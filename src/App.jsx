@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/auth/PermissionGate';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
+import ContactsPage from './pages/crm/ContactsPage';
 import { P } from './config/roles';
 import './i18n';
 
@@ -36,12 +37,28 @@ export default function App() {
             <Route path="/login" element={<AuthRedirect />} />
             <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/crm/*" element={<ComingSoon title="إدارة العملاء - CRM" />} />
+
+              {/* CRM */}
+              <Route path="/crm/contacts" element={<ContactsPage />} />
+              <Route path="/crm/opportunities" element={<ComingSoon title="الفرص البيعية - Opportunities" />} />
+              <Route path="/crm/lead-pool" element={<ComingSoon title="بركة الليدز - Lead Pool" />} />
+
+              {/* Real Estate */}
               <Route path="/real-estate/*" element={<ComingSoon title="العقارات - Real Estate" />} />
+
+              {/* Sales */}
               <Route path="/sales/*" element={<ComingSoon title="المبيعات - Sales" />} />
+
+              {/* Marketing */}
               <Route path="/marketing/*" element={<ComingSoon title="التسويق - Marketing" />} />
+
+              {/* HR */}
               <Route path="/hr/*" element={<ComingSoon title="الموارد البشرية - HR" />} />
+
+              {/* Finance */}
               <Route path="/finance/*" element={<ComingSoon title="المالية - Finance" />} />
+
+              {/* Others */}
               <Route path="/tasks" element={<ComingSoon title="المهام - Tasks" />} />
               <Route path="/calendar" element={<ComingSoon title="التقويم - Calendar" />} />
               <Route path="/chat" element={<ComingSoon title="الدردشة - Chat" />} />
