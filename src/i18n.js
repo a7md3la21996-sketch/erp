@@ -6,7 +6,8 @@ import en from './locales/en/translation.json';
 
 i18n.use(LanguageDetector).use(initReactI18next).init({
   resources: { ar: { translation: ar }, en: { translation: en } },
-  fallbackLng: 'ar',
+  fallbackLng: 'en',
+  lng: 'en',
   interpolation: { escapeValue: false },
   detection: { order: ['localStorage', 'navigator'], caches: ['localStorage'] },
 });
