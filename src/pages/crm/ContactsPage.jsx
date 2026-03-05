@@ -259,22 +259,66 @@ function BlacklistModal({ contact, onClose, onConfirm }) {
 
 // ── Activity Form ─────────────────────────────────────────────────────────
 function ActivityForm({ contactId, onSave, onCancel }) {
-  const [form, setForm] = useState({ type: 'call', description: '', next_action: '', next_action_date: '' });
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+
+  // Load activity types from localStorage (managed by Admin in Settings)
+  const defaultTypes = [
+    { key: 'call',          label: 'Call',          labelAr: 'مكالمة',       icon: '📞' },
+    { key: 'whatsapp',      label: 'WhatsApp',      labelAr: 'واتساب',       icon: '💬' },
+    { key: 'email',         label: 'Email',         labelAr: 'إيميل',        icon: '📧' },
+    { key: 'meeting',       label: 'Meeting',       labelAr: 'اجتماع',       icon: '🤝' },
+    { key: 'site_visit',    label: 'Site Visit',    labelAr: 'زيارة موقع',   icon: '🏠' },
+    { key: 'note',          label: 'Note',          labelAr: 'ملاحظة',       icon: '📝' },
+    { key: 'status_change', label: 'Status Change', labelAr: 'تغيير حالة',   icon: '🔄' },
+  ];
+  const [activityTypes] = useState(() => {
+    try {
+      const saved = localStorage.getItem('platform_activity_types');
+      return saved ? JSON.parse(saved) : defaultTypes;
+    } catch { return defaultTypes; }
+  });
+
+  const [form, setForm] = useState({ type: activityTypes[0]?.key || 'call', description: '', next_action: '', next_action_date: '' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const inp = { background: '#0F1E2D', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, padding: '8px 12px', color: '#E2EAF4', fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box' };
+
+  // Auto timestamp
+  const now = new Date().toLocaleString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+  const handleSave = () => {
+    onSave({ ...form, created_at: new Date().toISOString() });
+  };
+
   return (
     <div style={{ background: 'rgba(74,122,171,0.07)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 10, padding: 14, marginBottom: 12 }}>
+      {/* Auto timestamp - read only */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '5px 10px', background: 'rgba(74,122,171,0.08)', borderRadius: 6 }}>
+        <span style={{ fontSize: 11 }}>🕐</span>
+        <span style={{ fontSize: 11, color: '#6B8DB5' }}>{now}</span>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
         <select style={{ ...inp, cursor: 'pointer' }} value={form.type} onChange={e => set('type', e.target.value)}>
-          {Object.entries(ACTIVITY_TYPES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+          {activityTypes.map(v => (
+            <option key={v.key} value={v.key}>{v.icon} {isRTL ? (v.labelAr || v.label) : v.label}</option>
+          ))}
         </select>
-        <input style={inp} type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)} placeholder="Follow-up date" />
+        <input style={inp} type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)}
+          placeholder={isRTL ? 'تاريخ المتابعة' : 'Follow-up date'} />
       </div>
-      <textarea style={{ ...inp, resize: 'vertical', marginBottom: 10 }} rows={2} placeholder={i18n.language === "ar" ? "وصف النشاط..." : "Activity description..."} value={form.description} onChange={e => set('description', e.target.value)} />
-      <input style={{ ...inp, marginBottom: 12 }} placeholder={i18n.language === "ar" ? "الإجراء التالي (اختياري)..." : "Next action (optional)..."} value={form.next_action} onChange={e => set('next_action', e.target.value)} />
+      <textarea style={{ ...inp, resize: 'vertical', marginBottom: 10 }} rows={2}
+        placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
+        value={form.description} onChange={e => set('description', e.target.value)} />
+      <input style={{ ...inp, marginBottom: 12 }}
+        placeholder={isRTL ? 'الإجراء التالي (اختياري)...' : 'Next action (optional)...'}
+        value={form.next_action} onChange={e => set('next_action', e.target.value)} />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 6, color: '#8BA8C8', fontSize: 12, cursor: 'pointer' }}>إلغاء</button>
-        <button onClick={() => onSave(form)} style={{ padding: '6px 16px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>حفظ</button>
+        <button onClick={onCancel} style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 6, color: '#8BA8C8', fontSize: 12, cursor: 'pointer' }}>
+          {isRTL ? 'إلغاء' : 'Cancel'}
+        </button>
+        <button onClick={handleSave} style={{ padding: '6px 16px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+          {isRTL ? 'حفظ' : 'Save'}
+        </button>
       </div>
     </div>
   );
