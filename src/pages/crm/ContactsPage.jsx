@@ -1,12 +1,8 @@
-// v2 phone validation
-import { useState, useMemo, useEffect, useCallback } from 'react';
-...
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Filter, Ban, X, ChevronDown, ChevronRight, Clock, Star } from 'lucide-react';
-import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, checkDuplicate,
@@ -81,29 +77,6 @@ function ScorePill({ score }) {
   );
 }
 
-// ── Phone Validation ──────────────────────────────────────────────────────
-function validatePhone(phone) {
-  if (!phone) return null;
-  const cleaned = phone.replace(/\s+/g, '');
-  try {
-    // Try with country code
-    if (cleaned.startsWith('+')) {
-      if (isValidPhoneNumber(cleaned)) return { valid: true, formatted: parsePhoneNumber(cleaned).formatInternational() };
-      return { valid: false, error: 'Invalid international number' };
-    }
-    // Try as Egyptian number
-    if (cleaned.startsWith('01') && cleaned.length === 11) {
-      if (isValidPhoneNumber(cleaned, 'EG')) return { valid: true, formatted: parsePhoneNumber(cleaned, 'EG').formatInternational() };
-      return { valid: false, error: 'Invalid Egyptian number' };
-    }
-    // Try as generic with EG default
-    if (isValidPhoneNumber(cleaned, 'EG')) return { valid: true, formatted: cleaned };
-    return { valid: false, error: 'Invalid phone number' };
-  } catch {
-    return { valid: false, error: 'Invalid phone number format' };
-  }
-}
-
 // ── Add Contact Modal ──────────────────────────────────────────────────────
 function AddContactModal({ onClose, onSave, checkDup }) {
   const [step, setStep] = useState(1);
@@ -114,21 +87,12 @@ function AddContactModal({ onClose, onSave, checkDup }) {
     interested_in_type: 'residential', notes: '',
   });
   const [dupWarning, setDupWarning] = useState(null);
-  const [phoneError, setPhoneError] = useState(null);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const checkPhone = async () => {
-    if (!form.phone) return;
-    // Validate phone format first
-    const validation = validatePhone(form.phone);
-    if (!validation?.valid) {
-      setPhoneError(validation?.error || 'Invalid phone number');
-      return;
-    }
-    setPhoneError(null);
-    if (form.phone.length < 10) return;
+    if (!form.phone || form.phone.length < 10) return;
     setChecking(true);
     try {
       const dup = await checkDup(form.phone);
@@ -178,12 +142,11 @@ function AddContactModal({ onClose, onSave, checkDup }) {
               </div>
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span></label>
-                <input style={{ ...inp, borderColor: phoneError ? '#EF4444' : dupWarning ? '#F97316' : 'rgba(74,122,171,0.25)' }}
-                  placeholder="+20 10x xxxx xxxx or 010xxxxxxxx" value={form.phone}
-                  onChange={e => { set('phone', e.target.value); setDupWarning(null); setPhoneError(null); }}
+                <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
+                  placeholder="010xxxxxxxx" value={form.phone}
+                  onChange={e => { set('phone', e.target.value); setDupWarning(null); }}
                   onBlur={checkPhone} />
                 {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
-                {phoneError && <p style={{ fontSize: 11, color: '#EF4444', margin: '4px 0 0' }}>❌ {isRTL ? 'رقم الهاتف غير صحيح' : 'Invalid phone number'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12, color: '#EF4444' }}>
                     ⚠️ {isRTL ? 'هذا الرقم موجود مسبقاً باسم' : 'This number already exists for'}: <strong>{dupWarning.full_name}</strong>
@@ -196,7 +159,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 <input style={inp} placeholder="012xxxxxxxx" value={form.phone2} onChange={e => set('phone2', e.target.value)} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'البريد الإلكتروني' : 'Email'}' : 'Email'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
                 <input style={inp} type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
               </div>
               <div>
@@ -254,7 +217,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
           <div style={{ display: 'flex', gap: 10 }}>
             {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
             {step === 1
-              ? <button onClick={() => setStep(2)} disabled={!form.phone || !!phoneError} style={{ padding: '9px 22px', background: (form.phone && !phoneError) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: (form.phone && !phoneError) ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
+              ? <button onClick={() => setStep(2)} disabled={!form.phone} style={{ padding: '9px 22px', background: form.phone ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
               : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? '💾 حفظ' : '💾 Save')}</button>
             }
           </div>
@@ -301,13 +264,13 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 
   // Load activity types from localStorage (managed by Admin in Settings)
   const defaultTypes = [
-    { key: 'call', label: 'Call', labelAr: 'مكالمة', icon: '📞' },
-    { key: 'whatsapp', label: 'WhatsApp', labelAr: 'واتساب', icon: '💬' },
-    { key: 'email', label: 'Email', labelAr: 'إيميل', icon: '📧' },
-    { key: 'meeting', label: 'Meeting', labelAr: 'اجتماع', icon: '🤝' },
-    { key: 'site_visit', label: 'Site Visit', labelAr: 'زيارة موقع', icon: '🏠' },
-    { key: 'note', label: 'Note', labelAr: 'ملاحظة', icon: '📝' },
-    { key: 'status_change', label: 'Status Change', labelAr: 'تغيير حالة', icon: '🔄' },
+    { key: 'call',          label: 'Call',          labelAr: 'مكالمة',       icon: '📞' },
+    { key: 'whatsapp',      label: 'WhatsApp',      labelAr: 'واتساب',       icon: '💬' },
+    { key: 'email',         label: 'Email',         labelAr: 'إيميل',        icon: '📧' },
+    { key: 'meeting',       label: 'Meeting',       labelAr: 'اجتماع',       icon: '🤝' },
+    { key: 'site_visit',    label: 'Site Visit',    labelAr: 'زيارة موقع',   icon: '🏠' },
+    { key: 'note',          label: 'Note',          labelAr: 'ملاحظة',       icon: '📝' },
+    { key: 'status_change', label: 'Status Change', labelAr: 'تغيير حالة',   icon: '🔄' },
   ];
   const [activityTypes] = useState(() => {
     try {
@@ -488,12 +451,12 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📍 {isRTL ? 'الموقع المفضل' : 'Preferred Location'}', val: contact.preferred_location || '—' },
                 { label: '🏢 {isRTL ? 'نوع العقار' : 'Property Type'}', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: '👤 {isRTL ? 'المسؤول' : 'Assigned To'}', val: contact.assigned_to_name || '—' },
-                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: ``${ daysSince(contact.last_activity_at)}d`` },
+                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: ``${daysSince(contact.last_activity_at)}d`` },
               ].map(r => (
-              <div key={r.label} style={rowStyle}>
-                <span style={{ color: '#8BA8C8' }}>{r.label}</span>
-                <span style={{ color: '#E2EAF4', fontWeight: 500, maxWidth: '55%', textAlign: 'left' }}>{r.val}</span>
-              </div>
+                <div key={r.label} style={rowStyle}>
+                  <span style={{ color: '#8BA8C8' }}>{r.label}</span>
+                  <span style={{ color: '#E2EAF4', fontWeight: 500, maxWidth: '55%', textAlign: 'left' }}>{r.val}</span>
+                </div>
               ))}
 
               {contact.stage && (
@@ -725,7 +688,7 @@ export default function ContactsPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
-            {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', { count: filtered.length, total: contacts.length })}`}
+            {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', {count: filtered.length, total: contacts.length})}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
