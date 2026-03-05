@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Filter, Ban, X, ChevronDown, ChevronRight, Clock, Star } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
@@ -18,14 +17,14 @@ const STAGE_LABELS = { new: 'جديد', contacted: 'تم التواصل', intere
 const COLD_LABELS = { not_contacted: 'لم يُتصل به', no_answer: 'لا يرد', not_interested: 'غير مهتم', interested: 'مهتم', wrong_number: 'رقم خاطئ', call_back_later: 'اتصل لاحقاً' };
 const ACTIVITY_TYPES = { call: { label: 'مكالمة', icon: '📞' }, whatsapp: { label: 'واتساب', icon: '💬' }, email: { label: 'إيميل', icon: '📧' }, meeting: { label: 'اجتماع', icon: '🤝' }, site_visit: { label: 'زيارة موقع', icon: '🏠' }, note: { label: 'ملاحظة', icon: '📝' }, status_change: { label: 'تغيير حالة', icon: '🔄' } };
 const TEMP = {
-  hot:  { label: 'حار',   labelEn: 'Hot',  icon: '🔴', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
+  hot: { label: 'حار', labelEn: 'Hot', icon: '🔴', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
   warm: { label: 'دافئ', labelEn: 'Warm', icon: '🟠', color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
   cool: { label: 'فاتر', labelEn: 'Cool', icon: '🟡', color: '#EAB308', bg: 'rgba(234,179,8,0.12)' },
   cold: { label: 'بارد', labelEn: 'Cold', icon: '🔵', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
 };
 const TYPE = {
-  lead:   { label: 'ليد',   labelEn: 'Lead',   color: '#4A7AAB', bg: 'rgba(74,122,171,0.13)' },
-  cold:   { label: 'كولد',  labelEn: 'Cold',   color: '#8BA8C8', bg: 'rgba(139,168,200,0.13)' },
+  lead: { label: 'ليد', labelEn: 'Lead', color: '#4A7AAB', bg: 'rgba(74,122,171,0.13)' },
+  cold: { label: 'كولد', labelEn: 'Cold', color: '#8BA8C8', bg: 'rgba(139,168,200,0.13)' },
   client: { label: 'عميل', labelEn: 'Client', color: '#10B981', bg: 'rgba(16,185,129,0.13)' },
 };
 
@@ -513,15 +512,15 @@ export default function ContactsPage() {
   const isRTL = i18n.language === 'ar';
 
   const c = {
-    cardBg:    isDark ? '#152232'                  : '#ffffff',
-    border:    isDark ? 'rgba(74,122,171,0.2)'     : '#e5e7eb',
-    text:      isDark ? '#E2EAF4'                  : '#111827',
-    textMuted: isDark ? '#8BA8C8'                  : '#6b7280',
-    rowHover:  isDark ? 'rgba(74,122,171,0.1)'     : '#f9fafb',
-    inputBg:   isDark ? '#0F1E2D'                  : '#ffffff',
-    thBg:      isDark ? 'rgba(74,122,171,0.08)'    : '#f9fafb',
-    chipBg:    isDark ? 'rgba(74,122,171,0.12)'    : '#f3f4f6',
-    chipText:  isDark ? '#8BA8C8'                  : '#6b7280',
+    cardBg: isDark ? '#152232' : '#ffffff',
+    border: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
+    text: isDark ? '#E2EAF4' : '#111827',
+    textMuted: isDark ? '#8BA8C8' : '#6b7280',
+    rowHover: isDark ? 'rgba(74,122,171,0.1)' : '#f9fafb',
+    inputBg: isDark ? '#0F1E2D' : '#ffffff',
+    thBg: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb',
+    chipBg: isDark ? 'rgba(74,122,171,0.12)' : '#f3f4f6',
+    chipText: isDark ? '#8BA8C8' : '#6b7280',
   };
 
   const [contacts, setContacts] = useState([]);
