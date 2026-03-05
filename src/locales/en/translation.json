@@ -1,0 +1,8 @@
+{
+  "app": { "name": "Platform", "fullName": "Platform Real Estate", "tagline": "Integrated Management System" },
+  "auth": { "login": "Sign In", "logout": "Sign Out", "email": "Email", "password": "Password", "forgotPassword": "Forgot Password?", "welcomeBack": "Welcome Back", "loginSubtitle": "Sign in to access your dashboard", "invalidCredentials": "Invalid credentials" },
+  "common": { "search": "Search", "save": "Save", "cancel": "Cancel", "delete": "Delete", "edit": "Edit", "add": "Add", "loading": "Loading...", "noData": "No data available" },
+  "dashboard": { "welcome": "Welcome", "totalLeads": "Total Leads", "activeOpps": "Active Opportunities", "closedDeals": "Closed Deals", "totalRevenue": "Total Revenue", "thisMonth": "This Month", "today": "Today", "recentActivities": "Recent Activities", "slaAlerts": "SLA Alerts", "targetProgress": "Target Progress" },
+  "theme": { "light": "Light", "dark": "Dark", "toggle": "Toggle Theme" },
+  "language": { "toggle": "Switch Language" }
+}
