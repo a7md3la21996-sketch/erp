@@ -23,7 +23,20 @@ function ComingSoon({ title }) {
 
 function AuthRedirect() {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return null;
+  if (loading) return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      height: '100vh', background: '#0F1E2D', flexDirection: 'column', gap: 16,
+    }}>
+      <div style={{
+        width: 40, height: 40, border: '3px solid rgba(74,122,171,0.3)',
+        borderTop: '3px solid #4A7AAB', borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+      }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <p style={{ color: '#8BA8C8', fontSize: 14, margin: 0 }}>جاري التحميل...</p>
+    </div>
+  );
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
   return <LoginPage />;
 }
@@ -35,37 +48,24 @@ export default function App() {
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<AuthRedirect />} />
+            <Route path="/" element={<AuthRedirect />} />
             <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
-
-              {/* CRM */}
               <Route path="/crm/contacts" element={<ContactsPage />} />
               <Route path="/crm/opportunities" element={<ComingSoon title="الفرص البيعية - Opportunities" />} />
               <Route path="/crm/lead-pool" element={<ComingSoon title="بركة الليدز - Lead Pool" />} />
-
-              {/* Real Estate */}
               <Route path="/real-estate/*" element={<ComingSoon title="العقارات - Real Estate" />} />
-
-              {/* Sales */}
               <Route path="/sales/*" element={<ComingSoon title="المبيعات - Sales" />} />
-
-              {/* Marketing */}
               <Route path="/marketing/*" element={<ComingSoon title="التسويق - Marketing" />} />
-
-              {/* HR */}
               <Route path="/hr/*" element={<ComingSoon title="الموارد البشرية - HR" />} />
-
-              {/* Finance */}
               <Route path="/finance/*" element={<ComingSoon title="المالية - Finance" />} />
-
-              {/* Others */}
               <Route path="/tasks" element={<ComingSoon title="المهام - Tasks" />} />
               <Route path="/calendar" element={<ComingSoon title="التقويم - Calendar" />} />
               <Route path="/chat" element={<ComingSoon title="الدردشة - Chat" />} />
               <Route path="/reports" element={<ComingSoon title="التقارير - Reports" />} />
               <Route path="/settings/*" element={<ComingSoon title="الإعدادات - Settings" />} />
             </Route>
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </AuthProvider>
       </ThemeProvider>
