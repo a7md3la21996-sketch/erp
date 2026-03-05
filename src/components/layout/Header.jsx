@@ -21,6 +21,13 @@ export default function Header() {
 
   const roleLabel = profile?.role ? (ROLE_LABELS[profile.role]?.[i18n.language] || profile.role) : '';
 
+  const handleLangToggle = () => {
+    const newLang = i18n.language === 'ar' ? 'en' : 'ar';
+    i18n.changeLanguage(newLang).then(() => {
+      window.location.reload();
+    });
+  };
+
   return (
     <header style={{
       height: 64, background: '#fff', borderBottom: '1px solid #e5e7eb',
@@ -38,7 +45,7 @@ export default function Header() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={() => { i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar'); window.location.reload(); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: '#6b7280', fontSize: 13 }}>
+        <button onClick={handleLangToggle} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: '#6b7280', fontSize: 13 }}>
           <Globe size={18} /> {i18n.language === 'ar' ? 'EN' : 'عربي'}
         </button>
         <button onClick={toggleTheme} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: '#6b7280' }}>
