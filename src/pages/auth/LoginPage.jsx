@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -8,6 +9,7 @@ export default function LoginPage() {
   const { t, i18n } = useTranslation();
   const { login } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   const isRTL = i18n.language === 'ar';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,21 +18,29 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
-    setError(''); setLoading(true);
+    setError('');
+    setLoading(true);
     try {
       await login(email, password);
-      // لا تعمل navigate هنا!
-      // الـ AuthContext هيعمل update للـ state
-      // والـ AuthRedirect في App.jsx هيعمل redirect تلقائياً
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setError(err.message || t('auth.invalidCredentials'));
+      setLoading(false);
     }
-    catch { setError(t('auth.invalidCredentials')); setLoading(false); }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && email && password) handleLogin();
   };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex' }} dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Left panel */}
       <div style={{
-        flex: '0 0 50%', background: 'linear-gradient(135deg, #1B3347, #2B4C6F, #345A80)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden',
+        flex: '0 0 50%',
+        background: 'linear-gradient(135deg, #1B3347, #2B4C6F, #345A80)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        position: 'relative', overflow: 'hidden',
       }} className="hidden-mobile">
         <div style={{ position: 'absolute', top: 80, left: -80, width: 300, height: 300, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', filter: 'blur(60px)' }} />
         <div style={{ textAlign: 'center', zIndex: 1 }}>
@@ -40,12 +50,15 @@ export default function LoginPage() {
         </div>
       </div>
 
+      {/* Right panel */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: '#fff', position: 'relative' }}>
         <div style={{ position: 'absolute', top: 24, right: 24, display: 'flex', gap: 8 }}>
-          <button onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f3f4f6', color: '#6b7280', fontSize: 13 }}>
+          <button onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f3f4f6', color: '#6b7280', fontSize: 13 }}>
             <Globe size={16} /> {i18n.language === 'ar' ? 'EN' : 'عربي'}
           </button>
-          <button onClick={toggleTheme} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f3f4f6', color: '#6b7280' }}>
+          <button onClick={toggleTheme}
+            style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f3f4f6', color: '#6b7280' }}>
             {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
           </button>
         </div>
@@ -54,28 +67,37 @@ export default function LoginPage() {
           <h2 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>{t('auth.welcomeBack')}</h2>
           <p style={{ color: '#6b7280', margin: '0 0 32px' }}>{t('auth.loginSubtitle')}</p>
 
-          {error && <div style={{ padding: 12, borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 14, marginBottom: 24 }}>{error}</div>}
+          {error && (
+            <div style={{ padding: 12, borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 14, marginBottom: 24 }}>
+              {error}
+            </div>
+          )}
 
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 6 }}>{t('auth.email')}</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@platform.com" dir="ltr" style={{ width: '100%', height: 44, padding: '0 16px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown}
+              placeholder="admin@platform.com" dir="ltr"
+              style={{ width: '100%', height: 44, padding: '0 16px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
           </div>
 
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>{t('auth.password')}</label>
-              <button style={{ fontSize: 12, color: '#4A7AAB', background: 'none', border: 'none', cursor: 'pointer' }}>{t('auth.forgotPassword')}</button>
             </div>
             <div style={{ position: 'relative' }}>
-              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" dir="ltr" style={{ width: '100%', height: 44, padding: '0 44px 0 16px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
-              <button onClick={() => setShowPw(!showPw)} style={{ position: 'absolute', top: 10, [isRTL ? 'left' : 'right']: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>
+              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown}
+                placeholder="••••••••" dir="ltr"
+                style={{ width: '100%', height: 44, padding: '0 44px 0 16px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+              <button onClick={() => setShowPw(!showPw)}
+                style={{ position: 'absolute', top: 10, [isRTL ? 'left' : 'right']: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
           <button onClick={handleLogin} disabled={loading || !email || !password} style={{
-            width: '100%', height: 44, borderRadius: 8, border: 'none', cursor: 'pointer',
+            width: '100%', height: 44, borderRadius: 8, border: 'none',
+            cursor: loading || !email || !password ? 'not-allowed' : 'pointer',
             background: loading || !email || !password ? '#93B8D4' : '#2B4C6F',
             color: '#fff', fontSize: 14, fontWeight: 600,
           }}>
