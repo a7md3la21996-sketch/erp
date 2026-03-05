@@ -126,8 +126,8 @@ function AddContactModal({ onClose, onSave, checkDup }) {
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>إضافة جهة اتصال جديدة</h2>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>الخطوة {step} من 2</p>
+            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>{t('contacts.addContact')}</h2>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>{t('contacts.step')} {step} {t('contacts.of')} 2</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', fontSize: 18 }}><X size={18} /></button>
         </div>
@@ -137,11 +137,11 @@ function AddContactModal({ onClose, onSave, checkDup }) {
           {step === 1 ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>الاسم الكامل</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.fullName')}</label>
                 <input style={inp} placeholder="محمد أحمد..." value={form.full_name} onChange={e => set('full_name', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>رقم الهاتف <span style={{ color: '#EF4444' }}>*</span></label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.phone')} <span style={{ color: '#EF4444' }}>*</span></label>
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
                   onChange={e => { set('phone', e.target.value); setDupWarning(null); }}
@@ -155,15 +155,15 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 )}
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>رقم إضافي</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.phone2')}</label>
                 <input style={inp} placeholder="012xxxxxxxx" value={form.phone2} onChange={e => set('phone2', e.target.value)} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>البريد الإلكتروني</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.email')}</label>
                 <input style={inp} type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>النوع</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.type')}</label>
                 <select style={sel} value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
                   <option value="lead">ليد</option>
                   <option value="cold">كولد كول</option>
@@ -171,32 +171,32 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>المصدر</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.source')}</label>
                 <select style={sel} value={form.source} onChange={e => set('source', e.target.value)}>
                   {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>اسم الحملة</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.campaign')}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>ميزانية من (EGP)</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.budgetMin')}</label>
                 <input style={inp} type="number" placeholder="1500000" value={form.budget_min} onChange={e => set('budget_min', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>ميزانية إلى (EGP)</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.budgetMax')}</label>
                 <input style={inp} type="number" placeholder="3000000" value={form.budget_max} onChange={e => set('budget_max', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>الموقع المفضل</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.location')}</label>
                 <input style={inp} placeholder="الشيخ زايد، التجمع..." value={form.preferred_location} onChange={e => set('preferred_location', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>نوع العقار</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.propertyType')}</label>
                 <select style={sel} value={form.interested_in_type} onChange={e => set('interested_in_type', e.target.value)}>
                   <option value="residential">سكني</option>
                   <option value="commercial">تجاري</option>
@@ -204,7 +204,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>ملاحظات</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.notes')}</label>
                 <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder="ملاحظات إضافية..." value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
             </div>
@@ -235,13 +235,13 @@ function BlacklistModal({ contact, onClose, onConfirm }) {
       <div style={{ background: '#1A2B3C', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 44, marginBottom: 8 }}>⛔</div>
-          <h3 style={{ color: '#E2EAF4', margin: '0 0 6px', fontSize: 16 }}>إضافة للقائمة السوداء</h3>
-          <p style={{ color: '#8BA8C8', fontSize: 13, margin: 0 }}>سيتم منع هذا الرقم من الإضافة مستقبلاً</p>
+          <h3 style={{ color: '#E2EAF4', margin: '0 0 6px', fontSize: 16 }}>{t('contacts.blacklistTitle')}</h3>
+          <p style={{ color: '#8BA8C8', fontSize: 13, margin: 0 }}>{t('contacts.blacklistWarning')}</p>
         </div>
         <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#E2EAF4' }}>
           {contact?.full_name} — {contact?.phone}
         </div>
-        <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 8 }}>سبب الإضافة <span style={{ color: '#EF4444' }}>*</span></label>
+        <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 8 }}>{t('contacts.blacklistReason')} <span style={{ color: '#EF4444' }}>*</span></label>
         <input type="text" value={reason} onChange={e => setReason(e.target.value)}
           placeholder="مثال: سلوك مسيء، احتيال، رقم خاطئ متكرر..."
           style={{ width: '100%', background: '#0F1E2D', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '9px 12px', color: '#E2EAF4', fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 20 }} />
@@ -268,10 +268,10 @@ function ActivityForm({ contactId, onSave, onCancel }) {
         <select style={{ ...inp, cursor: 'pointer' }} value={form.type} onChange={e => set('type', e.target.value)}>
           {Object.entries(ACTIVITY_TYPES).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
         </select>
-        <input style={inp} type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)} />
+        <input style={inp} type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)} placeholder="Follow-up date" />
       </div>
-      <textarea style={{ ...inp, resize: 'vertical', marginBottom: 10 }} rows={2} placeholder="وصف النشاط..." value={form.description} onChange={e => set('description', e.target.value)} />
-      <input style={{ ...inp, marginBottom: 12 }} placeholder="الإجراء التالي (اختياري)..." value={form.next_action} onChange={e => set('next_action', e.target.value)} />
+      <textarea style={{ ...inp, resize: 'vertical', marginBottom: 10 }} rows={2} placeholder={i18n.language === "ar" ? "وصف النشاط..." : "Activity description..."} value={form.description} onChange={e => set('description', e.target.value)} />
+      <input style={{ ...inp, marginBottom: 12 }} placeholder={i18n.language === "ar" ? "الإجراء التالي (اختياري)..." : "Next action (optional)..."} value={form.next_action} onChange={e => set('next_action', e.target.value)} />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
         <button onClick={onCancel} style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 6, color: '#8BA8C8', fontSize: 12, cursor: 'pointer' }}>إلغاء</button>
         <button onClick={() => onSave(form)} style={{ padding: '6px 16px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>حفظ</button>
@@ -306,20 +306,13 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
   }, [tab, contact.id]);
 
   const handleSaveActivity = async (form) => {
-    const newAct = {
-      id: String(Date.now()),
-      ...form,
-      contact_id: contact.id,
-      created_at: new Date().toISOString(),
-      users: { full_name_ar: 'مدير النظام', full_name_en: 'Admin' },
-    };
     try {
       const act = await createActivity({ ...form, contact_id: contact.id });
       setActivities(prev => [act, ...prev]);
-    } catch {
-      setActivities(prev => [newAct, ...prev]);
+      setShowActivityForm(false);
+    } catch (err) {
+      alert('خطأ: ' + err.message);
     }
-    setShowActivityForm(false);
   };
 
   if (!contact) return null;
@@ -408,13 +401,13 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📱 الهاتف الأول', val: contact.phone },
                 { label: '📱 الهاتف الثاني', val: contact.phone2 || '—' },
                 { label: '📧 الإيميل', val: contact.email || '—' },
-                { label: '📣 المصدر', val: SOURCE_LABELS[contact.source] },
+                { label: '📣 المصدر', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
                 { label: '🎯 الحملة', val: contact.campaign_name || '—' },
                 { label: '💰 الميزانية', val: fmtBudget(contact.budget_min, contact.budget_max) },
                 { label: '📍 الموقع المفضل', val: contact.preferred_location || '—' },
                 { label: '🏢 نوع العقار', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: '👤 المسؤول', val: contact.assigned_to_name || '—' },
-                { label: '⏱️ آخر نشاط', val: `منذ ${daysSince(contact.last_activity_at)} يوم` },
+                { label: '⏱️ آخر نشاط', val: ``${daysSince(contact.last_activity_at)} ${t('contacts.daysAgo')}`` },
               ].map(r => (
                 <div key={r.label} style={rowStyle}>
                   <span style={{ color: '#8BA8C8' }}>{r.label}</span>
@@ -439,9 +432,6 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                   ⛔ سبب البلاك ليست: {contact.blacklist_reason}
                 </div>
               )}
-              <button onClick={() => onUpdate && onUpdate(contact)} style={{ marginTop: 16, width: '100%', padding: '9px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#4A7AAB', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                ✏️ تعديل البيانات
-              </button>
             </div>
           )}
 
@@ -450,7 +440,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
             <div>
               {!showActivityForm && (
                 <button onClick={() => setShowActivityForm(true)} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
-                  + إضافة نشاط جديد
+                  {t('contacts.activities.addNew')}
                 </button>
               )}
               {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
@@ -460,7 +450,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
               ) : activities.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
                   <Clock size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                  <p style={{ margin: 0, fontSize: 13 }}>لا توجد أنشطة بعد</p>
+                  <p style={{ margin: 0, fontSize: 13 }}>{t('contacts.activities.noActivities')}</p>
                 </div>
               ) : activities.map(act => (
                 <div key={act.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
@@ -485,12 +475,12 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
           {tab === 'opportunities' && (
             <div>
               <button style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
-                + فتح فرصة جديدة
+                {t('contacts.opportunities.addNew')}
               </button>
               {opportunities.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
                   <Star size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                  <p style={{ margin: 0, fontSize: 13 }}>لا توجد فرص مرتبطة</p>
+                  <p style={{ margin: 0, fontSize: 13 }}>{t('contacts.opportunities.noOpportunities')}</p>
                 </div>
               ) : opportunities.map(opp => (
                 <div key={opp.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
@@ -516,6 +506,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────
 export default function ContactsPage() {
   const { t, i18n } = useTranslation();
+  const lang = i18n.language;
   const { profile } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -651,9 +642,9 @@ export default function ContactsPage() {
       {/* Page Header */}
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>جهات الاتصال</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{t('contacts.title')}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
-            {loading ? 'جاري التحميل...' : `${filtered.length} نتيجة من ${contacts.length}`}
+            {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', {count: filtered.length, total: contacts.length})}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -672,10 +663,10 @@ export default function ContactsPage() {
       {/* Type Chips */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         {[
-          { label: 'الكل', value: 'all', count: stats.total, color: '#4A7AAB' },
-          { label: 'ليدز', value: 'lead', count: stats.leads, color: '#4A7AAB' },
-          { label: 'كولد', value: 'cold', count: stats.cold, color: '#8BA8C8' },
-          { label: 'عملاء', value: 'client', count: stats.clients, color: '#10B981' },
+          { label: t('common.all'), value: 'all', count: stats.total, color: '#4A7AAB' },
+          { label: t('contacts.lead'), value: 'lead', count: stats.leads, color: '#4A7AAB' },
+          { label: t('contacts.cold'), value: 'cold', count: stats.cold, color: '#8BA8C8' },
+          { label: t('contacts.client'), value: 'client', count: stats.clients, color: '#10B981' },
         ].map(s => (
           <button key={s.value} onClick={() => setFilterType(s.value)} style={{
             padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterType === s.value ? s.color : '#e5e7eb'}`,
@@ -705,15 +696,15 @@ export default function ContactsPage() {
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
           <Search size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-          <input type="text" placeholder="بحث بالاسم، الهاتف، الإيميل، الحملة..." value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" {...{placeholder: t('contacts.searchPlaceholder')}} value={search} onChange={e => setSearch(e.target.value)}
             style={{ ...sel, width: '100%', paddingRight: 32, boxSizing: 'border-box' }} />
         </div>
         <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={sel}>
-          <option value="all">كل المصادر</option>
+          <option value="all">{t('contacts.allSources')}</option>
           {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} style={sel}>
-          <option value="all">كل الدرجات</option>
+          <option value="all">{t('contacts.allTemps')}</option>
           {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
         </select>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sel}>
@@ -729,7 +720,7 @@ export default function ContactsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead>
               <tr>
-                {['الاسم', 'الهاتف', 'النوع', 'الحرارة', 'المصدر', 'المرحلة', 'الميزانية', 'Score', 'إجراءات'].map(h => (
+                {[t('contacts.fullName'), t('contacts.phone'), t('contacts.type'), t('contacts.temperature'), t('contacts.source'), t('contacts.stage'), t('contacts.budget'), 'Score', t('common.actions')].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
               </tr>
@@ -740,7 +731,7 @@ export default function ContactsPage() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={9} style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
                   <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-                  لا توجد نتائج
+                  {t('contacts.noResults')}
                 </td></tr>
               ) : filtered.map((c) => (
                 <tr key={c.id}
@@ -776,7 +767,7 @@ export default function ContactsPage() {
                   {/* Temp */}
                   <td style={td}><span title={TEMP[c.temperature]?.label} style={{ fontSize: 16 }}>{TEMP[c.temperature]?.icon}</span></td>
                   {/* Source */}
-                  <td style={td}><span style={{ fontSize: 11, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', color: '#6b7280' }}>{SOURCE_LABELS[c.source]}</span></td>
+                  <td style={td}><span style={{ fontSize: 11, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', color: '#6b7280' }}>{i18n.language === "ar" ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></td>
                   {/* Stage */}
                   <td style={td}>
                     {c.stage
