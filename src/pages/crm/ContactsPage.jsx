@@ -751,7 +751,7 @@ export default function ContactsPage() {
                         {c.is_blacklisted ? '⛔' : initials(c.full_name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : colors?.text || '#111827' }}>{c.full_name || 'بدون اسم'}</div>
+                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : c.text }}>{c.full_name || 'بدون اسم'}</div>
                         {c.email && <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.email}</div>}
                       </div>
                     </div>
