@@ -171,7 +171,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'المصدر' : 'Source'}' : 'Source'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المصدر' : 'Source'}</label>
                 <select style={sel} value={form.source} onChange={e => set('source', e.target.value)}>
                   {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
@@ -192,11 +192,11 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 <input style={inp} type="number" placeholder="3000000" value={form.budget_max} onChange={e => set('budget_max', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'الموقع المفضل' : 'Preferred Location'}' : 'Preferred Location'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الموقع المفضل' : 'Preferred Location'}</label>
                 <input style={inp} placeholder="الشيخ زايد، التجمع..." value={form.preferred_location} onChange={e => set('preferred_location', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'نوع العقار' : 'Property Type'}' : 'Property Type'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'نوع العقار' : 'Property Type'}</label>
                 <select style={sel} value={form.interested_in_type} onChange={e => set('interested_in_type', e.target.value)}>
                   <option value="residential">{isRTL ? 'سكني' : 'Residential'}</option>
                   <option value="commercial">{isRTL ? 'تجاري' : 'Commercial'}</option>
@@ -204,7 +204,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'ملاحظات' : 'Notes'}' : 'Notes'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
                 <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder="{isRTL ? 'ملاحظات' : 'Notes'} إضافية..." value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
             </div>
