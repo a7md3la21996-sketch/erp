@@ -1,8 +1,0 @@
-{
-  "app": { "name": "بلاتفورم", "fullName": "بلاتفورم للتسويق العقاري", "tagline": "نظام إدارة متكامل" },
-  "auth": { "login": "تسجيل الدخول", "logout": "تسجيل الخروج", "email": "البريد الإلكتروني", "password": "كلمة المرور", "forgotPassword": "نسيت كلمة المرور؟", "welcomeBack": "مرحباً بعودتك", "loginSubtitle": "سجّل دخولك للوصول إلى لوحة التحكم", "invalidCredentials": "بيانات الدخول غير صحيحة" },
-  "common": { "search": "بحث", "save": "حفظ", "cancel": "إلغاء", "delete": "حذف", "edit": "تعديل", "add": "إضافة", "loading": "جاري التحميل...", "noData": "لا توجد بيانات" },
-  "dashboard": { "welcome": "مرحباً", "totalLeads": "إجمالي الليدز", "activeOpps": "الفرص النشطة", "closedDeals": "الصفقات المغلقة", "totalRevenue": "إجمالي الإيرادات", "thisMonth": "هذا الشهر", "today": "اليوم", "recentActivities": "آخر الأنشطة", "slaAlerts": "تنبيهات SLA", "targetProgress": "تقدم التارجت" },
-  "theme": { "light": "فاتح", "dark": "داكن", "toggle": "تبديل الثيم" },
-  "language": { "toggle": "تبديل اللغة" }
-}

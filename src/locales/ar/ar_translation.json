@@ -1,0 +1,140 @@
+{
+  "app": { "name": "بلاتفورم", "fullName": "بلاتفورم للتسويق العقاري", "tagline": "نظام إدارة متكامل" },
+  "auth": { "login": "تسجيل الدخول", "logout": "تسجيل الخروج", "email": "البريد الإلكتروني", "password": "كلمة المرور", "forgotPassword": "نسيت كلمة المرور؟", "welcomeBack": "مرحباً بعودتك", "loginSubtitle": "سجّل دخولك للوصول إلى لوحة التحكم", "invalidCredentials": "بيانات الدخول غير صحيحة" },
+  "common": { "search": "بحث", "save": "حفظ", "cancel": "إلغاء", "delete": "حذف", "edit": "تعديل", "add": "إضافة", "loading": "جاري التحميل...", "noData": "لا توجد بيانات", "actions": "إجراءات", "all": "الكل", "export": "تصدير", "import": "استيراد" },
+  "dashboard": { "welcome": "مرحباً", "totalLeads": "إجمالي الليدز", "activeOpps": "الفرص النشطة", "closedDeals": "الصفقات المغلقة", "totalRevenue": "إجمالي الإيرادات", "thisMonth": "هذا الشهر", "today": "اليوم", "recentActivities": "آخر الأنشطة", "slaAlerts": "تنبيهات SLA", "targetProgress": "تقدم التارجت" },
+  "theme": { "light": "فاتح", "dark": "داكن", "toggle": "تبديل الثيم" },
+  "language": { "toggle": "تبديل اللغة" },
+  "contacts": {
+    "title": "جهات الاتصال",
+    "addContact": "إضافة جهة اتصال",
+    "results": "نتيجة من",
+    "searchPlaceholder": "بحث بالاسم، الهاتف، الإيميل، الحملة...",
+    "allSources": "كل المصادر",
+    "allTemps": "كل الدرجات",
+    "sortLastActivity": "ترتيب: آخر نشاط",
+    "sortScore": "ترتيب: Lead Score",
+    "sortName": "ترتيب: الاسم",
+    "blacklist": "بلاك ليست",
+    "blacklistTitle": "إضافة للقائمة السوداء",
+    "blacklistReason": "سبب الإضافة *",
+    "blacklistConfirm": "تأكيد الإضافة",
+    "blacklistWarning": "سيتم منع هذا الرقم من الإضافة مستقبلاً",
+    "duplicateWarning": "هذا الرقم موجود مسبقاً باسم",
+    "duplicateNote": "يمكنك الاستمرار لإضافة فرصة جديدة لنفس العميل",
+    "noResults": "لا توجد نتائج",
+    "tabs": {
+      "info": "البيانات",
+      "activities": "الأنشطة",
+      "opportunities": "الفرص"
+    },
+    "fields": {
+      "fullName": "الاسم الكامل",
+      "phone": "رقم الهاتف *",
+      "phone2": "رقم إضافي",
+      "email": "البريد الإلكتروني",
+      "type": "النوع",
+      "source": "المصدر",
+      "campaign": "اسم الحملة",
+      "budgetMin": "ميزانية من (EGP)",
+      "budgetMax": "ميزانية إلى (EGP)",
+      "location": "الموقع المفضل",
+      "propertyType": "نوع العقار",
+      "notes": "ملاحظات",
+      "assignedTo": "المسؤول",
+      "lastActivity": "آخر نشاط",
+      "stage": "المرحلة",
+      "coldStatus": "حالة الكولد",
+      "blacklistReason": "سبب البلاك ليست",
+      "score": "Score",
+      "temperature": "الحرارة"
+    },
+    "types": {
+      "lead": "ليد",
+      "cold": "كولد",
+      "client": "عميل"
+    },
+    "sources": {
+      "facebook": "فيسبوك",
+      "instagram": "إنستجرام",
+      "google_ads": "جوجل أدز",
+      "website": "الموقع",
+      "call": "اتصال وارد",
+      "walk_in": "زيارة مباشرة",
+      "referral": "ترشيح",
+      "developer": "مطور",
+      "cold_call": "كولد كول",
+      "other": "أخرى"
+    },
+    "temperatures": {
+      "hot": "حار",
+      "warm": "دافئ",
+      "cool": "فاتر",
+      "cold": "بارد"
+    },
+    "stages": {
+      "new": "جديد",
+      "contacted": "تم التواصل",
+      "interested": "مهتم",
+      "site_visit_scheduled": "موعد معاينة",
+      "site_visited": "زار الموقع",
+      "negotiation": "تفاوض",
+      "reserved": "محجوز",
+      "contracted": "تعاقد",
+      "closed_won": "فوز ✓",
+      "closed_lost": "خسارة ✗",
+      "on_hold": "معلق"
+    },
+    "coldStatuses": {
+      "not_contacted": "لم يُتصل به",
+      "no_answer": "لا يرد",
+      "not_interested": "غير مهتم",
+      "interested": "مهتم",
+      "wrong_number": "رقم خاطئ",
+      "call_back_later": "اتصل لاحقاً"
+    },
+    "propertyTypes": {
+      "residential": "سكني",
+      "commercial": "تجاري",
+      "administrative": "إداري"
+    },
+    "activities": {
+      "addNew": "إضافة نشاط جديد",
+      "noActivities": "لا توجد أنشطة بعد",
+      "types": {
+        "call": "مكالمة",
+        "whatsapp": "واتساب",
+        "email": "إيميل",
+        "meeting": "اجتماع",
+        "site_visit": "زيارة موقع",
+        "note": "ملاحظة",
+        "status_change": "تغيير حالة"
+      },
+      "description": "وصف النشاط",
+      "nextAction": "الإجراء التالي (اختياري)",
+      "nextActionDate": "تاريخ المتابعة"
+    },
+    "opportunities": {
+      "addNew": "فتح فرصة جديدة",
+      "noOpportunities": "لا توجد فرص مرتبطة",
+      "project": "المشروع",
+      "assignedTo": "المسؤول",
+      "followUp": "متابعة"
+    },
+    "stats": {
+      "hotOnly": "حار فقط",
+      "blacklisted": "بلاك ليست"
+    },
+    "step": "الخطوة",
+    "of": "من",
+    "next": "التالي",
+    "previous": "السابق",
+    "daysAgo": "يوم",
+    "call": "اتصال",
+    "whatsapp": "واتساب",
+    "emailAction": "إيميل",
+    "editData": "تعديل البيانات",
+    "checking": "جاري التحقق من التكرار...",
+    "days": "أيام"
+  }
+}
