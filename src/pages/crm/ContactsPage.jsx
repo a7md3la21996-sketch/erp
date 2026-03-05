@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Filter, Ban, X, ChevronDown, ChevronRight, Clock, Star } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
@@ -506,7 +508,21 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
 export default function ContactsPage() {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
+
+  const c = {
+    cardBg:    isDark ? '#152232'                  : '#ffffff',
+    border:    isDark ? 'rgba(74,122,171,0.2)'     : '#e5e7eb',
+    text:      isDark ? '#E2EAF4'                  : '#111827',
+    textMuted: isDark ? '#8BA8C8'                  : '#6b7280',
+    rowHover:  isDark ? 'rgba(74,122,171,0.1)'     : '#f9fafb',
+    inputBg:   isDark ? '#0F1E2D'                  : '#ffffff',
+    thBg:      isDark ? 'rgba(74,122,171,0.08)'    : '#f9fafb',
+    chipBg:    isDark ? 'rgba(74,122,171,0.12)'    : '#f3f4f6',
+    chipText:  isDark ? '#8BA8C8'                  : '#6b7280',
+  };
 
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -520,7 +536,7 @@ export default function ContactsPage() {
   const [selected, setSelected] = useState(null);
   const [blacklistTarget, setBlacklistTarget] = useState(null);
 
-  // Load contacts
+  // Load contacts — Supabase first, then localStorage, then MOCK
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -531,14 +547,25 @@ export default function ContactsPage() {
           teamId: profile?.team_id,
           filters: {},
         });
-        setContacts(data.length ? data : MOCK);
+        if (data.length) {
+          setContacts(data);
+        } else {
+          throw new Error('no data');
+        }
       } catch {
-        setContacts(MOCK);
+        // Try localStorage first
+        const cached = localStorage.getItem('platform_contacts');
+        if (cached) {
+          setContacts(JSON.parse(cached));
+        } else {
+          setContacts(MOCK);
+        }
       } finally {
         setLoading(false);
       }
     };
     if (profile) load();
+    else { setContacts(MOCK); setLoading(false); }
   }, [profile]);
 
   // Stats
@@ -589,9 +616,13 @@ export default function ContactsPage() {
     };
     try {
       const saved = await createContact(form);
-      setContacts(prev => [saved, ...prev]);
+      const updated = [saved, ...contacts];
+      setContacts(updated);
+      localStorage.setItem('platform_contacts', JSON.stringify(updated));
     } catch {
-      setContacts(prev => [newContact, ...prev]);
+      const updated = [newContact, ...contacts];
+      setContacts(updated);
+      localStorage.setItem('platform_contacts', JSON.stringify(updated));
     }
   };
 
@@ -601,18 +632,18 @@ export default function ContactsPage() {
     if (selected?.id === contact.id) setSelected(null);
   };
 
-  // Styles
-  const sel = { background: '#0F1E2D', border: '1px solid rgba(74,122,171,0.22)', borderRadius: 8, padding: '8px 12px', color: '#E2EAF4', fontSize: 12, outline: 'none', cursor: 'pointer' };
-  const th = { fontSize: 11, color: '#6B8DB5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, padding: '10px 12px', background: 'rgba(74,122,171,0.07)', borderBottom: '1px solid rgba(74,122,171,0.12)', whiteSpace: 'nowrap' };
-  const td = { padding: '12px', borderBottom: '1px solid rgba(74,122,171,0.07)', verticalAlign: 'middle', fontSize: 13 };
+  // Styles — theme aware
+  const sel = { background: c.inputBg, border: `1px solid ${c.border}`, borderRadius: 8, padding: '8px 12px', color: c.text, fontSize: 12, outline: 'none', cursor: 'pointer' };
+  const th = { fontSize: 11, color: '#6B8DB5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, padding: '10px 12px', background: c.thBg, borderBottom: `1px solid ${c.border}`, whiteSpace: 'nowrap' };
+  const td = { padding: '12px', borderBottom: `1px solid ${c.border}`, verticalAlign: 'middle', fontSize: 13, color: c.text };
 
   return (
-    <div dir="rtl" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+    <div dir="rtl" style={{ fontFamily: "'Cairo','Tajawal',sans-serif", color: c.text }}>
       {/* Page Header */}
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>جهات الاتصال</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>
+          <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
             {loading ? 'جاري التحميل...' : `${filtered.length} نتيجة من ${contacts.length}`}
           </p>
         </div>
@@ -684,7 +715,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead>
@@ -721,7 +752,7 @@ export default function ContactsPage() {
                         {c.is_blacklisted ? '⛔' : initials(c.full_name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : '#111827' }}>{c.full_name || 'بدون اسم'}</div>
+                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : colors?.text || '#111827' }}>{c.full_name || 'بدون اسم'}</div>
                         {c.email && <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.email}</div>}
                       </div>
                     </div>
