@@ -264,13 +264,13 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 
   // Load activity types from localStorage (managed by Admin in Settings)
   const defaultTypes = [
-    { key: 'call',          label: 'Call',          labelAr: 'مكالمة',       icon: '📞' },
-    { key: 'whatsapp',      label: 'WhatsApp',      labelAr: 'واتساب',       icon: '💬' },
-    { key: 'email',         label: 'Email',         labelAr: 'إيميل',        icon: '📧' },
-    { key: 'meeting',       label: 'Meeting',       labelAr: 'اجتماع',       icon: '🤝' },
-    { key: 'site_visit',    label: 'Site Visit',    labelAr: 'زيارة موقع',   icon: '🏠' },
-    { key: 'note',          label: 'Note',          labelAr: 'ملاحظة',       icon: '📝' },
-    { key: 'status_change', label: 'Status Change', labelAr: 'تغيير حالة',   icon: '🔄' },
+    { key: 'call', label: 'Call', labelAr: 'مكالمة', icon: '📞' },
+    { key: 'whatsapp', label: 'WhatsApp', labelAr: 'واتساب', icon: '💬' },
+    { key: 'email', label: 'Email', labelAr: 'إيميل', icon: '📧' },
+    { key: 'meeting', label: 'Meeting', labelAr: 'اجتماع', icon: '🤝' },
+    { key: 'site_visit', label: 'Site Visit', labelAr: 'زيارة موقع', icon: '🏠' },
+    { key: 'note', label: 'Note', labelAr: 'ملاحظة', icon: '📝' },
+    { key: 'status_change', label: 'Status Change', labelAr: 'تغيير حالة', icon: '🔄' },
   ];
   const [activityTypes] = useState(() => {
     try {
@@ -451,12 +451,12 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📍 {isRTL ? 'الموقع المفضل' : 'Preferred Location'}', val: contact.preferred_location || '—' },
                 { label: '🏢 {isRTL ? 'نوع العقار' : 'Property Type'}', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: '👤 {isRTL ? 'المسؤول' : 'Assigned To'}', val: contact.assigned_to_name || '—' },
-                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: ``${daysSince(contact.last_activity_at)}d`` },
+                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: ``${ daysSince(contact.last_activity_at)}d`` },
               ].map(r => (
-                <div key={r.label} style={rowStyle}>
-                  <span style={{ color: '#8BA8C8' }}>{r.label}</span>
-                  <span style={{ color: '#E2EAF4', fontWeight: 500, maxWidth: '55%', textAlign: 'left' }}>{r.val}</span>
-                </div>
+              <div key={r.label} style={rowStyle}>
+                <span style={{ color: '#8BA8C8' }}>{r.label}</span>
+                <span style={{ color: '#E2EAF4', fontWeight: 500, maxWidth: '55%', textAlign: 'left' }}>{r.val}</span>
+              </div>
               ))}
 
               {contact.stage && (
@@ -688,7 +688,7 @@ export default function ContactsPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
-            {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', {count: filtered.length, total: contacts.length})}`}
+            {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', { count: filtered.length, total: contacts.length })}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
