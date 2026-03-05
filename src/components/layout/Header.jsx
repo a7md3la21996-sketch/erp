@@ -38,7 +38,7 @@ export default function Header() {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: '#6b7280', fontSize: 13 }}>
+        <button onClick={() => { i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar'); window.location.reload(); }} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: '#6b7280', fontSize: 13 }}>
           <Globe size={18} /> {i18n.language === 'ar' ? 'EN' : 'عربي'}
         </button>
         <button onClick={toggleTheme} style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: '#6b7280' }}>
