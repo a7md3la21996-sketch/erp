@@ -17,10 +17,10 @@ const STAGE_LABELS = { new: 'جديد', contacted: 'تم التواصل', intere
 const COLD_LABELS = { not_contacted: 'لم يُتصل به', no_answer: 'لا يرد', not_interested: 'غير مهتم', interested: 'مهتم', wrong_number: 'رقم خاطئ', call_back_later: 'اتصل لاحقاً' };
 const ACTIVITY_TYPES = { call: { label: 'مكالمة', icon: '📞' }, whatsapp: { label: 'واتساب', icon: '💬' }, email: { label: 'إيميل', icon: '📧' }, meeting: { label: 'اجتماع', icon: '🤝' }, site_visit: { label: 'زيارة موقع', icon: '🏠' }, note: { label: 'ملاحظة', icon: '📝' }, status_change: { label: 'تغيير حالة', icon: '🔄' } };
 const TEMP = {
-  hot: { label: 'حار', labelEn: 'Hot', icon: '🔴', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
-  warm: { label: 'دافئ', labelEn: 'Warm', icon: '🟠', color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
-  cool: { label: 'فاتر', labelEn: 'Cool', icon: '🟡', color: '#EAB308', bg: 'rgba(234,179,8,0.12)' },
-  cold: { label: 'بارد', labelEn: 'Cold', icon: '🔵', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+  hot: { label: 'Hot', labelAr: 'حار', icon: '🔴', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
+  warm: { label: 'Warm', labelAr: 'دافئ', icon: '🟠', color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
+  cool: { label: 'Cool', labelAr: 'فاتر', icon: '🟡', color: '#EAB308', bg: 'rgba(234,179,8,0.12)' },
+  cold: { label: 'Cold', labelAr: 'بارد', icon: '🔵', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
 };
 const TYPE = {
   lead: { label: 'ليد', labelEn: 'Lead', color: '#4A7AAB', bg: 'rgba(74,122,171,0.13)' },
@@ -112,7 +112,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
       });
       onClose();
     } catch (err) {
-      alert('خطأ في الحفظ: ' + err.message);
+      alert((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
     }
     setSaving(false);
   };
@@ -126,8 +126,8 @@ function AddContactModal({ onClose, onSave, checkDup }) {
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>{t('contacts.addContact')}</h2>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>{t('contacts.step')} {step} {t('contacts.of')} 2</p>
+            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>{i18n.language === 'ar' ? 'إضافة جهة اتصال' : 'Add Contact'}</h2>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>{isRTL ? `الخطوة ${step} من 2` : `Step ${step} of 2`}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', fontSize: 18 }}><X size={18} /></button>
         </div>
@@ -137,75 +137,75 @@ function AddContactModal({ onClose, onSave, checkDup }) {
           {step === 1 ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.fullName')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
                 <input style={inp} placeholder="محمد أحمد..." value={form.full_name} onChange={e => set('full_name', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.phone')} <span style={{ color: '#EF4444' }}>*</span></label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span></label>
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
                   onChange={e => { set('phone', e.target.value); setDupWarning(null); }}
                   onBlur={checkPhone} />
-                {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>جاري التحقق من التكرار...</p>}
+                {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12, color: '#EF4444' }}>
-                    ⚠️ هذا الرقم موجود مسبقاً باسم: <strong>{dupWarning.full_name}</strong>
-                    <br /><span style={{ color: '#F97316', fontSize: 11 }}>يمكنك الاستمرار لإضافة فرصة جديدة للنفس العميل</span>
+                    ⚠️ {isRTL ? 'هذا الرقم موجود مسبقاً باسم' : 'This number already exists for'}: <strong>{dupWarning.full_name}</strong>
+                    <br /><span style={{ color: '#F97316', fontSize: 11 }}>{isRTL ? 'يمكنك الاستمرار لإضافة فرصة' : 'You can continue to add an opportunity'} جديدة للنفس العميل</span>
                   </div>
                 )}
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.phone2')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم إضافي' : 'Secondary Phone'}</label>
                 <input style={inp} placeholder="012xxxxxxxx" value={form.phone2} onChange={e => set('phone2', e.target.value)} />
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.email')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'البريد الإلكتروني' : 'Email'}' : 'Email'}</label>
                 <input style={inp} type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.type')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'}</label>
                 <select style={sel} value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
-                  <option value="lead">ليد</option>
-                  <option value="cold">كولد كول</option>
-                  <option value="client">عميل</option>
+                  <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
+                  <option value="cold">{isRTL ? 'كولد' : 'Cold'} كول</option>
+                  <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.source')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'المصدر' : 'Source'}' : 'Source'}</label>
                 <select style={sel} value={form.source} onChange={e => set('source', e.target.value)}>
                   {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.campaign')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم {isRTL ? 'الحملة' : 'Campaign'}' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.budgetMin')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
                 <input style={inp} type="number" placeholder="1500000" value={form.budget_min} onChange={e => set('budget_min', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.budgetMax')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية إلى' : 'Budget To (EGP)'}</label>
                 <input style={inp} type="number" placeholder="3000000" value={form.budget_max} onChange={e => set('budget_max', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.location')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'الموقع المفضل' : 'Preferred Location'}' : 'Preferred Location'}</label>
                 <input style={inp} placeholder="الشيخ زايد، التجمع..." value={form.preferred_location} onChange={e => set('preferred_location', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.propertyType')}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'نوع العقار' : 'Property Type'}' : 'Property Type'}</label>
                 <select style={sel} value={form.interested_in_type} onChange={e => set('interested_in_type', e.target.value)}>
-                  <option value="residential">سكني</option>
-                  <option value="commercial">تجاري</option>
-                  <option value="administrative">إداري</option>
+                  <option value="residential">{isRTL ? 'سكني' : 'Residential'}</option>
+                  <option value="commercial">{isRTL ? 'تجاري' : 'Commercial'}</option>
+                  <option value="administrative">{isRTL ? 'إداري' : 'Administrative'}</option>
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{t('contacts.notes')}</label>
-                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder="ملاحظات إضافية..." value={form.notes} onChange={e => set('notes', e.target.value)} />
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? '{isRTL ? 'ملاحظات' : 'Notes'}' : 'Notes'}</label>
+                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder="{isRTL ? 'ملاحظات' : 'Notes'} إضافية..." value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
             </div>
           )}
@@ -213,12 +213,12 @@ function AddContactModal({ onClose, onSave, checkDup }) {
 
         {/* Footer */}
         <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>إلغاء</button>
+          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
           <div style={{ display: 'flex', gap: 10 }}>
-            {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>← السابق</button>}
+            {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
             {step === 1
-              ? <button onClick={() => setStep(2)} disabled={!form.phone} style={{ padding: '9px 22px', background: form.phone ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>التالي →</button>
-              : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? 'جاري الحفظ...' : '💾 حفظ'}</button>
+              ? <button onClick={() => setStep(2)} disabled={!form.phone} style={{ padding: '9px 22px', background: form.phone ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
+              : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? '💾 حفظ' : '💾 Save')}</button>
             }
           </div>
         </div>
@@ -235,21 +235,21 @@ function BlacklistModal({ contact, onClose, onConfirm }) {
       <div style={{ background: '#1A2B3C', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 44, marginBottom: 8 }}>⛔</div>
-          <h3 style={{ color: '#E2EAF4', margin: '0 0 6px', fontSize: 16 }}>{t('contacts.blacklistTitle')}</h3>
-          <p style={{ color: '#8BA8C8', fontSize: 13, margin: 0 }}>{t('contacts.blacklistWarning')}</p>
+          <h3 style={{ color: '#E2EAF4', margin: '0 0 6px', fontSize: 16 }}>{isRTL ? 'إضافة للقائمة السوداء' : 'Add to Blacklist'}</h3>
+          <p style={{ color: '#8BA8C8', fontSize: 13, margin: 0 }}>{isRTL ? 'سيتم منع هذا الرقم من الإضافة مستقبلاً' : 'This number will be blocked from future additions'}</p>
         </div>
         <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#E2EAF4' }}>
           {contact?.full_name} — {contact?.phone}
         </div>
-        <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 8 }}>{t('contacts.blacklistReason')} <span style={{ color: '#EF4444' }}>*</span></label>
+        <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 8 }}>{isRTL ? 'سبب الإضافة' : 'Reason'} <span style={{ color: '#EF4444' }}>*</span></label>
         <input type="text" value={reason} onChange={e => setReason(e.target.value)}
           placeholder="مثال: سلوك مسيء، احتيال، رقم خاطئ متكرر..."
           style={{ width: '100%', background: '#0F1E2D', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '9px 12px', color: '#E2EAF4', fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 20 }} />
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>إلغاء</button>
+          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
           <button onClick={() => { if (reason.trim()) { onConfirm(contact, reason); onClose(); } }}
             style={{ padding: '9px 18px', background: reason.trim() ? 'linear-gradient(135deg,#7f1d1d,#EF4444)' : 'rgba(239,68,68,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: reason.trim() ? 'pointer' : 'not-allowed' }}>
-            تأكيد الإضافة
+            {isRTL ? 'تأكيد الإضافة' : 'Confirm'}
           </button>
         </div>
       </div>
@@ -363,7 +363,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
   const t = TEMP[contact.temperature];
   const tp = TYPE[contact.contact_type];
 
-  const tabs = [['info', 'البيانات'], ['activities', 'الأنشطة'], ['opportunities', 'الفرص']];
+  const tabs = [['info', isRTL ? 'البيانات' : 'Info'], ['activities', isRTL ? 'الأنشطة' : 'Activities'], ['opportunities', isRTL ? 'الفرص' : 'Opportunities']];
 
   const rowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(74,122,171,0.08)', fontSize: 13 };
 
@@ -388,7 +388,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : '#E2EAF4' }}>{contact.full_name || 'بدون اسم'}</div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
                   <Chip label={tp?.label} color={tp?.color} bg={tp?.bg} />
-                  {contact.is_blacklisted && <Chip label="بلاك ليست" color="#EF4444" bg="rgba(239,68,68,0.12)" />}
+                  {contact.is_blacklisted && <Chip label="{isRTL ? 'بلاك ليست' : 'Blacklist'}" color="#EF4444" bg="rgba(239,68,68,0.12)" />}
                 </div>
               </div>
             </div>
@@ -445,13 +445,13 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📱 الهاتف الأول', val: contact.phone },
                 { label: '📱 الهاتف الثاني', val: contact.phone2 || '—' },
                 { label: '📧 الإيميل', val: contact.email || '—' },
-                { label: '📣 المصدر', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
-                { label: '🎯 الحملة', val: contact.campaign_name || '—' },
-                { label: '💰 الميزانية', val: fmtBudget(contact.budget_min, contact.budget_max) },
-                { label: '📍 الموقع المفضل', val: contact.preferred_location || '—' },
-                { label: '🏢 نوع العقار', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
-                { label: '👤 المسؤول', val: contact.assigned_to_name || '—' },
-                { label: '⏱️ آخر نشاط', val: ``${daysSince(contact.last_activity_at)} ${t('contacts.daysAgo')}`` },
+                { label: '📣 {isRTL ? 'المصدر' : 'Source'}', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
+                { label: '🎯 {isRTL ? 'الحملة' : 'Campaign'}', val: contact.campaign_name || '—' },
+                { label: '💰 {isRTL ? 'الميزانية' : 'Budget'}', val: fmtBudget(contact.budget_min, contact.budget_max) },
+                { label: '📍 {isRTL ? 'الموقع المفضل' : 'Preferred Location'}', val: contact.preferred_location || '—' },
+                { label: '🏢 {isRTL ? 'نوع العقار' : 'Property Type'}', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
+                { label: '👤 {isRTL ? 'المسؤول' : 'Assigned To'}', val: contact.assigned_to_name || '—' },
+                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: ``${daysSince(contact.last_activity_at)}d`` },
               ].map(r => (
                 <div key={r.label} style={rowStyle}>
                   <span style={{ color: '#8BA8C8' }}>{r.label}</span>
@@ -473,7 +473,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
                 <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444' }}>
-                  ⛔ سبب البلاك ليست: {contact.blacklist_reason}
+                  {isRTL ? '⛔ سبب ال{isRTL ? 'بلاك ليست' : 'Blacklist'}:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
                 </div>
               )}
             </div>
@@ -484,7 +484,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
             <div>
               {!showActivityForm && (
                 <button onClick={() => setShowActivityForm(true)} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
-                  {t('contacts.activities.addNew')}
+                  {isRTL ? '+ إضافة نشاط' : '+ Add Activity'}
                 </button>
               )}
               {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
@@ -494,7 +494,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
               ) : activities.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
                   <Clock size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                  <p style={{ margin: 0, fontSize: 13 }}>{t('contacts.activities.noActivities')}</p>
+                  <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد أنشطة بعد' : 'No activities yet'}</p>
                 </div>
               ) : activities.map(act => (
                 <div key={act.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
@@ -519,12 +519,12 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
           {tab === 'opportunities' && (
             <div>
               <button style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
-                {t('contacts.opportunities.addNew')}
+                {isRTL ? '+ فتح فرصة جديدة' : '+ New Opportunity'}
               </button>
               {opportunities.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
                   <Star size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                  <p style={{ margin: 0, fontSize: 13 }}>{t('contacts.opportunities.noOpportunities')}</p>
+                  <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد فرص مرتبطة' : 'No opportunities linked'}</p>
                 </div>
               ) : opportunities.map(opp => (
                 <div key={opp.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
@@ -686,17 +686,17 @@ export default function ContactsPage() {
       {/* Page Header */}
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{t('contacts.title')}</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
             {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', {count: filtered.length, total: contacts.length})}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button style={{ padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#6b7280', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Download size={14} /> تصدير
+            <Download size={14} /> {isRTL ? 'تصدير' : 'Export'}
           </button>
           <button style={{ padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#6b7280', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Upload size={14} /> استيراد
+            <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
           <button onClick={() => setShowAddModal(true)} style={{ padding: '9px 18px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Plus size={14} /> إضافة جهة اتصال
@@ -707,10 +707,10 @@ export default function ContactsPage() {
       {/* Type Chips */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         {[
-          { label: t('common.all'), value: 'all', count: stats.total, color: '#4A7AAB' },
-          { label: t('contacts.lead'), value: 'lead', count: stats.leads, color: '#4A7AAB' },
-          { label: t('contacts.cold'), value: 'cold', count: stats.cold, color: '#8BA8C8' },
-          { label: t('contacts.client'), value: 'client', count: stats.clients, color: '#10B981' },
+          { label: i18n.language === 'ar' ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
+          { label: i18n.language === 'ar' ? 'ليدز' : 'Leads', value: 'lead', count: stats.leads, color: '#4A7AAB' },
+          { label: i18n.language === 'ar' ? 'كولد' : 'Cold', value: 'cold', count: stats.cold, color: '#8BA8C8' },
+          { label: i18n.language === 'ar' ? 'عملاء' : 'Clients', value: 'client', count: stats.clients, color: '#10B981' },
         ].map(s => (
           <button key={s.value} onClick={() => setFilterType(s.value)} style={{
             padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterType === s.value ? s.color : '#e5e7eb'}`,
@@ -725,14 +725,14 @@ export default function ContactsPage() {
           background: showBlacklisted ? 'rgba(239,68,68,0.08)' : '#fff',
           color: showBlacklisted ? '#EF4444' : '#6b7280', fontSize: 12, fontWeight: showBlacklisted ? 700 : 400, cursor: 'pointer',
         }}>
-          ⛔ بلاك ليست <span style={{ background: showBlacklisted ? '#EF4444' : '#e5e7eb', color: showBlacklisted ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.blacklisted}</span>
+          ⛔ {isRTL ? 'بلاك ليست' : 'Blacklist'} <span style={{ background: showBlacklisted ? '#EF4444' : '#e5e7eb', color: showBlacklisted ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.blacklisted}</span>
         </button>
         <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} style={{
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterTemp === 'hot' ? '#EF4444' : '#e5e7eb'}`,
           background: filterTemp === 'hot' ? 'rgba(239,68,68,0.08)' : '#fff',
           color: filterTemp === 'hot' ? '#EF4444' : '#6b7280', fontSize: 12, cursor: 'pointer',
         }}>
-          🔴 حار فقط <span style={{ background: filterTemp === 'hot' ? '#EF4444' : '#e5e7eb', color: filterTemp === 'hot' ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.hot}</span>
+          🔴 {isRTL ? 'حار فقط' : 'Hot Only'} <span style={{ background: filterTemp === 'hot' ? '#EF4444' : '#e5e7eb', color: filterTemp === 'hot' ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.hot}</span>
         </button>
       </div>
 
@@ -740,21 +740,21 @@ export default function ContactsPage() {
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
           <Search size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-          <input type="text" {...{placeholder: t('contacts.searchPlaceholder')}} value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={search} onChange={e => setSearch(e.target.value)}
             style={{ ...sel, width: '100%', paddingRight: 32, boxSizing: 'border-box' }} />
         </div>
         <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={sel}>
-          <option value="all">{t('contacts.allSources')}</option>
+          <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
           {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} style={sel}>
-          <option value="all">{t('contacts.allTemps')}</option>
+          <option value="all">{isRTL ? 'كل الدرجات' : 'All Temps'}</option>
           {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
         </select>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sel}>
-          <option value="last_activity">ترتيب: آخر نشاط</option>
-          <option value="score">ترتيب: Lead Score</option>
-          <option value="name">ترتيب: الاسم</option>
+          <option value="last_activity">{i18n.language === 'ar' ? 'ترتيب: {isRTL ? 'آخر نشاط' : 'Last Activity'}' : 'Sort: Last Activity'}</option>
+          <option value="score">{i18n.language === 'ar' ? 'ترتيب: Lead Score' : 'Sort: Lead Score'}</option>
+          <option value="name">{i18n.language === 'ar' ? 'ترتيب: الاسم' : 'Sort: Name'}</option>
         </select>
       </div>
 
@@ -775,7 +775,7 @@ export default function ContactsPage() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={9} style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
                   <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-                  {t('contacts.noResults')}
+                  {isRTL ? 'لا توجد نتائج' : 'No results found'}
                 </td></tr>
               ) : filtered.map((c) => (
                 <tr key={c.id}
@@ -830,7 +830,7 @@ export default function ContactsPage() {
                       <a href={`tel:${c.phone}`} title="اتصال" style={{ padding: '5px 8px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, color: '#10B981', fontSize: 13, textDecoration: 'none' }}>📞</a>
                       <a href={`https://wa.me/2${c.phone}`} target="_blank" rel="noreferrer" title="واتساب" style={{ padding: '5px 8px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 6, color: '#25D366', fontSize: 13, textDecoration: 'none' }}>💬</a>
                       {!c.is_blacklisted && (
-                        <button title="بلاك ليست" onClick={() => setBlacklistTarget(c)}
+                        <button title="{isRTL ? 'بلاك ليست' : 'Blacklist'}" onClick={() => setBlacklistTarget(c)}
                           style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>⛔</button>
                       )}
                     </div>
