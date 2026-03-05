@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { parsePhoneNumber, isValidPhoneNumber } from 'libphonenumber-js';
 import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Filter, Ban, X, ChevronDown, ChevronRight, Clock, Star } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
@@ -78,21 +77,6 @@ function ScorePill({ score }) {
   );
 }
 
-
-// ── Phone Validation ──────────────────────────────────────────────────────
-function validatePhone(phone) {
-  if (!phone) return null;
-  const cleaned = phone.replace(/\s+/g, '');
-  try {
-    if (cleaned.startsWith('+')) {
-      if (isValidPhoneNumber(cleaned)) return { valid: true };
-      return { valid: false };
-    }
-    if (isValidPhoneNumber(cleaned, 'EG')) return { valid: true };
-    return { valid: false };
-  } catch { return { valid: false }; }
-}
-
 // ── Add Contact Modal ──────────────────────────────────────────────────────
 function AddContactModal({ onClose, onSave, checkDup }) {
   const [step, setStep] = useState(1);
@@ -103,16 +87,12 @@ function AddContactModal({ onClose, onSave, checkDup }) {
     interested_in_type: 'residential', notes: '',
   });
   const [dupWarning, setDupWarning] = useState(null);
-  const [phoneError, setPhoneError] = useState(null);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const checkPhone = async () => {
-    if (!form.phone) return;
-    const validation = validatePhone(form.phone);
-    if (!validation?.valid) { setPhoneError(true); return; }
-    setPhoneError(null);
+    if (!form.phone || form.phone.length < 10) return;
     setChecking(true);
     try {
       const dup = await checkDup(form.phone);
@@ -162,12 +142,11 @@ function AddContactModal({ onClose, onSave, checkDup }) {
               </div>
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span></label>
-                <input style={{ ...inp, borderColor: phoneError ? '#EF4444' : dupWarning ? '#F97316' : 'rgba(74,122,171,0.25)' }}
+                <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
-                  onChange={e => { set('phone', e.target.value); setDupWarning(null); setPhoneError(null); }}
+                  onChange={e => { set('phone', e.target.value); setDupWarning(null); }}
                   onBlur={checkPhone} />
                 {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
-                {phoneError && <p style={{ fontSize: 11, color: '#EF4444', margin: '4px 0 0' }}>❌ {isRTL ? 'رقم الهاتف غير صحيح' : 'Invalid phone number'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12, color: '#EF4444' }}>
                     ⚠️ {isRTL ? 'هذا الرقم موجود مسبقاً باسم' : 'This number already exists for'}: <strong>{dupWarning.full_name}</strong>
@@ -198,7 +177,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم {isRTL ? 'الحملة' : 'Campaign'}' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
             </div>
@@ -409,7 +388,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : '#E2EAF4' }}>{contact.full_name || 'بدون اسم'}</div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
                   <Chip label={tp?.label} color={tp?.color} bg={tp?.bg} />
-                  {contact.is_blacklisted && <Chip label="isRTL ? 'بلاك ليست' : 'Blacklist'" color="#EF4444" bg="rgba(239,68,68,0.12)" />}
+                  {contact.is_blacklisted && <Chip label="{isRTL ? 'بلاك ليست' : 'Blacklist'}" color="#EF4444" bg="rgba(239,68,68,0.12)" />}
                 </div>
               </div>
             </div>
@@ -466,13 +445,13 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📱 الهاتف الأول', val: contact.phone },
                 { label: '📱 الهاتف الثاني', val: contact.phone2 || '—' },
                 { label: '📧 الإيميل', val: contact.email || '—' },
-                { label: '📣 {isRTL ? 'المصدر' : 'Source'}', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
-                { label: '🎯 {isRTL ? 'الحملة' : 'Campaign'}', val: contact.campaign_name || '—' },
-                { label: '💰 {isRTL ? 'الميزانية' : 'Budget'}', val: fmtBudget(contact.budget_min, contact.budget_max) },
-                { label: '📍 {isRTL ? 'الموقع المفضل' : 'Preferred Location'}', val: contact.preferred_location || '—' },
-                { label: '🏢 {isRTL ? 'نوع العقار' : 'Property Type'}', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
-                { label: '👤 {isRTL ? 'المسؤول' : 'Assigned To'}', val: contact.assigned_to_name || '—' },
-                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: ``${ daysSince(contact.last_activity_at)}d`` },
+                { label: isRTL ? '📣 المصدر' : '📣 Source', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
+                { label: isRTL ? '🎯 الحملة' : '🎯 Campaign', val: contact.campaign_name || '—' },
+                { label: isRTL ? '💰 الميزانية' : '💰 Budget', val: fmtBudget(contact.budget_min, contact.budget_max) },
+                { label: isRTL ? '📍 الموقع المفضل' : '📍 Preferred Location', val: contact.preferred_location || '—' },
+                { label: isRTL ? '🏢 نوع العقار' : '🏢 Property Type', val: { residential: isRTL ? 'سكني' : 'Residential', commercial: isRTL ? 'تجاري' : 'Commercial', administrative: isRTL ? 'إداري' : 'Administrative' }[contact.interested_in_type] || '—' },
+                { label: isRTL ? '👤 المسؤول' : '👤 Assigned To', val: contact.assigned_to_name || '—' },
+                { label: isRTL ? '⏱️ آخر نشاط' : '⏱️ Last Activity', val: `${daysSince(contact.last_activity_at)}d` },
               ].map(r => (
               <div key={r.label} style={rowStyle}>
                 <span style={{ color: '#8BA8C8' }}>{r.label}</span>
@@ -494,7 +473,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
                 <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444' }}>
-                  {isRTL ? '⛔ سبب البلاك ليست:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
+                  {isRTL ? '⛔ سبب ال{isRTL ? 'بلاك ليست' : 'Blacklist'}:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
                 </div>
               )}
             </div>
@@ -746,7 +725,7 @@ export default function ContactsPage() {
           background: showBlacklisted ? 'rgba(239,68,68,0.08)' : '#fff',
           color: showBlacklisted ? '#EF4444' : '#6b7280', fontSize: 12, fontWeight: showBlacklisted ? 700 : 400, cursor: 'pointer',
         }}>
-          ⛔ isRTL ? 'بلاك ليست' : 'Blacklist' <span style={{ background: showBlacklisted ? '#EF4444' : '#e5e7eb', color: showBlacklisted ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.blacklisted}</span>
+          ⛔ {isRTL ? 'بلاك ليست' : 'Blacklist'} <span style={{ background: showBlacklisted ? '#EF4444' : '#e5e7eb', color: showBlacklisted ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.blacklisted}</span>
         </button>
         <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} style={{
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterTemp === 'hot' ? '#EF4444' : '#e5e7eb'}`,
@@ -851,7 +830,7 @@ export default function ContactsPage() {
                       <a href={`tel:${c.phone}`} title="اتصال" style={{ padding: '5px 8px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, color: '#10B981', fontSize: 13, textDecoration: 'none' }}>📞</a>
                       <a href={`https://wa.me/2${c.phone}`} target="_blank" rel="noreferrer" title="واتساب" style={{ padding: '5px 8px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 6, color: '#25D366', fontSize: 13, textDecoration: 'none' }}>💬</a>
                       {!c.is_blacklisted && (
-                        <button title="isRTL ? 'بلاك ليست' : 'Blacklist'" onClick={() => setBlacklistTarget(c)}
+                        <button title="{isRTL ? 'بلاك ليست' : 'Blacklist'}" onClick={() => setBlacklistTarget(c)}
                           style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>⛔</button>
                       )}
                     </div>
