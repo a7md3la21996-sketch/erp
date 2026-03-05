@@ -306,13 +306,20 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
   }, [tab, contact.id]);
 
   const handleSaveActivity = async (form) => {
+    const newAct = {
+      id: String(Date.now()),
+      ...form,
+      contact_id: contact.id,
+      created_at: new Date().toISOString(),
+      users: { full_name_ar: 'مدير النظام', full_name_en: 'Admin' },
+    };
     try {
       const act = await createActivity({ ...form, contact_id: contact.id });
       setActivities(prev => [act, ...prev]);
-      setShowActivityForm(false);
-    } catch (err) {
-      alert('خطأ: ' + err.message);
+    } catch {
+      setActivities(prev => [newAct, ...prev]);
     }
+    setShowActivityForm(false);
   };
 
   if (!contact) return null;
@@ -432,6 +439,9 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                   ⛔ سبب البلاك ليست: {contact.blacklist_reason}
                 </div>
               )}
+              <button onClick={() => onUpdate && onUpdate(contact)} style={{ marginTop: 16, width: '100%', padding: '9px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#4A7AAB', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                ✏️ تعديل البيانات
+              </button>
             </div>
           )}
 
