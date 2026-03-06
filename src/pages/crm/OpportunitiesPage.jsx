@@ -202,7 +202,7 @@ function AddOpportunityModal({ isDark, onClose, onSave, defaultStage }) {
         background: isDark ? "#1e293b" : "#fff",
         borderRadius: 16, padding: 24, zIndex: 1,
         boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-        direction: "rtl",
+        direction: isRTL ? 'rtl' : 'ltr',
       }}>
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
@@ -576,7 +576,7 @@ function KanbanColumn({ stage, opportunities, isDark, dragState, onDragStart, on
 export default function OpportunitiesPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const effectiveDark = isDark;
+  const isDark = isDark;
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
@@ -622,18 +622,18 @@ export default function OpportunitiesPage() {
 
   const selectStyle = {
     padding: "7px 12px", borderRadius: 8, fontSize: 13, cursor: "pointer",
-    border: `1px solid ${effectiveDark ? "#334155" : "#E2E8F0"}`,
-    background: effectiveDark ? "#1e293b" : "#fff",
-    color: effectiveDark ? "#e2e8f0" : "#1B3347",
+    border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
+    background: isDark ? '#1a2234' : '#ffffff',
+    color: isDark ? "#e2e8f0" : "#1B3347",
     fontFamily: "inherit", outline: "none",
   };
 
   return (
     <div style={{
       minHeight: "100vh",
-      background: effectiveDark ? "#0f172a" : "#F1F5F9",
+      background: isDark ? '#152232' : '#f9fafb',
       fontFamily: "'Cairo', 'Tajawal', sans-serif",
-      direction: "rtl",
+      direction: isRTL ? 'rtl' : 'ltr',
       padding: "20px 20px 40px",
     }}>
       {/* ── HEADER ── */}
@@ -647,11 +647,11 @@ export default function OpportunitiesPage() {
             }}>
               <Icon.Kanban style={{ width: 18, height: 18, color: "#fff" }} />
             </div>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: effectiveDark ? "#e2e8f0" : "#1B3347" }}>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: isDark ? "#e2e8f0" : "#1B3347" }}>
               الفرص البيعية
             </h1>
           </div>
-          <p style={{ margin: 0, fontSize: 13, color: effectiveDark ? "#64748b" : "#94a3b8" }}>
+          <p style={{ margin: 0, fontSize: 13, color: isDark ? "#64748b" : "#94a3b8" }}>
             إدارة وتتبع فرص المبيعات عبر مراحل البيع
           </p>
         </div>
@@ -680,17 +680,17 @@ export default function OpportunitiesPage() {
           { label: "فرص ساخنة",     value: hotCount,               color: "#ef4444", icon: Icon.Flame },
         ].map((s, i) => (
           <div key={i} style={{
-            flex: "1 1 140px", background: effectiveDark ? "#1e293b" : "#fff",
+            flex: "1 1 140px", background: isDark ? '#1a2234' : '#ffffff',
             borderRadius: 12, padding: "14px 16px",
-            border: `1px solid ${effectiveDark ? "#334155" : "#E2E8F0"}`,
+            border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
             display: "flex", alignItems: "center", gap: 12,
           }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: s.color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <s.icon style={{ width: 16, height: 16, color: s.color }} />
             </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 800, color: effectiveDark ? "#e2e8f0" : "#1B3347" }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: effectiveDark ? "#64748b" : "#94a3b8" }}>{s.label}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: isDark ? "#e2e8f0" : "#1B3347" }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: isDark ? "#64748b" : "#94a3b8" }}>{s.label}</div>
             </div>
           </div>
         ))}
@@ -698,9 +698,9 @@ export default function OpportunitiesPage() {
 
       {/* ── FILTERS ── */}
       <div style={{
-        background: effectiveDark ? "#1e293b" : "#fff",
+        background: isDark ? '#1a2234' : '#ffffff',
         borderRadius: 12, padding: "12px 16px", marginBottom: 16,
-        border: `1px solid ${effectiveDark ? "#334155" : "#E2E8F0"}`,
+        border: `1px solid ${isDark ? "#334155" : "#E2E8F0"}`,
         display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap",
       }}>
         {/* Search */}
@@ -732,7 +732,7 @@ export default function OpportunitiesPage() {
         {/* Temp filter */}
         <div style={{ display: "flex", gap: 6 }}>
           {[
-            { val: "all", label: "الكل",  color: effectiveDark ? "#475569" : "#64748b" },
+            { val: "all", label: "الكل",  color: isDark ? "#475569" : "#64748b" },
             { val: "hot",  label: "ساخن", color: "#ef4444" },
             { val: "warm", label: "دافئ", color: "#f97316" },
             { val: "cool", label: "عادي", color: "#EAB308" },
@@ -741,7 +741,7 @@ export default function OpportunitiesPage() {
             <button key={t.val} onClick={() => setFilterTemp(t.val)} style={{
               padding: "6px 12px", borderRadius: 7, border: "none", cursor: "pointer",
               background: filterTemp === t.val ? t.color + "22" : "none",
-              color: filterTemp === t.val ? t.color : (effectiveDark ? "#475569" : "#94a3b8"),
+              color: filterTemp === t.val ? t.color : (isDark ? "#475569" : "#94a3b8"),
               fontWeight: filterTemp === t.val ? 700 : 400,
               fontSize: 12, fontFamily: "inherit",
               outline: filterTemp === t.val ? `1px solid ${t.color}` : "none",
@@ -771,7 +771,7 @@ export default function OpportunitiesPage() {
             key={stage.id}
             stage={stage}
             opportunities={filtered}
-            isDark={effectiveDark}
+            isDark={isDark}
             dragState={dragState}
             onDragStart={handleDragStart}
             onDrop={handleDrop}
@@ -787,7 +787,7 @@ export default function OpportunitiesPage() {
       {/* ── MODALS ── */}
       {showAddModal && (
         <AddOpportunityModal
-          isDark={effectiveDark}
+          isDark={isDark}
           defaultStage={addModalStage}
           onClose={() => { setShowAddModal(false); setEditTarget(null); }}
           onSave={handleSave}
