@@ -583,6 +583,32 @@ export default function ContactsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [blacklistTarget, setBlacklistTarget] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const isAdmin = profile?.role === 'admin';
+
+  const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  const toggleSelectAll = () => setSelectedIds(selectedIds.length === filtered.length ? [] : filtered.map(c => c.id));
+
+  const handleDelete = (id) => {
+    if (!window.confirm(isRTL ? 'هل أنت متأكد من الحذف؟' : 'Are you sure?')) return;
+    const updated = contacts.filter(c => c.id !== id);
+    setContacts(updated);
+    localStorage.setItem('platform_contacts', JSON.stringify(updated));
+  };
+
+  const handleDeleteSelected = () => {
+    if (!window.confirm(isRTL ? `حذف ${selectedIds.length} عميل؟` : `Delete ${selectedIds.length} contacts?`)) return;
+    const updated = contacts.filter(c => !selectedIds.includes(c.id));
+    setContacts(updated);
+    localStorage.setItem('platform_contacts', JSON.stringify(updated));
+    setSelectedIds([]);
+  };
+
+  const handleStageChange = (id, stage) => {
+    const updated = contacts.map(c => c.id === id ? { ...c, stage } : c);
+    setContacts(updated);
+    localStorage.setItem('platform_contacts', JSON.stringify(updated));
+  };
 
   // Load contacts — Supabase first, then localStorage, then MOCK
   useEffect(() => {
