@@ -53,9 +53,8 @@ export default function Sidebar({ collapsed, onToggle }) {
                   textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'background 0.15s',
                   background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
                 }}>
-                  {!collapsed && isRTL && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
-                  <Icon size={20} />
-                  {!collapsed && !isRTL && <span>{item.label[lang]}</span>}
+                  <Icon size={20} style={{ flexShrink: 0 }} />
+                  {!collapsed && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
                 </Link>
               ) : (
                 <button onClick={() => toggleMenu(item.id)} style={{
@@ -64,10 +63,9 @@ export default function Sidebar({ collapsed, onToggle }) {
                   background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
                   textAlign: 'right',
                 }}>
-                  {!collapsed && isRTL && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
-                  <Icon size={20} />
-                  {!collapsed && !isRTL && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
-                  {!collapsed && <ChevronDown size={16} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />}
+                  <Icon size={20} style={{ flexShrink: 0 }} />
+                  {!collapsed && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
+                  {!collapsed && <ChevronDown size={16} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />}
                 </button>
               )}
 
