@@ -106,7 +106,7 @@ function PhoneCell({ phone, small = false }) {
 }
 
 // ── Add Contact Modal ──────────────────────────────────────────────────────
-function AddContactModal({ onClose, onSave, checkDup }) {
+function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const [step, setStep] = useState(1);
@@ -178,9 +178,18 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                   onBlur={checkPhone} />
                 {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
-                  <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12, color: '#EF4444' }}>
-                    ⚠️ {isRTL ? 'هذا الرقم موجود مسبقاً باسم' : 'This number already exists for'}: <strong>{dupWarning.full_name}</strong>
-                    <br /><span style={{ color: '#F97316', fontSize: 11 }}>{isRTL ? 'يمكنك الاستمرار لإضافة فرصة' : 'You can continue to add an opportunity'} جديدة للنفس العميل</span>
+                  <div style={{ marginTop: 8, padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 12 }}>
+                    <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong></div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => { onOpenOpportunity(dupWarning); onClose(); }}
+                        style={{ flex: 1, padding: '8px 12px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                        ✨ {isRTL ? 'فتح فرصة جديدة لـ ' + dupWarning.full_name : 'New opportunity for ' + dupWarning.full_name}
+                      </button>
+                      <button onClick={onClose}
+                        style={{ padding: '8px 12px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 12, cursor: 'pointer' }}>
+                        {isRTL ? 'إلغاء' : 'Cancel'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -247,7 +256,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
           <div style={{ display: 'flex', gap: 10 }}>
             {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
             {step === 1
-              ? <button onClick={() => setStep(2)} disabled={!form.phone} style={{ padding: '9px 22px', background: form.phone ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
+              ? <button onClick={() => setStep(2)} disabled={!form.phone || !!dupWarning} style={{ padding: '9px 22px', background: (form.phone && !dupWarning) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
               : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? '💾 حفظ' : '💾 Save')}</button>
             }
           </div>
@@ -941,7 +950,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Modals */}
-      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={checkDuplicate} />}
+      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={checkDuplicate} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => setContacts(prev => prev.map(c => c.id === updated.id ? updated : c))} />}
       {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
     </div>
