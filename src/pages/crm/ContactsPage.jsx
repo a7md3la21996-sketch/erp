@@ -228,7 +228,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
             {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
             {step === 1
               ? <button onClick={() => setStep(2)} disabled={!form.phone || !!phoneError} style={{ padding: '9px 22px', background: form.phone ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
-              : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? '💾 حفظ' : '💾 Save')}</button>
+              : <button onClick={handleSave} disabled={saving || !!dupWarning} style={{ padding: "9px 22px", background: saving || dupWarning ? "rgba(74,122,171,0.3)" : "linear-gradient(135deg,#2B4C6F,#4A7AAB)"', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? '💾 حفظ' : '💾 Save')}</button>
             }
           </div>
         </div>
