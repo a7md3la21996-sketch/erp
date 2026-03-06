@@ -756,7 +756,7 @@ export default function ContactsPage() {
           {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
         </select>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sel}>
-          <option value="last_activity">{i18n.language === 'ar' ? 'ترتيب: {isRTL ? 'آخر نشاط' : 'Last Activity'}' : 'Sort: Last Activity'}</option>
+          <option value="last_activity">{isRTL ? 'ترتيب: آخر نشاط' : 'Sort: Last Activity'}</option>
           <option value="score">{i18n.language === 'ar' ? 'ترتيب: Lead Score' : 'Sort: Lead Score'}</option>
           <option value="name">{i18n.language === 'ar' ? 'ترتيب: الاسم' : 'Sort: Name'}</option>
         </select>
