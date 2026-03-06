@@ -53,6 +53,12 @@ const fmtBudget = (min, max) => {
 };
 const daysSince = d => Math.floor((Date.now() - new Date(d)) / 86400000);
 const initials = name => name ? name.trim().charAt(0) : '?';
+const validatePhone = (p) => {
+  if (!p) return false;
+  if (p.startsWith('+')) return p.length >= 10 && p.length <= 15;
+  if (p.startsWith('0')) return p.length === 11;
+  return false;
+};
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 function Chip({ label, color, bg, size = 'sm' }) {
@@ -171,10 +177,10 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <input style={inp} placeholder="محمد أحمد..." value={form.full_name} onChange={e => set('full_name', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span></label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span> {form.phone && !validatePhone(form.phone) && <span style={{ color: '#F97316', fontSize: 11 }}>{form.phone.startsWith('+') ? '(10-15 digits)' : isRTL ? '(11 رقم)' : '(11 digits)'}</span>}</label>
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
-                  onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (v.length >= 10) { checkDup(v).then(dup => setDupWarning(dup || null)).catch(() => {}); } }} />
+                  onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkDup(v).then(dup => setDupWarning(dup || null)).catch(() => {}); } }} />
                 {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 12 }}>
@@ -268,7 +274,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
           <div style={{ display: 'flex', gap: 10 }}>
             {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
             {step === 1
-              ? <button onClick={() => setStep(2)} disabled={!form.phone || !!dupWarning} style={{ padding: '9px 22px', background: (form.phone && !dupWarning) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
+              ? <button onClick={() => setStep(2)} disabled={!validatePhone(form.phone) || !!dupWarning} style={{ padding: '9px 22px', background: (validatePhone(form.phone) && !dupWarning) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
               : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? '💾 حفظ' : '💾 Save')}</button>
             }
           </div>
