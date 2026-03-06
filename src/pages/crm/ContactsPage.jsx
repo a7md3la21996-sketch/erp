@@ -688,6 +688,7 @@ export default function ContactsPage() {
   const [blacklistTarget, setBlacklistTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const isAdmin = profile?.role === 'admin';
 
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -829,7 +830,7 @@ export default function ContactsPage() {
           <button style={{ padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#6b7280', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Download size={14} /> {isRTL ? 'تصدير' : 'Export'}
           </button>
-          <button style={{ padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#6b7280', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={() => setShowImportModal(true)} style={{ padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#6b7280', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
           <button onClick={() => setShowAddModal(true)} style={{ padding: '9px 18px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
