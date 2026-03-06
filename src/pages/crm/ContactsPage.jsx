@@ -944,7 +944,10 @@ export default function ContactsPage() {
               <tr>
                 <th style={{...th, width: 36, padding: '10px 8px'}}><input type="checkbox" checked={selectedIds.length === filtered.length && filtered.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /></th>
                 <th style={{...th, width: 50}}>ID</th>
-                {[t('contacts.fullName'), t('contacts.phone'), t('contacts.type'), t('contacts.temperature'), t('contacts.source'), t('contacts.stage'), t('contacts.budget'), 'Score', t('common.actions')].map(h => (
+                {(isRTL
+                  ? [t('common.actions'), 'Score', t('contacts.budget'), t('contacts.stage'), t('contacts.source'), t('contacts.temperature'), t('contacts.type'), t('contacts.phone'), t('contacts.fullName')]
+                  : [t('contacts.fullName'), t('contacts.phone'), t('contacts.type'), t('contacts.temperature'), t('contacts.source'), t('contacts.stage'), t('contacts.budget'), 'Score', t('common.actions')]
+                ).map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
               </tr>
@@ -964,10 +967,9 @@ export default function ContactsPage() {
                   onMouseEnter={e => { if (!selectedIds.includes(c.id)) e.currentTarget.style.background = c.rowHover; }}
                   onMouseLeave={e => { e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
                 >
-                  {/* Checkbox */}
-                  <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>
-                  {/* ID */}
-                  <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>
+                  {/* Checkbox + ID - hidden in RTL */}
+                  {!isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
+                  {!isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
                   {/* Name */}
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1009,6 +1011,9 @@ export default function ContactsPage() {
                   </td>
                   {/* Budget */}
                   <td style={{ ...td, fontSize: 12, color: '#6b7280' }}>{fmtBudget(c.budget_min, c.budget_max)}</td>
+                  {/* ID + Checkbox - shown at end in RTL */}
+                  {isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
+                  {isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
                   {/* Score */}
                   <td style={td}><ScorePill score={c.lead_score || 0} /></td>
                   {/* Actions */}
