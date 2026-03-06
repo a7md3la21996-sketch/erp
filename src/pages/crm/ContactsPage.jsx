@@ -159,7 +159,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12, color: '#EF4444' }}>
-                    ⚠️ {isRTL ? 'هذا الرقم موجود مسبقاً باسم' : 'This number already exists for'}: <strong>{dupWarning.full_name}</strong>
+                    ⚠️ {isRTL ? 'هذا الرقم موجود مسبقاً باسم' : 'This number already exists for'}: <strong>{dupWarning?.full_name || dupWarning?.phone}</strong>
                     <br /><span style={{ color: '#F97316', fontSize: 11 }}>{isRTL ? 'يمكنك الاستمرار لإضافة فرصة' : 'You can continue to add an opportunity'} جديدة للنفس العميل</span>
                   </div>
                 )}
