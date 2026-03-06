@@ -91,13 +91,16 @@ function PhoneCell({ phone, small = false }) {
     });
   };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}
-      onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}
-      onClick={handleCopy} title={copied ? "✓ Copied!" : "Click to copy"}>
-      <span style={{ fontSize: small ? 11 : 13, color: small ? "#9ca3af" : "#374151", fontFamily: "monospace" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "3px 0" }}
+      onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}>
+      <span style={{ fontSize: small ? 11 : 13, color: small ? "#9ca3af" : "#374151", fontFamily: "monospace", letterSpacing: revealed ? 0 : 1 }}>
         {revealed ? phone : masked}
       </span>
-      {revealed && <span style={{ fontSize: 10, color: copied ? "#10B981" : "#9ca3af" }}>{copied ? "✓" : "⎘"}</span>}
+      {revealed && (
+        <button onClick={handleCopy} style={{ padding: "2px 8px", background: copied ? "rgba(16,185,129,0.15)" : "rgba(74,122,171,0.15)", border: copied ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(74,122,171,0.3)", borderRadius: 5, color: copied ? "#10B981" : "#6B8DB5", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
+          {copied ? "✓ copied" : "copy"}
+        </button>
+      )}
     </div>
   );
 }
