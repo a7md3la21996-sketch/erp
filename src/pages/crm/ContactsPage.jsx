@@ -93,6 +93,14 @@ function AddContactModal({ onClose, onSave, checkDup }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  const validatePhone = (phone) => {
+    const cleaned = phone.replace(/\s+/g, "");
+    if (!cleaned) return null;
+    if (/^01[0125][0-9]{8}$/.test(cleaned)) return null;
+    if (/^\+[1-9][0-9]{7,14}$/.test(cleaned)) return null;
+    return "رقم الهاتف غير صحيح";
+  };
+  const [phoneError, setPhoneError] = useState(null);
   const checkPhone = async () => {
     if (!form.phone || form.phone.length < 10) return;
     setChecking(true);
@@ -147,8 +155,9 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
                   onChange={e => { set('phone', e.target.value); setDupWarning(null); }}
-                  onBlur={checkPhone} />
-                {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
+                  onBlur={() => { const err = validatePhone(form.phone); setPhoneError(err); checkPhone(); }} />
+                {checking {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}{checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>} <p style={{ fontSize: 11, color: "#8BA8C8", margin: "4px 0 0" }}>{isRTL ? "جاري التحقق..." : "Checking..."}</p>}
+                {phoneError && <p style={{ fontSize: 11, color: "#EF4444", margin: "4px 0 0" }}>❌ {phoneError}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12, color: '#EF4444' }}>
                     ⚠️ {isRTL ? 'هذا الرقم موجود مسبقاً باسم' : 'This number already exists for'}: <strong>{dupWarning.full_name}</strong>
@@ -219,7 +228,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
           <div style={{ display: 'flex', gap: 10 }}>
             {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
             {step === 1
-              ? <button onClick={() => setStep(2)} disabled={!form.phone} style={{ padding: '9px 22px', background: form.phone ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
+              ? <button onClick={() => setStep(2)} disabled={!form.phone || !!phoneError} style={{ padding: '9px 22px', background: form.phone ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
               : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? '💾 حفظ' : '💾 Save')}</button>
             }
           </div>
