@@ -179,7 +179,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 12 }}>
-                    <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong></div>
+                    <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span style={{ fontSize: 11, color: '#6B8DB5', fontFamily: 'monospace' }}>— ID: {dupWarning.id}</span></div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => { onOpenOpportunity(dupWarning); onClose(); }}
                         style={{ flex: 1, padding: '8px 12px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
@@ -206,7 +206,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                   }} />
                 {dupWarning && (
                   <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 11, color: '#EF4444' }}>
-                    ⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'Registered to'}: <strong>{dupWarning.full_name}</strong>
+                    ⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'Registered to'}: <strong>{dupWarning.full_name}</strong> <span style={{ fontSize: 11, color: '#6B8DB5', fontFamily: 'monospace' }}>— ID: {dupWarning.id}</span>
                   </div>
                 )}
               </div>
