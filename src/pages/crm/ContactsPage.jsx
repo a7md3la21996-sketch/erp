@@ -136,6 +136,8 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
     interested_in_type: 'residential', notes: '',
   });
   const [dupWarning, setDupWarning] = useState(null);
+  const [extraPhones, setExtraPhones] = useState([]);
+  const [extraDups, setExtraDups] = useState([]);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -211,23 +213,41 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                   </div>
                 )}
               </div>
-              <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم إضافي' : 'Secondary Phone'}</label>
-                <input style={inp} placeholder="012xxxxxxxx" value={form.phone2}
-                  onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone2', v); setDupWarning(null); }}
-                  onBlur={async () => {
-                    if (!form.phone2 || !validatePhone(form.phone2)) return;
-                    setChecking(true);
-                    try { const dup = await checkDup(form.phone2); setDupWarning(dup || null); }
-                    catch { setDupWarning(null); }
-                    setChecking(false);
-                  }} />
-                {(() => { const v = form.phone2; return v ? (<>{!validatePhone(v) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>) : null; })()}
-                {dupWarning && (
-                  <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 11, color: '#EF4444' }}>
-                    ⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'Registered to'}: <strong>{dupWarning.full_name}</strong> <span style={{ fontSize: 11, color: '#6B8DB5', fontFamily: 'monospace' }}>— ID: {dupWarning.id}</span>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 8 }}>{isRTL ? 'أرقام إضافية' : 'Additional Phones'}</label>
+                {extraPhones.map((ph, i) => (
+                  <div key={i} style={{ marginBottom: 8 }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input style={{ ...inp, flex: 1 }} placeholder="012xxxxxxxx or +966..."
+                        value={ph}
+                        onChange={e => {
+                          const v = e.target.value.replace(/[^0-9+]/g, '');
+                          const updated = [...extraPhones]; updated[i] = v; setExtraPhones(updated);
+                          setExtraDups(d => { const nd = [...d]; nd[i] = null; return nd; });
+                          if (validatePhone(v)) { checkDup(v).then(dup => { setExtraDups(d => { const nd = [...d]; nd[i] = dup || null; return nd; }); }).catch(() => {}); }
+                        }} />
+                      <button type="button" onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraDups(d => d.filter((_, j) => j !== i)); }}
+                        style={{ padding: '0 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, color: '#EF4444', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                    </div>
+                    {ph && (<div style={{ marginTop: 4 }}>
+                      {!validatePhone(ph) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}
+                      {validatePhone(ph) && (() => { const info = getPhoneInfo(ph); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}
+                    </div>)}
+                    {extraDups[i] && (
+                      <div style={{ marginTop: 6, padding: '8px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12 }}>
+                        <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 4 }}>⚠️ {isRTL ? 'مسجل باسم' : 'Registered to'}: <strong>{extraDups[i].full_name}</strong> <span style={{ color: '#6B8DB5', fontFamily: 'monospace', fontSize: 11 }}>ID: {extraDups[i].id}</span></div>
+                        <button type="button" onClick={() => { onOpenOpportunity(extraDups[i]); onClose(); }}
+                          style={{ width: '100%', padding: '6px 10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                          ✨ {isRTL ? 'فتح فرصة جديدة' : 'New Opportunity'}
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
+                <button type="button" onClick={() => { setExtraPhones([...extraPhones, '']); setExtraDups([...extraDups, null]); }}
+                  style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#6B8DB5', fontSize: 12, cursor: 'pointer' }}>
+                  + {isRTL ? 'إضافة رقم' : 'Add Phone'}
+                </button>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
