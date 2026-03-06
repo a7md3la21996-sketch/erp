@@ -10,6 +10,12 @@ import OpportunitiesPage from './pages/crm/OpportunitiesPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import HRPoliciesPage from './pages/hr/HRPoliciesPage';
 import EmployeesPage from './pages/hr/EmployeesPage';
+import AttendancePage from './pages/hr/AttendancePage';
+import LeavePage from './pages/hr/LeavePage';
+import PayrollPage from './pages/hr/PayrollPage';
+import PerformancePage from './pages/hr/PerformancePage';
+import RecruitmentPage from './pages/hr/RecruitmentPage';
+import DisciplinaryPage from './pages/hr/DisciplinaryPage';
 import { P } from './config/roles';
 import './i18n';
 
@@ -56,6 +62,12 @@ export default function App() {
               <Route path="/marketing/*" element={<ComingSoon title="Marketing" />} />
               <Route path="/hr/employees" element={<EmployeesPage />} />
               <Route path="/hr/policies" element={<HRPoliciesPage />} />
+              <Route path="/hr/attendance" element={<AttendancePage />} />
+              <Route path="/hr/leave" element={<LeavePage />} />
+              <Route path="/hr/payroll" element={<PayrollPage />} />
+              <Route path="/hr/performance" element={<PerformancePage />} />
+              <Route path="/hr/recruitment" element={<RecruitmentPage />} />
+              <Route path="/hr/disciplinary" element={<DisciplinaryPage />} />
               <Route path="/hr/*" element={<ComingSoon title="HR" />} />
               <Route path="/finance/*" element={<ComingSoon title="Finance" />} />
               <Route path="/tasks" element={<ComingSoon title="Tasks" />} />
