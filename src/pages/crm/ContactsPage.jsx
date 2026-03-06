@@ -77,7 +77,6 @@ function ScorePill({ score }) {
   );
 }
 
-
 // ── Phone Cell ─────────────────────────────────────────────────────────────
 function PhoneCell({ phone, small = false }) {
   const [revealed, setRevealed] = useState(false);
@@ -784,6 +783,30 @@ export default function ContactsPage() {
               )}
             </div>
           )}
+          {isAdmin && selectedIds.length > 0 && (
+            <button onClick={handleDeleteSelected} style={{ padding: '9px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#EF4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              🗑️ {isRTL ? `حذف (${selectedIds.length})` : `Delete (${selectedIds.length})`}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Type Chips */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+        {[
+          { label: i18n.language === 'ar' ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
+          { label: i18n.language === 'ar' ? 'ليدز' : 'Leads', value: 'lead', count: stats.leads, color: '#4A7AAB' },
+          { label: i18n.language === 'ar' ? 'كولد' : 'Cold', value: 'cold', count: stats.cold, color: '#8BA8C8' },
+          { label: i18n.language === 'ar' ? 'عملاء' : 'Clients', value: 'client', count: stats.clients, color: '#10B981' },
+        ].map(s => (
+          <button key={s.value} onClick={() => setFilterType(s.value)} style={{
+            padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterType === s.value ? s.color : '#e5e7eb'}`,
+            background: filterType === s.value ? `${s.color}15` : '#fff',
+            color: filterType === s.value ? s.color : '#6b7280', fontSize: 12, fontWeight: filterType === s.value ? 700 : 400, cursor: 'pointer',
+          }}>
+            {s.label} <span style={{ background: filterType === s.value ? s.color : '#e5e7eb', color: filterType === s.value ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{s.count}</span>
+          </button>
+        ))}
         <button onClick={() => setShowBlacklisted(v => !v)} style={{
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${showBlacklisted ? '#EF4444' : '#e5e7eb'}`,
           background: showBlacklisted ? 'rgba(239,68,68,0.08)' : '#fff',
@@ -850,7 +873,9 @@ export default function ContactsPage() {
                   onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
                   onMouseLeave={e => e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'}
                 >
+                  {/* Checkbox */}
                   <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>
+                  {/* ID */}
                   <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>
                   {/* Name */}
                   <td style={td}>
