@@ -670,7 +670,7 @@ export default function ContactsPage() {
     border: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
     text: isDark ? '#E2EAF4' : '#111827',
     textMuted: isDark ? '#8BA8C8' : '#6b7280',
-    rowHover: isDark ? 'rgba(74,122,171,0.1)' : '#f9fafb',
+    rowHover: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC',
     inputBg: isDark ? '#0F1E2D' : '#ffffff',
     thBg: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb',
     chipBg: isDark ? 'rgba(74,122,171,0.12)' : '#f3f4f6',
@@ -919,7 +919,7 @@ export default function ContactsPage() {
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
           <Search size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
           <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={search} onChange={e => setSearch(e.target.value)}
-            style={{ ...sel, width: '100%', paddingRight: 32, boxSizing: 'border-box' }} />
+            style={{ ...sel, width: '100%', paddingRight: 32, boxSizing: 'border-box', background: c.inputBg, color: c.text, border: `1px solid ${c.border}` }} />
         </div>
         <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={sel}>
           <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
@@ -939,7 +939,7 @@ export default function ContactsPage() {
       {/* Table */}
       <div style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 12, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900, direction: isRTL ? 'rtl' : 'ltr' }}>
             <thead>
               <tr>
                 <th style={{...th, width: 36, padding: '10px 8px'}}><input type="checkbox" checked={selectedIds.length === filtered.length && filtered.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /></th>
@@ -961,8 +961,8 @@ export default function ContactsPage() {
                 <tr key={c.id}
                   onClick={() => setSelected(c)}
                   style={{ cursor: 'pointer', background: selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
-                  onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
-                  onMouseLeave={e => e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'}
+                  onMouseEnter={e => { if (!selectedIds.includes(c.id)) e.currentTarget.style.background = c.rowHover; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
                 >
                   {/* Checkbox */}
                   <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>

@@ -31,11 +31,9 @@ export default function Sidebar({ collapsed, onToggle }) {
     }}>
       <div style={{ height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'), padding: '8px 16px' }}>
         {collapsed ? (
-          <div style={{ width: 40, height: 40, borderRadius: 10, overflow: 'hidden', background: 'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <img src="/logo.png" alt="Platform" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          </div>
+          <img src="/logo.png" alt="P" style={{ width: 36, height: 36, objectFit: 'contain' }} />
         ) : (
-          <img src="/logo.png" alt="Platform Real Estate" style={{ width: '100%', height: 'auto', maxHeight: 70, objectFit: 'contain', padding: '0 8px' }} />
+          <img src="/logo.png" alt="Platform Real Estate" style={{ width: 'calc(100% - 16px)', height: 'auto', maxHeight: 65, objectFit: 'contain' }} />
         )}
       </div>
 
@@ -63,7 +61,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                   width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
                   borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500,
                   background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
-                  textAlign: isRTL ? 'right' : 'left',
+                  textAlign: 'right',
                 }}>
                   <Icon size={20} />
                   {!collapsed && (
@@ -76,7 +74,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               )}
 
               {!collapsed && hasChildren && isOpen && visibleChildren.length > 0 && (
-                <div style={{ paddingRight: 8, paddingLeft: 8, marginTop: 4, marginRight: isRTL ? 32 : 8, marginLeft: isRTL ? 8 : 32, borderRight: isRTL ? ('2px solid ' + (isDark ? '#2d3748' : '#E2E8F0')) : 'none', borderLeft: isRTL ? 'none' : ('2px solid ' + (isDark ? '#2d3748' : '#E2E8F0')) }}>
+                <div style={{ paddingRight: 8, paddingLeft: 8, marginTop: 4, marginRight: 32, marginLeft: 4, borderRight: '2px solid ' + (isDark ? '#2d3748' : '#E2E8F0'), borderLeft: 'none' }}>
                   {visibleChildren.map(child => (
                     <Link key={child.id} to={child.path} style={{
                       display: 'block', padding: '8px 12px', borderRadius: 8, textDecoration: 'none',
