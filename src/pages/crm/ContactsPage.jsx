@@ -177,7 +177,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم {isRTL ? 'الحملة' : 'Campaign'}' : 'Campaign'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
             </div>
