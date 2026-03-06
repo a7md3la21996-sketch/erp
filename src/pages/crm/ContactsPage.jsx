@@ -55,6 +55,8 @@ const fmtBudget = (min, max) => {
 };
 const daysSince = d => Math.floor((Date.now() - new Date(d)) / 86400000);
 const initials = name => name ? name.trim().charAt(0) : '?';
+const AVATAR_COLORS = ['#2B4C6F','#4A7AAB','#065F46','#92400E','#1E40AF','#6B21A8','#B45309','#0F766E'];
+const avatarColor = (id) => AVATAR_COLORS[parseInt(id) % AVATAR_COLORS.length];
 const normalizePhone = (p) => {
   if (!p) return p;
   if (p.startsWith('00')) return '+' + p.slice(2);
@@ -969,16 +971,17 @@ export default function ContactsPage() {
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
-                        width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                        background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : 'linear-gradient(135deg,#D9E4EE,#4A7AAB)',
+                        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                        background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id),
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 14, fontWeight: 700, color: c.is_blacklisted ? '#EF4444' : '#2B4C6F',
+                        fontSize: 13, fontWeight: 700, color: c.is_blacklisted ? '#EF4444' : '#fff',
                       }}>
                         {c.is_blacklisted ? '⛔' : initials(c.full_name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : c.text }}>{c.full_name || 'بدون اسم'}</div>
+                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : '#1A2B3C' }}>{c.full_name || 'بدون اسم'}</div>
                         {c.email && <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.email}</div>}
+                        {c.last_activity_at && (() => { const d = Math.floor((Date.now() - new Date(c.last_activity_at)) / 86400000); return <div style={{ fontSize: 10, marginTop: 2, fontWeight: 500, color: d === 0 ? '#10B981' : d <= 3 ? '#F97316' : d <= 7 ? '#F59E0B' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? '⏱ ' + d + ' أيام' : '⏱ ' + d + 'd ago')}</div>; })()}
                       </div>
                     </div>
                   </td>
