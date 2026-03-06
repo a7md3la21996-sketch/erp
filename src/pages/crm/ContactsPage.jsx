@@ -177,7 +177,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم {isRTL ? 'الحملة' : 'Campaign'}' : 'Campaign'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign Name'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
             </div>
@@ -451,7 +451,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📍 {isRTL ? 'الموقع المفضل' : 'Preferred Location'}', val: contact.preferred_location || '—' },
                 { label: '🏢 {isRTL ? 'نوع العقار' : 'Property Type'}', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: '👤 {isRTL ? 'المسؤول' : 'Assigned To'}', val: contact.assigned_to_name || '—' },
-                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: ``${ daysSince(contact.last_activity_at)}d`` },
+                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: `${daysSince(contact.last_activity_at)}d` },
               ].map(r => (
               <div key={r.label} style={rowStyle}>
                 <span style={{ color: '#8BA8C8' }}>{r.label}</span>
