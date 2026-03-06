@@ -174,7 +174,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span></label>
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
-                  onChange={e => { set('phone', e.target.value); setDupWarning(null); }}
+                  onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); }}
                   onBlur={checkPhone} />
                 {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
@@ -196,7 +196,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم إضافي' : 'Secondary Phone'}</label>
                 <input style={inp} placeholder="012xxxxxxxx" value={form.phone2}
-                  onChange={e => { set('phone2', e.target.value); setDupWarning(null); }}
+                  onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone2', v); setDupWarning(null); }}
                   onBlur={async () => {
                     if (!form.phone2 || form.phone2.length < 10) return;
                     setChecking(true);
