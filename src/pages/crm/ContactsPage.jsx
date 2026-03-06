@@ -10,6 +10,7 @@ import {
   fetchContactActivities, createActivity,
   fetchContactOpportunities
 } from '../../services/contactsService';
+import ImportModal from './ImportModal';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { facebook: 'فيسبوك', instagram: 'إنستجرام', google_ads: 'جوجل أدز', website: 'الموقع', call: 'اتصال وارد', walk_in: 'زيارة مباشرة', referral: 'ترشيح', developer: 'مطور', cold_call: 'كولد كول', other: 'أخرى' };
