@@ -451,7 +451,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: isRTL ? '📍 الموقع المفضل' : '📍 Preferred Location', val: contact.preferred_location || '—' },
                 { label: isRTL ? '🏢 نوع العقار' : '🏢 Property Type', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: isRTL ? '👤 المسؤول' : '👤 Assigned To', val: contact.assigned_to_name || '—' },
-                { label: isRTL ? '⏱️ آخر نشاط' : '⏱️ Last Activity', val: ``${ daysSince(contact.last_activity_at)}d`` },
+                { label: isRTL ? '⏱️ آخر نشاط' : '⏱️ Last Activity', val: `${daysSince(contact.last_activity_at)}d` },
               ].map(r => (
               <div key={r.label} style={rowStyle}>
                 <span style={{ color: '#8BA8C8' }}>{r.label}</span>
