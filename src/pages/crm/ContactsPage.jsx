@@ -91,8 +91,16 @@ function AddContactModal({ onClose, onSave, checkDup }) {
   const [dupWarning, setDupWarning] = useState(null);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [phoneError, setPhoneError] = useState(null);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
+  const validatePhone = (p) => {
+    const c = p.replace(/\s+/g, "");
+    if (!c) return null;
+    if (/^01[0125][0-9]{8}$/.test(c)) return null;
+    if (/^\+[1-9][0-9]{6,13}$/.test(c)) return null;
+    return isRTL ? "رقم الهاتف غير صحيح" : "Invalid phone number";
+  };
   const checkPhone = async () => {
     if (!form.phone || form.phone.length < 10) return;
     setChecking(true);
@@ -146,8 +154,8 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span></label>
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
-                  onChange={e => { set('phone', e.target.value); setDupWarning(null); }}
-                  onBlur={checkPhone} />
+                  onChange={e => { set("phone", e.target.value); setDupWarning(null); setPhoneError(null); }}
+                  onBlur={() => { setPhoneError(validatePhone(form.phone)); checkPhone(); }} />
                 {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '8px 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12, color: '#EF4444' }}>
