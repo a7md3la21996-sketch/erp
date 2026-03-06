@@ -692,7 +692,7 @@ export default function ContactsPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
-            {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', { count: filtered.length, total: contacts.length })}`}
+            {loading ? t('common.loading') : `${filtered.length} results`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
