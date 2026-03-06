@@ -78,7 +78,8 @@ export async function checkDuplicate(phone) {
     const cached = localStorage.getItem('platform_contacts');
     if (cached) {
       const contacts = JSON.parse(cached);
-      return contacts.find(c => c.phone === phone) || null;
+      const found = contacts.find(c => c.phone === phone || c.phone2 === phone);
+      return found || null;
     }
   } catch { /* ignore */ }
 
