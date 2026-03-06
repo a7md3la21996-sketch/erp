@@ -7,7 +7,6 @@ import LoginPage from './pages/auth/LoginPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ContactsPage from './pages/crm/ContactsPage';
 import OpportunitiesPage from './pages/crm/OpportunitiesPage';
-import OpportunitiesPage from './pages/crm/OpportunitiesPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import { P } from './config/roles';
 import './i18n';
