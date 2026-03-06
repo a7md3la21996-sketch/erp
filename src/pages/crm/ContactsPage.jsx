@@ -153,7 +153,9 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   };
 
   const handleSave = async () => {
-    if (!form.phone || !validatePhone(form.phone)) { alert(isRTL ? "رقم الهاتف غير صحيح" : "Invalid phone number"); return; }
+    if (!form.phone || !validatePhone(form.phone)) { alert(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
+    const invalidExtra = extraPhones.find(p => p && !validatePhone(p));
+    if (invalidExtra) { alert(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
     setSaving(true);
     try {
       await onSave({
