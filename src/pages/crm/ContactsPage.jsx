@@ -179,7 +179,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم {isRTL ? 'الحملة' : 'Campaign'}' : 'Campaign'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
             </div>
@@ -449,11 +449,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📱 الهاتف الأول', val: contact.phone },
                 { label: '📱 الهاتف الثاني', val: contact.phone2 || '—' },
                 { label: '📧 الإيميل', val: contact.email || '—' },
-                { label: '📣 {isRTL ? 'المصدر' : 'Source'}', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
-                { label: '🎯 {isRTL ? 'الحملة' : 'Campaign'}', val: contact.campaign_name || '—' },
-                { label: '💰 {isRTL ? 'الميزانية' : 'Budget'}', val: fmtBudget(contact.budget_min, contact.budget_max) },
-                { label: '📍 {isRTL ? 'الموقع المفضل' : 'Preferred Location'}', val: contact.preferred_location || '—' },
-                { label: '🏢 {isRTL ? 'نوع العقار' : 'Property Type'}', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
+                { label: isRTL ? '📣 المصدر' : '📣 Source', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
+                { label: isRTL ? '🎯 الحملة' : '🎯 Campaign', val: contact.campaign_name || '—' },
+                { label: isRTL ? '💰 الميزانية' : '💰 Budget', val: fmtBudget(contact.budget_min, contact.budget_max) },
+                { label: isRTL ? '📍 الموقع المفضل' : '📍 Preferred Location', val: contact.preferred_location || '—' },
+                { label: isRTL ? '🏢 نوع العقار' : '🏢 Property Type', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: isRTL ? '👤 المسؤول' : '👤 Assigned To', val: contact.assigned_to_name || '—' },
                 { label: isRTL ? '⏱️ آخر نشاط' : '⏱️ Last Activity', val: `${daysSince(contact.last_activity_at)}d` },
               ].map(r => (
@@ -477,7 +477,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
                 <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444' }}>
-                  {isRTL ? '⛔ سبب ال{isRTL ? 'بلاك ليست' : 'Blacklist'}:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
+                  {isRTL ? '⛔ سبب البلاك ليست:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
                 </div>
               )}
             </div>
