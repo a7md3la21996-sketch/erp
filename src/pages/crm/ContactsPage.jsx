@@ -675,6 +675,7 @@ export default function ContactsPage() {
     thBg: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb',
     chipBg: isDark ? 'rgba(74,122,171,0.12)' : '#f3f4f6',
     chipText: isDark ? '#8BA8C8' : '#6b7280',
+    surface: isDark ? '#0F1E2D' : '#F8FAFC',
   };
 
   const [contacts, setContacts] = useState([]);
@@ -824,8 +825,8 @@ export default function ContactsPage() {
 
   // Styles — theme aware
   const sel = { background: c.inputBg, border: `1px solid ${c.border}`, borderRadius: 8, padding: '8px 12px', color: c.text, fontSize: 12, outline: 'none', cursor: 'pointer' };
-  const th = { fontSize: 11, color: '#6B8DB5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, padding: '11px 14px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', whiteSpace: 'nowrap' };
-  const td = { padding: '13px 14px', borderBottom: '1px solid rgba(226,232,240,0.6)', verticalAlign: 'middle', fontSize: 13, color: '#1A2B3C' };
+  const th = { fontSize: 11, color: '#6B8DB5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, padding: '11px 14px', background: c.thBg, borderBottom: `1px solid ${c.border}`, whiteSpace: 'nowrap' };
+  const td = { padding: '13px 14px', borderBottom: `1px solid ${c.border}`, verticalAlign: 'middle', fontSize: 13, color: '#1A2B3C' };
 
   return (
     <div dir="rtl" style={{ fontFamily: "'Cairo','Tajawal',sans-serif", color: c.text }}>
@@ -899,14 +900,14 @@ export default function ContactsPage() {
         ))}
         <button onClick={() => setShowBlacklisted(v => !v)} style={{
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${showBlacklisted ? '#EF4444' : '#e5e7eb'}`,
-          background: showBlacklisted ? 'rgba(239,68,68,0.08)' : '#fff',
+          background: showBlacklisted ? 'rgba(239,68,68,0.08)' : c.cardBg,
           color: showBlacklisted ? '#EF4444' : '#6b7280', fontSize: 12, fontWeight: showBlacklisted ? 700 : 400, cursor: 'pointer',
         }}>
           ⛔ {isRTL ? 'بلاك ليست' : 'Blacklist'} <span style={{ background: showBlacklisted ? '#EF4444' : '#e5e7eb', color: showBlacklisted ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.blacklisted}</span>
         </button>
         <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} style={{
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterTemp === 'hot' ? '#EF4444' : '#e5e7eb'}`,
-          background: filterTemp === 'hot' ? 'rgba(239,68,68,0.08)' : '#fff',
+          background: filterTemp === 'hot' ? 'rgba(239,68,68,0.08)' : c.cardBg,
           color: filterTemp === 'hot' ? '#EF4444' : '#6b7280', fontSize: 12, cursor: 'pointer',
         }}>
           🔴 {isRTL ? 'حار فقط' : 'Hot Only'} <span style={{ background: filterTemp === 'hot' ? '#EF4444' : '#e5e7eb', color: filterTemp === 'hot' ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.hot}</span>
@@ -914,7 +915,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Filter Bar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center', background: c.thBg, padding: '10px 14px', borderRadius: 12, border: `1px solid ${c.border}` }}>
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
           <Search size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
           <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={search} onChange={e => setSearch(e.target.value)}
@@ -960,7 +961,7 @@ export default function ContactsPage() {
                 <tr key={c.id}
                   onClick={() => setSelected(c)}
                   style={{ cursor: 'pointer', background: selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                  onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
                   onMouseLeave={e => e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'}
                 >
                   {/* Checkbox */}

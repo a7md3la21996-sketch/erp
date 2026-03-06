@@ -31,11 +31,11 @@ export default function Sidebar({ collapsed, onToggle }) {
     }}>
       <div style={{ height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'), padding: '8px 16px' }}>
         {collapsed ? (
-          <div style={{ width: 36, height: 36, borderRadius: 10, overflow: 'hidden' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, overflow: 'hidden', background: 'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <img src="/logo.png" alt="Platform" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
         ) : (
-          <img src="/logo.png" alt="Platform Real Estate" style={{ height: 75, maxWidth: 220, objectFit: 'contain' }} />
+          <img src="/logo.png" alt="Platform Real Estate" style={{ width: '100%', height: 'auto', maxHeight: 70, objectFit: 'contain', padding: '0 8px' }} />
         )}
       </div>
 
