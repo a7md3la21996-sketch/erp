@@ -473,7 +473,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
                 <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444' }}>
-                  {isRTL ? '⛔ سبب ال{isRTL ? 'بلاك ليست' : 'Blacklist'}:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
+                  {isRTL ? '⛔ سبب البلاك ليست:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
                 </div>
               )}
             </div>
