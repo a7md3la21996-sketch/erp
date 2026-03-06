@@ -576,7 +576,6 @@ function KanbanColumn({ stage, opportunities, isDark, dragState, onDragStart, on
 export default function OpportunitiesPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const isDark = isDark;
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
