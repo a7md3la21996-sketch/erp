@@ -28,9 +28,11 @@ export default function Sidebar({ collapsed, onToggle }) {
     }}>
       <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #e5e7eb' }}>
         {collapsed ? (
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: '#2B4C6F', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 18 }}>P</div>
+          <div style={{ width: 36, height: 36, borderRadius: 10, overflow: 'hidden' }}>
+            <img src="/logo.png" alt="Platform" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          </div>
         ) : (
-          <span style={{ fontSize: 18, fontWeight: 'bold', color: '#2B4C6F' }}>Platform ERP</span>
+          <img src="/logo.png" alt="Platform Real Estate" style={{ height: 36, maxWidth: 160, objectFit: 'contain' }} />
         )}
       </div>
 
