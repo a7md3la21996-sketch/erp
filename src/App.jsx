@@ -6,6 +6,8 @@ import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ContactsPage from './pages/crm/ContactsPage';
+import OpportunitiesPage from './pages/crm/OpportunitiesPage';
+import OpportunitiesPage from './pages/crm/OpportunitiesPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import { P } from './config/roles';
 import './i18n';
@@ -46,7 +48,7 @@ export default function App() {
             <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/crm/contacts" element={<ContactsPage />} />
-              <Route path="/crm/opportunities" element={<ComingSoon title="Opportunities" />} />
+              <Route path="/crm/opportunities" element={<OpportunitiesPage />} />
               <Route path="/crm/lead-pool" element={<ComingSoon title="Lead Pool" />} />
               <Route path="/real-estate/*" element={<ComingSoon title="Real Estate" />} />
               <Route path="/sales/*" element={<ComingSoon title="Sales" />} />
