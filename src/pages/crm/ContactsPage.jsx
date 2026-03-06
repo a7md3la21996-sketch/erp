@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -55,9 +56,21 @@ const daysSince = d => Math.floor((Date.now() - new Date(d)) / 86400000);
 const initials = name => name ? name.trim().charAt(0) : '?';
 const validatePhone = (p) => {
   if (!p) return false;
-  if (p.startsWith('+')) return p.length >= 10 && p.length <= 15;
-  if (p.startsWith('0')) return p.length === 11;
-  return false;
+  const normalized = p.startsWith('00') ? '+' + p.slice(2) : p.startsWith('0') ? '+20' + p.slice(1) : p;
+  try {
+    const phone = parsePhoneNumberFromString(normalized);
+    return phone ? phone.isValid() : false;
+  } catch { return false; }
+};
+const getPhoneInfo = (p) => {
+  if (!p) return null;
+  const normalized = p.startsWith('00') ? '+' + p.slice(2) : p.startsWith('0') ? '+20' + p.slice(1) : p;
+  try {
+    const phone = parsePhoneNumberFromString(normalized);
+    if (!phone || !phone.isValid()) return null;
+    const flags = { EG: '🇪🇬', SA: '🇸🇦', AE: '🇦🇪', KW: '🇰🇼', QA: '🇶🇦', BH: '🇧🇭', OM: '🇴🇲', JO: '🇯🇴', LB: '🇱🇧', US: '🇺🇸', GB: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷' };
+    return { country: phone.country, flag: flags[phone.country] || '🌍', formatted: phone.formatInternational() };
+  } catch { return null; }
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────
@@ -177,7 +190,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <input style={inp} placeholder="محمد أحمد..." value={form.full_name} onChange={e => set('full_name', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span> {form.phone && !validatePhone(form.phone) && <span style={{ color: '#F97316', fontSize: 11 }}>{form.phone.startsWith('+') ? '(10-15 digits)' : isRTL ? '(11 رقم)' : '(11 digits)'}</span>}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
                   onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkDup(v).then(dup => setDupWarning(dup || null)).catch(() => {}); } }} />
@@ -203,12 +216,13 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <input style={inp} placeholder="012xxxxxxxx" value={form.phone2}
                   onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone2', v); setDupWarning(null); }}
                   onBlur={async () => {
-                    if (!form.phone2 || form.phone2.length < 10) return;
+                    if (!form.phone2 || !validatePhone(form.phone2)) return;
                     setChecking(true);
                     try { const dup = await checkDup(form.phone2); setDupWarning(dup || null); }
                     catch { setDupWarning(null); }
                     setChecking(false);
                   }} />
+                {(() => { const v = form.phone2; return v ? (<>{!validatePhone(v) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>) : null; })()}
                 {dupWarning && (
                   <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 11, color: '#EF4444' }}>
                     ⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'Registered to'}: <strong>{dupWarning.full_name}</strong> <span style={{ fontSize: 11, color: '#6B8DB5', fontFamily: 'monospace' }}>— ID: {dupWarning.id}</span>
