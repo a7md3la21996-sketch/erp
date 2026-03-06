@@ -822,8 +822,8 @@ export default function ContactsPage() {
 
   // Styles — theme aware
   const sel = { background: c.inputBg, border: `1px solid ${c.border}`, borderRadius: 8, padding: '8px 12px', color: c.text, fontSize: 12, outline: 'none', cursor: 'pointer' };
-  const th = { fontSize: 11, color: '#6B8DB5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, padding: '10px 12px', background: c.thBg, borderBottom: `1px solid ${c.border}`, whiteSpace: 'nowrap' };
-  const td = { padding: '12px', borderBottom: `1px solid ${c.border}`, verticalAlign: 'middle', fontSize: 13, color: c.text };
+  const th = { fontSize: 11, color: '#6B8DB5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, padding: '11px 14px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', whiteSpace: 'nowrap' };
+  const td = { padding: '13px 14px', borderBottom: '1px solid rgba(226,232,240,0.6)', verticalAlign: 'middle', fontSize: 13, color: '#1A2B3C' };
 
   return (
     <div dir="rtl" style={{ fontFamily: "'Cairo','Tajawal',sans-serif", color: c.text }}>
