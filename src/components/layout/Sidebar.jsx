@@ -71,7 +71,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               )}
 
               {!collapsed && hasChildren && isOpen && visibleChildren.length > 0 && (
-                <div style={{ [isRTL ? 'marginRight' : 'marginLeft']: 32, marginTop: 4 }}>
+                <div style={{ paddingRight: isRTL ? 12 : 0, paddingLeft: isRTL ? 0 : 12, marginTop: 4, borderRight: isRTL ? '2px solid #E2E8F0' : 'none', borderLeft: isRTL ? 'none' : '2px solid #E2E8F0', marginRight: isRTL ? 20 : 0, marginLeft: isRTL ? 0 : 20 }}>
                   {visibleChildren.map(child => (
                     <Link key={child.id} to={child.path} style={{
                       display: 'block', padding: '8px 12px', borderRadius: 8, textDecoration: 'none',
