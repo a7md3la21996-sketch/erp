@@ -49,19 +49,19 @@ export default function Sidebar({ collapsed, onToggle }) {
             <div key={item.id} style={{ marginBottom: 2 }}>
               {item.path && !hasChildren ? (
                 <Link to={item.path} style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 8,
+                  display: 'flex', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12, padding: '10px 12px', borderRadius: 8,
                   textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'background 0.15s',
                   background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
                 }}>
                   <Icon size={20} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
+                  {!collapsed && <span style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>{item.label[lang]}</span>}
                 </Link>
               ) : (
                 <button onClick={() => toggleMenu(item.id)} style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+                  width: '100%', display: 'flex', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12, padding: '10px 12px',
                   borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500,
                   background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
-                  textAlign: 'right',
+                  textAlign: isRTL ? 'right' : 'left',
                 }}>
                   <Icon size={20} style={{ flexShrink: 0 }} />
                   {!collapsed && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
@@ -70,7 +70,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               )}
 
               {!collapsed && hasChildren && isOpen && visibleChildren.length > 0 && (
-                <div style={{ paddingRight: 8, paddingLeft: 8, marginTop: 4, marginRight: 32, marginLeft: 4, borderRight: '2px solid ' + (isDark ? '#2d3748' : '#E2E8F0'), borderLeft: 'none' }}>
+                <div style={{ paddingRight: 8, paddingLeft: 8, marginTop: 4, borderRight: isRTL ? ('2px solid ' + (isDark ? '#2d3748' : '#E2E8F0')) : 'none', borderLeft: isRTL ? 'none' : ('2px solid ' + (isDark ? '#2d3748' : '#E2E8F0')), marginRight: isRTL ? 32 : 4, marginLeft: isRTL ? 4 : 32 }}>
                   {visibleChildren.map(child => (
                     <Link key={child.id} to={child.path} style={{
                       display: 'block', padding: '8px 12px', borderRadius: 8, textDecoration: 'none',
