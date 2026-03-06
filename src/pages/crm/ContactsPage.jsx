@@ -79,6 +79,8 @@ function ScorePill({ score }) {
 
 // ── Add Contact Modal ──────────────────────────────────────────────────────
 function AddContactModal({ onClose, onSave, checkDup }) {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     full_name: '', phone: '', phone2: '', email: '',
@@ -177,7 +179,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign Name'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم {isRTL ? 'الحملة' : 'Campaign'}' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
             </div>
@@ -205,7 +207,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
-                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
+                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder="{isRTL ? 'ملاحظات' : 'Notes'} إضافية..." value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
             </div>
           )}
@@ -229,6 +231,8 @@ function AddContactModal({ onClose, onSave, checkDup }) {
 
 // ── Blacklist Modal ────────────────────────────────────────────────────────
 function BlacklistModal({ contact, onClose, onConfirm }) {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const [reason, setReason] = useState('');
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -388,7 +392,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : '#E2EAF4' }}>{contact.full_name || 'بدون اسم'}</div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
                   <Chip label={tp?.label} color={tp?.color} bg={tp?.bg} />
-                  {contact.is_blacklisted && <Chip label={isRTL ? "بلاك ليست" : "Blacklist"} color="#EF4444" bg="rgba(239,68,68,0.12)" />}
+                  {contact.is_blacklisted && <Chip label="{isRTL ? 'بلاك ليست' : 'Blacklist'}" color="#EF4444" bg="rgba(239,68,68,0.12)" />}
                 </div>
               </div>
             </div>
@@ -451,7 +455,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📍 {isRTL ? 'الموقع المفضل' : 'Preferred Location'}', val: contact.preferred_location || '—' },
                 { label: '🏢 {isRTL ? 'نوع العقار' : 'Property Type'}', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: '👤 {isRTL ? 'المسؤول' : 'Assigned To'}', val: contact.assigned_to_name || '—' },
-                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: `${daysSince(contact.last_activity_at)}d` },
+                { label: '⏱️ {isRTL ? 'آخر نشاط' : 'Last Activity'}', val: ``${ daysSince(contact.last_activity_at)}d`` },
               ].map(r => (
               <div key={r.label} style={rowStyle}>
                 <span style={{ color: '#8BA8C8' }}>{r.label}</span>
@@ -688,7 +692,7 @@ export default function ContactsPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
-            {loading ? t('common.loading') : `${filtered.length} results`}
+            {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', { count: filtered.length, total: contacts.length })}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -699,7 +703,7 @@ export default function ContactsPage() {
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
           <button onClick={() => setShowAddModal(true)} style={{ padding: '9px 18px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Plus size={14} /> إضافة جهة اتصال
+            <Plus size={14} /> {isRTL ? "إضافة جهة اتصال" : "Add Contact"}
           </button>
         </div>
       </div>
@@ -830,7 +834,7 @@ export default function ContactsPage() {
                       <a href={`tel:${c.phone}`} title="اتصال" style={{ padding: '5px 8px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, color: '#10B981', fontSize: 13, textDecoration: 'none' }}>📞</a>
                       <a href={`https://wa.me/2${c.phone}`} target="_blank" rel="noreferrer" title="واتساب" style={{ padding: '5px 8px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 6, color: '#25D366', fontSize: 13, textDecoration: 'none' }}>💬</a>
                       {!c.is_blacklisted && (
-                        <button title={isRTL ? "بلاك ليست" : "Blacklist"} onClick={() => setBlacklistTarget(c)}
+                        <button title="{isRTL ? 'بلاك ليست' : 'Blacklist'}" onClick={() => setBlacklistTarget(c)}
                           style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>⛔</button>
                       )}
                     </div>
