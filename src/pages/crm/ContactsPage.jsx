@@ -799,6 +799,8 @@ export default function ContactsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead>
               <tr>
+                <th style={{...th, width: 36, padding: '10px 8px'}}><input type="checkbox" checked={selectedIds.length === filtered.length && filtered.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /></th>
+                <th style={{...th, width: 50}}>ID</th>
                 {[t('contacts.fullName'), t('contacts.phone'), t('contacts.type'), t('contacts.temperature'), t('contacts.source'), t('contacts.stage'), t('contacts.budget'), 'Score', t('common.actions')].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
@@ -806,19 +808,21 @@ export default function ContactsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
+                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
+                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
                   <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
                   {isRTL ? 'لا توجد نتائج' : 'No results found'}
                 </td></tr>
               ) : filtered.map((c) => (
                 <tr key={c.id}
                   onClick={() => setSelected(c)}
-                  style={{ cursor: 'pointer', background: c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
+                  style={{ cursor: 'pointer', background: selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                  onMouseLeave={e => e.currentTarget.style.background = c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'}
+                  onMouseLeave={e => e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'}
                 >
+                  <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>
+                  <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>
                   {/* Name */}
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -848,12 +852,14 @@ export default function ContactsPage() {
                   {/* Source */}
                   <td style={td}><span style={{ fontSize: 11, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', color: '#6b7280' }}>{i18n.language === "ar" ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></td>
                   {/* Stage */}
-                  <td style={td}>
-                    {c.stage
-                      ? <Chip label={STAGE_LABELS[c.stage]} color="#D4A853" bg="rgba(212,168,83,0.1)" />
-                      : c.cold_status
-                        ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{COLD_LABELS[c.cold_status]}</span>
-                        : <span style={{ color: '#d1d5db' }}>—</span>}
+                  <td style={td} onClick={e => e.stopPropagation()}>
+                    {isAdmin && c.contact_type === 'lead' ? (
+                      <select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} style={{ fontSize: 11, background: 'transparent', border: '1px solid rgba(212,168,83,0.3)', borderRadius: 6, color: '#D4A853', padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
+                        {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                      </select>
+                    ) : c.stage ? <Chip label={STAGE_LABELS[c.stage]} color="#D4A853" bg="rgba(212,168,83,0.1)" />
+                    : c.cold_status ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{COLD_LABELS[c.cold_status]}</span>
+                    : <span style={{ color: '#d1d5db' }}>—</span>}
                   </td>
                   {/* Budget */}
                   <td style={{ ...td, fontSize: 12, color: '#6b7280' }}>{fmtBudget(c.budget_min, c.budget_max)}</td>
@@ -867,6 +873,9 @@ export default function ContactsPage() {
                       {!c.is_blacklisted && (
                         <button title={isRTL ? "بلاك ليست" : "Blacklist"} onClick={() => setBlacklistTarget(c)}
                           style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>⛔</button>
+                      )}
+                      {isAdmin && (
+                        <button title={isRTL ? 'حذف' : 'Delete'} onClick={() => handleDelete(c.id)} style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>🗑️</button>
                       )}
                     </div>
                   </td>
