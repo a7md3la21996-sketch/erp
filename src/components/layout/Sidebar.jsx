@@ -32,7 +32,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             <img src="/logo.png" alt="Platform" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
         ) : (
-          <img src="/logo.png" alt="Platform Real Estate" style={{ height: 52, maxWidth: 200, objectFit: 'contain' }} />
+          <img src="/logo.png" alt="Platform Real Estate" style={{ height: 64, maxWidth: 220, objectFit: 'contain' }} />
         )}
       </div>
 
