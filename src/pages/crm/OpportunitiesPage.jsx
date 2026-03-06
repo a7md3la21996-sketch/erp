@@ -572,19 +572,11 @@ function KanbanColumn({ stage, opportunities, isDark, dragState, onDragStart, on
 //  MAIN PAGE
 // ════════════════════════════════════════════════════════════════
 export default function OpportunitiesPage() {
-  // ── Try to get theme from context, fallback to local state
-  let isDark = false;
-  try {
-    const ctx = require("../../contexts/ThemeContext");
-    isDark = ctx.useTheme?.()?.isDark ?? false;
-  } catch { /* no ThemeContext available — using local */ }
-
-  const [_isDark, setIsDark] = useState(false);
-  const effectiveDark = isDark || _isDark;
-
-  // Language (try i18n, fallback ar)
-  let lang = "ar";
-  try { lang = window.__i18nLang || "ar"; } catch {}
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const effectiveDark = isDark;
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
 
   const [opps, setOpps] = useState(MOCK_OPPORTUNITIES);
   const [search, setSearch] = useState("");
