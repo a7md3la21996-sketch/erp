@@ -77,6 +77,32 @@ function ScorePill({ score }) {
   );
 }
 
+
+// ── Phone Cell ─────────────────────────────────────────────────────────────
+function PhoneCell({ phone, small = false }) {
+  const [revealed, setRevealed] = useState(false);
+  const [copied, setCopied] = useState(false);
+  if (!phone) return null;
+  const masked = phone.slice(0, 6) + '****';
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(phone).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer" }}
+      onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}
+      onClick={handleCopy} title={copied ? "✓ Copied!" : "Click to copy"}>
+      <span style={{ fontSize: small ? 11 : 13, color: small ? "#9ca3af" : "#374151", fontFamily: "monospace" }}>
+        {revealed ? phone : masked}
+      </span>
+      {revealed && <span style={{ fontSize: 10, color: copied ? "#10B981" : "#9ca3af" }}>{copied ? "✓" : "⎘"}</span>}
+    </div>
+  );
+}
+
 // ── Add Contact Modal ──────────────────────────────────────────────────────
 function AddContactModal({ onClose, onSave, checkDup }) {
   const { i18n } = useTranslation();
@@ -584,6 +610,7 @@ export default function ContactsPage() {
   const [selected, setSelected] = useState(null);
   const [blacklistTarget, setBlacklistTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkMenu, setShowBulkMenu] = useState(false);
   const isAdmin = profile?.role === 'admin';
 
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -732,29 +759,31 @@ export default function ContactsPage() {
             <Plus size={14} /> {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
           </button>
           {isAdmin && selectedIds.length > 0 && (
-            <button onClick={handleDeleteSelected} style={{ padding: '9px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#EF4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              🗑️ {isRTL ? `حذف (${selectedIds.length})` : `Delete (${selectedIds.length})`}
-            </button>
+            <div style={{ position: "relative" }}>
+              <button onClick={() => setShowBulkMenu(v => !v)} style={{ padding: "9px 14px", background: "linear-gradient(135deg,#2B4C6F,#4A7AAB)", border: "none", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                ⚡ {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
+              </button>
+              {showBulkMenu && (
+                <div style={{ position: "absolute", top: "110%", left: 0, background: "#1A2B3C", border: "1px solid rgba(74,122,171,0.3)", borderRadius: 10, minWidth: 190, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.35)", overflow: "hidden" }}>
+                  {[
+                    { icon: "📋", label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => {} },
+                    { icon: "👤", label: isRTL ? "إعادة تعيين" : "Reassign", action: () => {} },
+                    { icon: "🔄", label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => {} },
+                  ].map(item => (
+                    <button key={item.label} onClick={item.action} style={{ width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#E2EAF4", fontSize: 13, cursor: "pointer", textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}
+                      onMouseEnter={e => e.currentTarget.style.background="rgba(74,122,171,0.15)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
+                      {item.icon} {item.label}
+                    </button>
+                  ))}
+                  <div style={{ height: 1, background: "rgba(239,68,68,0.2)", margin: "4px 0" }} />
+                  <button onClick={handleDeleteSelected} style={{ width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#EF4444", fontSize: 13, cursor: "pointer", textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}
+                    onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.1)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
+                    🗑️ {isRTL ? "حذف المحددين" : "Delete Selected"}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
-        </div>
-      </div>
-
-      {/* Type Chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-        {[
-          { label: i18n.language === 'ar' ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
-          { label: i18n.language === 'ar' ? 'ليدز' : 'Leads', value: 'lead', count: stats.leads, color: '#4A7AAB' },
-          { label: i18n.language === 'ar' ? 'كولد' : 'Cold', value: 'cold', count: stats.cold, color: '#8BA8C8' },
-          { label: i18n.language === 'ar' ? 'عملاء' : 'Clients', value: 'client', count: stats.clients, color: '#10B981' },
-        ].map(s => (
-          <button key={s.value} onClick={() => setFilterType(s.value)} style={{
-            padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterType === s.value ? s.color : '#e5e7eb'}`,
-            background: filterType === s.value ? `${s.color}15` : '#fff',
-            color: filterType === s.value ? s.color : '#6b7280', fontSize: 12, fontWeight: filterType === s.value ? 700 : 400, cursor: 'pointer',
-          }}>
-            {s.label} <span style={{ background: filterType === s.value ? s.color : '#e5e7eb', color: filterType === s.value ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{s.count}</span>
-          </button>
-        ))}
         <button onClick={() => setShowBlacklisted(v => !v)} style={{
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${showBlacklisted ? '#EF4444' : '#e5e7eb'}`,
           background: showBlacklisted ? 'rgba(239,68,68,0.08)' : '#fff',
@@ -841,9 +870,9 @@ export default function ContactsPage() {
                     </div>
                   </td>
                   {/* Phone */}
-                  <td style={td}>
-                    <div style={{ color: '#374151' }}>{c.phone}</div>
-                    {c.phone2 && <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.phone2}</div>}
+                  <td style={td} onClick={e => e.stopPropagation()}>
+                    <PhoneCell phone={c.phone} />
+                    {c.phone2 && <PhoneCell phone={c.phone2} small />}
                   </td>
                   {/* Type */}
                   <td style={td}><Chip label={TYPE[c.contact_type]?.label} color={TYPE[c.contact_type]?.color} bg={TYPE[c.contact_type]?.bg} /></td>
@@ -873,9 +902,6 @@ export default function ContactsPage() {
                       {!c.is_blacklisted && (
                         <button title={isRTL ? "بلاك ليست" : "Blacklist"} onClick={() => setBlacklistTarget(c)}
                           style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>⛔</button>
-                      )}
-                      {isAdmin && (
-                        <button title={isRTL ? 'حذف' : 'Delete'} onClick={() => handleDelete(c.id)} style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>🗑️</button>
                       )}
                     </div>
                   </td>
