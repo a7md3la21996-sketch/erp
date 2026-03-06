@@ -195,7 +195,20 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
               </div>
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم إضافي' : 'Secondary Phone'}</label>
-                <input style={inp} placeholder="012xxxxxxxx" value={form.phone2} onChange={e => set('phone2', e.target.value)} />
+                <input style={inp} placeholder="012xxxxxxxx" value={form.phone2}
+                  onChange={e => { set('phone2', e.target.value); setDupWarning(null); }}
+                  onBlur={async () => {
+                    if (!form.phone2 || form.phone2.length < 10) return;
+                    setChecking(true);
+                    try { const dup = await checkDup(form.phone2); setDupWarning(dup || null); }
+                    catch { setDupWarning(null); }
+                    setChecking(false);
+                  }} />
+                {dupWarning && (
+                  <div style={{ marginTop: 6, padding: '6px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 11, color: '#EF4444' }}>
+                    ⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'Registered to'}: <strong>{dupWarning.full_name}</strong>
+                  </div>
+                )}
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
