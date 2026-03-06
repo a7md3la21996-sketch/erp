@@ -153,7 +153,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   };
 
   const handleSave = async () => {
-    if (!form.phone) return;
+    if (!form.phone || !validatePhone(form.phone)) { alert(isRTL ? "رقم الهاتف غير صحيح" : "Invalid phone number"); return; }
     setSaving(true);
     try {
       await onSave({
