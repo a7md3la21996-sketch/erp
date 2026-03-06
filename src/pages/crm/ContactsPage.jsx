@@ -79,6 +79,8 @@ function ScorePill({ score }) {
 
 // ── Add Contact Modal ──────────────────────────────────────────────────────
 function AddContactModal({ onClose, onSave, checkDup }) {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     full_name: '', phone: '', phone2: '', email: '',
@@ -177,7 +179,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم {isRTL ? 'الحملة' : 'Campaign'}' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
             </div>
@@ -205,7 +207,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
-                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder="{isRTL ? 'ملاحظات' : 'Notes'} إضافية..." value={form.notes} onChange={e => set('notes', e.target.value)} />
+                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
             </div>
           )}
@@ -229,6 +231,8 @@ function AddContactModal({ onClose, onSave, checkDup }) {
 
 // ── Blacklist Modal ────────────────────────────────────────────────────────
 function BlacklistModal({ contact, onClose, onConfirm }) {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const [reason, setReason] = useState('');
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -388,7 +392,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : '#E2EAF4' }}>{contact.full_name || 'بدون اسم'}</div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
                   <Chip label={tp?.label} color={tp?.color} bg={tp?.bg} />
-                  {contact.is_blacklisted && <Chip label="{isRTL ? 'بلاك ليست' : 'Blacklist'}" color="#EF4444" bg="rgba(239,68,68,0.12)" />}
+                  {contact.is_blacklisted && <Chip label={isRTL ? "بلاك ليست" : "Blacklist"} color="#EF4444" bg="rgba(239,68,68,0.12)" />}
                 </div>
               </div>
             </div>
@@ -445,11 +449,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 { label: '📱 الهاتف الأول', val: contact.phone },
                 { label: '📱 الهاتف الثاني', val: contact.phone2 || '—' },
                 { label: '📧 الإيميل', val: contact.email || '—' },
-                { label: isRTL ? '📣 المصدر' : '📣 Source', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
-                { label: isRTL ? '🎯 الحملة' : '🎯 Campaign', val: contact.campaign_name || '—' },
-                { label: isRTL ? '💰 الميزانية' : '💰 Budget', val: fmtBudget(contact.budget_min, contact.budget_max) },
-                { label: isRTL ? '📍 الموقع المفضل' : '📍 Preferred Location', val: contact.preferred_location || '—' },
-                { label: isRTL ? '🏢 نوع العقار' : '🏢 Property Type', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
+                { label: '📣 {isRTL ? 'المصدر' : 'Source'}', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
+                { label: '🎯 {isRTL ? 'الحملة' : 'Campaign'}', val: contact.campaign_name || '—' },
+                { label: '💰 {isRTL ? 'الميزانية' : 'Budget'}', val: fmtBudget(contact.budget_min, contact.budget_max) },
+                { label: '📍 {isRTL ? 'الموقع المفضل' : 'Preferred Location'}', val: contact.preferred_location || '—' },
+                { label: '🏢 {isRTL ? 'نوع العقار' : 'Property Type'}', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: isRTL ? '👤 المسؤول' : '👤 Assigned To', val: contact.assigned_to_name || '—' },
                 { label: isRTL ? '⏱️ آخر نشاط' : '⏱️ Last Activity', val: `${daysSince(contact.last_activity_at)}d` },
               ].map(r => (
@@ -473,7 +477,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
                 <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444' }}>
-                  {isRTL ? '⛔ سبب البلاك ليست:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
+                  {isRTL ? '⛔ سبب ال{isRTL ? 'بلاك ليست' : 'Blacklist'}:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
                 </div>
               )}
             </div>
@@ -579,32 +583,6 @@ export default function ContactsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [blacklistTarget, setBlacklistTarget] = useState(null);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const isAdmin = profile?.role === 'admin';
-
-  const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const toggleSelectAll = () => setSelectedIds(selectedIds.length === filtered.length ? [] : filtered.map(c => c.id));
-
-  const handleDelete = (id) => {
-    if (!window.confirm(isRTL ? 'هل أنت متأكد من الحذف؟' : 'Are you sure?')) return;
-    const updated = contacts.filter(c => c.id !== id);
-    setContacts(updated);
-    localStorage.setItem('platform_contacts', JSON.stringify(updated));
-  };
-
-  const handleDeleteSelected = () => {
-    if (!window.confirm(isRTL ? `هل تريد حذف ${selectedIds.length} عميل؟` : `Delete ${selectedIds.length} contacts?`)) return;
-    const updated = contacts.filter(c => !selectedIds.includes(c.id));
-    setContacts(updated);
-    localStorage.setItem('platform_contacts', JSON.stringify(updated));
-    setSelectedIds([]);
-  };
-
-  const handleStageChange = (id, stage) => {
-    const updated = contacts.map(c => c.id === id ? { ...c, stage } : c);
-    setContacts(updated);
-    localStorage.setItem('platform_contacts', JSON.stringify(updated));
-  };
 
   // Load contacts — Supabase first, then localStorage, then MOCK
   useEffect(() => {
@@ -714,7 +692,7 @@ export default function ContactsPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
-            {loading ? loading ? t('common.loading') : `${filtered.length} ${t('contacts.results', { count: filtered.length, total: contacts.length })}`}
+            {loading ? t('common.loading') : `${filtered.length} results`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -725,8 +703,13 @@ export default function ContactsPage() {
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
           <button onClick={() => setShowAddModal(true)} style={{ padding: '9px 18px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Plus size={14} /> إضافة جهة اتصال
+            <Plus size={14} /> {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
           </button>
+          {isAdmin && selectedIds.length > 0 && (
+            <button onClick={handleDeleteSelected} style={{ padding: '9px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#EF4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              🗑️ {isRTL ? `حذف (${selectedIds.length})` : `Delete (${selectedIds.length})`}
+            </button>
+          )}
         </div>
       </div>
 
@@ -778,7 +761,7 @@ export default function ContactsPage() {
           {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
         </select>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sel}>
-          <option value="last_activity">{i18n.language === 'ar' ? 'ترتيب: {isRTL ? 'آخر نشاط' : 'Last Activity'}' : 'Sort: Last Activity'}</option>
+          <option value="last_activity">{isRTL ? 'ترتيب: آخر نشاط' : 'Sort: Last Activity'}</option>
           <option value="score">{i18n.language === 'ar' ? 'ترتيب: Lead Score' : 'Sort: Lead Score'}</option>
           <option value="name">{i18n.language === 'ar' ? 'ترتيب: الاسم' : 'Sort: Name'}</option>
         </select>
@@ -790,10 +773,6 @@ export default function ContactsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead>
               <tr>
-                <th style={{...th, width: 40}}>
-                  <input type="checkbox" checked={selectedIds.length === filtered.length && filtered.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} />
-                </th>
-                <th style={{...th, width: 60}}>ID</th>
                 {[t('contacts.fullName'), t('contacts.phone'), t('contacts.type'), t('contacts.temperature'), t('contacts.source'), t('contacts.stage'), t('contacts.budget'), 'Score', t('common.actions')].map(h => (
                   <th key={h} style={th}>{h}</th>
                 ))}
@@ -801,27 +780,19 @@ export default function ContactsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
                   <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
                   {isRTL ? 'لا توجد نتائج' : 'No results found'}
                 </td></tr>
               ) : filtered.map((c) => (
                 <tr key={c.id}
                   onClick={() => setSelected(c)}
-                  style={{ cursor: 'pointer', background: selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
+                  style={{ cursor: 'pointer', background: c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
-                  onMouseLeave={e => e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'}
+                  onMouseLeave={e => e.currentTarget.style.background = c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'}
                 >
-                  {/* Checkbox */}
-                  <td style={td} onClick={e => e.stopPropagation()}>
-                    <input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} />
-                  </td>
-                  {/* ID */}
-                  <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>
-                    #{String(c.id).slice(-4)}
-                  </td>
                   {/* Name */}
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -850,18 +821,13 @@ export default function ContactsPage() {
                   <td style={td}><span title={TEMP[c.temperature]?.label} style={{ fontSize: 16 }}>{TEMP[c.temperature]?.icon}</span></td>
                   {/* Source */}
                   <td style={td}><span style={{ fontSize: 11, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', color: '#6b7280' }}>{i18n.language === "ar" ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></td>
-                  {/* Stage — inline edit for admin */}
-                  <td style={td} onClick={e => e.stopPropagation()}>
-                    {isAdmin && c.contact_type === 'lead' ? (
-                      <select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)}
-                        style={{ fontSize: 11, background: 'transparent', border: '1px solid rgba(212,168,83,0.3)', borderRadius: 6, color: '#D4A853', padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
-                        {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                      </select>
-                    ) : c.stage ? (
-                      <Chip label={STAGE_LABELS[c.stage]} color="#D4A853" bg="rgba(212,168,83,0.1)" />
-                    ) : c.cold_status ? (
-                      <span style={{ fontSize: 11, color: '#9ca3af' }}>{COLD_LABELS[c.cold_status]}</span>
-                    ) : <span style={{ color: '#d1d5db' }}>—</span>}
+                  {/* Stage */}
+                  <td style={td}>
+                    {c.stage
+                      ? <Chip label={STAGE_LABELS[c.stage]} color="#D4A853" bg="rgba(212,168,83,0.1)" />
+                      : c.cold_status
+                        ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{COLD_LABELS[c.cold_status]}</span>
+                        : <span style={{ color: '#d1d5db' }}>—</span>}
                   </td>
                   {/* Budget */}
                   <td style={{ ...td, fontSize: 12, color: '#6b7280' }}>{fmtBudget(c.budget_min, c.budget_max)}</td>
@@ -873,12 +839,8 @@ export default function ContactsPage() {
                       <a href={`tel:${c.phone}`} title="اتصال" style={{ padding: '5px 8px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, color: '#10B981', fontSize: 13, textDecoration: 'none' }}>📞</a>
                       <a href={`https://wa.me/2${c.phone}`} target="_blank" rel="noreferrer" title="واتساب" style={{ padding: '5px 8px', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 6, color: '#25D366', fontSize: 13, textDecoration: 'none' }}>💬</a>
                       {!c.is_blacklisted && (
-                        <button title={isRTL ? 'بلاك ليست' : 'Blacklist'} onClick={() => setBlacklistTarget(c)}
+                        <button title={isRTL ? "بلاك ليست" : "Blacklist"} onClick={() => setBlacklistTarget(c)}
                           style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>⛔</button>
-                      )}
-                      {isAdmin && (
-                        <button title={isRTL ? 'حذف' : 'Delete'} onClick={() => handleDelete(c.id)}
-                          style={{ padding: '5px 8px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', fontSize: 13, cursor: 'pointer' }}>🗑️</button>
                       )}
                     </div>
                   </td>
