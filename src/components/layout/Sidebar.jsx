@@ -26,13 +26,13 @@ export default function Sidebar({ collapsed, onToggle }) {
       borderLeft: isRTL ? '1px solid #e5e7eb' : 'none',
       display: 'flex', flexDirection: 'column',
     }}>
-      <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #e5e7eb', padding: '0 12px' }}>
         {collapsed ? (
           <div style={{ width: 36, height: 36, borderRadius: 10, overflow: 'hidden' }}>
             <img src="/logo.png" alt="Platform" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
         ) : (
-          <img src="/logo.png" alt="Platform Real Estate" style={{ height: 64, maxWidth: 220, objectFit: 'contain' }} />
+          <img src="/logo.png" alt="Platform Real Estate" style={{ height: 70, maxWidth: 210, objectFit: 'contain' }} />
         )}
       </div>
 
