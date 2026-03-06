@@ -54,9 +54,20 @@ const fmtBudget = (min, max) => {
 };
 const daysSince = d => Math.floor((Date.now() - new Date(d)) / 86400000);
 const initials = name => name ? name.trim().charAt(0) : '?';
+const normalizePhone = (p) => {
+  if (!p) return p;
+  if (p.startsWith('00')) return '+' + p.slice(2);
+  if (p.startsWith('0')) {
+    // Egyptian numbers must be exactly 11 digits starting with 01
+    if (p.length === 11 && p.startsWith('01')) return '+20' + p.slice(1);
+    return p; // return as-is so validation fails
+  }
+  return p;
+};
 const validatePhone = (p) => {
   if (!p) return false;
-  const normalized = p.startsWith('00') ? '+' + p.slice(2) : p.startsWith('0') ? '+20' + p.slice(1) : p;
+  const normalized = normalizePhone(p);
+  if (normalized === p && p.startsWith('0')) return false; // Egyptian but wrong length
   try {
     const phone = parsePhoneNumberFromString(normalized);
     return phone ? phone.isValid() : false;
@@ -64,7 +75,7 @@ const validatePhone = (p) => {
 };
 const getPhoneInfo = (p) => {
   if (!p) return null;
-  const normalized = p.startsWith('00') ? '+' + p.slice(2) : p.startsWith('0') ? '+20' + p.slice(1) : p;
+  const normalized = normalizePhone(p);
   try {
     const phone = parsePhoneNumberFromString(normalized);
     if (!phone || !phone.isValid()) return null;
@@ -769,7 +780,7 @@ export default function ContactsPage() {
   const handleSave = async (form) => {
     const newContact = {
       ...form,
-      id: String(Date.now()),
+      id: String(Math.max(0, ...contacts.map(c => parseInt(c.id) || 0)) + 1),
       lead_score: 0,
       temperature: 'hot',
       temperature_auto: true,
