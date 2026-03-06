@@ -8,6 +8,8 @@ import DashboardPage from './pages/dashboard/DashboardPage';
 import ContactsPage from './pages/crm/ContactsPage';
 import OpportunitiesPage from './pages/crm/OpportunitiesPage';
 import SettingsPage from './pages/settings/SettingsPage';
+import HRPoliciesPage from './pages/hr/HRPoliciesPage';
+import EmployeesPage from './pages/hr/EmployeesPage';
 import { P } from './config/roles';
 import './i18n';
 
@@ -52,6 +54,8 @@ export default function App() {
               <Route path="/real-estate/*" element={<ComingSoon title="Real Estate" />} />
               <Route path="/sales/*" element={<ComingSoon title="Sales" />} />
               <Route path="/marketing/*" element={<ComingSoon title="Marketing" />} />
+              <Route path="/hr/employees" element={<EmployeesPage />} />
+              <Route path="/hr/policies" element={<HRPoliciesPage />} />
               <Route path="/hr/*" element={<ComingSoon title="HR" />} />
               <Route path="/finance/*" element={<ComingSoon title="Finance" />} />
               <Route path="/tasks" element={<ComingSoon title="Tasks" />} />
