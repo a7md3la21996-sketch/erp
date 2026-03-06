@@ -207,7 +207,7 @@ function AddContactModal({ onClose, onSave, checkDup }) {
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
-                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder="{isRTL ? 'ملاحظات' : 'Notes'} إضافية..." value={form.notes} onChange={e => set('notes', e.target.value)} />
+                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
             </div>
           )}
