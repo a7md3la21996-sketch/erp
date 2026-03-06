@@ -23,7 +23,7 @@ export default function Sidebar({ collapsed, onToggle }) {
 
   return (
     <aside style={{
-      position: 'fixed', top: 0, [isRTL ? 'right' : 'left']: 0, zIndex: 40,
+      position: 'fixed', top: 0, [isRTL ? 'right' : 'left']: 0, zIndex: 20,
       height: '100vh', width: collapsed ? 72 : 260, transition: 'width 0.3s',
       background: isDark ? '#1a2234' : '#fff', borderRight: isRTL ? 'none' : ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')),
       borderLeft: isRTL ? ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')) : 'none',
@@ -33,7 +33,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         {collapsed ? (
           <img src="/logo.png" alt="P" style={{ width: 36, height: 36, objectFit: 'contain' }} />
         ) : (
-          <img src="/logo.png" alt="Platform Real Estate" style={{ width: 'calc(100% - 16px)', height: 'auto', maxHeight: 65, objectFit: 'contain' }} />
+          <img src="/logo.png" alt="Platform Real Estate" style={{ width: '100%', height: 'auto', maxHeight: 60, objectFit: 'contain', padding: '0 12px' }} />
         )}
       </div>
 
@@ -53,8 +53,9 @@ export default function Sidebar({ collapsed, onToggle }) {
                   textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'background 0.15s',
                   background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
                 }}>
+                  {!collapsed && isRTL && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
                   <Icon size={20} />
-                  {!collapsed && <span>{item.label[lang]}</span>}
+                  {!collapsed && !isRTL && <span>{item.label[lang]}</span>}
                 </Link>
               ) : (
                 <button onClick={() => toggleMenu(item.id)} style={{
@@ -63,13 +64,10 @@ export default function Sidebar({ collapsed, onToggle }) {
                   background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
                   textAlign: 'right',
                 }}>
+                  {!collapsed && isRTL && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
                   <Icon size={20} />
-                  {!collapsed && (
-                    <>
-                      <span style={{ flex: 1 }}>{item.label[lang]}</span>
-                      <ChevronDown size={16} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-                    </>
-                  )}
+                  {!collapsed && !isRTL && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
+                  {!collapsed && <ChevronDown size={16} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />}
                 </button>
               )}
 
@@ -81,6 +79,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                       fontSize: 13, color: isActive(child.path) ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#6b7280' : '#9ca3af'),
                       fontWeight: isActive(child.path) ? 600 : 400,
                       background: isActive(child.path) ? (isDark ? 'rgba(74,122,171,0.15)' : '#EDF2F740') : 'transparent',
+                      textAlign: isRTL ? 'right' : 'left',
                     }}>
                       {child.label[lang]}
                     </Link>
