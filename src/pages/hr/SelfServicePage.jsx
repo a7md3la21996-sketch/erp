@@ -23,9 +23,9 @@ const PAYSLIPS = [
 const LEAVE_BALANCE = { annual: 21, used: 7, sick: 10, used_sick: 2, emergency: 3, used_emergency: 1 };
 
 const NOTIFICATIONS = [
-  { id: 1, type: 'payroll', ar: 'تم اعتماد مسير رواتب مارس', en: 'March payroll approved', time: '2h', icon: '💰', color: '#10B981' },
-  { id: 2, type: 'leave',   ar: 'تمت الموافقة على طلب إجازتك', en: 'Your leave request approved', time: '1d', icon: '✅', color: '#3B82F6' },
-  { id: 3, type: 'perf',    ar: 'موعد تقييم الأداء الربع سنوي', en: 'Quarterly review due soon', time: '3d', icon: '🎯', color: '#F59E0B' },
+  { id: 1, type: 'payroll', ar: 'تم اعتماد مسير رواتب مارس', en: 'March payroll approved', time: '2h', icon: '', color: '#4A7AAB' },
+  { id: 2, type: 'leave',   ar: 'تمت الموافقة على طلب إجازتك', en: 'Your leave request approved', time: '1d', icon: '', color: '#4A7AAB' },
+  { id: 3, type: 'perf',    ar: 'موعد تقييم الأداء الربع سنوي', en: 'Quarterly review due soon', time: '3d', icon: '', color: '#6B8DB5' },
 ];
 
 export default function SelfServicePage() {
@@ -59,9 +59,9 @@ export default function SelfServicePage() {
   };
 
   const tabs = [
-    { key: 'overview',  ar: 'نظرة عامة',  en: 'Overview'   },
-    { key: 'payslips',  ar: 'الرواتب',    en: 'Payslips'   },
-    { key: 'leave',     ar: 'الإجازات',   en: 'Leave'      },
+    { key: 'overview',  ar: 'نظرة عامة',  en: 'Overview' },
+    { key: 'payslips',  ar: 'الرواتب',    en: 'Payslips' },
+    { key: 'leave',     ar: 'الإجازات',   en: 'Leave' },
     { key: 'attendance',ar: 'الحضور',     en: 'Attendance' },
     { key: 'performance',ar: 'الأداء',    en: 'Performance'},
   ];
@@ -114,10 +114,10 @@ export default function SelfServicePage() {
           {/* Quick Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
             {[
-              { icon: '✅', label: lang === 'ar' ? 'أيام حضور' : 'Present Days', value: presentDays, color: '#10B981' },
-              { icon: '⏰', label: lang === 'ar' ? 'أيام تأخير' : 'Late Days', value: lateDays, color: '#F59E0B' },
-              { icon: '🏖️', label: lang === 'ar' ? 'رصيد إجازة' : 'Leave Balance', value: LEAVE_BALANCE.annual - LEAVE_BALANCE.used, color: '#3B82F6' },
-              { icon: '⭐', label: lang === 'ar' ? 'تقييم الأداء' : 'Performance', value: '4.2/5', color: '#6366F1' },
+              { icon: '', label: lang === 'ar' ? 'أيام حضور' : 'Present Days', value: presentDays, color: '#4A7AAB' },
+              { icon: '', label: lang === 'ar' ? 'أيام تأخير' : 'Late Days', value: lateDays, color: '#6B8DB5' },
+              { icon: '️', label: lang === 'ar' ? 'رصيد إجازة' : 'Leave Balance', value: LEAVE_BALANCE.annual - LEAVE_BALANCE.used, color: '#4A7AAB' },
+              { icon: '', label: lang === 'ar' ? 'تقييم الأداء' : 'Performance', value: '4.2/5', color: '#4A7AAB' },
             ].map((s, i) => (
               <div key={i} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
                 <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
@@ -132,11 +132,11 @@ export default function SelfServicePage() {
             {/* Latest Payslip */}
             <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
-                💰 {lang === 'ar' ? 'آخر قسيمة راتب' : 'Latest Payslip'}
+                 {lang === 'ar' ? 'آخر قسيمة راتب' : 'Latest Payslip'}
               </div>
               {PAYSLIPS.slice(0, 1).map(p => (
                 <div key={p.month}>
-                  <div style={{ fontSize: 32, fontWeight: 900, color: '#10B981', marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
+                  <div style={{ fontSize: 32, fontWeight: 900, color: '#4A7AAB', marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
                     {p.net.toLocaleString()}
                   </div>
                   <div style={{ fontSize: 13, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
@@ -144,8 +144,8 @@ export default function SelfServicePage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {[
-                      { label: lang === 'ar' ? 'راتب أساسي' : 'Basic', value: p.basic, color: '#10B981' },
-                      { label: lang === 'ar' ? 'بونص' : 'Bonus', value: p.bonus, color: '#6366F1' },
+                      { label: lang === 'ar' ? 'راتب أساسي' : 'Basic', value: p.basic, color: '#4A7AAB' },
+                      { label: lang === 'ar' ? 'بونص' : 'Bonus', value: p.bonus, color: '#4A7AAB' },
                       { label: lang === 'ar' ? 'خصومات' : 'Deductions', value: -p.deductions, color: '#EF4444' },
                     ].map((r, i) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -161,7 +161,7 @@ export default function SelfServicePage() {
             {/* Notifications */}
             <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
-                🔔 {lang === 'ar' ? 'الإشعارات' : 'Notifications'}
+                 {lang === 'ar' ? 'الإشعارات' : 'Notifications'}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {NOTIFICATIONS.map(n => (
@@ -188,15 +188,15 @@ export default function SelfServicePage() {
               onMouseLeave={e => e.currentTarget.style.borderColor = c.border}
             >
               <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, background: '#10B98115', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>💰</div>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: '#4A7AAB15', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}></div>
                 <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: c.text }}>{MONTH_NAMES[lang][p.month - 1]} {p.year}</div>
-                  <div style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? 'راتب أساسي: ' : 'Basic: '}{p.basic.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</div>
+                  <div style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? 'راتب أساسي: ': 'Basic: '}{p.basic.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</div>
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>{p.net.toLocaleString()}</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: '#4A7AAB' }}>{p.net.toLocaleString()}</div>
                   <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'صافي الراتب' : 'Net Salary'}</div>
                 </div>
                 <ChevronRight size={16} color={c.textMuted} style={{ transform: isRTL ? 'rotate(180deg)' : 'none' }} />
@@ -215,8 +215,8 @@ export default function SelfServicePage() {
                 </div>
                 <div style={{ padding: '20px 24px' }}>
                   {[
-                    { label: lang === 'ar' ? 'الراتب الأساسي' : 'Basic Salary', value: selectedPayslip.basic, color: '#10B981' },
-                    { label: lang === 'ar' ? 'البونص' : 'Bonus', value: selectedPayslip.bonus, color: '#6366F1' },
+                    { label: lang === 'ar' ? 'الراتب الأساسي' : 'Basic Salary', value: selectedPayslip.basic, color: '#4A7AAB' },
+                    { label: lang === 'ar' ? 'البونص' : 'Bonus', value: selectedPayslip.bonus, color: '#4A7AAB' },
                     { label: lang === 'ar' ? 'الخصومات' : 'Deductions', value: -selectedPayslip.deductions, color: '#EF4444' },
                   ].map((r, i) => (
                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid ' + c.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -226,7 +226,7 @@ export default function SelfServicePage() {
                   ))}
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 0', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'الصافي' : 'Net'}</span>
-                    <span style={{ fontSize: 20, fontWeight: 900, color: '#10B981' }}>{selectedPayslip.net.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                    <span style={{ fontSize: 20, fontWeight: 900, color: '#4A7AAB' }}>{selectedPayslip.net.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
                   </div>
                   <button onClick={() => setSelectedPayslip(null)} style={{ width: '100%', padding: '11px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 14, fontWeight: 600 }}>
                     {lang === 'ar' ? 'إغلاق' : 'Close'}
@@ -243,8 +243,8 @@ export default function SelfServicePage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
             {[
-              { label: lang === 'ar' ? 'إجازة سنوية' : 'Annual Leave', total: LEAVE_BALANCE.annual, used: LEAVE_BALANCE.used, color: '#3B82F6' },
-              { label: lang === 'ar' ? 'إجازة مرضية' : 'Sick Leave', total: LEAVE_BALANCE.sick, used: LEAVE_BALANCE.used_sick, color: '#F59E0B' },
+              { label: lang === 'ar' ? 'إجازة سنوية' : 'Annual Leave', total: LEAVE_BALANCE.annual, used: LEAVE_BALANCE.used, color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'إجازة مرضية' : 'Sick Leave', total: LEAVE_BALANCE.sick, used: LEAVE_BALANCE.used_sick, color: '#6B8DB5' },
               { label: lang === 'ar' ? 'طارئة' : 'Emergency', total: LEAVE_BALANCE.emergency, used: LEAVE_BALANCE.used_emergency, color: '#EF4444' },
             ].map((lb, i) => {
               const remaining = lb.total - lb.used;
@@ -254,7 +254,7 @@ export default function SelfServicePage() {
                   <div style={{ fontSize: 13, fontWeight: 600, color: c.textMuted, marginBottom: 10, textAlign: isRTL ? 'right' : 'left' }}>{lb.label}</div>
                   <div style={{ fontSize: 28, fontWeight: 800, color: lb.color, textAlign: isRTL ? 'right' : 'left' }}>{remaining}</div>
                   <div style={{ fontSize: 11, color: c.textMuted, marginBottom: 10, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'يوم متبقي' : 'days remaining'}</div>
-                  <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
+                  <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' }}>
                     <div style={{ height: '100%', borderRadius: 3, width: pct + '%', background: lb.color }} />
                   </div>
                   <div style={{ fontSize: 11, color: c.textMuted, marginTop: 6, textAlign: isRTL ? 'right' : 'left' }}>{lb.used}/{lb.total} {lang === 'ar' ? 'مستخدم' : 'used'}</div>
@@ -265,12 +265,12 @@ export default function SelfServicePage() {
           {/* Leave Request Form */}
           <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
-              📋 {lang === 'ar' ? 'طلب إجازة جديد' : 'New Leave Request'}
+               {lang === 'ar' ? 'طلب إجازة جديد' : 'New Leave Request'}
             </div>
             {leaveSubmitted ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ fontSize: 36, marginBottom: 10 }}>✅</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#10B981', marginBottom: 6 }}>{lang === 'ar' ? 'تم إرسال الطلب!' : 'Request Submitted!'}</div>
+                <div style={{ fontSize: 36, marginBottom: 10 }}></div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#4A7AAB', marginBottom: 6 }}>{lang === 'ar' ? 'تم إرسال الطلب!' : 'Request Submitted!'}</div>
                 <div style={{ fontSize: 13, color: c.textMuted, marginBottom: 16 }}>{lang === 'ar' ? 'سيتم مراجعته من المدير المباشر' : 'Your manager will review it shortly'}</div>
                 <button onClick={() => setLeaveSubmitted(false)} style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid ' + c.border, background: 'transparent', color: c.text, cursor: 'pointer', fontSize: 13 }}>
                   {lang === 'ar' ? 'طلب آخر' : 'New Request'}
@@ -326,9 +326,9 @@ export default function SelfServicePage() {
           <div style={{ padding: '16px 20px', borderBottom: '1px solid ' + c.border, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'سجل الحضور — مارس 2026' : 'Attendance — March 2026'}</div>
             <div style={{ display: 'flex', gap: 16, fontSize: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <span style={{ color: '#10B981' }}>✅ {presentDays} {lang === 'ar' ? 'حضور' : 'present'}</span>
-              <span style={{ color: '#F59E0B' }}>⏰ {lateDays} {lang === 'ar' ? 'تأخير' : 'late'}</span>
-              <span style={{ color: '#EF4444' }}>❌ {absentDays} {lang === 'ar' ? 'غياب' : 'absent'}</span>
+              <span style={{ color: '#4A7AAB' }}> {presentDays} {lang === 'ar' ? 'حضور' : 'present'}</span>
+              <span style={{ color: '#6B8DB5' }}> {lateDays} {lang === 'ar' ? 'تأخير' : 'late'}</span>
+              <span style={{ color: '#EF4444' }}> {absentDays} {lang === 'ar' ? 'غياب' : 'absent'}</span>
             </div>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -347,8 +347,8 @@ export default function SelfServicePage() {
                   <td style={{ padding: '10px 16px', fontSize: 13, color: c.text }}>{r.check_out || '—'}</td>
                   <td style={{ padding: '10px 16px' }}>
                     <span style={{ padding: '2px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
-                      background: r.status === 'present' ? '#10B98115' : r.status === 'late' ? '#F59E0B15' : '#EF444415',
-                      color: r.status === 'present' ? '#10B981' : r.status === 'late' ? '#F59E0B' : '#EF4444',
+                      background: r.status === 'present' ? '#4A7AAB15' : r.status === 'late' ? '#6B8DB515' : '#EF444415',
+                      color: r.status === 'present' ? '#4A7AAB' : r.status === 'late' ? '#6B8DB5' : '#EF4444',
                     }}>
                       {r.status === 'present' ? (lang === 'ar' ? 'حضور' : 'Present') : r.status === 'late' ? (lang === 'ar' ? 'تأخير' : 'Late') : (lang === 'ar' ? 'غياب' : 'Absent')}
                     </span>
@@ -366,7 +366,7 @@ export default function SelfServicePage() {
           <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'تقييم Q1 2026' : 'Q1 2026 Review'}</div>
-              <div style={{ padding: '6px 16px', borderRadius: 20, background: '#10B98115', color: '#10B981', fontSize: 13, fontWeight: 700 }}>4.2 / 5 ⭐</div>
+              <div style={{ padding: '6px 16px', borderRadius: 20, background: '#4A7AAB15', color: '#4A7AAB', fontSize: 13, fontWeight: 700 }}>4.2 / 5 </div>
             </div>
             {[
               { label: lang === 'ar' ? 'التواصل' : 'Communication', score: 4 },
@@ -378,10 +378,10 @@ export default function SelfServicePage() {
               <div key={i} style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                   <span style={{ fontSize: 13, color: c.text }}>{comp.label}</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: ['#EF4444','#F97316','#F59E0B','#3B82F6','#10B981'][comp.score - 1] }}>{comp.score}/5</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: ['#EF4444','#EF4444','#6B8DB5','#4A7AAB','#4A7AAB'][comp.score - 1] }}>{comp.score}/5</span>
                 </div>
-                <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                  <div style={{ height: '100%', borderRadius: 3, width: (comp.score / 5 * 100) + '%', background: ['#EF4444','#F97316','#F59E0B','#3B82F6','#10B981'][comp.score - 1], transition: 'width 0.5s' }} />
+                <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' }}>
+                  <div style={{ height: '100%', borderRadius: 3, width: (comp.score / 5 * 100) + '%', background: ['#EF4444','#EF4444','#6B8DB5','#4A7AAB','#4A7AAB'][comp.score - 1], transition: 'width 0.5s' }} />
                 </div>
               </div>
             ))}

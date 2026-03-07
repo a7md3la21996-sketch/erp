@@ -17,21 +17,21 @@ function getPol(key) {
 }
 
 const LEAVE_TYPES = {
-  annual:       { ar: 'سنوية',          en: 'Annual',        color: '#3B82F6', icon: '🏖️',  paid: true,  fromBalance: true  },
-  sick:         { ar: 'مرضية',          en: 'Sick',          color: '#10B981', icon: '🏥',  paid: true,  fromBalance: true  },
-  marriage:     { ar: 'زواج',           en: 'Marriage',      color: '#EC4899', icon: '💍',  paid: true,  fromBalance: true  },
-  maternity:    { ar: 'أمومة',          en: 'Maternity',     color: '#8B5CF6', icon: '👶',  paid: true,  fromBalance: true  },
-  paternity:    { ar: 'أبوة',           en: 'Paternity',     color: '#6366F1', icon: '👨‍👧',  paid: true,  fromBalance: true  },
-  unpaid:       { ar: 'بدون راتب',      en: 'Unpaid',        color: '#F59E0B', icon: '💸',  paid: false, fromBalance: false },
-  exception:    { ar: 'استثناء',        en: 'Exception',     color: '#14B8A6', icon: '⚡',  paid: true,  fromBalance: false },
-  notice:       { ar: 'بإشعار مسبق',   en: 'With Notice',   color: '#94A3B8', icon: '📋',  paid: false, fromBalance: false },
+  annual:       { ar: 'سنوية',          en: 'Annual',        color: '#4A7AAB', icon: '️',  paid: true,  fromBalance: true  },
+  sick:         { ar: 'مرضية',          en: 'Sick',          color: '#4A7AAB', icon: '',  paid: true,  fromBalance: true  },
+  marriage:     { ar: 'زواج',           en: 'Marriage',      color: '#6B8DB5', icon: '',  paid: true,  fromBalance: true  },
+  maternity:    { ar: 'أمومة',          en: 'Maternity',     color: '#4A7AAB', icon: '',  paid: true,  fromBalance: true  },
+  paternity:    { ar: 'أبوة',           en: 'Paternity',     color: '#4A7AAB', icon: '‍',  paid: true,  fromBalance: true  },
+  unpaid:       { ar: 'بدون راتب',      en: 'Unpaid',        color: '#6B8DB5', icon: '',  paid: false, fromBalance: false },
+  exception:    { ar: 'استثناء',        en: 'Exception',     color: '#4A7AAB', icon: '',  paid: true,  fromBalance: false },
+  notice:       { ar: 'بإشعار مسبق',   en: 'With Notice',   color: '#8BA8C8', icon: '',  paid: false, fromBalance: false },
 };
 
 const STATUS = {
-  pending:  { ar: 'قيد الانتظار', en: 'Pending',  color: '#F59E0B', bg: '#F59E0B20' },
-  approved: { ar: 'معتمدة',       en: 'Approved', color: '#10B981', bg: '#10B98120' },
+  pending:  { ar: 'قيد الانتظار', en: 'Pending',  color: '#6B8DB5', bg: '#6B8DB520' },
+  approved: { ar: 'معتمدة',       en: 'Approved', color: '#4A7AAB', bg: '#4A7AAB20' },
   rejected: { ar: 'مرفوضة',      en: 'Rejected', color: '#EF4444', bg: '#EF444420' },
-  cancelled:{ ar: 'ملغاة',        en: 'Cancelled',color: '#94A3B8', bg: '#94A3B820' },
+  cancelled:{ ar: 'ملغاة',        en: 'Cancelled',color: '#8BA8C8', bg: '#8BA8C820' },
 };
 
 function calcBalance(emp, leaveType) {
@@ -72,7 +72,7 @@ const MOCK_LEAVES = [
 
 // ── Avatar ────────────────────────────────────────────────────
 function Avatar({ emp, size = 32 }) {
-  const initials = emp.full_name_ar.split(' ').slice(0,2).map(w=>w[0]).join('');
+  const initials = emp.full_name_ar.split('').slice(0,2).map(w=>w[0]).join('');
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: emp.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.34, fontWeight: 700, flexShrink: 0 }}>
       {initials}
@@ -158,10 +158,10 @@ function RequestModal({ onClose, onSave, employees, isDark, isRTL, lang, c }) {
 
           {/* Balance info */}
           {bal && lt.fromBalance && (
-            <div style={{ padding: '10px 14px', borderRadius: 8, background: bal.inProbation ? '#F59E0B15' : '#3B82F615', border: '1px solid ' + (bal.inProbation ? '#F59E0B30' : '#3B82F630'), display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <div style={{ padding: '10px 14px', borderRadius: 8, background: bal.inProbation ? '#6B8DB515' : '#4A7AAB15', border: '1px solid ' + (bal.inProbation ? '#6B8DB530' : '#4A7AAB30'), display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               {bal.inProbation
-                ? <><AlertTriangle size={14} color="#F59E0B" /><span style={{ fontSize: 13, color: '#F59E0B' }}>{lang === 'ar' ? 'الموظف في فترة التجربة — لا يوجد رصيد' : 'Employee in probation — no balance'}</span></>
-                : <><CheckCircle size={14} color="#3B82F6" /><span style={{ fontSize: 13, color: '#3B82F6' }}>{lang === 'ar' ? `الرصيد المتاح: ${bal.balance} يوم` : `Available balance: ${bal.balance} days`}</span></>
+                ? <><AlertTriangle size={14} color="#6B8DB5" /><span style={{ fontSize: 13, color: '#6B8DB5' }}>{lang === 'ar' ? 'الموظف في فترة التجربة — لا يوجد رصيد' : 'Employee in probation — no balance'}</span></>
+                : <><CheckCircle size={14} color="#4A7AAB" /><span style={{ fontSize: 13, color: '#4A7AAB' }}>{lang === 'ar' ? `الرصيد المتاح: ${bal.balance} يوم` : `Available balance: ${bal.balance} days`}</span></>
               }
             </div>
           )}
@@ -180,7 +180,7 @@ function RequestModal({ onClose, onSave, employees, isDark, isRTL, lang, c }) {
 
           {/* Days summary */}
           {days > 0 && (
-            <div style={{ padding: '10px 14px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.1)' : '#EFF6FF', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : '#BFDBFE'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <div style={{ padding: '10px 14px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.2)'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <span style={{ fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'عدد الأيام' : 'Number of days'}</span>
               <span style={{ fontSize: 18, fontWeight: 800, color: c.accent }}>{days} {lang === 'ar' ? 'أيام' : 'days'}</span>
             </div>
@@ -233,7 +233,7 @@ function DetailModal({ leave, employees, onClose, onApprove, onReject, isDark, i
               <div style={{ fontSize: 13, color: c.textMuted }}>{leave.days} {lang === 'ar' ? 'أيام' : 'days'} · {leave.from_date} → {leave.to_date}</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={14} />
           </button>
         </div>
@@ -258,7 +258,7 @@ function DetailModal({ leave, employees, onClose, onApprove, onReject, isDark, i
 
           {/* Info rows */}
           {[
-            { label: lang === 'ar' ? 'مدفوعة' : 'Paid', value: lt.paid ? (lang === 'ar' ? '✅ نعم' : '✅ Yes') : (lang === 'ar' ? '❌ لا (خصم)' : '❌ No (deducted)') },
+            { label: lang === 'ar' ? 'مدفوعة' : 'Paid', value: lt.paid ? (lang === 'ar' ? ' نعم' : 'Yes') : (lang === 'ar' ? ' لا (خصم)' : 'No (deducted)') },
             { label: lang === 'ar' ? 'من الرصيد' : 'From Balance', value: lt.fromBalance ? (lang === 'ar' ? 'نعم' : 'Yes') : (lang === 'ar' ? 'لا' : 'No') },
             { label: lang === 'ar' ? 'تاريخ الطلب' : 'Requested', value: leave.created_at },
             ...(leave.reason ? [{ label: lang === 'ar' ? 'السبب' : 'Reason', value: leave.reason }] : []),
@@ -288,7 +288,7 @@ function DetailModal({ leave, employees, onClose, onApprove, onReject, isDark, i
                   <XCircle size={15} /> {lang === 'ar' ? 'رفض' : 'Reject'}
                 </button>
                 <button onClick={() => onApprove(leave.id, note)}
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#10B98120', color: '#10B981', fontSize: 13, fontWeight: 600 }}>
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#4A7AAB20', color: '#4A7AAB', fontSize: 13, fontWeight: 600 }}>
                   <CheckCircle size={15} /> {lang === 'ar' ? 'موافقة' : 'Approve'}
                 </button>
               </div>
@@ -337,7 +337,7 @@ export default function LeavePage() {
 
   const filtered = useMemo(() => leaves.filter(l => {
     const matchStatus = statusFilter === 'all' || l.status === statusFilter;
-    const matchType   = typeFilter === 'all'   || l.leave_type === typeFilter;
+    const matchType   = typeFilter === 'all' || l.leave_type === typeFilter;
     return matchStatus && matchType;
   }), [leaves, statusFilter, typeFilter]);
 
@@ -411,10 +411,10 @@ export default function LeavePage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         {[
-          { label: lang === 'ar' ? 'قيد الانتظار' : 'Pending',      value: pendingCount,          icon: '⏳', color: '#F59E0B' },
-          { label: lang === 'ar' ? 'معتمدة' : 'Approved',           value: approvedCount,         icon: '✅', color: '#10B981' },
-          { label: lang === 'ar' ? 'هذا الشهر (أيام)' : 'This Month (days)', value: totalDaysThisMonth, icon: '📅', color: '#6366F1' },
-          { label: lang === 'ar' ? 'إجمالي الطلبات' : 'Total',      value: leaves.length,         icon: '📋', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'قيد الانتظار' : 'Pending',      value: pendingCount,          icon: '', color: '#6B8DB5' },
+          { label: lang === 'ar' ? 'معتمدة' : 'Approved',           value: approvedCount,         icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'هذا الشهر (أيام)' : 'This Month (days)', value: totalDaysThisMonth, icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'إجمالي الطلبات' : 'Total',      value: leaves.length,         icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
           <div key={i} style={{ padding: '16px 18px', borderRadius: 12, background: c.cardBg, border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -430,20 +430,20 @@ export default function LeavePage() {
 
       {/* Pending Alert */}
       {pendingCount > 0 && (
-        <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(245,158,11,0.1)' : '#FFFBEB', border: '1px solid ' + (isDark ? 'rgba(245,158,11,0.2)' : '#FDE68A'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <AlertTriangle size={16} color="#F59E0B" />
-          <span style={{ fontSize: 13, fontWeight: 600, color: '#F59E0B' }}>
+        <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(245,158,11,0.1)' : 'rgba(74,122,171,0.06)', border: '1px solid ' + (isDark ? 'rgba(245,158,11,0.2)' : 'rgba(74,122,171,0.08)'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          <AlertTriangle size={16} color="#6B8DB5" />
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#6B8DB5' }}>
             {lang === 'ar' ? `${pendingCount} طلب إجازة ينتظر الموافقة` : `${pendingCount} leave request(s) pending approval`}
           </span>
           <button onClick={() => { setTab('requests'); setStatusF('pending'); }}
-            style={{ marginInlineStart: 'auto', padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', background: '#F59E0B', color: '#fff', fontSize: 12, fontWeight: 600 }}>
+            style={{ marginInlineStart: 'auto', padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer', background: '#6B8DB5', color: '#fff', fontSize: 12, fontWeight: 600 }}>
             {lang === 'ar' ? 'عرض' : 'View'}
           </button>
         </div>
       )}
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : '#F1F5F9', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.06)', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {[
           { id: 'requests', ar: 'الطلبات', en: 'Requests' },
           { id: 'balances', ar: 'الأرصدة', en: 'Balances' },
@@ -574,9 +574,9 @@ export default function LeavePage() {
               <tr style={{ background: c.thBg }}>
                 {[
                   { ar: 'الموظف', en: 'Employee', w: 'auto' },
-                  { ar: 'سنوية 🏖️', en: 'Annual 🏖️', w: '110px' },
-                  { ar: 'مرضية 🏥', en: 'Sick 🏥', w: '110px' },
-                  { ar: 'زواج 💍', en: 'Marriage 💍', w: '110px' },
+                  { ar: 'سنوية ️', en: 'Annual ️', w: '110px' },
+                  { ar: 'مرضية ', en: 'Sick ', w: '110px' },
+                  { ar: 'زواج ', en: 'Marriage ', w: '110px' },
                   { ar: 'الحالة', en: 'Status', w: '120px' },
                 ].map((col, i) => (
                   <th key={i} style={{ padding: '11px 16px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', width: col.w }}>
@@ -604,7 +604,7 @@ export default function LeavePage() {
                   {[annual, sick, marriage].map((bal, i) => (
                     <td key={i} style={{ padding: '12px 16px' }}>
                       {bal.inProbation
-                        ? <span style={{ fontSize: 12, color: '#F59E0B', fontWeight: 500 }}>{lang === 'ar' ? 'في التجربة' : 'Probation'}</span>
+                        ? <span style={{ fontSize: 12, color: '#6B8DB5', fontWeight: 500 }}>{lang === 'ar' ? 'في التجربة' : 'Probation'}</span>
                         : <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <span style={{ fontSize: 16, fontWeight: 800, color: c.accent }}>{bal.balance}</span>
                             <span style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'يوم' : 'days'}</span>
@@ -614,8 +614,8 @@ export default function LeavePage() {
                   ))}
 
                   <td style={{ padding: '12px 16px' }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: '#10B98120', color: '#10B981' }}>
-                      ✓ {lang === 'ar' ? 'نشط' : 'Active'}
+                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: '#4A7AAB20', color: '#4A7AAB' }}>
+                       {lang === 'ar' ? 'نشط' : 'Active'}
                     </span>
                   </td>
                 </tr>
@@ -661,7 +661,7 @@ export default function LeavePage() {
                   minHeight: 80, padding: '6px 8px',
                   borderRight: (i + 1) % 7 !== 0 ? '1px solid ' + c.border : 'none',
                   borderBottom: '1px solid ' + c.border,
-                  background: isWeekend && day ? (isDark ? 'rgba(239,68,68,0.04)' : '#FFF5F5') : 'transparent',
+                  background: isWeekend && day ? (isDark ? 'rgba(239,68,68,0.04)' : 'rgba(239,68,68,0.05)') : 'transparent',
                 }}>
                   {day && (
                     <>
@@ -679,7 +679,7 @@ export default function LeavePage() {
                         const lt  = LEAVE_TYPES[l.leave_type];
                         return (
                           <div key={li} style={{ marginBottom: 2, padding: '2px 5px', borderRadius: 4, background: lt.color + '25', borderLeft: `2px solid ${lt.color}`, fontSize: 10, fontWeight: 500, color: lt.color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {emp ? emp.full_name_ar.split(' ')[0] : ''}
+                            {emp ? emp.full_name_ar.split('')[0] : ''}
                           </div>
                         );
                       })}

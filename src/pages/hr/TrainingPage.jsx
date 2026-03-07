@@ -95,15 +95,15 @@ const INITIAL_COURSES = [
 const BUDGET = { total: 80000, year: 2026 };
 
 const STATUS_CONFIG = {
-  upcoming:  { ar: 'قادم',    en: 'Upcoming',  color: '#3B82F6', bg: '#3B82F615' },
-  ongoing:   { ar: 'جاري',    en: 'Ongoing',   color: '#F59E0B', bg: '#F59E0B15' },
-  completed: { ar: 'منتهى',   en: 'Completed', color: '#10B981', bg: '#10B98115' },
+  upcoming:  { ar: 'قادم',    en: 'Upcoming',  color: '#4A7AAB', bg: '#4A7AAB15' },
+  ongoing:   { ar: 'جاري',    en: 'Ongoing',   color: '#6B8DB5', bg: '#6B8DB515' },
+  completed: { ar: 'منتهى',   en: 'Completed', color: '#4A7AAB', bg: '#4A7AAB15' },
   cancelled: { ar: 'ملغي',    en: 'Cancelled', color: '#EF4444', bg: '#EF444415' },
 };
 
 const TYPE_CONFIG = {
-  internal: { ar: 'داخلي', en: 'Internal', color: '#6366F1', bg: '#6366F115', icon: '🏢' },
-  external: { ar: 'خارجي', en: 'External', color: '#EC4899', bg: '#EC489915', icon: '🌐' },
+  internal: { ar: 'داخلي', en: 'Internal', color: '#4A7AAB', bg: '#4A7AAB15', icon: '' },
+  external: { ar: 'خارجي', en: 'External', color: '#6B8DB5', bg: '#6B8DB515', icon: '' },
 };
 
 const EMPTY_FORM = {
@@ -145,7 +145,7 @@ function CourseCard({ course, lang, isRTL, c, isDark, employees, onClick }) {
           </span>
         </div>
         {course.cost > 0 && (
-          <span style={{ fontSize: 12, fontWeight: 700, color: '#F59E0B' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#6B8DB5' }}>
             {course.cost.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}
           </span>
         )}
@@ -156,12 +156,12 @@ function CourseCard({ course, lang, isRTL, c, isDark, employees, onClick }) {
         {lang === 'ar' ? course.title_ar : course.title_en}
       </div>
       <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 12 }}>
-        👨‍🏫 {lang === 'ar' ? course.trainer_ar : course.trainer_en} · {course.duration_days} {lang === 'ar' ? 'يوم' : 'days'}
+        ‍ {lang === 'ar' ? course.trainer_ar : course.trainer_en} · {course.duration_days} {lang === 'ar' ? 'يوم' : 'days'}
       </div>
 
       {/* Dates */}
       <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 12 }}>
-        📅 {course.start_date} → {course.end_date}
+         {course.start_date} → {course.end_date}
       </div>
 
       {/* Progress */}
@@ -169,10 +169,10 @@ function CourseCard({ course, lang, isRTL, c, isDark, employees, onClick }) {
         <div style={{ marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <span style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'نسبة الإتمام' : 'Completion'}</span>
-            <span style={{ fontSize: 11, fontWeight: 700, color: completionRate === 100 ? '#10B981' : '#F59E0B' }}>{completionRate}%</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: completionRate === 100 ? '#4A7AAB' : '#6B8DB5' }}>{completionRate}%</span>
           </div>
-          <div style={{ height: 4, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-            <div style={{ height: '100%', borderRadius: 4, width: completionRate + '%', background: completionRate === 100 ? '#10B981' : '#F59E0B', transition: 'width 0.3s' }} />
+          <div style={{ height: 4, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' }}>
+            <div style={{ height: '100%', borderRadius: 4, width: completionRate + '%', background: completionRate === 100 ? '#4A7AAB' : '#6B8DB5', transition: 'width 0.3s' }} />
           </div>
         </div>
       )}
@@ -257,7 +257,7 @@ function CourseModal({ course, employees, onClose, onSave, onDelete, lang, isRTL
               {lang === 'ar' ? course.title_ar : course.title_en}
             </div>
             <div style={{ fontSize: 13, color: c.textMuted, marginTop: 4 }}>
-              👨‍🏫 {lang === 'ar' ? course.trainer_ar : course.trainer_en} · 📅 {course.start_date} → {course.end_date}
+              ‍ {lang === 'ar' ? course.trainer_ar : course.trainer_en} ·  {course.start_date} → {course.end_date}
             </div>
           </div>
           <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(255,255,255,0.08)' : '#F3F4F6', color: c.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -268,9 +268,9 @@ function CourseModal({ course, employees, onClose, onSave, onDelete, lang, isRTL
         {/* Tabs */}
         <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid ' + c.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           {[
-            { key: 'details',   ar: 'التفاصيل',    en: 'Details'    },
+            { key: 'details',   ar: 'التفاصيل',    en: 'Details' },
             { key: 'enrollments', ar: 'المشاركون', en: 'Enrollments' },
-            { key: 'completion', ar: 'الإتمام',    en: 'Completion'  },
+            { key: 'completion', ar: 'الإتمام',    en: 'Completion' },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               padding: '12px 20px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
@@ -297,10 +297,10 @@ function CourseModal({ course, employees, onClose, onSave, onDelete, lang, isRTL
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 {[
-                  { icon: '🎯', label: lang === 'ar' ? 'الكفاءة المستهدفة' : 'Target Competency', value: comp ? (lang === 'ar' ? comp.ar : comp.en) : '-' },
-                  { icon: '💰', label: lang === 'ar' ? 'التكلفة' : 'Cost', value: course.cost > 0 ? `${course.cost.toLocaleString()} ${lang === 'ar' ? 'ج.م' : 'EGP'}` : (lang === 'ar' ? 'مجاني' : 'Free') },
-                  { icon: '⏱️', label: lang === 'ar' ? 'المدة' : 'Duration', value: `${course.duration_days} ${lang === 'ar' ? 'يوم' : 'days'}` },
-                  { icon: '💺', label: lang === 'ar' ? 'المقاعد' : 'Seats', value: `${enrolled.length} / ${course.max_seats}` },
+                  { icon: '', label: lang === 'ar' ? 'الكفاءة المستهدفة' : 'Target Competency', value: comp ? (lang === 'ar' ? comp.ar : comp.en) : '-' },
+                  { icon: '', label: lang === 'ar' ? 'التكلفة' : 'Cost', value: course.cost > 0 ? `${course.cost.toLocaleString()} ${lang === 'ar' ? 'ج.م' : 'EGP'}` : (lang === 'ar' ? 'مجاني' : 'Free') },
+                  { icon: '️', label: lang === 'ar' ? 'المدة' : 'Duration', value: `${course.duration_days} ${lang === 'ar' ? 'يوم' : 'days'}` },
+                  { icon: '', label: lang === 'ar' ? 'المقاعد' : 'Seats', value: `${enrolled.length} / ${course.max_seats}` },
                 ].map((item, i) => (
                   <div key={i} style={{ padding: '12px 14px', borderRadius: 8, background: c.cardBg, border: '1px solid ' + c.border }}>
                     <div style={{ fontSize: 11, color: c.textMuted, marginBottom: 4 }}>{item.icon} {item.label}</div>
@@ -310,17 +310,17 @@ function CourseModal({ course, employees, onClose, onSave, onDelete, lang, isRTL
               </div>
 
               {course.status === 'completed' && (
-                <div style={{ padding: 16, borderRadius: 10, background: '#10B98110', border: '1px solid #10B98130' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#10B981', marginBottom: 8 }}>
-                    ✅ {lang === 'ar' ? 'نتائج التدريب' : 'Training Results'}
+                <div style={{ padding: 16, borderRadius: 10, background: '#4A7AAB10', border: '1px solid #4A7AAB30' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#4A7AAB', marginBottom: 8 }}>
+                     {lang === 'ar' ? 'نتائج التدريب' : 'Training Results'}
                   </div>
                   <div style={{ display: 'flex', gap: 20, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                     <div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: '#10B981' }}>{completed.length}</div>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: '#4A7AAB' }}>{completed.length}</div>
                       <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'أتموا' : 'Completed'}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 24, fontWeight: 800, color: '#F59E0B' }}>{enrolled.length - completed.length}</div>
+                      <div style={{ fontSize: 24, fontWeight: 800, color: '#6B8DB5' }}>{enrolled.length - completed.length}</div>
                       <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'لم يتموا' : 'Incomplete'}</div>
                     </div>
                     <div>
@@ -353,7 +353,7 @@ function CourseModal({ course, employees, onClose, onSave, onDelete, lang, isRTL
                     <div key={emp.id} onClick={() => toggleEnroll(emp.id)} style={{
                       display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
                       borderRadius: 8, border: '1px solid ' + (isEnrolled ? c.accent : c.border),
-                      background: isEnrolled ? (isDark ? 'rgba(74,122,171,0.1)' : '#EFF6FF') : 'transparent',
+                      background: isEnrolled ? (isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.08)') : 'transparent',
                       cursor: 'pointer', transition: 'all 0.15s',
                       flexDirection: isRTL ? 'row-reverse' : 'row',
                     }}>
@@ -395,8 +395,8 @@ function CourseModal({ course, employees, onClose, onSave, onDelete, lang, isRTL
                     return (
                       <div key={emp.id} onClick={() => toggleComplete(emp.id)} style={{
                         display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
-                        borderRadius: 8, border: '1px solid ' + (isDone ? '#10B981' : c.border),
-                        background: isDone ? '#10B98110' : 'transparent',
+                        borderRadius: 8, border: '1px solid ' + (isDone ? '#4A7AAB' : c.border),
+                        background: isDone ? '#4A7AAB10' : 'transparent',
                         cursor: 'pointer', transition: 'all 0.15s',
                         flexDirection: isRTL ? 'row-reverse' : 'row',
                       }}>
@@ -409,9 +409,9 @@ function CourseModal({ course, employees, onClose, onSave, onDelete, lang, isRTL
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {isDone ? (
-                            <span style={{ fontSize: 11, color: '#10B981', fontWeight: 600 }}>✅ {lang === 'ar' ? 'أتم' : 'Done'}</span>
+                            <span style={{ fontSize: 11, color: '#4A7AAB', fontWeight: 600 }}> {lang === 'ar' ? 'أتم' : 'Done'}</span>
                           ) : (
-                            <span style={{ fontSize: 11, color: c.textMuted }}>⏳ {lang === 'ar' ? 'لم يتم' : 'Pending'}</span>
+                            <span style={{ fontSize: 11, color: c.textMuted }}> {lang === 'ar' ? 'لم يتم' : 'Pending'}</span>
                           )}
                         </div>
                       </div>
@@ -633,7 +633,7 @@ export default function TrainingPage() {
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#4A7AAB,#4A7AAB)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <BookOpen size={20} color="#fff" />
             </div>
             <div>
@@ -654,10 +654,10 @@ export default function TrainingPage() {
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 24 }}>
         {[
-          { label: lang === 'ar' ? 'البرامج' : 'Programs',     value: courses.length,    icon: '📚', color: '#6366F1' },
-          { label: lang === 'ar' ? 'المسجلون' : 'Enrolled',    value: totalEnrolled,      icon: '👥', color: '#3B82F6' },
-          { label: lang === 'ar' ? 'أتموا' : 'Completed',      value: totalCompleted,     icon: '✅', color: '#10B981' },
-          { label: lang === 'ar' ? 'نسبة الإتمام' : 'Rate',    value: completionRate + '%', icon: '🎯', color: '#F59E0B' },
+          { label: lang === 'ar' ? 'البرامج' : 'Programs',     value: courses.length,    icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'المسجلون' : 'Enrolled',    value: totalEnrolled,      icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'أتموا' : 'Completed',      value: totalCompleted,     icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'نسبة الإتمام' : 'Rate',    value: completionRate + '%', icon: '', color: '#6B8DB5' },
         ].map((stat, i) => (
           <div key={i} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
             <div style={{ fontSize: 22, marginBottom: 6 }}>{stat.icon}</div>
@@ -670,8 +670,8 @@ export default function TrainingPage() {
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '1px solid ' + c.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {[
-          { key: 'courses',         ar: 'البرامج',             en: 'Programs'       },
-          { key: 'budget',          ar: 'الميزانية',           en: 'Budget'         },
+          { key: 'courses',         ar: 'البرامج',             en: 'Programs' },
+          { key: 'budget',          ar: 'الميزانية',           en: 'Budget' },
           { key: 'recommendations', ar: 'توصيات التطوير',      en: 'Recommendations'},
         ].map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
@@ -729,27 +729,27 @@ export default function TrainingPage() {
           {/* Budget Overview */}
           <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '24px' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: c.text, marginBottom: 20, textAlign: isRTL ? 'right' : 'left' }}>
-              💰 {lang === 'ar' ? `ميزانية التدريب ${BUDGET.year}` : `Training Budget ${BUDGET.year}`}
+               {lang === 'ar' ? `ميزانية التدريب ${BUDGET.year}` : `Training Budget ${BUDGET.year}`}
             </div>
 
             {/* Budget Bar */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <span style={{ fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'الإجمالي' : 'Total'}: {BUDGET.total.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
-                <span style={{ fontSize: 13, color: remaining >= 0 ? '#10B981' : '#EF4444', fontWeight: 600 }}>
+                <span style={{ fontSize: 13, color: remaining >= 0 ? '#4A7AAB' : '#EF4444', fontWeight: 600 }}>
                   {lang === 'ar' ? 'المتبقي' : 'Remaining'}: {remaining.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}
                 </span>
               </div>
-              <div style={{ height: 12, borderRadius: 6, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', overflow: 'hidden' }}>
+              <div style={{ height: 12, borderRadius: 6, background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb', overflow: 'hidden' }}>
                 <div style={{ height: '100%', display: 'flex' }}>
                   <div style={{ width: spentPct + '%', background: '#EF4444', transition: 'width 0.5s' }} />
-                  <div style={{ width: committedPct + '%', background: '#F59E0B', transition: 'width 0.5s' }} />
+                  <div style={{ width: committedPct + '%', background: '#6B8DB5', transition: 'width 0.5s' }} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 16, marginTop: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <span style={{ fontSize: 11, color: '#EF4444' }}>■ {lang === 'ar' ? 'مصروف' : 'Spent'} {spentPct}%</span>
-                <span style={{ fontSize: 11, color: '#F59E0B' }}>■ {lang === 'ar' ? 'ملتزم' : 'Committed'} {committedPct}%</span>
-                <span style={{ fontSize: 11, color: '#10B981' }}>■ {lang === 'ar' ? 'متاح' : 'Available'} {100 - spentPct - committedPct}%</span>
+                <span style={{ fontSize: 11, color: '#EF4444' }}> {lang === 'ar' ? 'مصروف' : 'Spent'} {spentPct}%</span>
+                <span style={{ fontSize: 11, color: '#6B8DB5' }}> {lang === 'ar' ? 'ملتزم' : 'Committed'} {committedPct}%</span>
+                <span style={{ fontSize: 11, color: '#4A7AAB' }}> {lang === 'ar' ? 'متاح' : 'Available'} {100 - spentPct - committedPct}%</span>
               </div>
             </div>
 
@@ -770,8 +770,8 @@ export default function TrainingPage() {
                         <span style={{ fontSize: 13, fontWeight: 700, color: c.accent }}>{course.cost.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
                       </div>
                     </div>
-                    <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                      <div style={{ height: '100%', borderRadius: 3, width: pct + '%', background: course.status === 'completed' ? '#EF4444' : '#F59E0B' }} />
+                    <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' }}>
+                      <div style={{ height: '100%', borderRadius: 3, width: pct + '%', background: course.status === 'completed' ? '#EF4444' : '#6B8DB5' }} />
                     </div>
                   </div>
                 );
@@ -782,9 +782,9 @@ export default function TrainingPage() {
           {/* Summary Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
             {[
-              { label: lang === 'ar' ? 'مصروف' : 'Spent', value: spent.toLocaleString(), color: '#EF4444', icon: '💸' },
-              { label: lang === 'ar' ? 'ملتزم' : 'Committed', value: committed.toLocaleString(), color: '#F59E0B', icon: '📋' },
-              { label: lang === 'ar' ? 'متاح' : 'Available', value: remaining.toLocaleString(), color: '#10B981', icon: '💚' },
+              { label: lang === 'ar' ? 'مصروف' : 'Spent', value: spent.toLocaleString(), color: '#EF4444', icon: '' },
+              { label: lang === 'ar' ? 'ملتزم' : 'Committed', value: committed.toLocaleString(), color: '#6B8DB5', icon: '' },
+              { label: lang === 'ar' ? 'متاح' : 'Available', value: remaining.toLocaleString(), color: '#4A7AAB', icon: '' },
             ].map((s, i) => (
               <div key={i} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '18px 20px', textAlign: 'center' }}>
                 <div style={{ fontSize: 24, marginBottom: 6 }}>{s.icon}</div>
@@ -799,9 +799,9 @@ export default function TrainingPage() {
       {/* ── RECOMMENDATIONS TAB ── */}
       {activeTab === 'recommendations' && (
         <div>
-          <div style={{ padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(99,102,241,0.1)' : '#EEF2FF', border: '1px solid ' + (isDark ? 'rgba(99,102,241,0.2)' : '#C7D2FE'), marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <span style={{ fontSize: 18 }}>🤖</span>
-            <p style={{ margin: 0, fontSize: 13, color: isDark ? '#A5B4FC' : '#4338CA' }}>
+          <div style={{ padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(99,102,241,0.2)' : '#8BA8C8'), marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <span style={{ fontSize: 18 }}></span>
+            <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#2B4C6F' }}>
               {lang === 'ar'
                 ? 'التوصيات مبنية على تحليل الكفاءات الأضعف لكل موظف من تقييمات الأداء'
                 : 'Recommendations are based on each employee\'s weakest competencies from performance reviews'}
@@ -816,15 +816,15 @@ export default function TrainingPage() {
                 <div style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: c.text }}>{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
                   <div style={{ fontSize: 12, color: c.textMuted, marginTop: 2 }}>
-                    {lang === 'ar' ? 'كفاءة تحتاج تطوير: ' : 'Needs improvement: '}
-                    <span style={{ color: '#F59E0B', fontWeight: 600 }}>{lang === 'ar' ? weakComp.ar : weakComp.en}</span>
+                    {lang === 'ar' ? 'كفاءة تحتاج تطوير: ': 'Needs improvement: '}
+                    <span style={{ color: '#6B8DB5', fontWeight: 600 }}>{lang === 'ar' ? weakComp.ar : weakComp.en}</span>
                     <span style={{ fontSize: 11, color: '#EF4444', marginRight: 4, marginLeft: 4 }}>({weakScore}/5)</span>
                   </div>
                 </div>
                 <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
                   <div style={{ fontSize: 11, color: c.textMuted, marginBottom: 3 }}>{lang === 'ar' ? 'برنامج مقترح' : 'Suggested program'}</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: c.accent }}>{lang === 'ar' ? suggested.title_ar : suggested.title_en}</div>
-                  <div style={{ fontSize: 11, color: c.textMuted }}>📅 {suggested.start_date}</div>
+                  <div style={{ fontSize: 11, color: c.textMuted }}> {suggested.start_date}</div>
                 </div>
                 <ChevronRight size={16} color={c.textMuted} style={{ transform: isRTL ? 'rotate(180deg)' : 'none', flexShrink: 0 }} />
               </div>

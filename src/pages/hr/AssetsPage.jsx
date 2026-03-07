@@ -5,17 +5,17 @@ import { Monitor, Smartphone, Car, Key, Package, Plus, Search, AlertCircle, Chec
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 
 const ASSET_TYPES = [
-  { key: 'laptop',  ar: 'لابتوب',      en: 'Laptop',      icon: Monitor,    color: '#3B82F6' },
-  { key: 'phone',   ar: 'موبايل',      en: 'Phone',       icon: Smartphone, color: '#10B981' },
-  { key: 'car',     ar: 'سيارة',       en: 'Car',         icon: Car,        color: '#F59E0B' },
-  { key: 'key',     ar: 'مفتاح/كارت', en: 'Key/Card',    icon: Key,        color: '#8B5CF6' },
+  { key: 'laptop',  ar: 'لابتوب',      en: 'Laptop',      icon: Monitor,    color: '#4A7AAB' },
+  { key: 'phone',   ar: 'موبايل',      en: 'Phone',       icon: Smartphone, color: '#4A7AAB' },
+  { key: 'car',     ar: 'سيارة',       en: 'Car',         icon: Car,        color: '#6B8DB5' },
+  { key: 'key',     ar: 'مفتاح/كارت', en: 'Key/Card',    icon: Key,        color: '#4A7AAB' },
   { key: 'other',   ar: 'أخرى',        en: 'Other',       icon: Package,    color: '#6B7280' },
 ];
 
 const ASSET_STATUS = {
-  assigned:    { ar: 'معين',       en: 'Assigned',    color: '#10B981', bg: '#10B98115' },
-  available:   { ar: 'متاح',       en: 'Available',   color: '#3B82F6', bg: '#3B82F615' },
-  maintenance: { ar: 'صيانة',      en: 'Maintenance', color: '#F59E0B', bg: '#F59E0B15' },
+  assigned:    { ar: 'معين',       en: 'Assigned',    color: '#4A7AAB', bg: '#4A7AAB15' },
+  available:   { ar: 'متاح',       en: 'Available',   color: '#4A7AAB', bg: '#4A7AAB15' },
+  maintenance: { ar: 'صيانة',      en: 'Maintenance', color: '#6B8DB5', bg: '#6B8DB515' },
   retired:     { ar: 'متقاعد',     en: 'Retired',     color: '#6B7280', bg: '#6B728015' },
 };
 
@@ -123,7 +123,7 @@ export default function AssetsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: c.text, margin: 0 }}>
-            {lang === 'ar' ? '📦 إدارة الأصول' : '📦 Assets Management'}
+            {lang === 'ar' ? ' إدارة الأصول' : 'Assets Management'}
           </h1>
           <p style={{ color: c.textMuted, fontSize: 13, margin: '4px 0 0' }}>
             {lang === 'ar' ? 'تتبع الأجهزة والمعدات المخصصة للموظفين' : 'Track devices and equipment assigned to employees'}
@@ -138,10 +138,10 @@ export default function AssetsPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 24 }}>
         {[
-          { label: lang === 'ar' ? 'إجمالي الأصول' : 'Total Assets', value: stats.total, color: '#4A7AAB', icon: '📦' },
-          { label: lang === 'ar' ? 'معيّنة' : 'Assigned', value: stats.assigned, color: '#10B981', icon: '✅' },
-          { label: lang === 'ar' ? 'متاحة' : 'Available', value: stats.available, color: '#3B82F6', icon: '🟢' },
-          { label: lang === 'ar' ? 'صيانة' : 'Maintenance', value: stats.maintenance, color: '#F59E0B', icon: '🔧' },
+          { label: lang === 'ar' ? 'إجمالي الأصول' : 'Total Assets', value: stats.total, color: '#4A7AAB', icon: '' },
+          { label: lang === 'ar' ? 'معيّنة' : 'Assigned', value: stats.assigned, color: '#4A7AAB', icon: '' },
+          { label: lang === 'ar' ? 'متاحة' : 'Available', value: stats.available, color: '#4A7AAB', icon: '' },
+          { label: lang === 'ar' ? 'صيانة' : 'Maintenance', value: stats.maintenance, color: '#6B8DB5', icon: '' },
         ].map((s, i) => (
           <div key={i} style={{ background: c.cardBg, border: '1px solid ' + c.border, borderRadius: 12, padding: '16px 20px', textAlign: isRTL ? 'right' : 'left' }}>
             <div style={{ fontSize: 22 }}>{s.icon}</div>

@@ -21,9 +21,9 @@ function getPolicyValue(key) {
 }
 
 const AVATAR_COLORS = [
-  '#2B4C6F','#6366F1','#10B981','#EC4899',
-  '#F59E0B','#8B5CF6','#14B8A6','#EF4444',
-  '#3B82F6','#84CC16',
+  '#2B4C6F','#4A7AAB','#4A7AAB','#6B8DB5',
+  '#6B8DB5','#4A7AAB','#4A7AAB','#EF4444',
+  '#4A7AAB','#4A7AAB',
 ];
 
 function generateEmployeeNumber(employees) {
@@ -36,7 +36,7 @@ function generateEmployeeNumber(employees) {
 
 // ── Avatar ────────────────────────────────────────────────────
 function Avatar({ employee, size = 40 }) {
-  const initials = employee.full_name_ar.split(' ').slice(0, 2).map(w => w[0]).join('');
+  const initials = employee.full_name_ar.split('').slice(0, 2).map(w => w[0]).join('');
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%',
@@ -57,7 +57,7 @@ function StatusBadge({ employee, lang }) {
 
   if (isProbationEndingSoon(employee.hire_date, probMonths, alertDays)) {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: '#F59E0B20', color: '#F59E0B' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: '#6B8DB520', color: '#6B8DB5' }}>
         <AlertTriangle size={10} /> {lang === 'ar' ? `فترة تجربة تنتهي قريباً` : 'Probation Ending'}
       </span>
     );
@@ -77,7 +77,7 @@ function StatusBadge({ employee, lang }) {
     );
   }
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: '#10B98120', color: '#10B981' }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: '#4A7AAB20', color: '#4A7AAB' }}>
       <CheckCircle size={10} /> {lang === 'ar' ? 'نشط' : 'Active'}
     </span>
   );
@@ -126,7 +126,7 @@ function SalaryRaiseModal({ employee, onClose, onSubmit, isDark, isRTL, lang, c 
         {/* Header */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid ' + c.border, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#10B981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#4A7AAB,#4A7AAB)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <TrendingUp size={18} color="#fff" />
             </div>
             <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
@@ -134,7 +134,7 @@ function SalaryRaiseModal({ employee, onClose, onSubmit, isDark, isRTL, lang, c 
               <div style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? employee.full_name_ar : employee.full_name_en}</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={15} />
           </button>
         </div>
@@ -177,17 +177,17 @@ function SalaryRaiseModal({ employee, onClose, onSubmit, isDark, isRTL, lang, c 
 
           {/* Preview */}
           {newSalary && (
-            <div style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(16,185,129,0.08)' : '#ECFDF5', border: '1px solid ' + (isDark ? 'rgba(16,185,129,0.2)' : '#A7F3D0'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(16,185,129,0.08)' : 'rgba(74,122,171,0.06)', border: '1px solid ' + (isDark ? 'rgba(16,185,129,0.2)' : 'rgba(74,122,171,0.08)'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                <div style={{ fontSize: 11, color: '#059669' }}>{lang === 'ar' ? 'الراتب الجديد' : 'New Salary'}</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>{newSalary.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</div>
+                <div style={{ fontSize: 11, color: '#4A7AAB' }}>{lang === 'ar' ? 'الراتب الجديد' : 'New Salary'}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#4A7AAB' }}>{newSalary.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</div>
               </div>
               <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
-                <div style={{ fontSize: 11, color: '#059669' }}>{lang === 'ar' ? 'قيمة الزيادة' : 'Increase'}</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#10B981' }}>
+                <div style={{ fontSize: 11, color: '#4A7AAB' }}>{lang === 'ar' ? 'قيمة الزيادة' : 'Increase'}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#4A7AAB' }}>
                   +{diff.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}
                   {form.type === 'fixed' && employee.base_salary > 0 && (
-                    <span style={{ fontSize: 12, color: '#059669', marginInlineStart: 4 }}>
+                    <span style={{ fontSize: 12, color: '#4A7AAB', marginInlineStart: 4 }}>
                       ({((diff / employee.base_salary) * 100).toFixed(1)}%)
                     </span>
                   )}
@@ -229,7 +229,7 @@ function SalaryRaiseModal({ employee, onClose, onSubmit, isDark, isRTL, lang, c 
             {lang === 'ar' ? 'إلغاء' : 'Cancel'}
           </button>
           <button onClick={handleSubmit}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', fontSize: 13, fontWeight: 600, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#4A7AAB,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 600, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <TrendingUp size={14} />
             {lang === 'ar' ? 'تقديم الطلب' : 'Submit Request'}
           </button>
@@ -242,9 +242,9 @@ function SalaryRaiseModal({ employee, onClose, onSubmit, isDark, isRTL, lang, c 
 // ── Salary History Modal ───────────────────────────────────────
 function SalaryHistoryModal({ employee, history, onClose, onApprove, onReject, isDark, isRTL, lang, c }) {
   const STATUS_MAP = {
-    pending:  { ar: 'قيد المراجعة', en: 'Pending',  color: '#F59E0B', bg: '#FEF3C720' },
-    approved: { ar: 'معتمد',        en: 'Approved', color: '#10B981', bg: '#D1FAE520' },
-    rejected: { ar: 'مرفوض',        en: 'Rejected', color: '#EF4444', bg: '#FEE2E220' },
+    pending:  { ar: 'قيد المراجعة', en: 'Pending',  color: '#6B8DB5', bg: 'rgba(74,122,171,0.06)20' },
+    approved: { ar: 'معتمد',        en: 'Approved', color: '#4A7AAB', bg: 'rgba(74,122,171,0.08)20' },
+    rejected: { ar: 'مرفوض',        en: 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.08)20' },
   };
 
   const empHistory = history.filter(h => h.employee_id === employee.id)
@@ -262,7 +262,7 @@ function SalaryHistoryModal({ employee, history, onClose, onApprove, onReject, i
               <div style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? employee.full_name_ar : employee.full_name_en}</div>
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={15} />
           </button>
         </div>
@@ -295,25 +295,25 @@ function SalaryHistoryModal({ employee, history, onClose, onApprove, onReject, i
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                       <span style={{ fontSize: 14, color: c.textMuted }}>{h.old_salary.toLocaleString()}</span>
                       <ChevronRight size={14} color={c.textMuted} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
-                      <span style={{ fontSize: 16, fontWeight: 700, color: '#10B981' }}>{h.new_salary.toLocaleString()}</span>
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#4A7AAB' }}>{h.new_salary.toLocaleString()}</span>
                       <span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: '#10B981', marginInlineStart: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#4A7AAB', marginInlineStart: 4 }}>
                         (+{h.diff.toLocaleString()} · {((h.diff / h.old_salary) * 100).toFixed(1)}%)
                       </span>
                     </div>
 
-                    {h.notes && <p style={{ margin: '8px 0 0', fontSize: 12, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>📝 {h.notes}</p>}
+                    {h.notes && <p style={{ margin: '8px 0 0', fontSize: 12, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}> {h.notes}</p>}
 
                     {/* Approval Actions */}
                     {h.status === 'pending' && (
                       <div style={{ display: 'flex', gap: 8, marginTop: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                         <button onClick={() => onApprove(h.id)}
-                          style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#10B981', color: '#fff', fontSize: 12, fontWeight: 600 }}>
-                          {lang === 'ar' ? '✓ اعتماد' : '✓ Approve'}
+                          style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#4A7AAB', color: '#fff', fontSize: 12, fontWeight: 600 }}>
+                          {lang === 'ar' ? ' اعتماد' : 'Approve'}
                         </button>
                         <button onClick={() => onReject(h.id)}
                           style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #EF4444', cursor: 'pointer', background: 'transparent', color: '#EF4444', fontSize: 12, fontWeight: 600 }}>
-                          {lang === 'ar' ? '✕ رفض' : '✕ Reject'}
+                          {lang === 'ar' ? ' رفض' : 'Reject'}
                         </button>
                       </div>
                     )}
@@ -343,7 +343,7 @@ function ViewModal({ employee, employees, onClose, onEdit, onRaise, onHistory, i
 
   const InfoRow = ({ icon: Icon, label, value }) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: '1px solid ' + c.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.15)' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div style={{ width: 32, height: 32, borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         <Icon size={15} color="#4A7AAB" />
       </div>
       <div style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
@@ -372,7 +372,7 @@ function ViewModal({ employee, employees, onClose, onEdit, onRaise, onHistory, i
           <div style={{ display: 'flex', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <button
               onClick={() => onRaise(employee)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#10B981', color: '#fff', fontSize: 13, fontWeight: 500, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#4A7AAB', color: '#fff', fontSize: 13, fontWeight: 500, flexDirection: isRTL ? 'row-reverse' : 'row' }}
             >
               <TrendingUp size={13} />
               {lang === 'ar' ? 'زيادة راتب' : 'Raise'}
@@ -391,7 +391,7 @@ function ViewModal({ employee, employees, onClose, onEdit, onRaise, onHistory, i
               <Edit2 size={13} />
               {lang === 'ar' ? 'تعديل' : 'Edit'}
             </button>
-            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={16} />
             </button>
           </div>
@@ -400,9 +400,9 @@ function ViewModal({ employee, employees, onClose, onEdit, onRaise, onHistory, i
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, padding: '16px 24px' }}>
           {[
-            { label: lang === 'ar' ? 'سنوات الخدمة' : 'Service Years', value: years < 1 ? (lang === 'ar' ? `${Math.floor(years * 12)} شهر` : `${Math.floor(years * 12)} mo`) : `${years.toFixed(1)}`, icon: '📅' },
-            { label: lang === 'ar' ? 'رصيد الإجازة' : 'Leave Balance', value: leaveInfo.inProbation ? (lang === 'ar' ? 'في التجربة' : 'Probation') : `${leaveInfo.balance} ${lang === 'ar' ? 'يوم' : 'days'}`, icon: '🏖️' },
-            { label: lang === 'ar' ? 'الأجر الساعي' : 'Hourly Rate', value: `${hourlyRate} ${lang === 'ar' ? 'ج.م' : 'EGP'}`, icon: '💰' },
+            { label: lang === 'ar' ? 'سنوات الخدمة' : 'Service Years', value: years < 1 ? (lang === 'ar' ? `${Math.floor(years * 12)} شهر` : `${Math.floor(years * 12)} mo`) : `${years.toFixed(1)}`, icon: '' },
+            { label: lang === 'ar' ? 'رصيد الإجازة' : 'Leave Balance', value: leaveInfo.inProbation ? (lang === 'ar' ? 'في التجربة' : 'Probation') : `${leaveInfo.balance} ${lang === 'ar' ? 'يوم' : 'days'}`, icon: '️' },
+            { label: lang === 'ar' ? 'الأجر الساعي' : 'Hourly Rate', value: `${hourlyRate} ${lang === 'ar' ? 'ج.م' : 'EGP'}`, icon: '' },
           ].map((stat, i) => (
             <div key={i} style={{ padding: 12, borderRadius: 10, background: isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC', border: '1px solid ' + c.border, textAlign: 'center' }}>
               <div style={{ fontSize: 22, marginBottom: 4 }}>{stat.icon}</div>
@@ -425,8 +425,8 @@ function ViewModal({ employee, employees, onClose, onEdit, onRaise, onHistory, i
           <InfoRow icon={Clock}     label={lang === 'ar' ? 'ساعات التسامح' : 'Tolerance Hours'}      value={`${employee.tolerance_hours} ${lang === 'ar' ? 'ساعات' : 'hrs'}`} />
           {manager && <InfoRow icon={User} label={lang === 'ar' ? 'المدير المباشر' : 'Direct Manager'} value={lang === 'ar' ? manager.full_name_ar : manager.full_name_en} />}
           {employee.notes && (
-            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: isDark ? 'rgba(245,158,11,0.1)' : '#FFFBEB', border: '1px solid ' + (isDark ? 'rgba(245,158,11,0.2)' : '#FDE68A') }}>
-              <p style={{ margin: 0, fontSize: 13, color: isDark ? '#F59E0B' : '#92400E' }}>📝 {employee.notes}</p>
+            <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: isDark ? 'rgba(245,158,11,0.1)' : 'rgba(74,122,171,0.06)', border: '1px solid ' + (isDark ? 'rgba(245,158,11,0.2)' : 'rgba(74,122,171,0.08)') }}>
+              <p style={{ margin: 0, fontSize: 13, color: isDark ? '#6B8DB5' : '#1B3347' }}> {employee.notes}</p>
             </div>
           )}
         </div>
@@ -521,7 +521,7 @@ function EmployeeFormModal({ employee, employees, onClose, onSave, isDark, isRTL
               {isEdit && <p style={{ margin: 0, fontSize: 12, color: c.textMuted }}>{form.employee_number}</p>}
             </div>
           </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={16} />
           </button>
         </div>
@@ -529,7 +529,7 @@ function EmployeeFormModal({ employee, employees, onClose, onSave, isDark, isRTL
         {/* Form */}
         <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
 
-          <SectionTitle title={lang === 'ar' ? '👤 البيانات الشخصية' : '👤 Personal Info'} />
+          <SectionTitle title={lang === 'ar' ? ' البيانات الشخصية' : 'Personal Info'} />
 
           <Field label={lang === 'ar' ? 'الاسم بالعربي *' : 'Name (Arabic) *'}>
             <input value={form.full_name_ar} onChange={e => set('full_name_ar', e.target.value)} style={inputStyle(errors.full_name_ar)} placeholder="أحمد محمد" />
@@ -555,7 +555,7 @@ function EmployeeFormModal({ employee, employees, onClose, onSave, isDark, isRTL
             <input value={form.address} onChange={e => set('address', e.target.value)} style={inputStyle(false)} placeholder={lang === 'ar' ? 'القاهرة، مصر' : 'Cairo, Egypt'} />
           </Field>
 
-          <SectionTitle title={lang === 'ar' ? '💼 البيانات الوظيفية' : '💼 Job Info'} />
+          <SectionTitle title={lang === 'ar' ? ' البيانات الوظيفية' : 'Job Info'} />
 
           <Field label={lang === 'ar' ? 'المسمى الوظيفي (عربي) *' : 'Job Title (Arabic) *'}>
             <input value={form.job_title_ar} onChange={e => set('job_title_ar', e.target.value)} style={inputStyle(errors.job_title_ar)} placeholder="مستشار مبيعات" />
@@ -603,7 +603,7 @@ function EmployeeFormModal({ employee, employees, onClose, onSave, isDark, isRTL
             </select>
           </Field>
 
-          <SectionTitle title={lang === 'ar' ? '📋 العقد' : '📋 Contract'} />
+          <SectionTitle title={lang === 'ar' ? ' العقد' : 'Contract'} />
 
           <Field label={lang === 'ar' ? 'نوع العقد' : 'Contract Type'}>
             <select value={form.contract_type} onChange={e => set('contract_type', e.target.value)} style={inputStyle(false)}>
@@ -621,7 +621,7 @@ function EmployeeFormModal({ employee, employees, onClose, onSave, isDark, isRTL
             <input type="date" value={form.contract_end_date || ''} onChange={e => set('contract_end_date', e.target.value)} style={inputStyle(false)} />
           </Field>
 
-          <SectionTitle title={lang === 'ar' ? '💰 الراتب والأوفرتايم' : '💰 Salary & OT'} />
+          <SectionTitle title={lang === 'ar' ? ' الراتب والأوفرتايم' : 'Salary & OT'} />
 
           <Field label={lang === 'ar' ? 'الراتب الأساسي *' : 'Base Salary *'}>
             <input type="number" value={form.base_salary} onChange={e => set('base_salary', e.target.value)} style={inputStyle(errors.base_salary)} placeholder="10000" />
@@ -652,7 +652,7 @@ function EmployeeFormModal({ employee, employees, onClose, onSave, isDark, isRTL
           {/* Error message */}
           {Object.keys(errors).length > 0 && (
             <div style={{ gridColumn: '1 / -1', padding: '10px 14px', borderRadius: 8, background: '#EF444415', border: '1px solid #EF444430', fontSize: 13, color: '#EF4444' }}>
-              {lang === 'ar' ? '⚠️ الحقول المميزة باللون الأحمر مطلوبة' : '⚠️ Please fill in all required fields'}
+              {lang === 'ar' ? ' الحقول المميزة باللون الأحمر مطلوبة' : 'Please fill in all required fields'}
             </div>
           )}
         </div>
@@ -679,14 +679,14 @@ function EmployeeFormModal({ employee, employees, onClose, onSave, isDark, isRTL
 }
 
 // ── Org Chart ─────────────────────────────────────────────────
-const DEPT_COLORS = { sales: '#4A7AAB', marketing: '#EC4899', hr: '#10B981', finance: '#F59E0B' };
+const DEPT_COLORS = { sales: '#4A7AAB', marketing: '#6B8DB5', hr: '#4A7AAB', finance: '#6B8DB5' };
 
 function OrgNode({ emp, employees, onSelect, isDark, isRTL, lang, c }) {
   const [expanded, setExpanded] = useState(true);
   const reports = employees.filter(e => e.direct_manager_id === emp.id);
   const dept = DEPARTMENTS.find(d => d.id === emp.department);
-  const color = DEPT_COLORS[emp.department] || '#6366F1';
-  const initials = emp.full_name_ar.split(' ').slice(0, 2).map(w => w[0]).join('');
+  const color = DEPT_COLORS[emp.department] || '#4A7AAB';
+  const initials = emp.full_name_ar.split('').slice(0, 2).map(w => w[0]).join('');
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -728,16 +728,16 @@ function OrgNode({ emp, employees, onSelect, isDark, isRTL, lang, c }) {
       {/* Children */}
       {reports.length > 0 && expanded && (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ width: 2, height: 20, background: isDark ? 'rgba(74,122,171,0.3)' : '#D1D5DB' }} />
+          <div style={{ width: 2, height: 20, background: isDark ? 'rgba(74,122,171,0.3)' : '#e5e7eb' }} />
           <div style={{ position: 'relative', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
             {reports.length > 1 && (
               <div style={{ position: 'absolute', top: 0, left: `calc(50% - ${(reports.length - 1) * 85}px)`,
                 width: `${(reports.length - 1) * 170}px`, height: 2,
-                background: isDark ? 'rgba(74,122,171,0.3)' : '#D1D5DB' }} />
+                background: isDark ? 'rgba(74,122,171,0.3)' : '#e5e7eb' }} />
             )}
             {reports.map(child => (
               <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ width: 2, height: 20, background: isDark ? 'rgba(74,122,171,0.3)' : '#D1D5DB' }} />
+                <div style={{ width: 2, height: 20, background: isDark ? 'rgba(74,122,171,0.3)' : '#e5e7eb' }} />
                 <OrgNode emp={child} employees={employees} onSelect={onSelect} isDark={isDark} isRTL={isRTL} lang={lang} c={c} />
               </div>
             ))}
@@ -756,12 +756,12 @@ function OrgChart({ employees, onSelect, isDark, isRTL, lang, c }) {
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {DEPARTMENTS.map(d => (
           <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 10, height: 10, borderRadius: '50%', background: DEPT_COLORS[d.id] || '#6366F1' }} />
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: DEPT_COLORS[d.id] || '#4A7AAB' }} />
             <span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? d.name_ar : d.name_en}</span>
           </div>
         ))}
         <span style={{ marginInlineStart: 'auto', fontSize: 12, color: c.textMuted }}>
-          {lang === 'ar' ? '🖱 اضغط على موظف لعرض ملفه' : '🖱 Click to view profile'}
+          {lang === 'ar' ? ' اضغط على موظف لعرض ملفه' : 'Click to view profile'}
         </span>
       </div>
       <div style={{ display: 'flex', gap: 48, justifyContent: 'center', flexWrap: 'wrap', minWidth: 'max-content', margin: '0 auto' }}>
@@ -828,10 +828,10 @@ export default function EmployeesPage() {
   );
 
   const stats = [
-    { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: employees.length, icon: '👥', color: '#2B4C6F' },
-    { label: lang === 'ar' ? 'نشط' : 'Active', value: employees.filter(e => e.status === 'active').length, icon: '✅', color: '#10B981' },
-    { label: lang === 'ar' ? 'فترة تجربة' : 'Probation', value: employees.filter(e => e.contract_type === 'probation').length, icon: '⏳', color: '#F59E0B' },
-    { label: lang === 'ar' ? 'تنبيهات' : 'Alerts', value: alerts.length, icon: '🔔', color: '#EF4444' },
+    { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: employees.length, icon: '', color: '#2B4C6F' },
+    { label: lang === 'ar' ? 'نشط' : 'Active', value: employees.filter(e => e.status === 'active').length, icon: '', color: '#4A7AAB' },
+    { label: lang === 'ar' ? 'فترة تجربة' : 'Probation', value: employees.filter(e => e.contract_type === 'probation').length, icon: '', color: '#6B8DB5' },
+    { label: lang === 'ar' ? 'تنبيهات' : 'Alerts', value: alerts.length, icon: '', color: '#EF4444' },
   ];
 
   const handleSave = (savedEmp) => {
@@ -922,7 +922,7 @@ export default function EmployeesPage() {
 
       {/* Alerts */}
       {alerts.length > 0 && (
-        <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', border: '1px solid ' + (isDark ? 'rgba(239,68,68,0.2)' : '#FECACA') }}>
+        <div style={{ marginBottom: 20, padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', border: '1px solid ' + (isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)') }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <AlertTriangle size={16} color="#EF4444" />
             <span style={{ fontSize: 14, fontWeight: 600, color: '#EF4444' }}>
@@ -942,7 +942,7 @@ export default function EmployeesPage() {
 
       {/* View Toggle */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: isDark ? 'rgba(74,122,171,0.08)' : '#F3F4F6', borderRadius: 10, padding: 4, width: 'fit-content' }}>
-        {[{ key: 'table', ar: '☰ قائمة', en: '☰ List' }, { key: 'org', ar: '🏢 هيكل تنظيمي', en: '🏢 Org Chart' }].map(v => (
+        {[{ key: 'table', ar: 'قائمة', en: 'List' }, { key: 'org', ar: 'هيكل تنظيمي', en: 'Org Chart' }].map(v => (
           <button key={v.key} onClick={() => setActiveView(v.key)}
             style={{ padding: '7px 16px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500, transition: 'all 0.15s',
               background: activeView === v.key ? c.cardBg : 'transparent',
@@ -1041,7 +1041,7 @@ export default function EmployeesPage() {
                   <td style={{ padding: '14px 16px' }}>
                     {leaveInfo.inProbation
                       ? <span style={{ fontSize: 12, color: c.textMuted }}>—</span>
-                      : <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500, background: '#10B98120', color: '#10B981' }}>{leaveInfo.balance} {lang === 'ar' ? 'يوم' : 'days'}</span>
+                      : <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500, background: '#4A7AAB20', color: '#4A7AAB' }}>{leaveInfo.balance} {lang === 'ar' ? 'يوم' : 'days'}</span>
                     }
                   </td>
                   <td style={{ padding: '14px 16px' }}><StatusBadge employee={emp} lang={lang} /></td>
@@ -1055,7 +1055,7 @@ export default function EmployeesPage() {
                       </button>
                       <button onClick={() => openEdit(emp)}
                         style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid ' + c.border, cursor: 'pointer', background: 'transparent', color: c.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#F59E0B'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#F59E0B'; }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#6B8DB5'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#6B8DB5'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = c.textMuted; e.currentTarget.style.borderColor = c.border; }}>
                         <Edit2 size={14} />
                       </button>

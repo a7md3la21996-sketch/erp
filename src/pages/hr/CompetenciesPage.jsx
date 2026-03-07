@@ -34,7 +34,7 @@ const RATING_LABELS = {
   en: { 1: 'Poor', 2: 'Below Average', 3: 'Average', 4: 'Good', 5: 'Excellent' },
 };
 
-const RATING_COLORS = { 1: '#EF4444', 2: '#F97316', 3: '#F59E0B', 4: '#3B82F6', 5: '#10B981' };
+const RATING_COLORS = { 1: '#EF4444', 2: '#EF4444', 3: '#6B8DB5', 4: '#4A7AAB', 5: '#4A7AAB' };
 
 function genScores(empId) {
   const seed = empId.charCodeAt(empId.length - 1);
@@ -75,26 +75,26 @@ function nineBoxPos(perfScore, potentialScore) {
 
 const NINE_BOX_LABELS = {
   ar: [
-    ['نجم صاعد 🌟', 'عالي الأداء 💎', 'قائد المستقبل 🚀'],
-    ['لغز 🤔',       'موظف أساسي 🔑',  `ملهم عالٍ 🔥`],
-    ['مخاطرة ⚠️',    'موظف جيد ✅',    `أداء عالٍ 🎯`],
+    ['نجم صاعد ', 'عالي الأداء ', 'قائد المستقبل '],
+    ['لغز ',       'موظف أساسي ',  `ملهم عالٍ 🔥`],
+    ['مخاطرة ',    'موظف جيد ',    `أداء عالٍ `],
   ],
   en: [
-    ['Rising Star 🌟', 'High Performer 💎', 'Future Leader 🚀'],
-    ['Enigma 🤔',       'Core Player 🔑',    'High Potential 🔥'],
-    ['Risk ⚠️',         'Solid Performer ✅', 'High Performer 🎯'],
+    ['Rising Star ', 'High Performer ', 'Future Leader '],
+    ['Enigma ',       'Core Player ',    'High Potential 🔥'],
+    ['Risk ',         'Solid Performer ', 'High Performer '],
   ],
 };
 
 const NINE_BOX_COLORS = [
-  ['#3B82F6', '#10B981', '#6366F1'],
-  ['#F59E0B', '#4A7AAB', '#EC4899'],
-  ['#EF4444', '#94A3B8', '#F97316'],
+  ['#4A7AAB', '#4A7AAB', '#4A7AAB'],
+  ['#6B8DB5', '#4A7AAB', '#6B8DB5'],
+  ['#EF4444', '#8BA8C8', '#EF4444'],
 ];
 
 // ── Avatar ─────────────────────────────────────────────────
 function Avatar({ emp, size = 34 }) {
-  const initials = emp.full_name_ar.split(' ').slice(0,2).map(w=>w[0]).join('');
+  const initials = emp.full_name_ar.split('').slice(0,2).map(w=>w[0]).join('');
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: emp.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.34, fontWeight: 700, flexShrink: 0 }}>
       {initials}
@@ -110,7 +110,7 @@ function StarRating({ value, onChange, size = 18 }) {
       {[1,2,3,4,5].map(n => (
         <Star key={n} size={size}
           fill={(hovered || value) >= n ? RATING_COLORS[hovered || value] : 'none'}
-          color={(hovered || value) >= n ? RATING_COLORS[hovered || value] : '#CBD5E1'}
+          color={(hovered || value) >= n ? RATING_COLORS[hovered || value] : '#8BA8C8'}
           style={{ cursor: onChange ? 'pointer' : 'default', transition: 'all 0.1s' }}
           onMouseEnter={() => onChange && setHovered(n)}
           onMouseLeave={() => onChange && setHovered(0)}
@@ -195,7 +195,7 @@ function ReviewModal({ review, emp, onClose, onSave, isDark, isRTL, lang, c }) {
                 {kpis.map(kpi => {
                   const actual = review.kpi_actuals?.[kpi.id] || 0;
                   const pct    = Math.min(100, Math.round((actual / kpi.target) * 100));
-                  const color  = pct >= 100 ? '#10B981' : pct >= 75 ? '#3B82F6' : pct >= 50 ? '#F59E0B' : '#EF4444';
+                  const color  = pct >= 100 ? '#4A7AAB' : pct >= 75 ? '#4A7AAB' : pct >= 50 ? '#6B8DB5' : '#EF4444';
                   return (
                     <div key={kpi.id} style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: '1px solid ' + c.border }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -204,7 +204,7 @@ function ReviewModal({ review, emp, onClose, onSave, isDark, isRTL, lang, c }) {
                           {actual.toLocaleString()} / {kpi.target.toLocaleString()} {kpi.unit}
                         </span>
                       </div>
-                      <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0', overflow: 'hidden' }}>
+                      <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb', overflow: 'hidden' }}>
                         <div style={{ height: '100%', width: `${pct}%`, borderRadius: 3, background: color, transition: 'width 0.6s ease' }} />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -335,10 +335,10 @@ export default function CompetenciesPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         {[
-          { label: lang === 'ar' ? 'التقييمات المكتملة' : 'Reviews Done',    value: `${completedCount}/${reviews.length}`, icon: '✅', color: '#10B981' },
-          { label: lang === 'ar' ? 'متوسط الأداء'       : 'Avg. Performance', value: `${avgScore}/5`,                      icon: '⭐', color: '#F59E0B' },
-          { label: lang === 'ar' ? 'الفترة الحالية'     : 'Current Period',   value: 'Q1 2026',                            icon: '📅', color: '#4A7AAB' },
-          { label: lang === 'ar' ? `الكفاءات المقيّمة`  : 'Competencies',     value: COMPETENCIES.length,                  icon: '🎯', color: '#6366F1' },
+          { label: lang === 'ar' ? 'التقييمات المكتملة' : 'Reviews Done',    value: `${completedCount}/${reviews.length}`, icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg. Performance', value: `${avgScore}/5`,                      icon: '', color: '#6B8DB5' },
+          { label: lang === 'ar' ? 'الفترة الحالية' : 'Current Period',   value: 'Q1 2026',                            icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? `الكفاءات المقيّمة`  : 'Competencies',     value: COMPETENCIES.length,                  icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
           <div key={i} style={{ padding: '16px 18px', borderRadius: 12, background: c.cardBg, border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -353,10 +353,10 @@ export default function CompetenciesPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : '#F1F5F9', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.06)', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {[
           { id: 'overview', ar: 'نظرة عامة', en: 'Overview' },
-          { id: 'reviews',  ar: 'التقييمات', en: 'Reviews'  },
+          { id: 'reviews',  ar: 'التقييمات', en: 'Reviews' },
           { id: 'ninebox',  ar: 'مصفوفة 9-Box', en: '9-Box Matrix' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -422,7 +422,7 @@ export default function CompetenciesPage() {
                               <>
                                 <StarRating value={Math.round(ws)} size={14} />
                                 <span style={{ fontSize: 14, fontWeight: 700, color: RATING_COLORS[Math.round(ws)], minWidth: 30, textAlign: 'center' }}>{ws}</span>
-                                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: m.review?.status === 'completed' ? '#10B98120' : '#F59E0B20', color: m.review?.status === 'completed' ? '#10B981' : '#F59E0B' }}>
+                                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: m.review?.status === 'completed' ? '#4A7AAB20' : '#6B8DB520', color: m.review?.status === 'completed' ? '#4A7AAB' : '#6B8DB5' }}>
                                   {m.review?.status === 'completed' ? (lang === 'ar' ? 'مكتمل' : 'Done') : (lang === 'ar' ? 'معلق' : 'Pending')}
                                 </span>
                               </>
@@ -503,14 +503,14 @@ export default function CompetenciesPage() {
                   <td style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', gap: 2 }}>
                       {[1,2,3,4,5].map(n => (
-                        <div key={n} style={{ width: 12, height: 12, borderRadius: 2, background: n <= potential ? RATING_COLORS[potential] : (isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0') }} />
+                        <div key={n} style={{ width: 12, height: 12, borderRadius: 2, background: n <= potential ? RATING_COLORS[potential] : (isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb') }} />
                       ))}
                     </div>
                   </td>
 
                   <td style={{ padding: '12px 14px' }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: review?.status === 'completed' ? '#10B98120' : '#F59E0B20', color: review?.status === 'completed' ? '#10B981' : '#F59E0B' }}>
-                      {review?.status === 'completed' ? (lang === 'ar' ? '✓ مكتمل' : '✓ Done') : (lang === 'ar' ? '⏳ معلق' : '⏳ Pending')}
+                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: review?.status === 'completed' ? '#4A7AAB20' : '#6B8DB520', color: review?.status === 'completed' ? '#4A7AAB' : '#6B8DB5' }}>
+                      {review?.status === 'completed' ? (lang === 'ar' ? ' مكتمل' : 'Done') : (lang === 'ar' ? ' معلق' : 'Pending')}
                     </span>
                   </td>
 

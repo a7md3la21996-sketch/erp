@@ -33,13 +33,13 @@ const OFFBOARDING_CHECKLIST = [
 ];
 
 const CATEGORY_COLORS = {
-  documents:   { color: '#3B82F6', ar: 'المستندات',   en: 'Documents' },
-  it:          { color: '#8B5CF6', ar: 'تقنية المعلومات', en: 'IT' },
-  orientation: { color: '#10B981', ar: 'التوجيه',     en: 'Orientation' },
-  training:    { color: '#F59E0B', ar: 'التدريب',     en: 'Training' },
+  documents:   { color: '#4A7AAB', ar: 'المستندات',   en: 'Documents' },
+  it:          { color: '#4A7AAB', ar: 'تقنية المعلومات', en: 'IT' },
+  orientation: { color: '#4A7AAB', ar: 'التوجيه',     en: 'Orientation' },
+  training:    { color: '#6B8DB5', ar: 'التدريب',     en: 'Training' },
   finance:     { color: '#EF4444', ar: 'المالية',     en: 'Finance' },
   assets:      { color: '#6B7280', ar: 'الأصول',      en: 'Assets' },
-  handover:    { color: '#EC4899', ar: 'التسليم',     en: 'Handover' },
+  handover:    { color: '#6B8DB5', ar: 'التسليم',     en: 'Handover' },
 };
 
 const MOCK_PROCESSES = [
@@ -124,7 +124,7 @@ export default function OnboardingPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: c.text, margin: 0 }}>
-            {lang === 'ar' ? '🚀 الاستقبال والمغادرة' : '🚀 Onboarding & Offboarding'}
+            {lang === 'ar' ? ' الاستقبال والمغادرة' : 'Onboarding & Offboarding'}
           </h1>
           <p style={{ color: c.textMuted, fontSize: 13, margin: '4px 0 0' }}>
             {lang === 'ar' ? 'إدارة عمليات استقبال الموظفين الجدد ومغادرة الحاليين' : 'Manage new hire onboarding and employee offboarding'}
@@ -168,21 +168,21 @@ export default function OnboardingPage() {
                   style={{ background: c.cardBg, border: `1px solid ${selected === proc.id ? c.accent : c.border}`, borderRadius: 10, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.2s' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                      <span style={{ fontSize: 18 }}>{isOn ? '🚀' : '👋'}</span>
+                      <span style={{ fontSize: 18 }}>{isOn ? '' : ''}</span>
                       <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{emp?.full_name_ar || '—'}</div>
-                        <div style={{ fontSize: 11, color: isOn ? '#10B981' : '#EF4444', fontWeight: 600 }}>
+                        <div style={{ fontSize: 11, color: isOn ? '#4A7AAB' : '#EF4444', fontWeight: 600 }}>
                           {isOn ? (lang === 'ar' ? 'استقبال' : 'Onboarding') : (lang === 'ar' ? 'مغادرة' : 'Offboarding')}
                         </div>
                       </div>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: pct === 100 ? '#10B981' : c.accent }}>{pct}%</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: pct === 100 ? '#4A7AAB' : c.accent }}>{pct}%</span>
                   </div>
-                  <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                    <div style={{ height: '100%', borderRadius: 2, width: pct + '%', background: pct === 100 ? '#10B981' : c.accent, transition: 'width 0.3s' }} />
+                  <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' }}>
+                    <div style={{ height: '100%', borderRadius: 2, width: pct + '%', background: pct === 100 ? '#4A7AAB' : c.accent, transition: 'width 0.3s' }} />
                   </div>
                   <div style={{ fontSize: 11, color: c.textMuted, marginTop: 5, textAlign: isRTL ? 'right' : 'left' }}>
-                    {proc.completed.length}/{cl.length} {lang === 'ar' ? 'مهمة' : 'tasks'} • {proc.start_date}
+                    {proc.completed.length}/{cl.length} {lang === 'ar' ? 'مهمة' : 'tasks'} · {proc.start_date}
                   </div>
                 </div>
               );
@@ -199,17 +199,17 @@ export default function OnboardingPage() {
         {selectedProcess && selectedEmployee ? (
           <div style={{ background: c.cardBg, border: '1px solid ' + c.border, borderRadius: 12, overflow: 'hidden' }}>
             {/* Process header */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid ' + c.border, background: selectedProcess.type === 'onboarding' ? '#10B98108' : '#EF444408' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid ' + c.border, background: selectedProcess.type === 'onboarding' ? '#4A7AAB08' : '#EF444408' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: c.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', fontWeight: 700 }}>
                   {(selectedEmployee.full_name_ar || selectedEmployee.full_name_en || '?').charAt(0)}
                 </div>
                 <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
                   <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>{selectedEmployee.full_name_ar}</div>
-                  <div style={{ fontSize: 12, color: c.textMuted }}>{selectedEmployee.position} • {selectedProcess.start_date}</div>
+                  <div style={{ fontSize: 12, color: c.textMuted }}>{selectedEmployee.position} · {selectedProcess.start_date}</div>
                 </div>
                 <div style={{ marginInlineStart: 'auto', textAlign: 'center' }}>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: selectedProcess.type === 'onboarding' ? '#10B981' : '#EF4444' }}>
+                  <div style={{ fontSize: 22, fontWeight: 900, color: selectedProcess.type === 'onboarding' ? '#4A7AAB' : '#EF4444' }}>
                     {Math.round((selectedProcess.completed.length / checklist.length) * 100)}%
                   </div>
                   <div style={{ fontSize: 11, color: c.textMuted }}>{selectedProcess.completed.length}/{checklist.length}</div>
@@ -239,8 +239,8 @@ export default function OnboardingPage() {
                       const done = selectedProcess.completed.includes(item.id);
                       return (
                         <div key={item.id} onClick={() => toggleItem(selectedProcess.id, item.id)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, marginBottom: 6, cursor: 'pointer', background: done ? (isDark ? 'rgba(16,185,129,0.06)' : '#F0FDF4') : (isDark ? 'rgba(255,255,255,0.02)' : '#F9FAFB'), border: `1px solid ${done ? '#10B98130' : c.border}`, flexDirection: isRTL ? 'row-reverse' : 'row', transition: 'all 0.2s' }}>
-                          {done ? <CheckSquare size={16} color="#10B981" /> : <Square size={16} color={c.textMuted} />}
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, marginBottom: 6, cursor: 'pointer', background: done ? (isDark ? 'rgba(16,185,129,0.06)' : 'rgba(74,122,171,0.06)') : (isDark ? 'rgba(255,255,255,0.02)' : '#F9FAFB'), border: `1px solid ${done ? '#4A7AAB30' : c.border}`, flexDirection: isRTL ? 'row-reverse' : 'row', transition: 'all 0.2s' }}>
+                          {done ? <CheckSquare size={16} color="#4A7AAB" /> : <Square size={16} color={c.textMuted} />}
                           <span style={{ flex: 1, fontSize: 13, color: done ? c.textMuted : c.text, textDecoration: done ? 'line-through' : 'none', textAlign: isRTL ? 'right' : 'left' }}>
                             {lang === 'ar' ? item.ar : item.en}
                           </span>
@@ -254,10 +254,10 @@ export default function OnboardingPage() {
                 );
               })}
               {selectedProcess.status === 'completed' && (
-                <div style={{ padding: '16px 20px', borderRadius: 10, background: '#10B98110', border: '1px solid #10B98130', display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <CheckCircle size={20} color="#10B981" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>
-                    {lang === 'ar' ? '✅ تمت العملية بنجاح!' : '✅ Process completed successfully!'}
+                <div style={{ padding: '16px 20px', borderRadius: 10, background: '#4A7AAB10', border: '1px solid #4A7AAB30', display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                  <CheckCircle size={20} color="#4A7AAB" />
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#4A7AAB' }}>
+                    {lang === 'ar' ? ' تمت العملية بنجاح!' : 'Process completed successfully!'}
                   </span>
                 </div>
               )}
@@ -266,7 +266,7 @@ export default function OnboardingPage() {
         ) : (
           <div style={{ background: c.cardBg, border: '1px solid ' + c.border, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
             <div style={{ textAlign: 'center', color: c.textMuted }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>👈</div>
+              <div style={{ fontSize: 40, marginBottom: 12 }}></div>
               <p style={{ fontSize: 14 }}>{lang === 'ar' ? 'اختر عملية من القائمة' : 'Select a process from the list'}</p>
             </div>
           </div>
@@ -285,7 +285,7 @@ export default function OnboardingPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 5, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'النوع' : 'Type'}</label>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {[{ key: 'onboarding', ar: '🚀 استقبال', en: '🚀 Onboarding' }, { key: 'offboarding', ar: '👋 مغادرة', en: '👋 Offboarding' }].map(t => (
+                  {[{ key: 'onboarding', ar: 'استقبال', en: 'Onboarding' }, { key: 'offboarding', ar: 'مغادرة', en: 'Offboarding' }].map(t => (
                     <button key={t.key} onClick={() => setNewForm(p => ({ ...p, type: t.key }))}
                       style={{ flex: 1, padding: '9px 12px', borderRadius: 8, border: `2px solid ${newForm.type === t.key ? c.accent : c.border}`, background: newForm.type === t.key ? c.accent + '15' : 'transparent', color: newForm.type === t.key ? c.accent : c.text, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
                       {lang === 'ar' ? t.ar : t.en}

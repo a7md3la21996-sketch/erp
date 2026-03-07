@@ -86,7 +86,7 @@ export default function HRPoliciesPage() {
           onClick={() => setActiveCategory('all')}
           style={{
             padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-            background: activeCategory === 'all' ? c.primary : (isDark ? 'rgba(74,122,171,0.1)' : '#F1F5F9'),
+            background: activeCategory === 'all' ? c.primary : (isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)'),
             color: activeCategory === 'all' ? '#fff' : c.textMuted,
             transition: 'all 0.15s',
           }}
@@ -99,7 +99,7 @@ export default function HRPoliciesPage() {
             onClick={() => setActiveCategory(cat.key)}
             style={{
               padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-              background: activeCategory === cat.key ? cat.color : (isDark ? 'rgba(74,122,171,0.1)' : '#F1F5F9'),
+              background: activeCategory === cat.key ? cat.color : (isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)'),
               color: activeCategory === cat.key ? '#fff' : c.textMuted,
               transition: 'all 0.15s',
               display: 'flex', alignItems: 'center', gap: 6,
@@ -161,7 +161,7 @@ export default function HRPoliciesPage() {
                   key={policy.id}
                   style={{
                     borderTop: idx > 0 ? '1px solid ' + c.border : 'none',
-                    background: isEditing ? (isDark ? 'rgba(74,122,171,0.08)' : '#EFF6FF') : 'transparent',
+                    background: isEditing ? (isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.08)') : 'transparent',
                     transition: 'background 0.15s',
                   }}
                   onMouseEnter={e => { if (!isEditing) e.currentTarget.style.background = c.rowHover; }}
@@ -206,7 +206,7 @@ export default function HRPoliciesPage() {
                     ) : (
                       <span style={{
                         display: 'inline-block', padding: '4px 12px', borderRadius: 6,
-                        background: isDark ? 'rgba(74,122,171,0.15)' : '#EFF6FF',
+                        background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)',
                         color: c.accent, fontSize: 15, fontWeight: 700,
                       }}>
                         {policy.value}
@@ -217,11 +217,11 @@ export default function HRPoliciesPage() {
                   {/* Unit */}
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{ fontSize: 13, color: c.textMuted }}>
-                      {policy.unit === 'days'   ? (lang === 'ar' ? 'يوم' : 'days') :
-                       policy.unit === 'hours'  ? (lang === 'ar' ? 'ساعة' : 'hrs') :
+                      {policy.unit === 'days' ? (lang === 'ar' ? 'يوم' : 'days') :
+                       policy.unit === 'hours' ? (lang === 'ar' ? 'ساعة' : 'hrs') :
                        policy.unit === 'months' ? (lang === 'ar' ? 'شهر' : 'months') :
-                       policy.unit === 'time'   ? (lang === 'ar' ? 'توقيت' : 'time') :
-                       policy.unit === 'x'      ? (lang === 'ar' ? 'مضاعف' : 'multiplier') :
+                       policy.unit === 'time' ? (lang === 'ar' ? 'توقيت' : 'time') :
+                       policy.unit === 'x' ? (lang === 'ar' ? 'مضاعف' : 'multiplier') :
                        policy.unit}
                     </span>
                   </td>
@@ -230,14 +230,14 @@ export default function HRPoliciesPage() {
                   <td style={{ padding: '12px 16px' }}>
                     <span style={{
                       padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
-                      background: policy.level === 'company' ? '#10B98120' : '#F59E0B20',
-                      color: policy.level === 'company' ? '#10B981' : '#F59E0B',
+                      background: policy.level === 'company' ? '#4A7AAB20' : '#6B8DB520',
+                      color: policy.level === 'company' ? '#4A7AAB' : '#6B8DB5',
                     }}>
                       {policy.level === 'company'
-                        ? (lang === 'ar' ? '🏢 الشركة' : '🏢 Company')
+                        ? (lang === 'ar' ? ' الشركة' : 'Company')
                         : policy.level === 'department'
-                        ? (lang === 'ar' ? '👥 القسم' : '👥 Dept')
-                        : (lang === 'ar' ? '👤 فردي' : '👤 Individual')}
+                        ? (lang === 'ar' ? ' القسم' : 'Dept')
+                        : (lang === 'ar' ? ' فردي' : 'Individual')}
                     </span>
                   </td>
 
@@ -247,7 +247,7 @@ export default function HRPoliciesPage() {
                       <div style={{ display: 'flex', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                         <button
                           onClick={() => saveEdit(policy.id)}
-                          style={{ width: 30, height: 30, borderRadius: 6, border: 'none', cursor: 'pointer', background: '#10B981', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          style={{ width: 30, height: 30, borderRadius: 6, border: 'none', cursor: 'pointer', background: '#4A7AAB', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         >
                           <Check size={14} />
                         </button>
@@ -286,13 +286,13 @@ export default function HRPoliciesPage() {
       {/* Info Banner */}
       <div style={{
         marginTop: 16, padding: '12px 16px', borderRadius: 8,
-        background: isDark ? 'rgba(74,122,171,0.1)' : '#EFF6FF',
-        border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : '#BFDBFE'),
+        background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.08)',
+        border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.2)'),
         display: 'flex', alignItems: 'center', gap: 10,
         flexDirection: isRTL ? 'row-reverse' : 'row',
       }}>
-        <span style={{ fontSize: 18 }}>💡</span>
-        <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#1D4ED8' }}>
+        <span style={{ fontSize: 18 }}></span>
+        <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#4A7AAB' }}>
           {lang === 'ar'
             ? `التغييرات هنا بتأثر على حسابات الحضور والإجازات والرواتب تلقائياً — بدون تعديل أي كود`
             : 'Changes here automatically affect attendance, leave, and payroll calculations — no code changes needed'}

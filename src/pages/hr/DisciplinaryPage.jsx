@@ -9,30 +9,30 @@ import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 
 // ── Constants ─────────────────────────────────────────────────
 const VIOLATION_TYPES = [
-  { id: 'late',        ar: 'التأخير المتكرر',       en: 'Repeated Lateness',    severity: 1, icon: '⏰' },
-  { id: 'absence',     ar: 'الغياب بدون إذن',       en: 'Unauthorized Absence', severity: 2, icon: '🚫' },
-  { id: 'behavior',    ar: 'سلوك غير لائق',          en: 'Misconduct',           severity: 2, icon: '⚠️' },
-  { id: 'performance', ar: 'ضعف الأداء المستمر',     en: 'Poor Performance',     severity: 2, icon: '📉' },
-  { id: 'policy',      ar: 'مخالفة السياسات',        en: 'Policy Violation',     severity: 2, icon: '📋' },
-  { id: 'harassment',  ar: 'تحرش أو تنمر',           en: 'Harassment/Bullying',  severity: 3, icon: '🚨' },
-  { id: 'fraud',       ar: 'غش أو سرقة',             en: 'Fraud/Theft',          severity: 3, icon: '💰' },
-  { id: 'other',       ar: 'أخرى',                   en: 'Other',                severity: 1, icon: '📌' },
+  { id: 'late',        ar: 'التأخير المتكرر',       en: 'Repeated Lateness',    severity: 1, icon: '' },
+  { id: 'absence',     ar: 'الغياب بدون إذن',       en: 'Unauthorized Absence', severity: 2, icon: '' },
+  { id: 'behavior',    ar: 'سلوك غير لائق',          en: 'Misconduct',           severity: 2, icon: '' },
+  { id: 'performance', ar: 'ضعف الأداء المستمر',     en: 'Poor Performance',     severity: 2, icon: '' },
+  { id: 'policy',      ar: 'مخالفة السياسات',        en: 'Policy Violation',     severity: 2, icon: '' },
+  { id: 'harassment',  ar: 'تحرش أو تنمر',           en: 'Harassment/Bullying',  severity: 3, icon: '' },
+  { id: 'fraud',       ar: 'غش أو سرقة',             en: 'Fraud/Theft',          severity: 3, icon: '' },
+  { id: 'other',       ar: 'أخرى',                   en: 'Other',                severity: 1, icon: '' },
 ];
 
 const ACTION_TYPES = [
-  { id: 'verbal',     ar: 'إنذار شفهي',     en: 'Verbal Warning',    color: '#F59E0B', bg: '#F59E0B18', icon: '💬', weight: 1 },
-  { id: 'written1',   ar: 'إنذار كتابي أول', en: '1st Written Warning', color: '#F97316', bg: '#F9731618', icon: '📝', weight: 2 },
-  { id: 'written2',   ar: 'إنذار كتابي ثاني', en: '2nd Written Warning', color: '#EF4444', bg: '#EF444418', icon: '📄', weight: 3 },
-  { id: 'deduction',  ar: 'خصم من الراتب',   en: 'Salary Deduction',  color: '#8B5CF6', bg: '#8B5CF618', icon: '💸', weight: 2 },
-  { id: 'suspension', ar: 'إيقاف مؤقت',      en: 'Suspension',        color: '#EC4899', bg: '#EC489918', icon: '⏸️', weight: 3 },
-  { id: 'termination',ar: 'إنهاء الخدمة',    en: 'Termination',       color: '#991B1B', bg: '#991B1B18', icon: '🔴', weight: 5 },
+  { id: 'verbal',     ar: 'إنذار شفهي',     en: 'Verbal Warning',    color: '#6B8DB5', bg: '#6B8DB518', icon: '', weight: 1 },
+  { id: 'written1',   ar: 'إنذار كتابي أول', en: '1st Written Warning', color: '#EF4444', bg: '#EF444418', icon: '', weight: 2 },
+  { id: 'written2',   ar: 'إنذار كتابي ثاني', en: '2nd Written Warning', color: '#EF4444', bg: '#EF444418', icon: '', weight: 3 },
+  { id: 'deduction',  ar: 'خصم من الراتب',   en: 'Salary Deduction',  color: '#4A7AAB', bg: '#4A7AAB18', icon: '', weight: 2 },
+  { id: 'suspension', ar: 'إيقاف مؤقت',      en: 'Suspension',        color: '#6B8DB5', bg: '#6B8DB518', icon: '️', weight: 3 },
+  { id: 'termination',ar: 'إنهاء الخدمة',    en: 'Termination',       color: '#7f1d1d', bg: '#7f1d1d18', icon: '', weight: 5 },
 ];
 
 const RECORD_STATUS = {
-  open:     { ar: 'مفتوحة',   en: 'Open',     color: '#F59E0B', bg: '#F59E0B18' },
-  resolved: { ar: 'محلولة',   en: 'Resolved', color: '#10B981', bg: '#10B98118' },
-  appealed: { ar: 'مستأنفة',  en: 'Appealed', color: '#3B82F6', bg: '#3B82F618' },
-  closed:   { ar: 'مغلقة',    en: 'Closed',   color: '#94A3B8', bg: '#94A3B818' },
+  open:     { ar: 'مفتوحة',   en: 'Open',     color: '#6B8DB5', bg: '#6B8DB518' },
+  resolved: { ar: 'محلولة',   en: 'Resolved', color: '#4A7AAB', bg: '#4A7AAB18' },
+  appealed: { ar: 'مستأنفة',  en: 'Appealed', color: '#4A7AAB', bg: '#4A7AAB18' },
+  closed:   { ar: 'مغلقة',    en: 'Closed',   color: '#8BA8C8', bg: '#8BA8C818' },
 };
 
 // ── Mock Data ─────────────────────────────────────────────────
@@ -47,7 +47,7 @@ const MOCK_RECORDS = [
 
 // ── Avatar ─────────────────────────────────────────────────
 function Avatar({ emp, size = 34 }) {
-  const initials = emp.full_name_ar.split(' ').slice(0,2).map(w=>w[0]).join('');
+  const initials = emp.full_name_ar.split('').slice(0,2).map(w=>w[0]).join('');
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: emp.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.34, fontWeight: 700, flexShrink: 0 }}>
       {initials}
@@ -89,7 +89,7 @@ function NewRecordModal({ onClose, onSave, employees, isDark, isRTL, lang, c }) 
       <div style={{ background: c.cardBg, borderRadius: 16, width: '100%', maxWidth: 560, direction: isRTL ? 'rtl' : 'ltr', maxHeight: '92vh', overflowY: 'auto' }}>
 
         {/* Header */}
-        <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg,#7F1D1D,#DC2626)', borderRadius: '16px 16px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div style={{ padding: '18px 24px', background: 'linear-gradient(135deg,#7f1d1d,#EF4444)', borderRadius: '16px 16px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <AlertTriangle size={18} color="#fff" />
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#fff' }}>{lang === 'ar' ? 'إجراء تأديبي جديد' : 'New Disciplinary Action'}</h3>
@@ -115,9 +115,9 @@ function NewRecordModal({ onClose, onSave, employees, isDark, isRTL, lang, c }) 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>
               {VIOLATION_TYPES.map(v => (
                 <button key={v.id} onClick={() => set('violation', v.id)}
-                  style={{ padding: '8px 6px', borderRadius: 8, border: `2px solid ${form.violation === v.id ? (v.severity === 3 ? '#EF4444' : v.severity === 2 ? '#F97316' : '#F59E0B') : c.border}`, cursor: 'pointer', background: form.violation === v.id ? (v.severity === 3 ? '#EF444415' : v.severity === 2 ? '#F9731615' : '#F59E0B15') : 'transparent', textAlign: 'center' }}>
+                  style={{ padding: '8px 6px', borderRadius: 8, border: `2px solid ${form.violation === v.id ? (v.severity === 3 ? '#EF4444' : v.severity === 2 ? '#EF4444' : '#6B8DB5') : c.border}`, cursor: 'pointer', background: form.violation === v.id ? (v.severity === 3 ? '#EF444415' : v.severity === 2 ? '#EF444415' : '#6B8DB515') : 'transparent', textAlign: 'center' }}>
                   <div style={{ fontSize: 18 }}>{v.icon}</div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: form.violation === v.id ? (v.severity === 3 ? '#EF4444' : v.severity === 2 ? '#F97316' : '#F59E0B') : c.textMuted, marginTop: 2, lineHeight: 1.3 }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: form.violation === v.id ? (v.severity === 3 ? '#EF4444' : v.severity === 2 ? '#EF4444' : '#6B8DB5') : c.textMuted, marginTop: 2, lineHeight: 1.3 }}>
                     {lang === 'ar' ? v.ar : v.en}
                   </div>
                 </button>
@@ -148,9 +148,9 @@ function NewRecordModal({ onClose, onSave, employees, isDark, isRTL, lang, c }) 
 
           {/* Termination Warning */}
           {isTermination && (
-            <div style={{ padding: '12px 16px', borderRadius: 10, background: '#7F1D1D18', border: '1px solid #DC262630', display: 'flex', alignItems: 'flex-start', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <AlertTriangle size={16} color="#DC2626" style={{ flexShrink: 0, marginTop: 1 }} />
-              <p style={{ margin: 0, fontSize: 13, color: '#DC2626', fontWeight: 500 }}>
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: '#7f1d1d18', border: '1px solid #EF444430', display: 'flex', alignItems: 'flex-start', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <AlertTriangle size={16} color="#EF4444" style={{ flexShrink: 0, marginTop: 1 }} />
+              <p style={{ margin: 0, fontSize: 13, color: '#EF4444', fontWeight: 500 }}>
                 {lang === 'ar'
                   ? 'تحذير: إجراء إنهاء الخدمة لا يمكن التراجع عنه. تأكد من اتباع الإجراءات القانونية قبل المتابعة.'
                   : 'Warning: Termination cannot be undone. Ensure all legal procedures are followed before proceeding.'}
@@ -196,7 +196,7 @@ function NewRecordModal({ onClose, onSave, employees, isDark, isRTL, lang, c }) 
             {lang === 'ar' ? 'إلغاء' : 'Cancel'}
           </button>
           <button onClick={handleSave}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: isTermination ? 'linear-gradient(135deg,#7F1D1D,#DC2626)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 600 }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: isTermination ? 'linear-gradient(135deg,#7f1d1d,#EF4444)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 600 }}>
             <Save size={14} /> {isTermination ? (lang === 'ar' ? 'تأكيد إنهاء الخدمة' : 'Confirm Termination') : (lang === 'ar' ? 'حفظ الإجراء' : 'Save Action')}
           </button>
         </div>
@@ -219,7 +219,7 @@ function DetailModal({ record, emp, issuer, onClose, onStatusChange, isDark, isR
         <div style={{ padding: '18px 24px', background: action?.bg?.replace('18',''), borderRadius: '16px 16px 0 0', borderBottom: '1px solid ' + c.border }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 12 }}>
             <span style={{ fontSize: 36 }}>{action?.icon}</span>
-            <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid ' + c.border, cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button onClick={onClose} style={{ width: 28, height: 28, borderRadius: 7, border: '1px solid ' + c.border, cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={13} />
             </button>
           </div>
@@ -267,11 +267,11 @@ function DetailModal({ record, emp, issuer, onClose, onStatusChange, isDark, isR
           {record.status === 'open' && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button onClick={() => onStatusChange(record.id, 'resolved')}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#10B98120', color: '#10B981', fontSize: 13, fontWeight: 600 }}>
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#4A7AAB20', color: '#4A7AAB', fontSize: 13, fontWeight: 600 }}>
                 <CheckCircle size={15} /> {lang === 'ar' ? `حُلّت` : 'Mark Resolved'}
               </button>
               <button onClick={() => onStatusChange(record.id, 'appealed')}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#3B82F620', color: '#3B82F6', fontSize: 13, fontWeight: 600 }}>
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#4A7AAB20', color: '#4A7AAB', fontSize: 13, fontWeight: 600 }}>
                 <FileText size={15} /> {lang === 'ar' ? 'مستأنفة' : 'Mark Appealed'}
               </button>
             </div>
@@ -361,7 +361,7 @@ export default function DisciplinaryPage() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#7F1D1D,#DC2626)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#7f1d1d,#EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Shield size={20} color="#fff" />
           </div>
           <div>
@@ -370,7 +370,7 @@ export default function DisciplinaryPage() {
           </div>
         </div>
         <button onClick={() => setShowForm(true)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#7F1D1D,#DC2626)', color: '#fff', fontSize: 14, fontWeight: 600, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#7f1d1d,#EF4444)', color: '#fff', fontSize: 14, fontWeight: 600, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <Plus size={16} /> {lang === 'ar' ? 'إجراء جديد' : 'New Action'}
         </button>
       </div>
@@ -378,10 +378,10 @@ export default function DisciplinaryPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         {[
-          { label: lang === 'ar' ? 'قيد المتابعة'   : 'Open Cases',     value: openCount,                     icon: '⚠️', color: '#F59E0B' },
-          { label: lang === 'ar' ? 'إجمالي الجزاءات': 'Total Records',  value: records.length,                icon: '📋', color: '#4A7AAB' },
-          { label: lang === 'ar' ? 'إجمالي الخصومات': 'Total Penalties',value: `${totalPenalty.toLocaleString()} ج.م`, icon: '💸', color: '#EF4444' },
-          { label: lang === 'ar' ? 'إنهاء خدمة'     : 'Terminations',   value: termCount,                     icon: '🔴', color: '#991B1B' },
+          { label: lang === 'ar' ? 'قيد المتابعة' : 'Open Cases',     value: openCount,                     icon: '', color: '#6B8DB5' },
+          { label: lang === 'ar' ? 'إجمالي الجزاءات': 'Total Records',  value: records.length,                icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'إجمالي الخصومات': 'Total Penalties',value: `${totalPenalty.toLocaleString()} ج.م`, icon: '', color: '#EF4444' },
+          { label: lang === 'ar' ? 'إنهاء خدمة' : 'Terminations',   value: termCount,                     icon: '', color: '#7f1d1d' },
         ].map((s, i) => (
           <div key={i} style={{ padding: '16px 18px', borderRadius: 12, background: c.cardBg, border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -396,9 +396,9 @@ export default function DisciplinaryPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : '#F1F5F9', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.06)', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {[
-          { id: 'records', ar: 'السجلات',      en: 'Records'    },
+          { id: 'records', ar: 'السجلات',      en: 'Records' },
           { id: 'risk',    ar: 'موظفون في خطر', en: 'Risk Watch' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -441,13 +441,13 @@ export default function DisciplinaryPage() {
               <thead>
                 <tr style={{ background: c.thBg }}>
                   {[
-                    { ar: 'الموظف',     en: 'Employee',   w: 'auto'  },
+                    { ar: 'الموظف',     en: 'Employee',   w: 'auto' },
                     { ar: 'المخالفة',   en: 'Violation',  w: '140px' },
                     { ar: 'الإجراء',    en: 'Action',     w: '150px' },
                     { ar: 'التاريخ',    en: 'Date',       w: '110px' },
                     { ar: 'الخصم',      en: 'Penalty',    w: '100px' },
                     { ar: 'الحالة',     en: 'Status',     w: '110px' },
-                    { ar: '',           en: '',           w: '50px'  },
+                    { ar: '',           en: '',           w: '50px' },
                   ].map((col, i) => (
                     <th key={i} style={{ padding: '11px 14px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', width: col.w }}>
                       {lang === 'ar' ? col.ar : col.en}
@@ -527,17 +527,17 @@ export default function DisciplinaryPage() {
       {/* ── RISK WATCH TAB ── */}
       {tab === 'risk' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(245,158,11,0.08)' : '#FFFBEB', border: '1px solid ' + (isDark ? 'rgba(245,158,11,0.2)' : '#FDE68A'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <AlertTriangle size={16} color="#F59E0B" />
-            <span style={{ fontSize: 13, color: '#F59E0B', fontWeight: 500 }}>
+          <div style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(74,122,171,0.06)', border: '1px solid ' + (isDark ? 'rgba(245,158,11,0.2)' : 'rgba(74,122,171,0.08)'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <AlertTriangle size={16} color="#6B8DB5" />
+            <span style={{ fontSize: 13, color: '#6B8DB5', fontWeight: 500 }}>
               {lang === 'ar' ? `يُصنَّف الموظفون حسب مجموع أوزان الإجراءات التأديبية المتخذة ضدهم` : 'Employees ranked by cumulative weight of disciplinary actions taken against them'}
             </span>
           </div>
 
           {empRisk.map(({ emp, count, weight }, idx) => {
             const riskLevel = weight >= 8 ? { ar: `خطر عالٍ`, en: 'High Risk', color: '#EF4444', bg: '#EF444415' }
-                            : weight >= 4 ? { ar: 'خطر متوسط', en: 'Medium Risk', color: '#F97316', bg: '#F9731615' }
-                            : { ar: 'خطر منخفض', en: 'Low Risk', color: '#F59E0B', bg: '#F59E0B15' };
+                            : weight >= 4 ? { ar: 'خطر متوسط', en: 'Medium Risk', color: '#EF4444', bg: '#EF444415' }
+                            : { ar: 'خطر منخفض', en: 'Low Risk', color: '#6B8DB5', bg: '#6B8DB515' };
             const empRecords = records.filter(r => r.emp_id === emp.id);
             const lastAction = ACTION_TYPES.find(a => a.id === empRecords[empRecords.length - 1]?.action);
 
@@ -567,7 +567,7 @@ export default function DisciplinaryPage() {
                     <span style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'مؤشر الخطورة' : 'Risk Score'}</span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: riskLevel.color }}>{weight} / 15</span>
                   </div>
-                  <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0', overflow: 'hidden' }}>
+                  <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${Math.min(100, (weight / 15) * 100)}%`, borderRadius: 3, background: riskLevel.color, transition: 'width 0.6s ease' }} />
                   </div>
                 </div>

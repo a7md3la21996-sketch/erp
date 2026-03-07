@@ -66,10 +66,10 @@ const INIT_MONTH = NOW.getMonth() + 1;
 // ── Work Mode Badge ───────────────────────────────────────────
 function ModeBadge({ mode, lang }) {
   const map = {
-    normal:    { ar: 'مكتبي',   en: 'Office',  bg: '#3B82F620', color: '#3B82F6' },
-    remote:    { ar: 'ريموت',   en: 'Remote',  bg: '#10B98120', color: '#10B981' },
-    field:     { ar: 'ميداني',  en: 'Field',   bg: '#F59E0B20', color: '#F59E0B' },
-    exception: { ar: 'استثناء', en: 'Exception', bg: '#8B5CF620', color: '#8B5CF6' },
+    normal:    { ar: 'مكتبي',   en: 'Office',  bg: '#4A7AAB20', color: '#4A7AAB' },
+    remote:    { ar: 'ريموت',   en: 'Remote',  bg: '#4A7AAB20', color: '#4A7AAB' },
+    field:     { ar: 'ميداني',  en: 'Field',   bg: '#6B8DB520', color: '#6B8DB5' },
+    exception: { ar: 'استثناء', en: 'Exception', bg: '#4A7AAB20', color: '#4A7AAB' },
   };
   const m = map[mode] || map.normal;
   return (
@@ -82,18 +82,18 @@ function ModeBadge({ mode, lang }) {
 // ── Source Badge ──────────────────────────────────────────────
 function SourceBadge({ source, lang }) {
   if (source === 'fingerprint') return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: '#6366F120', color: '#6366F1' }}>
-      🖐️ {lang === 'ar' ? 'بصمة' : 'FP'}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: '#4A7AAB20', color: '#4A7AAB' }}>
+      ️ {lang === 'ar' ? 'بصمة' : 'FP'}
     </span>
   );
   if (source === 'excel') return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: '#10B98120', color: '#10B981' }}>
-      📊 Excel
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: '#4A7AAB20', color: '#4A7AAB' }}>
+       Excel
     </span>
   );
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: '#94A3B820', color: '#94A3B8' }}>
-      ✍️ {lang === 'ar' ? 'يدوي' : 'Manual'}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 7px', borderRadius: 20, fontSize: 10, fontWeight: 600, background: '#8BA8C820', color: '#8BA8C8' }}>
+      ️ {lang === 'ar' ? 'يدوي' : 'Manual'}
     </span>
   );
 }
@@ -129,7 +129,7 @@ function ManualEntryModal({ record, employees, onClose, onSave, isDark, isRTL, l
               {isNew ? (lang === 'ar' ? 'تسجيل حضور يدوي' : 'Manual Check-in') : (lang === 'ar' ? 'تعديل السجل' : 'Edit Record')}
             </h3>
           </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={14} />
           </button>
         </div>
@@ -240,7 +240,7 @@ export default function AttendancePage() {
   const [dayDate, setDayDate] = useState(new Date().toISOString().split('T')[0]);
   const [deptFilter, setDept] = useState('all');
   const [empFilter, setEmp]   = useState('all');
-  // ✅ بيجيب البيانات من الـ store المشترك — نفس البيانات اللي بيشوفها Payroll
+  //  بيجيب البيانات من الـ store المشترك — نفس البيانات اللي بيشوفها Payroll
   const [records, setRecords] = useState(() => getAttendanceForMonth(INIT_YEAR, INIT_MONTH));
   const [fpConnected]         = useState(false);
   const [showManual, setShowManual] = useState(false);
@@ -307,7 +307,7 @@ export default function AttendancePage() {
   }, [records, dayDate, empFilter]);
 
   const saveRecord = (rec) => {
-    // ✅ بيحدث الـ store المشترك عشان Payroll يشوف التعديل
+    //  بيحدث الـ store المشترك عشان Payroll يشوف التعديل
     updateAttendanceRecord(year, month, rec);
     setRecords(prev => {
       const idx = prev.findIndex(r => r.id === rec.id);
@@ -340,9 +340,9 @@ export default function AttendancePage() {
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           {/* Fingerprint Status */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 8, border: '1px solid ' + (fpConnected ? '#10B98140' : c.border), background: fpConnected ? '#10B98110' : (isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC') }}>
-            {fpConnected ? <Wifi size={14} color="#10B981" /> : <WifiOff size={14} color={c.textMuted} />}
-            <span style={{ fontSize: 12, fontWeight: 600, color: fpConnected ? '#10B981' : c.textMuted }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 14px', borderRadius: 8, border: '1px solid ' + (fpConnected ? '#4A7AAB40' : c.border), background: fpConnected ? '#4A7AAB10' : (isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC') }}>
+            {fpConnected ? <Wifi size={14} color="#4A7AAB" /> : <WifiOff size={14} color={c.textMuted} />}
+            <span style={{ fontSize: 12, fontWeight: 600, color: fpConnected ? '#4A7AAB' : c.textMuted }}>
               {lang === 'ar' ? (fpConnected ? 'البصمة متصلة' : 'البصمة غير متصلة') : (fpConnected ? 'FP Connected' : 'FP Offline')}
             </span>
           </div>
@@ -367,10 +367,10 @@ export default function AttendancePage() {
       {/* ── Stats ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         {[
-          { label: lang === 'ar' ? 'أيام الحضور' : 'Present Days', value: totalPresent, icon: '✅', color: '#10B981' },
-          { label: lang === 'ar' ? 'أيام الغياب' : 'Absent Days',  value: totalAbsent,  icon: '❌', color: '#EF4444' },
-          { label: lang === 'ar' ? 'سجلات التأخير' : 'Late Records', value: totalLate,  icon: '⏰', color: '#F59E0B' },
-          { label: lang === 'ar' ? 'إجمالي الأوفرتايم' : 'Total OT', value: `${totalOT.toFixed(1)}h`, icon: '⚡', color: '#6366F1' },
+          { label: lang === 'ar' ? 'أيام الحضور' : 'Present Days', value: totalPresent, icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'أيام الغياب' : 'Absent Days',  value: totalAbsent,  icon: '', color: '#EF4444' },
+          { label: lang === 'ar' ? 'سجلات التأخير' : 'Late Records', value: totalLate,  icon: '', color: '#6B8DB5' },
+          { label: lang === 'ar' ? 'إجمالي الأوفرتايم' : 'Total OT', value: `${totalOT.toFixed(1)}h`, icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
           <div key={i} style={{ padding: '16px 18px', borderRadius: 12, background: c.cardBg, border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -385,7 +385,7 @@ export default function AttendancePage() {
       </div>
 
       {/* ── Tabs ── */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : '#F1F5F9', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.06)', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {[{ id: 'monthly', ar: 'الملخص الشهري', en: 'Monthly Summary' }, { id: 'daily', ar: 'اليومي', en: 'Daily View' }, { id: 'analytics', ar: 'التحليل', en: 'Analytics' }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
@@ -450,7 +450,7 @@ export default function AttendancePage() {
               <tbody>
                 {monthlySummary.map(({ emp, presentDays, absentDays, remoteDays, fieldDays, totalOT, totalLateMins, totalDeduction, toleranceCap, usedTolerance }, idx) => {
                   const tolerancePct = Math.min(100, (usedTolerance / toleranceCap) * 100);
-                  const lateColor = totalLateMins > toleranceCap * 60 ? '#EF4444' : totalLateMins > 0 ? '#F59E0B' : '#10B981';
+                  const lateColor = totalLateMins > toleranceCap * 60 ? '#EF4444' : totalLateMins > 0 ? '#6B8DB5' : '#4A7AAB';
                   return (
                     <tr key={emp.id} style={{ borderTop: idx > 0 ? '1px solid ' + c.border : 'none', transition: 'background 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
@@ -460,7 +460,7 @@ export default function AttendancePage() {
                       <td style={{ padding: '12px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                           <div style={{ width: 34, height: 34, borderRadius: '50%', background: emp.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-                            {emp.full_name_ar.split(' ').slice(0,2).map(w=>w[0]).join('')}
+                            {emp.full_name_ar.split('').slice(0,2).map(w=>w[0]).join('')}
                           </div>
                           <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
@@ -471,7 +471,7 @@ export default function AttendancePage() {
 
                       {/* Present */}
                       <td style={{ padding: '12px 14px' }}>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#10B981' }}>{presentDays}</span>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: '#4A7AAB' }}>{presentDays}</span>
                         <span style={{ fontSize: 11, color: c.textMuted }}> {lang === 'ar' ? 'يوم' : 'd'}</span>
                       </td>
 
@@ -485,7 +485,7 @@ export default function AttendancePage() {
                       {/* Remote/Field */}
                       <td style={{ padding: '12px 14px' }}>
                         <span style={{ fontSize: 12, color: c.textMuted }}>
-                          🏠{remoteDays} / 🚗{fieldDays}
+                          {remoteDays} / {fieldDays}
                         </span>
                       </td>
 
@@ -499,7 +499,7 @@ export default function AttendancePage() {
                       {/* OT */}
                       <td style={{ padding: '12px 14px' }}>
                         {totalOT > 0
-                          ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#6366F120', color: '#6366F1' }}>{totalOT.toFixed(1)}h</span>
+                          ? <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#4A7AAB20', color: '#4A7AAB' }}>{totalOT.toFixed(1)}h</span>
                           : <span style={{ fontSize: 13, color: c.textMuted }}>—</span>}
                       </td>
 
@@ -508,8 +508,8 @@ export default function AttendancePage() {
                         <div style={{ fontSize: 11, color: c.textMuted, marginBottom: 3 }}>
                           {usedTolerance.toFixed(1)} / {toleranceCap}h
                         </div>
-                        <div style={{ height: 5, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.2)' : '#E5E7EB', width: 80 }}>
-                          <div style={{ height: '100%', borderRadius: 3, width: `${tolerancePct}%`, background: tolerancePct >= 100 ? '#EF4444' : tolerancePct > 70 ? '#F59E0B' : '#10B981', transition: 'width 0.3s' }} />
+                        <div style={{ height: 5, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb', width: 80 }}>
+                          <div style={{ height: '100%', borderRadius: 3, width: `${tolerancePct}%`, background: tolerancePct >= 100 ? '#EF4444' : tolerancePct > 70 ? '#6B8DB5' : '#4A7AAB', transition: 'width 0.3s' }} />
                         </div>
                       </td>
 
@@ -517,7 +517,7 @@ export default function AttendancePage() {
                       <td style={{ padding: '12px 14px' }}>
                         {totalDeduction > 0
                           ? <span style={{ fontSize: 13, fontWeight: 700, color: '#EF4444' }}>-{Math.round(totalDeduction).toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
-                          : <span style={{ fontSize: 13, color: '#10B981', fontWeight: 600 }}>✓</span>}
+                          : <span style={{ fontSize: 13, color: '#4A7AAB', fontWeight: 600 }}></span>}
                       </td>
                     </tr>
                   );
@@ -542,9 +542,9 @@ export default function AttendancePage() {
             </select>
 
             <div style={{ fontSize: 13, color: c.textMuted, marginInlineStart: 'auto' }}>
-              ✅ {dailyRecords.filter(r => r.rec && !r.rec.absent).length} &nbsp;
-              ❌ {dailyRecords.filter(r => r.rec?.absent).length} &nbsp;
-              ⏳ {dailyRecords.filter(r => !r.rec).length} {lang === 'ar' ? `لم يُسجَّل` : 'unrecorded'}
+               {dailyRecords.filter(r => r.rec && !r.rec.absent).length} &nbsp;
+               {dailyRecords.filter(r => r.rec?.absent).length} &nbsp;
+               {dailyRecords.filter(r => !r.rec).length} {lang === 'ar' ? `لم يُسجَّل` : 'unrecorded'}
             </div>
           </div>
 
@@ -580,7 +580,7 @@ export default function AttendancePage() {
                       <td style={{ padding: '12px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                           <div style={{ width: 32, height: 32, borderRadius: '50%', background: emp.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 11, fontWeight: 700 }}>
-                            {emp.full_name_ar.split(' ').slice(0,2).map(w=>w[0]).join('')}
+                            {emp.full_name_ar.split('').slice(0,2).map(w=>w[0]).join('')}
                           </div>
                           <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
@@ -599,7 +599,7 @@ export default function AttendancePage() {
                               {lang === 'ar' ? (rec.absent_with_notice ? 'غياب بإشعار' : 'غياب') : (rec.absent_with_notice ? 'Absent (notice)' : 'Absent')}
                             </span>
                           : rec?.check_in
-                            ? <span style={{ fontSize: 13, fontWeight: 600, color: lateMin > 0 ? '#F59E0B' : c.text }}>{rec.check_in}</span>
+                            ? <span style={{ fontSize: 13, fontWeight: 600, color: lateMin > 0 ? '#6B8DB5' : c.text }}>{rec.check_in}</span>
                             : <span style={{ fontSize: 12, color: c.textMuted }}>—</span>}
                       </td>
 
@@ -609,13 +609,13 @@ export default function AttendancePage() {
 
                       <td style={{ padding: '12px 14px' }}>
                         {lateMin > 0
-                          ? <span style={{ fontSize: 12, fontWeight: 600, color: lateMin > 60 ? '#EF4444' : '#F59E0B' }}>+{minutesToTime(lateMin)}</span>
-                          : <span style={{ fontSize: 12, color: '#10B981' }}>✓</span>}
+                          ? <span style={{ fontSize: 12, fontWeight: 600, color: lateMin > 60 ? '#EF4444' : '#6B8DB5' }}>+{minutesToTime(lateMin)}</span>
+                          : <span style={{ fontSize: 12, color: '#4A7AAB' }}></span>}
                       </td>
 
                       <td style={{ padding: '12px 14px' }}>
                         {ot > 0
-                          ? <span style={{ fontSize: 12, fontWeight: 600, color: '#6366F1' }}>+{ot.toFixed(1)}h</span>
+                          ? <span style={{ fontSize: 12, fontWeight: 600, color: '#4A7AAB' }}>+{ot.toFixed(1)}h</span>
                           : <span style={{ fontSize: 12, color: c.textMuted }}>—</span>}
                       </td>
 
@@ -651,7 +651,7 @@ export default function AttendancePage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: c.text, textAlign: isRTL ? 'right' : 'left' }}>
-                  📅 {lang === 'ar' ? 'خريطة حرارية للحضور' : 'Attendance Heatmap'}
+                   {lang === 'ar' ? 'خريطة حرارية للحضور' : 'Attendance Heatmap'}
                 </div>
                 <div style={{ fontSize: 12, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>
                   {lang === 'ar' ? 'نسبة الحضور اليومي للشهر' : 'Daily attendance rate for the month'}
@@ -659,11 +659,11 @@ export default function AttendancePage() {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: c.textMuted }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: 3, background: '#10B981' }} />
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: '#4A7AAB' }} />
                   <span>95%+</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: 3, background: '#F59E0B' }} />
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: '#6B8DB5' }} />
                   <span>80-95%</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -703,15 +703,15 @@ export default function AttendancePage() {
                           <div key={i} style={{
                             aspectRatio: '1',
                             borderRadius: 8,
-                            background: cell.pct >= 95 ? '#10B98130' : cell.pct >= 80 ? '#F59E0B25' : cell.pct > 0 ? '#EF444420' : (isDark ? 'rgba(255,255,255,0.03)' : '#F3F4F6'),
-                            border: `1px solid ${cell.pct >= 95 ? '#10B98140' : cell.pct >= 80 ? '#F59E0B40' : cell.pct > 0 ? '#EF444430' : c.border}`,
+                            background: cell.pct >= 95 ? '#4A7AAB30' : cell.pct >= 80 ? '#6B8DB525' : cell.pct > 0 ? '#EF444420' : (isDark ? 'rgba(255,255,255,0.03)' : '#F3F4F6'),
+                            border: `1px solid ${cell.pct >= 95 ? '#4A7AAB40' : cell.pct >= 80 ? '#6B8DB540' : cell.pct > 0 ? '#EF444430' : c.border}`,
                             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'default',
                             transition: 'transform 0.15s',
                           }}
                             onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
                             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
                             <div style={{ fontSize: 12, fontWeight: 700, color: c.text }}>{cell.d}</div>
-                            {cell.pct > 0 && <div style={{ fontSize: 9, color: cell.pct >= 95 ? '#10B981' : cell.pct >= 80 ? '#F59E0B' : '#EF4444', fontWeight: 600 }}>{cell.pct}%</div>}
+                            {cell.pct > 0 && <div style={{ fontSize: 9, color: cell.pct >= 95 ? '#4A7AAB' : cell.pct >= 80 ? '#6B8DB5' : '#EF4444', fontWeight: 600 }}>{cell.pct}%</div>}
                           </div>
                         )
                     ))}
@@ -727,7 +727,7 @@ export default function AttendancePage() {
             {/* Alerts */}
             <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
-                🔔 {lang === 'ar' ? 'تنبيهات الحضور' : 'Attendance Alerts'}
+                 {lang === 'ar' ? 'تنبيهات الحضور' : 'Attendance Alerts'}
               </div>
               <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
                 {lang === 'ar' ? 'تنبيهات تحتاج إجراء' : 'Alerts requiring action'}
@@ -737,9 +737,9 @@ export default function AttendancePage() {
                 const highLate     = monthlySummary.filter(s => s.totalLateMins > 180);
                 const overTolerance = monthlySummary.filter(s => s.usedTolerance >= s.toleranceCap);
                 const alerts = [
-                  highAbsent.length > 0   && { icon: '🚨', color: '#EF4444', bg: '#EF444415', title: lang==='ar'?'غياب مرتفع':'High Absenteeism', desc: lang==='ar'?`${highAbsent.length} موظف غابوا 3+ أيام`:`${highAbsent.length} employees absent 3+ days` },
-                  highLate.length > 0     && { icon: '⏰', color: '#F59E0B', bg: '#F59E0B15', title: lang==='ar'?'تأخير متكرر':'Repeated Late', desc: lang==='ar'?`${highLate.length} موظف تأخروا أكثر من 3 ساعات`:`${highLate.length} employees late more than 3h total` },
-                  overTolerance.length > 0 && { icon: '⚠️', color: '#8B5CF6', bg: '#8B5CF615', title: lang==='ar'?'تجاوز الـ Tolerance':'Tolerance Exceeded', desc: lang==='ar'?`${overTolerance.length} موظف استنفدوا رصيد التسامح`:`${overTolerance.length} employees used all tolerance hours` },
+                  highAbsent.length > 0   && { icon: '', color: '#EF4444', bg: '#EF444415', title: lang==='ar'?'غياب مرتفع':'High Absenteeism', desc: lang==='ar'?`${highAbsent.length} موظف غابوا 3+ أيام`:`${highAbsent.length} employees absent 3+ days` },
+                  highLate.length > 0     && { icon: '', color: '#6B8DB5', bg: '#6B8DB515', title: lang==='ar'?'تأخير متكرر':'Repeated Late', desc: lang==='ar'?`${highLate.length} موظف تأخروا أكثر من 3 ساعات`:`${highLate.length} employees late more than 3h total` },
+                  overTolerance.length > 0 && { icon: '', color: '#4A7AAB', bg: '#4A7AAB15', title: lang==='ar'?'تجاوز الـ Tolerance':'Tolerance Exceeded', desc: lang==='ar'?`${overTolerance.length} موظف استنفدوا رصيد التسامح`:`${overTolerance.length} employees used all tolerance hours` },
                 ].filter(Boolean);
                 return alerts.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -755,7 +755,7 @@ export default function AttendancePage() {
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '24px', color: c.textMuted }}>
-                    <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}></div>
                     <div style={{ fontSize: 13 }}>{lang === 'ar' ? 'لا توجد تنبيهات هذا الشهر' : 'No alerts this month'}</div>
                   </div>
                 );
@@ -765,7 +765,7 @@ export default function AttendancePage() {
             {/* Dept Comparison */}
             <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
-                🏢 {lang === 'ar' ? 'مقارنة الأقسام' : 'Department Comparison'}
+                 {lang === 'ar' ? 'مقارنة الأقسام' : 'Department Comparison'}
               </div>
               <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
                 {lang === 'ar' ? 'نسبة الحضور والغياب لكل قسم' : 'Attendance rate per department'}
@@ -788,10 +788,10 @@ export default function AttendancePage() {
                             <span style={{ fontSize: 12, color: c.text, fontWeight: 600 }}>{lang==='ar'?dept.name_ar:dept.name_en}</span>
                             <span style={{ fontSize: 10, color: c.textMuted }}>({emps} {lang==='ar'?'موظف':'emp'})</span>
                           </div>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: pct >= 95 ? '#10B981' : pct >= 80 ? '#F59E0B' : '#EF4444' }}>{pct}%</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: pct >= 95 ? '#4A7AAB' : pct >= 80 ? '#6B8DB5' : '#EF4444' }}>{pct}%</span>
                         </div>
-                        <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                          <div style={{ height: '100%', borderRadius: 3, width: pct + '%', background: pct >= 95 ? '#10B981' : pct >= 80 ? '#F59E0B' : '#EF4444', transition: 'width 0.5s' }} />
+                        <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' }}>
+                          <div style={{ height: '100%', borderRadius: 3, width: pct + '%', background: pct >= 95 ? '#4A7AAB' : pct >= 80 ? '#6B8DB5' : '#EF4444', transition: 'width 0.5s' }} />
                         </div>
                       </div>
                     ))}
@@ -804,9 +804,9 @@ export default function AttendancePage() {
       )}
 
       {/* ── Fingerprint Info Banner ── */}
-      <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(99,102,241,0.08)' : '#EEF2FF', border: '1px solid ' + (isDark ? 'rgba(99,102,241,0.2)' : '#C7D2FE'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <span style={{ fontSize: 18 }}>🖐️</span>
-        <p style={{ margin: 0, fontSize: 13, color: isDark ? '#A5B4FC' : '#4338CA' }}>
+      <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(99,102,241,0.2)' : '#8BA8C8'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <span style={{ fontSize: 18 }}>️</span>
+        <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#2B4C6F' }}>
           {lang === 'ar'
             ? 'البصمة جاهزة للربط — لما تربط الجهاز، بيانات الحضور هتيجي أوتوماتيك وتظهر هنا بالمصدر "بصمة"'
             : 'Fingerprint API ready — once connected, attendance data will sync automatically and appear here with source "FP"'}

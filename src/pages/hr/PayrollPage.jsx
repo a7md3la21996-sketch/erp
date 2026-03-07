@@ -24,7 +24,7 @@ function getHistoricalPayroll(month, year) {
 
 // ── Avatar ────────────────────────────────────────────────────
 function Avatar({ emp, size = 34 }) {
-  const initials = emp.full_name_ar.split(' ').slice(0,2).map(w=>w[0]).join('');
+  const initials = emp.full_name_ar.split('').slice(0,2).map(w=>w[0]).join('');
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: emp.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.34, fontWeight: 700, flexShrink: 0 }}>
       {initials}
@@ -49,12 +49,12 @@ function StackedBarChart({ data, lang, isRTL, c, isDark }) {
               onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)}>
               {isHov && (
                 <div style={{ position: 'absolute', marginTop: -40, background: isDark ? '#1a2234' : '#fff', border: '1px solid ' + c.border, borderRadius: 8, padding: '6px 10px', fontSize: 11, color: c.text, whiteSpace: 'nowrap', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-                  <div>{lang === 'ar' ? 'أساسي: ' : 'Base: '}{fmt(d.base)}</div>
-                  {d.ot > 0 && <div style={{ color: '#10B981' }}>{lang === 'ar' ? 'OT: ' : 'OT: '}{fmt(d.ot)}</div>}
+                  <div>{lang === 'ar' ? 'أساسي: ': 'Base: '}{fmt(d.base)}</div>
+                  {d.ot > 0 && <div style={{ color: '#4A7AAB' }}>{lang === 'ar' ? 'OT: ': 'OT: '}{fmt(d.ot)}</div>}
                 </div>
               )}
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: 140, position: 'relative' }}>
-                <div style={{ width: '100%', height: otH, background: '#10B981', borderRadius: otH > 0 ? '4px 4px 0 0' : 0, transition: 'all 0.3s', opacity: isHov ? 1 : 0.85 }} />
+                <div style={{ width: '100%', height: otH, background: '#4A7AAB', borderRadius: otH > 0 ? '4px 4px 0 0' : 0, transition: 'all 0.3s', opacity: isHov ? 1 : 0.85 }} />
                 <div style={{ width: '100%', height: baseH, background: isDark ? '#2B4C6F' : '#4A7AAB', borderRadius: otH > 0 ? 0 : '4px 4px 0 0', transition: 'all 0.3s', opacity: isHov ? 1 : 0.85 }} />
               </div>
               <div style={{ fontSize: 10, color: c.textMuted }}>{MONTH_NAMES[lang][d.month - 1].slice(0,3)}</div>
@@ -65,7 +65,7 @@ function StackedBarChart({ data, lang, isRTL, c, isDark }) {
       <div style={{ display: 'flex', gap: 16, marginTop: 10, justifyContent: 'center' }}>
         {[
           { color: isDark ? '#2B4C6F' : '#4A7AAB', label: lang === 'ar' ? 'راتب أساسي' : 'Base Salary' },
-          { color: '#10B981', label: lang === 'ar' ? 'أوفرتايم' : 'Overtime' },
+          { color: '#4A7AAB', label: lang === 'ar' ? 'أوفرتايم' : 'Overtime' },
         ].map((l, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <div style={{ width: 10, height: 10, borderRadius: 2, background: l.color }} />
@@ -80,7 +80,7 @@ function StackedBarChart({ data, lang, isRTL, c, isDark }) {
 // ── Pie Chart (SVG) ───────────────────────────────────────────
 function DeptPieChart({ deptData, lang, isRTL, c }) {
   const [hovered, setHovered] = useState(null);
-  const COLORS = ['#1B3347','#4A7AAB','#F59E0B','#10B981','#EF4444','#8B5CF6'];
+  const COLORS = ['#1B3347','#4A7AAB','#6B8DB5','#4A7AAB','#EF4444','#4A7AAB'];
   const total = deptData.reduce((s, d) => s + d.net, 0);
   let cumAngle = 0;
   const slices = deptData.map((d, i) => {
@@ -161,10 +161,10 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
         <div style={{ padding: '20px 24px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 10, marginBottom: 20 }}>
             {[
-              { label: lang === 'ar' ? 'حضور' : 'Present', value: data.presentDays, color: '#10B981' },
+              { label: lang === 'ar' ? 'حضور' : 'Present', value: data.presentDays, color: '#4A7AAB' },
               { label: lang === 'ar' ? 'غياب' : 'Absent',  value: data.absentDays,  color: '#EF4444' },
-              { label: lang === 'ar' ? 'تأخير' : 'Late',   value: data.lateDays,    color: '#F59E0B' },
-              { label: lang === 'ar' ? 'OT' : 'OT',        value: `${data.otHours}h`, color: '#6366F1' },
+              { label: lang === 'ar' ? 'تأخير' : 'Late',   value: data.lateDays,    color: '#6B8DB5' },
+              { label: lang === 'ar' ? 'OT' : 'OT',        value: `${data.otHours}h`, color: '#4A7AAB' },
             ].map((s,i) => (
               <div key={i} style={{ padding: '10px 8px', borderRadius: 10, background: isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC', border: '1px solid ' + c.border, textAlign: 'center' }}>
                 <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
@@ -173,9 +173,9 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
             ))}
           </div>
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981', marginBottom: 8, textTransform: 'uppercase' }}>{lang === 'ar' ? '+ المستحقات' : '+ EARNINGS'}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#4A7AAB', marginBottom: 8, textTransform: 'uppercase' }}>{lang === 'ar' ? '+ المستحقات' : '+ EARNINGS'}</div>
             <Row label={lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary'} value={`${fmt(data.baseSalary)} ${lang==='ar'?'ج.م':'EGP'}`} />
-            {data.otEarnings > 0 && <Row label={lang === 'ar' ? `أوفرتايم (${data.otHours}h)` : `OT (${data.otHours}h)`} value={`+ ${fmt(data.otEarnings)} ${lang==='ar'?'ج.م':'EGP'}`} color="#10B981" />}
+            {data.otEarnings > 0 && <Row label={lang === 'ar' ? `أوفرتايم (${data.otHours}h)` : `OT (${data.otHours}h)`} value={`+ ${fmt(data.otEarnings)} ${lang==='ar'?'ج.م':'EGP'}`} color="#4A7AAB" />}
           </div>
           {data.totalDeductions > 0 && (
             <div style={{ marginBottom: 16 }}>
@@ -184,15 +184,15 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
               {data.absenceDeduction > 0 && <Row label={lang === 'ar' ? 'خصم الغياب' : 'Absence Deduction'} value={`- ${fmt(data.absenceDeduction)} ${lang==='ar'?'ج.م':'EGP'}`} color="#EF4444" />}
             </div>
           )}
-          <div style={{ padding: '14px 16px', borderRadius: 10, background: isDark ? 'rgba(74,122,171,0.1)' : '#EFF6FF', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : '#BFDBFE'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          <div style={{ padding: '14px 16px', borderRadius: 10, background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.2)'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'صافي الراتب' : 'Net Salary'}</span>
             <span style={{ fontSize: 22, fontWeight: 900, color: c.accent }}>{fmt(data.netSalary)} {lang==='ar'?'ج.م':'EGP'}</span>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 16 }}>
             {[
               { label: lang === 'ar' ? 'أجر ساعي' : 'Hourly Rate', value: `${data.hourlyRate} ${lang==='ar'?'ج.م':'EGP'}` },
-              { label: lang === 'ar' ? 'أجر يومي'  : 'Daily Rate',  value: `${data.dailyRate} ${lang==='ar'?'ج.م':'EGP'}` },
-              { label: lang === 'ar' ? 'OT'         : 'OT Rate',    value: emp.ot_multiplier },
+              { label: lang === 'ar' ? 'أجر يومي' : 'Daily Rate',  value: `${data.dailyRate} ${lang==='ar'?'ج.م':'EGP'}` },
+              { label: lang === 'ar' ? 'OT' : 'OT Rate',    value: emp.ot_multiplier },
             ].map((r,i) => (
               <div key={i} style={{ textAlign: isRTL ? 'right' : 'left' }}>
                 <div style={{ fontSize: 10, color: c.textMuted }}>{r.label}</div>
@@ -370,9 +370,9 @@ export default function PayrollPage() {
             </>
           )}
           <button onClick={runPayroll} disabled={runStatus === 'running'}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, border: 'none', cursor: runStatus === 'running' ? 'not-allowed' : 'pointer', background: runStatus === 'done' ? '#10B981' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 14, fontWeight: 600, opacity: runStatus === 'running' ? 0.7 : 1, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, border: 'none', cursor: runStatus === 'running' ? 'not-allowed' : 'pointer', background: runStatus === 'done' ? '#4A7AAB' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 14, fontWeight: 600, opacity: runStatus === 'running' ? 0.7 : 1, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             {runStatus === 'running' ? <Clock size={16} /> : runStatus === 'done' ? <CheckCircle size={16} /> : <Play size={16} />}
-            {runStatus === 'running' ? (lang === 'ar' ? 'جاري الحساب...' : 'Calculating...') : runStatus === 'done' ? (lang === 'ar' ? 'تم التشغيل ✓' : 'Complete ✓') : (lang === 'ar' ? 'تشغيل المسير' : 'Run Payroll')}
+            {runStatus === 'running' ? (lang === 'ar' ? 'جاري الحساب...' : 'Calculating...') : runStatus === 'done' ? (lang === 'ar' ? 'تم التشغيل ' : 'Complete ') : (lang === 'ar' ? 'تشغيل المسير' : 'Run Payroll')}
           </button>
         </div>
       </div>
@@ -381,7 +381,7 @@ export default function PayrollPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, padding: '16px 20px', borderRadius: 12, background: c.cardBg, border: '1px solid ' + c.border, flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <Calendar size={16} color={c.textMuted} />
-          <span style={{ fontSize: 13, color: c.textMuted, fontWeight: 500 }}>{lang === 'ar' ? 'فترة المسير:' : 'Payroll Period:'}</span>
+          <span style={{ fontSize: 13, color: c.textMuted, fontWeight: 500 }}>{lang === 'ar' ? 'فترة المسير:': 'Payroll Period:'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <button onClick={prevMonth} style={{ width: 30, height: 30, borderRadius: 7, border: '1px solid ' + c.border, background: 'transparent', cursor: 'pointer', color: c.text, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -431,13 +431,13 @@ export default function PayrollPage() {
             {[
               { label: lang === 'ar' ? 'إجمالي الرواتب' : 'Total Base',    value: `${fmt(totals.base)} ${lang==='ar'?'ج.م':'EGP'}`,        icon: <DollarSign size={20} />,    color: '#2B4C6F', bg: '#2B4C6F15', trend: '+3.5%' },
               { label: lang === 'ar' ? 'إجمالي الخصومات' : 'Deductions',   value: `${fmt(totals.deductions)} ${lang==='ar'?'ج.م':'EGP'}`,  icon: <AlertTriangle size={20} />, color: '#EF4444', bg: '#EF444415', trend: '-1.5%' },
-              { label: lang === 'ar' ? 'إجمالي الأوفرتايم' : 'Total OT',   value: `${fmt(totals.ot)} ${lang==='ar'?'ج.م':'EGP'}`,          icon: <TrendingUp size={20} />,    color: '#10B981', bg: '#10B98115', trend: '+8.7%' },
+              { label: lang === 'ar' ? 'إجمالي الأوفرتايم' : 'Total OT',   value: `${fmt(totals.ot)} ${lang==='ar'?'ج.م':'EGP'}`,          icon: <TrendingUp size={20} />,    color: '#4A7AAB', bg: '#4A7AAB15', trend: '+8.7%' },
               { label: lang === 'ar' ? 'إجمالي الصافي' : 'Total Net',      value: `${fmt(totals.net)} ${lang==='ar'?'ج.م':'EGP'}`,          icon: <CheckCircle size={20} />,   color: '#4A7AAB', bg: '#4A7AAB15', trend: '+5.2%' },
             ].map((s, i) => (
               <div key={i} style={{ padding: '18px 20px', borderRadius: 12, background: s.bg, border: `1px solid ${s.color}30` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 8 }}>
                   <div style={{ color: s.color }}>{s.icon}</div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: s.trend.startsWith('+') ? '#10B981' : '#EF4444', background: s.trend.startsWith('+') ? '#10B98115' : '#EF444415', padding: '2px 6px', borderRadius: 10 }}>{s.trend}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: s.trend.startsWith('+') ? '#4A7AAB' : '#EF4444', background: s.trend.startsWith('+') ? '#4A7AAB15' : '#EF444415', padding: '2px 6px', borderRadius: 10 }}>{s.trend}</span>
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
                 <div style={{ fontSize: 12, color: c.textMuted, marginTop: 4 }}>{s.label}</div>
@@ -493,13 +493,13 @@ export default function PayrollPage() {
                             </div>
                           </td>
                           <td style={{ padding: '13px 14px' }}><span style={{ fontSize: 14, fontWeight: 600, color: c.text }}>{fmt(data.baseSalary)}</span></td>
-                          <td style={{ padding: '13px 14px' }}>{data.lateDeduction > 0 ? <span style={{ fontSize: 13, fontWeight: 600, color: '#EF4444' }}>- {fmt(data.lateDeduction)}</span> : <span style={{ color: '#10B981' }}>✓</span>}</td>
-                          <td style={{ padding: '13px 14px' }}>{data.absenceDeduction > 0 ? <span style={{ fontSize: 13, fontWeight: 600, color: '#EF4444' }}>- {fmt(data.absenceDeduction)}</span> : <span style={{ color: '#10B981' }}>✓</span>}</td>
-                          <td style={{ padding: '13px 14px' }}>{data.otEarnings > 0 ? <span style={{ fontSize: 13, fontWeight: 600, color: '#10B981' }}>+ {fmt(data.otEarnings)}</span> : <span style={{ color: c.textMuted }}>—</span>}</td>
+                          <td style={{ padding: '13px 14px' }}>{data.lateDeduction > 0 ? <span style={{ fontSize: 13, fontWeight: 600, color: '#EF4444' }}>- {fmt(data.lateDeduction)}</span> : <span style={{ color: '#4A7AAB' }}></span>}</td>
+                          <td style={{ padding: '13px 14px' }}>{data.absenceDeduction > 0 ? <span style={{ fontSize: 13, fontWeight: 600, color: '#EF4444' }}>- {fmt(data.absenceDeduction)}</span> : <span style={{ color: '#4A7AAB' }}></span>}</td>
+                          <td style={{ padding: '13px 14px' }}>{data.otEarnings > 0 ? <span style={{ fontSize: 13, fontWeight: 600, color: '#4A7AAB' }}>+ {fmt(data.otEarnings)}</span> : <span style={{ color: c.textMuted }}>—</span>}</td>
                           <td style={{ padding: '13px 14px' }}>
                             {data.totalDeductions > 0
                               ? <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#EF444420', color: '#EF4444' }}>- {fmt(data.totalDeductions)}</span>
-                              : <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#10B98120', color: '#10B981' }}>✓</span>}
+                              : <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#4A7AAB20', color: '#4A7AAB' }}></span>}
                           </td>
                           <td style={{ padding: '13px 14px' }}><span style={{ fontSize: 15, fontWeight: 800, color: c.accent }}>{fmt(data.netSalary)}</span></td>
                           <td style={{ padding: '13px 14px' }} onClick={e => e.stopPropagation()}>
@@ -516,7 +516,7 @@ export default function PayrollPage() {
                   </tbody>
                   {totals && (
                     <tfoot>
-                      <tr style={{ background: isDark ? 'rgba(74,122,171,0.1)' : '#EFF6FF', borderTop: '2px solid ' + c.accent + '40' }}>
+                      <tr style={{ background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.08)', borderTop: '2px solid ' + c.accent + '40' }}>
                         <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: c.accent }}>{lang === 'ar' ? `الإجمالي (${filtered.length} موظف)` : `Total (${filtered.length} employees)`}</td>
                         <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: c.text }}>{fmt(totals.base)}</td>
                         <td /><td /><td />
@@ -541,7 +541,7 @@ export default function PayrollPage() {
                 {/* Stacked Bar */}
                 <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
-                    📊 {lang === 'ar' ? 'اتجاهات الرواتب الشهرية' : 'Monthly Payroll Trends'}
+                     {lang === 'ar' ? 'اتجاهات الرواتب الشهرية' : 'Monthly Payroll Trends'}
                   </div>
                   <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
                     {lang === 'ar' ? 'الراتب الأساسي والأوفرتايم' : 'Base salary + overtime'}
@@ -552,7 +552,7 @@ export default function PayrollPage() {
                 {/* Pie */}
                 <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
-                    🥧 {lang === 'ar' ? 'توزيع الرواتب حسب القسم' : 'Salary Distribution by Dept'}
+                     {lang === 'ar' ? 'توزيع الرواتب حسب القسم' : 'Salary Distribution by Dept'}
                   </div>
                   <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
                     {lang === 'ar' ? 'نسبة كل قسم من إجمالي الرواتب' : 'Each department share of total payroll'}
@@ -575,7 +575,7 @@ export default function PayrollPage() {
                 {/* Top Earners */}
                 <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
-                    🏆 {lang === 'ar' ? `أعلى الموظفين أجراً` : 'Top Earners'}
+                     {lang === 'ar' ? `أعلى الموظفين أجراً` : 'Top Earners'}
                   </div>
                   <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
                     {lang === 'ar' ? 'الموظفون الأعلى صافي راتب هذا الشهر' : 'Highest net salary this month'}
@@ -584,7 +584,7 @@ export default function PayrollPage() {
                     {topEarners.map((d, i) => {
                       const maxNet = topEarners[0].netSalary;
                       const pct = (d.netSalary / maxNet) * 100;
-                      const MEDALS = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+                      const MEDALS = ['','','','4️⃣','5️⃣'];
                       const dept = DEPARTMENTS.find(dep => dep.id === d.emp.department);
                       return (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -600,7 +600,7 @@ export default function PayrollPage() {
                               </div>
                               <span style={{ fontSize: 13, fontWeight: 700, color: c.accent }}>{fmt(d.netSalary)}</span>
                             </div>
-                            <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
+                            <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#e5e7eb' }}>
                               <div style={{ height: '100%', borderRadius: 2, width: pct + '%', background: 'linear-gradient(90deg,#2B4C6F,#4A7AAB)', transition: 'width 0.5s' }} />
                             </div>
                           </div>
@@ -613,7 +613,7 @@ export default function PayrollPage() {
                 {/* Forecast */}
                 <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
-                    🔮 {lang === 'ar' ? 'نمذجة تنبؤية' : 'Payroll Forecast'}
+                     {lang === 'ar' ? 'نمذجة تنبؤية' : 'Payroll Forecast'}
                   </div>
                   <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
                     {lang === 'ar' ? 'توقعات تكاليف الرواتب للأشهر الستة القادمة' : 'Expected payroll costs for next 6 months'}
@@ -627,13 +627,13 @@ export default function PayrollPage() {
                         <div style={{ fontSize: 14, fontWeight: 800, color: c.text }}>
                           {(f.value / 1000).toFixed(0)}K
                         </div>
-                        <div style={{ fontSize: 10, color: '#10B981', marginTop: 2 }}>+{f.growth}%</div>
+                        <div style={{ fontSize: 10, color: '#4A7AAB', marginTop: 2 }}>+{f.growth}%</div>
                       </div>
                     ))}
                   </div>
-                  <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.08)' : '#EFF6FF', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : '#BFDBFE') }}>
-                    <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#1D4ED8', textAlign: isRTL ? 'right' : 'left' }}>
-                      💡 {lang === 'ar' ? `بناءً على معدل نمو شهري 1.7% — يشمل الزيادات المتوقعة والتوظيف الجديد` : 'Based on 1.7% monthly growth rate — includes expected raises & new hires'}
+                  <div style={{ marginTop: 16, padding: '10px 14px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.2)') }}>
+                    <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#4A7AAB', textAlign: isRTL ? 'right' : 'left' }}>
+                       {lang === 'ar' ? `بناءً على معدل نمو شهري 1.7% — يشمل الزيادات المتوقعة والتوظيف الجديد` : 'Based on 1.7% monthly growth rate — includes expected raises & new hires'}
                     </div>
                   </div>
                 </div>
@@ -642,13 +642,13 @@ export default function PayrollPage() {
               {/* Deductions Breakdown */}
               <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
-                  📉 {lang === 'ar' ? 'تفصيل الاستقطاعات' : 'Deductions Breakdown'}
+                   {lang === 'ar' ? 'تفصيل الاستقطاعات' : 'Deductions Breakdown'}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
                   {[
-                    { label: lang === 'ar' ? 'خصم التأخير' : 'Late Deductions',    value: payrollData.reduce((s,d)=>s+d.lateDeduction,0),     color: '#F59E0B', icon: '⏰' },
-                    { label: lang === 'ar' ? 'خصم الغياب' : 'Absence Deductions',  value: payrollData.reduce((s,d)=>s+d.absenceDeduction,0),   color: '#EF4444', icon: '❌' },
-                    { label: lang === 'ar' ? 'إجمالي الخصومات' : 'Total Deductions', value: payrollData.reduce((s,d)=>s+d.totalDeductions,0),  color: '#8B5CF6', icon: '📊' },
+                    { label: lang === 'ar' ? 'خصم التأخير' : 'Late Deductions',    value: payrollData.reduce((s,d)=>s+d.lateDeduction,0),     color: '#6B8DB5', icon: '' },
+                    { label: lang === 'ar' ? 'خصم الغياب' : 'Absence Deductions',  value: payrollData.reduce((s,d)=>s+d.absenceDeduction,0),   color: '#EF4444', icon: '' },
+                    { label: lang === 'ar' ? 'إجمالي الخصومات' : 'Total Deductions', value: payrollData.reduce((s,d)=>s+d.totalDeductions,0),  color: '#4A7AAB', icon: '' },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: '16px', borderRadius: 10, background: item.color + '10', border: '1px solid ' + item.color + '30', textAlign: 'center' }}>
                       <div style={{ fontSize: 24, marginBottom: 8 }}>{item.icon}</div>
@@ -661,9 +661,9 @@ export default function PayrollPage() {
             </div>
           )}
 
-          <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.08)' : '#EFF6FF', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : '#BFDBFE'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <span style={{ fontSize: 18 }}>💡</span>
-            <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#1D4ED8' }}>
+          <div style={{ marginTop: 14, padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.2)'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <span style={{ fontSize: 18 }}></span>
+            <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#4A7AAB' }}>
               {lang === 'ar' ? `بعد اعتماد المسير، بيتصدّر تلقائياً للمالية — كل موظف بيتبعتله إشعار بقسيمة راتبه.` : 'After payroll approval, it exports automatically to Finance. Each employee gets notified with their payslip.'}
             </p>
           </div>

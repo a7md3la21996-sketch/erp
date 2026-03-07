@@ -5,26 +5,26 @@ import { useTranslation } from 'react-i18next';
 const STAGE_CONFIG = [
   { id: "all",                  label_ar: "الكل",            label_en: "All",             color: "#4A7AAB" },
   { id: "new",                  label_ar: "جديد",            label_en: "New",             color: "#4A7AAB" },
-  { id: "contacted",            label_ar: "تم التواصل",      label_en: "Contacted",       color: "#8b5cf6" },
-  { id: "interested",           label_ar: "مهتم",            label_en: "Interested",      color: "#D4A853" },
-  { id: "site_visit_scheduled", label_ar: "موعد معاينة",     label_en: "Visit Scheduled", color: "#10b981" },
-  { id: "site_visited",         label_ar: "تمت المعاينة",    label_en: "Site Visited",    color: "#06b6d4" },
-  { id: "negotiation",          label_ar: "تفاوض",           label_en: "Negotiation",     color: "#f97316" },
+  { id: "contacted",            label_ar: "تم التواصل",      label_en: "Contacted",       color: "#4A7AAB" },
+  { id: "interested",           label_ar: "مهتم",            label_en: "Interested",      color: "#4A7AAB" },
+  { id: "site_visit_scheduled", label_ar: "موعد معاينة",     label_en: "Visit Scheduled", color: "#2B4C6F" },
+  { id: "site_visited",         label_ar: "تمت المعاينة",    label_en: "Site Visited",    color: "#2B4C6F" },
+  { id: "negotiation",          label_ar: "تفاوض",           label_en: "Negotiation",     color: "#1B3347" },
   { id: "reserved",             label_ar: "محجوز",           label_en: "Reserved",        color: "#1B3347" },
-  { id: "closed_won",           label_ar: "تم الإغلاق",     label_en: "Closed Won",      color: "#22c55e" },
-  { id: "closed_lost",          label_ar: "خسارة",           label_en: "Closed Lost",     color: "#ef4444" },
+  { id: "closed_won",           label_ar: "تم الإغلاق",      label_en: "Closed Won",      color: "#1B3347" },
+  { id: "closed_lost",          label_ar: "خسارة",           label_en: "Closed Lost",     color: "#EF4444" },
 ];
 const TEMP_CONFIG = {
-  hot:  { label_ar: "ساخن", label_en: "Hot",  color: "#ef4444", bg: "#FEE2E2" },
-  warm: { label_ar: "دافئ", label_en: "Warm", color: "#f97316", bg: "#FFEDD5" },
-  cool: { label_ar: "عادي", label_en: "Cool", color: "#EAB308", bg: "#FEF9C3" },
-  cold: { label_ar: "بارد", label_en: "Cold", color: "#3b82f6", bg: "#DBEAFE" },
+  hot:  { label_ar: "ساخن", label_en: "Hot",  color: "#EF4444", bg: "rgba(239,68,68,0.10)",   lucide: "Flame"       },
+  warm: { label_ar: "دافئ", label_en: "Warm", color: "#F97316", bg: "rgba(249,115,22,0.10)",  lucide: "Thermometer" },
+  cool: { label_ar: "عادي", label_en: "Cool", color: "#8BA8C8", bg: "rgba(139,168,200,0.10)", lucide: "Wind"        },
+  cold: { label_ar: "بارد", label_en: "Cold", color: "#4A7AAB", bg: "rgba(74,122,171,0.10)",  lucide: "Snowflake"   },
 };
 const PRIORITY_CONFIG = {
-  urgent: { label_ar: "عاجل",  label_en: "Urgent", color: "#ef4444" },
-  high:   { label_ar: "عالي",  label_en: "High",   color: "#f97316" },
-  medium: { label_ar: "متوسط", label_en: "Medium", color: "#D4A853" },
-  low:    { label_ar: "منخفض", label_en: "Low",    color: "#6B8DB5" },
+  urgent: { label_ar: "عاجل",  label_en: "Urgent", color: "#EF4444" },
+  high:   { label_ar: "عالي",  label_en: "High",   color: "#4A7AAB" },
+  medium: { label_ar: "متوسط", label_en: "Medium", color: "#6B8DB5" },
+  low:    { label_ar: "منخفض", label_en: "Low",    color: "#8BA8C8" },
 };
 const AGENT_OPTIONS   = ["احمد محمد", "سارة علي", "محمود حسن", "نورا احمد", "خالد عمر"];
 const PROJECT_OPTIONS = ["سيليا العاصمة الادارية", "بلو تري المرج", "تاون جيت 6 اكتوبر", "ريفان الشيخ زايد"];
@@ -45,9 +45,9 @@ const MOCK_OPPORTUNITIES = [
   { id:14, contactName:"ايمان فريد",    contactId:14, budget:1200000, agent:"نورا احمد",  temperature:"cold", priority:"low",    stage:"closed_lost",          project:"",                       lastActivityDays:14, notes:"السعر خارج الميزانية" },
 ];
 const fmtBudget = (n) => { if(!n) return "-"; if(n>=1000000) return (n/1000000).toFixed(1)+"M"; if(n>=1000) return (n/1000).toFixed(0)+"K"; return n.toLocaleString(); };
-const actLabel = (d,isRTL) => { if(d===0) return {text:isRTL?"اليوم":"Today",color:"#22c55e"}; if(d===1) return {text:isRTL?"امس":"Yesterday",color:"#86efac"}; if(d<=3) return {text:d+(isRTL?"د":"d"),color:"#D4A853"}; if(d<=7) return {text:d+(isRTL?"د":"d"),color:"#f97316"}; return {text:d+(isRTL?"د":"d"),color:"#ef4444"}; };
+const actLabel = (d,isRTL) => { if(d===0) return {text:isRTL?"اليوم":"Today",color:"#4A7AAB"}; if(d===1) return {text:isRTL?"امس":"Yesterday",color:"#6B8DB5"}; if(d<=3) return {text:d+(isRTL?"د":"d"),color:"#8BA8C8"}; return {text:d+(isRTL?"د":"d"),color:"#EF4444"}; };
 const initials = (n) => (n||"").trim().split(" ").map(w=>w[0]).slice(0,2).join("")||"?";
-const ACOLORS = ["#4A7AAB","#8b5cf6","#10b981","#f97316","#D4A853","#06b6d4","#ef4444","#1B3347"];
+const ACOLORS = ["#1B3347","#2B4C6F","#4A7AAB","#6B8DB5","#8BA8C8","#1B3347","#2B4C6F","#4A7AAB"];
 const avatarColor = (id) => ACOLORS[id%ACOLORS.length];
 const IPlus    = (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>;
 const ISearch  = (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
@@ -89,15 +89,15 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove }) {
           </div>
         </div>
         <div ref={menuRef} style={{ position:"relative", flexShrink:0 }}>
-          <button onClick={(e)=>{e.stopPropagation();setMenuOpen(m=>!m);}} style={{ background:"none", border:"none", cursor:"pointer", color:isDark?"#475569":"#9ca3af", padding:4, borderRadius:6, display:"flex" }}>
+          <button onClick={(e)=>{e.stopPropagation();setMenuOpen(m=>!m);}} style={{ background:"none", border:"none", cursor:"pointer", color:isDark?"#8BA8C8":"#9ca3af", padding:4, borderRadius:6, display:"flex" }}>
             <IDots style={{ width:15, height:15 }} />
           </button>
           {menuOpen && (
             <div style={{ position:"absolute", [isRTL?"left":"right"]:0, top:"100%", zIndex:50, background:isDark?"#0F1E2D":"#fff", border:`1px solid ${isDark?"rgba(74,122,171,0.2)":"#e5e7eb"}`, borderRadius:10, boxShadow:"0 8px 24px rgba(0,0,0,0.15)", minWidth:170, overflow:"hidden" }}>
               <div style={{ padding:"6px 0", borderBottom:`1px solid ${isDark?"rgba(74,122,171,0.1)":"#f3f4f6"}` }}>
-                <div style={{ padding:"4px 12px", fontSize:10, fontWeight:600, color:isDark?"#475569":"#9ca3af" }}>{isRTL?"نقل الى":"Move to"}</div>
+                <div style={{ padding:"4px 12px", fontSize:10, fontWeight:600, color:isDark?"#8BA8C8":"#9ca3af" }}>{isRTL?"نقل الى":"Move to"}</div>
                 {STAGE_CONFIG.filter(s=>s.id!=="all"&&s.id!==opp.stage).slice(0,5).map(s=>(
-                  <button key={s.id} onClick={()=>{onMove(opp.id,s.id);setMenuOpen(false);}} style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"7px 12px", background:"none", border:"none", cursor:"pointer", fontSize:12, color:isDark?"#cbd5e1":"#374151", fontFamily:"inherit", textAlign:isRTL?"right":"left" }}>
+                  <button key={s.id} onClick={()=>{onMove(opp.id,s.id);setMenuOpen(false);}} style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"7px 12px", background:"none", border:"none", cursor:"pointer", fontSize:12, color:isDark?"#E2EAF4":"#E2EAF4", fontFamily:"inherit", textAlign:isRTL?"right":"left" }}>
                     <div style={{ width:8, height:8, borderRadius:"50%", background:s.color, flexShrink:0 }} />
                     {isRTL?s.label_ar:s.label_en}
                   </button>
@@ -112,7 +112,7 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove }) {
       </div>
       {opp.project && <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:isDark?"#8BA8C8":"#6b7280" }}><IBuilding style={{ width:12, height:12, flexShrink:0 }} /><span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{opp.project}</span></div>}
       <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:4, background:isDark?"rgba(74,122,171,0.1)":"#EDF2F7", borderRadius:6, padding:"4px 9px", fontSize:12, fontWeight:700, color:"#4A7AAB" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:4, background:isDark?"rgba(74,122,171,0.1)":"rgba(74,122,171,0.08)", borderRadius:6, padding:"4px 9px", fontSize:12, fontWeight:700, color:"#4A7AAB" }}>
           <IMoney style={{ width:11, height:11 }} />{fmtBudget(opp.budget)} {isRTL?"ج":"EGP"}
         </div>
         <div style={{ borderRadius:6, padding:"4px 9px", fontSize:11, fontWeight:600, background:temp.bg, color:temp.color }}>{isRTL?temp.label_ar:temp.label_en}</div>
@@ -122,7 +122,7 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove }) {
         <div style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:isDark?"#8BA8C8":"#6b7280" }}><IUser style={{ width:11, height:11 }} />{opp.agent}</div>
         <div style={{ fontSize:11, fontWeight:700, color:act.color }}>{act.text}</div>
       </div>
-      {opp.notes && <div style={{ fontSize:11, color:isDark?"#475569":"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop:-4 }}>{opp.notes}</div>}
+      {opp.notes && <div style={{ fontSize:11, color:isDark?"#8BA8C8":"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop:-4 }}>{opp.notes}</div>}
     </div>
   );
 }
@@ -206,7 +206,7 @@ export default function OpportunitiesPage() {
         </button>
       </div>
       <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap" }}>
-        {[{label:isRTL?"اجمالي الفرص":"Total",value:opps.length,color:"#4A7AAB",I:IGrid},{label:isRTL?"اجمالي الميزانيات":"Budget",value:fmtBudget(totalBudget)+(isRTL?" ج":" EGP"),color:"#D4A853",I:IMoney},{label:isRTL?"صفقات مغلقة":"Won",value:wonCount,color:"#22c55e",I:IBuilding},{label:isRTL?"فرص ساخنة":"Hot",value:hotCount,color:"#ef4444",I:IFlame}].map((s,i)=>(
+        {[{label:isRTL?"اجمالي الفرص":"Total",value:opps.length,color:"#4A7AAB",I:IGrid},{label:isRTL?"اجمالي الميزانيات":"Budget",value:fmtBudget(totalBudget)+(isRTL?" ج":" EGP"),color:"#4A7AAB",I:IMoney},{label:isRTL?"صفقات مغلقة":"Won",value:wonCount,color:"#2B4C6F",I:IBuilding},{label:isRTL?"فرص ساخنة":"Hot",value:hotCount,color:"#EF4444",I:IFlame}].map((s,i)=>(
           <div key={i} style={{ flex:"1 1 140px", background:c.cardBg, borderRadius:12, padding:"14px 16px", border:`1px solid ${c.border}`, display:"flex", alignItems:"center", gap:12 }}>
             <div style={{ width:36, height:36, borderRadius:10, background:s.color+"18", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><s.I style={{ width:16, height:16, color:s.color }} /></div>
             <div><div style={{ fontSize:18, fontWeight:800, color:c.text }}>{s.value}</div><div style={{ fontSize:11, color:c.textMuted }}>{s.label}</div></div>

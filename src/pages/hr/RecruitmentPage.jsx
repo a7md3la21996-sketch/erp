@@ -10,33 +10,33 @@ import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 
 // ── Constants ─────────────────────────────────────────────────
 const PIPELINE_STAGES = [
-  { id: 'applied',    ar: `تقدّم`,          en: 'Applied',       color: '#94A3B8', icon: '📥' },
-  { id: 'screening',  ar: 'فرز أولي',       en: 'Screening',     color: '#3B82F6', icon: '🔍' },
-  { id: 'interview1', ar: 'مقابلة أولى',    en: '1st Interview', color: '#8B5CF6', icon: '💬' },
-  { id: 'interview2', ar: 'مقابلة تقنية',   en: 'Tech Interview', color: '#EC4899', icon: '⚙️' },
-  { id: 'offer',      ar: 'عرض',            en: 'Offer',         color: '#F59E0B', icon: '📋' },
-  { id: 'hired',      ar: 'تم التعيين',     en: 'Hired',         color: '#10B981', icon: '✅' },
+  { id: 'applied',    ar: `تقدّم`,          en: 'Applied',       color: '#8BA8C8', icon: '' },
+  { id: 'screening',  ar: 'فرز أولي',       en: 'Screening',     color: '#4A7AAB', icon: '' },
+  { id: 'interview1', ar: 'مقابلة أولى',    en: '1st Interview', color: '#4A7AAB', icon: '' },
+  { id: 'interview2', ar: 'مقابلة تقنية',   en: 'Tech Interview', color: '#6B8DB5', icon: '️' },
+  { id: 'offer',      ar: 'عرض',            en: 'Offer',         color: '#6B8DB5', icon: '' },
+  { id: 'hired',      ar: 'تم التعيين',     en: 'Hired',         color: '#4A7AAB', icon: '' },
 ];
 
 const JOB_STATUS = {
-  open:   { ar: 'مفتوح',   en: 'Open',   color: '#10B981', bg: '#10B98120' },
-  closed: { ar: 'مغلق',    en: 'Closed', color: '#94A3B8', bg: '#94A3B820' },
-  hold:   { ar: 'متوقف',   en: 'On Hold',color: '#F59E0B', bg: '#F59E0B20' },
+  open:   { ar: 'مفتوح',   en: 'Open',   color: '#4A7AAB', bg: '#4A7AAB20' },
+  closed: { ar: 'مغلق',    en: 'Closed', color: '#8BA8C8', bg: '#8BA8C820' },
+  hold:   { ar: 'متوقف',   en: 'On Hold',color: '#6B8DB5', bg: '#6B8DB520' },
 };
 
 const EXPERIENCE_LEVELS = [
-  { id: 'junior',  ar: 'مبتدئ (0-2 سنة)',       en: 'Junior (0-2 yrs)'    },
+  { id: 'junior',  ar: 'مبتدئ (0-2 سنة)',       en: 'Junior (0-2 yrs)' },
   { id: 'mid',     ar: 'متوسط (2-5 سنوات)',      en: 'Mid-level (2-5 yrs)' },
-  { id: 'senior',  ar: 'خبير (5+ سنوات)',        en: 'Senior (5+ yrs)'     },
-  { id: 'lead',    ar: 'قيادي',                  en: 'Lead / Manager'      },
+  { id: 'senior',  ar: 'خبير (5+ سنوات)',        en: 'Senior (5+ yrs)' },
+  { id: 'lead',    ar: 'قيادي',                  en: 'Lead / Manager' },
 ];
 
 const CANDIDATE_SOURCES = [
-  { id: 'linkedin',  ar: 'LinkedIn',  en: 'LinkedIn',  icon: '💼' },
-  { id: 'referral',  ar: 'توصية',    en: 'Referral',  icon: '🤝' },
-  { id: 'website',   ar: 'الموقع',   en: 'Website',   icon: '🌐' },
-  { id: 'agency',    ar: 'وكالة',    en: 'Agency',    icon: '🏢' },
-  { id: 'other',     ar: 'أخرى',     en: 'Other',     icon: '📌' },
+  { id: 'linkedin',  ar: 'LinkedIn',  en: 'LinkedIn',  icon: '' },
+  { id: 'referral',  ar: 'توصية',    en: 'Referral',  icon: '' },
+  { id: 'website',   ar: 'الموقع',   en: 'Website',   icon: '' },
+  { id: 'agency',    ar: 'وكالة',    en: 'Agency',    icon: '' },
+  { id: 'other',     ar: 'أخرى',     en: 'Other',     icon: '' },
 ];
 
 // ── Mock Data ─────────────────────────────────────────────────
@@ -48,22 +48,22 @@ const MOCK_JOBS = [
 ];
 
 const MOCK_CANDIDATES = [
-  { id: 'c1', job_id: 'j1', name: 'أحمد سامي',       name_en: 'Ahmed Samy',       phone: '01012345678', email: 'ahmed@email.com',   source: 'linkedin', stage: 'interview1', rating: 4, note: 'خبرة 6 سنوات في المبيعات',         avatar_color: '#3B82F6', applied_at: '2026-02-16' },
-  { id: 'c2', job_id: 'j1', name: 'محمد علي',        name_en: 'Mohamed Ali',      phone: '01098765432', email: 'moh@email.com',     source: 'referral', stage: 'offer',      rating: 5, note: `ممتاز جداً — أفضل مرشح`,          avatar_color: '#10B981', applied_at: '2026-02-18' },
-  { id: 'c3', job_id: 'j1', name: 'كريم حسن',        name_en: 'Karim Hassan',     phone: '01055512345', email: 'karim@email.com',   source: 'website',  stage: 'screening',  rating: 3, note: 'يحتاج تقييم إضافي',               avatar_color: '#8B5CF6', applied_at: '2026-02-20' },
-  { id: 'c4', job_id: 'j2', name: 'سارة خالد',       name_en: 'Sara Khaled',      phone: '01022334455', email: 'sara@email.com',    source: 'linkedin', stage: 'interview2', rating: 4, note: 'خبرة قوية في الإعلانات الرقمية',   avatar_color: '#EC4899', applied_at: '2026-02-22' },
-  { id: 'c5', job_id: 'j2', name: 'نور محمود',       name_en: 'Nour Mahmoud',     phone: '01033445566', email: 'nour@email.com',    source: 'agency',   stage: 'applied',    rating: 3, note: '',                                 avatar_color: '#F59E0B', applied_at: '2026-02-25' },
-  { id: 'c6', job_id: 'j1', name: 'عمر إبراهيم',     name_en: 'Omar Ibrahim',     phone: '01044556677', email: 'omar@email.com',    source: 'referral', stage: 'hired',      rating: 5, note: 'تم التعيين — يبدأ ١ مارس',        avatar_color: '#6366F1', applied_at: '2026-02-10' },
-  { id: 'c7', job_id: 'j2', name: 'ريم عادل',        name_en: 'Reem Adel',        phone: '01055667788', email: 'reem@email.com',    source: 'website',  stage: 'screening',  rating: 4, note: 'Portfolio قوي',                    avatar_color: '#14B8A6', applied_at: '2026-02-28' },
+  { id: 'c1', job_id: 'j1', name: 'أحمد سامي',       name_en: 'Ahmed Samy',       phone: '01012345678', email: 'ahmed@email.com',   source: 'linkedin', stage: 'interview1', rating: 4, note: 'خبرة 6 سنوات في المبيعات',         avatar_color: '#4A7AAB', applied_at: '2026-02-16' },
+  { id: 'c2', job_id: 'j1', name: 'محمد علي',        name_en: 'Mohamed Ali',      phone: '01098765432', email: 'moh@email.com',     source: 'referral', stage: 'offer',      rating: 5, note: `ممتاز جداً — أفضل مرشح`,          avatar_color: '#4A7AAB', applied_at: '2026-02-18' },
+  { id: 'c3', job_id: 'j1', name: 'كريم حسن',        name_en: 'Karim Hassan',     phone: '01055512345', email: 'karim@email.com',   source: 'website',  stage: 'screening',  rating: 3, note: 'يحتاج تقييم إضافي',               avatar_color: '#4A7AAB', applied_at: '2026-02-20' },
+  { id: 'c4', job_id: 'j2', name: 'سارة خالد',       name_en: 'Sara Khaled',      phone: '01022334455', email: 'sara@email.com',    source: 'linkedin', stage: 'interview2', rating: 4, note: 'خبرة قوية في الإعلانات الرقمية',   avatar_color: '#6B8DB5', applied_at: '2026-02-22' },
+  { id: 'c5', job_id: 'j2', name: 'نور محمود',       name_en: 'Nour Mahmoud',     phone: '01033445566', email: 'nour@email.com',    source: 'agency',   stage: 'applied',    rating: 3, note: '',                                 avatar_color: '#6B8DB5', applied_at: '2026-02-25' },
+  { id: 'c6', job_id: 'j1', name: 'عمر إبراهيم',     name_en: 'Omar Ibrahim',     phone: '01044556677', email: 'omar@email.com',    source: 'referral', stage: 'hired',      rating: 5, note: 'تم التعيين — يبدأ ١ مارس',        avatar_color: '#4A7AAB', applied_at: '2026-02-10' },
+  { id: 'c7', job_id: 'j2', name: 'ريم عادل',        name_en: 'Reem Adel',        phone: '01055667788', email: 'reem@email.com',    source: 'website',  stage: 'screening',  rating: 4, note: 'Portfolio قوي',                    avatar_color: '#4A7AAB', applied_at: '2026-02-28' },
 ];
 
-const RATING_COLORS = { 1: '#EF4444', 2: '#F97316', 3: '#F59E0B', 4: '#3B82F6', 5: '#10B981' };
+const RATING_COLORS = { 1: '#EF4444', 2: '#EF4444', 3: '#6B8DB5', 4: '#4A7AAB', 5: '#4A7AAB' };
 
 function fmt(n) { return n?.toLocaleString() ?? '—'; }
 
 // ── Avatar ─────────────────────────────────────────────────
 function CandAvatar({ c: cand, size = 36 }) {
-  const initials = cand.name.split(' ').slice(0,2).map(w=>w[0]).join('');
+  const initials = cand.name.split('').slice(0,2).map(w=>w[0]).join('');
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: cand.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.34, fontWeight: 700, flexShrink: 0 }}>
       {initials}
@@ -224,14 +224,14 @@ function CandidateModal({ cand, job, onClose, onStageChange, isDark, isRTL, lang
 
           {/* Rating */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <span style={{ fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'التقييم:' : 'Rating:'}</span>
+            <span style={{ fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'التقييم:': 'Rating:'}</span>
             <div style={{ display: 'flex', gap: 4 }}>
               {[1,2,3,4,5].map(n => (
                 <div key={n} style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
                   background: n <= cand.rating ? RATING_COLORS[cand.rating] + '20' : 'transparent',
                   border: `1px solid ${n <= cand.rating ? RATING_COLORS[cand.rating] : c.border}`,
                 }}>
-                  {n <= cand.rating ? '⭐' : ''}
+                  {n <= cand.rating ? '' : ''}
                 </div>
               ))}
             </div>
@@ -258,11 +258,11 @@ function CandidateModal({ cand, job, onClose, onStageChange, isDark, isRTL, lang
                     onClick={() => onStageChange(cand.id, stage.id)}
                     style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', borderRadius: 8, cursor: 'pointer', transition: 'all 0.15s',
                       background: isCurrent ? stage.color + '20' : 'transparent',
-                      border: `1px solid ${isCurrent ? stage.color : isDone ? '#10B98130' : c.border}`,
+                      border: `1px solid ${isCurrent ? stage.color : isDone ? '#4A7AAB30' : c.border}`,
                       flexDirection: isRTL ? 'row-reverse' : 'row',
                     }}>
-                    <span style={{ fontSize: 16 }}>{isDone ? '✅' : isCurrent ? stage.icon : '⬜'}</span>
-                    <span style={{ fontSize: 13, fontWeight: isCurrent ? 700 : 500, color: isCurrent ? stage.color : isDone ? '#10B981' : c.textMuted, flex: 1 }}>
+                    <span style={{ fontSize: 16 }}>{isDone ? '' : isCurrent ? stage.icon : ''}</span>
+                    <span style={{ fontSize: 13, fontWeight: isCurrent ? 700 : 500, color: isCurrent ? stage.color : isDone ? '#4A7AAB' : c.textMuted, flex: 1 }}>
                       {lang === 'ar' ? stage.ar : stage.en}
                     </span>
                     {isCurrent && <span style={{ fontSize: 11, fontWeight: 700, color: stage.color, padding: '2px 8px', borderRadius: 20, background: stage.color + '20' }}>
@@ -286,8 +286,8 @@ function CandidateModal({ cand, job, onClose, onStageChange, isDark, isRTL, lang
             </button>
           )}
           {cand.stage === 'hired' && (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: '#10B98120', color: '#10B981', fontSize: 13, fontWeight: 700 }}>
-              <CheckCircle size={15} /> {lang === 'ar' ? 'تم التعيين ✓' : 'Hired ✓'}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, background: '#4A7AAB20', color: '#4A7AAB', fontSize: 13, fontWeight: 700 }}>
+              <CheckCircle size={15} /> {lang === 'ar' ? 'تم التعيين ' : 'Hired '}
             </div>
           )}
         </div>
@@ -379,10 +379,10 @@ export default function RecruitmentPage() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         {[
-          { label: lang === 'ar' ? 'وظائف مفتوحة'    : 'Open Jobs',       value: openJobs,       icon: '📢', color: '#10B981' },
-          { label: lang === 'ar' ? 'إجمالي المرشحين' : 'Total Candidates', value: totalCands,     icon: '👥', color: '#4A7AAB' },
-          { label: lang === 'ar' ? 'تم التعيين'       : 'Hired',           value: hiredCount,     icon: '✅', color: '#6366F1' },
-          { label: lang === 'ar' ? 'عروض معلقة'       : 'Pending Offers',  value: pendingOffers,  icon: '📋', color: '#F59E0B' },
+          { label: lang === 'ar' ? 'وظائف مفتوحة' : 'Open Jobs',       value: openJobs,       icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'إجمالي المرشحين' : 'Total Candidates', value: totalCands,     icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'تم التعيين' : 'Hired',           value: hiredCount,     icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'عروض معلقة' : 'Pending Offers',  value: pendingOffers,  icon: '', color: '#6B8DB5' },
         ].map((s, i) => (
           <div key={i} style={{ padding: '16px 18px', borderRadius: 12, background: c.cardBg, border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -397,9 +397,9 @@ export default function RecruitmentPage() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : '#F1F5F9', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.06)', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {[
-          { id: 'jobs',     ar: 'الوظائف',   en: 'Jobs'     },
+          { id: 'jobs',     ar: 'الوظائف',   en: 'Jobs' },
           { id: 'pipeline', ar: 'البايبلاين', en: 'Pipeline' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -455,11 +455,11 @@ export default function RecruitmentPage() {
 
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
                     {[
-                      { icon: '🎓', label: lang === 'ar' ? expLevel?.ar : expLevel?.en },
-                      { icon: '👥', label: `${job.openings} ${lang === 'ar' ? 'شاغر' : 'opening(s)'}` },
-                      { icon: '💰', label: `${(job.salary_min / 1000).toFixed(0)}K - ${(job.salary_max / 1000).toFixed(0)}K ${lang==='ar'?'ج.م':'EGP'}` },
+                      { icon: '', label: lang === 'ar' ? expLevel?.ar : expLevel?.en },
+                      { icon: '', label: `${job.openings} ${lang === 'ar' ? 'شاغر' : 'opening(s)'}` },
+                      { icon: '', label: `${(job.salary_min / 1000).toFixed(0)}K - ${(job.salary_max / 1000).toFixed(0)}K ${lang==='ar'?'ج.م':'EGP'}` },
                     ].map((tag, i) => (
-                      <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 20, fontSize: 11, background: isDark ? 'rgba(74,122,171,0.1)' : '#F1F5F9', color: c.textMuted, border: '1px solid ' + c.border }}>
+                      <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 20, fontSize: 11, background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)', color: c.textMuted, border: '1px solid ' + c.border }}>
                         {tag.icon} {tag.label}
                       </span>
                     ))}
@@ -483,7 +483,7 @@ export default function RecruitmentPage() {
               style={{ background: 'transparent', borderRadius: 12, border: `2px dashed ${c.border}`, padding: '18px 20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 140, transition: 'border-color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = c.accent}
               onMouseLeave={e => e.currentTarget.style.borderColor = c.border}>
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: isDark ? 'rgba(74,122,171,0.1)' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ width: 36, height: 36, borderRadius: '50%', background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Plus size={18} color={c.accent} />
               </div>
               <span style={{ fontSize: 13, fontWeight: 600, color: c.accent }}>{lang === 'ar' ? 'إضافة وظيفة جديدة' : 'Add New Job'}</span>
@@ -543,7 +543,7 @@ export default function RecruitmentPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                           <div style={{ display: 'flex', gap: 1 }}>
                             {[1,2,3,4,5].map(n => (
-                              <span key={n} style={{ fontSize: 10, color: n <= cand.rating ? RATING_COLORS[cand.rating] : '#CBD5E1' }}>★</span>
+                              <span key={n} style={{ fontSize: 10, color: n <= cand.rating ? RATING_COLORS[cand.rating] : '#8BA8C8' }}></span>
                             ))}
                           </div>
                           <span style={{ fontSize: 10, color: c.textMuted }}>
