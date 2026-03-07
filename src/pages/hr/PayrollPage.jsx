@@ -152,6 +152,9 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
               </div>
             )}
           </div>
+
+          {/* Rates info */}
+          <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: '1px solid ' + c.border, display: 'flex', gap: 20, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             {[
               { label: lang === 'ar' ? 'أجر ساعي' : 'Hourly Rate', value: `${data.hourlyRate} ${lang==='ar'?'ج.م':'EGP'}` },
               { label: lang === 'ar' ? 'أجر يومي' : 'Daily Rate',  value: `${data.dailyRate} ${lang==='ar'?'ج.م':'EGP'}` },
