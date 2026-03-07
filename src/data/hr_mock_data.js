@@ -84,7 +84,7 @@ export const MOCK_EMPLOYEES = [
     tolerance_hours: 4,
     direct_manager_id: 'e1',
     status: 'active',
-    avatar_color: '#6366F1',
+    avatar_color: '#2B4C6F',
     address: 'القاهرة، مصر',
     notes: '',
   },
@@ -109,7 +109,7 @@ export const MOCK_EMPLOYEES = [
     tolerance_hours: 4,
     direct_manager_id: 'e1',
     status: 'active',
-    avatar_color: '#10B981',
+    avatar_color: '#4A7AAB',
     address: 'القاهرة، مصر',
     notes: '',
   },
@@ -134,7 +134,7 @@ export const MOCK_EMPLOYEES = [
     tolerance_hours: 4,
     direct_manager_id: 'e1',
     status: 'active',
-    avatar_color: '#EC4899',
+    avatar_color: '#6B8DB5',
     address: 'القاهرة، مصر',
     notes: '',
   },
@@ -159,7 +159,7 @@ export const MOCK_EMPLOYEES = [
     tolerance_hours: 5,
     direct_manager_id: 'e3',
     status: 'active',
-    avatar_color: '#F59E0B',
+    avatar_color: '#6B8DB5',
     address: 'الجيزة، مصر',
     notes: '',
   },
@@ -184,7 +184,7 @@ export const MOCK_EMPLOYEES = [
     tolerance_hours: 4,
     direct_manager_id: 'e5',
     status: 'active',
-    avatar_color: '#8B5CF6',
+    avatar_color: '#4A7AAB',
     address: 'القاهرة، مصر',
     notes: '',
   },
@@ -209,7 +209,7 @@ export const MOCK_EMPLOYEES = [
     tolerance_hours: 4,
     direct_manager_id: 'e1',
     status: 'active',
-    avatar_color: '#14B8A6',
+    avatar_color: '#2B4C6F',
     address: 'القاهرة، مصر',
     notes: '',
   },
@@ -296,34 +296,34 @@ export function isContractEndingSoon(contractEndDate, alertDays = 30) {
 }
 
 export const CONTRACT_TYPES = {
-  full_time:  { ar: 'دوام كامل',    en: 'Full Time',   color: '#10B981' },
-  part_time:  { ar: 'دوام جزئي',    en: 'Part Time',   color: '#F59E0B' },
-  freelance:  { ar: 'فريلانس',      en: 'Freelance',   color: '#8B5CF6' },
+  full_time:  { ar: 'دوام كامل',    en: 'Full Time',   color: '#4A7AAB' },
+  part_time:  { ar: 'دوام جزئي',    en: 'Part Time',   color: '#6B8DB5' },
+  freelance:  { ar: 'فريلانس',      en: 'Freelance',   color: '#4A7AAB' },
   probation:  { ar: 'فترة تجربة',   en: 'Probation',   color: '#EF4444' },
 };
 
 export const WORK_TYPES = {
-  office: { ar: 'مكتبي',   en: 'Office',  icon: '🏢' },
-  remote: { ar: 'ريموت',   en: 'Remote',  icon: '🏠' },
-  field:  { ar: 'ميداني',  en: 'Field',   icon: '🚗' },
-  hybrid: { ar: 'هجين',    en: 'Hybrid',  icon: '🔄' },
+  office: { ar: 'مكتبي',   en: 'Office',  icon: 'Building2' },
+  remote: { ar: 'ريموت',   en: 'Remote',  icon: 'Home' },
+  field:  { ar: 'ميداني',  en: 'Field',   icon: 'Car' },
+  hybrid: { ar: 'هجين',    en: 'Hybrid',  icon: 'RefreshCw' },
 };
 
 export const OT_MULTIPLIERS = ['1x', '1.5x', '2x', 'Fixed'];
 
 export const POLICY_CATEGORIES = {
-  leave:      { ar: 'الإجازات',         en: 'Leave',      color: '#10B981', icon: '🏖️' },
-  attendance: { ar: 'الحضور والعمل',    en: 'Attendance', color: '#3B82F6', icon: '⏰' },
-  payroll:    { ar: 'الرواتب',          en: 'Payroll',    color: '#F59E0B', icon: '💰' },
-  employment: { ar: 'التوظيف',          en: 'Employment', color: '#8B5CF6', icon: '📋' },
-  alerts:     { ar: 'التنبيهات',        en: 'Alerts',     color: '#EF4444', icon: '🔔' },
+  leave:      { ar: 'الإجازات',         en: 'Leave',      color: '#4A7AAB', icon: 'Umbrella' },
+  attendance: { ar: 'الحضور والعمل',    en: 'Attendance', color: '#2B4C6F', icon: 'Clock' },
+  payroll:    { ar: 'الرواتب',          en: 'Payroll',    color: '#4A7AAB', icon: 'Banknote' },
+  employment: { ar: 'التوظيف',          en: 'Employment', color: '#6B8DB5', icon: 'FileText' },
+  alerts:     { ar: 'التنبيهات',        en: 'Alerts',     color: '#EF4444', icon: 'Bell' },
 };
 
 export const COMPETENCIES = [
-  { id: 'c1', key: 'communication',   ar: 'التواصل',            en: 'Communication',   icon: '💬', weight: 20 },
-  { id: 'c2', key: 'teamwork',        ar: 'العمل الجماعي',      en: 'Teamwork',        icon: '🤝', weight: 15 },
-  { id: 'c3', key: 'initiative',      ar: 'المبادرة',           en: 'Initiative',      icon: '⚡', weight: 15 },
-  { id: 'c4', key: 'problem_solving', ar: 'حل المشكلات',        en: 'Problem Solving', icon: '🧠', weight: 20 },
-  { id: 'c5', key: 'attendance',      ar: 'الالتزام والحضور',   en: 'Commitment',      icon: '📅', weight: 15 },
-  { id: 'c6', key: 'quality',         ar: 'جودة العمل',         en: 'Work Quality',    icon: '✨', weight: 15 },
+  { id: 'c1', key: 'communication',   ar: 'التواصل',            en: 'Communication',   lucide: 'MessageCircle', weight: 20 },
+  { id: 'c2', key: 'teamwork',        ar: 'العمل الجماعي',      en: 'Teamwork',        lucide: 'Users', weight: 15 },
+  { id: 'c3', key: 'initiative',      ar: 'المبادرة',           en: 'Initiative',      lucide: 'Zap', weight: 15 },
+  { id: 'c4', key: 'problem_solving', ar: 'حل المشكلات',        en: 'Problem Solving', lucide: 'Lightbulb', weight: 20 },
+  { id: 'c5', key: 'attendance',      ar: 'الالتزام والحضور',   en: 'Commitment',      lucide: 'Clock', weight: 15 },
+  { id: 'c6', key: 'quality',         ar: 'جودة العمل',         en: 'Work Quality',    lucide: 'CheckCircle2', weight: 15 },
 ];
