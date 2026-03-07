@@ -84,8 +84,8 @@ function nineBoxPos(perfScore, potentialScore) {
 const NINE_BOX_LABELS = {
   ar: [
     ['نجم صاعد 🌟', 'عالي الأداء 💎', 'قائد المستقبل 🚀'],
-    ['لغز 🤔',       'موظف أساسي 🔑',  'ملهم عالٍ 🔥'],
-    ['مخاطرة ⚠️',    'موظف جيد ✅',    'أداء عالٍ 🎯'],
+    ['لغز 🤔',       'موظف أساسي 🔑',  `ملهم عالٍ 🔥`],
+    ['مخاطرة ⚠️',    'موظف جيد ✅',    `أداء عالٍ 🎯`],
   ],
   en: [
     ['Rising Star 🌟', 'High Performer 💎', 'Future Leader 🚀'],
@@ -346,7 +346,7 @@ export default function PerformancePage() {
           { label: lang === 'ar' ? 'التقييمات المكتملة' : 'Reviews Done',    value: `${completedCount}/${reviews.length}`, icon: '✅', color: '#10B981' },
           { label: lang === 'ar' ? 'متوسط الأداء'       : 'Avg. Performance', value: `${avgScore}/5`,                      icon: '⭐', color: '#F59E0B' },
           { label: lang === 'ar' ? 'الفترة الحالية'     : 'Current Period',   value: 'Q1 2026',                            icon: '📅', color: '#4A7AAB' },
-          { label: lang === 'ar' ? 'الكفاءات المقيّمة'  : 'Competencies',     value: COMPETENCIES.length,                  icon: '🎯', color: '#6366F1' },
+          { label: lang === 'ar' ? `الكفاءات المقيّمة`  : 'Competencies',     value: COMPETENCIES.length,                  icon: '🎯', color: '#6366F1' },
         ].map((s, i) => (
           <div key={i} style={{ padding: '16px 18px', borderRadius: 12, background: c.cardBg, border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -435,7 +435,7 @@ export default function PerformancePage() {
                                 </span>
                               </>
                             ) : (
-                              <span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? 'لم يُقيَّم بعد' : 'Not reviewed yet'}</span>
+                              <span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? `لم يُقيَّم بعد` : 'Not reviewed yet'}</span>
                             )}
                             <Eye size={14} color={c.accent} />
                           </div>

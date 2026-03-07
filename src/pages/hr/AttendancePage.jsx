@@ -544,7 +544,7 @@ export default function AttendancePage() {
             <div style={{ fontSize: 13, color: c.textMuted, marginInlineStart: 'auto' }}>
               ✅ {dailyRecords.filter(r => r.rec && !r.rec.absent).length} &nbsp;
               ❌ {dailyRecords.filter(r => r.rec?.absent).length} &nbsp;
-              ⏳ {dailyRecords.filter(r => !r.rec).length} {lang === 'ar' ? 'لم يُسجَّل' : 'unrecorded'}
+              ⏳ {dailyRecords.filter(r => !r.rec).length} {lang === 'ar' ? `لم يُسجَّل` : 'unrecorded'}
             </div>
           </div>
 

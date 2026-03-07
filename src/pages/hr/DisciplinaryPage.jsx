@@ -268,7 +268,7 @@ function DetailModal({ record, emp, issuer, onClose, onStatusChange, isDark, isR
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
               <button onClick={() => onStatusChange(record.id, 'resolved')}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#10B98120', color: '#10B981', fontSize: 13, fontWeight: 600 }}>
-                <CheckCircle size={15} /> {lang === 'ar' ? 'حُلّت' : 'Mark Resolved'}
+                <CheckCircle size={15} /> {lang === 'ar' ? `حُلّت` : 'Mark Resolved'}
               </button>
               <button onClick={() => onStatusChange(record.id, 'appealed')}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#3B82F620', color: '#3B82F6', fontSize: 13, fontWeight: 600 }}>
@@ -530,12 +530,12 @@ export default function DisciplinaryPage() {
           <div style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(245,158,11,0.08)' : '#FFFBEB', border: '1px solid ' + (isDark ? 'rgba(245,158,11,0.2)' : '#FDE68A'), display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
             <AlertTriangle size={16} color="#F59E0B" />
             <span style={{ fontSize: 13, color: '#F59E0B', fontWeight: 500 }}>
-              {lang === 'ar' ? 'يُصنَّف الموظفون حسب مجموع أوزان الإجراءات التأديبية المتخذة ضدهم' : 'Employees ranked by cumulative weight of disciplinary actions taken against them'}
+              {lang === 'ar' ? `يُصنَّف الموظفون حسب مجموع أوزان الإجراءات التأديبية المتخذة ضدهم` : 'Employees ranked by cumulative weight of disciplinary actions taken against them'}
             </span>
           </div>
 
           {empRisk.map(({ emp, count, weight }, idx) => {
-            const riskLevel = weight >= 8 ? { ar: 'خطر عالٍ', en: 'High Risk', color: '#EF4444', bg: '#EF444415' }
+            const riskLevel = weight >= 8 ? { ar: `خطر عالٍ`, en: 'High Risk', color: '#EF4444', bg: '#EF444415' }
                             : weight >= 4 ? { ar: 'خطر متوسط', en: 'Medium Risk', color: '#F97316', bg: '#F9731615' }
                             : { ar: 'خطر منخفض', en: 'Low Risk', color: '#F59E0B', bg: '#F59E0B15' };
             const empRecords = records.filter(r => r.emp_id === emp.id);
@@ -574,7 +574,7 @@ export default function DisciplinaryPage() {
 
                 {/* Summary */}
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <span style={{ fontSize: 12, color: c.textMuted }}>{count} {lang === 'ar' ? 'إجراء مسجّل' : 'recorded actions'}</span>
+                  <span style={{ fontSize: 12, color: c.textMuted }}>{count} {lang === 'ar' ? `إجراء مسجّل` : 'recorded actions'}</span>
                   {lastAction && (
                     <span style={{ fontSize: 12, color: c.textMuted }}>·</span>
                   )}

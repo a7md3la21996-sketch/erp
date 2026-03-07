@@ -10,7 +10,7 @@ import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 
 // ── Constants ─────────────────────────────────────────────────
 const PIPELINE_STAGES = [
-  { id: 'applied',    ar: 'تقدّم',          en: 'Applied',       color: '#94A3B8', icon: '📥' },
+  { id: 'applied',    ar: `تقدّم`,          en: 'Applied',       color: '#94A3B8', icon: '📥' },
   { id: 'screening',  ar: 'فرز أولي',       en: 'Screening',     color: '#3B82F6', icon: '🔍' },
   { id: 'interview1', ar: 'مقابلة أولى',    en: '1st Interview', color: '#8B5CF6', icon: '💬' },
   { id: 'interview2', ar: 'مقابلة تقنية',   en: 'Tech Interview', color: '#EC4899', icon: '⚙️' },
@@ -49,7 +49,7 @@ const MOCK_JOBS = [
 
 const MOCK_CANDIDATES = [
   { id: 'c1', job_id: 'j1', name: 'أحمد سامي',       name_en: 'Ahmed Samy',       phone: '01012345678', email: 'ahmed@email.com',   source: 'linkedin', stage: 'interview1', rating: 4, note: 'خبرة 6 سنوات في المبيعات',         avatar_color: '#3B82F6', applied_at: '2026-02-16' },
-  { id: 'c2', job_id: 'j1', name: 'محمد علي',        name_en: 'Mohamed Ali',      phone: '01098765432', email: 'moh@email.com',     source: 'referral', stage: 'offer',      rating: 5, note: 'ممتاز جداً — أفضل مرشح',          avatar_color: '#10B981', applied_at: '2026-02-18' },
+  { id: 'c2', job_id: 'j1', name: 'محمد علي',        name_en: 'Mohamed Ali',      phone: '01098765432', email: 'moh@email.com',     source: 'referral', stage: 'offer',      rating: 5, note: `ممتاز جداً — أفضل مرشح`,          avatar_color: '#10B981', applied_at: '2026-02-18' },
   { id: 'c3', job_id: 'j1', name: 'كريم حسن',        name_en: 'Karim Hassan',     phone: '01055512345', email: 'karim@email.com',   source: 'website',  stage: 'screening',  rating: 3, note: 'يحتاج تقييم إضافي',               avatar_color: '#8B5CF6', applied_at: '2026-02-20' },
   { id: 'c4', job_id: 'j2', name: 'سارة خالد',       name_en: 'Sara Khaled',      phone: '01022334455', email: 'sara@email.com',    source: 'linkedin', stage: 'interview2', rating: 4, note: 'خبرة قوية في الإعلانات الرقمية',   avatar_color: '#EC4899', applied_at: '2026-02-22' },
   { id: 'c5', job_id: 'j2', name: 'نور محمود',       name_en: 'Nour Mahmoud',     phone: '01033445566', email: 'nour@email.com',    source: 'agency',   stage: 'applied',    rating: 3, note: '',                                 avatar_color: '#F59E0B', applied_at: '2026-02-25' },
@@ -282,7 +282,7 @@ function CandidateModal({ cand, job, onClose, onStageChange, isDark, isRTL, lang
           {cand.stage !== 'hired' && (
             <button onClick={() => { const next = PIPELINE_STAGES[currentStageIdx + 1]; if (next) onStageChange(cand.id, next.id); }}
               style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '9px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 600, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <ChevronRight size={14} /> {lang === 'ar' ? 'تقدّم للمرحلة التالية' : 'Advance to Next Stage'}
+              <ChevronRight size={14} /> {lang === 'ar' ? `تقدّم للمرحلة التالية` : 'Advance to Next Stage'}
             </button>
           )}
           {cand.stage === 'hired' && (
