@@ -250,7 +250,7 @@ function ReviewModal({ review, emp, onClose, onSave, isDark, isRTL, lang, c }) {
 }
 
 // ── Main Page ──────────────────────────────────────────────
-export default function PerformancePage() {
+export default function CompetenciesPage() {
   const { theme } = useTheme();
   const { i18n }  = useTranslation();
   const isDark = theme === 'dark';
@@ -334,8 +334,8 @@ export default function PerformancePage() {
             <Star size={20} color="#fff" />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'إدارة الأداء' : 'Performance Management'}</h1>
-            <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'الكفاءات · الـ KPIs · مصفوفة 9-Box' : 'Competencies · KPIs · 9-Box Matrix'}</p>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'الكفاءات والتقييم' : 'Competencies & Review'}</h1>
+            <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'تقييم الكفاءات · مصفوفة 9-Box · ربط التدريب' : 'Competency Review · 9-Box Matrix · Training Link'}</p>
           </div>
         </div>
       </div>

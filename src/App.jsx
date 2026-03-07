@@ -13,13 +13,10 @@ import EmployeesPage from './pages/hr/EmployeesPage';
 import AttendancePage from './pages/hr/AttendancePage';
 import LeavePage from './pages/hr/LeavePage';
 import PayrollPage from './pages/hr/PayrollPage';
-import PerformancePage from './pages/hr/PerformancePage';
+import CompetenciesPage from './pages/hr/CompetenciesPage';
+import PerformancePage from './pages/PerformancePage';
 import RecruitmentPage from './pages/hr/RecruitmentPage';
 import DisciplinaryPage from './pages/hr/DisciplinaryPage';
-import TrainingPage from './pages/hr/TrainingPage';
-import SelfServicePage from './pages/hr/SelfServicePage';
-import AssetsPage from './pages/hr/AssetsPage';
-import OnboardingPage from './pages/hr/OnboardingPage';
 import { P } from './config/roles';
 import './i18n';
 
@@ -69,13 +66,10 @@ export default function App() {
               <Route path="/hr/attendance" element={<AttendancePage />} />
               <Route path="/hr/leave" element={<LeavePage />} />
               <Route path="/hr/payroll" element={<PayrollPage />} />
-              <Route path="/hr/performance" element={<PerformancePage />} />
+              <Route path="/hr/competencies" element={<CompetenciesPage />} />
+              <Route path="/performance" element={<PerformancePage />} />
               <Route path="/hr/recruitment" element={<RecruitmentPage />} />
               <Route path="/hr/disciplinary" element={<DisciplinaryPage />} />
-              <Route path="/hr/training" element={<TrainingPage />} />
-              <Route path="/hr/self-service" element={<SelfServicePage />} />
-              <Route path="/hr/assets" element={<AssetsPage />} />
-              <Route path="/hr/onboarding" element={<OnboardingPage />} />
               <Route path="/hr/*" element={<ComingSoon title="HR" />} />
               <Route path="/finance/*" element={<ComingSoon title="Finance" />} />
               <Route path="/tasks" element={<ComingSoon title="Tasks" />} />
