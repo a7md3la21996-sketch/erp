@@ -294,7 +294,7 @@ export default function HRPoliciesPage() {
         <span style={{ fontSize: 18 }}>💡</span>
         <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#1D4ED8' }}>
           {lang === 'ar'
-            ? 'التغييرات هنا بتأثر على حسابات الحضور والإجازات والرواتب تلقائياً — بدون تعديل أي كود'
+            ? `التغييرات هنا بتأثر على حسابات الحضور والإجازات والرواتب تلقائياً — بدون تعديل أي كود`
             : 'Changes here automatically affect attendance, leave, and payroll calculations — no code changes needed'}
         </p>
       </div>
