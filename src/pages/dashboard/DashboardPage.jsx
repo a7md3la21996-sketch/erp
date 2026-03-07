@@ -99,7 +99,7 @@ export default function DashboardPage() {
   const hr = useMemo(() => buildHRStats(attendance), [attendance]);
 
   const c = {
-    bg:        isDark ? '#152232' : '#f0f4f8',
+    bg:        isDark ? '#152232' : '#F8FAFC',
     cardBg:    isDark ? '#1a2234' : '#ffffff',
     border:    isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
     text:      isDark ? '#E2EAF4' : '#111827',
@@ -170,7 +170,7 @@ export default function DashboardPage() {
         <div style={{ position: 'absolute', bottom: -30, right: isRTL ? 'auto' : 40, left: isRTL ? 40 : 'auto', width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
         <div style={{ position: 'relative' }}>
           <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 4 }}>
-            {greeting}، {name} 👋
+            {greeting}، {name} 
           </div>
           <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
             {roleLabel} · {dateStr}
@@ -181,12 +181,12 @@ export default function DashboardPage() {
       {/* ── HR Section ── */}
       {sections.showHR && (
         <div style={{ background: c.cardBg, borderRadius: 14, border: '1px solid ' + c.border, padding: 20, marginBottom: 20 }}>
-          <SectionHeader icon="👔" title={lang === 'ar' ? 'الموارد البشرية' : 'Human Resources'} sub={lang === 'ar' ? 'مارس 2026' : 'March 2026'} />
+          <SectionHeader icon="" title={lang === 'ar' ? 'الموارد البشرية' : 'Human Resources'} sub={lang === 'ar' ? 'مارس 2026' : 'March 2026'} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
-            <StatCard icon="👥" label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={hr.total}            color={c.accent} />
-            <StatCard icon="✅" label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'} value={hr.attendanceRate + '%'} color="#10B981" />
-            <StatCard icon="⏳" label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}  value={hr.pendingLeaves}   color="#F59E0B" />
-            <StatCard icon="💼" label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}  value={hr.openPositions}   color="#6366F1" />
+            <StatCard icon="" label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={hr.total}            color={c.accent} />
+            <StatCard icon="" label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'} value={hr.attendanceRate + '%'} color="#4A7AAB" />
+            <StatCard icon="" label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}  value={hr.pendingLeaves}   color="#6B8DB5" />
+            <StatCard icon="" label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}  value={hr.openPositions}   color="#4A7AAB" />
           </div>
 
           {/* Dept breakdown + alerts */}
@@ -210,22 +210,22 @@ export default function DashboardPage() {
             </div>
 
             {/* Alerts */}
-            <div style={{ padding: '14px 16px', borderRadius: 10, background: isDark ? 'rgba(239,68,68,0.06)' : '#FFF5F5', border: '1px solid ' + (isDark ? 'rgba(239,68,68,0.15)' : '#FED7D7') }}>
+            <div style={{ padding: '14px 16px', borderRadius: 10, background: isDark ? 'rgba(239,68,68,0.06)' : 'rgba(239,68,68,0.05)', border: '1px solid ' + (isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)') }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#EF4444', marginBottom: 10, textAlign: isRTL ? 'right' : 'left' }}>
-                ⚠️ {lang === 'ar' ? 'تنبيهات' : 'Alerts'}
+                 {lang === 'ar' ? 'تنبيهات' : 'Alerts'}
               </div>
               {[
-                { icon: '📋', label: lang === 'ar' ? `${hr.contractAlerts} عقد ينتهي قريباً` : `${hr.contractAlerts} contracts expiring soon`, show: hr.contractAlerts > 0 },
-                { icon: '🔄', label: lang === 'ar' ? `${hr.probationCount} موظف في فترة تجربة` : `${hr.probationCount} on probation`, show: hr.probationCount > 0 },
-                { icon: '🚫', label: lang === 'ar' ? `${hr.absentCount} غائب اليوم` : `${hr.absentCount} absent today`, show: hr.absentCount > 0 },
-                { icon: '⏰', label: lang === 'ar' ? `${hr.lateCount} متأخر اليوم` : `${hr.lateCount} late today`, show: hr.lateCount > 0 },
+                { icon: '', label: lang === 'ar' ? `${hr.contractAlerts} عقد ينتهي قريباً` : `${hr.contractAlerts} contracts expiring soon`, show: hr.contractAlerts > 0 },
+                { icon: '', label: lang === 'ar' ? `${hr.probationCount} موظف في فترة تجربة` : `${hr.probationCount} on probation`, show: hr.probationCount > 0 },
+                { icon: '', label: lang === 'ar' ? `${hr.absentCount} غائب اليوم` : `${hr.absentCount} absent today`, show: hr.absentCount > 0 },
+                { icon: '', label: lang === 'ar' ? `${hr.lateCount} متأخر اليوم` : `${hr.lateCount} late today`, show: hr.lateCount > 0 },
               ].filter(a => a.show).map((a, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, fontSize: 12, color: '#EF4444', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                   <span>{a.icon}</span><span>{a.label}</span>
                 </div>
               ))}
               {hr.contractAlerts === 0 && hr.absentCount === 0 && (
-                <div style={{ fontSize: 12, color: '#10B981', textAlign: 'center', padding: '8px 0' }}>✅ {lang === 'ar' ? 'لا تنبيهات' : 'No alerts'}</div>
+                <div style={{ fontSize: 12, color: '#4A7AAB', textAlign: 'center', padding: '8px 0' }}> {lang === 'ar' ? 'لا تنبيهات' : 'No alerts'}</div>
               )}
             </div>
           </div>
@@ -235,12 +235,12 @@ export default function DashboardPage() {
       {/* ── CRM + Sales Section ── */}
       {sections.showCRM && (
         <div style={{ background: c.cardBg, borderRadius: 14, border: '1px solid ' + c.border, padding: 20, marginBottom: 20 }}>
-          <SectionHeader icon="🎯" title={lang === 'ar' ? 'المبيعات والعملاء' : 'Sales & CRM'} sub={lang === 'ar' ? 'مارس 2026' : 'March 2026'} />
+          <SectionHeader icon="" title={lang === 'ar' ? 'المبيعات والعملاء' : 'Sales & CRM'} sub={lang === 'ar' ? 'مارس 2026' : 'March 2026'} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 16 }}>
-            <StatCard icon="👥" label={lang === 'ar' ? 'إجمالي الليدز'   : 'Total Leads'}    value={MOCK_CRM.totalLeads}    color={c.accent} />
-            <StatCard icon="🎯" label={lang === 'ar' ? 'فرص نشطة'        : 'Active Opps'}    value={MOCK_CRM.activeOpps}    color="#6366F1" />
-            <StatCard icon="✅" label={lang === 'ar' ? 'صفقات مغلقة'     : 'Deals Closed'}   value={MOCK_CRM.closedDeals}   color="#10B981" />
-            <StatCard icon="💰" label={lang === 'ar' ? 'الإيرادات'        : 'Revenue'}        value={(MOCK_CRM.revenue / 1000).toFixed(0) + 'K'} color="#F59E0B" />
+            <StatCard icon="" label={lang === 'ar' ? 'إجمالي الليدز'   : 'Total Leads'}    value={MOCK_CRM.totalLeads}    color={c.accent} />
+            <StatCard icon="" label={lang === 'ar' ? 'فرص نشطة'        : 'Active Opps'}    value={MOCK_CRM.activeOpps}    color="#4A7AAB" />
+            <StatCard icon="" label={lang === 'ar' ? 'صفقات مغلقة'     : 'Deals Closed'}   value={MOCK_CRM.closedDeals}   color="#4A7AAB" />
+            <StatCard icon="" label={lang === 'ar' ? 'الإيرادات'        : 'Revenue'}        value={(MOCK_CRM.revenue / 1000).toFixed(0) + 'K'} color="#6B8DB5" />
           </div>
 
           {sections.showSales && (
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                 <KpiBar
                   label={lang === 'ar' ? 'الإيرادات' : 'Revenue'}
                   value={MOCK_SALES.achieved} target={MOCK_SALES.target}
-                  color="#10B981" unit=" EGP"
+                  color="#4A7AAB" unit="EGP"
                 />
                 <div style={{ fontSize: 12, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>
                   {Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100)}% {lang === 'ar' ? 'من التارجت' : 'of target'}
@@ -263,15 +263,15 @@ export default function DashboardPage() {
               {/* Top performers */}
               <div style={{ padding: '14px 16px', borderRadius: 10, background: c.thBg, border: '1px solid ' + c.border }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: c.text, marginBottom: 10, textAlign: isRTL ? 'right' : 'left' }}>
-                  🌟 {lang === 'ar' ? 'أفضل البائعين' : 'Top Performers'}
+                   {lang === 'ar' ? 'أفضل البائعين' : 'Top Performers'}
                 </div>
                 {MOCK_SALES.topSales.map((s, i) => (
                   <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                      <span style={{ fontSize: 13, color: ['#F59E0B','#94A3B8','#CD7C2F'][i] }}>#{i + 1}</span>
+                      <span style={{ fontSize: 13, color: ['#6B8DB5','#8BA8C8','#4A7AAB'][i] }}>#{i + 1}</span>
                       <span style={{ fontSize: 12, color: c.text }}>{lang === 'ar' ? s.name_ar : s.name_en}</span>
                     </div>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#10B981' }}>{(s.revenue / 1000).toFixed(0)}K</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#4A7AAB' }}>{(s.revenue / 1000).toFixed(0)}K</span>
                   </div>
                 ))}
               </div>
@@ -283,33 +283,33 @@ export default function DashboardPage() {
       {/* ── Finance Section ── */}
       {sections.showFinance && (
         <div style={{ background: c.cardBg, borderRadius: 14, border: '1px solid ' + c.border, padding: 20, marginBottom: 20 }}>
-          <SectionHeader icon="💵" title={lang === 'ar' ? 'المالية' : 'Finance'} sub={lang === 'ar' ? 'مارس 2026' : 'March 2026'} />
+          <SectionHeader icon="" title={lang === 'ar' ? 'المالية' : 'Finance'} sub={lang === 'ar' ? 'مارس 2026' : 'March 2026'} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginBottom: 16 }}>
-            <StatCard icon="💸" label={lang === 'ar' ? 'المصروفات'        : 'Expenses'}          value={(MOCK_FINANCE.totalExpenses / 1000).toFixed(0) + 'K'} color="#EF4444" />
-            <StatCard icon="📄" label={lang === 'ar' ? 'فواتير معلقة'    : 'Pending Invoices'}   value={MOCK_FINANCE.pendingInvoices}  color="#F59E0B" />
-            <StatCard icon="📊" label={lang === 'ar' ? 'الميزانية المتبقية' : 'Budget Remaining'} value={(( MOCK_FINANCE.budget - MOCK_FINANCE.totalExpenses) / 1000).toFixed(0) + 'K'} color="#10B981" />
+            <StatCard icon="" label={lang === 'ar' ? 'المصروفات'        : 'Expenses'}          value={(MOCK_FINANCE.totalExpenses / 1000).toFixed(0) + 'K'} color="#EF4444" />
+            <StatCard icon="" label={lang === 'ar' ? 'فواتير معلقة'    : 'Pending Invoices'}   value={MOCK_FINANCE.pendingInvoices}  color="#6B8DB5" />
+            <StatCard icon="" label={lang === 'ar' ? 'الميزانية المتبقية' : 'Budget Remaining'} value={(( MOCK_FINANCE.budget - MOCK_FINANCE.totalExpenses) / 1000).toFixed(0) + 'K'} color="#4A7AAB" />
           </div>
           <KpiBar
             label={lang === 'ar' ? 'استهلاك الميزانية' : 'Budget Usage'}
             value={MOCK_FINANCE.totalExpenses} target={MOCK_FINANCE.budget}
-            color="#F59E0B" unit=" EGP"
+            color="#6B8DB5" unit="EGP"
           />
         </div>
       )}
 
       {/* ── Quick Links ── */}
       <div style={{ background: c.cardBg, borderRadius: 14, border: '1px solid ' + c.border, padding: 20 }}>
-        <SectionHeader icon="⚡" title={lang === 'ar' ? 'روابط سريعة' : 'Quick Links'} />
+        <SectionHeader icon="" title={lang === 'ar' ? 'روابط سريعة' : 'Quick Links'} />
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           {[
-            { label: lang === 'ar' ? 'الموظفين'    : 'Employees',    path: '/hr/employees',    show: sections.showHR,      icon: '👥' },
-            { label: lang === 'ar' ? 'الحضور'      : 'Attendance',   path: '/hr/attendance',   show: sections.showHR,      icon: '⏰' },
-            { label: lang === 'ar' ? 'الرواتب'     : 'Payroll',      path: '/hr/payroll',      show: sections.showHR,      icon: '💰' },
-            { label: lang === 'ar' ? 'التوظيف'     : 'Recruitment',  path: '/hr/recruitment',  show: sections.showHR,      icon: '📋' },
-            { label: lang === 'ar' ? 'الفرص'       : 'Opportunities',path: '/crm/opportunities',show: sections.showCRM,    icon: '🎯' },
-            { label: lang === 'ar' ? 'الصفقات'     : 'Deals',        path: '/sales/deals',     show: sections.showSales,   icon: '🤝' },
-            { label: lang === 'ar' ? 'الأداء'      : 'Performance',  path: '/performance',     show: true,                 icon: '📊' },
-            { label: lang === 'ar' ? 'بوابة الموظف': 'Self-Service', path: '/hr/self-service', show: true,                 icon: '🪪' },
+            { label: lang === 'ar' ? 'الموظفين'    : 'Employees',    path: '/hr/employees',    show: sections.showHR,      icon: '' },
+            { label: lang === 'ar' ? 'الحضور'      : 'Attendance',   path: '/hr/attendance',   show: sections.showHR,      icon: '' },
+            { label: lang === 'ar' ? 'الرواتب'     : 'Payroll',      path: '/hr/payroll',      show: sections.showHR,      icon: '' },
+            { label: lang === 'ar' ? 'التوظيف'     : 'Recruitment',  path: '/hr/recruitment',  show: sections.showHR,      icon: '' },
+            { label: lang === 'ar' ? 'الفرص'       : 'Opportunities',path: '/crm/opportunities',show: sections.showCRM,    icon: '' },
+            { label: lang === 'ar' ? 'الصفقات'     : 'Deals',        path: '/sales/deals',     show: sections.showSales,   icon: '' },
+            { label: lang === 'ar' ? 'الأداء'      : 'Performance',  path: '/performance',     show: true,                 icon: '' },
+            { label: lang === 'ar' ? 'بوابة الموظف': 'Self-Service', path: '/hr/self-service', show: true,                 icon: '' },
           ].filter(l => l.show).map((l, i) => (
             <a key={i} href={l.path} style={{
               display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px',

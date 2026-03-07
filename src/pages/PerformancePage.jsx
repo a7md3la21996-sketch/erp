@@ -65,10 +65,10 @@ const DEPT_KPIS = {
 };
 
 const FREQ_CONFIG = {
-  daily:     { ar: 'يومي',       en: 'Daily',     color: '#3B82F6' },
-  weekly:    { ar: 'أسبوعي',    en: 'Weekly',    color: '#6366F1' },
-  monthly:   { ar: 'شهري',      en: 'Monthly',   color: '#10B981' },
-  quarterly: { ar: 'ربع سنوي', en: 'Quarterly', color: '#F59E0B' },
+  daily:     { ar: 'يومي',       en: 'Daily',     color: '#4A7AAB' },
+  weekly:    { ar: 'أسبوعي',    en: 'Weekly',    color: '#4A7AAB' },
+  monthly:   { ar: 'شهري',      en: 'Monthly',   color: '#4A7AAB' },
+  quarterly: { ar: 'ربع سنوي', en: 'Quarterly', color: '#6B8DB5' },
 };
 
 // Build employee performance data
@@ -104,21 +104,21 @@ function get9BoxPos(avgPct, compScore) {
 
 const BOX_LABELS = {
   ar: [
-    ['خطر ⚠️',        'موظف أساسي 🔑',  'ملهم 🔥'],
-    ['مراقبة 👁️',     'موظف جيد ✅',    'أداء عالي 🎯'],
-    ['إعادة توجيه',   'نجم صاعد ⭐',    'نجم 🌟'],
+    ['خطر ',        'موظف أساسي ',  'ملهم '],
+    ['مراقبة ',     'موظف جيد ',    'أداء عالي '],
+    ['إعادة توجيه',   'نجم صاعد ',    'نجم '],
   ],
   en: [
-    ['Risk ⚠️',       'Key Player 🔑',  'Inspire 🔥'],
-    ['Monitor 👁️',    'Good Emp ✅',    'High Perf 🎯'],
-    ['Re-direct',     'Rising Star ⭐', 'Star 🌟'],
+    ['Risk ',       'Key Player ',  'Inspire '],
+    ['Monitor ',    'Good Emp ',    'High Perf '],
+    ['Re-direct',     'Rising Star ', 'Star '],
   ],
 };
 
 const BOX_COLORS = [
-  ['#EF4444', '#F59E0B', '#10B981'],
-  ['#F97316', '#3B82F6', '#10B981'],
-  ['#6B7280', '#6366F1', '#10B981'],
+  ['#EF4444', '#6B8DB5', '#4A7AAB'],
+  ['#EF4444', '#4A7AAB', '#4A7AAB'],
+  ['#6B7280', '#4A7AAB', '#4A7AAB'],
 ];
 
 export default function PerformancePage() {
@@ -177,28 +177,28 @@ export default function PerformancePage() {
 
   const BSC_PERSPECTIVES = [
     {
-      key: 'financial', icon: '💰', ar: 'المالي', en: 'Financial', color: '#10B981',
+      key: 'financial', icon: '', ar: 'المالي', en: 'Financial', color: '#4A7AAB',
       objectives: [
         { ar: 'تحقيق التارجت الشهري',  en: 'Monthly target',      actual: MOCK_SALES_BSC.achieved, target: MOCK_SALES_BSC.target, unit: 'EGP' },
         { ar: 'تقليل تكاليف التوظيف', en: 'Reduce hiring costs',  actual: 18000,                   target: 25000,                unit: 'EGP' },
       ],
     },
     {
-      key: 'customer', icon: '👥', ar: 'العملاء', en: 'Customer', color: '#3B82F6',
+      key: 'customer', icon: '', ar: 'العملاء', en: 'Customer', color: '#4A7AAB',
       objectives: [
         { ar: 'معدل تحويل الليدز',   en: 'Lead conversion rate', actual: MOCK_CRM_BSC.conversionRate, target: 10,  unit: '%' },
         { ar: 'الصفقات المغلقة',      en: 'Deals closed',         actual: MOCK_CRM_BSC.closedDeals,    target: 15,  unit: ''  },
       ],
     },
     {
-      key: 'internal', icon: '⚙️', ar: 'العمليات الداخلية', en: 'Internal Processes', color: '#F59E0B',
+      key: 'internal', icon: '', ar: 'العمليات الداخلية', en: 'Internal Processes', color: '#6B8DB5',
       objectives: [
         { ar: 'معدل الحضور',           en: 'Attendance rate',      actual: avgAttendance, target: 22,  unit: 'days' },
         { ar: 'وقت الاستجابة',         en: 'Response time',        actual: 4,             target: 2,   unit: 'h'    },
       ],
     },
     {
-      key: 'learning', icon: '🎓', ar: 'التعلم والنمو', en: 'Learning & Growth', color: '#8B5CF6',
+      key: 'learning', icon: '', ar: 'التعلم والنمو', en: 'Learning & Growth', color: '#4A7AAB',
       objectives: [
         { ar: 'اكتمال التدريب',        en: 'Training completion',  actual: 65,            target: 80,  unit: '%'   },
         { ar: 'متوسط تقييم الكفاءات', en: 'Avg competency score', actual: avgCompScore,   target: 4,   unit: '/5'  },
@@ -212,7 +212,7 @@ export default function PerformancePage() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#F59E0B,#EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#6B8DB5,#EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Target size={20} color="#fff" />
           </div>
           <div>
@@ -229,10 +229,10 @@ export default function PerformancePage() {
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
         {[
-          { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg Performance', value: avgPerf + '%', icon: '📊', color: '#4A7AAB' },
-          { label: lang === 'ar' ? 'متميزون' : 'Top Performers',       value: topPerformers,  icon: '🌟', color: '#10B981' },
-          { label: lang === 'ar' ? 'يحتاجون متابعة' : 'Need Attention', value: atRisk,         icon: '⚠️', color: '#EF4444' },
-          { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: MOCK_EMPLOYEES.length, icon: '👥', color: '#6366F1' },
+          { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg Performance', value: avgPerf + '%', icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'متميزون' : 'Top Performers',       value: topPerformers,  icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'يحتاجون متابعة' : 'Need Attention', value: atRisk,         icon: '', color: '#EF4444' },
+          { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: MOCK_EMPLOYEES.length, icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
           <div key={i} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
             <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
@@ -275,7 +275,7 @@ export default function PerformancePage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {filtered.sort((a, b) => b.avgPct - a.avgPct).map((d, idx) => {
             const dept = DEPARTMENTS.find(dep => dep.id === d.emp.department);
-            const color = d.avgPct >= 90 ? '#10B981' : d.avgPct >= 60 ? '#F59E0B' : '#EF4444';
+            const color = d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444';
             return (
               <div key={d.emp.id} onClick={() => setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d)}
                 style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '14px 18px', cursor: 'pointer', transition: 'all 0.15s', flexDirection: isRTL ? 'row-reverse' : 'row' }}
@@ -284,7 +284,7 @@ export default function PerformancePage() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                   {/* Rank */}
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: idx < 3 ? ['#F59E0B','#94A3B8','#CD7C2F'][idx] + '20' : c.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: idx < 3 ? ['#F59E0B','#94A3B8','#CD7C2F'][idx] : c.textMuted, flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: idx < 3 ? ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] + '20' : c.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: idx < 3 ? ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] : c.textMuted, flexShrink: 0 }}>
                     {idx + 1}
                   </div>
                   {/* Avatar */}
@@ -311,7 +311,7 @@ export default function PerformancePage() {
                     {d.crm.deals_closed > 0 && (
                       <div style={{ textAlign: 'center', minWidth: 50 }}>
                         <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'صفقات' : 'Deals'}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#10B981' }}>{d.crm.deals_closed}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#4A7AAB' }}>{d.crm.deals_closed}</div>
                       </div>
                     )}
                     {/* Score */}
@@ -330,7 +330,7 @@ export default function PerformancePage() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px,1fr))', gap: 10 }}>
                       {d.scores.map((kpi, i) => {
                         const freq = FREQ_CONFIG[kpi.freq];
-                        const kpiColor = kpi.pct >= 90 ? '#10B981' : kpi.pct >= 60 ? '#F59E0B' : '#EF4444';
+                        const kpiColor = kpi.pct >= 90 ? '#4A7AAB' : kpi.pct >= 60 ? '#6B8DB5' : '#EF4444';
                         return (
                           <div key={i} style={{ padding: '10px 12px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: '1px solid ' + c.border }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
@@ -350,7 +350,7 @@ export default function PerformancePage() {
                     </div>
                     {/* Source note */}
                     <div style={{ marginTop: 10, fontSize: 11, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>
-                      🔗 {lang === 'ar' ? 'البيانات من: CRM + الحضور' : 'Data from: CRM + Attendance'}
+                       {lang === 'ar' ? 'البيانات من: CRM + الحضور' : 'Data from: CRM + Attendance'}
                     </div>
                   </div>
                 )}
@@ -394,7 +394,7 @@ export default function PerformancePage() {
                           <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
                         </td>
                         {d.scores.map((kpi, j) => {
-                          const kpiColor = kpi.pct >= 90 ? '#10B981' : kpi.pct >= 60 ? '#F59E0B' : '#EF4444';
+                          const kpiColor = kpi.pct >= 90 ? '#4A7AAB' : kpi.pct >= 60 ? '#6B8DB5' : '#EF4444';
                           return (
                             <td key={j} style={{ padding: '10px 12px', textAlign: 'center' }}>
                               <div style={{ fontSize: 13, fontWeight: 700, color: kpiColor }}>{kpi.actual.toLocaleString()}</div>
@@ -403,7 +403,7 @@ export default function PerformancePage() {
                           );
                         })}
                         <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: d.avgPct >= 90 ? '#10B981' : d.avgPct >= 60 ? '#F59E0B' : '#EF4444' }}>{d.avgPct}%</span>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444' }}>{d.avgPct}%</span>
                         </td>
                       </tr>
                     ))}
@@ -418,8 +418,8 @@ export default function PerformancePage() {
       {/* ── 9-BOX TAB ── */}
       {activeTab === 'ninebox' && (
         <div>
-          <div style={{ padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.08)' : '#EFF6FF', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : '#BFDBFE'), marginBottom: 20, fontSize: 13, color: isDark ? '#8BA8C8' : '#1D4ED8' }}>
-            {lang === 'ar' ? '📊 المحور الأفقي: الأداء (KPIs) · المحور الرأسي: الالتزام (الحضور)' : '📊 X-axis: Performance (KPIs) · Y-axis: Commitment (Attendance)'}
+          <div style={{ padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.2)'), marginBottom: 20, fontSize: 13, color: isDark ? '#8BA8C8' : '#4A7AAB' }}>
+            {lang === 'ar' ? ' المحور الأفقي: الأداء (KPIs) · المحور الرأسي: الالتزام (الحضور)' : 'X-axis: Performance (KPIs) · Y-axis: Commitment (Attendance)'}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
             {[2,1,0].map(potential => (
@@ -458,9 +458,9 @@ export default function PerformancePage() {
           {/* Activity Legend */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
             {[
-              { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.calls, 0), icon: '📞', color: '#3B82F6' },
-              { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.opportunities, 0), icon: '🎯', color: '#6366F1' },
-              { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.deals_closed, 0), icon: '✅', color: '#10B981' },
+              { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.calls, 0), icon: '', color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.opportunities, 0), icon: '', color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.deals_closed, 0), icon: '', color: '#4A7AAB' },
             ].map((s, i) => (
               <div key={i} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
                 <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
@@ -487,18 +487,18 @@ export default function PerformancePage() {
                 {empData.filter(d => d.emp.department === 'sales').map((d, i) => {
                   const convRate = d.crm.calls > 0 ? ((d.crm.deals_closed / d.crm.calls) * 100).toFixed(1) : 0;
                   const analysis = d.crm.calls >= 40 && d.crm.deals_closed >= 3
-                    ? { ar: 'نجم ⭐', en: 'Star ⭐', color: '#10B981' }
+                    ? { ar: 'نجم ', en: 'Star ', color: '#4A7AAB' }
                     : d.crm.calls >= 30 && d.crm.deals_closed < 2
-                    ? { ar: 'مهارة ⚠️', en: 'Skill Gap ⚠️', color: '#F59E0B' }
+                    ? { ar: 'مهارة ', en: 'Skill Gap ', color: '#6B8DB5' }
                     : d.crm.calls < 20
                     ? { ar: 'نشاط منخفض', en: 'Low Activity', color: '#EF4444' }
-                    : { ar: 'جيد ✅', en: 'Good ✅', color: '#3B82F6' };
+                    : { ar: 'جيد ', en: 'Good ', color: '#4A7AAB' };
                   return (
                     <tr key={d.emp.id} style={{ borderTop: i > 0 ? '1px solid ' + c.border : 'none' }}>
                       <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: c.text }}>{d.crm.calls}</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: c.text }}>{d.crm.opportunities}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#10B981' }}>{d.crm.deals_closed}</td>
+                      <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#4A7AAB' }}>{d.crm.deals_closed}</td>
                       <td style={{ padding: '12px 16px', fontSize: 13, color: c.accent }}>{d.crm.revenue > 0 ? (d.crm.revenue / 1000).toFixed(0) + 'K' : '—'}</td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: analysis.color + '20', color: analysis.color }}>
@@ -513,19 +513,19 @@ export default function PerformancePage() {
           </div>
 
           {/* Golden Rule */}
-          <div style={{ padding: '14px 20px', borderRadius: 10, background: isDark ? 'rgba(99,102,241,0.1)' : '#EEF2FF', border: '1px solid ' + (isDark ? 'rgba(99,102,241,0.2)' : '#C7D2FE') }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#A5B4FC' : '#4338CA', marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>
-              {lang === 'ar' ? '💡 القاعدة الذهبية' : '💡 Golden Rule'}
+          <div style={{ padding: '14px 20px', borderRadius: 10, background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(99,102,241,0.2)' : '#8BA8C8') }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#8BA8C8' : '#2B4C6F', marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>
+              {lang === 'ar' ? ' القاعدة الذهبية' : 'Golden Rule'}
             </div>
             <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               {[
-                { ar: 'نشاط عالي + نتيجة عالية = نجم → مكافأة', en: 'High Activity + High Results = Star → Reward', color: '#10B981' },
-                { ar: 'نشاط عالي + نتيجة ضعيفة = مشكلة مهارة → تدريب', en: 'High Activity + Low Results = Skill Gap → Training', color: '#F59E0B' },
+                { ar: 'نشاط عالي + نتيجة عالية = نجم → مكافأة', en: 'High Activity + High Results = Star → Reward', color: '#4A7AAB' },
+                { ar: 'نشاط عالي + نتيجة ضعيفة = مشكلة مهارة → تدريب', en: 'High Activity + Low Results = Skill Gap → Training', color: '#6B8DB5' },
                 { ar: 'نشاط منخفض + نتيجة ضعيفة = مشكلة التزام → متابعة', en: 'Low Activity + Low Results = Commitment Issue → Follow Up', color: '#EF4444' },
               ].map((r, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                   <div style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: isDark ? '#A5B4FC' : '#4338CA' }}>{lang === 'ar' ? r.ar : r.en}</span>
+                  <span style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#2B4C6F' }}>{lang === 'ar' ? r.ar : r.en}</span>
                 </div>
               ))}
             </div>
@@ -560,7 +560,7 @@ export default function PerformancePage() {
                 {p.objectives.map((o, i) => {
                   const pct  = Math.min(Math.round((o.actual / o.target) * 100), 150);
                   const disp = Math.min(pct, 100);
-                  const col  = pct >= 90 ? '#10B981' : pct >= 60 ? '#F59E0B' : '#EF4444';
+                  const col  = pct >= 90 ? '#4A7AAB' : pct >= 60 ? '#6B8DB5' : '#EF4444';
                   const fmt  = v => typeof v === 'number' && v > 1000 ? (v / 1000).toFixed(0) + 'K' : v;
                   return (
                     <div key={i}>
@@ -569,7 +569,7 @@ export default function PerformancePage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: col }}>{fmt(o.actual)}{o.unit}</span>
                           <span style={{ fontSize: 11, color: c.textMuted }}>/ {fmt(o.target)}{o.unit}</span>
-                          {pct > 100 && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: '#10B98120', color: '#10B981', fontWeight: 600 }}>+{pct - 100}%</span>}
+                          {pct > 100 && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: '#4A7AAB20', color: '#4A7AAB', fontWeight: 600 }}>+{pct - 100}%</span>}
                         </div>
                       </div>
                       <div style={{ height: 8, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
@@ -582,8 +582,8 @@ export default function PerformancePage() {
               </div>
             </div>
           ))}
-          <div style={{ padding: '14px 18px', borderRadius: 10, background: isDark ? 'rgba(139,92,246,0.08)' : '#F5F3FF', border: '1px solid ' + (isDark ? 'rgba(139,92,246,0.2)' : '#DDD6FE'), fontSize: 12, color: isDark ? '#C4B5FD' : '#5B21B6', textAlign: isRTL ? 'right' : 'left' }}>
-            💡 {lang === 'ar' ? 'البيانات ستكون حقيقية بعد ربط الـ modules — Finance + CRM + Sales' : 'Data will be live once Finance, CRM & Sales modules are connected.'}
+          <div style={{ padding: '14px 18px', borderRadius: 10, background: isDark ? 'rgba(139,92,246,0.08)' : 'rgba(74,122,171,0.06)', border: '1px solid ' + (isDark ? 'rgba(139,92,246,0.2)' : 'rgba(74,122,171,0.15)'), fontSize: 12, color: isDark ? '#8BA8C8' : '#2B4C6F', textAlign: isRTL ? 'right' : 'left' }}>
+             {lang === 'ar' ? 'البيانات ستكون حقيقية بعد ربط الـ modules — Finance + CRM + Sales' : 'Data will be live once Finance, CRM & Sales modules are connected.'}
           </div>
         </div>
       )}
