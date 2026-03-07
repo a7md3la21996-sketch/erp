@@ -288,7 +288,7 @@ export default function PerformancePage() {
                     {idx + 1}
                   </div>
                   {/* Avatar */}
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: `hsl(${d.emp.id.charCodeAt(1) * 40},60%,50%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: d.emp.avatar_color || '#2B4C6F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
                     {(lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en).charAt(0)}
                   </div>
                   {/* Info */}
