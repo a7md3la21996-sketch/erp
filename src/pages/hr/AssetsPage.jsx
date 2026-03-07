@@ -64,7 +64,7 @@ export default function AssetsPage() {
     const matchSearch = !search ||
       a.brand.toLowerCase().includes(search.toLowerCase()) ||
       a.serial.toLowerCase().includes(search.toLowerCase()) ||
-      (emp && emp.name.toLowerCase().includes(search.toLowerCase()));
+      (emp && (emp.full_name_ar + ' ' + emp.full_name_en).toLowerCase().includes(search.toLowerCase()));
     const matchType   = filterType   === 'all' || a.type   === filterType;
     const matchStatus = filterStatus === 'all' || a.status === filterStatus;
     return matchSearch && matchType && matchStatus;
@@ -212,9 +212,9 @@ export default function AssetsPage() {
                     {emp ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                         <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#4A7AAB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: '#fff', fontWeight: 700 }}>
-                          {emp.name.charAt(0)}
+                          {(emp.full_name_ar || emp.full_name_en || '?').charAt(0)}
                         </div>
-                        <span style={{ fontSize: 12 }}>{emp.name}</span>
+                        <span style={{ fontSize: 12 }}>{emp.full_name_ar}</span>
                       </div>
                     ) : <span style={{ color: c.textMuted, fontSize: 12 }}>—</span>}
                   </td>
@@ -259,7 +259,7 @@ export default function AssetsPage() {
                 { label: lang === 'ar' ? 'الاسم/الماركة' : 'Brand/Name', field: 'brand', type: 'text' },
                 { label: lang === 'ar' ? 'السيريال' : 'Serial Number', field: 'serial', type: 'text' },
                 { label: lang === 'ar' ? 'الحالة' : 'Status', field: 'status', type: 'select', options: Object.entries(ASSET_STATUS).map(([k,v]) => ({ value: k, label: lang === 'ar' ? v.ar : v.en })) },
-                { label: lang === 'ar' ? 'الموظف' : 'Employee', field: 'employee_id', type: 'select', options: [{ value: '', label: lang === 'ar' ? '— بدون تعيين —' : '— Unassigned —' }, ...MOCK_EMPLOYEES.map(e => ({ value: e.id, label: e.name }))] },
+                { label: lang === 'ar' ? 'الموظف' : 'Employee', field: 'employee_id', type: 'select', options: [{ value: '', label: lang === 'ar' ? '— بدون تعيين —' : '— Unassigned —' }, ...MOCK_EMPLOYEES.map(e => ({ value: e.id, label: e.full_name_ar }))] },
                 { label: lang === 'ar' ? 'الحالة الفعلية' : 'Condition', field: 'condition', type: 'text' },
               ].map(({ label, field, type, options }) => (
                 <div key={field}>

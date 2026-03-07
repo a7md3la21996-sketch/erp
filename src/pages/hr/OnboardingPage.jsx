@@ -80,7 +80,7 @@ export default function OnboardingPage() {
   const displayProcs = activeTab === 'active' ? activeProcs : doneProcs;
   const filtered     = displayProcs.filter(p => {
     const emp = empMap[p.employee_id];
-    return !search || (emp && emp.name.toLowerCase().includes(search.toLowerCase()));
+    return !search || (emp && (emp.full_name_ar + ' ' + emp.full_name_en).toLowerCase().includes(search.toLowerCase()));
   });
 
   const selectedProcess  = processes.find(p => p.id === selected);
@@ -170,7 +170,7 @@ export default function OnboardingPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                       <span style={{ fontSize: 18 }}>{isOn ? '🚀' : '👋'}</span>
                       <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{emp?.name || '—'}</div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{emp?.full_name_ar || '—'}</div>
                         <div style={{ fontSize: 11, color: isOn ? '#10B981' : '#EF4444', fontWeight: 600 }}>
                           {isOn ? (lang === 'ar' ? 'استقبال' : 'Onboarding') : (lang === 'ar' ? 'مغادرة' : 'Offboarding')}
                         </div>
@@ -202,10 +202,10 @@ export default function OnboardingPage() {
             <div style={{ padding: '16px 20px', borderBottom: '1px solid ' + c.border, background: selectedProcess.type === 'onboarding' ? '#10B98108' : '#EF444408' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: c.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', fontWeight: 700 }}>
-                  {selectedEmployee.name.charAt(0)}
+                  {(selectedEmployee.full_name_ar || selectedEmployee.full_name_en || '?').charAt(0)}
                 </div>
                 <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>{selectedEmployee.name}</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>{selectedEmployee.full_name_ar}</div>
                   <div style={{ fontSize: 12, color: c.textMuted }}>{selectedEmployee.position} • {selectedProcess.start_date}</div>
                 </div>
                 <div style={{ marginInlineStart: 'auto', textAlign: 'center' }}>
@@ -298,7 +298,7 @@ export default function OnboardingPage() {
                 <select value={newForm.employee_id} onChange={e => setNewForm(p => ({ ...p, employee_id: e.target.value }))}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 13, direction: isRTL ? 'rtl' : 'ltr' }}>
                   <option value="">{lang === 'ar' ? '— اختر موظف —' : '— Select Employee —'}</option>
-                  {MOCK_EMPLOYEES.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                  {MOCK_EMPLOYEES.map(e => <option key={e.id} value={e.id}>{e.full_name_ar}</option>)}
                 </select>
               </div>
             </div>

@@ -7,6 +7,20 @@ import {
   ChevronRight, Edit2, Trash2, AlertCircle, BarChart2
 } from 'lucide-react';
 import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../../data/hr_mock_data';
+// ── Competency scoring helpers ─────────────────────────────
+function genCompScores(empId) {
+  const seed = empId.charCodeAt(empId.length - 1);
+  return COMPETENCIES.reduce((acc, c, i) => {
+    acc[c.key] = Math.min(5, Math.max(1, Math.round(2.5 + ((seed * (i + 3)) % 25) / 10)));
+    return acc;
+  }, {});
+}
+function getWeakestCompetency(empId) {
+  const scores = genCompScores(empId);
+  return COMPETENCIES.reduce((weakest, c) =>
+    (scores[c.key] < scores[weakest.key] ? c : weakest), COMPETENCIES[0]);
+}
+
 
 // ── Mock Data ──────────────────────────────────────────────────
 
