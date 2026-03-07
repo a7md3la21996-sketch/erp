@@ -1,13 +1,13 @@
 import { useState, useMemo } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import {
   Target, TrendingUp, TrendingDown, Users, Star,
   ChevronRight, Award, AlertTriangle, CheckCircle,
   BarChart2, Calendar, Filter, Search
 } from 'lucide-react';
-import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../../data/hr_mock_data';
-import { getAttendanceForMonth } from '../../data/attendanceStore';
+import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
+import { getAttendanceForMonth } from '../data/attendanceStore';
 
 // ── Mock CRM Activity Data ─────────────────────────────────────
 const MOCK_CRM_ACTIVITY = {
