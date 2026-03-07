@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import {
@@ -240,7 +240,7 @@ function SalaryRaiseModal({ employee, onClose, onSubmit, isDark, isRTL, lang, c 
 }
 
 // ── Salary History Modal ───────────────────────────────────────
-function SalaryHistoryModal({ employee, history, onClose, isDark, isRTL, lang, c }) {
+function SalaryHistoryModal({ employee, history, onClose, onApprove, onReject, isDark, isRTL, lang, c }) {
   const STATUS_MAP = {
     pending:  { ar: 'قيد المراجعة', en: 'Pending',  color: '#F59E0B', bg: '#FEF3C720' },
     approved: { ar: 'معتمد',        en: 'Approved', color: '#10B981', bg: '#D1FAE520' },
@@ -307,11 +307,11 @@ function SalaryHistoryModal({ employee, history, onClose, isDark, isRTL, lang, c
                     {/* Approval Actions */}
                     {h.status === 'pending' && (
                       <div style={{ display: 'flex', gap: 8, marginTop: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                        <button onClick={() => h.onApprove(h.id)}
+                        <button onClick={() => onApprove(h.id)}
                           style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#10B981', color: '#fff', fontSize: 12, fontWeight: 600 }}>
                           {lang === 'ar' ? '✓ اعتماد' : '✓ Approve'}
                         </button>
-                        <button onClick={() => h.onReject(h.id)}
+                        <button onClick={() => onReject(h.id)}
                           style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #EF4444', cursor: 'pointer', background: 'transparent', color: '#EF4444', fontSize: 12, fontWeight: 600 }}>
                           {lang === 'ar' ? '✕ رفض' : '✕ Reject'}
                         </button>
@@ -678,6 +678,101 @@ function EmployeeFormModal({ employee, employees, onClose, onSave, isDark, isRTL
   );
 }
 
+// ── Org Chart ─────────────────────────────────────────────────
+const DEPT_COLORS = { sales: '#4A7AAB', marketing: '#EC4899', hr: '#10B981', finance: '#F59E0B' };
+
+function OrgNode({ emp, employees, onSelect, isDark, isRTL, lang, c }) {
+  const [expanded, setExpanded] = useState(true);
+  const reports = employees.filter(e => e.direct_manager_id === emp.id);
+  const dept = DEPARTMENTS.find(d => d.id === emp.department);
+  const color = DEPT_COLORS[emp.department] || '#6366F1';
+  const initials = emp.full_name_ar.split(' ').slice(0, 2).map(w => w[0]).join('');
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* Card */}
+      <div style={{ position: 'relative' }}>
+        <div onClick={() => onSelect(emp)}
+          style={{ width: 150, padding: '12px 14px', borderRadius: 12, background: c.cardBg, border: `2px solid ${color}30`,
+            boxShadow: isDark ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+            cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = `${color}30`; e.currentTarget.style.transform = 'none'; }}>
+          <div style={{ width: 42, height: 42, borderRadius: '50%', background: emp.avatar_color || color,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: 14, fontWeight: 700, margin: '0 auto 8px' }}>
+            {initials}
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: c.text, marginBottom: 2, lineHeight: 1.3 }}>
+            {lang === 'ar' ? emp.full_name_ar : emp.full_name_en}
+          </div>
+          <div style={{ fontSize: 10, color: c.textMuted, marginBottom: 6, lineHeight: 1.3 }}>
+            {lang === 'ar' ? emp.job_title_ar : emp.job_title_en}
+          </div>
+          <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 9, fontWeight: 600,
+            background: `${color}20`, color }}>
+            {lang === 'ar' ? dept?.name_ar : dept?.name_en}
+          </span>
+        </div>
+        {reports.length > 0 && (
+          <button onClick={e => { e.stopPropagation(); setExpanded(x => !x); }}
+            style={{ position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)',
+              width: 20, height: 20, borderRadius: '50%', border: `2px solid ${color}`,
+              background: c.cardBg, cursor: 'pointer', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: 10, color, fontWeight: 700, zIndex: 2 }}>
+            {expanded ? '−' : `+${reports.length}`}
+          </button>
+        )}
+      </div>
+
+      {/* Children */}
+      {reports.length > 0 && expanded && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: 2, height: 20, background: isDark ? 'rgba(74,122,171,0.3)' : '#D1D5DB' }} />
+          <div style={{ position: 'relative', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+            {reports.length > 1 && (
+              <div style={{ position: 'absolute', top: 0, left: `calc(50% - ${(reports.length - 1) * 85}px)`,
+                width: `${(reports.length - 1) * 170}px`, height: 2,
+                background: isDark ? 'rgba(74,122,171,0.3)' : '#D1D5DB' }} />
+            )}
+            {reports.map(child => (
+              <div key={child.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ width: 2, height: 20, background: isDark ? 'rgba(74,122,171,0.3)' : '#D1D5DB' }} />
+                <OrgNode emp={child} employees={employees} onSelect={onSelect} isDark={isDark} isRTL={isRTL} lang={lang} c={c} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OrgChart({ employees, onSelect, isDark, isRTL, lang, c }) {
+  const empIds = new Set(employees.map(e => e.id));
+  const roots = employees.filter(e => !e.direct_manager_id || !empIds.has(e.direct_manager_id));
+  return (
+    <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: 32, overflowX: 'auto' }}>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        {DEPARTMENTS.map(d => (
+          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: DEPT_COLORS[d.id] || '#6366F1' }} />
+            <span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? d.name_ar : d.name_en}</span>
+          </div>
+        ))}
+        <span style={{ marginInlineStart: 'auto', fontSize: 12, color: c.textMuted }}>
+          {lang === 'ar' ? '🖱 اضغط على موظف لعرض ملفه' : '🖱 Click to view profile'}
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 48, justifyContent: 'center', flexWrap: 'wrap', minWidth: 'max-content', margin: '0 auto' }}>
+        {roots.map(root => (
+          <OrgNode key={root.id} emp={root} employees={employees} onSelect={onSelect} isDark={isDark} isRTL={isRTL} lang={lang} c={c} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────
 export default function EmployeesPage() {
   const { theme } = useTheme();
@@ -698,6 +793,7 @@ export default function EmployeesPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [historyEmployee, setHistoryEmployee] = useState(null);
   const [salaryHistory, setSalaryHistory] = useState([]);
+  const [activeView, setActiveView] = useState('table');
 
   const c = {
     bg:        isDark ? '#152232' : '#f9fafb',
@@ -757,24 +853,26 @@ export default function EmployeesPage() {
       ...data,
       status: 'pending',
       created_at: new Date().toISOString(),
-      onApprove: (id) => {
-        setSalaryHistory(prev => prev.map(h => {
-          if (h.id !== id) return h;
-          // تحديث الراتب الفعلي عند الاعتماد
-          setEmployees(emps => emps.map(e =>
-            e.id === h.employee_id ? { ...e, base_salary: h.new_salary } : e
-          ));
-          return { ...h, status: 'approved' };
-        }));
-      },
-      onReject: (id) => setSalaryHistory(prev => prev.map(h => h.id === id ? { ...h, status: 'rejected' } : h)),
     };
     setSalaryHistory(prev => [newEntry, ...prev]);
     setShowRaise(false);
     setRaiseEmployee(null);
-    // افتح السجل مباشرة بعد الطلب
     setHistoryEmployee(raiseEmployee);
     setShowHistory(true);
+  };
+
+  const handleApprove = (id) => {
+    setSalaryHistory(prev => prev.map(h => {
+      if (h.id !== id) return h;
+      setEmployees(emps => emps.map(e =>
+        e.id === h.employee_id ? { ...e, base_salary: h.new_salary } : e
+      ));
+      return { ...h, status: 'approved' };
+    }));
+  };
+
+  const handleReject = (id) => {
+    setSalaryHistory(prev => prev.map(h => h.id === id ? { ...h, status: 'rejected' } : h));
   };
 
   const openAdd = () => { setEditEmployee(null); setShowForm(true); };
@@ -842,7 +940,26 @@ export default function EmployeesPage() {
         </div>
       )}
 
+      {/* View Toggle */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: isDark ? 'rgba(74,122,171,0.08)' : '#F3F4F6', borderRadius: 10, padding: 4, width: 'fit-content' }}>
+        {[{ key: 'table', ar: '☰ قائمة', en: '☰ List' }, { key: 'org', ar: '🏢 هيكل تنظيمي', en: '🏢 Org Chart' }].map(v => (
+          <button key={v.key} onClick={() => setActiveView(v.key)}
+            style={{ padding: '7px 16px', borderRadius: 7, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500, transition: 'all 0.15s',
+              background: activeView === v.key ? c.cardBg : 'transparent',
+              color: activeView === v.key ? c.text : c.textMuted,
+              boxShadow: activeView === v.key ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
+            {lang === 'ar' ? v.ar : v.en}
+          </button>
+        ))}
+      </div>
+
+      {/* Org Chart */}
+      {activeView === 'org' && (
+        <OrgChart employees={employees} onSelect={setSelectedEmployee} isDark={isDark} isRTL={isRTL} lang={lang} c={c} />
+      )}
+
       {/* Filters */}
+      {activeView === 'table' && (
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row', flexWrap: 'wrap' }}>
         <div style={{ position: 'relative', flex: 1, minWidth: 200 }}>
           <Search size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRTL ? 'right' : 'left']: 12, color: c.textMuted }} />
@@ -863,8 +980,10 @@ export default function EmployeesPage() {
           {Object.entries(CONTRACT_TYPES).map(([k, v]) => <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>)}
         </select>
       </div>
+      )}
 
       {/* Table */}
+      {activeView === 'table' && (
       <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
@@ -954,6 +1073,7 @@ export default function EmployeesPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* View Modal */}
       {selectedEmployee && (
@@ -984,6 +1104,8 @@ export default function EmployeesPage() {
           employee={historyEmployee}
           history={salaryHistory}
           onClose={() => { setShowHistory(false); setHistoryEmployee(null); }}
+          onApprove={handleApprove}
+          onReject={handleReject}
           isDark={isDark} isRTL={isRTL} lang={lang} c={c}
         />
       )}
