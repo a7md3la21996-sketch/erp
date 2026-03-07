@@ -5,103 +5,9 @@ import {
   DollarSign, Play, Download, Eye, X, ChevronLeft, ChevronRight,
   CheckCircle, Clock, AlertTriangle, FileText, Users, TrendingUp
 } from 'lucide-react';
-import { MOCK_EMPLOYEES, MOCK_HR_POLICIES } from '../../data/hr_mock_data';
-
-// ── Helpers ───────────────────────────────────────────────────
-function getPol(key) {
-  const p = MOCK_HR_POLICIES.find(p => p.key === key);
-  return p ? parseFloat(p.value) : null;
-}
-
-const HOUR_DIVISOR   = getPol('hourly_rate_divisor')      || 240;
-const WORK_DAYS      = getPol('work_days_per_month')       || 30;
-const ABSENCE_NOTICE = getPol('absence_with_notice_mult')  || 1;
-const ABSENCE_NO     = getPol('absence_no_notice_mult')    || 2;
-
-function calcPayroll(emp, attendanceData) {
-  const hourlyRate  = emp.base_salary / HOUR_DIVISOR;
-  const dailyRate   = emp.base_salary / WORK_DAYS;
-  const toleranceCap = emp.tolerance_hours || getPol('tolerance_hours_monthly') || 4;
-
-  let lateDeduction   = 0;
-  let absenceDeduction = 0;
-  let otEarnings      = 0;
-  let usedTolerance   = 0;
-  let lateDays        = 0;
-  let absentDays      = 0;
-  let presentDays     = 0;
-  let otHours         = 0;
-
-  attendanceData.forEach(rec => {
-    if (rec.absent) {
-      absentDays++;
-      const mult = rec.absent_with_notice ? ABSENCE_NOTICE : ABSENCE_NO;
-      absenceDeduction += dailyRate * mult;
-    } else if (rec.check_in) {
-      presentDays++;
-      // late calc
-      const lateThresh = 10 * 60 + 30; // 10:30
-      const [h, m] = rec.check_in.split(':').map(Number);
-      const checkInMins = h * 60 + m;
-      const lateMin = Math.max(0, checkInMins - lateThresh);
-      if (lateMin > 0) {
-        lateDays++;
-        const lateH = lateMin / 60;
-        const remaining = Math.max(0, toleranceCap - usedTolerance);
-        const covered   = Math.min(lateH, remaining);
-        const over      = lateH - covered;
-        usedTolerance  += covered;
-        lateDeduction  += (covered * hourlyRate) + (over * hourlyRate * 2);
-      }
-      // OT
-      const otH = rec.ot_hours || 0;
-      otHours += otH;
-      const otMultiplier = parseFloat(emp.ot_multiplier?.replace('x','')) || 1;
-      otEarnings += otH * hourlyRate * otMultiplier;
-    }
-  });
-
-  const totalDeductions = lateDeduction + absenceDeduction;
-  const netSalary       = emp.base_salary - totalDeductions + otEarnings;
-
-  return {
-    emp,
-    baseSalary:       emp.base_salary,
-    lateDeduction:    Math.round(lateDeduction),
-    absenceDeduction: Math.round(absenceDeduction),
-    otEarnings:       Math.round(otEarnings),
-    totalDeductions:  Math.round(totalDeductions),
-    netSalary:        Math.round(Math.max(0, netSalary)),
-    presentDays,
-    absentDays,
-    lateDays,
-    otHours:          Math.round(otHours * 10) / 10,
-    hourlyRate:       Math.round(hourlyRate * 100) / 100,
-    dailyRate:        Math.round(dailyRate * 100) / 100,
-  };
-}
-
-// generate mock attendance for payroll
-function genAttendance(empId, year, month) {
-  const records = [];
-  const daysInMonth = new Date(year, month, 0).getDate();
-  for (let d = 1; d <= daysInMonth; d++) {
-    const date = new Date(year, month - 1, d);
-    const dow  = date.getDay();
-    if (dow === 5 || dow === 6) continue;
-    const rand = Math.random();
-    if (rand < 0.04) {
-      records.push({ absent: true, absent_with_notice: Math.random() > 0.5, check_in: null, ot_hours: 0 });
-    } else {
-      const lateMin = Math.floor(Math.random() * 55);
-      const inH = 10, inM = lateMin;
-      const outH = inH + 8 + Math.floor(Math.random() * 2);
-      const otH  = Math.random() > 0.7 ? Math.round(Math.random() * 2 * 2) / 2 : 0;
-      records.push({ absent: false, absent_with_notice: false, check_in: `${String(inH).padStart(2,'0')}:${String(inM).padStart(2,'0')}`, check_out: `${String(outH).padStart(2,'0')}:00`, ot_hours: otH });
-    }
-  }
-  return records;
-}
+import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
+import { getAttendanceForMonth, calcPayrollFromAttendance } from '../../data/attendanceStore';
+// ✅ Payroll الآن بيستخدم نفس بيانات الحضور اللي في AttendancePage
 
 const MONTH_NAMES = {
   ar: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'],
@@ -220,8 +126,32 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
             <span style={{ fontSize: 22, fontWeight: 900, color: c.accent }}>{fmt(data.netSalary)} {lang==='ar'?'ج.م':'EGP'}</span>
           </div>
 
-          {/* Rates info */}
-          <div style={{ marginTop: 14, padding: '10px 14px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: '1px solid ' + c.border, display: 'flex', gap: 20, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          {/* Attendance Summary */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: c.textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {lang === 'ar' ? 'ملخص الحضور' : 'ATTENDANCE SUMMARY'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+              {[
+                { label: lang==='ar'?'أيام الحضور':'Present', value: data.presentDays, color: '#10B981' },
+                { label: lang==='ar'?'أيام الغياب':'Absent',  value: data.absentDays,  color: '#EF4444' },
+                { label: lang==='ar'?'أيام التأخير':'Late',   value: data.lateDays,    color: '#F59E0B' },
+                { label: lang==='ar'?'ساعات OT':'OT Hours',  value: `${data.otHours}h`, color: '#6366F1' },
+              ].map((s, i) => (
+                <div key={i} style={{ padding: '10px 8px', borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.03)' : '#F9FAFB', border: '1px solid ' + c.border, textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: 10, color: c.textMuted, marginTop: 2 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            {data.totalLateMinutes > 0 && (
+              <div style={{ marginTop: 8, fontSize: 11, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>
+                {lang==='ar'
+                  ? `إجمالي التأخير: ${Math.floor(data.totalLateMinutes/60)}س ${data.totalLateMinutes%60}د — tolerance مستخدم: ${data.usedTolerance}h / ${data.toleranceCap}h`
+                  : `Total late: ${Math.floor(data.totalLateMinutes/60)}h ${data.totalLateMinutes%60}m — Tolerance used: ${data.usedTolerance}h / ${data.toleranceCap}h`}
+              </div>
+            )}
+          </div>
             {[
               { label: lang === 'ar' ? 'أجر ساعي' : 'Hourly Rate', value: `${data.hourlyRate} ${lang==='ar'?'ج.م':'EGP'}` },
               { label: lang === 'ar' ? 'أجر يومي' : 'Daily Rate',  value: `${data.dailyRate} ${lang==='ar'?'ج.م':'EGP'}` },
@@ -284,10 +214,8 @@ export default function PayrollPage() {
   const runPayroll = () => {
     setRunStatus('running');
     setTimeout(() => {
-      const data = MOCK_EMPLOYEES.map(emp => {
-        const att = genAttendance(emp.id, year, month);
-        return calcPayroll(emp, att);
-      });
+      // ✅ بيستخدم نفس بيانات الحضور اللي في AttendancePage — مش random
+      const data = MOCK_EMPLOYEES.map(emp => calcPayrollFromAttendance(emp, year, month));
       setPayrollData(data);
       setRunStatus('done');
     }, 1200);

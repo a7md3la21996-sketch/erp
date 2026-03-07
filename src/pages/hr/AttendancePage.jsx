@@ -9,6 +9,7 @@ import {
 import {
   MOCK_EMPLOYEES, DEPARTMENTS, MOCK_HR_POLICIES
 } from '../../data/hr_mock_data';
+import { getAttendanceForMonth, updateAttendanceRecord, addAttendanceRecord } from '../../data/attendanceStore';
 
 // ── Helpers ───────────────────────────────────────────────────
 function getPol(key) {
@@ -57,49 +58,6 @@ function calcDeduction(lateMinutes, usedTolerance, toleranceCap, hourlyRate) {
   return (coveredByTolerance * hourlyRate) + (overTolerance * hourlyRate * 2);
 }
 
-// generate mock attendance for a month
-function generateMockMonth(employees, year, month) {
-  const records = [];
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const workModes = ['normal', 'normal', 'normal', 'remote', 'field', 'normal', 'normal'];
-
-  employees.forEach(emp => {
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(year, month - 1, d);
-      const dow  = date.getDay();
-      if (dow === 5 || dow === 6) continue; // Friday/Saturday off
-
-      const mode = workModes[d % 7];
-      let checkIn = null, checkOut = null, absent = false, absentNotice = false;
-
-      if (mode === 'normal') {
-        const rand = Math.random();
-        if (rand < 0.05) { absent = true; absentNotice = Math.random() > 0.5; }
-        else {
-          const lateMin = Math.floor(Math.random() * 60);
-          const inH = 10, inM = lateMin;
-          checkIn  = `${String(inH).padStart(2,'0')}:${String(inM).padStart(2,'0')}`;
-          checkOut = `${String(inH + WORK_HOURS + Math.floor(Math.random()*2)).padStart(2,'0')}:${String(Math.floor(Math.random()*60)).padStart(2,'0')}`;
-        }
-      }
-
-      records.push({
-        id: `${emp.id}-${year}-${month}-${d}`,
-        employee_id: emp.id,
-        date: `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`,
-        work_mode: mode,
-        check_in:  checkIn,
-        check_out: checkOut,
-        absent,
-        absent_with_notice: absentNotice,
-        ot_hours: checkIn && checkOut ? calcOTHours(checkIn, checkOut) : 0,
-        note: '',
-        source: Math.random() > 0.7 ? 'fingerprint' : 'manual',
-      });
-    }
-  });
-  return records;
-}
 
 const NOW   = new Date();
 const INIT_YEAR  = NOW.getFullYear();
@@ -282,15 +240,24 @@ export default function AttendancePage() {
   const [dayDate, setDayDate] = useState(new Date().toISOString().split('T')[0]);
   const [deptFilter, setDept] = useState('all');
   const [empFilter, setEmp]   = useState('all');
-  const [records, setRecords] = useState(() => generateMockMonth(MOCK_EMPLOYEES, INIT_YEAR, INIT_MONTH));
-  const [fpConnected]         = useState(false); // fingerprint status — will come from API later
+  // ✅ بيجيب البيانات من الـ store المشترك — نفس البيانات اللي بيشوفها Payroll
+  const [records, setRecords] = useState(() => getAttendanceForMonth(INIT_YEAR, INIT_MONTH));
+  const [fpConnected]         = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [editRecord, setEditRecord] = useState(null);
   const [excelLoading, setExcelLoading] = useState(false);
 
-  // month navigation
-  const prevMonth = () => { if (month === 1) { setYear(y => y-1); setMonth(12); } else setMonth(m => m-1); };
-  const nextMonth = () => { if (month === 12) { setYear(y => y+1); setMonth(1); } else setMonth(m => m+1); };
+  // month navigation — بيجيب الشهر من الـ store (أو بيولّده لو أول مرة)
+  const prevMonth = () => {
+    const [y, m] = month === 1 ? [year-1, 12] : [year, month-1];
+    setYear(y); setMonth(m);
+    setRecords(getAttendanceForMonth(y, m));
+  };
+  const nextMonth = () => {
+    const [y, m] = month === 12 ? [year+1, 1] : [year, month+1];
+    setYear(y); setMonth(m);
+    setRecords(getAttendanceForMonth(y, m));
+  };
 
   const monthNames = { ar: ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'], en: ['January','February','March','April','May','June','July','August','September','October','November','December'] };
 
@@ -340,6 +307,8 @@ export default function AttendancePage() {
   }, [records, dayDate, empFilter]);
 
   const saveRecord = (rec) => {
+    // ✅ بيحدث الـ store المشترك عشان Payroll يشوف التعديل
+    updateAttendanceRecord(year, month, rec);
     setRecords(prev => {
       const idx = prev.findIndex(r => r.id === rec.id);
       return idx >= 0 ? prev.map(r => r.id === rec.id ? rec : r) : [...prev, rec];
