@@ -58,14 +58,14 @@ function StatusBadge({ employee, lang }) {
   if (isProbationEndingSoon(employee.hire_date, probMonths, alertDays)) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: '#F59E0B20', color: '#F59E0B' }}>
-        <AlertTriangle size={10} /> {lang === 'ar' ? 'فترة تجربة تنتهي قريباً' : 'Probation Ending'}
+        <AlertTriangle size={10} /> {lang === 'ar' ? `فترة تجربة تنتهي قريباً` : 'Probation Ending'}
       </span>
     );
   }
   if (isContractEndingSoon(employee.contract_end_date, contractAlert)) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 20, fontSize: 11, fontWeight: 500, background: '#EF444420', color: '#EF4444' }}>
-        <AlertTriangle size={10} /> {lang === 'ar' ? 'عقد ينتهي قريباً' : 'Contract Ending'}
+        <AlertTriangle size={10} /> {lang === 'ar' ? `عقد ينتهي قريباً` : 'Contract Ending'}
       </span>
     );
   }

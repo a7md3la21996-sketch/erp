@@ -457,7 +457,7 @@ export default function RecruitmentPage() {
                     {[
                       { icon: '🎓', label: lang === 'ar' ? expLevel?.ar : expLevel?.en },
                       { icon: '👥', label: `${job.openings} ${lang === 'ar' ? 'شاغر' : 'opening(s)'}` },
-                      { icon: '💰', label: `${(job.salary_min/1000).toFixed(0)}K - ${(job.salary_max/1000).toFixed(0)}K ${lang==='ar'?'ج.م':'EGP'}` },
+                      { icon: '💰', label: `${(job.salary_min / 1000).toFixed(0)}K - ${(job.salary_max / 1000).toFixed(0)}K ${lang==='ar'?'ج.م':'EGP'}` },
                     ].map((tag, i) => (
                       <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 9px', borderRadius: 20, fontSize: 11, background: isDark ? 'rgba(74,122,171,0.1)' : '#F1F5F9', color: c.textMuted, border: '1px solid ' + c.border }}>
                         {tag.icon} {tag.label}

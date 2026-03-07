@@ -147,8 +147,8 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
             {data.totalLateMinutes > 0 && (
               <div style={{ marginTop: 8, fontSize: 11, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>
                 {lang==='ar'
-                  ? `إجمالي التأخير: ${Math.floor(data.totalLateMinutes/60)}س ${data.totalLateMinutes%60}د — tolerance مستخدم: ${data.usedTolerance}h / ${data.toleranceCap}h`
-                  : `Total late: ${Math.floor(data.totalLateMinutes/60)}h ${data.totalLateMinutes%60}m — Tolerance used: ${data.usedTolerance}h / ${data.toleranceCap}h`}
+                  ? `إجمالي التأخير: ${Math.floor(data.totalLateMinutes / 60)}س ${data.totalLateMinutes%60}د — tolerance مستخدم: ${data.usedTolerance}h / ${data.toleranceCap}h`
+                  : `Total late: ${Math.floor(data.totalLateMinutes / 60)}h ${data.totalLateMinutes%60}m — Tolerance used: ${data.usedTolerance}h / ${data.toleranceCap}h`}
               </div>
             )}
           </div>
