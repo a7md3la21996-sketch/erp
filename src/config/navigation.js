@@ -1,6 +1,6 @@
 import { P } from './roles';
 import {
-  LayoutDashboard, Users, Target, Building2, ActivitySquare,
+  LayoutDashboard, Users, Target, Building2, ActivitySquare, BookUser,
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet,
 } from 'lucide-react';
