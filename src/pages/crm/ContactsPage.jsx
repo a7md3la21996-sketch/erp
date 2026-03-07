@@ -3,7 +3,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Filter, Ban, X, ChevronDown, ChevronRight, Clock, Star } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, UserCheck, PhoneOff, AlertOctagon, CheckCircle2, Calendar, FileDown, MoreVertical, Bell, PhoneMissed } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, checkDuplicate,
@@ -17,17 +17,17 @@ const SOURCE_LABELS = { facebook: 'فيسبوك', instagram: 'إنستجرام',
 const SOURCE_EN = { facebook: 'Facebook', instagram: 'Instagram', google_ads: 'Google Ads', website: 'Website', call: 'Inbound Call', walk_in: 'Walk-in', referral: 'Referral', developer: 'Developer', cold_call: 'Cold Call', other: 'Other' };
 const STAGE_LABELS = { new: 'جديد', contacted: 'تم التواصل', interested: 'مهتم', site_visit_scheduled: 'موعد معاينة', site_visited: 'زار الموقع', negotiation: 'تفاوض', reserved: 'محجوز', contracted: 'تعاقد', closed_won: 'فوز ✓', closed_lost: 'خسارة ✗', on_hold: 'معلق' };
 const COLD_LABELS = { not_contacted: 'لم يُتصل به', no_answer: 'لا يرد', not_interested: 'غير مهتم', interested: 'مهتم', wrong_number: 'رقم خاطئ', call_back_later: 'اتصل لاحقاً' };
-const ACTIVITY_TYPES = { call: { label: 'مكالمة', icon: '📞' }, whatsapp: { label: 'واتساب', icon: '💬' }, email: { label: 'إيميل', icon: '📧' }, meeting: { label: 'اجتماع', icon: '🤝' }, site_visit: { label: 'زيارة موقع', icon: '🏠' }, note: { label: 'ملاحظة', icon: '📝' }, status_change: { label: 'تغيير حالة', icon: '🔄' } };
+const ACTIVITY_TYPES = { call: { label: 'مكالمة', icon: 'phone' }, whatsapp: { label: 'واتساب', icon: 'message' }, email: { label: 'إيميل', icon: 'mail' }, meeting: { label: 'اجتماع', icon: 'users' }, site_visit: { label: 'زيارة موقع', icon: 'calendar' }, note: { label: 'ملاحظة', icon: 'note' }, status_change: { label: 'تغيير حالة', icon: 'refresh' } };
 const TEMP = {
-  hot: { label: 'Hot', labelAr: 'حار', icon: '🔴', color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
-  warm: { label: 'Warm', labelAr: 'دافئ', icon: '🟠', color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
-  cool: { label: 'Cool', labelAr: 'فاتر', icon: '🟡', color: '#EAB308', bg: 'rgba(234,179,8,0.12)' },
-  cold: { label: 'Cold', labelAr: 'بارد', icon: '🔵', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+  hot:  { label: 'Hot', labelAr: 'حار',  color: '#EF4444', bg: 'rgba(239,68,68,0.10)',  Icon: Flame },
+  warm: { label: 'Warm', labelAr: 'دافئ', color: '#F97316', bg: 'rgba(249,115,22,0.10)', Icon: Thermometer },
+  cool: { label: 'Cool', labelAr: 'فاتر', color: '#8BA8C8', bg: 'rgba(139,168,200,0.10)', Icon: Wind },
+  cold: { label: 'Cold', labelAr: 'بارد', color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  Icon: Snowflake },
 };
 const TYPE = {
-  lead: { label: 'ليد', labelEn: 'Lead', color: '#4A7AAB', bg: 'rgba(74,122,171,0.13)' },
-  cold: { label: 'كولد', labelEn: 'Cold', color: '#8BA8C8', bg: 'rgba(139,168,200,0.13)' },
-  client: { label: 'عميل', labelEn: 'Client', color: '#10B981', bg: 'rgba(16,185,129,0.13)' },
+  lead:   { label: 'ليد',   labelEn: 'Lead',   color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)'  },
+  cold:   { label: 'كولد',  labelEn: 'Cold',   color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
+  client: { label: 'عميل',  labelEn: 'Client', color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)'   },
 };
 
 // ── MOCK DATA (used until Supabase is connected) ───────────────────────────
@@ -99,10 +99,10 @@ function Chip({ label, color, bg, size = 'sm' }) {
 }
 
 function ScorePill({ score }) {
-  const color = score >= 75 ? '#10B981' : score >= 50 ? '#F59E0B' : score >= 25 ? '#F97316' : '#EF4444';
+  const color = score >= 75 ? '#4A7AAB' : score >= 50 ? '#6B8DB5' : score >= 25 ? '#8BA8C8' : '#EF4444';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 70 }}>
-      <div style={{ flex: 1, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: 4, background: 'rgba(74,122,171,0.15)', borderRadius: 2, overflow: 'hidden' }}>
         <div style={{ width: `${score}%`, height: '100%', background: color, borderRadius: 2 }} />
       </div>
       <span style={{ fontSize: 11, color, fontWeight: 700, minWidth: 20 }}>{score}</span>
@@ -325,7 +325,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
             {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
             {step === 1
               ? <button onClick={() => setStep(2)} disabled={!validatePhone(form.phone) || !!dupWarning} style={{ padding: '9px 22px', background: (validatePhone(form.phone) && !dupWarning) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
-              : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? '💾 حفظ' : '💾 Save')}</button>
+              : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</button>
             }
           </div>
         </div>
@@ -343,7 +343,9 @@ function BlacklistModal({ contact, onClose, onConfirm }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: '#1A2B3C', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <div style={{ fontSize: 44, marginBottom: 8 }}>⛔</div>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <Ban size={24} color="#EF4444" />
+          </div>
           <h3 style={{ color: '#E2EAF4', margin: '0 0 6px', fontSize: 16 }}>{isRTL ? 'إضافة للقائمة السوداء' : 'Add to Blacklist'}</h3>
           <p style={{ color: '#8BA8C8', fontSize: 13, margin: 0 }}>{isRTL ? 'سيتم منع هذا الرقم من الإضافة مستقبلاً' : 'This number will be blocked from future additions'}</p>
         </div>
@@ -373,13 +375,13 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 
   // Load activity types from localStorage (managed by Admin in Settings)
   const defaultTypes = [
-    { key: 'call', label: 'Call', labelAr: 'مكالمة', icon: '📞' },
-    { key: 'whatsapp', label: 'WhatsApp', labelAr: 'واتساب', icon: '💬' },
-    { key: 'email', label: 'Email', labelAr: 'إيميل', icon: '📧' },
-    { key: 'meeting', label: 'Meeting', labelAr: 'اجتماع', icon: '🤝' },
-    { key: 'site_visit', label: 'Site Visit', labelAr: 'زيارة موقع', icon: '🏠' },
-    { key: 'note', label: 'Note', labelAr: 'ملاحظة', icon: '📝' },
-    { key: 'status_change', label: 'Status Change', labelAr: 'تغيير حالة', icon: '🔄' },
+    { key: 'call',          label: 'Call',          labelAr: 'مكالمة',      lucide: 'Phone'          },
+    { key: 'whatsapp',      label: 'WhatsApp',      labelAr: 'واتساب',      lucide: 'MessageCircle'  },
+    { key: 'email',         label: 'Email',         labelAr: 'إيميل',       lucide: 'Mail'           },
+    { key: 'meeting',       label: 'Meeting',       labelAr: 'اجتماع',      lucide: 'Users'          },
+    { key: 'site_visit',    label: 'Site Visit',    labelAr: 'زيارة موقع',  lucide: 'Calendar'       },
+    { key: 'note',          label: 'Note',          labelAr: 'ملاحظة',      lucide: 'Clock'          },
+    { key: 'status_change', label: 'Status Change', labelAr: 'تغيير حالة',  lucide: 'CheckCircle2'   },
   ];
   const [activityTypes] = useState(() => {
     try {
@@ -403,13 +405,13 @@ function ActivityForm({ contactId, onSave, onCancel }) {
     <div style={{ background: 'rgba(74,122,171,0.07)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 10, padding: 14, marginBottom: 12 }}>
       {/* Auto timestamp - read only */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '5px 10px', background: 'rgba(74,122,171,0.08)', borderRadius: 6 }}>
-        <span style={{ fontSize: 11 }}>🕐</span>
+        <Clock size={11} color="#6B8DB5" />
         <span style={{ fontSize: 11, color: '#6B8DB5' }}>{now}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
         <select style={{ ...inp, cursor: 'pointer' }} value={form.type} onChange={e => set('type', e.target.value)}>
           {activityTypes.map(v => (
-            <option key={v.key} value={v.key}>{v.icon} {isRTL ? (v.labelAr || v.label) : v.label}</option>
+            <option key={v.key} value={v.key}>{isRTL ? (v.labelAr || v.label) : v.label}</option>
           ))}
         </select>
         <input style={inp} type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)}
@@ -492,7 +494,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 18, fontWeight: 800, color: contact.is_blacklisted ? '#EF4444' : '#fff',
               }}>
-                {contact.is_blacklisted ? '⛔' : initials(contact.full_name)}
+                {contact.is_blacklisted ? <Ban size={18} /> : initials(contact.full_name)}
               </div>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : '#E2EAF4' }}>{contact.full_name || 'بدون اسم'}</div>
@@ -547,21 +549,21 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 </div>
                 <div style={{ background: t?.bg, borderRadius: 10, padding: 12, border: `1px solid ${t?.color}30` }}>
                   <div style={{ color: '#8BA8C8', fontSize: 11, marginBottom: 4 }}>الحرارة</div>
-                  <span style={{ color: t?.color, fontWeight: 700, fontSize: 14 }}>{t?.icon} {t?.label}</span>
+                  {t?.Icon && <div style={{ display:'flex', alignItems:'center', gap:6 }}><t.Icon size={14} color={t.color} /><span style={{ color: t?.color, fontWeight: 700, fontSize: 14 }}>{t?.labelAr}</span></div>}
                 </div>
               </div>
 
               {[
-                { label: '📱 الهاتف الأول', val: contact.phone },
-                { label: '📱 الهاتف الثاني', val: contact.phone2 || '—' },
-                { label: '📧 الإيميل', val: contact.email || '—' },
-                { label: isRTL ? '📣 المصدر' : '📣 Source', val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
-                { label: isRTL ? '🎯 الحملة' : '🎯 Campaign', val: contact.campaign_name || '—' },
-                { label: isRTL ? '💰 الميزانية' : '💰 Budget', val: fmtBudget(contact.budget_min, contact.budget_max) },
-                { label: isRTL ? '📍 الموقع المفضل' : '📍 Preferred Location', val: contact.preferred_location || '—' },
-                { label: isRTL ? '🏢 نوع العقار' : '🏢 Property Type', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
-                { label: isRTL ? '👤 المسؤول' : '👤 Assigned To', val: contact.assigned_to_name || '—' },
-                { label: isRTL ? '⏱️ آخر نشاط' : '⏱️ Last Activity', val: `${daysSince(contact.last_activity_at)}d` },
+                { label: 'الهاتف الأول',   val: contact.phone },
+                { label: 'الهاتف الثاني',  val: contact.phone2 || '—' },
+                { label: 'الإيميل',         val: contact.email || '—' },
+                { label: isRTL ? 'المصدر'   : 'Source',   val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
+                { label: isRTL ? 'الحملة'   : 'Campaign', val: contact.campaign_name || '—' },
+                { label: isRTL ? 'الميزانية': 'Budget',   val: fmtBudget(contact.budget_min, contact.budget_max) },
+                { label: isRTL ? 'الموقع'   : 'Location', val: contact.preferred_location || '—' },
+                { label: isRTL ? 'نوع العقار': 'Property', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
+                { label: isRTL ? 'المسؤول'  : 'Assigned', val: contact.assigned_to_name || '—' },
+                { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: `${daysSince(contact.last_activity_at)}d` },
               ].map(r => (
               <div key={r.label} style={rowStyle}>
                 <span style={{ color: '#8BA8C8' }}>{r.label}</span>
@@ -571,19 +573,19 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
 
               {contact.stage && (
                 <div style={rowStyle}>
-                  <span style={{ color: '#8BA8C8' }}>🔄 المرحلة</span>
-                  <Chip label={STAGE_LABELS[contact.stage]} color="#D4A853" bg="rgba(212,168,83,0.1)" />
+                  <span style={{ color: '#8BA8C8' }}>المرحلة</span>
+                  <Chip label={STAGE_LABELS[contact.stage]} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                 </div>
               )}
               {contact.cold_status && (
                 <div style={rowStyle}>
-                  <span style={{ color: '#8BA8C8' }}>📋 حالة الكولد</span>
-                  <Chip label={COLD_LABELS[contact.cold_status]} color="#8BA8C8" bg="rgba(139,168,200,0.1)" />
+                  <span style={{ color: '#8BA8C8' }}>حالة الكولد</span>
+                  <Chip label={COLD_LABELS[contact.cold_status]} color="#6B8DB5" bg="rgba(107,141,181,0.1)" />
                 </div>
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
-                <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444' }}>
-                  {isRTL ? '⛔ سبب البلاك ليست:' : '⛔ Blacklist Reason:'} {contact.blacklist_reason}
+                <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444', display:'flex', gap:6, alignItems:'center' }}>
+                  <Ban size={13} /> {isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}
                 </div>
               )}
             </div>
@@ -609,15 +611,15 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
               ) : activities.map(act => (
                 <div key={act.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ color: '#E2EAF4', fontSize: 13, fontWeight: 600 }}>{ACTIVITY_TYPES[act.type]?.icon} {act.description}</span>
+                    <span style={{ color: '#E2EAF4', fontSize: 13, fontWeight: 600 }}>{act.description}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8BA8C8' }}>
                     <span>{act.users?.full_name_ar || 'مجهول'}</span>
                     <span>{act.created_at?.slice(0, 10)}</span>
                   </div>
                   {act.next_action && (
-                    <div style={{ marginTop: 8, padding: '5px 10px', background: 'rgba(212,168,83,0.08)', borderRadius: 6, fontSize: 11, color: '#D4A853' }}>
-                      ➡️ {act.next_action}{act.next_action_date ? ` — ${act.next_action_date}` : ''}
+                    <div style={{ marginTop: 8, padding: '5px 10px', background: 'rgba(74,122,171,0.08)', borderRadius: 6, fontSize: 11, color: '#6B8DB5' }}>
+                      › {act.next_action}{act.next_action_date ? ` — ${act.next_action_date}` : ''}
                     </div>
                   )}
                 </div>
@@ -640,12 +642,12 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                 <div key={opp.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ color: '#E2EAF4', fontSize: 13, fontWeight: 600 }}>فرصة #{opp.id.slice(-4)}</span>
-                    <Chip label={STAGE_LABELS[opp.stage] || opp.stage} color="#D4A853" bg="rgba(212,168,83,0.1)" />
+                    <Chip label={STAGE_LABELS[opp.stage] || opp.stage} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                   </div>
                   <div style={{ fontSize: 11, color: '#8BA8C8', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {opp.projects?.name_ar && <span>🏢 {opp.projects.name_ar}</span>}
-                    <span>👤 {opp.users?.full_name_ar || '—'}</span>
-                    {opp.next_follow_up && <span>📅 متابعة: {opp.next_follow_up}</span>}
+                    {opp.projects?.name_ar && <span>{opp.projects.name_ar}</span>}
+                    <span>{opp.users?.full_name_ar || '—'}</span>
+                    {opp.next_follow_up && <span>متابعة: {opp.next_follow_up}</span>}
                   </div>
                 </div>
               ))}
@@ -834,7 +836,7 @@ export default function ContactsPage() {
       {/* Page Header */}
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: c.text }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
             {loading ? t('common.loading') : `${filtered.length} results`}
           </p>
@@ -852,24 +854,24 @@ export default function ContactsPage() {
           {isAdmin && selectedIds.length > 0 && (
             <div style={{ position: "relative" }}>
               <button onClick={() => setShowBulkMenu(v => !v)} style={{ padding: "9px 14px", background: "linear-gradient(135deg,#2B4C6F,#4A7AAB)", border: "none", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-                ⚡ {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
+                {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
               </button>
               {showBulkMenu && (
                 <div style={{ position: "absolute", top: "110%", left: 0, background: "#1A2B3C", border: "1px solid rgba(74,122,171,0.3)", borderRadius: 10, minWidth: 190, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.35)", overflow: "hidden" }}>
                   {[
-                    { icon: "📋", label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => {} },
-                    { icon: "👤", label: isRTL ? "إعادة تعيين" : "Reassign", action: () => {} },
-                    { icon: "🔄", label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => {} },
+                    { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => {} },
+                    { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => {} },
+                    { label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => {} },
                   ].map(item => (
                     <button key={item.label} onClick={item.action} style={{ width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#E2EAF4", fontSize: 13, cursor: "pointer", textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}
                       onMouseEnter={e => e.currentTarget.style.background="rgba(74,122,171,0.15)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
-                      {item.icon} {item.label}
+                      {item.label}
                     </button>
                   ))}
                   <div style={{ height: 1, background: "rgba(239,68,68,0.2)", margin: "4px 0" }} />
                   <button onClick={handleDeleteSelected} style={{ width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#EF4444", fontSize: 13, cursor: "pointer", textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}
                     onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.1)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
-                    🗑️ {isRTL ? "حذف المحددين" : "Delete Selected"}
+                    {isRTL ? "حذف المحددين" : "Delete Selected"}
                   </button>
                 </div>
               )}
@@ -877,30 +879,10 @@ export default function ContactsPage() {
           )}
           {isAdmin && selectedIds.length > 0 && (
             <button onClick={handleDeleteSelected} style={{ padding: '9px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#EF4444', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-              🗑️ {isRTL ? `حذف (${selectedIds.length})` : `Delete (${selectedIds.length})`}
+              {isRTL ? `حذف (${selectedIds.length})` : `Delete (${selectedIds.length})`}
             </button>
           )}
         </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 18 }}>
-        {[
-          { label: isRTL ? 'إجمالي' : 'Total', value: stats.total, icon: '👥', color: '#4A7AAB', bg: isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)' },
-          { label: isRTL ? 'ليدز' : 'Leads', value: stats.leads, icon: '🎯', color: '#4A7AAB', bg: isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)' },
-          { label: isRTL ? 'عملاء' : 'Clients', value: stats.clients, icon: '🤝', color: '#10B981', bg: isDark ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.07)' },
-          { label: isRTL ? 'حار' : 'Hot', value: stats.hot, icon: '🔴', color: '#EF4444', bg: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.07)' },
-          { label: isRTL ? 'كولد' : 'Cold Calls', value: stats.cold, icon: '📞', color: '#8BA8C8', bg: isDark ? 'rgba(139,168,200,0.1)' : 'rgba(139,168,200,0.07)' },
-          { label: isRTL ? 'بلاك ليست' : 'Blacklist', value: stats.blacklisted, icon: '⛔', color: '#EF4444', bg: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)' },
-        ].map(s => (
-          <div key={s.label} style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{s.icon}</div>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: c.textMuted, marginTop: 2 }}>{s.label}</div>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* Type Chips */}
@@ -909,11 +891,11 @@ export default function ContactsPage() {
           { label: i18n.language === 'ar' ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
           { label: i18n.language === 'ar' ? 'ليدز' : 'Leads', value: 'lead', count: stats.leads, color: '#4A7AAB' },
           { label: i18n.language === 'ar' ? 'كولد' : 'Cold', value: 'cold', count: stats.cold, color: '#8BA8C8' },
-          { label: i18n.language === 'ar' ? 'عملاء' : 'Clients', value: 'client', count: stats.clients, color: '#10B981' },
+          { label: i18n.language === 'ar' ? 'عملاء' : 'Clients', value: 'client', count: stats.clients, color: '#2B4C6F' },
         ].map(s => (
           <button key={s.value} onClick={() => setFilterType(s.value)} style={{
             padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterType === s.value ? s.color : '#e5e7eb'}`,
-            background: filterType === s.value ? `${s.color}15` : c.cardBg,
+            background: filterType === s.value ? `${s.color}15` : '#fff',
             color: filterType === s.value ? s.color : '#6b7280', fontSize: 12, fontWeight: filterType === s.value ? 700 : 400, cursor: 'pointer',
           }}>
             {s.label} <span style={{ background: filterType === s.value ? s.color : '#e5e7eb', color: filterType === s.value ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{s.count}</span>
@@ -923,15 +905,17 @@ export default function ContactsPage() {
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${showBlacklisted ? '#EF4444' : '#e5e7eb'}`,
           background: showBlacklisted ? 'rgba(239,68,68,0.08)' : c.cardBg,
           color: showBlacklisted ? '#EF4444' : '#6b7280', fontSize: 12, fontWeight: showBlacklisted ? 700 : 400, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 5,
         }}>
-          ⛔ {isRTL ? 'بلاك ليست' : 'Blacklist'} <span style={{ background: showBlacklisted ? '#EF4444' : '#e5e7eb', color: showBlacklisted ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.blacklisted}</span>
+          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span style={{ background: showBlacklisted ? '#EF4444' : '#e5e7eb', color: showBlacklisted ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.blacklisted}</span>
         </button>
         <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} style={{
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterTemp === 'hot' ? '#EF4444' : '#e5e7eb'}`,
           background: filterTemp === 'hot' ? 'rgba(239,68,68,0.08)' : c.cardBg,
           color: filterTemp === 'hot' ? '#EF4444' : '#6b7280', fontSize: 12, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 5,
         }}>
-          🔴 {isRTL ? 'حار فقط' : 'Hot Only'} <span style={{ background: filterTemp === 'hot' ? '#EF4444' : '#e5e7eb', color: filterTemp === 'hot' ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.hot}</span>
+          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span style={{ background: filterTemp === 'hot' ? '#EF4444' : '#e5e7eb', color: filterTemp === 'hot' ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.hot}</span>
         </button>
       </div>
 
@@ -948,7 +932,7 @@ export default function ContactsPage() {
         </select>
         <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} style={sel}>
           <option value="all">{isRTL ? 'كل الدرجات' : 'All Temps'}</option>
-          {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{v.icon} {v.label}</option>)}
+          {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{v.labelAr} ({v.label})</option>)}
         </select>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sel}>
           <option value="last_activity">{isRTL ? 'ترتيب: آخر نشاط' : 'Sort: Last Activity'}</option>
@@ -978,103 +962,99 @@ export default function ContactsPage() {
                 <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={11} style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
-                  <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+                  <Search size={28} style={{ opacity: 0.3, marginBottom: 8, display:'block', margin:'0 auto 8px' }} />
                   {isRTL ? 'لا توجد نتائج' : 'No results found'}
                 </td></tr>
-              ) : filtered.map((row) => (
-                <tr key={row.id}
-                  onClick={() => setSelected(row)}
-                  style={{ cursor: 'pointer', background: selectedIds.includes(row.id) ? 'rgba(74,122,171,0.08)' : row.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
-                  onMouseEnter={e => { if (!selectedIds.includes(row.id)) e.currentTarget.style.background = c.rowHover; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = selectedIds.includes(row.id) ? 'rgba(74,122,171,0.08)' : row.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
+              ) : filtered.map((c) => (
+                <tr key={c.id}
+                  onClick={() => setSelected(c)}
+                  style={{ cursor: 'pointer', background: selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
+                  onMouseEnter={e => { if (!selectedIds.includes(c.id)) e.currentTarget.style.background = c.rowHover; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
                 >
-                  {/* Checkbox + ID */}
-                  {!isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} style={{ cursor: 'pointer' }} /></td>}
-                  {!isRTL && <td style={{ ...td, fontSize: 10, color: c.textMuted, fontFamily: 'monospace' }}>#{String(row.id).slice(-4)}</td>}
+                  {/* Checkbox + ID - hidden in RTL */}
+                  {!isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
+                  {!isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
                   {/* Name */}
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
-                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                        background: row.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(row.id),
+                        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                        background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id),
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 14, fontWeight: 700, color: row.is_blacklisted ? '#EF4444' : '#fff',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                        fontSize: 13, fontWeight: 700, color: c.is_blacklisted ? '#EF4444' : '#fff',
                       }}>
-                        {row.is_blacklisted ? '⛔' : initials(row.full_name)}
+                        {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, fontSize: 13, color: row.is_blacklisted ? '#EF4444' : c.text }}>{row.full_name || 'بدون اسم'}</div>
-                        {row.email && <div style={{ fontSize: 11, color: c.textMuted, marginTop: 1 }}>{row.email}</div>}
-                        {row.last_activity_at && (() => { const d = Math.floor((Date.now() - new Date(row.last_activity_at)) / 86400000); return <div style={{ fontSize: 11, marginTop: 3, fontWeight: 600, color: d === 0 ? '#10B981' : d <= 3 ? '#F97316' : d <= 7 ? '#F59E0B' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? '⏱ ' + d + ' يوم' : '⏱ ' + d + 'd ago')}</div>; })()}
+                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : '#1A2B3C' }}>{c.full_name || 'بدون اسم'}</div>
+                        {c.email && <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.email}</div>}
+                        {c.last_activity_at && (() => { const d = Math.floor((Date.now() - new Date(c.last_activity_at)) / 86400000); return <div style={{ fontSize: 10, marginTop: 2, fontWeight: 600, color: d === 0 ? '#4A7AAB' : d <= 3 ? '#6B8DB5' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</div>; })()}
                       </div>
                     </div>
                   </td>
                   {/* Phone */}
                   <td style={td} onClick={e => e.stopPropagation()}>
-                    <PhoneCell phone={row.phone} />
-                    {row.phone2 && <PhoneCell phone={row.phone2} small />}
+                    <PhoneCell phone={c.phone} />
+                    {c.phone2 && <PhoneCell phone={c.phone2} small />}
                   </td>
                   {/* Type */}
-                  <td style={td}><Chip label={TYPE[row.contact_type]?.label} color={TYPE[row.contact_type]?.color} bg={TYPE[row.contact_type]?.bg} /></td>
+                  <td style={td}><Chip label={TYPE[c.contact_type]?.label} color={TYPE[c.contact_type]?.color} bg={TYPE[c.contact_type]?.bg} /></td>
                   {/* Temp */}
                   <td style={td}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ fontSize: 15 }}>{TEMP[row.temperature]?.icon}</span>
-                      <span style={{ fontSize: 11, color: TEMP[row.temperature]?.color, fontWeight: 600 }}>{TEMP[row.temperature]?.labelAr}</span>
-                    </div>
+                    {(() => { const TempIcon = TEMP[c.temperature]?.Icon; return TempIcon ? <TempIcon size={15} color={TEMP[c.temperature]?.color} /> : '—'; })()}
                   </td>
                   {/* Source */}
-                  <td style={td}><span style={{ fontSize: 11, background: isDark ? 'rgba(74,122,171,0.1)' : '#f3f4f6', border: `1px solid ${c.border}`, borderRadius: 6, padding: '3px 8px', color: c.textMuted }}>{i18n.language === "ar" ? SOURCE_LABELS[row.source] : (SOURCE_EN[row.source] || row.source)}</span></td>
+                  <td style={td}><span style={{ fontSize: 11, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', color: '#6b7280' }}>{i18n.language === "ar" ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></td>
                   {/* Stage */}
                   <td style={td} onClick={e => e.stopPropagation()}>
-                    {isAdmin && row.contact_type === 'lead' ? (
-                      <select value={row.stage || ''} onChange={e => handleStageChange(row.id, e.target.value)} style={{ fontSize: 11, background: isDark ? 'rgba(212,168,83,0.08)' : 'transparent', border: '1px solid rgba(212,168,83,0.3)', borderRadius: 6, color: '#D4A853', padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
+                    {isAdmin && c.contact_type === 'lead' ? (
+                      <select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} style={{ fontSize: 11, background: 'transparent', border: '1px solid rgba(74,122,171,0.1)', borderRadius: 6, color: '#4A7AAB', padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
                         {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                       </select>
-                    ) : row.stage ? <Chip label={STAGE_LABELS[row.stage]} color="#D4A853" bg="rgba(212,168,83,0.1)" />
-                    : row.cold_status ? <span style={{ fontSize: 11, color: c.textMuted }}>{COLD_LABELS[row.cold_status]}</span>
-                    : <span style={{ color: c.textMuted }}>—</span>}
+                    ) : c.stage ? <Chip label={STAGE_LABELS[c.stage]} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
+                    : c.cold_status ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{COLD_LABELS[c.cold_status]}</span>
+                    : <span style={{ color: '#d1d5db' }}>—</span>}
                   </td>
                   {/* Budget */}
-                  <td style={{ ...td, fontSize: 12, color: c.textMuted }}>{fmtBudget(row.budget_min, row.budget_max)}</td>
-                  {/* ID + Checkbox RTL */}
-                  {isRTL && <td style={{ ...td, fontSize: 10, color: c.textMuted, fontFamily: 'monospace' }}>#{String(row.id).slice(-4)}</td>}
-                  {isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} style={{ cursor: 'pointer' }} /></td>}
+                  <td style={{ ...td, fontSize: 12, color: '#6b7280' }}>{fmtBudget(c.budget_min, c.budget_max)}</td>
+                  {/* ID + Checkbox - shown at end in RTL */}
+                  {isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
+                  {isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
                   {/* Score */}
-                  <td style={td}><ScorePill score={row.lead_score || 0} /></td>
+                  <td style={td}><ScorePill score={c.lead_score || 0} /></td>
                   {/* Actions */}
                   <td style={td} onClick={e => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      <a href={"tel:" + row.phone} title={isRTL ? "اتصال" : "Call"} style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, color: '#10B981', textDecoration: 'none' }}>
+                      <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 7, color: '#10B981', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l.77-.77a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       </a>
-                      <a href={"https://wa.me/2" + row.phone} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 8, color: '#25D366', textDecoration: 'none' }}>
+                      <a href={"https://wa.me/2" + c.phone} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 7, color: '#25D366', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                       </a>
                       <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setOpenMenuId(openMenuId === row.id ? null : row.id)}
-                          style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: openMenuId === row.id ? '#4A7AAB' : isDark ? 'rgba(74,122,171,0.1)' : '#fff', border: '1px solid ' + (openMenuId === row.id ? '#4A7AAB' : c.border), borderRadius: 8, color: openMenuId === row.id ? '#fff' : c.textMuted, cursor: 'pointer' }}>
+                        <button onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                          style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: openMenuId === c.id ? '#4A7AAB' : '#fff', border: '1px solid ' + (openMenuId === c.id ? '#4A7AAB' : '#e5e7eb'), borderRadius: 7, color: openMenuId === c.id ? '#fff' : '#6b7280', cursor: 'pointer' }}>
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                         </button>
-                        {openMenuId === row.id && (
-                          <div style={{ position: 'absolute', top: 34, left: 0, background: isDark ? '#1a2234' : '#fff', border: `1px solid ${c.border}`, borderRadius: 12, minWidth: 190, zIndex: 100, boxShadow: '0 8px 30px rgba(27,51,71,0.15)', overflow: 'hidden' }}>
+                        {openMenuId === c.id && (
+                          <div style={{ position: 'absolute', top: 32, left: 0, background: isDark ? '#1a2234' : '#fff', border: `1px solid ${c.border}`, borderRadius: 12, minWidth: 190, zIndex: 100, boxShadow: '0 8px 30px rgba(27,51,71,0.12)', overflow: 'hidden' }}>
                             <div style={{ padding: 6 }}>
-                              <button onClick={() => { setLogCallTarget(row); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07"/><path d="M8.09 8.91a16 16 0 0 0 6 6"/></svg>
                                 {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
                               </button>
-                              <button onClick={() => { setReminderTarget(row); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                 {isRTL ? 'إضافة تذكير' : 'Add Reminder'}
                               </button>
-                              <button onClick={() => { const data = [['الاسم','الهاتف','النوع','المصدر','الميزانية'],[row.full_name,row.phone,row.contact_type,row.source,(row.budget_min||'')+'\u2013'+(row.budget_max||'')]]; const csv = data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,\uFEFF'+csv; a.download = row.full_name+'.csv'; a.click(); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <button onClick={() => { const data = [['الاسم','الهاتف','النوع','المصدر','الميزانية'],[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,﻿'+csv; a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 {isRTL ? 'تصدير بيانات العميل' : 'Export Contact'}
                               </button>
                             </div>
-                            {!row.is_blacklisted && (<><div style={{ height: 1, background: c.border }} /><div style={{ padding: 6 }}>
-                              <button onClick={() => { setBlacklistTarget(row); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#EF4444', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.07)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                            {!c.is_blacklisted && (<><div style={{ height: 1, background: '#E2E8F0' }} /><div style={{ padding: 6 }}>
+                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#EF4444', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.05)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                                 {isRTL ? 'بلاك ليست' : 'Blacklist'}
                               </button>
@@ -1096,9 +1076,9 @@ export default function ContactsPage() {
       {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => setContacts(prev => prev.map(c => c.id === updated.id ? updated : c))} />}
       {logCallTarget && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setLogCallTarget(null)}>
-        <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-          <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: c.text }}>📞 {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {logCallTarget.full_name}</h3>
+        <div style={{ background: '#fff', borderRadius: 16, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1B3347', display:'flex', alignItems:'center', gap:6 }}><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {logCallTarget.full_name}</h3>
             <button onClick={() => setLogCallTarget(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#9CA3AF', cursor: 'pointer' }}>×</button>
           </div>
           <div style={{ padding: '18px 20px' }}>
@@ -1117,18 +1097,18 @@ export default function ContactsPage() {
               ))}
             </div>
           </div>
-          <div style={{ padding: '14px 20px', borderTop: `1px solid ${c.border}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${c.border}`, background: isDark ? 'rgba(74,122,171,0.1)' : '#F8FAFC', fontSize: 13, color: c.textMuted, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-            <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? '💾 حفظ المكالمة' : '💾 Save Call'}</button>
+          <div style={{ padding: '14px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', fontSize: 13, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+            <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'حفظ المكالمة' : 'Save Call'}</button>
           </div>
         </div>
       </div>
     )}
     {reminderTarget && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setReminderTarget(null)}>
-        <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-          <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: c.text }}>⏰ {isRTL ? 'إضافة تذكير' : 'Add Reminder'} — {reminderTarget.full_name}</h3>
+        <div style={{ background: '#fff', borderRadius: 16, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1B3347', display:'flex', alignItems:'center', gap:6 }}><Bell size={14} /> {isRTL ? 'إضافة تذكير' : 'Add Reminder'} — {reminderTarget.full_name}</h3>
             <button onClick={() => setReminderTarget(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#9CA3AF', cursor: 'pointer' }}>×</button>
           </div>
           <div style={{ padding: '18px 20px' }}>
@@ -1141,9 +1121,9 @@ export default function ContactsPage() {
             <div style={{ fontSize: 12, color: '#4A5568', fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'الرسالة' : 'Message'}</div>
             <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #E2E8F0', borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none' }} placeholder={isRTL ? 'متابعة العميل...' : 'Follow up with client...'} />
           </div>
-          <div style={{ padding: '14px 20px', borderTop: `1px solid ${c.border}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${c.border}`, background: isDark ? 'rgba(74,122,171,0.1)' : '#F8FAFC', fontSize: 13, color: c.textMuted, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-            <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? '⏰ حفظ التذكير' : '⏰ Save Reminder'}</button>
+          <div style={{ padding: '14px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', fontSize: 13, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+            <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'حفظ التذكير' : 'Save Reminder'}</button>
           </div>
         </div>
       </div>
