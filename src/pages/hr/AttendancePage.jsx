@@ -386,7 +386,7 @@ export default function AttendancePage() {
 
       {/* ── Tabs ── */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : '#F1F5F9', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        {[{ id: 'monthly', ar: 'الملخص الشهري', en: 'Monthly Summary' }, { id: 'daily', ar: 'اليومي', en: 'Daily View' }].map(t => (
+        {[{ id: 'monthly', ar: 'الملخص الشهري', en: 'Monthly Summary' }, { id: 'daily', ar: 'اليومي', en: 'Daily View' }, { id: 'analytics', ar: 'التحليل', en: 'Analytics' }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
               background: tab === t.id ? (isDark ? '#1a2234' : '#fff') : 'transparent',
@@ -639,6 +639,168 @@ export default function AttendancePage() {
             </table>
           </div>
         </>
+      )}
+
+
+      {/* ── ANALYTICS TAB ── */}
+      {tab === 'analytics' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Heatmap Calendar */}
+          <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: c.text, textAlign: isRTL ? 'right' : 'left' }}>
+                  📅 {lang === 'ar' ? 'خريطة حرارية للحضور' : 'Attendance Heatmap'}
+                </div>
+                <div style={{ fontSize: 12, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>
+                  {lang === 'ar' ? 'نسبة الحضور اليومي للشهر' : 'Daily attendance rate for the month'}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: c.textMuted }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: '#10B981' }} />
+                  <span>95%+</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: '#F59E0B' }} />
+                  <span>80-95%</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 12, height: 12, borderRadius: 3, background: '#EF4444' }} />
+                  <span>{'<80%'}</span>
+                </div>
+              </div>
+            </div>
+            {(() => {
+              const daysInMonth = new Date(year, month, 0).getDate();
+              const firstDay    = new Date(year, month - 1, 1).getDay();
+              const totalEmps   = MOCK_EMPLOYEES.length;
+              const cells = [];
+              // Empty cells
+              for (let i = 0; i < firstDay; i++) cells.push(null);
+              for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dayRecs = records.filter(r => r.date === dateStr && !r.absent && r.check_in);
+                const pct = totalEmps > 0 ? Math.round((dayRecs.length / totalEmps) * 100) : 0;
+                cells.push({ d, pct, dateStr });
+              }
+              const DAY_LABELS = lang === 'ar'
+                ? ['أح','إث','ثل','أر','خم','جم','سب']
+                : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+              return (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6, marginBottom: 6 }}>
+                    {DAY_LABELS.map((d,i) => (
+                      <div key={i} style={{ textAlign: 'center', fontSize: 10, color: c.textMuted, fontWeight: 600, padding: '2px 0' }}>{d}</div>
+                    ))}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 }}>
+                    {cells.map((cell, i) => (
+                      cell === null
+                        ? <div key={i} />
+                        : (
+                          <div key={i} style={{
+                            aspectRatio: '1',
+                            borderRadius: 8,
+                            background: cell.pct >= 95 ? '#10B98130' : cell.pct >= 80 ? '#F59E0B25' : cell.pct > 0 ? '#EF444420' : (isDark ? 'rgba(255,255,255,0.03)' : '#F3F4F6'),
+                            border: `1px solid ${cell.pct >= 95 ? '#10B98140' : cell.pct >= 80 ? '#F59E0B40' : cell.pct > 0 ? '#EF444430' : c.border}`,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'default',
+                            transition: 'transform 0.15s',
+                          }}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                            <div style={{ fontSize: 12, fontWeight: 700, color: c.text }}>{cell.d}</div>
+                            {cell.pct > 0 && <div style={{ fontSize: 9, color: cell.pct >= 95 ? '#10B981' : cell.pct >= 80 ? '#F59E0B' : '#EF4444', fontWeight: 600 }}>{cell.pct}%</div>}
+                          </div>
+                        )
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Real-time Alerts + Dept Comparison */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+
+            {/* Alerts */}
+            <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
+                🔔 {lang === 'ar' ? 'تنبيهات الحضور' : 'Attendance Alerts'}
+              </div>
+              <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
+                {lang === 'ar' ? 'تنبيهات تحتاج إجراء' : 'Alerts requiring action'}
+              </div>
+              {(() => {
+                const highAbsent   = monthlySummary.filter(s => s.absentDays >= 3);
+                const highLate     = monthlySummary.filter(s => s.totalLateMins > 180);
+                const overTolerance = monthlySummary.filter(s => s.usedTolerance >= s.toleranceCap);
+                const alerts = [
+                  highAbsent.length > 0   && { icon: '🚨', color: '#EF4444', bg: '#EF444415', title: lang==='ar'?'غياب مرتفع':'High Absenteeism', desc: lang==='ar'?`${highAbsent.length} موظف غابوا 3+ أيام`:`${highAbsent.length} employees absent 3+ days` },
+                  highLate.length > 0     && { icon: '⏰', color: '#F59E0B', bg: '#F59E0B15', title: lang==='ar'?'تأخير متكرر':'Repeated Late', desc: lang==='ar'?`${highLate.length} موظف تأخروا أكثر من 3 ساعات`:`${highLate.length} employees late more than 3h total` },
+                  overTolerance.length > 0 && { icon: '⚠️', color: '#8B5CF6', bg: '#8B5CF615', title: lang==='ar'?'تجاوز الـ Tolerance':'Tolerance Exceeded', desc: lang==='ar'?`${overTolerance.length} موظف استنفدوا رصيد التسامح`:`${overTolerance.length} employees used all tolerance hours` },
+                ].filter(Boolean);
+                return alerts.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {alerts.map((a, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 12, padding: '12px', borderRadius: 10, background: a.bg, border: `1px solid ${a.color}30`, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                        <span style={{ fontSize: 20, flexShrink: 0 }}>{a.icon}</span>
+                        <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: a.color }}>{a.title}</div>
+                          <div style={{ fontSize: 12, color: c.textMuted, marginTop: 2 }}>{a.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '24px', color: c.textMuted }}>
+                    <div style={{ fontSize: 32, marginBottom: 8 }}>✅</div>
+                    <div style={{ fontSize: 13 }}>{lang === 'ar' ? 'لا توجد تنبيهات هذا الشهر' : 'No alerts this month'}</div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Dept Comparison */}
+            <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4, textAlign: isRTL ? 'right' : 'left' }}>
+                🏢 {lang === 'ar' ? 'مقارنة الأقسام' : 'Department Comparison'}
+              </div>
+              <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
+                {lang === 'ar' ? 'نسبة الحضور والغياب لكل قسم' : 'Attendance rate per department'}
+              </div>
+              {(() => {
+                const deptStats = DEPARTMENTS.map(dept => {
+                  const emps    = MOCK_EMPLOYEES.filter(e => e.department === dept.id);
+                  const empRecs = records.filter(r => emps.some(e => e.id === r.employee_id));
+                  const present = empRecs.filter(r => !r.absent && r.check_in).length;
+                  const total   = emps.length * new Date(year, month, 0).getDate();
+                  const pct     = total > 0 ? Math.round((present / total) * 100) : 0;
+                  return { dept, emps: emps.length, pct };
+                }).sort((a,b) => b.pct - a.pct);
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {deptStats.map(({ dept, emps, pct }, i) => (
+                      <div key={dept.id}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 12, color: c.text, fontWeight: 600 }}>{lang==='ar'?dept.name_ar:dept.name_en}</span>
+                            <span style={{ fontSize: 10, color: c.textMuted }}>({emps} {lang==='ar'?'موظف':'emp'})</span>
+                          </div>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: pct >= 95 ? '#10B981' : pct >= 80 ? '#F59E0B' : '#EF4444' }}>{pct}%</span>
+                        </div>
+                        <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
+                          <div style={{ height: '100%', borderRadius: 3, width: pct + '%', background: pct >= 95 ? '#10B981' : pct >= 80 ? '#F59E0B' : '#EF4444', transition: 'width 0.5s' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ── Fingerprint Info Banner ── */}
