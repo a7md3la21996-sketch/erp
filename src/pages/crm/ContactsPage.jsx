@@ -460,7 +460,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
 
   const handleSaveActivity = async (form) => {
     try {
-      const act = await createActivity({ ...form, contact_id: contact.id });
+      const { user_id, ...formData } = form;
+      const act = await createActivity({ ...formData, contact_id: contact.id });
       setActivities(prev => [act, ...prev]);
       setShowActivityForm(false);
     } catch (err) {
