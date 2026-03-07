@@ -6,7 +6,7 @@ import {
   ChevronRight, Award, AlertTriangle, CheckCircle,
   BarChart2, Calendar, Filter, Search
 } from 'lucide-react';
-import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
+import { MOCK_EMPLOYEES, DEPARTMENTS } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
 
 // ── Mock CRM Activity Data ─────────────────────────────────────
