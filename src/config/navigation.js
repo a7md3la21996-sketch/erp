@@ -1,6 +1,6 @@
 import { P } from './roles';
 import {
-  LayoutDashboard, Users, Target, Building2,
+  LayoutDashboard, Users, Target, Building2, ActivitySquare,
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet,
 } from 'lucide-react';
@@ -8,10 +8,11 @@ import {
 export const NAV_ITEMS = [
   { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD },
   { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
-    { id: 'contacts', label: { ar: 'جهات الاتصال', en: 'Contacts' }, path: '/crm/contacts', permission: P.CONTACTS_VIEW_OWN },
     { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
     { id: 'lead-pool', label: { ar: 'بركة الليدز', en: 'Lead Pool' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
   ]},
+  { id: 'contacts', label: { ar: 'جهات الاتصال', en: 'Contacts' }, icon: BookUser, path: '/crm/contacts', permission: P.CONTACTS_VIEW_OWN },
+  { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.CONTACTS_VIEW_OWN },
   { id: 'real-estate', label: { ar: 'العقارات', en: 'Real Estate' }, icon: Building2, permission: P.PROJECTS_VIEW, children: [
     { id: 'projects', label: { ar: 'المشاريع', en: 'Projects' }, path: '/real-estate/projects', permission: P.PROJECTS_VIEW },
     { id: 'units', label: { ar: 'الوحدات', en: 'Units' }, path: '/real-estate/units', permission: P.UNITS_VIEW },
