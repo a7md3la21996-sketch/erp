@@ -98,9 +98,10 @@ export async function fetchContactActivities(contactId) {
 }
 
 export async function createActivity(activityData) {
+  const { user_id, ...cleanData } = activityData;
   const { data, error } = await supabase
     .from('activities')
-    .insert([activityData])
+    .insert([cleanData])
     .select('*')
     .single();
   if (error) throw error;
