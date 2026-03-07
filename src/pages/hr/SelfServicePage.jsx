@@ -35,6 +35,8 @@ export default function SelfServicePage() {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const [activeTab, setActiveTab] = useState('overview');
+  const [leaveForm, setLeaveForm] = useState({ type: 'annual', days: 1, from: '', to: '', reason: '' });
+  const [leaveSubmitted, setLeaveSubmitted] = useState(false);
   const [selectedPayslip, setSelectedPayslip] = useState(null);
 
   const emp = CURRENT_EMP;
@@ -260,11 +262,60 @@ export default function SelfServicePage() {
               );
             })}
           </div>
-          <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px', textAlign: 'center' }}>
-            <div style={{ fontSize: 14, color: c.textMuted, marginBottom: 12 }}>{lang === 'ar' ? 'لتقديم طلب إجازة، اذهب إلى صفحة الإجازات' : 'To submit a leave request, go to the Leave page'}</div>
-            <a href="/hr/leave" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 8, background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-              {lang === 'ar' ? 'طلب إجازة' : 'Request Leave'} <ChevronRight size={14} />
-            </a>
+          {/* Leave Request Form */}
+          <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '20px' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 16, textAlign: isRTL ? 'right' : 'left' }}>
+              📋 {lang === 'ar' ? 'طلب إجازة جديد' : 'New Leave Request'}
+            </div>
+            {leaveSubmitted ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 36, marginBottom: 10 }}>✅</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#10B981', marginBottom: 6 }}>{lang === 'ar' ? 'تم إرسال الطلب!' : 'Request Submitted!'}</div>
+                <div style={{ fontSize: 13, color: c.textMuted, marginBottom: 16 }}>{lang === 'ar' ? 'سيتم مراجعته من المدير المباشر' : 'Your manager will review it shortly'}</div>
+                <button onClick={() => setLeaveSubmitted(false)} style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid ' + c.border, background: 'transparent', color: c.text, cursor: 'pointer', fontSize: 13 }}>
+                  {lang === 'ar' ? 'طلب آخر' : 'New Request'}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 5, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'نوع الإجازة' : 'Leave Type'}</label>
+                  <select value={leaveForm.type} onChange={e => setLeaveForm(f => ({ ...f, type: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 13 }}>
+                    <option value="annual">{lang === 'ar' ? 'سنوية' : 'Annual'}</option>
+                    <option value="sick">{lang === 'ar' ? 'مرضية' : 'Sick'}</option>
+                    <option value="emergency">{lang === 'ar' ? 'طارئة' : 'Emergency'}</option>
+                    <option value="unpaid">{lang === 'ar' ? 'بدون راتب' : 'Unpaid'}</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 5, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'عدد الايام' : 'Days Count'}</label>
+                  <input type="number" min="1" max="30" value={leaveForm.days} onChange={e => setLeaveForm(f => ({ ...f, days: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 13, boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 5, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'من تاريخ' : 'From Date'}</label>
+                  <input type="date" value={leaveForm.from} onChange={e => setLeaveForm(f => ({ ...f, from: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 13, boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 5, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'الى تاريخ' : 'To Date'}</label>
+                  <input type="date" value={leaveForm.to} onChange={e => setLeaveForm(f => ({ ...f, to: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 13, boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ gridColumn: '1/-1' }}>
+                  <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 5, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'السبب (اختياري)' : 'Reason (optional)'}</label>
+                  <textarea value={leaveForm.reason} onChange={e => setLeaveForm(f => ({ ...f, reason: e.target.value }))} rows={2}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 13, resize: 'vertical', boxSizing: 'border-box' }} />
+                </div>
+                <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: isRTL ? 'flex-start' : 'flex-end' }}>
+                  <button onClick={() => { if (leaveForm.from && leaveForm.to) setLeaveSubmitted(true); }}
+                    style={{ padding: '10px 24px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    {lang === 'ar' ? 'ارسال الطلب' : 'Submit Request'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

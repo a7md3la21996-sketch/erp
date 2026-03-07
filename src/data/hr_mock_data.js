@@ -318,3 +318,12 @@ export const POLICY_CATEGORIES = {
   employment: { ar: 'التوظيف',          en: 'Employment', color: '#8B5CF6', icon: '📋' },
   alerts:     { ar: 'التنبيهات',        en: 'Alerts',     color: '#EF4444', icon: '🔔' },
 };
+
+export const COMPETENCIES = [
+  { id: 'c1', key: 'communication',   ar: 'التواصل',            en: 'Communication',   icon: '💬', weight: 20 },
+  { id: 'c2', key: 'teamwork',        ar: 'العمل الجماعي',      en: 'Teamwork',        icon: '🤝', weight: 15 },
+  { id: 'c3', key: 'initiative',      ar: 'المبادرة',           en: 'Initiative',      icon: '⚡', weight: 15 },
+  { id: 'c4', key: 'problem_solving', ar: 'حل المشكلات',        en: 'Problem Solving', icon: '🧠', weight: 20 },
+  { id: 'c5', key: 'attendance',      ar: 'الالتزام والحضور',   en: 'Commitment',      icon: '📅', weight: 15 },
+  { id: 'c6', key: 'quality',         ar: 'جودة العمل',         en: 'Work Quality',    icon: '✨', weight: 15 },
+];

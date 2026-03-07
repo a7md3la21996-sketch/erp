@@ -6,8 +6,13 @@ import {
   ChevronRight, Award, AlertTriangle, CheckCircle,
   BarChart2, Calendar, Filter, Search
 } from 'lucide-react';
-import { MOCK_EMPLOYEES, DEPARTMENTS } from '../data/hr_mock_data';
+import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
+
+// ── Mock Data for BSC ────────────────────────────────────────
+const MOCK_SALES_BSC = { achieved: 1250000, target: 1500000 };
+const MOCK_CRM_BSC   = { closedDeals: 11, conversionRate: 7.7 };
+
 
 // ── Mock CRM Activity Data ─────────────────────────────────────
 const MOCK_CRM_ACTIVITY = {
@@ -22,6 +27,26 @@ const MOCK_CRM_ACTIVITY = {
   e9:  { calls: 18, opportunities: 4,  deals_closed: 1, leads: 0,  campaigns: 0,  revenue: 75000  },
   e10: { calls: 29, opportunities: 7,  deals_closed: 2, leads: 0,  campaigns: 0,  revenue: 155000 },
 };
+
+
+// ── Shared Competency Scores (same logic as CompetenciesPage) ──
+function genCompScores(empId) {
+  const seed = empId.charCodeAt(empId.length - 1);
+  return COMPETENCIES.reduce((acc, c, i) => {
+    acc[c.key] = Math.min(5, Math.max(1, Math.round(2.5 + ((seed * (i + 3)) % 25) / 10)));
+    return acc;
+  }, {});
+}
+
+function calcWeightedScore(scores) {
+  const total = COMPETENCIES.reduce((sum, c) => sum + (scores[c.key] || 3) * c.weight, 0);
+  return Math.round((total / 100) * 10) / 10;
+}
+
+// Pre-compute competency scores per employee
+const EMP_COMP_SCORES = Object.fromEntries(
+  MOCK_EMPLOYEES.map(emp => [emp.id, calcWeightedScore(genCompScores(emp.id))])
+);
 
 const YEAR = 2026;
 const MONTH = 3;
@@ -75,13 +100,14 @@ function buildEmpData(emp, attendance) {
     ? Math.round(scores.reduce((s, k) => s + k.pct, 0) / scores.length)
     : 0;
 
-  return { emp, scores, avgPct, presentDays, lateDays, crm };
+  const compScore = EMP_COMP_SCORES[emp.id] || 3;
+  return { emp, scores, avgPct, presentDays, lateDays, crm, compScore };
 }
 
-// 9-Box position based on performance % and attendance
-function get9BoxPos(avgPct, presentDays) {
-  const perf = avgPct >= 90 ? 2 : avgPct >= 60 ? 1 : 0;
-  const potential = presentDays >= 20 ? 2 : presentDays >= 15 ? 1 : 0;
+// 9-Box: X=Performance (KPIs %), Y=Potential (Competency weighted score)
+function get9BoxPos(avgPct, compScore) {
+  const perf      = avgPct >= 90 ? 2 : avgPct >= 60 ? 1 : 0;
+  const potential = compScore >= 4 ? 2 : compScore >= 3 ? 1 : 0;
   return { perf, potential };
 }
 
@@ -150,7 +176,57 @@ export default function PerformancePage() {
     { key: 'kpis',      ar: 'مؤشرات الأداء', en: 'KPIs'       },
     { key: 'ninebox',   ar: 'مصفوفة 9-Box',  en: '9-Box'      },
     { key: 'activity',  ar: 'النشاط',        en: 'Activity'   },
+    { key: 'bsc',       ar: 'Balanced Scorecard', en: 'Balanced Scorecard' },
   ];
+
+  // ── Balanced Scorecard Data ───────────────────────────────
+  const BSC_PERSPECTIVES = [
+    {
+      key: 'financial',
+      icon: '💰',
+      ar: 'المالي',
+      en: 'Financial',
+      color: '#10B981',
+      objectives: [
+        { ar: 'تحقيق التارجت الشهري',    en: 'Achieve monthly target',    actual: MOCK_SALES_BSC.achieved, target: MOCK_SALES_BSC.target,    unit: 'EGP' },
+        { ar: 'تقليل تكاليف التوظيف',    en: 'Reduce hiring costs',       actual: 18000,               target: 25000,                unit: 'EGP' },
+      ],
+    },
+    {
+      key: 'customer',
+      icon: '👥',
+      ar: 'العملاء',
+      en: 'Customer',
+      color: '#3B82F6',
+      objectives: [
+        { ar: 'معدل تحويل الليدز',        en: 'Lead conversion rate',      actual: MOCK_CRM_BSC.conversionRate, target: 10,               unit: '%'   },
+        { ar: 'عدد الصفقات المغلقة',      en: 'Deals closed',              actual: MOCK_CRM_BSC.closedDeals,    target: 15,               unit: ''    },
+      ],
+    },
+    {
+      key: 'internal',
+      icon: '⚙️',
+      ar: 'العمليات الداخلية',
+      en: 'Internal Processes',
+      color: '#F59E0B',
+      objectives: [
+        { ar: 'معدل الحضور',              en: 'Attendance rate',           actual: Math.round(empData.filter(d => d.presentDays > 0).length / empData.length * 100), target: 95,               unit: '%'   },
+        { ar: 'وقت الاستجابة للعملاء',   en: 'Response time',             actual: 4,                       target: 2,                unit: 'h'   },
+      ],
+    },
+    {
+      key: 'learning',
+      icon: '🎓',
+      ar: 'التعلم والنمو',
+      en: 'Learning & Growth',
+      color: '#8B5CF6',
+      objectives: [
+        { ar: 'معدل اكتمال التدريب',      en: 'Training completion',       actual: 65,                      target: 80,               unit: '%'   },
+        { ar: 'متوسط تقييم الكفاءات',    en: 'Avg competency score',      actual: Math.round(empData.reduce((s,d) => s + d.compScore, 0) / empData.length * 10) / 10, target: 4, unit: '/5' },
+      ],
+    },
+  ];
+
 
   return (
     <div style={{ padding: 24, background: c.bg, minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
@@ -365,13 +441,13 @@ export default function PerformancePage() {
       {activeTab === 'ninebox' && (
         <div>
           <div style={{ padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.08)' : '#EFF6FF', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : '#BFDBFE'), marginBottom: 20, fontSize: 13, color: isDark ? '#8BA8C8' : '#1D4ED8' }}>
-            {lang === 'ar' ? '📊 المحور الأفقي: الأداء (KPIs) · المحور الرأسي: الالتزام (الحضور)' : '📊 X-axis: Performance (KPIs) · Y-axis: Commitment (Attendance)'}
+            {lang === 'ar' ? '📊 المحور الأفقي: الأداء (KPIs) · المحور الرأسي: الإمكانات (تقييم الكفاءات)' : '📊 X-axis: Performance (KPIs) · Y-axis: Potential (Competency Score)'}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
             {[2,1,0].map(potential => (
               [0,1,2].map(perf => {
                 const boxEmps = filtered.filter(d => {
-                  const pos = get9BoxPos(d.avgPct, d.presentDays);
+                  const pos = get9BoxPos(d.avgPct, d.compScore);
                   return pos.perf === perf && pos.potential === potential;
                 });
                 const label = BOX_LABELS[lang][2 - potential][perf];
@@ -478,6 +554,74 @@ export default function PerformancePage() {
           </div>
         </div>
       )}
+      {/* ── BSC TAB ── */}
+      {activeTab === 'bsc' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Overview cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+            {BSC_PERSPECTIVES.map(p => {
+              const scores = p.objectives.map(o => Math.min(Math.round((o.actual / o.target) * 100), 100));
+              const avg = Math.round(scores.reduce((s,v) => s + v, 0) / scores.length);
+              return (
+                <div key={p.key} style={{ background: c.cardBg, borderRadius: 12, border: `2px solid ${p.color}30`, padding: '16px 18px', textAlign: isRTL ? 'right' : 'left' }}>
+                  <div style={{ fontSize: 24, marginBottom: 6 }}>{p.icon}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 4 }}>{lang === 'ar' ? p.ar : p.en}</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: p.color }}>{avg}%</div>
+                  <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', marginTop: 8 }}>
+                    <div style={{ height: '100%', borderRadius: 2, width: avg + '%', background: p.color }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Detailed objectives */}
+          {BSC_PERSPECTIVES.map(p => (
+            <div key={p.key} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 18px', borderBottom: '1px solid ' + c.border, background: p.color + '10', display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                <span style={{ fontSize: 16 }}>{p.icon}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: p.color }}>{lang === 'ar' ? p.ar : p.en}</span>
+              </div>
+              <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {p.objectives.map((o, i) => {
+                  const pct = Math.min(Math.round((o.actual / o.target) * 100), 150);
+                  const isOver = pct > 100;
+                  const displayPct = Math.min(pct, 100);
+                  const objColor = pct >= 90 ? '#10B981' : pct >= 60 ? '#F59E0B' : '#EF4444';
+                  return (
+                    <div key={i}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                        <span style={{ fontSize: 13, color: c.text, fontWeight: 500 }}>{lang === 'ar' ? o.ar : o.en}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: objColor }}>
+                            {typeof o.actual === 'number' && o.actual > 1000 ? (o.actual / 1000).toFixed(0) + 'K' : o.actual}{o.unit}
+                          </span>
+                          <span style={{ fontSize: 11, color: c.textMuted }}>
+                            / {typeof o.target === 'number' && o.target > 1000 ? (o.target / 1000).toFixed(0) + 'K' : o.target}{o.unit}
+                          </span>
+                          {isOver && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: '#10B98120', color: '#10B981', fontWeight: 600 }}>+{pct - 100}%</span>}
+                        </div>
+                      </div>
+                      <div style={{ height: 8, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
+                        <div style={{ height: '100%', borderRadius: 4, width: displayPct + '%', background: `linear-gradient(90deg, ${objColor}99, ${objColor})`, transition: 'width 0.6s ease' }} />
+                      </div>
+                      <div style={{ fontSize: 11, color: c.textMuted, marginTop: 3, textAlign: isRTL ? 'right' : 'left' }}>{pct}%</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {/* Strategy note */}
+          <div style={{ padding: '14px 18px', borderRadius: 10, background: isDark ? 'rgba(139,92,246,0.08)' : '#F5F3FF', border: '1px solid ' + (isDark ? 'rgba(139,92,246,0.2)' : '#DDD6FE'), fontSize: 12, color: isDark ? '#C4B5FD' : '#5B21B6', textAlign: isRTL ? 'right' : 'left' }}>
+            💡 {lang === 'ar'
+              ? 'Balanced Scorecard يقيس الأداء من 4 محاور: المالي، العملاء، العمليات الداخلية، التعلم والنمو. البيانات ستكون حقيقية بعد ربط الـ modules.'
+              : 'Balanced Scorecard measures performance across 4 perspectives: Financial, Customer, Internal Processes, Learning & Growth. Data will be live once modules are connected.'}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

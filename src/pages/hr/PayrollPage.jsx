@@ -152,6 +152,18 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
               </div>
             )}
           </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 12 }}>
+            {[
+              { label: lang === 'ar' ? 'أجر ساعي' : 'Hourly Rate', value: `${data.hourlyRate} ${lang==='ar'?'ج.م':'EGP'}` },
+              { label: lang === 'ar' ? 'أجر يومي' : 'Daily Rate',  value: `${data.dailyRate} ${lang==='ar'?'ج.م':'EGP'}` },
+              { label: lang === 'ar' ? 'OT' : 'OT Rate', value: emp.ot_multiplier },
+            ].map((r,i) => (
+              <div key={i} style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                <div style={{ fontSize: 10, color: c.textMuted }}>{r.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{r.value}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Footer */}

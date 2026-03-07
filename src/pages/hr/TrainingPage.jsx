@@ -9,13 +9,6 @@ import {
 import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 
 // ── Mock Data ──────────────────────────────────────────────────
-const COMPETENCIES = [
-  { key: 'communication',   ar: 'التواصل',          en: 'Communication'   },
-  { key: 'teamwork',        ar: 'العمل الجماعي',    en: 'Teamwork'        },
-  { key: 'initiative',      ar: 'المبادرة',         en: 'Initiative'      },
-  { key: 'problem_solving', ar: 'حل المشكلات',      en: 'Problem Solving' },
-  { key: 'quality',         ar: 'جودة العمل',       en: 'Work Quality'    },
-];
 
 const INITIAL_COURSES = [
   {
@@ -597,15 +590,16 @@ export default function TrainingPage() {
   const totalCompleted = courses.reduce((sum, c) => sum + c.completed.length, 0);
   const completionRate = totalEnrolled > 0 ? Math.round((totalCompleted / totalEnrolled) * 100) : 0;
 
-  // Recommendations: employees with low performance scores -> suggest courses
+  // Recommendations: based on actual weakest competency score per employee
   const recommendations = useMemo(() => {
-    return employees.slice(0, 4).map(emp => {
-      const seed = emp.id.charCodeAt(emp.id.length - 1);
-      const weakComp = COMPETENCIES[seed % COMPETENCIES.length];
-      const suggested = courses.find(c => c.status === 'upcoming' && c.competency === weakComp.key) ||
+    return employees.map(emp => {
+      const weakComp = getWeakestCompetency(emp.id);
+      const scores   = genCompScores(emp.id);
+      const weakScore = scores[weakComp.key] || 3;
+      const suggested = courses.find(c => c.competency === weakComp.key) ||
                         courses.find(c => c.status === 'upcoming');
-      return { emp, weakComp, suggested };
-    }).filter(r => r.suggested);
+      return { emp, weakComp, weakScore, suggested };
+    }).filter(r => r.suggested && r.weakScore <= 3);
   }, [employees, courses]);
 
   const handleSaveCourse = (updated) => {
@@ -810,6 +804,7 @@ export default function TrainingPage() {
                   <div style={{ fontSize: 12, color: c.textMuted, marginTop: 2 }}>
                     {lang === 'ar' ? 'كفاءة تحتاج تطوير: ' : 'Needs improvement: '}
                     <span style={{ color: '#F59E0B', fontWeight: 600 }}>{lang === 'ar' ? weakComp.ar : weakComp.en}</span>
+                    <span style={{ fontSize: 11, color: '#EF4444', marginRight: 4, marginLeft: 4 }}>({weakScore}/5)</span>
                   </div>
                 </div>
                 <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
