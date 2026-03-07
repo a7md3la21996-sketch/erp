@@ -176,7 +176,7 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
             </div>
         </div>
     </div>
-  );
+    );
 }
 
 // ── Main Page ─────────────────────────────────────────────────
