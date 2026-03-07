@@ -23,7 +23,7 @@ function Avatar({ emp, size = 34 }) {
         <div style={{ width: size, height: size, borderRadius: '50%', background: emp.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.34, fontWeight: 700, flexShrink: 0 }}>
             {initials}
         </div>
-    );
+  );
 }
 
 // ── Payslip Modal ─────────────────────────────────────────────
@@ -36,7 +36,7 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
             <span style={{ fontSize: 13, color: c.textMuted }}>{label}</span>
             <span style={{ fontSize: 13, fontWeight: bold ? 700 : 500, color: color || c.text }}>{value}</span>
         </div>
-    );
+  );
 
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -176,7 +176,7 @@ function PayslipModal({ data, month, year, onClose, isDark, isRTL, lang, c }) {
             </div>
         </div>
     </div>
-    );
+  );
 }
 
 // ── Main Page ─────────────────────────────────────────────────
@@ -518,5 +518,5 @@ export default function PayrollPage() {
                 />
             )}
         </div>
-    );
+  );
 }
