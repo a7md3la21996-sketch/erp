@@ -32,7 +32,11 @@ export const NAV_ITEMS = [
     { id: 'payroll',      label: { ar: 'الرواتب',         en: 'Payroll' },      path: '/hr/payroll',      permission: P.PAYROLL_VIEW },
     { id: 'performance',  label: { ar: 'الأداء',          en: 'Performance' },  path: '/hr/performance',  permission: P.HR_VIEW_OWN },
     { id: 'recruitment',  label: { ar: 'التوظيف',         en: 'Recruitment' },  path: '/hr/recruitment',  permission: P.HR_VIEW_ALL },
-    { id: 'disciplinary', label: { ar: 'الإجراءات التأديبية', en: 'Disciplinary' }, path: '/hr/disciplinary', permission: P.HR_VIEW_ALL },
+    { id: 'disciplinary',   label: { ar: 'الإجراءات التأديبية', en: 'Disciplinary' },          path: '/hr/disciplinary',   permission: P.HR_VIEW_ALL },
+    { id: 'training',       label: { ar: 'التدريب والتطوير',      en: 'Training & Development' }, path: '/hr/training',       permission: P.HR_VIEW_ALL },
+    { id: 'self-service',   label: { ar: 'بوابة الموظف',          en: 'Self-Service' },           path: '/hr/self-service',   permission: P.HR_VIEW_OWN },
+    { id: 'assets',         label: { ar: 'إدارة الأصول',          en: 'Assets' },                 path: '/hr/assets',         permission: P.HR_VIEW_ALL },
+    { id: 'onboarding',     label: { ar: 'الاستقبال والمغادرة',   en: 'Onboarding' },             path: '/hr/onboarding',     permission: P.HR_VIEW_ALL },
   ]},
   { id: 'finance', label: { ar: 'المالية', en: 'Finance' }, icon: Wallet, permission: P.FINANCE_VIEW, children: [
     { id: 'expenses', label: { ar: 'المصروفات', en: 'Expenses' }, path: '/finance/expenses', permission: P.EXPENSES_VIEW_OWN },
