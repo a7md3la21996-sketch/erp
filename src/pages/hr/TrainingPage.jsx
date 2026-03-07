@@ -6,7 +6,7 @@ import {
   DollarSign, Calendar, Star, TrendingUp, Award, Filter,
   ChevronRight, Edit2, Trash2, AlertCircle, BarChart2
 } from 'lucide-react';
-import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
+import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../../data/hr_mock_data';
 
 // ── Mock Data ──────────────────────────────────────────────────
 

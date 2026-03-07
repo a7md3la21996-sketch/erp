@@ -5,7 +5,7 @@ import {
   Star, Target, TrendingUp, X, Save, Plus,
   Award, Users, ChevronDown, ChevronUp, Eye
 } from 'lucide-react';
-import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
+import { MOCK_EMPLOYEES, COMPETENCIES } from '../../data/hr_mock_data';
 
 // ── Data ──────────────────────────────────────────────────────
 
