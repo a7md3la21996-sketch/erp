@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Clock, Users, AlertTriangle, CheckCircle, Upload,
   Plus, X, Save, ChevronLeft, ChevronRight,
-  Wifi, WifiOff, Edit2, Calendar, Download
+  Wifi, WifiOff, Edit2, Download
 } from 'lucide-react';
 import {
   MOCK_EMPLOYEES, DEPARTMENTS, MOCK_HR_POLICIES

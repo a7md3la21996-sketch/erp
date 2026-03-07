@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import {
   Users, Search, Plus, X, User, Mail, Phone,
   Building2, Briefcase, Clock, DollarSign,
-  Calendar, Eye, Edit2, AlertTriangle, CheckCircle, Save
+  Calendar, Eye, Edit2, AlertTriangle, CheckCircle, Save,
+  TrendingUp, ChevronRight, History
 } from 'lucide-react';
 import {
   MOCK_EMPLOYEES, DEPARTMENTS, CONTRACT_TYPES, WORK_TYPES, OT_MULTIPLIERS,
@@ -82,8 +83,253 @@ function StatusBadge({ employee, lang }) {
   );
 }
 
+// ── Salary Raise Modal ────────────────────────────────────────
+function SalaryRaiseModal({ employee, onClose, onSubmit, isDark, isRTL, lang, c }) {
+  const [form, setForm] = useState({
+    type: 'percentage', // percentage | fixed
+    value: '',
+    reason: '',
+    effective_date: new Date().toISOString().split('T')[0],
+    notes: '',
+  });
+  const [error, setError] = useState('');
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const newSalary = useMemo(() => {
+    if (!form.value || isNaN(form.value)) return null;
+    const v = parseFloat(form.value);
+    if (form.type === 'percentage') return Math.round(employee.base_salary * (1 + v / 100));
+    return Math.round(employee.base_salary + v);
+  }, [form.type, form.value, employee.base_salary]);
+
+  const diff = newSalary ? newSalary - employee.base_salary : 0;
+
+  const REASONS = {
+    ar: ['مكافأة أداء','زيادة سنوية','ترقية','تعديل سوق','تميز استثنائي','أخرى'],
+    en: ['Performance Bonus','Annual Increase','Promotion','Market Adjustment','Outstanding Achievement','Other'],
+  };
+
+  const handleSubmit = () => {
+    if (!form.value || isNaN(form.value) || parseFloat(form.value) <= 0) {
+      setError(lang === 'ar' ? 'أدخل قيمة صحيحة' : 'Enter a valid value'); return;
+    }
+    if (!form.reason) { setError(lang === 'ar' ? 'اختر سبب الزيادة' : 'Select raise reason'); return; }
+    onSubmit({ ...form, value: parseFloat(form.value), new_salary: newSalary, old_salary: employee.base_salary, diff });
+  };
+
+  const inp = { padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: c.cardBg, borderRadius: 16, width: '100%', maxWidth: 480, direction: isRTL ? 'rtl' : 'ltr' }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid ' + c.border, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#10B981,#059669)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={18} color="#fff" />
+            </div>
+            <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'طلب زيادة راتب' : 'Salary Raise Request'}</div>
+              <div style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? employee.full_name_ar : employee.full_name_en}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Current Salary */}
+          <div style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC', border: '1px solid ' + c.border, display: 'flex', justifyContent: 'space-between', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <span style={{ fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'الراتب الحالي' : 'Current Salary'}</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: c.text }}>{employee.base_salary.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+          </div>
+
+          {/* Type Toggle */}
+          <div>
+            <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 6, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'نوع الزيادة' : 'Raise Type'}</label>
+            <div style={{ display: 'flex', borderRadius: 8, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+              {[
+                { val: 'percentage', ar: 'نسبة مئوية %', en: 'Percentage %' },
+                { val: 'fixed',      ar: 'مبلغ ثابت',    en: 'Fixed Amount' },
+              ].map(t => (
+                <button key={t.val} onClick={() => set('type', t.val)}
+                  style={{ flex: 1, padding: '9px 0', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                    background: form.type === t.val ? '#4A7AAB' : 'transparent',
+                    color: form.type === t.val ? '#fff' : c.textMuted }}>
+                  {lang === 'ar' ? t.ar : t.en}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Value Input */}
+          <div>
+            <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 6, textAlign: isRTL ? 'right' : 'left' }}>
+              {form.type === 'percentage' ? (lang === 'ar' ? 'نسبة الزيادة (%)' : 'Raise Percentage (%)') : (lang === 'ar' ? 'مبلغ الزيادة (ج.م)' : 'Raise Amount (EGP)')}
+            </label>
+            <input type="number" min="0" value={form.value} onChange={e => set('value', e.target.value)}
+              placeholder={form.type === 'percentage' ? '10' : '500'}
+              style={{ ...inp, borderColor: error && !form.value ? '#EF4444' : c.border }} />
+          </div>
+
+          {/* Preview */}
+          {newSalary && (
+            <div style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(16,185,129,0.08)' : '#ECFDF5', border: '1px solid ' + (isDark ? 'rgba(16,185,129,0.2)' : '#A7F3D0'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                <div style={{ fontSize: 11, color: '#059669' }}>{lang === 'ar' ? 'الراتب الجديد' : 'New Salary'}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#10B981' }}>{newSalary.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</div>
+              </div>
+              <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
+                <div style={{ fontSize: 11, color: '#059669' }}>{lang === 'ar' ? 'قيمة الزيادة' : 'Increase'}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#10B981' }}>
+                  +{diff.toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}
+                  {form.type === 'fixed' && employee.base_salary > 0 && (
+                    <span style={{ fontSize: 12, color: '#059669', marginInlineStart: 4 }}>
+                      ({((diff / employee.base_salary) * 100).toFixed(1)}%)
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Reason */}
+          <div>
+            <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 6, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'سبب الزيادة *' : 'Reason *'}</label>
+            <select value={form.reason} onChange={e => set('reason', e.target.value)}
+              style={{ ...inp, cursor: 'pointer', borderColor: error && !form.reason ? '#EF4444' : c.border }}>
+              <option value="">{lang === 'ar' ? 'اختر السبب...' : 'Select reason...'}</option>
+              {REASONS[lang === 'ar' ? 'ar' : 'en'].map((r, i) => <option key={i} value={r}>{r}</option>)}
+            </select>
+          </div>
+
+          {/* Effective Date */}
+          <div>
+            <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 6, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'تاريخ التطبيق' : 'Effective Date'}</label>
+            <input type="date" value={form.effective_date} onChange={e => set('effective_date', e.target.value)} style={inp} />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label style={{ fontSize: 12, color: c.textMuted, display: 'block', marginBottom: 6, textAlign: isRTL ? 'right' : 'left' }}>{lang === 'ar' ? 'ملاحظات (اختياري)' : 'Notes (optional)'}</label>
+            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2}
+              placeholder={lang === 'ar' ? 'أي تفاصيل إضافية...' : 'Additional details...'}
+              style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }} />
+          </div>
+
+          {error && <p style={{ margin: 0, fontSize: 12, color: '#EF4444', textAlign: isRTL ? 'right' : 'left' }}>{error}</p>}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px', borderTop: '1px solid ' + c.border, display: 'flex', gap: 10, justifyContent: isRTL ? 'flex-start' : 'flex-end', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid ' + c.border, cursor: 'pointer', background: 'transparent', color: c.textMuted, fontSize: 13 }}>
+            {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+          </button>
+          <button onClick={handleSubmit}
+            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff', fontSize: 13, fontWeight: 600, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <TrendingUp size={14} />
+            {lang === 'ar' ? 'تقديم الطلب' : 'Submit Request'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Salary History Modal ───────────────────────────────────────
+function SalaryHistoryModal({ employee, history, onClose, isDark, isRTL, lang, c }) {
+  const STATUS_MAP = {
+    pending:  { ar: 'قيد المراجعة', en: 'Pending',  color: '#F59E0B', bg: '#FEF3C720' },
+    approved: { ar: 'معتمد',        en: 'Approved', color: '#10B981', bg: '#D1FAE520' },
+    rejected: { ar: 'مرفوض',        en: 'Rejected', color: '#EF4444', bg: '#FEE2E220' },
+  };
+
+  const empHistory = history.filter(h => h.employee_id === employee.id)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ background: c.cardBg, borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '85vh', overflowY: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
+
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid ' + c.border, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isRTL ? 'row-reverse' : 'row', position: 'sticky', top: 0, background: c.cardBg, zIndex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <History size={20} color="#4A7AAB" />
+            <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'سجل الرواتب' : 'Salary History'}</div>
+              <div style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? employee.full_name_ar : employee.full_name_en}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer', background: isDark ? 'rgba(239,68,68,0.1)' : '#FEF2F2', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <div style={{ padding: 24 }}>
+          {empHistory.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: c.textMuted }}>
+              <History size={36} style={{ opacity: 0.3, marginBottom: 10 }} />
+              <p style={{ margin: 0 }}>{lang === 'ar' ? 'لا يوجد سجل تغييرات' : 'No salary changes yet'}</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {empHistory.map((h, i) => {
+                const st = STATUS_MAP[h.status] || STATUS_MAP.pending;
+                return (
+                  <div key={h.id} style={{ padding: 16, borderRadius: 12, background: isDark ? 'rgba(74,122,171,0.05)' : '#F8FAFC', border: '1px solid ' + c.border }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                      <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{h.reason}</div>
+                        <div style={{ fontSize: 11, color: c.textMuted, marginTop: 2 }}>
+                          {lang === 'ar' ? 'طلب في' : 'Requested'}: {new Date(h.created_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB')}
+                          {h.effective_date && ` · ${lang === 'ar' ? 'يسري من' : 'Effective'}: ${new Date(h.effective_date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB')}`}
+                        </div>
+                      </div>
+                      <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: st.bg, color: st.color }}>
+                        {lang === 'ar' ? st.ar : st.en}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                      <span style={{ fontSize: 14, color: c.textMuted }}>{h.old_salary.toLocaleString()}</span>
+                      <ChevronRight size={14} color={c.textMuted} style={{ transform: isRTL ? 'scaleX(-1)' : 'none' }} />
+                      <span style={{ fontSize: 16, fontWeight: 700, color: '#10B981' }}>{h.new_salary.toLocaleString()}</span>
+                      <span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? 'ج.م' : 'EGP'}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#10B981', marginInlineStart: 4 }}>
+                        (+{h.diff.toLocaleString()} · {((h.diff / h.old_salary) * 100).toFixed(1)}%)
+                      </span>
+                    </div>
+
+                    {h.notes && <p style={{ margin: '8px 0 0', fontSize: 12, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>📝 {h.notes}</p>}
+
+                    {/* Approval Actions */}
+                    {h.status === 'pending' && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                        <button onClick={() => h.onApprove(h.id)}
+                          style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#10B981', color: '#fff', fontSize: 12, fontWeight: 600 }}>
+                          {lang === 'ar' ? '✓ اعتماد' : '✓ Approve'}
+                        </button>
+                        <button onClick={() => h.onReject(h.id)}
+                          style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #EF4444', cursor: 'pointer', background: 'transparent', color: '#EF4444', fontSize: 12, fontWeight: 600 }}>
+                          {lang === 'ar' ? '✕ رفض' : '✕ Reject'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── View Modal ────────────────────────────────────────────────
-function ViewModal({ employee, employees, onClose, onEdit, isDark, isRTL, lang, c }) {
+function ViewModal({ employee, employees, onClose, onEdit, onRaise, onHistory, isDark, isRTL, lang, c }) {
   if (!employee) return null;
   const years = calcYearsOfService(employee.hire_date);
   const leaveInfo = calcLeaveBalance(
@@ -124,6 +370,20 @@ function ViewModal({ employee, employees, onClose, onEdit, isDark, isRTL, lang, 
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <button
+              onClick={() => onRaise(employee)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#10B981', color: '#fff', fontSize: 13, fontWeight: 500, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+            >
+              <TrendingUp size={13} />
+              {lang === 'ar' ? 'زيادة راتب' : 'Raise'}
+            </button>
+            <button
+              onClick={() => onHistory(employee)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: '1px solid ' + c.border, cursor: 'pointer', background: 'transparent', color: c.textMuted, fontSize: 13, fontWeight: 500, flexDirection: isRTL ? 'row-reverse' : 'row' }}
+            >
+              <History size={13} />
+              {lang === 'ar' ? 'السجل' : 'History'}
+            </button>
             <button
               onClick={() => { onClose(); onEdit(employee); }}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: c.accent, color: '#fff', fontSize: 13, fontWeight: 500 }}
@@ -431,8 +691,13 @@ export default function EmployeesPage() {
   const [deptFilter, setDeptFilter] = useState('all');
   const [contractFilter, setContractFilter] = useState('all');
   const [selectedEmployee, setSelectedEmployee] = useState(null);
-  const [editEmployee, setEditEmployee] = useState(null);   // null = closed, {} = new, {...emp} = edit
+  const [editEmployee, setEditEmployee] = useState(null);
   const [showForm, setShowForm] = useState(false);
+  const [showRaise, setShowRaise] = useState(false);
+  const [raiseEmployee, setRaiseEmployee] = useState(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyEmployee, setHistoryEmployee] = useState(null);
+  const [salaryHistory, setSalaryHistory] = useState([]);
 
   const c = {
     bg:        isDark ? '#152232' : '#f9fafb',
@@ -480,6 +745,36 @@ export default function EmployeesPage() {
     });
     setShowForm(false);
     setEditEmployee(null);
+  };
+
+  const openRaise = (emp) => { setRaiseEmployee(emp); setShowRaise(true); setSelectedEmployee(null); };
+  const openHistory = (emp) => { setHistoryEmployee(emp); setShowHistory(true); };
+
+  const handleRaiseSubmit = (data) => {
+    const newEntry = {
+      id: Date.now().toString(),
+      employee_id: raiseEmployee.id,
+      ...data,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+      onApprove: (id) => {
+        setSalaryHistory(prev => prev.map(h => {
+          if (h.id !== id) return h;
+          // تحديث الراتب الفعلي عند الاعتماد
+          setEmployees(emps => emps.map(e =>
+            e.id === h.employee_id ? { ...e, base_salary: h.new_salary } : e
+          ));
+          return { ...h, status: 'approved' };
+        }));
+      },
+      onReject: (id) => setSalaryHistory(prev => prev.map(h => h.id === id ? { ...h, status: 'rejected' } : h)),
+    };
+    setSalaryHistory(prev => [newEntry, ...prev]);
+    setShowRaise(false);
+    setRaiseEmployee(null);
+    // افتح السجل مباشرة بعد الطلب
+    setHistoryEmployee(raiseEmployee);
+    setShowHistory(true);
   };
 
   const openAdd = () => { setEditEmployee(null); setShowForm(true); };
@@ -667,6 +962,28 @@ export default function EmployeesPage() {
           employees={employees}
           onClose={() => setSelectedEmployee(null)}
           onEdit={openEdit}
+          onRaise={openRaise}
+          onHistory={openHistory}
+          isDark={isDark} isRTL={isRTL} lang={lang} c={c}
+        />
+      )}
+
+      {/* Salary Raise Modal */}
+      {showRaise && raiseEmployee && (
+        <SalaryRaiseModal
+          employee={raiseEmployee}
+          onClose={() => { setShowRaise(false); setRaiseEmployee(null); }}
+          onSubmit={handleRaiseSubmit}
+          isDark={isDark} isRTL={isRTL} lang={lang} c={c}
+        />
+      )}
+
+      {/* Salary History Modal */}
+      {showHistory && historyEmployee && (
+        <SalaryHistoryModal
+          employee={historyEmployee}
+          history={salaryHistory}
+          onClose={() => { setShowHistory(false); setHistoryEmployee(null); }}
           isDark={isDark} isRTL={isRTL} lang={lang} c={c}
         />
       )}
