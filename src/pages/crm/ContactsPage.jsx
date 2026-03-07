@@ -834,7 +834,7 @@ export default function ContactsPage() {
       {/* Page Header */}
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
+          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: c.text }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
             {loading ? t('common.loading') : `${filtered.length} results`}
           </p>
@@ -883,6 +883,26 @@ export default function ContactsPage() {
         </div>
       </div>
 
+      {/* Stats Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 18 }}>
+        {[
+          { label: isRTL ? 'إجمالي' : 'Total', value: stats.total, icon: '👥', color: '#4A7AAB', bg: isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)' },
+          { label: isRTL ? 'ليدز' : 'Leads', value: stats.leads, icon: '🎯', color: '#4A7AAB', bg: isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)' },
+          { label: isRTL ? 'عملاء' : 'Clients', value: stats.clients, icon: '🤝', color: '#10B981', bg: isDark ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.07)' },
+          { label: isRTL ? 'حار' : 'Hot', value: stats.hot, icon: '🔴', color: '#EF4444', bg: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.07)' },
+          { label: isRTL ? 'كولد' : 'Cold Calls', value: stats.cold, icon: '📞', color: '#8BA8C8', bg: isDark ? 'rgba(139,168,200,0.1)' : 'rgba(139,168,200,0.07)' },
+          { label: isRTL ? 'بلاك ليست' : 'Blacklist', value: stats.blacklisted, icon: '⛔', color: '#EF4444', bg: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.05)' },
+        ].map(s => (
+          <div key={s.label} style={{ background: c.cardBg, border: `1px solid ${c.border}`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: s.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{s.icon}</div>
+            <div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: c.textMuted, marginTop: 2 }}>{s.label}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Type Chips */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         {[
@@ -893,7 +913,7 @@ export default function ContactsPage() {
         ].map(s => (
           <button key={s.value} onClick={() => setFilterType(s.value)} style={{
             padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterType === s.value ? s.color : '#e5e7eb'}`,
-            background: filterType === s.value ? `${s.color}15` : '#fff',
+            background: filterType === s.value ? `${s.color}15` : c.cardBg,
             color: filterType === s.value ? s.color : '#6b7280', fontSize: 12, fontWeight: filterType === s.value ? 700 : 400, cursor: 'pointer',
           }}>
             {s.label} <span style={{ background: filterType === s.value ? s.color : '#e5e7eb', color: filterType === s.value ? '#fff' : '#6b7280', borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{s.count}</span>
@@ -961,94 +981,100 @@ export default function ContactsPage() {
                   <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
                   {isRTL ? 'لا توجد نتائج' : 'No results found'}
                 </td></tr>
-              ) : filtered.map((c) => (
-                <tr key={c.id}
-                  onClick={() => setSelected(c)}
-                  style={{ cursor: 'pointer', background: selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
-                  onMouseEnter={e => { if (!selectedIds.includes(c.id)) e.currentTarget.style.background = c.rowHover; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
+              ) : filtered.map((row) => (
+                <tr key={row.id}
+                  onClick={() => setSelected(row)}
+                  style={{ cursor: 'pointer', background: selectedIds.includes(row.id) ? 'rgba(74,122,171,0.08)' : row.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
+                  onMouseEnter={e => { if (!selectedIds.includes(row.id)) e.currentTarget.style.background = c.rowHover; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = selectedIds.includes(row.id) ? 'rgba(74,122,171,0.08)' : row.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
                 >
-                  {/* Checkbox + ID - hidden in RTL */}
-                  {!isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
-                  {!isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
+                  {/* Checkbox + ID */}
+                  {!isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} style={{ cursor: 'pointer' }} /></td>}
+                  {!isRTL && <td style={{ ...td, fontSize: 10, color: c.textMuted, fontFamily: 'monospace' }}>#{String(row.id).slice(-4)}</td>}
                   {/* Name */}
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{
-                        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                        background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id),
+                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                        background: row.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(row.id),
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 13, fontWeight: 700, color: c.is_blacklisted ? '#EF4444' : '#fff',
+                        fontSize: 14, fontWeight: 700, color: row.is_blacklisted ? '#EF4444' : '#fff',
+                        boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                       }}>
-                        {c.is_blacklisted ? '⛔' : initials(c.full_name)}
+                        {row.is_blacklisted ? '⛔' : initials(row.full_name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : '#1A2B3C' }}>{c.full_name || 'بدون اسم'}</div>
-                        {c.email && <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.email}</div>}
-                        {c.last_activity_at && (() => { const d = Math.floor((Date.now() - new Date(c.last_activity_at)) / 86400000); return <div style={{ fontSize: 10, marginTop: 2, fontWeight: 500, color: d === 0 ? '#10B981' : d <= 3 ? '#F97316' : d <= 7 ? '#F59E0B' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? '⏱ ' + d + ' أيام' : '⏱ ' + d + 'd ago')}</div>; })()}
+                        <div style={{ fontWeight: 600, fontSize: 13, color: row.is_blacklisted ? '#EF4444' : c.text }}>{row.full_name || 'بدون اسم'}</div>
+                        {row.email && <div style={{ fontSize: 11, color: c.textMuted, marginTop: 1 }}>{row.email}</div>}
+                        {row.last_activity_at && (() => { const d = Math.floor((Date.now() - new Date(row.last_activity_at)) / 86400000); return <div style={{ fontSize: 11, marginTop: 3, fontWeight: 600, color: d === 0 ? '#10B981' : d <= 3 ? '#F97316' : d <= 7 ? '#F59E0B' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? '⏱ ' + d + ' يوم' : '⏱ ' + d + 'd ago')}</div>; })()}
                       </div>
                     </div>
                   </td>
                   {/* Phone */}
                   <td style={td} onClick={e => e.stopPropagation()}>
-                    <PhoneCell phone={c.phone} />
-                    {c.phone2 && <PhoneCell phone={c.phone2} small />}
+                    <PhoneCell phone={row.phone} />
+                    {row.phone2 && <PhoneCell phone={row.phone2} small />}
                   </td>
                   {/* Type */}
-                  <td style={td}><Chip label={TYPE[c.contact_type]?.label} color={TYPE[c.contact_type]?.color} bg={TYPE[c.contact_type]?.bg} /></td>
+                  <td style={td}><Chip label={TYPE[row.contact_type]?.label} color={TYPE[row.contact_type]?.color} bg={TYPE[row.contact_type]?.bg} /></td>
                   {/* Temp */}
-                  <td style={td}><span title={TEMP[c.temperature]?.label} style={{ fontSize: 16 }}>{TEMP[c.temperature]?.icon}</span></td>
+                  <td style={td}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontSize: 15 }}>{TEMP[row.temperature]?.icon}</span>
+                      <span style={{ fontSize: 11, color: TEMP[row.temperature]?.color, fontWeight: 600 }}>{TEMP[row.temperature]?.labelAr}</span>
+                    </div>
+                  </td>
                   {/* Source */}
-                  <td style={td}><span style={{ fontSize: 11, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 8px', color: '#6b7280' }}>{i18n.language === "ar" ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></td>
+                  <td style={td}><span style={{ fontSize: 11, background: isDark ? 'rgba(74,122,171,0.1)' : '#f3f4f6', border: `1px solid ${c.border}`, borderRadius: 6, padding: '3px 8px', color: c.textMuted }}>{i18n.language === "ar" ? SOURCE_LABELS[row.source] : (SOURCE_EN[row.source] || row.source)}</span></td>
                   {/* Stage */}
                   <td style={td} onClick={e => e.stopPropagation()}>
-                    {isAdmin && c.contact_type === 'lead' ? (
-                      <select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} style={{ fontSize: 11, background: 'transparent', border: '1px solid rgba(212,168,83,0.3)', borderRadius: 6, color: '#D4A853', padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
+                    {isAdmin && row.contact_type === 'lead' ? (
+                      <select value={row.stage || ''} onChange={e => handleStageChange(row.id, e.target.value)} style={{ fontSize: 11, background: isDark ? 'rgba(212,168,83,0.08)' : 'transparent', border: '1px solid rgba(212,168,83,0.3)', borderRadius: 6, color: '#D4A853', padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
                         {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                       </select>
-                    ) : c.stage ? <Chip label={STAGE_LABELS[c.stage]} color="#D4A853" bg="rgba(212,168,83,0.1)" />
-                    : c.cold_status ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{COLD_LABELS[c.cold_status]}</span>
-                    : <span style={{ color: '#d1d5db' }}>—</span>}
+                    ) : row.stage ? <Chip label={STAGE_LABELS[row.stage]} color="#D4A853" bg="rgba(212,168,83,0.1)" />
+                    : row.cold_status ? <span style={{ fontSize: 11, color: c.textMuted }}>{COLD_LABELS[row.cold_status]}</span>
+                    : <span style={{ color: c.textMuted }}>—</span>}
                   </td>
                   {/* Budget */}
-                  <td style={{ ...td, fontSize: 12, color: '#6b7280' }}>{fmtBudget(c.budget_min, c.budget_max)}</td>
-                  {/* ID + Checkbox - shown at end in RTL */}
-                  {isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
-                  {isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
+                  <td style={{ ...td, fontSize: 12, color: c.textMuted }}>{fmtBudget(row.budget_min, row.budget_max)}</td>
+                  {/* ID + Checkbox RTL */}
+                  {isRTL && <td style={{ ...td, fontSize: 10, color: c.textMuted, fontFamily: 'monospace' }}>#{String(row.id).slice(-4)}</td>}
+                  {isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(row.id)} onChange={() => toggleSelect(row.id)} style={{ cursor: 'pointer' }} /></td>}
                   {/* Score */}
-                  <td style={td}><ScorePill score={c.lead_score || 0} /></td>
+                  <td style={td}><ScorePill score={row.lead_score || 0} /></td>
                   {/* Actions */}
                   <td style={td} onClick={e => e.stopPropagation()}>
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 7, color: '#10B981', textDecoration: 'none' }}>
+                      <a href={"tel:" + row.phone} title={isRTL ? "اتصال" : "Call"} style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, color: '#10B981', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l.77-.77a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       </a>
-                      <a href={"https://wa.me/2" + c.phone} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 7, color: '#25D366', textDecoration: 'none' }}>
+                      <a href={"https://wa.me/2" + row.phone} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.08)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 8, color: '#25D366', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                       </a>
                       <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-                        <button onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                          style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: openMenuId === c.id ? '#4A7AAB' : '#fff', border: '1px solid ' + (openMenuId === c.id ? '#4A7AAB' : '#e5e7eb'), borderRadius: 7, color: openMenuId === c.id ? '#fff' : '#6b7280', cursor: 'pointer' }}>
+                        <button onClick={() => setOpenMenuId(openMenuId === row.id ? null : row.id)}
+                          style={{ width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: openMenuId === row.id ? '#4A7AAB' : isDark ? 'rgba(74,122,171,0.1)' : '#fff', border: '1px solid ' + (openMenuId === row.id ? '#4A7AAB' : c.border), borderRadius: 8, color: openMenuId === row.id ? '#fff' : c.textMuted, cursor: 'pointer' }}>
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
                         </button>
-                        {openMenuId === c.id && (
-                          <div style={{ position: 'absolute', top: 32, left: 0, background: isDark ? '#1a2234' : '#fff', border: `1px solid ${c.border}`, borderRadius: 12, minWidth: 190, zIndex: 100, boxShadow: '0 8px 30px rgba(27,51,71,0.12)', overflow: 'hidden' }}>
+                        {openMenuId === row.id && (
+                          <div style={{ position: 'absolute', top: 34, left: 0, background: isDark ? '#1a2234' : '#fff', border: `1px solid ${c.border}`, borderRadius: 12, minWidth: 190, zIndex: 100, boxShadow: '0 8px 30px rgba(27,51,71,0.15)', overflow: 'hidden' }}>
                             <div style={{ padding: 6 }}>
-                              <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <button onClick={() => { setLogCallTarget(row); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07"/><path d="M8.09 8.91a16 16 0 0 0 6 6"/></svg>
                                 {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
                               </button>
-                              <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <button onClick={() => { setReminderTarget(row); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                                 {isRTL ? 'إضافة تذكير' : 'Add Reminder'}
                               </button>
-                              <button onClick={() => { const data = [['الاسم','الهاتف','النوع','المصدر','الميزانية'],[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,﻿'+csv; a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <button onClick={() => { const data = [['الاسم','الهاتف','النوع','المصدر','الميزانية'],[row.full_name,row.phone,row.contact_type,row.source,(row.budget_min||'')+'\u2013'+(row.budget_max||'')]]; const csv = data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,\uFEFF'+csv; a.download = row.full_name+'.csv'; a.click(); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                                 {isRTL ? 'تصدير بيانات العميل' : 'Export Contact'}
                               </button>
                             </div>
-                            {!c.is_blacklisted && (<><div style={{ height: 1, background: '#E2E8F0' }} /><div style={{ padding: 6 }}>
-                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#EF4444', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.05)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                            {!row.is_blacklisted && (<><div style={{ height: 1, background: c.border }} /><div style={{ padding: 6 }}>
+                              <button onClick={() => { setBlacklistTarget(row); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#EF4444', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.07)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                                 {isRTL ? 'بلاك ليست' : 'Blacklist'}
                               </button>
@@ -1070,9 +1096,9 @@ export default function ContactsPage() {
       {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => setContacts(prev => prev.map(c => c.id === updated.id ? updated : c))} />}
       {logCallTarget && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setLogCallTarget(null)}>
-        <div style={{ background: '#fff', borderRadius: 16, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1B3347' }}>📞 {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {logCallTarget.full_name}</h3>
+        <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+          <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: c.text }}>📞 {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {logCallTarget.full_name}</h3>
             <button onClick={() => setLogCallTarget(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#9CA3AF', cursor: 'pointer' }}>×</button>
           </div>
           <div style={{ padding: '18px 20px' }}>
@@ -1091,8 +1117,8 @@ export default function ContactsPage() {
               ))}
             </div>
           </div>
-          <div style={{ padding: '14px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', fontSize: 13, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+          <div style={{ padding: '14px 20px', borderTop: `1px solid ${c.border}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${c.border}`, background: isDark ? 'rgba(74,122,171,0.1)' : '#F8FAFC', fontSize: 13, color: c.textMuted, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
             <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? '💾 حفظ المكالمة' : '💾 Save Call'}</button>
           </div>
         </div>
@@ -1100,9 +1126,9 @@ export default function ContactsPage() {
     )}
     {reminderTarget && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setReminderTarget(null)}>
-        <div style={{ background: '#fff', borderRadius: 16, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-          <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1B3347' }}>⏰ {isRTL ? 'إضافة تذكير' : 'Add Reminder'} — {reminderTarget.full_name}</h3>
+        <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.25)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+          <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: c.text }}>⏰ {isRTL ? 'إضافة تذكير' : 'Add Reminder'} — {reminderTarget.full_name}</h3>
             <button onClick={() => setReminderTarget(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: '#9CA3AF', cursor: 'pointer' }}>×</button>
           </div>
           <div style={{ padding: '18px 20px' }}>
@@ -1115,8 +1141,8 @@ export default function ContactsPage() {
             <div style={{ fontSize: 12, color: '#4A5568', fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'الرسالة' : 'Message'}</div>
             <input style={{ width: '100%', padding: '9px 12px', border: '1px solid #E2E8F0', borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none' }} placeholder={isRTL ? 'متابعة العميل...' : 'Follow up with client...'} />
           </div>
-          <div style={{ padding: '14px 20px', borderTop: '1px solid #E2E8F0', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid #E2E8F0', background: '#F8FAFC', fontSize: 13, color: '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+          <div style={{ padding: '14px 20px', borderTop: `1px solid ${c.border}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${c.border}`, background: isDark ? 'rgba(74,122,171,0.1)' : '#F8FAFC', fontSize: 13, color: c.textMuted, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
             <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? '⏰ حفظ التذكير' : '⏰ Save Reminder'}</button>
           </div>
         </div>
