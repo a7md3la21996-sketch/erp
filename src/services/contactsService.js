@@ -41,7 +41,7 @@ export async function createContact(contactData) {
   const { data, error } = await supabase
     .from('contacts')
     .insert([{ ...contactData, last_activity_at: new Date().toISOString() }])
-    .select()
+    .select('*')
     .single();
   if (error) throw error;
   return data;
@@ -52,7 +52,7 @@ export async function updateContact(id, updates) {
     .from('contacts')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select()
+    .select('*')
     .single();
   if (error) throw error;
   return data;
@@ -101,7 +101,7 @@ export async function createActivity(activityData) {
   const { data, error } = await supabase
     .from('activities')
     .insert([activityData])
-    .select()
+    .select('*')
     .single();
   if (error) throw error;
 
