@@ -212,7 +212,7 @@ export default function PerformancePage() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#6B8DB5,#EF4444)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#2B4C6F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Target size={20} color="#fff" />
           </div>
           <div>
