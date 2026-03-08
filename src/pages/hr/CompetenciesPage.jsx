@@ -1,620 +1,111 @@
-import { useState, useMemo } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Star, Target, TrendingUp, X, Save, Plus,
-  Award, Users, ChevronDown, ChevronUp, Eye
-} from 'lucide-react';
-import { MOCK_EMPLOYEES, COMPETENCIES } from '../../data/hr_mock_data';
+import { useTheme } from '../../contexts/ThemeContext';
+import { COMPETENCIES } from '../../data/hr_mock_data';
+import { Award, TrendingUp, Users, Star, ChevronDown } from 'lucide-react';
 
-// ── Data ──────────────────────────────────────────────────────
-
-const KPIS = {
-  sales:     [
-    { id: 'k1', ar: 'عدد الصفقات المغلقة', en: 'Deals Closed',    unit: 'deals', target: 10 },
-    { id: 'k2', ar: 'إجمالي المبيعات',     en: 'Total Sales',     unit: 'EGP',   target: 500000 },
-    { id: 'k3', ar: 'معدل التحويل',         en: 'Conversion Rate', unit: '%',     target: 30 },
-  ],
-  marketing: [
-    { id: 'k4', ar: 'عدد العملاء المحتملين', en: 'Leads Generated', unit: 'leads', target: 50 },
-    { id: 'k5', ar: 'معدل التفاعل',           en: 'Engagement Rate', unit: '%',     target: 5 },
-  ],
-  hr: [
-    { id: 'k6', ar: 'دوران الموظفين',      en: 'Turnover Rate',    unit: '%',     target: 5 },
-    { id: 'k7', ar: 'وقت التوظيف (أيام)', en: 'Time to Hire',     unit: 'days',  target: 30 },
-  ],
-  finance: [
-    { id: 'k8', ar: 'دقة التقارير',       en: 'Report Accuracy',  unit: '%',     target: 99 },
-    { id: 'k9', ar: 'إغلاق الشهر (أيام)', en: 'Month Close Days', unit: 'days',  target: 3 },
-  ],
-};
-
-const RATING_LABELS = {
-  ar: { 1: 'ضعيف', 2: 'أقل من المتوسط', 3: 'متوسط', 4: 'جيد', 5: 'ممتاز' },
-  en: { 1: 'Poor', 2: 'Below Average', 3: 'Average', 4: 'Good', 5: 'Excellent' },
-};
-
-const RATING_COLORS = { 1: '#EF4444', 2: '#EF4444', 3: '#6B8DB5', 4: '#4A7AAB', 5: '#4A7AAB' };
-
-function genScores(empId) {
-  const seed = empId.charCodeAt(empId.length - 1);
-  return COMPETENCIES.reduce((acc, c, i) => {
-    acc[c.key] = Math.min(5, Math.max(1, Math.round(2.5 + ((seed * (i + 3)) % 25) / 10)));
-    return acc;
-  }, {});
+function useDS() {
+  const { theme } = useTheme(); const dark = theme==='dark';
+  return { dark, bg:dark?'#152232':'#F0F4F8', card:dark?'#1a2234':'#ffffff', border:dark?'rgba(74,122,171,0.2)':'#E2E8F0', text:dark?'#E2EAF4':'#1A2B3C', muted:dark?'#8BA8C8':'#64748B', input:dark?'#0F1E2D':'#ffffff', rowHover:dark?'rgba(74,122,171,0.07)':'#F8FAFC', thBg:dark?'rgba(74,122,171,0.08)':'#F8FAFC', accent:'#4A7AAB', primary:'#2B4C6F' };
 }
 
-function genKpiActuals(dept) {
-  const kpis = KPIS[dept] || [];
-  return kpis.reduce((acc, k) => {
-    const pct = 0.6 + Math.random() * 0.6;
-    acc[k.id] = Math.round(k.target * pct);
-    return acc;
-  }, {});
-}
-
-const MOCK_REVIEWS = MOCK_EMPLOYEES.map(emp => ({
-  emp_id:   emp.id,
-  period:   'Q1 2026',
-  scores:   genScores(emp.id),
-  kpi_actuals: genKpiActuals(emp.department),
-  manager_note: '',
-  status: Math.random() > 0.4 ? 'completed' : 'pending',
-}));
-
-function calcWeightedScore(scores) {
-  const total = COMPETENCIES.reduce((sum, c) => sum + (scores[c.key] || 3) * c.weight, 0);
-  return Math.round((total / 100) * 10) / 10;
-}
-
-function nineBoxPos(perfScore, potentialScore) {
-  const p = perfScore <= 2 ? 0 : perfScore <= 3.5 ? 1 : 2;
-  const q = potentialScore <= 2 ? 0 : potentialScore <= 3.5 ? 1 : 2;
-  return { col: p, row: 2 - q };
-}
-
-const NINE_BOX_LABELS = {
-  ar: [
-    ['نجم صاعد ', 'عالي الأداء ', 'قائد المستقبل '],
-    ['لغز ',       'موظف أساسي ',  `ملهم عالٍ 🔥`],
-    ['مخاطرة ',    'موظف جيد ',    `أداء عالٍ `],
-  ],
-  en: [
-    ['Rising Star ', 'High Performer ', 'Future Leader '],
-    ['Enigma ',       'Core Player ',    'High Potential 🔥'],
-    ['Risk ',         'Solid Performer ', 'High Performer '],
-  ],
-};
-
-const NINE_BOX_COLORS = [
-  ['#4A7AAB', '#4A7AAB', '#4A7AAB'],
-  ['#6B8DB5', '#4A7AAB', '#6B8DB5'],
-  ['#EF4444', '#8BA8C8', '#EF4444'],
-];
-
-// ── Avatar ─────────────────────────────────────────────────
-function Avatar({ emp, size = 34 }) {
-  const initials = emp.full_name_ar.split('').slice(0,2).map(w=>w[0]).join('');
-  return (
-    <div style={{ width: size, height: size, borderRadius: '50%', background: emp.avatar_color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: size * 0.34, fontWeight: 700, flexShrink: 0 }}>
-      {initials}
+function KpiCard({ icon: Icon, label, value, color='#4A7AAB' }) {
+  const ds = useDS(); const [hov, setHov] = useState(false);
+  return <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ background:ds.card, borderRadius:14, border:`1px solid ${hov?color+'60':ds.border}`, padding:'18px 20px', position:'relative', overflow:'hidden', transform:hov?'translateY(-2px)':'none', boxShadow:hov?`0 8px 24px ${color}22`:'0 1px 3px rgba(0,0,0,0.06)', transition:'all 0.2s ease' }}>
+    <div style={{ position:'absolute', top:0, right:0, width:4, height:'100%', background:`linear-gradient(180deg,${color},transparent)`, borderRadius:'14px 0 0 14px', opacity:hov?1:0.6, transition:'opacity 0.2s' }} />
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+      <div><p style={{ margin:'0 0 6px', fontSize:12, color:ds.muted, fontWeight:500 }}>{label}</p><p style={{ margin:0, fontSize:26, fontWeight:800, color:ds.text, lineHeight:1 }}>{value}</p></div>
+      <div style={{ width:42, height:42, borderRadius:11, background:color+(hov?'25':'15'), display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><Icon size={20} color={color} /></div>
     </div>
-  );
+  </div>;
 }
 
-// ── Star Rating ────────────────────────────────────────────
-function StarRating({ value, onChange, size = 18 }) {
-  const [hovered, setHovered] = useState(0);
-  return (
-    <div style={{ display: 'flex', gap: 3 }}>
-      {[1,2,3,4,5].map(n => (
-        <Star key={n} size={size}
-          fill={(hovered || value) >= n ? RATING_COLORS[hovered || value] : 'none'}
-          color={(hovered || value) >= n ? RATING_COLORS[hovered || value] : '#8BA8C8'}
-          style={{ cursor: onChange ? 'pointer' : 'default', transition: 'all 0.1s' }}
-          onMouseEnter={() => onChange && setHovered(n)}
-          onMouseLeave={() => onChange && setHovered(0)}
-          onClick={() => onChange && onChange(n)}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ── Review Modal ───────────────────────────────────────────
-function ReviewModal({ review, emp, onClose, onSave, isDark, isRTL, lang, c }) {
-  const [scores, setScores]   = useState({ ...review.scores });
-  const [note, setNote]       = useState(review.manager_note || '');
-  const weightedScore = calcWeightedScore(scores);
-  const kpis = KPIS[emp.department] || [];
-
-  const inp = { padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' };
-  const lbl = { fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 4, display: 'block', textAlign: isRTL ? 'right' : 'left' };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, overflowY: 'auto' }}>
-      <div style={{ background: c.cardBg, borderRadius: 16, width: '100%', maxWidth: 600, direction: isRTL ? 'rtl' : 'ltr', maxHeight: '90vh', overflowY: 'auto' }}>
-
-        {/* Header */}
-        <div style={{ padding: '18px 24px', borderBottom: '1px solid ' + c.border, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexDirection: isRTL ? 'row-reverse' : 'row', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', borderRadius: '16px 16px 0 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <Avatar emp={emp} size={38} />
-            <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#fff' }}>{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>{review.period} · {lang === 'ar' ? emp.job_title_ar : emp.job_title_en}</div>
-            </div>
-          </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 7, border: 'none', cursor: 'pointer', background: 'rgba(255,255,255,0.2)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <X size={14} />
-          </button>
-        </div>
-
-        <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {/* Weighted Score Banner */}
-          <div style={{ padding: '14px 20px', borderRadius: 12, background: `${RATING_COLORS[Math.round(weightedScore)]}15`, border: `1px solid ${RATING_COLORS[Math.round(weightedScore)]}30`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-            <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-              <div style={{ fontSize: 12, color: c.textMuted, marginBottom: 4 }}>{lang === 'ar' ? 'الدرجة المرجحة الإجمالية' : 'Weighted Overall Score'}</div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: RATING_COLORS[Math.round(weightedScore)] }}>{weightedScore} / 5</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <StarRating value={Math.round(weightedScore)} size={22} />
-              <div style={{ fontSize: 12, fontWeight: 600, color: RATING_COLORS[Math.round(weightedScore)], marginTop: 6 }}>
-                {RATING_LABELS[lang][Math.round(weightedScore)]}
-              </div>
-            </div>
-          </div>
-
-          {/* Competencies */}
-          <div>
-            <h4 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'الكفاءات' : 'Competencies'}</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {COMPETENCIES.map(comp => (
-                <div key={comp.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: '1px solid ' + c.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <span style={{ fontSize: 20, flexShrink: 0 }}>{comp.icon}</span>
-                  <div style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? comp.ar : comp.en}</div>
-                    <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? `وزن: ${comp.weight}%` : `Weight: ${comp.weight}%`}</div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                    <StarRating value={scores[comp.key] || 3} onChange={v => setScores(s => ({ ...s, [comp.key]: v }))} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: RATING_COLORS[scores[comp.key] || 3], minWidth: 70, textAlign: isRTL ? 'right' : 'left' }}>
-                      {RATING_LABELS[lang][scores[comp.key] || 3]}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* KPIs */}
-          {kpis.length > 0 && (
-            <div>
-              <h4 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'مؤشرات الأداء (KPIs)' : 'KPIs'}</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {kpis.map(kpi => {
-                  const actual = review.kpi_actuals?.[kpi.id] || 0;
-                  const pct    = Math.min(100, Math.round((actual / kpi.target) * 100));
-                  const color  = pct >= 100 ? '#4A7AAB' : pct >= 75 ? '#4A7AAB' : pct >= 50 ? '#6B8DB5' : '#EF4444';
-                  return (
-                    <div key={kpi.id} style={{ padding: '12px 16px', borderRadius: 10, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: '1px solid ' + c.border }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? kpi.ar : kpi.en}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color }}>
-                          {actual.toLocaleString()} / {kpi.target.toLocaleString()} {kpi.unit}
-                        </span>
-                      </div>
-                      <div style={{ height: 6, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, borderRadius: 3, background: color, transition: 'width 0.6s ease' }} />
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                        <span style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? `الهدف: ${kpi.target.toLocaleString()}` : `Target: ${kpi.target.toLocaleString()}`}</span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color }}>{pct}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Manager Note */}
-          <div>
-            <label style={lbl}>{lang === 'ar' ? 'ملاحظات المدير' : 'Manager Notes'}</label>
-            <textarea value={note} onChange={e => setNote(e.target.value)} rows={3}
-              style={{ ...inp, resize: 'vertical', fontFamily: 'inherit' }}
-              placeholder={lang === 'ar' ? 'أضف ملاحظاتك...' : 'Add your notes...'} />
-          </div>
-        </div>
-
-        <div style={{ padding: '14px 24px', borderTop: '1px solid ' + c.border, display: 'flex', gap: 10, justifyContent: isRTL ? 'flex-start' : 'flex-end', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid ' + c.border, cursor: 'pointer', background: 'transparent', color: c.textMuted, fontSize: 13 }}>
-            {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-          </button>
-          <button onClick={() => onSave({ ...review, scores, manager_note: note, status: 'completed' })}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 600 }}>
-            <Save size={14} /> {lang === 'ar' ? 'حفظ التقييم' : 'Save Review'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Main Page ──────────────────────────────────────────────
 export default function CompetenciesPage() {
-  const { theme } = useTheme();
-  const { i18n }  = useTranslation();
-  const isDark = theme === 'dark';
-  const isRTL  = i18n.language === 'ar';
-  const lang   = i18n.language;
+  const { i18n } = useTranslation(); const ds = useDS();
+  const isRTL = i18n.language==='ar'; const lang = i18n.language;
+  const [filter, setFilter] = useState('all');
+  const [expanded, setExpanded] = useState(null);
 
-  const c = {
-    bg:        isDark ? '#152232' : '#f9fafb',
-    cardBg:    isDark ? '#1a2234' : '#ffffff',
-    border:    isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text:      isDark ? '#E2EAF4' : '#111827',
-    textMuted: isDark ? '#8BA8C8' : '#6b7280',
-    inputBg:   isDark ? '#0F1E2D' : '#ffffff',
-    thBg:      isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC',
-    rowHover:  isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC',
-    accent:    '#4A7AAB',
-    primary:   '#2B4C6F',
-  };
+  const categories = [...new Set(COMPETENCIES.map(c=>c.category))];
+  const filtered = filter==='all' ? COMPETENCIES : COMPETENCIES.filter(c=>c.category===filter);
+  const avgLevel = Math.round(COMPETENCIES.reduce((s,c)=>s+(c.required_level||3),0)/COMPETENCIES.length);
 
-  const [tab, setTab]               = useState('overview');
-  const [reviews, setReviews]       = useState(MOCK_REVIEWS);
-  const [selectedReview, setSelRev] = useState(null);
-  const [selectedEmp, setSelEmp]    = useState(null);
-  const [expandedDept, setExpDept]  = useState(null);
-
-  const reviewMap = useMemo(() => {
-    return reviews.reduce((acc, r) => { acc[r.emp_id] = r; return acc; }, {});
-  }, [reviews]);
-
-  const enriched = useMemo(() => MOCK_EMPLOYEES.map(emp => {
-    const r   = reviewMap[emp.id];
-    const ws  = r ? calcWeightedScore(r.scores) : null;
-    const pot = ws ? Math.min(5, Math.max(1, Math.round(ws * (0.8 + Math.random() * 0.4)))) : 3;
-    return { emp, review: r, weightedScore: ws, potential: pot };
-  }), [reviewMap]);
-
-  const completedCount = reviews.filter(r => r.status === 'completed').length;
-  const avgScore = useMemo(() => {
-    const scores = enriched.filter(e => e.weightedScore).map(e => e.weightedScore);
-    if (!scores.length) return 0;
-    return Math.round((scores.reduce((s,v) => s+v, 0) / scores.length) * 10) / 10;
-  }, [enriched]);
-
-  const saveReview = (updated) => {
-    setReviews(prev => prev.map(r => r.emp_id === updated.emp_id ? updated : r));
-    setSelRev(null);
-    setSelEmp(null);
-  };
-
-  // Group by dept for overview
-  const byDept = useMemo(() => {
-    const groups = {};
-    enriched.forEach(e => {
-      const d = e.emp.department;
-      if (!groups[d]) groups[d] = [];
-      groups[d].push(e);
-    });
-    return groups;
-  }, [enriched]);
-
-  const deptNames = { sales: { ar: 'المبيعات', en: 'Sales' }, marketing: { ar: 'التسويق', en: 'Marketing' }, hr: { ar: 'الموارد البشرية', en: 'HR' }, finance: { ar: 'المالية', en: 'Finance' } };
-
-  // 9-box data
-  const nineBoxData = useMemo(() => {
-    const grid = Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => []));
-    enriched.forEach(e => {
-      if (!e.weightedScore) return;
-      const { col, row } = nineBoxPos(e.weightedScore, e.potential);
-      grid[row][col].push(e);
-    });
-    return grid;
-  }, [enriched]);
+  const th = { fontSize:11, fontWeight:700, color:ds.muted, padding:'10px 14px', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.05em' };
+  const td = { fontSize:13, color:ds.text, padding:'12px 14px', verticalAlign:'middle' };
 
   return (
-    <div style={{ padding: 24, background: c.bg, minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
-
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Star size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'الكفاءات والتقييم' : 'Competencies & Review'}</h1>
-            <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'تقييم الكفاءات · مصفوفة 9-Box · ربط التدريب' : 'Competency Review · 9-Box Matrix · Training Link'}</p>
+    <div style={{ padding:'24px 28px', background:ds.bg, minHeight:'100vh', direction:isRTL?'rtl':'ltr' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexDirection:isRTL?'row-reverse':'row' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:14, flexDirection:isRTL?'row-reverse':'row' }}>
+          <div style={{ width:46, height:46, borderRadius:13, background:'linear-gradient(135deg,#1B3347,#4A7AAB)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(74,122,171,0.3)' }}><Award size={22} color="#fff" /></div>
+          <div style={{ textAlign:isRTL?'right':'left' }}>
+            <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:ds.text }}>{lang==='ar'?'الكفاءات':'Competencies'}</h1>
+            <p style={{ margin:0, fontSize:12, color:ds.muted }}>{lang==='ar'?'إدارة كفاءات الموظفين':'Manage employee competencies'}</p>
           </div>
         </div>
+        <AddBtn label={lang==='ar'?'+ كفاءة جديدة':'+ Add Competency'} ds={ds} />
       </div>
 
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
-        {[
-          { label: lang === 'ar' ? 'التقييمات المكتملة' : 'Reviews Done',    value: `${completedCount}/${reviews.length}`, icon: '', color: '#4A7AAB' },
-          { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg. Performance', value: `${avgScore}/5`,                      icon: '', color: '#6B8DB5' },
-          { label: lang === 'ar' ? 'الفترة الحالية' : 'Current Period',   value: 'Q1 2026',                            icon: '', color: '#4A7AAB' },
-          { label: lang === 'ar' ? `الكفاءات المقيّمة`  : 'Competencies',     value: COMPETENCIES.length,                  icon: '', color: '#4A7AAB' },
-        ].map((s, i) => (
-          <div key={i} style={{ padding: '16px 18px', borderRadius: 12, background: c.cardBg, border: '1px solid ' + c.border }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: c.textMuted, marginTop: 2 }}>{s.label}</div>
-              </div>
-              <span style={{ fontSize: 26 }}>{s.icon}</span>
-            </div>
-          </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+        <KpiCard icon={Award} label={lang==='ar'?'إجمالي الكفاءات':'Total Competencies'} value={COMPETENCIES.length} color="#1B3347" />
+        <KpiCard icon={Users} label={lang==='ar'?'عدد الفئات':'Categories'} value={categories.length} color="#4A7AAB" />
+        <KpiCard icon={TrendingUp} label={lang==='ar'?'متوسط المستوى':'Avg Level'} value={avgLevel+'/5'} color="#6B8DB5" />
+        <KpiCard icon={Star} label={lang==='ar'?'كفاءات متقدمة':'Advanced'} value={COMPETENCIES.filter(c=>c.required_level>=4).length} color="#2B4C6F" />
+      </div>
+
+      <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
+        {['all', ...categories].map(cat => (
+          <FilterBtn key={cat} label={cat==='all'?(lang==='ar'?'الكل':'All'):cat} active={filter===cat} onClick={()=>setFilter(cat)} ds={ds} />
         ))}
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.06)', padding: 4, borderRadius: 10, width: 'fit-content', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        {[
-          { id: 'overview', ar: 'نظرة عامة', en: 'Overview' },
-          { id: 'reviews',  ar: 'التقييمات', en: 'Reviews' },
-          { id: 'ninebox',  ar: 'مصفوفة 9-Box', en: '9-Box Matrix' },
-        ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'all 0.15s',
-              background: tab === t.id ? (isDark ? '#1a2234' : '#fff') : 'transparent',
-              color: tab === t.id ? c.accent : c.textMuted,
-              boxShadow: tab === t.id ? '0 1px 4px rgba(0,0,0,0.1)' : 'none',
-            }}>
-            {lang === 'ar' ? t.ar : t.en}
-          </button>
-        ))}
-      </div>
-
-      {/* ── OVERVIEW TAB ── */}
-      {tab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {Object.entries(byDept).map(([deptId, members]) => {
-            const deptAvg = members.filter(m => m.weightedScore).reduce((s,m,_,a) => s + m.weightedScore/a.length, 0);
-            const isOpen  = expandedDept === deptId;
-            return (
-              <div key={deptId} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
-                <div
-                  onClick={() => setExpDept(isOpen ? null : deptId)}
-                  style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                  onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                    <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: c.text }}>{lang === 'ar' ? deptNames[deptId]?.ar : deptNames[deptId]?.en}</div>
-                      <div style={{ fontSize: 12, color: c.textMuted }}>{members.length} {lang === 'ar' ? 'موظف' : 'employees'}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                    {deptAvg > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                        <StarRating value={Math.round(deptAvg)} size={14} />
-                        <span style={{ fontSize: 14, fontWeight: 700, color: RATING_COLORS[Math.round(deptAvg)] }}>{Math.round(deptAvg * 10) / 10}</span>
-                      </div>
-                    )}
-                    {isOpen ? <ChevronUp size={16} color={c.textMuted} /> : <ChevronDown size={16} color={c.textMuted} />}
-                  </div>
-                </div>
-
-                {isOpen && (
-                  <div style={{ borderTop: '1px solid ' + c.border }}>
-                    {members.map((m, idx) => {
-                      const ws = m.weightedScore;
-                      return (
-                        <div key={m.emp.id}
-                          style={{ padding: '12px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: idx > 0 ? '1px solid ' + c.border : 'none', flexDirection: isRTL ? 'row-reverse' : 'row', cursor: 'pointer', transition: 'background 0.15s' }}
-                          onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                          onClick={() => { setSelRev(m.review); setSelEmp(m.emp); }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                            <Avatar emp={m.emp} size={36} />
-                            <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                              <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? m.emp.full_name_ar : m.emp.full_name_en}</div>
-                              <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? m.emp.job_title_ar : m.emp.job_title_en}</div>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                            {ws ? (
-                              <>
-                                <StarRating value={Math.round(ws)} size={14} />
-                                <span style={{ fontSize: 14, fontWeight: 700, color: RATING_COLORS[Math.round(ws)], minWidth: 30, textAlign: 'center' }}>{ws}</span>
-                                <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: m.review?.status === 'completed' ? '#4A7AAB20' : '#6B8DB520', color: m.review?.status === 'completed' ? '#4A7AAB' : '#6B8DB5' }}>
-                                  {m.review?.status === 'completed' ? (lang === 'ar' ? 'مكتمل' : 'Done') : (lang === 'ar' ? 'معلق' : 'Pending')}
-                                </span>
-                              </>
-                            ) : (
-                              <span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? `لم يُقيَّم بعد` : 'Not reviewed yet'}</span>
-                            )}
-                            <Eye size={14} color={c.accent} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── REVIEWS TAB ── */}
-      {tab === 'reviews' && (
-        <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ background: c.thBg }}>
-                {[
-                  { ar: 'الموظف',       en: 'Employee',      w: 'auto' },
-                  { ar: 'الكفاءات',    en: 'Competencies',  w: '180px' },
-                  { ar: 'الدرجة',      en: 'Score',         w: '90px' },
-                  { ar: 'الإمكانية',   en: 'Potential',     w: '100px' },
-                  { ar: 'الحالة',      en: 'Status',        w: '100px' },
-                  { ar: '',            en: '',              w: '50px' },
-                ].map((col, i) => (
-                  <th key={i} style={{ padding: '11px 14px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', width: col.w }}>
-                    {lang === 'ar' ? col.ar : col.en}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {enriched.map(({ emp, review, weightedScore, potential }, idx) => (
-                <tr key={emp.id}
-                  style={{ borderTop: idx > 0 ? '1px solid ' + c.border : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                  onClick={() => { setSelRev(review); setSelEmp(emp); }}>
-
-                  <td style={{ padding: '12px 14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                      <Avatar emp={emp} size={34} />
-                      <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
-                        <div style={{ fontSize: 11, color: c.textMuted }}>{emp.employee_number}</div>
-                      </div>
-                    </div>
-                  </td>
-
-                  <td style={{ padding: '12px 14px' }}>
-                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {COMPETENCIES.slice(0,3).map(comp => (
-                        <span key={comp.id} title={lang==='ar'?comp.ar:comp.en}
-                          style={{ fontSize: 10, padding: '2px 7px', borderRadius: 20, background: RATING_COLORS[review?.scores?.[comp.key]||3] + '20', color: RATING_COLORS[review?.scores?.[comp.key]||3], fontWeight: 600 }}>
-                          {comp.icon} {review?.scores?.[comp.key] || '—'}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-
-                  <td style={{ padding: '12px 14px' }}>
-                    {weightedScore
-                      ? <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontSize: 16, fontWeight: 800, color: RATING_COLORS[Math.round(weightedScore)] }}>{weightedScore}</span>
-                          <Star size={13} fill={RATING_COLORS[Math.round(weightedScore)]} color={RATING_COLORS[Math.round(weightedScore)]} />
-                        </div>
-                      : <span style={{ color: c.textMuted, fontSize: 12 }}>—</span>}
-                  </td>
-
-                  <td style={{ padding: '12px 14px' }}>
-                    <div style={{ display: 'flex', gap: 2 }}>
-                      {[1,2,3,4,5].map(n => (
-                        <div key={n} style={{ width: 12, height: 12, borderRadius: 2, background: n <= potential ? RATING_COLORS[potential] : (isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb') }} />
-                      ))}
-                    </div>
-                  </td>
-
-                  <td style={{ padding: '12px 14px' }}>
-                    <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: review?.status === 'completed' ? '#4A7AAB20' : '#6B8DB520', color: review?.status === 'completed' ? '#4A7AAB' : '#6B8DB5' }}>
-                      {review?.status === 'completed' ? (lang === 'ar' ? ' مكتمل' : 'Done') : (lang === 'ar' ? ' معلق' : 'Pending')}
-                    </span>
-                  </td>
-
-                  <td style={{ padding: '12px 14px' }} onClick={e => e.stopPropagation()}>
-                    <button onClick={() => { setSelRev(review); setSelEmp(emp); }}
-                      style={{ width: 28, height: 28, borderRadius: 6, border: '1px solid ' + c.border, cursor: 'pointer', background: 'transparent', color: c.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = c.accent; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = c.accent; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = c.textMuted; e.currentTarget.style.borderColor = c.border; }}>
-                      <Star size={13} />
-                    </button>
-                  </td>
-                </tr>
+      <div style={{ background:ds.card, borderRadius:14, border:`1px solid ${ds.border}`, overflow:'hidden' }}>
+        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+          <thead>
+            <tr style={{ background:ds.thBg, borderBottom:`2px solid ${ds.border}` }}>
+              {[lang==='ar'?'الكفاءة':'Competency', lang==='ar'?'الفئة':'Category', lang==='ar'?'المستوى المطلوب':'Required Level', lang==='ar'?'التقييم':'Rating', ''].map((h,i)=>(
+                <th key={i} style={{ ...th, textAlign:isRTL?'right':'left' }}>{h}</th>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* ── 9-BOX TAB ── */}
-      {tab === 'ninebox' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-
-          {/* Axis Labels */}
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-
-            {/* Y Label */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 28, paddingTop: 28 }}>
-              <span style={{ fontSize: 11, color: c.textMuted, fontWeight: 700, writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.08em' }}>
-                {lang === 'ar' ? 'الإمكانية ↑' : 'POTENTIAL ↑'}
-              </span>
-            </div>
-
-            <div style={{ flex: 1 }}>
-              {/* Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gridTemplateRows: 'repeat(3,auto)', gap: 8 }}>
-                {nineBoxData.map((row, ri) =>
-                  row.map((cell, ci) => {
-                    const boxColor  = NINE_BOX_COLORS[ri][ci];
-                    const boxLabel  = (lang === 'ar' ? NINE_BOX_LABELS.ar : NINE_BOX_LABELS.en)[ri][ci];
-                    return (
-                      <div key={`${ri}-${ci}`}
-                        style={{ minHeight: 100, padding: '10px 12px', borderRadius: 10, background: boxColor + '18', border: `1.5px solid ${boxColor}35`, position: 'relative' }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: boxColor, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{boxLabel}</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                          {cell.map(({ emp }) => (
-                            <div key={emp.id}
-                              title={lang === 'ar' ? emp.full_name_ar : emp.full_name_en}
-                              onClick={() => { const e = enriched.find(x => x.emp.id === emp.id); setSelRev(e?.review); setSelEmp(emp); }}
-                              style={{ cursor: 'pointer' }}>
-                              <Avatar emp={emp} size={30} />
-                            </div>
-                          ))}
-                          {cell.length === 0 && (
-                            <span style={{ fontSize: 11, color: c.textMuted, opacity: 0.5 }}>—</span>
-                          )}
-                        </div>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((comp, idx) => {
+              const [hov, setHov] = useState(false);
+              const isExp = expanded===idx;
+              return (
+                <>
+                  <tr key={idx} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ borderBottom:`1px solid ${ds.border}`, background:hov?ds.rowHover:'transparent', transition:'background 0.15s', cursor:'pointer' }} onClick={()=>setExpanded(isExp?null:idx)}>
+                    <td style={{ ...td, fontWeight:700 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                        <div style={{ width:8, height:8, borderRadius:'50%', background:'#4A7AAB', flexShrink:0 }} />
+                        {lang==='ar'?comp.name_ar:comp.name_en}
                       </div>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* X Label */}
-              <div style={{ textAlign: 'center', marginTop: 8 }}>
-                <span style={{ fontSize: 11, color: c.textMuted, fontWeight: 700, letterSpacing: '0.08em' }}>
-                  {lang === 'ar' ? '← الأداء →' : '← PERFORMANCE →'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Legend */}
-          <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '14px 20px' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 12 }}>{lang === 'ar' ? 'دليل المصفوفة' : 'Matrix Legend'}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
-              {nineBoxData.map((row, ri) =>
-                row.map((_, ci) => {
-                  const boxColor = NINE_BOX_COLORS[ri][ci];
-                  const boxLabel = (lang === 'ar' ? NINE_BOX_LABELS.ar : NINE_BOX_LABELS.en)[ri][ci];
-                  const count = nineBoxData[ri][ci].length;
-                  return (
-                    <div key={`l-${ri}-${ci}`} style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                      <div style={{ width: 12, height: 12, borderRadius: 3, background: boxColor, flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, color: c.text, fontWeight: 500 }}>{boxLabel}</span>
-                      <span style={{ fontSize: 11, color: c.textMuted, marginInlineStart: 'auto' }}>({count})</span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Review Modal */}
-      {selectedReview && selectedEmp && (
-        <ReviewModal
-          review={selectedReview}
-          emp={selectedEmp}
-          onClose={() => { setSelRev(null); setSelEmp(null); }}
-          onSave={saveReview}
-          isDark={isDark} isRTL={isRTL} lang={lang} c={c}
-        />
-      )}
+                    </td>
+                    <td style={{ ...td }}><span style={{ padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:'rgba(74,122,171,0.12)', color:'#4A7AAB', border:'1px solid rgba(74,122,171,0.25)' }}>{comp.category}</span></td>
+                    <td style={{ ...td }}>
+                      <div style={{ display:'flex', gap:3 }}>
+                        {[1,2,3,4,5].map(i=>(<div key={i} style={{ width:16, height:16, borderRadius:4, background:i<=(comp.required_level||3)?'#4A7AAB':'rgba(74,122,171,0.15)', transition:'background 0.2s' }} />))}
+                      </div>
+                    </td>
+                    <td style={{ ...td, color:ds.muted, fontSize:11 }}>{comp.description_ar||comp.description_en||'-'}</td>
+                    <td style={{ ...td }}><ChevronDown size={14} color={ds.muted} style={{ transform:isExp?'rotate(180deg)':'none', transition:'transform 0.2s' }} /></td>
+                  </tr>
+                  {isExp && (
+                    <tr key={idx+'exp'} style={{ background:ds.dark?'rgba(74,122,171,0.04)':'#F8FAFC', borderBottom:`1px solid ${ds.border}` }}>
+                      <td colSpan={5} style={{ padding:'14px 20px' }}>
+                        <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?comp.description_ar:comp.description_en}</p>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
+
+function AddBtn({label,ds}){const [hov,setHov]=useState(false);return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{display:'flex',alignItems:'center',gap:8,padding:'10px 20px',borderRadius:10,background:hov?'#2B4C6F':'#1B3347',border:'none',cursor:'pointer',color:'#fff',fontSize:13,fontWeight:700,transform:hov?'translateY(-1px)':'none',boxShadow:hov?'0 6px 16px rgba(27,51,71,0.35)':'0 2px 6px rgba(27,51,71,0.2)',transition:'all 0.2s ease'}}>{label}</button>;}
+function FilterBtn({label,active,onClick,ds}){const [hov,setHov]=useState(false);return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={onClick} style={{padding:'6px 14px',borderRadius:8,border:`1px solid ${active||hov?'#4A7AAB60':ds.border}`,background:active?'#4A7AAB':hov?'rgba(74,122,171,0.08)':'transparent',cursor:'pointer',color:active?'#fff':hov?'#4A7AAB':ds.muted,fontSize:12,fontWeight:600,transition:'all 0.15s'}}>{label}</button>;}
