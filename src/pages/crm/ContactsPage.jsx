@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { SkeletonTable, SkeletonKpiGrid } from '../../components/ui/LoadingAndEmpty';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
@@ -929,7 +930,7 @@ export default function ContactsPage() {
         <div>
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: c.textMuted }}>
-            {loading ? t('common.loading') : `${filtered.length} results`}
+            {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${filtered.length} ${isRTL ? 'نتيجة' : 'results'}`}
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -1052,9 +1053,14 @@ export default function ContactsPage() {
               {loading ? (
                 <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 60, color: '#9ca3af' }}>
-                  <Search size={28} style={{ opacity: 0.3, marginBottom: 8, display:'block', margin:'0 auto 8px' }} />
-                  {isRTL ? 'لا توجد نتائج' : 'No results found'}
+                <tr><td colSpan={11} style={{ padding: 0, border: 'none' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
+                    <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, rgba(27,51,71,0.08), rgba(74,122,171,0.12))', border: '1.5px dashed rgba(74,122,171,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                      <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
+                    </div>
+                    <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: c.text }}>{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
+                    <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
+                  </div>
                 </td></tr>
               ) : filtered.map((c) => (
                 <tr key={c.id}
