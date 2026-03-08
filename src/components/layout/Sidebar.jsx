@@ -26,11 +26,11 @@ export default function Sidebar({ collapsed, onToggle }) {
       <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'), padding: collapsed ? '8px' : '8px 16px', overflow: 'hidden' }}>
         {collapsed ? (
           <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-            <img src="/logo.png" alt="P" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+            <img src={isDark ? "/logo-white.png" : "/logo.png"} alt="P" style={{ width: 32, height: 32, objectFit: 'contain' }} />
           </div>
         ) : (
           <div style={{ width: '100%', height: 56, background: 'transparent', borderRadius: 10, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '4px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-            <img src="/logo.png" alt="Platform Real Estate" style={{ width: '100%', height: 'auto', maxHeight: 56, objectFit: 'contain' }} />
+            <img src={isDark ? "/logo-white.png" : "/logo.png"} alt="Platform Real Estate" style={{ width: '100%', height: 'auto', maxHeight: 56, objectFit: 'contain' }} />
           </div>
         )}
       </div>
