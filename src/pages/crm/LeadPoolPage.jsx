@@ -93,6 +93,7 @@ export default function LeadPoolPage() {
   const [typeFilter, setTypeFilter]   = useState('all');
   const [agingFilter, setAgingFilter] = useState('all');
   const [search, setSearch]           = useState('');
+  const [poolScope, setPoolScope]     = useState('my_team'); // 'my_team' | 'all'
   const [assignModal, setAssignModal] = useState(null); // lead or 'bulk'
   const [addModal, setAddModal]       = useState(false);
   const [newLead, setNewLead]         = useState({ name: '', phone: '', source: 'cold_call' });
@@ -134,7 +135,7 @@ export default function LeadPoolPage() {
       if (scoreDiff !== 0) return scoreDiff;
       return new Date(a.created_at) - new Date(b.created_at);
     });
-  }, [leads, canViewFresh, sourceFilter, typeFilter, agingFilter, search, tick]);
+  }, [leads, canViewFresh, canViewAll, poolScope, sourceFilter, typeFilter, agingFilter, search, tick]);
 
   // Stats
   const stats = useMemo(() => {
@@ -293,6 +294,26 @@ export default function LeadPoolPage() {
             {a === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : a === 'fresh' ? (lang === 'ar' ? 'جديد' : 'Fresh') : a === 'warn' ? (lang === 'ar' ? 'تحذير' : 'Warn') : (lang === 'ar' ? 'قديم' : 'Old')}
           </button>
         ))}
+
+
+          {/* Team / Global Pool Toggle — visible to managers only */}
+          {canViewAll && (
+            <div style={{ display: 'flex', borderRadius: 8, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+              {[
+                { value: 'my_team', ar: 'تيمي', en: 'My Team' },
+                { value: 'all',     ar: 'الكل',  en: 'All Teams' },
+              ].map(opt => (
+                <button key={opt.value} onClick={() => setPoolScope(opt.value)} style={{
+                  padding: '7px 14px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
+                  background: poolScope === opt.value ? c.accent : c.cardBg,
+                  color: poolScope === opt.value ? '#fff' : c.muted,
+                  transition: 'all 0.15s',
+                }}>
+                  {lang === 'ar' ? opt.ar : opt.en}
+                </button>
+              ))}
+            </div>
+          )}
 
         {/* Select all */}
         {canAssign && (

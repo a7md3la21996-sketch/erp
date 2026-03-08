@@ -23,6 +23,7 @@ import AssetsPage from './pages/hr/AssetsPage';
 import OnboardingPage from './pages/hr/OnboardingPage';
 import LeadPoolPage from './pages/crm/LeadPoolPage';
 import TasksPage from './pages/TasksPage';
+import ActivitiesPage from './pages/ActivitiesPage';
 import FinancePage from './pages/finance/FinancePage';
 import { P } from './config/roles';
 import './i18n';
@@ -64,6 +65,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/crm/contacts" element={<ContactsPage />} />
               <Route path="/crm/opportunities" element={<OpportunitiesPage />} />
+              <Route path="/activities" element={<ActivitiesPage />} />
               <Route path="/crm/lead-pool" element={<LeadPoolPage />} />
               <Route path="/real-estate/*" element={<ComingSoon title="Real Estate" />} />
               <Route path="/sales/*" element={<ComingSoon title="Sales" />} />
