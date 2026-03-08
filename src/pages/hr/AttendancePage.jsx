@@ -25,37 +25,44 @@ function AttendanceRow({ emp, attendance, isRTL, ds }) {
   const [hov, setHov] = useState(false);
   const raw = attendance[emp.employee_id];
   const recs = Array.isArray(raw) ? raw : Object.values(raw || {});
-  const p = recs.filter(r=>r.status==='present').length;
-  const a = recs.filter(r=>r.status==='absent').length;
-  const l = recs.filter(r=>r.status==='late').length;
+  const p = recs.filter(r => r.status === 'present').length;
+  const a = recs.filter(r => r.status === 'absent').length;
+  const l = recs.filter(r => r.status === 'late').length;
   const total = recs.length || 1;
-  const rate = Math.round((p/total)*100);
+  const rate = Math.round((p / total) * 100);
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
-  const nameInitials = name.split(' ').map(w => w[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || '??';
-  const td = { fontSize:13, color:ds.text, padding:'12px 14px', verticalAlign:'middle' };
+  const ini = name.split(' ').map(w => w[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || '??';
+  const td = { fontSize: 13, color: ds.text, padding: '12px 14px', verticalAlign: 'middle' };
   return (
-    <tr onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ borderBottom:`1px solid ${ds.border}`, background:hov?ds.rowHover:'transparent', transition:'background 0.15s' }}>
-      <td style={{ ...td }}>
-        <div style={{ display:'flex', alignItems:'center', gap:10, flexDirection:isRTL?'row-reverse':'row' }}>
-          <div style={{ width:32, height:32, borderRadius:9, background:'#2B4C6F', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><span style={{ fontSize:11, fontWeight:700, color:'#fff' }}>{nameInitials}</span></div>
-          <div style={{ textAlign:isRTL?'right':'left' }}><p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{name}</p><p style={{ margin:0, fontSize:11, color:ds.muted }}>{emp.employee_id}</p></div>
+    <tr onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ borderBottom: `1px solid ${ds.border}`, background: hov ? ds.rowHover : 'transparent', transition: 'background 0.15s' }}>
+      <td style={td}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: '#2B4C6F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{ini}</span>
+          </div>
+          <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: ds.text }}>{name}</p>
+            <p style={{ margin: 0, fontSize: 11, color: ds.muted }}>{emp.employee_id}</p>
+          </div>
         </div>
       </td>
-      <td style={{ ...td, color:ds.muted }}>{emp.department_ar||emp.department}</td>
-      <td style={{ ...td, fontWeight:700, color:'#4A7AAB' }}>{p}</td>
-      <td style={{ ...td, fontWeight:700, color:'#EF4444' }}>{a}</td>
-      <td style={{ ...td, fontWeight:700, color:'#6B8DB5' }}>{l}</td>
-      <td style={{ ...td }}>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ flex:1, height:6, borderRadius:3, background:ds.dark?'rgba(255,255,255,0.08)':'#E2E8F0' }}>
-            <div style={{ height:'100%', borderRadius:3, width:rate+'%', background:rate>=80?'#4A7AAB':rate>=60?'#6B8DB5':'#EF4444', transition:'width 0.4s' }} />
+      <td style={{ ...td, color: ds.muted }}>{emp.department_ar || emp.department}</td>
+      <td style={{ ...td, fontWeight: 700, color: '#4A7AAB' }}>{p}</td>
+      <td style={{ ...td, fontWeight: 700, color: '#EF4444' }}>{a}</td>
+      <td style={{ ...td, fontWeight: 700, color: '#6B8DB5' }}>{l}</td>
+      <td style={td}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ flex: 1, height: 6, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' }}>
+            <div style={{ height: '100%', borderRadius: 3, width: rate + '%', background: rate >= 80 ? '#4A7AAB' : rate >= 60 ? '#6B8DB5' : '#EF4444', transition: 'width 0.4s' }} />
           </div>
-          <span style={{ fontSize:12, fontWeight:700, color:ds.text, minWidth:32 }}>{rate}%</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: ds.text, minWidth: 32 }}>{rate}%</span>
         </div>
       </td>
     </tr>
   );
 }
+
 
 export default function AttendancePage() {
   const { i18n } = useTranslation(); const ds = useDS();
