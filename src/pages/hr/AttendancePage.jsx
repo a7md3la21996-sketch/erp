@@ -30,14 +30,14 @@ function AttendanceRow({ emp, attendance, isRTL, ds }) {
   const l = recs.filter(r=>r.status==='late').length;
   const total = recs.length || 1;
   const rate = Math.round((p/total)*100);
-  const name = (isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar;
-  const initials = name?.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()||'??';
+  const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
+  const nameInitials = name.split(' ').map(w => w[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || '??';
   const td = { fontSize:13, color:ds.text, padding:'12px 14px', verticalAlign:'middle' };
   return (
     <tr onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ borderBottom:`1px solid ${ds.border}`, background:hov?ds.rowHover:'transparent', transition:'background 0.15s' }}>
       <td style={{ ...td }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, flexDirection:isRTL?'row-reverse':'row' }}>
-          <div style={{ width:32, height:32, borderRadius:9, background:'#2B4C6F', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><span style={{ fontSize:11, fontWeight:700, color:'#fff' }}>{initials}</span></div>
+          <div style={{ width:32, height:32, borderRadius:9, background:'#2B4C6F', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><span style={{ fontSize:11, fontWeight:700, color:'#fff' }}>{nameInitials}</span></div>
           <div style={{ textAlign:isRTL?'right':'left' }}><p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{name}</p><p style={{ margin:0, fontSize:11, color:ds.muted }}>{emp.employee_id}</p></div>
         </div>
       </td>
@@ -121,7 +121,7 @@ export default function AttendancePage() {
             ))}
                   <td style={{ ...td }}>
                     <div style={{ display:'flex', alignItems:'center', gap:10, flexDirection:isRTL?'row-reverse':'row' }}>
-                      <div style={{ width:32, height:32, borderRadius:9, background:'#2B4C6F', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><span style={{ fontSize:11, fontWeight:700, color:'#fff' }}>{initials}</span></div>
+                      <div style={{ width:32, height:32, borderRadius:9, background:'#2B4C6F', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><span style={{ fontSize:11, fontWeight:700, color:'#fff' }}>{nameInitials}</span></div>
                       <div style={{ textAlign:isRTL?'right':'left' }}><p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{name}</p><p style={{ margin:0, fontSize:11, color:ds.muted }}>{emp.employee_id}</p></div>
                     </div>
                   </td>
