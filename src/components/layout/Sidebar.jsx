@@ -25,8 +25,8 @@ export default function Sidebar({ collapsed, onToggle }) {
     <aside style={{ position: 'fixed', top: 0, [isRTL ? 'right' : 'left']: 0, zIndex: 20, height: '100vh', width: collapsed ? 72 : 260, transition: 'width 0.3s', background: isDark ? '#1a2234' : '#fff', borderRight: isRTL ? 'none' : ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')), borderLeft: isRTL ? ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')) : 'none', display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'), padding: collapsed ? '8px' : '8px 16px', overflow: 'hidden' }}>
         {collapsed ? (
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-            <img src={isDark ? "/logo-white.png" : "/logo.png"} alt="P" style={{ width: 32, height: 32, objectFit: 'contain' }} />
+          <div style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
+            <img src={isDark ? "/logo-icon-white.png" : "/logo-icon.png"} alt="P" style={{ width: 40, height: 40, objectFit: 'contain' }} />
           </div>
         ) : (
           <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }}>
