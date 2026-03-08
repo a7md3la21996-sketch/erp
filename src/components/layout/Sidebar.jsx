@@ -29,7 +29,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             <img src={isDark ? "/logo-white.png" : "/logo.png"} alt="P" style={{ width: 32, height: 32, objectFit: 'contain' }} />
           </div>
         ) : (
-          <div style={{ width: '100%', height: 56, background: 'transparent', borderRadius: 10, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '4px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }}>
             <img src={isDark ? "/logo-white.png" : "/logo.png"} alt="Platform Real Estate" style={{ width: '100%', height: 'auto', maxHeight: 56, objectFit: 'contain' }} />
           </div>
         )}
