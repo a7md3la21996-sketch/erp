@@ -186,8 +186,8 @@ export default function FollowUpReminder({ entityType = 'contact', entityId, ent
       </div>
       {loading ? (
         <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {[1,2].map(i => <div key={i} style={{ height: 44, borderRadius: 8, background: ds.border, animation: 'pulse 1.5s ease-in-out infinite' }} />)}
-          <style>{\`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}\`}</style>
+          {[1,2].map(i => <div key={i} style={{ height: 44, borderRadius: 8, background: ds.border, opacity: 0.5 }} />)}
+          
         </div>
       ) : active.length === 0 ? (
         <div style={{ padding: '24px 16px', textAlign: 'center' }}>
