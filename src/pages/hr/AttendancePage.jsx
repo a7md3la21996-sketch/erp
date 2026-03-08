@@ -23,7 +23,8 @@ function KpiCard({ icon: Icon, label, value, color='#4A7AAB' }) {
 
 function AttendanceRow({ emp, attendance, isRTL, ds }) {
   const [hov, setHov] = useState(false);
-  const recs = attendance[emp.employee_id] || [];
+  const raw = attendance[emp.employee_id];
+  const recs = Array.isArray(raw) ? raw : Object.values(raw || {});
   const p = recs.filter(r=>r.status==='present').length;
   const a = recs.filter(r=>r.status==='absent').length;
   const l = recs.filter(r=>r.status==='late').length;
@@ -64,12 +65,16 @@ export default function AttendancePage() {
   const attendance = useMemo(() => getAttendanceForMonth(year, month), [year, month]);
   const stats = useMemo(() => {
     let present=0, absent=0, late=0, leave=0;
-    Object.values(attendance).forEach(recs => recs.forEach(r => {
-      if (r.status==='present') present++;
-      else if (r.status==='absent') absent++;
-      else if (r.status==='late') late++;
-      else if (r.status==='leave') leave++;
-    }));
+    Object.values(attendance).forEach(recs => {
+      const arr = Array.isArray(recs) ? recs : Object.values(recs || {});
+      arr.forEach(r => {
+        if (!r || !r.status) return;
+        if (r.status==='present') present++;
+        else if (r.status==='absent') absent++;
+        else if (r.status==='late') late++;
+        else if (r.status==='leave') leave++;
+      });
+    });
     return { present, absent, late, leave };
   }, [attendance]);
   const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
