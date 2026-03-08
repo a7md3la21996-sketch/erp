@@ -69,7 +69,9 @@ export default function App() {
               <Route path="/activities" element={<ActivitiesPage />} />
               <Route path="/crm/lead-pool" element={<LeadPoolPage />} />
               <Route path="/real-estate/*" element={<ComingSoon title="Real Estate" />} />
+              <Route path="/sales/targets" element={<TargetTrackerPage />} />
               <Route path="/sales/*" element={<ComingSoon title="Sales" />} />
+              {/* duplicate removed */}
               <Route path="/marketing/*" element={<ComingSoon title="Marketing" />} />
               <Route path="/hr/employees" element={<EmployeesPage />} />
               <Route path="/hr/policies" element={<HRPoliciesPage />} />
@@ -78,7 +80,6 @@ export default function App() {
               <Route path="/hr/payroll" element={<PayrollPage />} />
               <Route path="/hr/competencies" element={<CompetenciesPage />} />
               <Route path="/performance" element={<PerformancePage />} />
-              <Route path="/sales/targets" element={<TargetTrackerPage />} />
               <Route path="/hr/recruitment" element={<RecruitmentPage />} />
               <Route path="/hr/disciplinary" element={<DisciplinaryPage />} />
               <Route path="/hr/training" element={<TrainingPage />} />
