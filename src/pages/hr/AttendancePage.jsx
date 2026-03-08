@@ -126,6 +126,12 @@ export default function AttendancePage() {
             {MOCK_EMPLOYEES.map(emp => (
               <AttendanceRow key={emp.id} emp={emp} attendance={attendance} isRTL={isRTL} ds={ds} />
             ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 function ExportBtn({ label, ds }) {
   const [hov, setHov] = useState(false);
   return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:10, border:`1px solid ${hov?'#4A7AAB60':ds.border}`, background:hov?'rgba(74,122,171,0.1)':'transparent', cursor:'pointer', color:hov?'#4A7AAB':ds.muted, fontSize:13, fontWeight:600, transition:'all 0.15s' }}><Download size={14}/>{label}</button>;
