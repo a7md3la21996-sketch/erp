@@ -57,9 +57,9 @@ function makeMockLeads() {
 // ── Helpers ────────────────────────────────────────────────────────────────
 function getAging(dateStr) {
   const mins = Math.floor((Date.now() - new Date(dateStr)) / 60000);
-  if (mins < 60)    return { label: `${mins}د`,           color: '#4A7AAB', dot: '🟢', level: 'fresh' };
-  if (mins < 1440)  return { label: `${Math.floor(mins/60)}س`, color: '#F97316', dot: '🟡', level: 'warn'  };
-  return              { label: `${Math.floor(mins/1440)}ي`,color: '#EF4444', dot: '🔴', level: 'old'   };
+  if (mins < 60)    return { label: `${mins}د`,           color: '#4A7AAB', dot: 'fresh', level: 'fresh' };
+  if (mins < 1440)  return { label: `${Math.floor(mins / 60)}س`, color: '#6B8DB5', dot: 'warn',  level: 'warn'  };
+  return              { label: `${Math.floor(mins / 1440)}ي`, color: '#EF4444', dot: 'old',   level: 'old'   };
 }
 
 function getSLAStatus(lead) {
@@ -290,7 +290,7 @@ export default function LeadPoolPage() {
             background: agingFilter === a ? c.accent + '18' : 'transparent', color: agingFilter === a ? c.accent : c.muted,
             fontSize: 12, cursor: 'pointer',
           }}>
-            {a === 'all' ? '⚪' : a === 'fresh' ? '🟢' : a === 'warn' ? '🟡' : '🔴'}
+            {a === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : a === 'fresh' ? (lang === 'ar' ? 'جديد' : 'Fresh') : a === 'warn' ? (lang === 'ar' ? 'تحذير' : 'Warn') : (lang === 'ar' ? 'قديم' : 'Old')}
           </button>
         ))}
 
@@ -340,7 +340,7 @@ export default function LeadPoolPage() {
               )}
 
               {/* Aging dot */}
-              <div style={{ fontSize: 14, flexShrink: 0 }}>{aging.dot}</div>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: aging.color, flexShrink: 0, marginTop: 4 }} />
 
               {/* Lead info */}
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -355,7 +355,7 @@ export default function LeadPoolPage() {
                     </span>
                   )}
                   {isReserved && (
-                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: '#F9731618', color: '#F97316' }}>
+                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: 'rgba(74,122,171,0.12)', color: '#4A7AAB' }}>
                       {lang === 'ar' ? 'محجوز' : 'Reserved'}
                     </span>
                   )}
@@ -377,14 +377,14 @@ export default function LeadPoolPage() {
                     </span>
                   </div>
                   <div style={{ height: 3, borderRadius: 2, background: c.border, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: sla.pct + '%', borderRadius: 2, background: sla.breached ? '#EF4444' : sla.pct > 75 ? '#F97316' : c.accent, transition: 'width 0.3s' }} />
+                    <div style={{ height: '100%', width: sla.pct + '%', borderRadius: 2, background: sla.breached ? '#EF4444' : sla.pct > 75 ? '#6B8DB5' : c.accent, transition: 'width 0.3s' }} />
                   </div>
                 </div>
               </div>
 
               {/* Score */}
               <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: score > 75 ? '#EF4444' : score > 50 ? '#F97316' : c.accent }}>{score}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: score > 75 ? '#EF4444' : score > 50 ? '#6B8DB5' : c.accent }}>{score}</div>
                 <div style={{ fontSize: 10, color: c.muted }}>{lang === 'ar' ? 'سكور' : 'Score'}</div>
               </div>
 

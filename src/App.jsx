@@ -23,6 +23,7 @@ import AssetsPage from './pages/hr/AssetsPage';
 import OnboardingPage from './pages/hr/OnboardingPage';
 import LeadPoolPage from './pages/crm/LeadPoolPage';
 import TasksPage from './pages/TasksPage';
+import FinancePage from './pages/finance/FinancePage';
 import { P } from './config/roles';
 import './i18n';
 
@@ -30,7 +31,7 @@ function ComingSoon({ title }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: 16 }}>🚧</div>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(74,122,171,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><span style={{ fontSize: 24 }}>⚙</span></div>
         <h2 style={{ color: '#374151', margin: '0 0 8px' }}>{title}</h2>
         <p style={{ color: '#9ca3af' }}>Coming soon — Next phase</p>
       </div>
@@ -81,7 +82,8 @@ export default function App() {
               <Route path="/hr/assets" element={<AssetsPage />} />
               <Route path="/hr/onboarding" element={<OnboardingPage />} />
               <Route path="/hr/*" element={<ComingSoon title="HR" />} />
-              <Route path="/finance/*" element={<ComingSoon title="Finance" />} />
+              <Route path="/finance" element={<FinancePage />} />
+              <Route path="/finance/*" element={<FinancePage />} />
               <Route path="/tasks" element={<TasksPage />} />
               <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
               <Route path="/chat" element={<ComingSoon title="Chat" />} />
