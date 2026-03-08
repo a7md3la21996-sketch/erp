@@ -10,14 +10,14 @@ export default function MainLayout() {
   const isRTL = i18n.language === 'ar';
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+    <div style={{ minHeight: '100vh', background: '#F0F4F8', direction: isRTL ? 'rtl' : 'ltr' }}>
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
       <div style={{
         transition: 'margin 0.3s',
         [isRTL ? 'marginRight' : 'marginLeft']: collapsed ? 72 : 260,
       }}>
         <Header />
-        <main style={{ padding: 24 }}>
+        <main>
           <Outlet />
         </main>
       </div>
