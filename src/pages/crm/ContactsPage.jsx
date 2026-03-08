@@ -600,9 +600,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                   <Ban size={13} /> {isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}
                 </div>
               )}
-              <div style={{ marginTop: 16 }}>
-                <FollowUpReminder entityType="contact" entityId={contact.id} entityName={contact.full_name} />
-              </div>
+              {/* FollowUpReminder — temporarily disabled */}
             </div>
           )}
 
