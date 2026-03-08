@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import FollowUpReminder from '../../components/ui/FollowUpReminder';
 import { SkeletonTable, SkeletonKpiGrid } from '../../components/ui/LoadingAndEmpty';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
@@ -599,6 +600,9 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
                   <Ban size={13} /> {isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}
                 </div>
               )}
+              <div style={{ marginTop: 16 }}>
+                <FollowUpReminder entityType="contact" entityId={contact.id} entityName={contact.full_name} />
+              </div>
             </div>
           )}
 
