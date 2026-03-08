@@ -126,31 +126,6 @@ export default function AttendancePage() {
             {MOCK_EMPLOYEES.map(emp => (
               <AttendanceRow key={emp.id} emp={emp} attendance={attendance} isRTL={isRTL} ds={ds} />
             ))}
-                  <td style={{ ...td }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:10, flexDirection:isRTL?'row-reverse':'row' }}>
-                      <div style={{ width:32, height:32, borderRadius:9, background:'#2B4C6F', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><span style={{ fontSize:11, fontWeight:700, color:'#fff' }}>{nameInitials}</span></div>
-                      <div style={{ textAlign:isRTL?'right':'left' }}><p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{name}</p><p style={{ margin:0, fontSize:11, color:ds.muted }}>{emp.employee_id}</p></div>
-                    </div>
-                  </td>
-                  <td style={{ ...td, color:ds.muted }}>{emp.department_ar||emp.department}</td>
-                  <td style={{ ...td, fontWeight:700, color:'#4A7AAB' }}>{p}</td>
-                  <td style={{ ...td, fontWeight:700, color:'#EF4444' }}>{a}</td>
-                  <td style={{ ...td, fontWeight:700, color:'#6B8DB5' }}>{l}</td>
-                  <td style={{ ...td }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                      <div style={{ flex:1, height:6, borderRadius:3, background:ds.dark?'rgba(255,255,255,0.08)':'#E2E8F0' }}>
-                        <div style={{ height:'100%', borderRadius:3, width:rate+'%', background:rate>=80?'#4A7AAB':rate>=60?'#6B8DB5':'#EF4444', transition:'width 0.4s' }} />
-                      </div>
-                      <span style={{ fontSize:12, fontWeight:700, color:ds.text, minWidth:32 }}>{rate}%</span>
-                    </div>
-                  </td>
-
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
 function ExportBtn({ label, ds }) {
   const [hov, setHov] = useState(false);
   return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 18px', borderRadius:10, border:`1px solid ${hov?'#4A7AAB60':ds.border}`, background:hov?'rgba(74,122,171,0.1)':'transparent', cursor:'pointer', color:hov?'#4A7AAB':ds.muted, fontSize:13, fontWeight:600, transition:'all 0.15s' }}><Download size={14}/>{label}</button>;
