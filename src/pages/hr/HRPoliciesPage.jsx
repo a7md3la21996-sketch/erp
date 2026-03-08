@@ -1,303 +1,130 @@
 import { useState } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
-import { Settings, Search, Edit2, Check, X, ChevronDown } from 'lucide-react';
-import { MOCK_HR_POLICIES, POLICY_CATEGORIES } from '../../data/hr_mock_data';
+import { useTheme } from '../../contexts/ThemeContext';
+import { FileText, BookOpen, Shield, Clock, Plus, Eye, Download } from 'lucide-react';
+
+function useDS() {
+  const { theme } = useTheme(); const dark = theme==='dark';
+  return { dark, bg:dark?'#152232':'#F0F4F8', card:dark?'#1a2234':'#ffffff', border:dark?'rgba(74,122,171,0.2)':'#E2E8F0', text:dark?'#E2EAF4':'#1A2B3C', muted:dark?'#8BA8C8':'#64748B', input:dark?'#0F1E2D':'#ffffff', rowHover:dark?'rgba(74,122,171,0.07)':'#F8FAFC', thBg:dark?'rgba(74,122,171,0.08)':'#F8FAFC', accent:'#4A7AAB', primary:'#2B4C6F' };
+}
+
+function KpiCard({ icon: Icon, label, value, color='#4A7AAB' }) {
+  const ds = useDS(); const [hov, setHov] = useState(false);
+  return <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ background:ds.card, borderRadius:14, border:`1px solid ${hov?color+'60':ds.border}`, padding:'18px 20px', position:'relative', overflow:'hidden', transform:hov?'translateY(-2px)':'none', boxShadow:hov?`0 8px 24px ${color}22`:'0 1px 3px rgba(0,0,0,0.06)', transition:'all 0.2s ease' }}>
+    <div style={{ position:'absolute', top:0, right:0, width:4, height:'100%', background:`linear-gradient(180deg,${color},transparent)`, borderRadius:'14px 0 0 14px', opacity:hov?1:0.6, transition:'opacity 0.2s' }} />
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+      <div><p style={{ margin:'0 0 6px', fontSize:12, color:ds.muted, fontWeight:500 }}>{label}</p><p style={{ margin:0, fontSize:26, fontWeight:800, color:ds.text, lineHeight:1 }}>{value}</p></div>
+      <div style={{ width:42, height:42, borderRadius:11, background:color+(hov?'25':'15'), display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><Icon size={20} color={color} /></div>
+    </div>
+  </div>;
+}
+
+const MOCK_POLICIES = [
+  { id:1, title_ar:'سياسة الحضور', title_en:'Attendance Policy', category:'attendance', status:'active', version:'2.1', updated:'2026-01-15', views:124 },
+  { id:2, title_ar:'سياسة الإجازات', title_en:'Leave Policy', category:'leave', status:'active', version:'1.3', updated:'2025-11-20', views:98 },
+  { id:3, title_ar:'سياسة السلوك المهني', title_en:'Code of Conduct', category:'conduct', status:'active', version:'3.0', updated:'2025-09-10', views:210 },
+  { id:4, title_ar:'سياسة التطوير الوظيفي', title_en:'Career Development', category:'training', status:'draft', version:'1.0', updated:'2026-02-28', views:45 },
+  { id:5, title_ar:'سياسة الرواتب والمكافآت', title_en:'Compensation Policy', category:'payroll', status:'active', version:'2.0', updated:'2026-01-01', views:167 },
+  { id:6, title_ar:'سياسة الخصوصية', title_en:'Privacy Policy', category:'compliance', status:'active', version:'1.5', updated:'2025-12-15', views:77 },
+];
+
+const CATEGORIES = [
+  { key:'all', label_ar:'الكل', label_en:'All', icon: FileText },
+  { key:'attendance', label_ar:'حضور', label_en:'Attendance', icon: Clock },
+  { key:'leave', label_ar:'إجازات', label_en:'Leave', icon: BookOpen },
+  { key:'conduct', label_ar:'سلوك', label_en:'Conduct', icon: Shield },
+];
 
 export default function HRPoliciesPage() {
-  const { theme } = useTheme();
-  const { i18n } = useTranslation();
-  const isDark = theme === 'dark';
-  const isRTL = i18n.language === 'ar';
-  const lang = i18n.language;
+  const { i18n } = useTranslation(); const ds = useDS();
+  const isRTL = i18n.language==='ar'; const lang = i18n.language;
+  const [cat, setCat] = useState('all');
 
-  const [policies, setPolicies] = useState(MOCK_HR_POLICIES);
-  const [editingId, setEditingId] = useState(null);
-  const [editValue, setEditValue] = useState('');
-  const [search, setSearch] = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
+  const filtered = cat==='all' ? MOCK_POLICIES : MOCK_POLICIES.filter(p=>p.category===cat);
+  const active = MOCK_POLICIES.filter(p=>p.status==='active').length;
+  const draft = MOCK_POLICIES.filter(p=>p.status==='draft').length;
 
-  const c = {
-    bg:        isDark ? '#152232' : '#f9fafb',
-    cardBg:    isDark ? '#1a2234' : '#ffffff',
-    border:    isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text:      isDark ? '#E2EAF4' : '#111827',
-    textMuted: isDark ? '#8BA8C8' : '#6b7280',
-    inputBg:   isDark ? '#0F1E2D' : '#ffffff',
-    thBg:      isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC',
-    rowHover:  isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC',
-    primary:   '#2B4C6F',
-    accent:    '#4A7AAB',
-  };
-
-  const filtered = policies.filter(p => {
-    const matchSearch = !search ||
-      p.label_ar.includes(search) ||
-      p.label_en.toLowerCase().includes(search.toLowerCase()) ||
-      p.key.includes(search);
-    const matchCat = activeCategory === 'all' || p.category === activeCategory;
-    return matchSearch && matchCat;
-  });
-
-  const startEdit = (policy) => {
-    setEditingId(policy.id);
-    setEditValue(policy.value);
-  };
-
-  const saveEdit = (id) => {
-    setPolicies(prev => prev.map(p => p.id === id ? { ...p, value: editValue } : p));
-    setEditingId(null);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditValue('');
-  };
-
-  const categoryStats = Object.entries(POLICY_CATEGORIES).map(([key, cat]) => ({
-    key,
-    ...cat,
-    count: policies.filter(p => p.category === key).length,
-  }));
+  const th = { fontSize:11, fontWeight:700, color:ds.muted, padding:'10px 14px', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.05em' };
+  const td = { fontSize:13, color:ds.text, padding:'12px 14px', verticalAlign:'middle' };
 
   return (
-    <div style={{ padding: 24, background: c.bg, minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
-
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #2B4C6F, #4A7AAB)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Settings size={20} color="#fff" />
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: c.text }}>
-              {lang === 'ar' ? 'محرك السياسات' : 'Policy Engine'}
-            </h1>
-            <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>
-              {lang === 'ar' ? 'كل قواعد العمل في مكان واحد — بدون كود' : 'All business rules in one place — no code needed'}
-            </p>
+    <div style={{ padding:'24px 28px', background:ds.bg, minHeight:'100vh', direction:isRTL?'rtl':'ltr' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexDirection:isRTL?'row-reverse':'row' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:14, flexDirection:isRTL?'row-reverse':'row' }}>
+          <div style={{ width:46, height:46, borderRadius:13, background:'linear-gradient(135deg,#1B3347,#4A7AAB)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(74,122,171,0.3)' }}><FileText size={22} color="#fff" /></div>
+          <div style={{ textAlign:isRTL?'right':'left' }}>
+            <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:ds.text }}>{lang==='ar'?'سياسات الموارد البشرية':'HR Policies'}</h1>
+            <p style={{ margin:0, fontSize:12, color:ds.muted }}>{lang==='ar'?'إدارة سياسات وأنظمة الشركة':'Manage company policies & guidelines'}</p>
           </div>
         </div>
+        <AddBtn label={lang==='ar'?'+ سياسة جديدة':'+ New Policy'} ds={ds} />
       </div>
 
-      {/* Category Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <button
-          onClick={() => setActiveCategory('all')}
-          style={{
-            padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-            background: activeCategory === 'all' ? c.primary : (isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)'),
-            color: activeCategory === 'all' ? '#fff' : c.textMuted,
-            transition: 'all 0.15s',
-          }}
-        >
-          {lang === 'ar' ? `الكل (${policies.length})` : `All (${policies.length})`}
-        </button>
-        {categoryStats.map(cat => (
-          <button
-            key={cat.key}
-            onClick={() => setActiveCategory(cat.key)}
-            style={{
-              padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-              background: activeCategory === cat.key ? cat.color : (isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)'),
-              color: activeCategory === cat.key ? '#fff' : c.textMuted,
-              transition: 'all 0.15s',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            <span>{cat.icon}</span>
-            <span>{lang === 'ar' ? cat.ar : cat.en} ({cat.count})</span>
-          </button>
-        ))}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+        <KpiCard icon={FileText}  label={lang==='ar'?'إجمالي السياسات':'Total Policies'} value={MOCK_POLICIES.length} color="#1B3347" />
+        <KpiCard icon={Shield}    label={lang==='ar'?'نشطة':'Active'}               value={active}                color="#4A7AAB" />
+        <KpiCard icon={Clock}     label={lang==='ar'?'مسودة':'Draft'}                value={draft}                 color="#6B8DB5" />
+        <KpiCard icon={BookOpen}  label={lang==='ar'?'إجمالي المشاهدات':'Total Views'}     value={MOCK_POLICIES.reduce((s,p)=>s+p.views,0)} color="#2B4C6F" />
       </div>
 
-      {/* Search */}
-      <div style={{ position: 'relative', marginBottom: 20, maxWidth: 400 }}>
-        <Search size={16} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRTL ? 'right' : 'left']: 12, color: c.textMuted }} />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder={lang === 'ar' ? 'ابحث عن سياسة...' : 'Search policy...'}
-          style={{
-            width: '100%', padding: isRTL ? '10px 40px 10px 14px' : '10px 14px 10px 40px',
-            borderRadius: 8, border: '1px solid ' + c.border,
-            background: c.inputBg, color: c.text, fontSize: 14,
-            outline: 'none', boxSizing: 'border-box',
-            direction: isRTL ? 'rtl' : 'ltr',
-          }}
-        />
-      </div>
-
-      {/* Policies Table */}
-      <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div style={{ background:ds.card, borderRadius:14, border:`1px solid ${ds.border}`, overflow:'hidden' }}>
+        <div style={{ padding:'14px 18px', borderBottom:`1px solid ${ds.border}`, display:'flex', justifyContent:'space-between', alignItems:'center', flexDirection:isRTL?'row-reverse':'row' }}>
+          <p style={{ margin:0, fontSize:14, fontWeight:700, color:ds.text }}>{lang==='ar'?'قائمة السياسات':'Policies List'}</p>
+          <div style={{ display:'flex', gap:6 }}>
+            {CATEGORIES.map(c => (
+              <button key={c.key} onClick={()=>setCat(c.key)} style={{ padding:'5px 12px', borderRadius:8, border:`1px solid ${cat===c.key?ds.accent+'60':ds.border}`, background:cat===c.key?ds.accent+'15':'transparent', color:cat===c.key?ds.accent:ds.muted, fontSize:12, fontWeight:600, cursor:'pointer', transition:'all 0.15s' }}>{lang==='ar'?c.label_ar:c.label_en}</button>
+            ))}
+          </div>
+        </div>
+        <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
-            <tr style={{ background: c.thBg }}>
-              {[
-                { key: 'category', ar: 'الفئة',      en: 'Category', w: '120px' },
-                { key: 'label',    ar: 'السياسة',    en: 'Policy',   w: 'auto' },
-                { key: 'value',    ar: 'القيمة',     en: 'Value',    w: '130px' },
-                { key: 'unit',     ar: 'الوحدة',     en: 'Unit',     w: '80px' },
-                { key: 'level',    ar: 'المستوى',    en: 'Level',    w: '100px' },
-                { key: 'actions',  ar: 'تعديل',      en: 'Edit',     w: '80px' },
-              ].map(col => (
-                <th key={col.key} style={{
-                  padding: '12px 16px', textAlign: isRTL ? 'right' : 'left',
-                  fontSize: 12, fontWeight: 600, color: c.textMuted,
-                  textTransform: 'uppercase', letterSpacing: '0.05em',
-                  width: col.w, whiteSpace: 'nowrap',
-                }}>
-                  {lang === 'ar' ? col.ar : col.en}
-                </th>
+            <tr style={{ background:ds.thBg, borderBottom:`2px solid ${ds.border}` }}>
+              {[lang==='ar'?'السياسة':'Policy', lang==='ar'?'التصنيف':'Category', lang==='ar'?'الإصدار':'Version', lang==='ar'?'آخر تحديث':'Updated', lang==='ar'?'الحالة':'Status', lang==='ar'?'المشاهدات':'Views', ''].map((h,i)=>(
+                <th key={i} style={{ ...th, textAlign:isRTL?'right':'left' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map((policy, idx) => {
-              const cat = POLICY_CATEGORIES[policy.category];
-              const isEditing = editingId === policy.id;
+            {filtered.map(policy => {
+              const [hov, setHov] = useState(false);
               return (
-                <tr
-                  key={policy.id}
-                  style={{
-                    borderTop: idx > 0 ? '1px solid ' + c.border : 'none',
-                    background: isEditing ? (isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.08)') : 'transparent',
-                    transition: 'background 0.15s',
-                  }}
-                  onMouseEnter={e => { if (!isEditing) e.currentTarget.style.background = c.rowHover; }}
-                  onMouseLeave={e => { if (!isEditing) e.currentTarget.style.background = 'transparent'; }}
-                >
-                  {/* Category */}
-                  <td style={{ padding: '12px 16px' }}>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 5,
-                      padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
-                      background: cat?.color + '20', color: cat?.color,
-                    }}>
-                      {cat?.icon} {lang === 'ar' ? cat?.ar : cat?.en}
-                    </span>
-                  </td>
-
-                  {/* Label */}
-                  <td style={{ padding: '12px 16px' }}>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: c.text }}>
-                      {lang === 'ar' ? policy.label_ar : policy.label_en}
-                    </div>
-                    <div style={{ fontSize: 12, color: c.textMuted, marginTop: 2 }}>
-                      {lang === 'ar' ? policy.description_ar : policy.description_ar}
+                <tr key={policy.id} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ borderBottom:`1px solid ${ds.border}`, background:hov?ds.rowHover:'transparent', transition:'background 0.15s' }}>
+                  <td style={{ ...td }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10, flexDirection:isRTL?'row-reverse':'row' }}>
+                      <div style={{ width:34, height:34, borderRadius:9, background:'rgba(74,122,171,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={15} color="#4A7AAB" /></div>
+                      <p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{lang==='ar'?policy.title_ar:policy.title_en}</p>
                     </div>
                   </td>
-
-                  {/* Value */}
-                  <td style={{ padding: '12px 16px' }}>
-                    {isEditing ? (
-                      <input
-                        value={editValue}
-                        onChange={e => setEditValue(e.target.value)}
-                        autoFocus
-                        style={{
-                          width: 90, padding: '6px 10px', borderRadius: 6,
-                          border: '2px solid ' + c.accent,
-                          background: c.inputBg, color: c.text,
-                          fontSize: 14, fontWeight: 600, outline: 'none',
-                          textAlign: 'center',
-                        }}
-                      />
-                    ) : (
-                      <span style={{
-                        display: 'inline-block', padding: '4px 12px', borderRadius: 6,
-                        background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)',
-                        color: c.accent, fontSize: 15, fontWeight: 700,
-                      }}>
-                        {policy.value}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Unit */}
-                  <td style={{ padding: '12px 16px' }}>
-                    <span style={{ fontSize: 13, color: c.textMuted }}>
-                      {policy.unit === 'days' ? (lang === 'ar' ? 'يوم' : 'days') :
-                       policy.unit === 'hours' ? (lang === 'ar' ? 'ساعة' : 'hrs') :
-                       policy.unit === 'months' ? (lang === 'ar' ? 'شهر' : 'months') :
-                       policy.unit === 'time' ? (lang === 'ar' ? 'توقيت' : 'time') :
-                       policy.unit === 'x' ? (lang === 'ar' ? 'مضاعف' : 'multiplier') :
-                       policy.unit}
+                  <td style={{ ...td }}><span style={{ display:'inline-flex', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:'rgba(74,122,171,0.12)', color:'#4A7AAB', border:'1px solid rgba(74,122,171,0.25)' }}>{policy.category}</span></td>
+                  <td style={{ ...td, color:ds.muted }}>v{policy.version}</td>
+                  <td style={{ ...td, color:ds.muted }}>{policy.updated}</td>
+                  <td style={{ ...td }}>
+                    <span style={{ display:'inline-flex', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:policy.status==='active'?'rgba(74,122,171,0.15)':'rgba(107,141,181,0.15)', color:policy.status==='active'?'#4A7AAB':'#6B8DB5', border:`1px solid ${policy.status==='active'?'rgba(74,122,171,0.3)':'rgba(107,141,181,0.3)'}` }}>
+                      {policy.status==='active'?(lang==='ar'?'نشط':'Active'):(lang==='ar'?'مسودة':'Draft')}
                     </span>
                   </td>
-
-                  {/* Level */}
-                  <td style={{ padding: '12px 16px' }}>
-                    <span style={{
-                      padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 500,
-                      background: policy.level === 'company' ? '#4A7AAB20' : '#6B8DB520',
-                      color: policy.level === 'company' ? '#4A7AAB' : '#6B8DB5',
-                    }}>
-                      {policy.level === 'company'
-                        ? (lang === 'ar' ? ' الشركة' : 'Company')
-                        : policy.level === 'department'
-                        ? (lang === 'ar' ? ' القسم' : 'Dept')
-                        : (lang === 'ar' ? ' فردي' : 'Individual')}
-                    </span>
-                  </td>
-
-                  {/* Actions */}
-                  <td style={{ padding: '12px 16px' }}>
-                    {isEditing ? (
-                      <div style={{ display: 'flex', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                        <button
-                          onClick={() => saveEdit(policy.id)}
-                          style={{ width: 30, height: 30, borderRadius: 6, border: 'none', cursor: 'pointer', background: '#4A7AAB', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <Check size={14} />
-                        </button>
-                        <button
-                          onClick={cancelEdit}
-                          style={{ width: 30, height: 30, borderRadius: 6, border: 'none', cursor: 'pointer', background: '#EF4444', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startEdit(policy)}
-                        style={{ width: 30, height: 30, borderRadius: 6, border: '1px solid ' + c.border, cursor: 'pointer', background: 'transparent', color: c.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}
-                        onMouseEnter={e => { e.currentTarget.style.background = c.accent; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = c.accent; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = c.textMuted; e.currentTarget.style.borderColor = c.border; }}
-                      >
-                        <Edit2 size={13} />
-                      </button>
-                    )}
+                  <td style={{ ...td, color:ds.muted }}>{policy.views}</td>
+                  <td style={{ ...td }}>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <ActionBtn icon={Eye} color="#4A7AAB" ds={ds} />
+                      <ActionBtn icon={Download} color="#6B8DB5" ds={ds} />
+                    </div>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-
-        {filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '48px 24px', color: c.textMuted }}>
-            <Settings size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
-            <p style={{ margin: 0 }}>{lang === 'ar' ? 'لا توجد سياسات' : 'No policies found'}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Info Banner */}
-      <div style={{
-        marginTop: 16, padding: '12px 16px', borderRadius: 8,
-        background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.08)',
-        border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.2)'),
-        display: 'flex', alignItems: 'center', gap: 10,
-        flexDirection: isRTL ? 'row-reverse' : 'row',
-      }}>
-        <span style={{ fontSize: 18 }}></span>
-        <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#4A7AAB' }}>
-          {lang === 'ar'
-            ? `التغييرات هنا بتأثر على حسابات الحضور والإجازات والرواتب تلقائياً — بدون تعديل أي كود`
-            : 'Changes here automatically affect attendance, leave, and payroll calculations — no code changes needed'}
-        </p>
       </div>
     </div>
   );
+}
+
+function AddBtn({ label, ds }) {
+  const [hov, setHov] = useState(false);
+  return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10, background:hov?'#2B4C6F':'#1B3347', border:'none', cursor:'pointer', color:'#fff', fontSize:13, fontWeight:700, transform:hov?'translateY(-1px)':'none', boxShadow:hov?'0 6px 16px rgba(27,51,71,0.35)':'0 2px 6px rgba(27,51,71,0.2)', transition:'all 0.2s ease' }}><Plus size={16}/>{label}</button>;
+}
+function ActionBtn({ icon: Icon, color, ds }) {
+  const [hov, setHov] = useState(false);
+  return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ width:30, height:30, borderRadius:8, border:`1px solid ${hov?color+'60':ds.border}`, background:hov?color+'15':'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transform:hov?'scale(1.08)':'scale(1)', transition:'all 0.15s ease' }}><Icon size={13} color={hov?color:ds.muted} /></button>;
 }
