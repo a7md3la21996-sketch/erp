@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import FollowUpReminder from '../../components/ui/FollowUpReminder';
-import FollowUpReminder from '../../components/ui/FollowUpReminder';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 
