@@ -3,13 +3,14 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, UserCheck, PhoneOff, AlertOctagon, CheckCircle2, Calendar, FileDown, MoreVertical, Bell, PhoneMissed } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, UserCheck, PhoneOff, AlertOctagon, CheckCircle2, Calendar, FileDown, MoreVertical, Bell, PhoneMissed, CheckSquare, Check, Trash2 } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, checkDuplicate,
   fetchContactActivities, createActivity,
   fetchContactOpportunities
 } from '../../services/contactsService';
+import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES, TASK_STATUSES } from '../../services/tasksService';
 import ImportModal from './ImportModal';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -442,6 +443,10 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
   const [tab, setTab] = useState('info');
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [addTaskForm, setAddTaskForm] = useState(false);
+  const [newTask, setNewTask] = useState({ title: '', type: 'followup', priority: 'medium', due_date: '', notes: '' });
+  const [savingTask, setSavingTask] = useState(false);
   const [loadingActs, setLoadingActs] = useState(false);
   const [showActivityForm, setShowActivityForm] = useState(false);
 
@@ -452,6 +457,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
         .then(data => setActivities(data))
         .catch(() => setActivities([]))
         .finally(() => setLoadingActs(false));
+    }
+    if (tab === 'tasks') {
+      fetchTasks({ contactId: contact.id })
+        .then(data => setTasks(data))
+        .catch(() => setTasks([]));
     }
     if (tab === 'opportunities') {
       fetchContactOpportunities(contact.id)
@@ -475,7 +485,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
   const t = TEMP[contact.temperature];
   const tp = TYPE[contact.contact_type];
 
-  const tabs = [['info', isRTL ? 'البيانات' : 'Info'], ['activities', isRTL ? 'الأنشطة' : 'Activities'], ['opportunities', isRTL ? 'الفرص' : 'Opportunities']];
+  const tabs = [['info', isRTL ? 'البيانات' : 'Info'], ['activities', isRTL ? 'الأنشطة' : 'Activities'], ['opportunities', isRTL ? 'الفرص' : 'Opportunities'], ['tasks', isRTL ? 'المهام' : 'Tasks']];
 
   const rowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(74,122,171,0.08)', fontSize: 13 };
 
@@ -627,7 +637,88 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
             </div>
           )}
 
-          {/* OPPORTUNITIES TAB */}
+
+          {/* TASKS TAB */}
+          {tab === 'tasks' && (
+            <div>
+              <button onClick={() => setAddTaskForm(f => !f)} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
+                {addTaskForm ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '+ مهمة جديدة' : '+ New Task')}
+              </button>
+
+              {addTaskForm && (
+                <div style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 12, marginBottom: 14 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <input value={newTask.title} onChange={e => setNewTask(f => ({...f, title: e.target.value}))}
+                      placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
+                      style={{ padding: '7px 10px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: 'rgba(15,30,45,0.6)', color: '#E2EAF4', fontSize: 12, outline: 'none', direction: isRTL ? 'rtl' : 'ltr' }} />
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <select value={newTask.type} onChange={e => setNewTask(f => ({...f, type: e.target.value}))}
+                        style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: 'rgba(15,30,45,0.6)', color: '#E2EAF4', fontSize: 11, outline: 'none' }}>
+                        {Object.entries(TASK_TYPES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+                      </select>
+                      <select value={newTask.priority} onChange={e => setNewTask(f => ({...f, priority: e.target.value}))}
+                        style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: 'rgba(15,30,45,0.6)', color: '#E2EAF4', fontSize: 11, outline: 'none' }}>
+                        {Object.entries(TASK_PRIORITIES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+                      </select>
+                    </div>
+                    <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
+                      style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: 'rgba(15,30,45,0.6)', color: '#E2EAF4', fontSize: 11, outline: 'none' }} />
+                    <button onClick={async () => {
+                      if (!newTask.title.trim() || !newTask.due_date) return;
+                      setSavingTask(true);
+                      try {
+                        const t = await createTask({ ...newTask, contact_id: contact.id, contact_name: contact.full_name_ar || contact.full_name_en, dept: 'crm' });
+                        setTasks(prev => [t, ...prev]);
+                        setNewTask({ title: '', type: 'followup', priority: 'medium', due_date: '', notes: '' });
+                        setAddTaskForm(false);
+                      } finally { setSavingTask(false); }
+                    }} disabled={savingTask || !newTask.title.trim() || !newTask.due_date}
+                      style={{ padding: '7px', borderRadius: 7, border: 'none', background: '#2B4C6F', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: savingTask || !newTask.title.trim() || !newTask.due_date ? 0.5 : 1 }}>
+                      {savingTask ? '...' : (isRTL ? 'حفظ' : 'Save')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {tasks.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
+                  <CheckSquare size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
+                  <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد مهام مرتبطة' : 'No tasks linked'}</p>
+                </div>
+              ) : tasks.map(task => {
+                const pri = TASK_PRIORITIES[task.priority];
+                const typ = TASK_TYPES[task.type];
+                const st  = TASK_STATUSES[task.status];
+                const due = new Date(task.due_date);
+                const overdue = due < new Date() && task.status !== 'done';
+                return (
+                  <div key={task.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#E2EAF4', marginBottom: 4, textDecoration: task.status === 'done' ? 'line-through' : 'none', opacity: task.status === 'done' ? 0.6 : 1 }}>
+                          {task.title}
+                        </div>
+                        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 5, background: (pri?.color || '#4A7AAB') + '22', color: pri?.color || '#4A7AAB', fontWeight: 600 }}>
+                            {isRTL ? pri?.ar : pri?.en}
+                          </span>
+                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 5, background: (st?.color || '#4A7AAB') + '22', color: st?.color || '#4A7AAB' }}>
+                            {isRTL ? st?.ar : st?.en}
+                          </span>
+                          <span style={{ fontSize: 10, color: overdue ? '#EF4444' : '#8BA8C8', display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Clock size={9} />
+                            {due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* OPPORTUNITIES TAB */
           {tab === 'opportunities' && (
             <div>
               <button style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>

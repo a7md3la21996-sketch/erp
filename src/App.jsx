@@ -81,7 +81,7 @@ export default function App() {
               <Route path="/hr/onboarding" element={<OnboardingPage />} />
               <Route path="/hr/*" element={<ComingSoon title="HR" />} />
               <Route path="/finance/*" element={<ComingSoon title="Finance" />} />
-              <Route path="/tasks" element={<ComingSoon title="Tasks" />} />
+              <Route path="/tasks" element={<TasksPage />} />
               <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
               <Route path="/chat" element={<ComingSoon title="Chat" />} />
               <Route path="/reports" element={<ComingSoon title="Reports" />} />
