@@ -25,6 +25,7 @@ import LeadPoolPage from './pages/crm/LeadPoolPage';
 import TasksPage from './pages/TasksPage';
 import ActivitiesPage from './pages/ActivitiesPage';
 import FinancePage from './pages/finance/FinancePage';
+import TargetTrackerPage from './pages/sales/TargetTrackerPage';
 import { P } from './config/roles';
 import './i18n';
 
@@ -77,6 +78,7 @@ export default function App() {
               <Route path="/hr/payroll" element={<PayrollPage />} />
               <Route path="/hr/competencies" element={<CompetenciesPage />} />
               <Route path="/performance" element={<PerformancePage />} />
+              <Route path="/sales/targets" element={<TargetTrackerPage />} />
               <Route path="/hr/recruitment" element={<RecruitmentPage />} />
               <Route path="/hr/disciplinary" element={<DisciplinaryPage />} />
               <Route path="/hr/training" element={<TrainingPage />} />
