@@ -29,8 +29,8 @@ export default function Sidebar({ collapsed, onToggle }) {
             <img src="/logo.png" alt="P" style={{ width: 32, height: 32, objectFit: 'contain' }} />
           </div>
         ) : (
-          <div style={{ width: '100%', height: 52, background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '4px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
-            <img src="/logo.png" alt="Platform Real Estate" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          <div style={{ width: '100%', height: 56, background: 'transparent', borderRadius: 10, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '4px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+            <img src="/logo.png" alt="Platform Real Estate" style={{ width: '100%', height: 'auto', maxHeight: 56, objectFit: 'contain' }} />
           </div>
         )}
       </div>
