@@ -21,7 +21,7 @@ import TrainingPage from './pages/hr/TrainingPage';
 import SelfServicePage from './pages/hr/SelfServicePage';
 import AssetsPage from './pages/hr/AssetsPage';
 import OnboardingPage from './pages/hr/OnboardingPage';
-import ActivitiesPage from './pages/ActivitiesPage';
+import LeadPoolPage from './pages/crm/LeadPoolPage';
 import { P } from './config/roles';
 import './i18n';
 
@@ -29,7 +29,7 @@ function ComingSoon({ title }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '3rem', marginBottom: 16, color: '#4A7AAB' }}>⏳</div>
+        <div style={{ fontSize: '3rem', marginBottom: 16 }}>🚧</div>
         <h2 style={{ color: '#374151', margin: '0 0 8px' }}>{title}</h2>
         <p style={{ color: '#9ca3af' }}>Coming soon — Next phase</p>
       </div>
@@ -62,8 +62,7 @@ export default function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/crm/contacts" element={<ContactsPage />} />
               <Route path="/crm/opportunities" element={<OpportunitiesPage />} />
-              <Route path="/crm/lead-pool" element={<ComingSoon title="Lead Pool" />} />
-              <Route path="/activities" element={<ActivitiesPage />} />
+              <Route path="/crm/lead-pool" element={<LeadPoolPage />} />
               <Route path="/real-estate/*" element={<ComingSoon title="Real Estate" />} />
               <Route path="/sales/*" element={<ComingSoon title="Sales" />} />
               <Route path="/marketing/*" element={<ComingSoon title="Marketing" />} />
