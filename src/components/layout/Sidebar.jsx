@@ -22,59 +22,18 @@ export default function Sidebar({ collapsed, onToggle }) {
   const visibleItems = NAV_ITEMS.filter(item => hasPermission(item.permission));
 
   return (
-    <aside style={{
-      position: 'fixed', top: 0, [isRTL ? 'right' : 'left']: 0, zIndex: 20,
-      height: '100vh', width: collapsed ? 72 : 260, transition: 'width 0.3s',
-      background: isDark ? '#1a2234' : '#fff',
-      borderRight: isRTL ? 'none' : ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')),
-      borderLeft: isRTL ? ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')) : 'none',
-      display: 'flex', flexDirection: 'column',
-    }}>
-
-      {/* ── Logo Area ── */}
-      <div style={{
-        height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'),
-        padding: collapsed ? '8px' : '8px 16px',
-        overflow: 'hidden',
-      }}>
+    <aside style={{ position: 'fixed', top: 0, [isRTL ? 'right' : 'left']: 0, zIndex: 20, height: '100vh', width: collapsed ? 72 : 260, transition: 'width 0.3s', background: isDark ? '#1a2234' : '#fff', borderRight: isRTL ? 'none' : ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')), borderLeft: isRTL ? ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')) : 'none', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'), padding: collapsed ? '8px' : '8px 16px', overflow: 'hidden' }}>
         {collapsed ? (
-          // أيقونة صغيرة — مربع أبيض بلوجو جواه
-          <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: '#fff',
-            border: '1px solid #e5e7eb',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden', flexShrink: 0,
-            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-          }}>
-            <img
-              src="/final_logooo_pdf-3.png"
-              alt="P"
-              style={{ width: 32, height: 32, objectFit: 'contain' }}
-            />
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#fff', border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+            <img src="/logo.png" alt="P" style={{ width: 32, height: 32, objectFit: 'contain' }} />
           </div>
         ) : (
-          // اللوجو الكامل — خلفية بيضاء ثابتة عشان يبان صح في Dark وLight
-          <div style={{
-            width: '100%', height: 52,
-            background: '#fff',
-            borderRadius: 10,
-            border: '1px solid #e5e7eb',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            overflow: 'hidden', padding: '4px 8px',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-          }}>
-            <img
-              src="/final_logooo_pdf-3.png"
-              alt="Platform Real Estate"
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-            />
+          <div style={{ width: '100%', height: 52, background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', padding: '4px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>
+            <img src="/logo.png" alt="Platform Real Estate" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
         )}
       </div>
-
-      {/* ── Navigation ── */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: '16px 12px' }}>
         {visibleItems.map(item => {
           const Icon = item.icon;
@@ -82,60 +41,24 @@ export default function Sidebar({ collapsed, onToggle }) {
           const isOpen = openMenus[item.id] || isParentActive(item);
           const active = item.path ? isActive(item.path) : isParentActive(item);
           const visibleChildren = hasChildren ? item.children.filter(c => hasPermission(c.permission)) : [];
-
           return (
             <div key={item.id} style={{ marginBottom: 2 }}>
               {item.path && !hasChildren ? (
-                <Link to={item.path} style={{
-                  display: 'flex', alignItems: 'center',
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                  gap: 12, padding: '10px 12px', borderRadius: 8,
-                  textDecoration: 'none', fontSize: 14, fontWeight: 500,
-                  transition: 'background 0.15s',
-                  background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent',
-                  color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
-                }}>
+                <Link to={item.path} style={{ display: 'flex', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12, padding: '10px 12px', borderRadius: 8, textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'background 0.15s', background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280') }}>
                   <Icon size={20} style={{ flexShrink: 0 }} />
                   {!collapsed && <span style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>{item.label[lang]}</span>}
                 </Link>
               ) : (
-                <button onClick={() => toggleMenu(item.id)} style={{
-                  width: '100%', display: 'flex', alignItems: 'center',
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                  gap: 12, padding: '10px 12px', borderRadius: 8,
-                  border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500,
-                  background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent',
-                  color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'),
-                  textAlign: isRTL ? 'right' : 'left',
-                }}>
+                <button onClick={() => toggleMenu(item.id)} style={{ width: '100%', display: 'flex', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row', gap: 12, padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 500, background: active ? (isDark ? 'rgba(74,122,171,0.2)' : '#EDF2F7') : 'transparent', color: active ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#9ca3af' : '#6b7280'), textAlign: isRTL ? 'right' : 'left' }}>
                   <Icon size={20} style={{ flexShrink: 0 }} />
                   {!collapsed && <span style={{ flex: 1 }}>{item.label[lang]}</span>}
-                  {!collapsed && (
-                    <ChevronDown size={16} style={{
-                      transform: isOpen ? 'rotate(180deg)' : 'none',
-                      transition: 'transform 0.2s', flexShrink: 0,
-                    }} />
-                  )}
+                  {!collapsed && <ChevronDown size={16} style={{ transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }} />}
                 </button>
               )}
-
               {!collapsed && hasChildren && isOpen && visibleChildren.length > 0 && (
-                <div style={{
-                  paddingRight: 8, paddingLeft: 8, marginTop: 4,
-                  borderRight: isRTL ? ('2px solid ' + (isDark ? '#2d3748' : '#E2E8F0')) : 'none',
-                  borderLeft: isRTL ? 'none' : ('2px solid ' + (isDark ? '#2d3748' : '#E2E8F0')),
-                  marginRight: isRTL ? 32 : 4,
-                  marginLeft: isRTL ? 4 : 32,
-                }}>
+                <div style={{ paddingRight: 8, paddingLeft: 8, marginTop: 4, borderRight: isRTL ? ('2px solid ' + (isDark ? '#2d3748' : '#E2E8F0')) : 'none', borderLeft: isRTL ? 'none' : ('2px solid ' + (isDark ? '#2d3748' : '#E2E8F0')), marginRight: isRTL ? 32 : 4, marginLeft: isRTL ? 4 : 32 }}>
                   {visibleChildren.map(child => (
-                    <Link key={child.id} to={child.path} style={{
-                      display: 'block', padding: '8px 12px', borderRadius: 8,
-                      textDecoration: 'none', fontSize: 13,
-                      color: isActive(child.path) ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#6b7280' : '#9ca3af'),
-                      fontWeight: isActive(child.path) ? 600 : 400,
-                      background: isActive(child.path) ? (isDark ? 'rgba(74,122,171,0.15)' : '#EDF2F740') : 'transparent',
-                      textAlign: isRTL ? 'right' : 'left',
-                    }}>
+                    <Link key={child.id} to={child.path} style={{ display: 'block', padding: '8px 12px', borderRadius: 8, textDecoration: 'none', fontSize: 13, color: isActive(child.path) ? (isDark ? '#6B8DB5' : '#2B4C6F') : (isDark ? '#6b7280' : '#9ca3af'), fontWeight: isActive(child.path) ? 600 : 400, background: isActive(child.path) ? (isDark ? 'rgba(74,122,171,0.15)' : '#EDF2F740') : 'transparent', textAlign: isRTL ? 'right' : 'left' }}>
                       {child.label[lang]}
                     </Link>
                   ))}
@@ -145,18 +68,9 @@ export default function Sidebar({ collapsed, onToggle }) {
           );
         })}
       </nav>
-
-      {/* ── Toggle Button ── */}
       <div style={{ padding: 12, borderTop: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb') }}>
-        <button onClick={onToggle} style={{
-          width: '100%', display: 'flex', justifyContent: 'center', padding: '8px',
-          borderRadius: 8, border: 'none', cursor: 'pointer',
-          background: 'transparent', color: isDark ? '#6b7280' : '#9ca3af',
-        }}>
-          {collapsed
-            ? (isRTL ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />)
-            : (isRTL ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />)
-          }
+        <button onClick={onToggle} style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: isDark ? '#6b7280' : '#9ca3af' }}>
+          {collapsed ? (isRTL ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />) : (isRTL ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />)}
         </button>
       </div>
     </aside>
