@@ -330,7 +330,9 @@ export default function EmployeesPage() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
             <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, rgba(27,51,71,0.08), rgba(74,122,171,0.12))', border: '1.5px dashed rgba(74,122,171,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
               <Users size={28} color="#4A7AAB" strokeWidth={1.5} />
-            <p style={{ fontSize: 14, color: ds.muted, margin: 0 }}>{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
+            </div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: ds.text, margin: '0 0 6px' }}>{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
+            <p style={{ fontSize: 13, color: ds.muted, margin: 0 }}>{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>
           </div>
         )}
       </div>
