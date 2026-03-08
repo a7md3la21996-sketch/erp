@@ -86,6 +86,7 @@ export default function LeadPoolPage() {
   const canViewFresh   = hasPermission(P.POOL_VIEW_FRESH);
   const canAssign      = hasPermission(P.POOL_ASSIGN);
   const canManage      = hasPermission(P.POOL_MANAGE);
+  const canViewAll     = canManage; // managers/directors see all teams
 
   const [leads, setLeads]             = useState(makeMockLeads);
   const [selected, setSelected]       = useState([]);
