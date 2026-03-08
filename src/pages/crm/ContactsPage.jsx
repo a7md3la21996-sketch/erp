@@ -718,7 +718,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
             </div>
           )}
 
-          {/* OPPORTUNITIES TAB */
+          {/* OPPORTUNITIES TAB */}
           {tab === 'opportunities' && (
             <div>
               <button style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
