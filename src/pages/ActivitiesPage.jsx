@@ -250,12 +250,25 @@ export default function ActivitiesPage() {
       {/* Activities List */}
       <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: c.muted, fontSize: 13 }}>
-            {lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}
+          <div style={{ padding: 24 }}>
+            {[1,2,3,4,5].map(i => (
+              <div key={i} style={{ display: 'flex', gap: 12, padding: '14px 16px', borderBottom: '1px solid ' + c.border, alignItems: 'flex-start' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: c.border, flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite', opacity: 0.6 }} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ width: '40%', height: 12, borderRadius: 6, background: c.border, animation: 'pulse 1.5s ease-in-out infinite' }} />
+                  <div style={{ width: '70%', height: 10, borderRadius: 6, background: c.border, animation: 'pulse 1.5s ease-in-out infinite', opacity: 0.7 }} />
+                </div>
+              </div>
+            ))}
+            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: c.muted, fontSize: 13 }}>
-            {lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
+            <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, rgba(27,51,71,0.08), rgba(74,122,171,0.12))', border: '1.5px dashed rgba(74,122,171,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <Activity size={28} color="#4A7AAB" strokeWidth={1.5} />
+            </div>
+            <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: c.text }}>{lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}</p>
+            <p style={{ margin: 0, fontSize: 13, color: c.muted }}>{lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started'}</p>
           </div>
         ) : (
           filtered.map((act, idx) => {
