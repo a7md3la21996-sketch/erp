@@ -22,6 +22,7 @@ import SelfServicePage from './pages/hr/SelfServicePage';
 import AssetsPage from './pages/hr/AssetsPage';
 import OnboardingPage from './pages/hr/OnboardingPage';
 import LeadPoolPage from './pages/crm/LeadPoolPage';
+import TasksPage from './pages/TasksPage';
 import { P } from './config/roles';
 import './i18n';
 
