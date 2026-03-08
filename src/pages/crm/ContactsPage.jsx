@@ -1,6 +1,4 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import FollowUpReminder from '../../components/ui/FollowUpReminder';
-import { SkeletonTable, SkeletonKpiGrid } from '../../components/ui/LoadingAndEmpty';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
