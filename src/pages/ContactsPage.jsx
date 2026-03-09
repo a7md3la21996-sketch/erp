@@ -12,7 +12,7 @@ import {
   fetchContactOpportunities
 } from '../services/contactsService';
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES, TASK_STATUSES } from '../services/tasksService';
-import ImportModal from './ImportModal';
+import ImportModal from './crm/ImportModal';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { facebook: 'فيسبوك', instagram: 'إنستجرام', google_ads: 'جوجل أدز', website: 'الموقع', call: 'اتصال وارد', walk_in: 'زيارة مباشرة', referral: 'ترشيح', developer: 'مطور', cold_call: 'كولد كول', other: 'أخرى' };
