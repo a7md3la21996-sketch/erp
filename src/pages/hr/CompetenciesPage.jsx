@@ -69,7 +69,15 @@ export default function CompetenciesPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((comp, idx) => {
+            {filtered.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <Star size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد كفاءات مسجلة':'No Competencies Found'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي كفاءات بعد':'No competencies added yet'}</p>
+              </div>
+            ) : filtered.map((comp, idx) => {
               const [hov, setHov] = useState(false);
               const isExp = expanded===idx;
               return (

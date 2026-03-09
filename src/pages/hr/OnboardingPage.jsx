@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
-import { UserPlus, CheckCircle2, Clock, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { UserPlus, CheckCircle2, Clock, AlertCircle, ChevronDown, ChevronRight , UserCheck } from 'lucide-react';
 
 function useDS() {
   const { theme } = useTheme(); const dark = theme==='dark';
@@ -63,7 +63,15 @@ export default function OnboardingPage() {
       </div>
 
       <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-        {MOCK_ONBOARDING.map(ob => {
+        {MOCK_ONBOARDING.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <UserCheck size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا يوجد موظفون في التهيئة':'No Onboarding Employees'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي موظفين في مرحلة التهيئة':'No employees in onboarding'}</p>
+              </div>
+            ) : MOCK_ONBOARDING.map(ob => {
           const emp = MOCK_EMPLOYEES.find(e=>e.employee_id===ob.emp_id||e.id===ob.emp_id);
           const name = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : ob.emp_id;
           const initials = name?.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()||'??';

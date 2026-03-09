@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
-import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, Eye } from 'lucide-react';
+import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, Eye , ShieldAlert } from 'lucide-react';
 
 function useDS() {
   const { theme } = useTheme(); const dark = theme==='dark';
@@ -77,7 +77,15 @@ export default function DisciplinaryPage() {
             </tr>
           </thead>
           <tbody>
-            {cases.map(cas => {
+            {cases.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <ShieldAlert size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد مخالفات تأديبية':'No Disciplinary Records'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم تسجيل أي مخالفات':'No disciplinary records found'}</p>
+              </div>
+            ) : cases.map(cas => {
               const emp = MOCK_EMPLOYEES.find(e=>e.employee_id===cas.emp_id||e.id===cas.emp_id);
               const name = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : cas.emp_id;
               const [hov, setHov] = useState(false);

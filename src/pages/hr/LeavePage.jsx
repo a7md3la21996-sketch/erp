@@ -105,7 +105,15 @@ export default function LeavePage() {
               <th key={i} style={{ fontSize:11,fontWeight:700,color:ds.muted,padding:'10px 14px',textAlign:isRTL?'right':'left',textTransform:'uppercase' }}>{h}</th>
             ))}
           </tr></thead>
-          <tbody>{leaves.map(lv => {
+          <tbody>{leaves.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <CalendarOff size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد طلبات إجازة':'No Leave Requests'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم تقديم أي طلبات إجازة بعد':'No leave requests submitted yet'}</p>
+              </div>
+            ) : leaves.map(lv => {
             const emp = MOCK_EMPLOYEES.find(e=>e.employee_id===lv.emp_id);
             const name = emp?((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar):lv.emp_id;
             const [hov,setHov] = useState(false);

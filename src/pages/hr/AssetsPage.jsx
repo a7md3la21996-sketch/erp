@@ -79,7 +79,15 @@ export default function AssetsPage() {
         <div style={{ padding:'14px 18px', borderBottom:`1px solid ${ds.border}`, display:'flex', justifyContent:'space-between', alignItems:'center', flexDirection:isRTL?'row-reverse':'row' }}>
           <p style={{ margin:0, fontSize:14, fontWeight:700, color:ds.text }}>{lang==='ar'?'قائمة الأصول':'Asset List'}</p>
           <div style={{ display:'flex', gap:6 }}>
-            {filters.map(f => (
+            {filtered.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <Package size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد أصول مسجلة':'No Assets Found'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم تسجيل أي أصول بعد':'No assets registered yet'}</p>
+              </div>
+            ) : filters.map(f => (
               <button key={f.key} onClick={()=>setFilter(f.key)} style={{ padding:'5px 12px', borderRadius:8, border:`1px solid ${filter===f.key?ds.accent+'60':ds.border}`, background:filter===f.key?ds.accent+'15':'transparent', color:filter===f.key?ds.accent:ds.muted, fontSize:12, fontWeight:600, cursor:'pointer', transition:'all 0.15s' }}>{f.label}</button>
             ))}
           </div>

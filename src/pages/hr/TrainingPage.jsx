@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
-import { BookOpen, Users, CheckCircle2, Clock, Plus, Award } from 'lucide-react';
+import { BookOpen, Users, CheckCircle2, Clock, Plus, Award , GraduationCap } from 'lucide-react';
 
 function useDS() {
   const { theme } = useTheme(); const dark = theme==='dark';
@@ -63,7 +63,15 @@ export default function TrainingPage() {
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:14, marginBottom:16 }}>
-        {programs.map(prog => {
+        {programs.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <GraduationCap size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد برامج تدريبية':'No Training Programs'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي برامج تدريبية بعد':'No training programs added yet'}</p>
+              </div>
+            ) : programs.map(prog => {
           const [hov, setHov] = useState(false);
           const pct = prog.enrolled ? Math.round(prog.completed/prog.enrolled*100) : 0;
           return (
