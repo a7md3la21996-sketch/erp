@@ -6,7 +6,7 @@ import { ProtectedRoute } from './components/auth/PermissionGate';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
-import ContactsPage from './pages/crm/ContactsPage';
+import ContactsPage from './pages/ContactsPage';
 import OpportunitiesPage from './pages/crm/OpportunitiesPage';
 import LeadPoolPage from './pages/crm/LeadPoolPage';
 import ActivitiesPage from './pages/ActivitiesPage';
@@ -66,7 +66,6 @@ export default function App() {
               <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/contacts" element={<ContactsPage />} />
-                <Route path="/crm/contacts" element={<ContactsPage />} />
                 <Route path="/activities" element={<ActivitiesPage />} />
                 <Route path="/tasks" element={<TasksPage />} />
                 <Route path="/crm/opportunities" element={<OpportunitiesPage />} />

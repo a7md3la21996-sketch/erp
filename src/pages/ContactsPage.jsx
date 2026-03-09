@@ -1,17 +1,17 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import FollowUpReminder from '../../components/ui/FollowUpReminder';
+import FollowUpReminder from '../components/ui/FollowUpReminder';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, UserCheck, PhoneOff, AlertOctagon, CheckCircle2, Calendar, FileDown, MoreVertical, Bell, PhoneMissed, CheckSquare, Check, Trash2 } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, checkDuplicate,
   fetchContactActivities, createActivity,
   fetchContactOpportunities
-} from '../../services/contactsService';
-import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES, TASK_STATUSES } from '../../services/tasksService';
+} from '../services/contactsService';
+import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES, TASK_STATUSES } from '../services/tasksService';
 import ImportModal from './ImportModal';
 
 // ── Constants ──────────────────────────────────────────────────────────────

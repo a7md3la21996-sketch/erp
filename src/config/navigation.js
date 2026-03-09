@@ -11,7 +11,7 @@ export const NAV_ITEMS = [
     { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
     { id: 'lead-pool', label: { ar: 'بركة الليدز', en: 'Lead Pool' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
   ]},
-  { id: 'contacts', label: { ar: 'جهات الاتصال', en: 'Contacts' }, icon: BookUser, path: '/crm/contacts', permission: P.CONTACTS_VIEW_OWN },
+  { id: 'contacts', label: { ar: 'جهات الاتصال', en: 'Contacts' }, icon: BookUser, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
   { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.CONTACTS_VIEW_OWN },
   { id: 'real-estate', label: { ar: 'العقارات', en: 'Real Estate' }, icon: Building2, permission: P.PROJECTS_VIEW, children: [
     { id: 'projects', label: { ar: 'المشاريع', en: 'Projects' }, path: '/real-estate/projects', permission: P.PROJECTS_VIEW },
