@@ -302,7 +302,15 @@ export default function FinancePage() {
             </tr>
           </thead>
           <tbody>
-            {filteredComm.map((row) => (
+            {filteredComm.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <DollarSign size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد عمولات':'No Commissions'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم تسجيل أي عمولات بعد':'No commission records found'}</p>
+              </div>
+            ) : filteredComm.map((row) => (
               <tr key={row.id}
                 style={{ background: hoverRow === row.id ? c.rowHover : 'transparent', transition: 'background 0.15s' }}
                 onMouseEnter={() => setHoverRow(row.id)}
@@ -455,7 +463,15 @@ export default function FinancePage() {
             </tr>
           </thead>
           <tbody>
-            {filteredExp.map((row) => (
+            {filteredExp.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <Receipt size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد مصروفات':'No Expenses'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم تسجيل أي مصروفات بعد':'No expense records found'}</p>
+              </div>
+            ) : filteredExp.map((row) => (
               <tr key={row.id}
                 style={{ background: hoverRow === row.id ? c.rowHover : 'transparent', transition: 'background 0.15s' }}
                 onMouseEnter={() => setHoverRow(row.id)}

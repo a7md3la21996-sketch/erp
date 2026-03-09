@@ -332,11 +332,14 @@ export default function LeadPoolPage() {
       {/* Leads List */}
       <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
         {visible.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 48, color: c.muted }}>
-            <Zap size={32} color={c.border} style={{ marginBottom: 12 }} />
-            <p style={{ margin: 0, fontSize: 14 }}>{lang === 'ar' ? 'لا توجد ليدز في الـ Pool' : 'No leads in pool'}</p>
-          </div>
-        ) : visible.map((lead, idx) => {
+            <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <Users size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
+              </div>
+            ) : visible.map((lead, idx) => {
           const aging   = getAging(lead.created_at);
           const sla     = getSLAStatus(lead);
           const src     = SOURCES[lead.source];

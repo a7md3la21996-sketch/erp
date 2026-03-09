@@ -212,11 +212,14 @@ export default function TasksPage() {
         {loading ? (
           <div style={{ textAlign:'center', padding:48, color:c.muted }}>{lang==='ar'?'جاري التحميل...':'Loading...'}</div>
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign:'center', padding:48, color:c.muted }}>
-            <CheckSquare size={32} color={c.border} style={{ marginBottom:12 }} />
-            <p style={{ margin:0, fontSize:14 }}>{lang==='ar'?'لا توجد مهام':'No tasks found'}</p>
-          </div>
-        ) : filtered.map((task, idx) => {
+            <div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <CheckSquare size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي مهام بعد أو جرّب تغيير الفلتر':'No tasks found, try changing the filter'}</p>
+              </div>
+            ) : filtered.map((task, idx) => {
           const typeDef = TASK_TYPES[task.type] || TASK_TYPES.general;
           const Ic = ICONS[typeDef.icon] || CheckSquare;
           const priDef = TASK_PRIORITIES[task.priority];

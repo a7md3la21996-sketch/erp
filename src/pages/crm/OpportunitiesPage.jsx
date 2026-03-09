@@ -244,7 +244,13 @@ export default function OpportunitiesPage() {
         <div style={{ marginInlineStart:"auto", fontSize:12, color:c.textMuted }}>{filtered.length} {isRTL?"فرصة":"opportunities"}</div>
       </div>
       {filtered.length===0
-        ? <div style={{ textAlign:"center", padding:"60px 0", color:c.textMuted, fontSize:14 }}>{isRTL?"لا توجد فرص":"No opportunities found"}</div>
+        ? (<div style={{ textAlign:'center', padding:'60px 20px' }}>
+                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                  <TrendingUp size={24} color='#4A7AAB' />
+                </div>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد فرص بيع':'No Opportunities Found'}</p>
+                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي فرص بيع بعد':'No sales opportunities have been added yet'}</p>
+              </div>)
         : <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:16 }}>
             {filtered.map(opp=><OppCard key={opp.id} opp={opp} isDark={isDark} isRTL={isRTL} onDelete={handleDelete} onMove={handleMove} />)}
           </div>
