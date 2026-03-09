@@ -256,6 +256,73 @@ export default function OpportunitiesPage() {
           </div>
       }
       {showModal&&<AddModal isDark={isDark} isRTL={isRTL} onClose={()=>setShowModal(false)} onSave={handleSave} />}
-    </div>
+    
+      {showAddModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}
+          onClick={e => { if(e.target === e.currentTarget) setShowAddModal(false); }}>
+          <div style={{ background:ds.card, borderRadius:20, padding:28, width:'100%', maxWidth:520, border:'1px solid '+ds.border, maxHeight:'90vh', overflowY:'auto' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:20, flexDirection:isRTL?'row-reverse':'row' }}>
+              <h3 style={{ margin:0, fontSize:17, fontWeight:700, color:ds.text }}>{lang==='ar'?'إضافة فرصة جديدة':'Add New Opportunity'}</h3>
+              <button onClick={() => setShowAddModal(false)} style={{ background:'none', border:'none', cursor:'pointer', color:ds.muted, fontSize:20, lineHeight:1 }}>✕</button>
+            </div>
+
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              {[
+                { key:'contactName', label_ar:'اسم العميل',  label_en:'Client Name',   type:'text',   placeholder_ar:'أدخل اسم العميل', placeholder_en:'Enter client name' },
+                { key:'budget',      label_ar:'الميزانية',   label_en:'Budget (EGP)',   type:'number', placeholder_ar:'مثال: 2500000',    placeholder_en:'e.g. 2500000' },
+                { key:'notes',       label_ar:'ملاحظات',     label_en:'Notes',          type:'text',   placeholder_ar:'ملاحظات إضافية',   placeholder_en:'Additional notes' },
+              ].map(f => (
+                <div key={f.key} style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  <label style={{ fontSize:13, fontWeight:600, color:ds.text, textAlign:isRTL?'right':'left' }}>{lang==='ar'?f.label_ar:f.label_en}</label>
+                  <input
+                    type={f.type}
+                    value={newOpp[f.key]}
+                    onChange={e => setNewOpp(p => ({ ...p, [f.key]: e.target.value }))}
+                    placeholder={lang==='ar'?f.placeholder_ar:f.placeholder_en}
+                    style={{ padding:'10px 14px', borderRadius:10, border:'1px solid '+ds.border, background:ds.input, color:ds.text, fontSize:13, outline:'none', textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr' }}
+                  />
+                </div>
+              ))}
+
+              {[
+                { key:'project', label_ar:'المشروع', label_en:'Project', options: PROJECT_OPTIONS.map(p => ({ value:p, label:p })) },
+                { key:'stage',   label_ar:'المرحلة', label_en:'Stage',   options: STAGE_CONFIG.filter(s=>s.id!=='all').map(s => ({ value:s.id, label:lang==='ar'?s.label_ar:s.label_en })) },
+                { key:'temperature', label_ar:'الحرارة', label_en:'Temperature', options: Object.entries(TEMP_CONFIG).map(([k,v]) => ({ value:k, label:lang==='ar'?v.label_ar:v.label_en })) },
+                { key:'priority',    label_ar:'الأولوية', label_en:'Priority',    options: Object.entries(PRIORITY_CONFIG).map(([k,v]) => ({ value:k, label:lang==='ar'?v.label_ar:v.label_en })) },
+                { key:'agent',       label_ar:'المسؤول',  label_en:'Agent',       options: AGENT_OPTIONS.map(a => ({ value:a, label:a })) },
+              ].map(f => (
+                <div key={f.key} style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                  <label style={{ fontSize:13, fontWeight:600, color:ds.text, textAlign:isRTL?'right':'left' }}>{lang==='ar'?f.label_ar:f.label_en}</label>
+                  <select
+                    value={newOpp[f.key]}
+                    onChange={e => setNewOpp(p => ({ ...p, [f.key]: e.target.value }))}
+                    style={{ padding:'10px 14px', borderRadius:10, border:'1px solid '+ds.border, background:ds.input, color:ds.text, fontSize:13, outline:'none', textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr', cursor:'pointer' }}
+                  >
+                    <option value="">{lang==='ar'?'اختر...':'Select...'}</option>
+                    {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display:'flex', gap:10, marginTop:24, flexDirection:isRTL?'row-reverse':'row' }}>
+              <button
+                onClick={() => {
+                  if (!newOpp.contactName) return;
+                  setOpportunities(prev => [...prev, { ...newOpp, id: Date.now(), budget: Number(newOpp.budget)||0, lastActivityDays:0, contactId: Date.now() }]);
+                  setShowAddModal(false);
+                  setNewOpp({ contactName:"", project:"", budget:"", stage:"new", temperature:"warm", priority:"medium", agent:"", notes:"" });
+                }}
+                style={{ flex:1, padding:'11px 0', borderRadius:10, background:'#2B4C6F', color:'#fff', border:'none', fontSize:14, fontWeight:600, cursor:'pointer' }}
+              >{lang==='ar'?'إضافة الفرصة':'Add Opportunity'}</button>
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{ padding:'11px 20px', borderRadius:10, background:'transparent', color:ds.muted, border:'1px solid '+ds.border, fontSize:14, cursor:'pointer' }}
+              >{lang==='ar'?'إلغاء':'Cancel'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+</div>
   );
 }

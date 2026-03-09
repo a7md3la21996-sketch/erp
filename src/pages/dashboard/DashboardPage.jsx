@@ -6,7 +6,9 @@ import { ROLE_LABELS } from '../../config/roles';
 import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 import { getAttendanceForMonth } from '../../data/attendanceStore';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2 } from 'lucide-react';
+import { fetchTodayReminders } from '../../services/remindersService';
+import { useState, useEffect } from 'react';
+import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2 , Bell , Phone , MessageCircle , MapPin , Mail , CheckCircle } from 'lucide-react';
 
 const YEAR = 2026;
 const MONTH = 3;
@@ -44,6 +46,87 @@ function ChartTooltip({ active, payload, label, isDark, isRTL }) {
     </div>
   );
 }
+
+const REMINDER_TYPES = {
+  call:     { ar: 'مكالمة',    en: 'Call',       color: '#10B981', Icon: Phone },
+  whatsapp: { ar: 'واتساب',   en: 'WhatsApp',    color: '#25D366', Icon: MessageCircle },
+  visit:    { ar: 'زيارة موقع',en: 'Site Visit',  color: '#4A7AAB', Icon: MapPin },
+  meeting:  { ar: 'اجتماع',   en: 'Meeting',     color: '#8B5CF6', Icon: Users },
+  email:    { ar: 'بريد',     en: 'Email',       color: '#F59E0B', Icon: Mail },
+};
+
+function TodayReminders({ lang, isRTL, c, isDark }) {
+  const [reminders, setReminders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTodayReminders().then(data => {
+      setReminders(data || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  const formatTime = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div style={{ background: c.card, borderRadius: 16, padding: 20, border: '1px solid ' + c.border, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Bell size={18} color="#4A7AAB" />
+          </div>
+          <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups"}</p>
+            <p style={{ margin: 0, fontSize: 12, color: c.textMuted }}>{reminders.length > 0 ? (lang === 'ar' ? reminders.length + ' متابعة مجدولة' : reminders.length + ' scheduled') : (lang === 'ar' ? 'لا متابعات اليوم' : 'No follow-ups today')}</p>
+          </div>
+        </div>
+        {reminders.length > 0 && (
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', background: '#EF4444', borderRadius: 20, padding: '2px 10px' }}>{reminders.length}</span>
+        )}
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', gap: 10 }}>
+          {[1,2,3].map(i => <div key={i} style={{ flex: 1, height: 64, borderRadius: 10, background: isDark ? 'rgba(255,255,255,0.05)' : '#F0F4F8', animation: 'pulse 1.5s infinite' }} />)}
+        </div>
+      ) : reminders.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <CheckCircle size={32} color="#4A7AAB" style={{ opacity: 0.4, marginBottom: 8 }} />
+          <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'أنجزت كل متابعاتك اليوم!' : 'All caught up for today!'}</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {reminders.slice(0, 5).map((r, i) => {
+            const t = REMINDER_TYPES[r.type] || REMINDER_TYPES.call;
+            const TIcon = t.Icon;
+            return (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: isDark ? 'rgba(255,255,255,0.04)' : '#F8FAFC', border: '1px solid ' + c.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: t.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <TIcon size={15} color={t.color} />
+                </div>
+                <div style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: c.text }}>{r.entity_name || (lang === 'ar' ? 'جهة اتصال' : 'Contact')}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? t.ar : t.en}{r.notes ? ' · ' + r.notes : ''}</p>
+                </div>
+                <span style={{ fontSize: 11, color: c.textMuted, flexShrink: 0 }}>{formatTime(r.due_at)}</span>
+              </div>
+            );
+          })}
+          {reminders.length > 5 && (
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: c.textMuted, textAlign: 'center' }}>
+              {lang === 'ar' ? '+ ' + (reminders.length - 5) + ' متابعات أخرى' : '+ ' + (reminders.length - 5) + ' more'}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 
 export default function DashboardPage() {
   const { i18n } = useTranslation();
@@ -220,6 +303,10 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+
+      {/* ===== متابعات اليوم ===== */}
+      <TodayReminders lang={lang} isRTL={isRTL} c={c} isDark={isDark} />
 
       <Box>
         <CardTitle icon={BarChart2} title={lang === 'ar' ? 'روابط سريعة' : 'Quick Links'} />
