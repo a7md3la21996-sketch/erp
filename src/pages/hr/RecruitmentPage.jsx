@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Briefcase, Users, Clock, CheckCircle2, Plus, Eye , UserSearch } from 'lucide-react';
+import { Briefcase, Users, Clock, CheckCircle2, Plus, Eye  } from 'lucide-react';
 
 function useDS() {
   const { theme } = useTheme(); const dark = theme==='dark';
@@ -77,7 +77,7 @@ export default function RecruitmentPage() {
             {jobs.length === 0 ? (
               <div style={{ textAlign:'center', padding:'60px 20px' }}>
                 <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
-                  <UserSearch size={24} color='#4A7AAB' />
+                  <Briefcase size={24} color='#4A7AAB' />
                 </div>
                 <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد طلبات توظيف':'No Recruitment Requests'}</p>
                 <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي طلبات توظيف بعد':'No recruitment requests added yet'}</p>
