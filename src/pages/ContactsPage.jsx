@@ -197,7 +197,10 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>{i18n.language === 'ar' ? 'إضافة جهة اتصال' : 'Add Contact'}</h2>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>{isRTL ? `الخطوة ${step} من 2` : `Step ${step} of 2`}</p>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>
+              {step === 1 ? (isRTL ? 'البيانات الأساسية' : 'Basic Info') : (isRTL ? 'البيانات الإضافية' : 'Additional Info')}
+              {' '}<span style={{ color: 'rgba(139,168,200,0.5)' }}>({isRTL ? `${step} من 2` : `${step} of 2`})</span>
+            </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', fontSize: 18 }}><X size={18} /></button>
         </div>
@@ -304,6 +307,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                   <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
                 </select>
               </div>
+              {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المصدر' : 'Source'}</label>
                 <select style={sel} value={form.source} onChange={e => set('source', e.target.value)}>
@@ -314,6 +318,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
+              </>)}
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الشركة / جهة العمل' : 'Company'}</label>
                 <input style={inp} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} value={form.company} onChange={e => set('company', e.target.value)} />
@@ -322,6 +327,10 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
                 <input style={inp} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} value={form.job_title} onChange={e => set('job_title', e.target.value)} />
               </div>
+
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنس' : 'Gender'}</label>
                 <select style={sel} value={form.gender} onChange={e => set('gender', e.target.value)}>
@@ -343,13 +352,11 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                   <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
                 </select>
               </div>
-              <div>
+              <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
                 <input style={inp} type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} />
               </div>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
                 <input style={inp} type="number" placeholder="1500000" value={form.budget_min} onChange={e => set('budget_min', e.target.value)} />
@@ -374,6 +381,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
                 <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
+              </>)}
             </div>
           )}
         </div>
