@@ -799,7 +799,12 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 </div>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button onClick={() => setShowEdit(true)} style={{ background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 6, color: '#4A7AAB', cursor: 'pointer', padding: '4px 10px', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Pencil size={12} /> {isRTL ? 'تعديل' : 'Edit'}
+              </button>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+            </div>
           </div>
 
           {/* Quick Actions */}
