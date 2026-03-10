@@ -1142,6 +1142,7 @@ export default function ContactsPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
+  const toast = useToast();
 
   const c = {
     cardBg: isDark ? '#152232' : '#ffffff',
@@ -1181,6 +1182,9 @@ export default function ContactsPage() {
   const PAGE_SIZE = 25;
   const [showBulkMenu, setShowBulkMenu] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null); // { title, message, onConfirm }
+  const [bulkStageModal, setBulkStageModal] = useState(false);
+  const [bulkReassignModal, setBulkReassignModal] = useState(false);
   const isAdmin = profile?.role === 'admin';
 
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -1193,18 +1197,53 @@ export default function ContactsPage() {
   }, []);
 
   const handleDelete = (id) => {
-    if (!window.confirm(isRTL ? 'هل أنت متأكد من الحذف؟' : 'Are you sure?')) return;
-    const updated = contacts.filter(c => c.id !== id);
-    setContacts(updated);
-    localStorage.setItem('platform_contacts', JSON.stringify(updated));
+    const contact = contacts.find(c => c.id === id);
+    setConfirmAction({
+      title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
+      message: isRTL ? `هل أنت متأكد من حذف "${contact?.full_name || ''}"؟` : `Are you sure you want to delete "${contact?.full_name || ''}"?`,
+      onConfirm: () => {
+        const updated = contacts.filter(c => c.id !== id);
+        setContacts(updated);
+        localStorage.setItem('platform_contacts', JSON.stringify(updated));
+        toast.success(isRTL ? 'تم الحذف بنجاح' : 'Deleted successfully');
+        setConfirmAction(null);
+      }
+    });
   };
 
   const handleDeleteSelected = () => {
-    if (!window.confirm(isRTL ? `حذف ${selectedIds.length} عميل؟` : `Delete ${selectedIds.length} contacts?`)) return;
-    const updated = contacts.filter(c => !selectedIds.includes(c.id));
+    setConfirmAction({
+      title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
+      message: isRTL ? `حذف ${selectedIds.length} جهة اتصال؟ لا يمكن التراجع.` : `Delete ${selectedIds.length} contacts? This cannot be undone.`,
+      onConfirm: () => {
+        const updated = contacts.filter(c => !selectedIds.includes(c.id));
+        setContacts(updated);
+        localStorage.setItem('platform_contacts', JSON.stringify(updated));
+        setSelectedIds([]);
+        toast.success(isRTL ? `تم حذف ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts deleted`);
+        setConfirmAction(null);
+      }
+    });
+  };
+
+  const handleBulkStage = (stage) => {
+    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, stage } : c);
     setContacts(updated);
     localStorage.setItem('platform_contacts', JSON.stringify(updated));
+    toast.success(isRTL ? `تم تغيير المرحلة لـ ${selectedIds.length} جهة اتصال` : `Stage updated for ${selectedIds.length} contacts`);
     setSelectedIds([]);
+    setBulkStageModal(false);
+    setShowBulkMenu(false);
+  };
+
+  const handleBulkReassign = (agentName) => {
+    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName } : c);
+    setContacts(updated);
+    localStorage.setItem('platform_contacts', JSON.stringify(updated));
+    toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
+    setSelectedIds([]);
+    setBulkReassignModal(false);
+    setShowBulkMenu(false);
   };
 
   const handleStageChange = (id, stage) => {
@@ -1360,8 +1399,8 @@ export default function ContactsPage() {
                 <div style={{ position: "absolute", top: "110%", left: 0, background: "#1A2B3C", border: "1px solid rgba(74,122,171,0.3)", borderRadius: 10, minWidth: 190, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.35)", overflow: "hidden" }}>
                   {[
                     { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
-                    { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => {} },
-                    { label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => {} },
+                    { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => setBulkReassignModal(true) },
+                    { label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => setBulkStageModal(true) },
                   ].map(item => (
                     <button key={item.label} onClick={item.action} style={{ width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#E2EAF4", fontSize: 13, cursor: "pointer", textAlign: "right", display: "flex", alignItems: "center", gap: 8 }}
                       onMouseEnter={e => e.currentTarget.style.background="rgba(74,122,171,0.15)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
@@ -1670,6 +1709,65 @@ export default function ContactsPage() {
     )}
     {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={(newContacts) => { setContacts(prev => { const updated = [...prev, ...newContacts]; localStorage.setItem('platform_contacts', JSON.stringify(updated)); return updated; }); setShowImportModal(false); }} />}
+
+      {/* Confirm Modal */}
+      {confirmAction && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : '#e5e7eb'}`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 400, textAlign: 'center' }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 22 }}>⚠️</div>
+            <h3 style={{ margin: '0 0 8px', color: c.text, fontSize: 16, fontWeight: 700 }}>{confirmAction.title}</h3>
+            <p style={{ margin: '0 0 20px', color: c.textMuted, fontSize: 13 }}>{confirmAction.message}</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button onClick={() => setConfirmAction(null)} style={{ padding: '9px 20px', background: 'transparent', border: `1px solid ${c.border}`, borderRadius: 8, color: c.textMuted, fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+              <button onClick={confirmAction.onConfirm} style={{ padding: '9px 20px', background: 'linear-gradient(135deg,#7f1d1d,#EF4444)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Stage Modal */}
+      {bulkStageModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${c.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: c.text, fontSize: 15, fontWeight: 700 }}>{isRTL ? `تغيير المرحلة (${selectedIds.length})` : `Change Stage (${selectedIds.length})`}</h3>
+              <button onClick={() => setBulkStageModal(false)} style={{ background: 'none', border: 'none', color: c.textMuted, cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {Object.entries(STAGE_LABELS).map(([key, label]) => (
+                <button key={key} onClick={() => handleBulkStage(key)}
+                  style={{ padding: '10px 14px', background: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb', border: `1px solid ${c.border}`, borderRadius: 8, color: c.text, fontSize: 13, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
+                  onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.15)' : '#f0f4f8'}
+                  onMouseLeave={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb'}>
+                  {isRTL ? label : key.replace(/_/g, ' ')}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Reassign Modal */}
+      {bulkReassignModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${c.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, color: c.text, fontSize: 15, fontWeight: 700 }}>{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
+              <button onClick={() => setBulkReassignModal(false)} style={{ background: 'none', border: 'none', color: c.textMuted, cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {[...new Set(contacts.map(ct => ct.assigned_to_name).filter(Boolean))].map(agent => (
+                <button key={agent} onClick={() => handleBulkReassign(agent)}
+                  style={{ padding: '10px 14px', background: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb', border: `1px solid ${c.border}`, borderRadius: 8, color: c.text, fontSize: 13, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
+                  onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.15)' : '#f0f4f8'}
+                  onMouseLeave={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb'}>
+                  {agent}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
