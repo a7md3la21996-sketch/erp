@@ -4,9 +4,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import {
   BarChart2, DollarSign, Receipt, FileText, BookOpen, Wallet,
   Plus, Search, X, ChevronDown, ChevronRight,
-  TrendingUp, TrendingDown,
+  TrendingUp, TrendingDown, Target,
   Download, AlertTriangle, Clock, CheckCircle,
-  Building2, PieChart, FolderTree,
+  Building2, PieChart, FolderTree, ClipboardList,
+  ArrowUpRight, ArrowDownRight, Layers, Minus,
 } from 'lucide-react';
 import {
   JOURNAL_STATUS, INVOICE_STATUS, COMMISSION_STATUS, EXPENSE_STATUS,
@@ -370,6 +371,8 @@ const TABS = [
   { id: 'invoices',  ar: 'الفواتير',         en: 'Invoices',          Icon: FileText    },
   { id: 'commissions', ar: 'العمولات',       en: 'Commissions',       Icon: DollarSign  },
   { id: 'expenses',  ar: 'المصروفات',        en: 'Expenses',          Icon: Receipt     },
+  { id: 'reports',   ar: 'التقارير المالية',  en: 'Reports',           Icon: ClipboardList },
+  { id: 'budget',    ar: 'الموازنة',          en: 'Budget',            Icon: Target      },
 ];
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -410,6 +413,12 @@ export default function FinancePage() {
 
   // COA state
   const [coaExpanded, setCoaExpanded] = useState({ 'acc-1000': true, 'acc-2000': true, 'acc-3000': true, 'acc-4000': true, 'acc-5000': true });
+
+  // Reports state
+  const [reportView, setReportView] = useState('balance_sheet');
+
+  // Budget state
+  const [budgetData, setBudgetData] = useState(MOCK_BUDGET);
 
   // ── Derived data ────────────────────────────────────────────────────────
 
@@ -1046,6 +1055,438 @@ export default function FinancePage() {
   };
 
   /* ═══════════════════════════════════════════════════════════════════════
+     TAB 7 — FINANCIAL REPORTS
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  const renderReports = () => {
+    // ── Compute all balances from posted journal entries ──
+    const bal = (accId) => calcAccountBalance(postedEntries, accId);
+
+    // Helper: sum balance of all leaf accounts under a parent
+    const sumGroup = (parentId) => {
+      const children = CHART_OF_ACCOUNTS.filter(a => a.parent_id === parentId);
+      let total = 0;
+      children.forEach(c => {
+        if (c.is_group) total += sumGroup(c.id);
+        else total += bal(c.id);
+      });
+      return total;
+    };
+
+    // ── Balance Sheet data ──
+    const totalAssets = sumGroup('acc-1000');
+    const totalLiabilities = -sumGroup('acc-2000'); // liabilities have credit-normal, so negate
+    const totalEquity = -sumGroup('acc-3000');
+    const netIncome = totalRevenue - postedEntries.reduce((s, e) => {
+      let expTotal = 0;
+      e.lines.forEach(l => { if (l.account_id.startsWith('acc-5')) expTotal += l.debit - l.credit; });
+      return s + expTotal;
+    }, 0) + postedEntries.reduce((s, e) => {
+      let expTotal = 0;
+      e.lines.forEach(l => { if (l.account_id.startsWith('acc-5')) expTotal += l.debit - l.credit; });
+      return s + expTotal;
+    }, 0);
+
+    // Actually compute properly
+    const totalExpPosted = (() => {
+      let t = 0;
+      postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id.startsWith('acc-5')) t += l.debit - l.credit; }));
+      return t;
+    })();
+    const netIncomeCalc = totalRevenue - totalExpPosted;
+
+    // ── Income Statement data ──
+    const revAccounts = CHART_OF_ACCOUNTS.filter(a => a.type === 'revenue' && !a.is_group);
+    const expAccounts = CHART_OF_ACCOUNTS.filter(a => a.type === 'expense' && !a.is_group);
+
+    // ── Cash Flow data ──
+    const cashBal = bal('acc-1110');
+    const bankCIB = bal('acc-1120');
+    const bankNBE = bal('acc-1130');
+    const totalCash = cashBal + bankCIB + bankNBE;
+
+    // Cash inflows from revenue collections
+    const cashInflows = (() => {
+      let t = 0;
+      postedEntries.forEach(e => e.lines.forEach(l => {
+        if ((l.account_id === 'acc-1110' || l.account_id === 'acc-1120' || l.account_id === 'acc-1130') && l.debit > 0) t += l.debit;
+      }));
+      return t;
+    })();
+    const cashOutflows = (() => {
+      let t = 0;
+      postedEntries.forEach(e => e.lines.forEach(l => {
+        if ((l.account_id === 'acc-1110' || l.account_id === 'acc-1120' || l.account_id === 'acc-1130') && l.credit > 0) t += l.credit;
+      }));
+      return t;
+    })();
+
+    const ReportLine = ({ label, amount, bold, indent = 0, negative, separator }) => {
+      if (separator) return (
+        <div style={{ borderTop: `2px solid ${ds.border}`, margin: '8px 0' }} />
+      );
+      return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `6px 0 6px ${indent * 20}px`, borderBottom: `1px solid ${ds.border}20` }}>
+          <span style={{ fontSize: 13, fontWeight: bold ? 700 : 400, color: bold ? ds.text : ds.muted }}>{label}</span>
+          <span style={{ fontSize: 13, fontWeight: bold ? 800 : 600, color: negative ? '#EF4444' : amount === 0 ? ds.muted : bold ? ds.accent : ds.text }}>
+            {fmtMoney(Math.abs(amount))}
+          </span>
+        </div>
+      );
+    };
+
+    const ReportHeader = ({ title }) => (
+      <div style={{ padding: '10px 0 6px', borderBottom: `2px solid ${ds.accent}40`, marginBottom: 4 }}>
+        <span style={{ fontSize: 14, fontWeight: 800, color: ds.text, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</span>
+      </div>
+    );
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Report selector */}
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
+            { id: 'balance_sheet', label: L('الميزانية العمومية', 'Balance Sheet') },
+            { id: 'income_statement', label: L('قائمة الدخل', 'Income Statement') },
+            { id: 'cash_flow', label: L('التدفقات النقدية', 'Cash Flow') },
+          ].map(r => <FilterPill key={r.id} label={r.label} active={reportView === r.id} onClick={() => setReportView(r.id)} />)}
+        </div>
+
+        {/* ── BALANCE SHEET ── */}
+        {reportView === 'balance_sheet' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {/* Left — Assets */}
+            <CardWrap title={L('الميزانية العمومية', 'Balance Sheet')} icon={Layers}>
+              <div style={{ padding: '16px 18px' }}>
+                <div style={{ fontSize: 11, color: ds.muted, marginBottom: 12 }}>{L('كما في مارس 2026', 'As of March 2026')}</div>
+
+                <ReportHeader title={L('الأصول', 'ASSETS')} />
+                {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-1000' && !a.is_group).map(a => (
+                  <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={bal(a.id)} indent={1} />
+                ))}
+                {/* Sub-groups */}
+                {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-1000' && a.is_group).map(g => {
+                  const leaves = CHART_OF_ACCOUNTS.filter(a => a.parent_id === g.id && !a.is_group);
+                  return [
+                    <ReportLine key={g.id + '-h'} label={L(g.name_ar, g.name_en)} amount={sumGroup(g.id)} bold indent={1} />,
+                    ...leaves.map(a => <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={bal(a.id)} indent={2} />),
+                  ];
+                })}
+                <ReportLine separator />
+                <ReportLine label={L('إجمالي الأصول', 'Total Assets')} amount={totalAssets} bold />
+
+                <div style={{ height: 20 }} />
+
+                <ReportHeader title={L('الخصوم', 'LIABILITIES')} />
+                {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-2000' && !a.is_group).map(a => (
+                  <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={-bal(a.id)} indent={1} />
+                ))}
+                <ReportLine separator />
+                <ReportLine label={L('إجمالي الخصوم', 'Total Liabilities')} amount={totalLiabilities} bold />
+
+                <div style={{ height: 20 }} />
+
+                <ReportHeader title={L('حقوق الملكية', 'EQUITY')} />
+                {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-3000' && !a.is_group).map(a => (
+                  <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={-bal(a.id)} indent={1} />
+                ))}
+                <ReportLine label={L('صافي الدخل', 'Net Income')} amount={netIncomeCalc} indent={1} />
+                <ReportLine separator />
+                <ReportLine label={L('إجمالي حقوق الملكية', 'Total Equity')} amount={totalEquity + netIncomeCalc} bold />
+
+                <div style={{ height: 12 }} />
+                <div style={{ padding: '10px 14px', borderRadius: 10, background: (totalAssets === totalLiabilities + totalEquity + netIncomeCalc) ? 'rgba(43,76,111,0.08)' : 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {(Math.abs(totalAssets - (totalLiabilities + totalEquity + netIncomeCalc)) < 1)
+                    ? <><CheckCircle size={14} color="#2B4C6F" /><span style={{ fontSize: 12, fontWeight: 600, color: '#2B4C6F' }}>{L('الميزانية متوازنة ✓', 'Balance Sheet is balanced ✓')}</span></>
+                    : <><AlertTriangle size={14} color="#EF4444" /><span style={{ fontSize: 12, fontWeight: 600, color: '#EF4444' }}>{L('الميزانية غير متوازنة', 'Balance Sheet NOT balanced')}</span></>
+                  }
+                </div>
+              </div>
+            </CardWrap>
+
+            {/* Right — KPIs */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <KpiCard icon={Layers} label={L('إجمالي الأصول', 'Total Assets')} value={fmtShort(totalAssets)} sub="EGP" color="#4A7AAB" />
+              <KpiCard icon={AlertTriangle} label={L('إجمالي الخصوم', 'Total Liabilities')} value={fmtShort(totalLiabilities)} sub="EGP" color="#EF4444" />
+              <KpiCard icon={Wallet} label={L('حقوق الملكية', 'Equity')} value={fmtShort(totalEquity + netIncomeCalc)} sub="EGP" color="#2B4C6F" />
+              <KpiCard icon={TrendingUp} label={L('صافي الدخل', 'Net Income')} value={fmtShort(netIncomeCalc)} sub="EGP" color="#1B3347" />
+
+              <CardWrap title={L('ملخص', 'Summary')} icon={BarChart2}>
+                <div style={{ padding: '14px 18px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: ds.muted }}>{L('نسبة السيولة', 'Current Ratio')}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: ds.text }}>{totalLiabilities > 0 ? (totalAssets / totalLiabilities).toFixed(2) : '∞'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: ds.muted }}>{L('هامش الربح', 'Profit Margin')}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: netIncomeCalc >= 0 ? '#2B4C6F' : '#EF4444' }}>{totalRevenue > 0 ? ((netIncomeCalc / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 12, color: ds.muted }}>{L('نسبة المصروفات', 'Expense Ratio')}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: ds.text }}>{totalRevenue > 0 ? ((totalExpPosted / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
+                  </div>
+                </div>
+              </CardWrap>
+            </div>
+          </div>
+        )}
+
+        {/* ── INCOME STATEMENT ── */}
+        {reportView === 'income_statement' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
+            <CardWrap title={L('قائمة الدخل', 'Income Statement')} icon={TrendingUp}>
+              <div style={{ padding: '16px 18px' }}>
+                <div style={{ fontSize: 11, color: ds.muted, marginBottom: 12 }}>{L('مارس 2026', 'March 2026')}</div>
+
+                <ReportHeader title={L('الإيرادات', 'REVENUE')} />
+                {revAccounts.map(a => {
+                  let amount = 0;
+                  postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id === a.id) amount += l.credit - l.debit; }));
+                  return <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={amount} indent={1} />;
+                })}
+                <ReportLine separator />
+                <ReportLine label={L('إجمالي الإيرادات', 'Total Revenue')} amount={totalRevenue} bold />
+
+                <div style={{ height: 16 }} />
+
+                <ReportHeader title={L('المصروفات', 'EXPENSES')} />
+                {expAccounts.map(a => {
+                  let amount = 0;
+                  postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id === a.id) amount += l.debit - l.credit; }));
+                  if (amount === 0) return null;
+                  return <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={amount} indent={1} negative />;
+                })}
+                <ReportLine separator />
+                <ReportLine label={L('إجمالي المصروفات', 'Total Expenses')} amount={totalExpPosted} bold negative />
+
+                <div style={{ height: 16 }} />
+                <div style={{ padding: '12px 14px', borderRadius: 10, background: netIncomeCalc >= 0 ? 'rgba(43,76,111,0.08)' : 'rgba(239,68,68,0.08)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: ds.text }}>{L('صافي الدخل', 'Net Income')}</span>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: netIncomeCalc >= 0 ? '#2B4C6F' : '#EF4444' }}>{fmtMoney(netIncomeCalc)}</span>
+                  </div>
+                </div>
+              </div>
+            </CardWrap>
+
+            {/* Right — Chart */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <KpiCard icon={TrendingUp} label={L('الإيرادات', 'Revenue')} value={fmtShort(totalRevenue)} sub="EGP" color="#4A7AAB" />
+              <KpiCard icon={TrendingDown} label={L('المصروفات', 'Expenses')} value={fmtShort(totalExpPosted)} sub="EGP" color="#EF4444" />
+              <KpiCard icon={DollarSign} label={L('صافي الدخل', 'Net Income')} value={fmtShort(netIncomeCalc)} sub="EGP" color={netIncomeCalc >= 0 ? '#2B4C6F' : '#EF4444'} />
+
+              {/* Expense breakdown mini */}
+              <CardWrap title={L('توزيع المصروفات', 'Expense Breakdown')} icon={PieChart}>
+                <div style={{ padding: '12px 18px' }}>
+                  {expAccounts.filter(a => {
+                    let amt = 0;
+                    postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id === a.id) amt += l.debit - l.credit; }));
+                    return amt > 0;
+                  }).sort((a, b) => {
+                    let aAmt = 0, bAmt = 0;
+                    postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id === a.id) aAmt += l.debit - l.credit; if (l.account_id === b.id) bAmt += l.debit - l.credit; }));
+                    return bAmt - aAmt;
+                  }).map((a, i) => {
+                    let amt = 0;
+                    postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id === a.id) amt += l.debit - l.credit; }));
+                    const pct = totalExpPosted > 0 ? Math.round((amt / totalExpPosted) * 100) : 0;
+                    const colors = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#EF4444'];
+                    return (
+                      <div key={a.id} style={{ marginBottom: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                          <span style={{ fontSize: 11, color: ds.text }}>{L(a.name_ar, a.name_en)}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: ds.muted }}>{pct}%</span>
+                        </div>
+                        <div style={{ height: 4, borderRadius: 2, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
+                          <div style={{ height: '100%', width: pct + '%', borderRadius: 2, background: colors[i % colors.length] }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardWrap>
+            </div>
+          </div>
+        )}
+
+        {/* ── CASH FLOW STATEMENT ── */}
+        {reportView === 'cash_flow' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
+            <CardWrap title={L('قائمة التدفقات النقدية', 'Cash Flow Statement')} icon={Wallet}>
+              <div style={{ padding: '16px 18px' }}>
+                <div style={{ fontSize: 11, color: ds.muted, marginBottom: 12 }}>{L('مارس 2026', 'March 2026')}</div>
+
+                <ReportHeader title={L('تدفقات من الأنشطة التشغيلية', 'OPERATING ACTIVITIES')} />
+                <ReportLine label={L('صافي الدخل', 'Net Income')} amount={netIncomeCalc} indent={1} />
+                <ReportLine label={L('تغير في ذمم مدينة', 'Change in Receivables')} amount={-receivable} indent={1} negative={receivable > 0} />
+                <ReportLine label={L('تغير في ذمم دائنة', 'Change in Payables')} amount={payable} indent={1} />
+                <ReportLine separator />
+                <ReportLine label={L('صافي التدفقات التشغيلية', 'Net Operating Cash Flow')} amount={netIncomeCalc - receivable + payable} bold />
+
+                <div style={{ height: 16 }} />
+                <ReportHeader title={L('ملخص الحركة النقدية', 'CASH MOVEMENT SUMMARY')} />
+                <ReportLine label={L('إجمالي التحصيلات', 'Total Cash Inflows')} amount={cashInflows} indent={1} />
+                <ReportLine label={L('إجمالي المدفوعات', 'Total Cash Outflows')} amount={cashOutflows} indent={1} negative />
+                <ReportLine separator />
+                <ReportLine label={L('صافي الحركة', 'Net Movement')} amount={cashInflows - cashOutflows} bold />
+
+                <div style={{ height: 16 }} />
+                <ReportHeader title={L('الأرصدة النقدية', 'CASH BALANCES')} />
+                <ReportLine label={L('الصندوق (كاش)', 'Cash on Hand')} amount={cashBal} indent={1} />
+                <ReportLine label={L('بنك CIB', 'CIB Bank')} amount={bankCIB} indent={1} />
+                <ReportLine label={L('بنك NBE', 'NBE Bank')} amount={bankNBE} indent={1} />
+                <ReportLine separator />
+                <ReportLine label={L('إجمالي النقدية', 'Total Cash & Banks')} amount={totalCash} bold />
+              </div>
+            </CardWrap>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <KpiCard icon={ArrowUpRight} label={L('إجمالي التحصيلات', 'Total Inflows')} value={fmtShort(cashInflows)} sub="EGP" color="#4A7AAB" />
+              <KpiCard icon={ArrowDownRight} label={L('إجمالي المدفوعات', 'Total Outflows')} value={fmtShort(cashOutflows)} sub="EGP" color="#EF4444" />
+              <KpiCard icon={Wallet} label={L('إجمالي النقدية', 'Total Cash')} value={fmtShort(totalCash)} sub="EGP" color="#2B4C6F" />
+
+              {/* Cash breakdown */}
+              <CardWrap title={L('توزيع النقدية', 'Cash Distribution')} icon={PieChart}>
+                <div style={{ padding: '14px 18px' }}>
+                  {[
+                    { label: L('الصندوق', 'Cash on Hand'), amount: cashBal, color: '#1B3347' },
+                    { label: L('بنك CIB', 'CIB Bank'), amount: bankCIB, color: '#4A7AAB' },
+                    { label: L('بنك NBE', 'NBE Bank'), amount: bankNBE, color: '#8BA8C8' },
+                  ].map((item, i) => {
+                    const pct = totalCash !== 0 ? Math.round((Math.abs(item.amount) / Math.abs(totalCash)) * 100) : 0;
+                    return (
+                      <div key={i} style={{ marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                          <span style={{ fontSize: 12, color: ds.text }}>{item.label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{fmtMoney(item.amount)}</span>
+                        </div>
+                        <div style={{ height: 5, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
+                          <div style={{ height: '100%', width: pct + '%', borderRadius: 3, background: item.color }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardWrap>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     TAB 8 — BUDGET
+     ═══════════════════════════════════════════════════════════════════════ */
+
+  const renderBudget = () => {
+    const totalBudgetYtd = budgetData.reduce((s, b) => s + b.budget_ytd, 0);
+    const totalActualYtd = budgetData.reduce((s, b) => s + b.actual_ytd, 0);
+    const totalMonthly = budgetData.reduce((s, b) => s + b.monthly, 0);
+    const overallPct = totalBudgetYtd > 0 ? Math.round((totalActualYtd / totalBudgetYtd) * 100) : 0;
+    const overBudgetCount = budgetData.filter(b => b.actual_ytd > b.budget_ytd).length;
+
+    const handleUpdateMonthly = (id, newVal) => {
+      const v = Number(newVal);
+      if (isNaN(v) || v < 0) return;
+      setBudgetData(prev => prev.map(b => b.id === id ? { ...b, monthly: v, budget_ytd: v * 3 } : b));
+    };
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+          <KpiCard icon={Target} label={L('الموازنة الشهرية', 'Monthly Budget')} value={fmtShort(totalMonthly)} sub="EGP" color="#4A7AAB" />
+          <KpiCard icon={BarChart2} label={L('الفعلي YTD', 'Actual YTD')} value={fmtShort(totalActualYtd)} sub="EGP" color="#2B4C6F" />
+          <KpiCard icon={PieChart} label={L('نسبة الاستهلاك', 'Usage Rate')} value={overallPct + '%'} sub={L('من الموازنة', 'of budget')} color={overallPct > 100 ? '#EF4444' : '#4A7AAB'} />
+          <KpiCard icon={AlertTriangle} label={L('بنود تجاوزت', 'Over Budget')} value={overBudgetCount} sub={L('بند', 'items')} color={overBudgetCount > 0 ? '#EF4444' : '#2B4C6F'} />
+        </div>
+
+        {/* Overall progress */}
+        <CardWrap title={L('استهلاك الموازنة الكلي', 'Overall Budget Consumption')} icon={Target}>
+          <div style={{ padding: '16px 18px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 13, color: ds.text, fontWeight: 600 }}>{L('الفعلي', 'Actual')}: {fmtMoney(totalActualYtd)}</span>
+              <span style={{ fontSize: 13, color: ds.muted }}>{L('الموازنة', 'Budget')}: {fmtMoney(totalBudgetYtd)}</span>
+            </div>
+            <div style={{ height: 10, borderRadius: 5, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: Math.min(overallPct, 100) + '%', borderRadius: 5, background: overallPct > 100 ? '#EF4444' : overallPct > 85 ? '#f59e0b' : '#4A7AAB', transition: 'width 0.4s' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+              <span style={{ fontSize: 11, color: ds.muted }}>0%</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: overallPct > 100 ? '#EF4444' : ds.accent }}>{overallPct}%</span>
+              <span style={{ fontSize: 11, color: ds.muted }}>100%</span>
+            </div>
+          </div>
+        </CardWrap>
+
+        {/* Detailed table */}
+        <CardWrap title={L('تفاصيل الموازنة', 'Budget Details')} icon={ClipboardList}>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead><tr>
+                <TH>{L('البند', 'Category')}</TH>
+                <TH>{L('شهري', 'Monthly')}</TH>
+                <TH>{L('الموازنة YTD', 'Budget YTD')}</TH>
+                <TH>{L('الفعلي YTD', 'Actual YTD')}</TH>
+                <TH>{L('الفرق', 'Variance')}</TH>
+                <TH>{L('النسبة', '%')}</TH>
+                <TH>{L('التقدم', 'Progress')}</TH>
+              </tr></thead>
+              <tbody>
+                {budgetData.map(b => {
+                  const pct = b.budget_ytd > 0 ? Math.round((b.actual_ytd / b.budget_ytd) * 100) : 0;
+                  const variance = b.budget_ytd - b.actual_ytd;
+                  const over = variance < 0;
+                  return (
+                    <TR key={b.id}>
+                      <TD bold>{L(b.cat_ar, b.cat_en)}</TD>
+                      <TD>
+                        <input
+                          type="number"
+                          value={b.monthly}
+                          onChange={e => handleUpdateMonthly(b.id, e.target.value)}
+                          style={{ width: 80, padding: '4px 6px', borderRadius: 6, border: `1px solid ${ds.border}`, background: ds.input, color: ds.text, fontSize: 12, outline: 'none', textAlign: 'center' }}
+                        />
+                      </TD>
+                      <TD color={ds.muted}>{fmtMoney(b.budget_ytd)}</TD>
+                      <TD bold>{fmtMoney(b.actual_ytd)}</TD>
+                      <TD bold color={over ? '#EF4444' : '#2B4C6F'}>
+                        {over ? '(' : ''}{fmtMoney(Math.abs(variance))}{over ? ')' : ''}
+                      </TD>
+                      <TD bold color={over ? '#EF4444' : pct > 85 ? '#f59e0b' : '#2B4C6F'}>{pct}%</TD>
+                      <TD style={{ minWidth: 100 }}>
+                        <div style={{ height: 6, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
+                          <div style={{ height: '100%', width: Math.min(pct, 100) + '%', borderRadius: 3, background: over ? '#EF4444' : pct > 85 ? '#f59e0b' : '#4A7AAB', transition: 'width 0.3s' }} />
+                        </div>
+                      </TD>
+                    </TR>
+                  );
+                })}
+                {/* Totals row */}
+                <tr style={{ background: ds.thBg, borderTop: `2px solid ${ds.border}` }}>
+                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 800, color: ds.text }}>{L('الإجمالي', 'Total')}</td>
+                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: ds.text }}>{fmtMoney(totalMonthly)}</td>
+                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: ds.muted }}>{fmtMoney(totalBudgetYtd)}</td>
+                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: ds.text }}>{fmtMoney(totalActualYtd)}</td>
+                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: totalActualYtd > totalBudgetYtd ? '#EF4444' : '#2B4C6F' }}>
+                    {totalActualYtd > totalBudgetYtd ? '(' : ''}{fmtMoney(Math.abs(totalBudgetYtd - totalActualYtd))}{totalActualYtd > totalBudgetYtd ? ')' : ''}
+                  </td>
+                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 800, color: overallPct > 100 ? '#EF4444' : '#2B4C6F' }}>{overallPct}%</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    <div style={{ height: 6, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
+                      <div style={{ height: '100%', width: Math.min(overallPct, 100) + '%', borderRadius: 3, background: overallPct > 100 ? '#EF4444' : '#4A7AAB' }} />
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </CardWrap>
+      </div>
+    );
+  };
+
+  /* ═══════════════════════════════════════════════════════════════════════
      MODALS
      ═══════════════════════════════════════════════════════════════════════ */
 
@@ -1295,6 +1736,8 @@ export default function FinancePage() {
       {activeTab === 'invoices' && renderInvoices()}
       {activeTab === 'commissions' && renderCommissions()}
       {activeTab === 'expenses' && renderExpenses()}
+      {activeTab === 'reports' && renderReports()}
+      {activeTab === 'budget' && renderBudget()}
 
       {/* Modals */}
       {renderJournalModal()}
