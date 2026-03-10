@@ -27,8 +27,10 @@ function useEscClose(onClose) {
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { facebook: 'فيسبوك', instagram: 'إنستجرام', google_ads: 'جوجل أدز', website: 'الموقع', call: 'اتصال وارد', walk_in: 'زيارة مباشرة', referral: 'ترشيح', developer: 'مطور', cold_call: 'كولد كول', other: 'أخرى' };
 const SOURCE_EN = { facebook: 'Facebook', instagram: 'Instagram', google_ads: 'Google Ads', website: 'Website', call: 'Inbound Call', walk_in: 'Walk-in', referral: 'Referral', developer: 'Developer', cold_call: 'Cold Call', other: 'Other' };
-const STAGE_LABELS = { new: 'جديد', contacted: 'تم التواصل', interested: 'مهتم', site_visit_scheduled: 'موعد معاينة', site_visited: 'زار الموقع', negotiation: 'تفاوض', reserved: 'محجوز', contracted: 'تعاقد', closed_won: 'فوز ✓', closed_lost: 'خسارة ✗', on_hold: 'معلق' };
-const COLD_LABELS = { not_contacted: 'لم يُتصل به', no_answer: 'لا يرد', not_interested: 'غير مهتم', interested: 'مهتم', wrong_number: 'رقم خاطئ', call_back_later: 'اتصل لاحقاً' };
+const STAGE_LABELS = { new: { ar: 'جديد', en: 'New' }, contacted: { ar: 'تم التواصل', en: 'Contacted' }, interested: { ar: 'مهتم', en: 'Interested' }, site_visit_scheduled: { ar: 'موعد معاينة', en: 'Visit Scheduled' }, site_visited: { ar: 'زار الموقع', en: 'Site Visited' }, negotiation: { ar: 'تفاوض', en: 'Negotiation' }, reserved: { ar: 'محجوز', en: 'Reserved' }, contracted: { ar: 'تعاقد', en: 'Contracted' }, closed_won: { ar: 'فوز ✓', en: 'Won ✓' }, closed_lost: { ar: 'خسارة ✗', en: 'Lost ✗' }, on_hold: { ar: 'معلق', en: 'On Hold' } };
+const stageLabel = (key, isRTL) => { const s = STAGE_LABELS[key]; return s ? (isRTL ? s.ar : s.en) : key; };
+const COLD_LABELS = { not_contacted: { ar: 'لم يُتصل به', en: 'Not Contacted' }, no_answer: { ar: 'لا يرد', en: 'No Answer' }, not_interested: { ar: 'غير مهتم', en: 'Not Interested' }, interested: { ar: 'مهتم', en: 'Interested' }, wrong_number: { ar: 'رقم خاطئ', en: 'Wrong Number' }, call_back_later: { ar: 'اتصل لاحقاً', en: 'Call Back Later' } };
+const coldLabel = (key, isRTL) => { const s = COLD_LABELS[key]; return s ? (isRTL ? s.ar : s.en) : key; };
 const ACTIVITY_TYPES = { call: { label: 'مكالمة', icon: 'phone' }, whatsapp: { label: 'واتساب', icon: 'message' }, email: { label: 'إيميل', icon: 'mail' }, meeting: { label: 'اجتماع', icon: 'users' }, site_visit: { label: 'زيارة موقع', icon: 'calendar' }, note: { label: 'ملاحظة', icon: 'note' }, status_change: { label: 'تغيير حالة', icon: 'refresh' } };
 const TEMP = {
   hot:  { label: 'Hot', labelAr: 'حار',  color: '#EF4444', bg: 'rgba(239,68,68,0.10)',  Icon: Flame },
@@ -37,9 +39,13 @@ const TEMP = {
   cold: { label: 'Cold', labelAr: 'بارد', color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  Icon: Snowflake },
 };
 const TYPE = {
-  lead:   { label: 'ليد',   labelEn: 'Lead',   color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)'  },
-  cold:   { label: 'كولد',  labelEn: 'Cold',   color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
-  client: { label: 'عميل',  labelEn: 'Client', color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)'   },
+  lead:      { label: 'ليد',       labelEn: 'Lead',       color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)'  },
+  cold:      { label: 'كولد',      labelEn: 'Cold',       color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
+  client:    { label: 'عميل',      labelEn: 'Client',     color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)'   },
+  supplier:  { label: 'مورد',      labelEn: 'Supplier',   color: '#0F766E', bg: 'rgba(15,118,110,0.12)'  },
+  developer: { label: 'مطور',      labelEn: 'Developer',  color: '#B45309', bg: 'rgba(180,83,9,0.12)'    },
+  applicant: { label: 'متقدم',     labelEn: 'Applicant',  color: '#6B21A8', bg: 'rgba(107,33,168,0.12)'  },
+  partner:   { label: 'شريك',      labelEn: 'Partner',    color: '#1E40AF', bg: 'rgba(30,64,175,0.12)'   },
 };
 
 // ── MOCK DATA (used until Supabase is connected) ───────────────────────────
@@ -450,6 +456,141 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
 }
 
 // ── Blacklist Modal ────────────────────────────────────────────────────────
+// ── Log Call Modal ──────────────────────────────────────────────────────────
+const CALL_RESULTS = [
+  { key: 'answered', ar: 'رد', en: 'Answered' },
+  { key: 'no_answer', ar: 'لم يرد', en: 'No Answer' },
+  { key: 'interested', ar: 'مهتم', en: 'Interested' },
+  { key: 'not_interested', ar: 'غير مهتم', en: 'Not Interested' },
+  { key: 'call_back', ar: 'اتصل لاحقاً', en: 'Call Back' },
+];
+
+function LogCallModal({ contact, onClose }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+  const toast = useToast();
+  useEscClose(onClose);
+
+  const [callResult, setCallResult] = useState('');
+  const [callNotes, setCallNotes] = useState('');
+  const [callFollowup, setCallFollowup] = useState('');
+
+  const handleSaveCall = async () => {
+    if (!callResult) { toast.warning(isRTL ? 'اختر نتيجة المكالمة' : 'Select call result'); return; }
+    const activity = { type: 'call', description: `${isRTL ? 'مكالمة' : 'Call'}: ${CALL_RESULTS.find(r => r.key === callResult)?.[isRTL ? 'ar' : 'en'] || callResult}${callNotes ? ' — ' + callNotes : ''}`, next_action: callFollowup ? (isRTL ? 'متابعة' : 'Follow up') : '', next_action_date: callFollowup || '', contact_id: contact.id, created_at: new Date().toISOString() };
+    try { await createActivity(activity); } catch { /* saved locally */ }
+    toast.success(isRTL ? 'تم حفظ المكالمة' : 'Call saved');
+    onClose();
+  };
+
+  const btnBorder = isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0';
+  const btnColor = isDark ? '#E2EAF4' : '#4A5568';
+  const lblColor = isDark ? '#8BA8C8' : '#4A5568';
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
+        </div>
+        <div style={{ padding: '18px 20px' }}>
+          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 8 }}>{isRTL ? 'نتيجة المكالمة' : 'Call Result'} <span style={{ color: '#EF4444' }}>*</span></div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+            {CALL_RESULTS.map(r => (
+              <button key={r.key} onClick={() => setCallResult(r.key)} style={{ padding: '5px 12px', borderRadius: 8, border: `1.5px solid ${callResult === r.key ? '#4A7AAB' : btnBorder}`, background: callResult === r.key ? 'rgba(74,122,171,0.12)' : 'none', fontSize: 12, color: callResult === r.key ? '#4A7AAB' : btnColor, cursor: 'pointer', fontFamily: 'inherit', fontWeight: callResult === r.key ? 700 : 400 }}>{isRTL ? r.ar : r.en}</button>
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</div>
+          <textarea rows={3} value={callNotes} onChange={e => setCallNotes(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', resize: 'none', marginBottom: 14, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
+          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'تذكير متابعة' : 'Follow-up Reminder'}</div>
+          <input type="datetime-local" value={callFollowup} onChange={e => setCallFollowup(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, outline: 'none', background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} />
+        </div>
+        <div style={{ padding: '14px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${btnBorder}`, background: isDark ? '#152232' : '#F8FAFC', fontSize: 13, color: isDark ? '#8BA8C8' : '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+          <button onClick={handleSaveCall} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: callResult ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: callResult ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>{isRTL ? 'حفظ المكالمة' : 'Save Call'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Reminder Modal ──────────────────────────────────────────────────────────
+const REMINDER_PRESETS = [
+  { key: 'tomorrow', ar: 'غداً', en: 'Tomorrow', days: 1 },
+  { key: '3days', ar: '3 أيام', en: '3 Days', days: 3 },
+  { key: 'week', ar: 'أسبوع', en: 'Week', days: 7 },
+  { key: 'custom', ar: 'تاريخ محدد', en: 'Custom', days: 0 },
+];
+
+function ReminderModal({ contact, onClose }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+  const toast = useToast();
+  useEscClose(onClose);
+
+  const [selectedPreset, setSelectedPreset] = useState('');
+  const [customDate, setCustomDate] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handlePreset = (preset) => {
+    setSelectedPreset(preset.key);
+    if (preset.key !== 'custom') {
+      const d = new Date();
+      d.setDate(d.getDate() + preset.days);
+      setCustomDate(d.toISOString().slice(0, 16));
+    } else {
+      setCustomDate('');
+    }
+  };
+
+  const handleSaveReminder = async () => {
+    if (!customDate) { toast.warning(isRTL ? 'اختر موعد التذكير' : 'Select reminder date'); return; }
+    const activity = { type: 'note', description: `${isRTL ? 'تذكير' : 'Reminder'}: ${message || (isRTL ? 'متابعة' : 'Follow up')}`, next_action: isRTL ? 'تذكير' : 'Reminder', next_action_date: customDate, contact_id: contact.id, created_at: new Date().toISOString() };
+    try { await createActivity(activity); } catch { /* saved locally */ }
+    toast.success(isRTL ? 'تم حفظ التذكير' : 'Reminder saved');
+    onClose();
+  };
+
+  const btnBorder = isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0';
+  const lblColor = isDark ? '#8BA8C8' : '#4A5568';
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Bell size={14} /> {isRTL ? 'إضافة تذكير' : 'Add Reminder'} — {contact.full_name}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
+        </div>
+        <div style={{ padding: '18px 20px' }}>
+          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 8 }}>{isRTL ? 'متى؟' : 'When?'}</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+            {REMINDER_PRESETS.map(p => (
+              <button key={p.key} onClick={() => handlePreset(p)} style={{ padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${selectedPreset === p.key ? '#4A7AAB' : btnBorder}`, background: selectedPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none', fontSize: 12, color: selectedPreset === p.key ? '#4A7AAB' : (isDark ? '#E2EAF4' : '#4A5568'), cursor: 'pointer', fontFamily: 'inherit', fontWeight: selectedPreset === p.key ? 700 : 400 }}>{isRTL ? p.ar : p.en}</button>
+            ))}
+          </div>
+          {selectedPreset === 'custom' && (
+            <>
+              <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'التاريخ والوقت' : 'Date & Time'}</div>
+              <input type="datetime-local" value={customDate} onChange={e => setCustomDate(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, outline: 'none', marginBottom: 14, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} />
+            </>
+          )}
+          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'الرسالة' : 'Message'}</div>
+          <input value={message} onChange={e => setMessage(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} placeholder={isRTL ? 'متابعة العميل...' : 'Follow up with client...'} />
+        </div>
+        <div style={{ padding: '14px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${btnBorder}`, background: isDark ? '#152232' : '#F8FAFC', fontSize: 13, color: isDark ? '#8BA8C8' : '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+          <button onClick={handleSaveReminder} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: (selectedPreset && (selectedPreset !== 'custom' || customDate)) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: (selectedPreset && (selectedPreset !== 'custom' || customDate)) ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>{isRTL ? 'حفظ التذكير' : 'Save Reminder'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BlacklistModal({ contact, onClose, onConfirm }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -939,14 +1080,14 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
 
               {contact.stage && (
                 <div style={rowStyle}>
-                  <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>المرحلة</span>
-                  <Chip label={STAGE_LABELS[contact.stage]} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
+                  <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>{isRTL ? 'المرحلة' : 'Stage'}</span>
+                  <Chip label={stageLabel(contact.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                 </div>
               )}
               {contact.cold_status && (
                 <div style={rowStyle}>
-                  <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>حالة الكولد</span>
-                  <Chip label={COLD_LABELS[contact.cold_status]} color="#6B8DB5" bg="rgba(107,141,181,0.1)" />
+                  <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>{isRTL ? 'حالة الكولد' : 'Cold Status'}</span>
+                  <Chip label={coldLabel(contact.cold_status, isRTL)} color="#6B8DB5" bg="rgba(107,141,181,0.1)" />
                 </div>
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
@@ -1002,7 +1143,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                     <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, fontWeight: 600 }}>{act.description}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B' }}>
-                    <span>{act.users?.full_name_ar || 'مجهول'}</span>
+                    <span>{isRTL ? (act.users?.full_name_ar || 'مجهول') : (act.users?.full_name_en || act.users?.full_name_ar || 'Unknown')}</span>
                     <span>{act.created_at?.slice(0, 10)}</span>
                   </div>
                   {act.next_action && (
@@ -1156,7 +1297,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 <div key={opp.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, fontWeight: 600 }}>فرصة #{opp.id.slice(-4)}</span>
-                    <Chip label={STAGE_LABELS[opp.stage] || opp.stage} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
+                    <Chip label={stageLabel(opp.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                   </div>
                   <div style={{ fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B', display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {opp.projects?.name_ar && <span>{opp.projects.name_ar}</span>}
@@ -1585,7 +1726,7 @@ export default function ContactsPage() {
                         {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : '#1A2B3C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.full_name || 'بدون اسم'}</div>
+                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : (isDark ? '#E2EAF4' : '#1A2B3C'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</div>
                         {c.email && <div style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.email}</div>}
                         {c.last_activity_at && (() => { const d = Math.floor((Date.now() - new Date(c.last_activity_at)) / 86400000); return <div style={{ fontSize: 10, marginTop: 2, fontWeight: 600, color: d === 0 ? '#4A7AAB' : d <= 3 ? '#6B8DB5' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</div>; })()}
                       </div>
@@ -1608,14 +1749,14 @@ export default function ContactsPage() {
                   <td style={td} onClick={e => e.stopPropagation()}>
                     {isAdmin && c.contact_type === 'lead' ? (
                       <select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} style={{ fontSize: 11, background: 'transparent', border: '1px solid rgba(74,122,171,0.1)', borderRadius: 6, color: '#4A7AAB', padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
-                        {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
                       </select>
-                    ) : c.stage ? <Chip label={STAGE_LABELS[c.stage]} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
-                    : c.cold_status ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{COLD_LABELS[c.cold_status]}</span>
+                    ) : c.stage ? <Chip label={stageLabel(c.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
+                    : c.cold_status ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{coldLabel(c.cold_status, isRTL)}</span>
                     : <span style={{ color: '#d1d5db' }}>—</span>}
                   </td>
                   {/* Budget */}
-                  <td style={{ ...td, fontSize: 12, color: '#6b7280' }}>{fmtBudget(c.budget_min, c.budget_max)}</td>
+                  <td style={{ ...td, fontSize: 12, color: colors.textMuted }}>{fmtBudget(c.budget_min, c.budget_max)}</td>
                   {/* ID + Checkbox - shown at end in RTL */}
                   {isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
                   {isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
@@ -1627,7 +1768,7 @@ export default function ContactsPage() {
                       <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 7, color: '#10B981', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l.77-.77a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                       </a>
-                      <a href={"https://wa.me/2" + c.phone} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 7, color: '#25D366', textDecoration: 'none' }}>
+                      <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 7, color: '#25D366', textDecoration: 'none' }}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                       </a>
                       <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
@@ -1689,60 +1830,8 @@ export default function ContactsPage() {
       {/* Modals */}
       {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const found = contacts.find(c => c.phone === phone || c.phone2 === phone || (c.extraPhones || []).includes(phone)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => setContacts(prev => prev.map(c => c.id === updated.id ? updated : c))} onAddOpportunity={(opp) => { setSelected(null); }} />}
-      {logCallTarget && (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setLogCallTarget(null)}>
-        <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-          <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display:'flex', alignItems:'center', gap:6 }}><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {logCallTarget.full_name}</h3>
-            <button onClick={() => setLogCallTarget(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
-          </div>
-          <div style={{ padding: '18px 20px' }}>
-            <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#4A5568', fontWeight: 600, marginBottom: 8 }}>{isRTL ? 'نتيجة المكالمة' : 'Call Result'}</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-              {[isRTL?'رد':'Answered', isRTL?'لم يرد':'No Answer', isRTL?'مهتم':'Interested', isRTL?'غير مهتم':'Not Interested', isRTL?'اتصل لاحقاً':'Call Back'].map(r => (
-                <button key={r} style={{ padding: '5px 12px', borderRadius: 8, border: `1.5px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'}`, background: 'none', fontSize: 12, color: isDark ? '#E2EAF4' : '#4A5568', cursor: 'pointer', fontFamily: 'inherit' }} onMouseEnter={e => { e.currentTarget.style.borderColor='#4A7AAB'; e.currentTarget.style.color='#4A7AAB'; }} onMouseLeave={e => { e.currentTarget.style.borderColor=isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'; e.currentTarget.style.color=isDark ? '#E2EAF4' : '#4A5568'; }}>{r}</button>
-              ))}
-            </div>
-            <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#4A5568', fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</div>
-            <textarea rows={3} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', resize: 'none', marginBottom: 14, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C' }} placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
-            <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#4A5568', fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'تذكير متابعة' : 'Follow-up Reminder'}</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              {[isRTL?'غداً':'Tomorrow', isRTL?'3 أيام':'3 Days', isRTL?'أسبوع':'Week', isRTL?'بدون':'None'].map(d => (
-                <button key={d} style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'}`, background: 'none', fontSize: 12, color: isDark ? '#E2EAF4' : '#4A5568', cursor: 'pointer', fontFamily: 'inherit' }} onMouseEnter={e => { e.currentTarget.style.borderColor='#4A7AAB'; e.currentTarget.style.color='#4A7AAB'; }} onMouseLeave={e => { e.currentTarget.style.borderColor=isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'; e.currentTarget.style.color=isDark ? '#E2EAF4' : '#4A5568'; }}>{d}</button>
-              ))}
-            </div>
-          </div>
-          <div style={{ padding: '14px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'}`, background: isDark ? '#152232' : '#F8FAFC', fontSize: 13, color: isDark ? '#8BA8C8' : '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-            <button onClick={() => setLogCallTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'حفظ المكالمة' : 'Save Call'}</button>
-          </div>
-        </div>
-      </div>
-    )}
-    {reminderTarget && (
-      <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setReminderTarget(null)}>
-        <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-          <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display:'flex', alignItems:'center', gap:6 }}><Bell size={14} /> {isRTL ? 'إضافة تذكير' : 'Add Reminder'} — {reminderTarget.full_name}</h3>
-            <button onClick={() => setReminderTarget(null)} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
-          </div>
-          <div style={{ padding: '18px 20px' }}>
-            <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#4A5568', fontWeight: 600, marginBottom: 8 }}>{isRTL ? 'متى؟' : 'When?'}</div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-              {[isRTL?'غداً':'Tomorrow', isRTL?'3 أيام':'3 Days', isRTL?'أسبوع':'Week', isRTL?'تاريخ محدد':'Custom'].map(d => (
-                <button key={d} style={{ padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'}`, background: 'none', fontSize: 12, color: isDark ? '#E2EAF4' : '#4A5568', cursor: 'pointer', fontFamily: 'inherit' }} onMouseEnter={e => { e.currentTarget.style.borderColor='#4A7AAB'; e.currentTarget.style.color='#4A7AAB'; }} onMouseLeave={e => { e.currentTarget.style.borderColor=isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'; e.currentTarget.style.color=isDark ? '#E2EAF4' : '#4A5568'; }}>{d}</button>
-              ))}
-            </div>
-            <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#4A5568', fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'الرسالة' : 'Message'}</div>
-            <input style={{ width: '100%', padding: '9px 12px', border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C' }} placeholder={isRTL ? 'متابعة العميل...' : 'Follow up with client...'} />
-          </div>
-          <div style={{ padding: '14px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0'}`, background: isDark ? '#152232' : '#F8FAFC', fontSize: 13, color: isDark ? '#8BA8C8' : '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-            <button onClick={() => setReminderTarget(null)} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'حفظ التذكير' : 'Save Reminder'}</button>
-          </div>
-        </div>
-      </div>
-    )}
+      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
+      {reminderTarget && <ReminderModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
     {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={(newContacts) => { setContacts(prev => { const updated = [...prev, ...newContacts]; localStorage.setItem('platform_contacts', JSON.stringify(updated)); return updated; }); setShowImportModal(false); }} />}
 
@@ -1770,12 +1859,12 @@ export default function ContactsPage() {
               <button onClick={() => setBulkStageModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {Object.entries(STAGE_LABELS).map(([key, label]) => (
+              {Object.entries(STAGE_LABELS).map(([key, val]) => (
                 <button key={key} onClick={() => handleBulkStage(key)}
                   style={{ padding: '10px 14px', background: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb', border: `1px solid ${colors.border}`, borderRadius: 8, color: colors.text, fontSize: 13, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
                   onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.15)' : '#f0f4f8'}
                   onMouseLeave={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb'}>
-                  {isRTL ? label : key.replace(/_/g, ' ')}
+                  {isRTL ? val.ar : val.en}
                 </button>
               ))}
             </div>
