@@ -158,6 +158,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   useEscClose(onClose);
+  const dupTimer = useRef(null);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     prefix: '', full_name: '', phone: '', phone2: '', email: '',
@@ -173,14 +174,17 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const checkPhoneNumber = async (phone) => {
+  const checkPhoneNumber = (phone) => {
     if (!phone || !validatePhone(phone)) return;
-    setChecking(true);
-    try {
-      const dup = await checkDup(phone);
-      setDupWarning(dup || null);
-    } catch { setDupWarning(null); }
-    setChecking(false);
+    clearTimeout(dupTimer.current);
+    dupTimer.current = setTimeout(async () => {
+      setChecking(true);
+      try {
+        const dup = await checkDup(phone);
+        setDupWarning(dup || null);
+      } catch { setDupWarning(null); }
+      setChecking(false);
+    }, 400);
   };
 
   const handleSave = async () => {
@@ -207,8 +211,8 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const sel = { ...inp, cursor: 'pointer' };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div onClick={e => e.stopPropagation()} className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -243,11 +247,11 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <div style={{ display: 'flex', gap: 8 }}>
                   <select style={{ ...sel, width: 110, flexShrink: 0 }} value={form.prefix} onChange={e => set('prefix', e.target.value)}>
                     <option value="">{isRTL ? 'اللقب' : 'Prefix'}</option>
-                    <option value="Mr.">Mr.</option>
-                    <option value="Mrs.">Mrs.</option>
-                    <option value="Dr.">Dr.</option>
-                    <option value="Eng.">Eng.</option>
-                    <option value="أستاذ">أستاذ</option>
+                    <option value="Mr.">{isRTL ? 'السيد' : 'Mr.'}</option>
+                    <option value="Mrs.">{isRTL ? 'السيدة' : 'Mrs.'}</option>
+                    <option value="Dr.">{isRTL ? 'د.' : 'Dr.'}</option>
+                    <option value="Eng.">{isRTL ? 'م.' : 'Eng.'}</option>
+                    <option value="أستاذ">{isRTL ? 'أستاذ' : 'Prof.'}</option>
                   </select>
                   <input style={{ ...inp, flex: 1 }} placeholder={isRTL ? 'محمد أحمد...' : 'John Doe...'} value={form.full_name} onChange={e => set('full_name', e.target.value)} />
                 </div>
@@ -419,10 +423,10 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
         <div style={{ padding: '16px 24px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
           <div style={{ display: 'flex', gap: 10 }}>
-            {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
+            {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'السابق →' : '← Back'}</button>}
             {step === 1
-              ? <button onClick={() => setStep(2)} disabled={!validatePhone(form.phone) || !!dupWarning} style={{ padding: '9px 22px', background: (validatePhone(form.phone) && !dupWarning) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
-              : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</button>
+              ? <button onClick={() => setStep(2)} disabled={!validatePhone(form.phone) || !!dupWarning} style={{ padding: '9px 22px', background: (validatePhone(form.phone) && !dupWarning) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: (validatePhone(form.phone) && !dupWarning) ? 'pointer' : 'not-allowed' }}>{isRTL ? '← التالي' : 'Next →'}</button>
+              : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: saving ? 'rgba(74,122,171,0.3)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</button>
             }
           </div>
         </div>
