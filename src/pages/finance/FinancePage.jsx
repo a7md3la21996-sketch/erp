@@ -210,7 +210,7 @@ function AddJournalModal({ ds, L, onClose, onSave, entryCount }) {
   const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${ds.border}`, background: ds.input, color: ds.text, fontSize: 13, outline: 'none' };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: ds.card, borderRadius: 16, border: `1px solid ${ds.border}`, width: '100%', maxWidth: 700, maxHeight: '85vh', overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${ds.border}` }}>
           <span style={{ fontSize: 16, fontWeight: 700, color: ds.text }}>{L('قيد يومية جديد', 'New Journal Entry')}</span>
@@ -312,7 +312,7 @@ function AddExpenseModal({ ds, L, onClose, onSave, expCount }) {
   const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${ds.border}`, background: ds.input, color: ds.text, fontSize: 13, outline: 'none' };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: ds.card, borderRadius: 16, border: `1px solid ${ds.border}`, width: '100%', maxWidth: 520, maxHeight: '85vh', overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${ds.border}` }}>
           <span style={{ fontSize: 16, fontWeight: 700, color: ds.text }}>{L('مصروف جديد', 'New Expense')}</span>
@@ -1491,7 +1491,7 @@ export default function FinancePage() {
      ═══════════════════════════════════════════════════════════════════════ */
 
   const Overlay = ({ children, onClose }) => (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: ds.card, borderRadius: 16, border: `1px solid ${ds.border}`, width: '100%', maxWidth: 700, maxHeight: '85vh', overflow: 'auto' }}>
         {children}
       </div>

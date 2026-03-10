@@ -293,7 +293,7 @@ export default function OperationsPage() {
     const totalDocs = DOCUMENT_CHECKLIST.filter(d => d.required).length;
     const doneDocs = DOCUMENT_CHECKLIST.filter(d => d.required && deal.documents[d.key]).length;
     return (
-      <div style={{ position: 'fixed', top: 0, right: 0, bottom: 0, width: '100%', maxWidth: 520, background: c.card, zIndex: 1000, boxShadow: '-8px 0 40px rgba(0,0,0,0.2)', overflowY: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
+      <div style={{ position: 'fixed', top: 0, [isRTL ? 'left' : 'right']: 0, bottom: 0, width: '100%', maxWidth: 520, background: c.card, zIndex: 200, boxShadow: '-8px 0 40px rgba(0,0,0,0.2)', overflowY: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
         <div style={{ position: 'sticky', top: 0, background: c.card, zIndex: 1, padding: '20px 24px', borderBottom: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: c.text }}>{deal.deal_number}</h2>
@@ -884,7 +884,7 @@ export default function OperationsPage() {
       {/* Drawer overlay */}
       {selectedDeal && (
         <>
-          <div onClick={() => setSelectedDeal(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.4)', zIndex: 999 }} />
+          <div onClick={() => setSelectedDeal(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200 }} />
           <DealDrawer deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
         </>
       )}

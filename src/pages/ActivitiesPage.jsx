@@ -97,10 +97,13 @@ export default function ActivitiesPage() {
     setSaving(true);
     try {
       await createActivity({ type: form.type, notes: form.notes, entityType: 'internal', dept: form.dept, userId: user?.id });
+      await load();
       setForm({ type: 'call', notes: '', dept: 'crm' });
+      setSaving(false);
       setAdding(false);
-      load();
-    } finally { setSaving(false); }
+    } catch {
+      setSaving(false);
+    }
   };
 
   const availableTypes = Object.entries(ACTIVITY_TYPES).filter(([, v]) =>
