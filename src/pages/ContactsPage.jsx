@@ -941,8 +941,8 @@ function EditContactModal({ contact, onClose, onSave }) {
       onClose();
     } catch (err) {
       toast.error((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const inp = { background: isDark ? '#0F1E2D' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, padding: '9px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
@@ -1147,6 +1147,14 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
     return () => { cancelled = true; };
   }, [tab, contact.id]);
 
+  // ESC to close opportunity modal
+  useEffect(() => {
+    if (!showOppModal) return;
+    const handler = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); setShowOppModal(false); } };
+    document.addEventListener('keydown', handler, true);
+    return () => document.removeEventListener('keydown', handler, true);
+  }, [showOppModal]);
+
   const handleSaveActivity = async (form) => {
     try {
       const { user_id, ...formData } = form;
@@ -1271,7 +1279,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 { label: isRTL ? 'الموقع'   : 'Location', val: contact.preferred_location || '—' },
                 { label: isRTL ? 'نوع العقار': 'Property', val: (isRTL ? { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' } : { residential: 'Residential', commercial: 'Commercial', administrative: 'Administrative' })[contact.interested_in_type] || '—' },
                 { label: isRTL ? 'المسؤول'  : 'Assigned', val: contact.assigned_to_name || '—' },
-                { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: (() => { const d = daysSince(contact.last_activity_at); return d === 0 ? (isRTL ? 'اليوم' : 'Today') : isRTL ? `منذ ${d} يوم` : `${d} days ago`; })() },
+                { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: contact.last_activity_at ? (() => { const d = daysSince(contact.last_activity_at); return d === 0 ? (isRTL ? 'اليوم' : 'Today') : isRTL ? `منذ ${d} يوم` : `${d} days ago`; })() : '—' },
                 { label: isRTL ? 'تاريخ الإنشاء' : 'Created', val: contact.created_at ? new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
                 { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
                 { label: isRTL ? 'الشركة' : 'Company', val: contact.company || '—' },
@@ -1465,7 +1473,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 {isRTL ? '+ فتح فرصة جديدة' : '+ New Opportunity'}
               </button>
               {showOppModal && (
-                <div onClick={()=>setShowOppModal(false)} style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'rgba(0,0,0,0.6)' }}>
+                <div onClick={()=>setShowOppModal(false)} style={{ position:'fixed', inset:0, zIndex:1100, display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'rgba(0,0,0,0.5)' }}>
                   <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e=>e.stopPropagation()} className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', borderRadius:14, padding:24, width:'100%', maxWidth:420, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}` }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
                       <h3 style={{ margin:0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:15, fontWeight:700 }}>{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
@@ -1498,7 +1506,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                       ))}
                     </div>
                     <div style={{ display:'flex', gap:10, marginTop:20 }}>
-                      <button onClick={()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } onAddOpportunity&&onAddOpportunity({...newOpp, contactName:contact.full_name, contactId:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:Date.now()}); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); }}
+                      <button onClick={()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const opp = {...newOpp, contactName:contact.full_name, contactId:contact.id, contact_id:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:String(Date.now()), created_at:new Date().toISOString(), projects:{name_ar:newOpp.project,name_en:newOpp.project}}; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}
                         style={{ flex:1, padding:'10px 0', borderRadius:8, background:'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color:'#fff', border:'none', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                         {isRTL?'حفظ':'Save'}
                       </button>
@@ -1618,6 +1626,20 @@ export default function ContactsPage() {
     document.addEventListener('click', close);
     return () => document.removeEventListener('click', close);
   }, []);
+
+  // ESC to close inline modals
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== 'Escape') return;
+      if (batchCallMode) { setBatchCallMode(false); return; }
+      if (mergePreview) { setMergePreview(null); setMergeTargets([]); setMergeMode(false); return; }
+      if (bulkStageModal) { setBulkStageModal(false); return; }
+      if (bulkReassignModal) { setBulkReassignModal(false); return; }
+      if (confirmAction) { setConfirmAction(null); return; }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [batchCallMode, mergePreview, bulkStageModal, bulkReassignModal, confirmAction]);
 
   const handleDelete = (id) => {
     const contact = contacts.find(c => c.id === id);
@@ -2034,13 +2056,13 @@ export default function ContactsPage() {
                     {c.phone2 && <PhoneCell phone={c.phone2} small />}
                   </td>
                   {/* Type */}
-                  <td style={td}><Chip label={isRTL ? TYPE[c.contact_type]?.label : TYPE[c.contact_type]?.labelEn} color={TYPE[c.contact_type]?.color} bg={TYPE[c.contact_type]?.bg} /></td>
+                  <td style={td}>{TYPE[c.contact_type] ? <Chip label={isRTL ? TYPE[c.contact_type].label : TYPE[c.contact_type].labelEn} color={TYPE[c.contact_type].color} bg={TYPE[c.contact_type].bg} /> : <span style={{ color: colors.textMuted }}>—</span>}</td>
                   {/* Temp */}
                   <td style={td}>
                     {(() => { const TempIcon = TEMP[c.temperature]?.Icon; return TempIcon ? <TempIcon size={15} color={TEMP[c.temperature]?.color} /> : '—'; })()}
                   </td>
                   {/* Source */}
-                  <td style={td}><span style={{ fontSize: 11, background: colors.chipBg, border: '1px solid ' + colors.border, borderRadius: 6, padding: '3px 8px', color: colors.chipText }}>{isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></td>
+                  <td style={td}><span style={{ fontSize: 11, background: colors.chipBg, border: '1px solid ' + colors.border, borderRadius: 6, padding: '3px 8px', color: colors.chipText }}>{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</span></td>
                   {/* Stage */}
                   <td style={td} onClick={e => e.stopPropagation()}>
                     {isAdmin && c.contact_type === 'lead' ? (
@@ -2120,7 +2142,7 @@ export default function ContactsPage() {
 
       {/* Modals */}
       {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const found = contacts.find(c => c.phone === phone || c.phone2 === phone || (c.extra_phones || []).includes(phone)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); try { updateContact(updated.id, updated); } catch { /* optimistic */ } }} onAddOpportunity={(opp) => { setSelected(null); }} />}
+      {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => { /* optimistic */ }) }} onAddOpportunity={() => {}} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
     {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
@@ -2135,7 +2157,7 @@ export default function ContactsPage() {
         const total = batchContacts.length;
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1A2B3C' : '#fff', borderRadius: 20, width: '100%', maxWidth: 520, overflow: 'hidden' }}>
+            <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', borderRadius: 20, width: '100%', maxWidth: 520, overflow: 'hidden' }}>
               {/* Header */}
               <div style={{ background: 'linear-gradient(135deg,#065F46,#10B981)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -2242,7 +2264,7 @@ export default function ContactsPage() {
         const fields = ['full_name','phone','phone2','email','contact_type','source','temperature','stage','company','preferred_location'];
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
+            <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h3 style={{ margin: 0, color: colors.text, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><Merge size={18} color="#1E40AF" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
                 <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={18} /></button>

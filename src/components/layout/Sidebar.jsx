@@ -21,17 +21,27 @@ export default function Sidebar({ collapsed, onToggle }) {
   const isParentActive = (item) => item.children?.some(c => location.pathname.startsWith(c.path));
   const visibleItems = NAV_ITEMS.filter(item => hasPermission(item.permission));
 
+  const ToggleIcon = collapsed
+    ? (isRTL ? PanelLeftClose : PanelLeftOpen)
+    : (isRTL ? PanelLeftOpen : PanelLeftClose);
+
   return (
     <aside style={{ position: 'fixed', top: 0, [isRTL ? 'right' : 'left']: 0, zIndex: 20, height: '100vh', width: collapsed ? 72 : 260, transition: 'width 0.3s', background: isDark ? '#1a2234' : '#fff', borderRight: isRTL ? 'none' : ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')), borderLeft: isRTL ? ('1px solid ' + (isDark ? '#2d3748' : '#e5e7eb')) : 'none', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'), padding: collapsed ? '8px' : '8px 16px', overflow: 'hidden' }}>
+      {/* Header with logo + toggle */}
+      <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'), padding: collapsed ? '8px' : '8px 16px', overflow: 'hidden', gap: 8 }}>
         {collapsed ? (
-          <div style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            <img src={isDark ? "/logo-icon-white.png" : "/logo-icon.png"} alt={isRTL ? 'بلاتفورم' : 'Platform'} style={{ width: 40, height: 40, objectFit: 'contain' }} />
-          </div>
+          <button onClick={onToggle} style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)', color: isDark ? '#6B8DB5' : '#6b7280', transition: 'background 0.15s', flexShrink: 0 }}>
+            <ToggleIcon size={20} />
+          </button>
         ) : (
-          <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }}>
-            <img src={isDark ? "/logo-white.png" : "/logo.png"} alt={isRTL ? 'بلاتفورم للعقارات' : 'Platform Real Estate'} style={{ width: '100%', height: 'auto', maxHeight: 56, objectFit: 'contain' }} />
-          </div>
+          <>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', minWidth: 0 }}>
+              <img src={isDark ? "/logo-white.png" : "/logo.png"} alt={isRTL ? 'بلاتفورم للعقارات' : 'Platform Real Estate'} style={{ width: '100%', height: 'auto', maxHeight: 56, objectFit: 'contain' }} />
+            </div>
+            <button onClick={onToggle} style={{ flexShrink: 0, width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer', background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)', color: isDark ? '#6B8DB5' : '#9ca3af', transition: 'background 0.15s' }}>
+              <ToggleIcon size={16} />
+            </button>
+          </>
         )}
       </div>
       <nav style={{ flex: 1, overflowY: 'auto', padding: '16px 12px' }}>
@@ -68,11 +78,6 @@ export default function Sidebar({ collapsed, onToggle }) {
           );
         })}
       </nav>
-      <div style={{ padding: 12, borderTop: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb') }}>
-        <button onClick={onToggle} style={{ width: '100%', display: 'flex', justifyContent: 'center', padding: '8px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: isDark ? '#6b7280' : '#9ca3af' }}>
-          {collapsed ? (isRTL ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />) : (isRTL ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />)}
-        </button>
-      </div>
     </aside>
   );
 }
