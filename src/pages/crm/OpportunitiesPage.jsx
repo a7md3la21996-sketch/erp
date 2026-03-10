@@ -75,7 +75,7 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove, onSelect }) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
   return (
-    <div style={{ background: isDark?"#1a2234":"#fff", border:`1px solid ${isDark?"rgba(74,122,171,0.15)":"#e5e7eb"}`, borderRadius:14, padding:"16px", display:"flex", flexDirection:"column", gap:12, position:"relative", overflow:"hidden", boxShadow: isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)", transition:"box-shadow 0.2s, transform 0.2s", cursor:"pointer" }}
+    <div role="button" tabIndex={0} style={{ background: isDark?"#1a2234":"#fff", border:`1px solid ${isDark?"rgba(74,122,171,0.15)":"#e5e7eb"}`, borderRadius:14, padding:"16px", display:"flex", flexDirection:"column", gap:12, position:"relative", overflow:"hidden", boxShadow: isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)", transition:"box-shadow 0.2s, transform 0.2s", cursor:"pointer" }}
       onMouseEnter={e=>{e.currentTarget.style.boxShadow=isDark?"0 8px 24px rgba(0,0,0,0.4)":"0 8px 24px rgba(27,51,71,0.12)";e.currentTarget.style.transform="translateY(-2px)";}}
       onMouseLeave={e=>{e.currentTarget.style.boxShadow=isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)";e.currentTarget.style.transform="none";}}>
       <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:stage.color, borderRadius:"14px 14px 0 0" }} />
@@ -146,7 +146,7 @@ function AddModal({ isDark, isRTL, onClose, onSave }) {
   const lbl = (t) => <label style={{ fontSize:12, fontWeight:600, color:isDark?"#8BA8C8":"#6b7280", marginBottom:4, display:"block" }}>{t}</label>;
   return (
     <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div onClick={onClose} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
+      <div role="button" tabIndex={0} aria-label="Close" onClick={onClose} onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')onClose();}} style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.5)" }} />
       <div style={{ position:"relative", width:520, maxHeight:"90vh", overflowY:"auto", background:isDark?"#1a2234":"#fff", borderRadius:16, padding:24, zIndex:1, boxShadow:"0 20px 60px rgba(0,0,0,0.3)", direction:isRTL?"rtl":"ltr" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:16, fontWeight:700, color:isDark?"#E2EAF4":"#1B3347" }}>{isRTL?"اضافة فرصة جديدة":"Add New Opportunity"}</h3>
@@ -268,7 +268,7 @@ export default function OpportunitiesPage() {
     </div>
 
       {selectedOpp && (
-        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', flexDirection:'row-reverse' }} onClick={e => { if(e.target===e.currentTarget) setSelectedOpp(null); }}>
+        <div role="dialog" style={{ position:'fixed', inset:0, zIndex:200, display:'flex', flexDirection:'row-reverse' }} onClick={e => { if(e.target===e.currentTarget) setSelectedOpp(null); }}>
           <div style={{ width:'100%', maxWidth:460, height:'100%', background:isDark?'#1a2234':'#fff', boxShadow:'-8px 0 40px rgba(0,0,0,0.2)', display:'flex', flexDirection:'column', overflowY:'auto', animation:'slideIn 0.25s ease' }}>
             {/* Header */}
             <div style={{ padding:'20px 24px', borderBottom:`1px solid ${c.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', flexDirection:isRTL?'row-reverse':'row', background:isDark?'#152232':'#F8FAFC' }}>
@@ -335,7 +335,7 @@ export default function OpportunitiesPage() {
               <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={selectedOpp.contactName} />
             </div>
           </div>
-          <div style={{ flex:1, background:'rgba(0,0,0,0.4)' }} onClick={()=>setSelectedOpp(null)} />
+          <div role="button" tabIndex={0} aria-label="Close drawer" style={{ flex:1, background:'rgba(0,0,0,0.4)' }} onClick={()=>setSelectedOpp(null)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' ')setSelectedOpp(null);}} />
         </div>
       )}
   </>);

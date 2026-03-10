@@ -24,6 +24,14 @@ html.dark body, body.dark { background: #030712; color: #f3f4f6; }
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
 
+/* Global scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+html.dark ::-webkit-scrollbar-thumb, body.dark ::-webkit-scrollbar-thumb { background: rgba(74,122,171,0.3); }
+html.dark ::-webkit-scrollbar-thumb:hover, body.dark ::-webkit-scrollbar-thumb:hover { background: rgba(74,122,171,0.5); }
+
 /* Dark mode native form controls */
 html.dark select, body.dark select,
 html.dark input, body.dark input,

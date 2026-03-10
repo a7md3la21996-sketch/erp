@@ -138,7 +138,7 @@ function PhoneCell({ phone, small = false }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "3px 0" }}
       onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}>
-      <span style={{ fontSize: small ? 11 : 13, color: small ? "#9ca3af" : "#374151", fontFamily: "monospace", letterSpacing: revealed ? 0 : 1 }}>
+      <span style={{ fontSize: small ? 11 : 13, color: small ? "#9ca3af" : "#374151", fontFamily: "monospace", letterSpacing: revealed ? 0 : 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150, display: 'inline-block' }}>
         {revealed ? phone : masked}
       </span>
       {revealed && (
@@ -614,7 +614,7 @@ function EditContactModal({ contact, onClose, onSave }) {
         <div style={{ padding: '18px 24px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <div>
             <h2 style={{ margin: 0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 17, fontWeight: 700 }}>{isRTL ? 'تعديل بيانات جهة الاتصال' : 'Edit Contact'}</h2>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B' }}>{contact.full_name}</p>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 300 }}>{contact.full_name}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: isDark ? '#8BA8C8' : '#64748B', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
         </div>
@@ -838,7 +838,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 {contact.is_blacklisted ? <Ban size={18} /> : initials(contact.full_name)}
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : (isDark ? '#E2EAF4' : '#1A2B3C') }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : (isDark ? '#E2EAF4' : '#1A2B3C'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>
                   {contact.prefix ? <span style={{ color: isDark ? '#6B8DB5' : '#6b7280', marginLeft: 4 }}>{contact.prefix}</span> : null}{contact.full_name || 'بدون اسم'}
                 </div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -921,7 +921,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               ].map(r => (
               <div key={r.label} style={rowStyle}>
                 <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>{r.label}</span>
-                <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontWeight: 500, maxWidth: '55%', textAlign: 'left' }}>{r.val}</span>
+                <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontWeight: 500, maxWidth: '55%', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.val}</span>
               </div>
               ))}
 
@@ -938,8 +938,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 </div>
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
-                <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444', display:'flex', gap:6, alignItems:'center' }}>
-                  <Ban size={13} /> {isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}
+                <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444', display:'flex', gap:6, alignItems:'flex-start' }}>
+                  <Ban size={13} style={{ flexShrink: 0, marginTop: 2 }} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
                 </div>
               )}
               <div style={{ marginTop: 16 }}>
@@ -1577,8 +1577,8 @@ export default function ContactsPage() {
                         {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : '#1A2B3C' }}>{c.full_name || 'بدون اسم'}</div>
-                        {c.email && <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.email}</div>}
+                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : '#1A2B3C', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.full_name || 'بدون اسم'}</div>
+                        {c.email && <div style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.email}</div>}
                         {c.last_activity_at && (() => { const d = Math.floor((Date.now() - new Date(c.last_activity_at)) / 86400000); return <div style={{ fontSize: 10, marginTop: 2, fontWeight: 600, color: d === 0 ? '#4A7AAB' : d <= 3 ? '#6B8DB5' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</div>; })()}
                       </div>
                     </div>

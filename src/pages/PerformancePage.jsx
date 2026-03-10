@@ -277,7 +277,8 @@ export default function PerformancePage() {
             const dept = DEPARTMENTS.find(dep => dep.id === d.emp.department);
             const color = d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444';
             return (
-              <div key={d.emp.id} onClick={() => setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d)}
+              <div key={d.emp.id} role="button" tabIndex={0} onClick={() => setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d)}
+                onKeyDown={e => { if(e.key==='Enter'||e.key===' ') setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d); }}
                 style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '14px 18px', cursor: 'pointer', transition: 'all 0.15s', flexDirection: isRTL ? 'row-reverse' : 'row' }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = c.accent}
                 onMouseLeave={e => e.currentTarget.style.borderColor = c.border}
