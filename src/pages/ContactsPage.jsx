@@ -457,13 +457,26 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
 }
 
 // ── Blacklist Modal ────────────────────────────────────────────────────────
-// ── Log Call Modal ──────────────────────────────────────────────────────────
+// ── Log Call Modal (Activity + Follow-up Task in one flow) ──────────────────
 const CALL_RESULTS = [
-  { key: 'answered', ar: 'رد', en: 'Answered' },
-  { key: 'no_answer', ar: 'لم يرد', en: 'No Answer' },
-  { key: 'interested', ar: 'مهتم', en: 'Interested' },
-  { key: 'not_interested', ar: 'غير مهتم', en: 'Not Interested' },
-  { key: 'call_back', ar: 'اتصل لاحقاً', en: 'Call Back' },
+  { key: 'answered', ar: 'رد', en: 'Answered', color: '#10B981' },
+  { key: 'no_answer', ar: 'لم يرد', en: 'No Answer', color: '#F59E0B' },
+  { key: 'busy', ar: 'مشغول', en: 'Busy', color: '#EF4444' },
+  { key: 'interested', ar: 'مهتم', en: 'Interested', color: '#4A7AAB' },
+  { key: 'not_interested', ar: 'غير مهتم', en: 'Not Interested', color: '#6b7280' },
+  { key: 'call_back', ar: 'اتصل لاحقاً', en: 'Call Back', color: '#8B5CF6' },
+];
+const FOLLOWUP_PRESETS = [
+  { key: 'tomorrow', ar: 'غداً', en: 'Tomorrow', days: 1 },
+  { key: '3days', ar: '3 أيام', en: '3 Days', days: 3 },
+  { key: 'week', ar: 'أسبوع', en: 'Week', days: 7 },
+  { key: 'custom', ar: 'تاريخ محدد', en: 'Custom', days: 0 },
+];
+const FOLLOWUP_TYPES = [
+  { value: 'call', ar: 'مكالمة', en: 'Call' },
+  { value: 'whatsapp', ar: 'واتساب', en: 'WhatsApp' },
+  { value: 'meeting', ar: 'اجتماع', en: 'Meeting' },
+  { value: 'email', ar: 'إيميل', en: 'Email' },
 ];
 
 function LogCallModal({ contact, onClose }) {
@@ -472,45 +485,177 @@ function LogCallModal({ contact, onClose }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
+  const { profile } = useAuth();
   useEscClose(onClose);
 
   const [callResult, setCallResult] = useState('');
   const [callNotes, setCallNotes] = useState('');
-  const [callFollowup, setCallFollowup] = useState('');
+  const [saving, setSaving] = useState(false);
+  // Follow-up task
+  const [addFollowup, setAddFollowup] = useState(false);
+  const [followupPreset, setFollowupPreset] = useState('');
+  const [followupDate, setFollowupDate] = useState('');
+  const [followupType, setFollowupType] = useState('call');
+  const [followupPriority, setFollowupPriority] = useState('medium');
 
-  const handleSaveCall = async () => {
+  const handlePreset = (preset) => {
+    setFollowupPreset(preset.key);
+    if (preset.key !== 'custom') {
+      const d = new Date();
+      d.setDate(d.getDate() + preset.days);
+      d.setHours(10, 0, 0, 0);
+      setFollowupDate(d.toISOString().slice(0, 16));
+    } else {
+      setFollowupDate('');
+    }
+  };
+
+  // Auto-suggest follow-up based on call result
+  useEffect(() => {
+    if (callResult === 'call_back' || callResult === 'no_answer' || callResult === 'busy') {
+      setAddFollowup(true);
+      if (!followupPreset) handlePreset(FOLLOWUP_PRESETS[0]); // default: tomorrow
+    } else if (callResult === 'interested') {
+      setAddFollowup(true);
+      if (!followupPreset) handlePreset(FOLLOWUP_PRESETS[0]);
+    }
+  }, [callResult]);
+
+  const handleSave = async () => {
     if (!callResult) { toast.warning(isRTL ? 'اختر نتيجة المكالمة' : 'Select call result'); return; }
-    const activity = { type: 'call', description: `${isRTL ? 'مكالمة' : 'Call'}: ${CALL_RESULTS.find(r => r.key === callResult)?.[isRTL ? 'ar' : 'en'] || callResult}${callNotes ? ' — ' + callNotes : ''}`, next_action: callFollowup ? (isRTL ? 'متابعة' : 'Follow up') : '', next_action_date: callFollowup || '', contact_id: contact.id, created_at: new Date().toISOString() };
-    try { await createActivity(activity); toast.success(isRTL ? 'تم حفظ المكالمة' : 'Call saved'); } catch { toast.success(isRTL ? 'تم حفظ المكالمة محلياً' : 'Call saved locally'); }
+    if (addFollowup && !followupDate) { toast.warning(isRTL ? 'اختر موعد المتابعة' : 'Select follow-up date'); return; }
+    setSaving(true);
+
+    // 1. Save call activity
+    const resultLabel = CALL_RESULTS.find(r => r.key === callResult)?.[isRTL ? 'ar' : 'en'] || callResult;
+    const activity = {
+      type: 'call',
+      description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${callNotes ? ' — ' + callNotes : ''}`,
+      next_action: addFollowup ? (isRTL ? 'متابعة' : 'Follow up') : '',
+      next_action_date: addFollowup ? followupDate : '',
+      contact_id: contact.id,
+      created_at: new Date().toISOString(),
+    };
+    try { await createActivity(activity); } catch { /* saved optimistically */ }
+
+    // 2. Create follow-up task if enabled
+    if (addFollowup && followupDate) {
+      const followupTypeLabel = FOLLOWUP_TYPES.find(t => t.value === followupType)?.[isRTL ? 'ar' : 'en'] || followupType;
+      const task = {
+        title: isRTL ? `${followupTypeLabel} - ${contact.full_name}` : `${followupTypeLabel} - ${contact.full_name}`,
+        type: followupType,
+        priority: followupPriority,
+        status: 'pending',
+        contact_id: contact.id,
+        contact_name: contact.full_name,
+        due_date: followupDate,
+        dept: 'crm',
+        notes: callNotes ? `${isRTL ? 'من مكالمة سابقة' : 'From previous call'}: ${callNotes}` : '',
+        assigned_to_name_ar: profile?.full_name_ar || '',
+        assigned_to_name_en: profile?.full_name_en || '',
+      };
+      try { await createTask(task); } catch { /* saved optimistically */ }
+    }
+
+    toast.success(isRTL
+      ? `تم حفظ المكالمة${addFollowup ? ' + مهمة المتابعة' : ''}`
+      : `Call saved${addFollowup ? ' + follow-up task' : ''}`
+    );
+    setSaving(false);
     onClose();
   };
 
   const btnBorder = isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0';
-  const btnColor = isDark ? '#E2EAF4' : '#4A5568';
   const lblColor = isDark ? '#8BA8C8' : '#4A5568';
+  const priorities = [
+    { value: 'high', ar: 'عالية', en: 'High', color: '#EF4444' },
+    { value: 'medium', ar: 'متوسطة', en: 'Medium', color: '#F59E0B' },
+    { value: 'low', ar: 'منخفضة', en: 'Low', color: '#10B981' },
+  ];
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+      <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
         <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
         </div>
         <div style={{ padding: '18px 20px' }}>
+          {/* Call Result */}
           <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 8 }}>{isRTL ? 'نتيجة المكالمة' : 'Call Result'} <span style={{ color: '#EF4444' }}>*</span></div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
             {CALL_RESULTS.map(r => (
-              <button key={r.key} onClick={() => setCallResult(r.key)} style={{ padding: '5px 12px', borderRadius: 8, border: `1.5px solid ${callResult === r.key ? '#4A7AAB' : btnBorder}`, background: callResult === r.key ? 'rgba(74,122,171,0.12)' : 'none', fontSize: 12, color: callResult === r.key ? '#4A7AAB' : btnColor, cursor: 'pointer', fontFamily: 'inherit', fontWeight: callResult === r.key ? 700 : 400 }}>{isRTL ? r.ar : r.en}</button>
+              <button key={r.key} onClick={() => setCallResult(r.key)} style={{
+                padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
+                border: `1.5px solid ${callResult === r.key ? r.color : btnBorder}`,
+                background: callResult === r.key ? r.color + '18' : 'none',
+                color: callResult === r.key ? r.color : (isDark ? '#E2EAF4' : '#4A5568'),
+                fontWeight: callResult === r.key ? 700 : 400,
+              }}>{isRTL ? r.ar : r.en}</button>
             ))}
           </div>
+          {/* Notes */}
           <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</div>
-          <textarea rows={3} value={callNotes} onChange={e => setCallNotes(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', resize: 'none', marginBottom: 14, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
-          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'تذكير متابعة' : 'Follow-up Reminder'}</div>
-          <input type="datetime-local" value={callFollowup} onChange={e => setCallFollowup(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, outline: 'none', background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} />
+          <textarea rows={2} value={callNotes} onChange={e => setCallNotes(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', resize: 'none', marginBottom: 16, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
+
+          {/* Follow-up Section */}
+          <div style={{ background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: `1px solid ${addFollowup ? (isDark ? 'rgba(74,122,171,0.25)' : '#4A7AAB30') : btnBorder}`, borderRadius: 10, padding: 14, transition: 'border-color 0.2s' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: addFollowup ? '#4A7AAB' : lblColor }}>
+              <input type="checkbox" checked={addFollowup} onChange={e => setAddFollowup(e.target.checked)} style={{ accentColor: '#4A7AAB', cursor: 'pointer' }} />
+              <Clock size={14} /> {isRTL ? 'إنشاء مهمة متابعة' : 'Create follow-up task'}
+            </label>
+            {addFollowup && (
+              <div style={{ marginTop: 12 }}>
+                {/* When */}
+                <div style={{ fontSize: 11, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'متى؟' : 'When?'}</div>
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                  {FOLLOWUP_PRESETS.map(p => (
+                    <button key={p.key} onClick={() => handlePreset(p)} style={{
+                      padding: '4px 12px', borderRadius: 16, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
+                      border: `1.5px solid ${followupPreset === p.key ? '#4A7AAB' : btnBorder}`,
+                      background: followupPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none',
+                      color: followupPreset === p.key ? '#4A7AAB' : (isDark ? '#E2EAF4' : '#4A5568'),
+                      fontWeight: followupPreset === p.key ? 700 : 400,
+                    }}>{isRTL ? p.ar : p.en}</button>
+                  ))}
+                </div>
+                {followupPreset === 'custom' && (
+                  <input type="datetime-local" value={followupDate} onChange={e => setFollowupDate(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, outline: 'none', marginBottom: 10, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} />
+                )}
+                {/* Type + Priority */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: lblColor, fontWeight: 600, marginBottom: 4 }}>{isRTL ? 'نوع المتابعة' : 'Follow-up type'}</div>
+                    <select value={followupType} onChange={e => setFollowupType(e.target.value)} style={{ width: '100%', padding: '6px 8px', border: `1px solid ${btnBorder}`, borderRadius: 6, fontSize: 11, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', outline: 'none', cursor: 'pointer' }}>
+                      {FOLLOWUP_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, color: lblColor, fontWeight: 600, marginBottom: 4 }}>{isRTL ? 'الأولوية' : 'Priority'}</div>
+                    <div style={{ display: 'flex', gap: 3 }}>
+                      {priorities.map(p => (
+                        <button key={p.value} onClick={() => setFollowupPriority(p.value)} style={{
+                          flex: 1, padding: '5px 0', borderRadius: 5, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit',
+                          background: followupPriority === p.value ? p.color + '18' : 'transparent',
+                          border: `1px solid ${followupPriority === p.value ? p.color : btnBorder}`,
+                          color: followupPriority === p.value ? p.color : (isDark ? '#8BA8C8' : '#6B7280'),
+                          fontWeight: followupPriority === p.value ? 700 : 400,
+                        }}>{isRTL ? p.ar : p.en}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+        {/* Footer */}
         <div style={{ padding: '14px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${btnBorder}`, background: isDark ? '#152232' : '#F8FAFC', fontSize: 13, color: isDark ? '#8BA8C8' : '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-          <button onClick={handleSaveCall} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: callResult ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: callResult ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>{isRTL ? 'حفظ المكالمة' : 'Save Call'}</button>
+          <button onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: callResult ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: callResult ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: saving ? 0.6 : 1 }}>
+            {saving ? '...' : addFollowup ? (isRTL ? 'حفظ + إنشاء مهمة' : 'Save + Create Task') : (isRTL ? 'حفظ المكالمة' : 'Save Call')}
+          </button>
         </div>
       </div>
     </div>
