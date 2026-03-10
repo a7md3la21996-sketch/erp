@@ -99,8 +99,7 @@ function StatusBadgeStatic({ status, config, isRTL }) {
   const cfg = config[status];
   if (!cfg) return null;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap' }}>
-      <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color }} />
+    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, color: cfg.color, background: cfg.color + '18', border: `1px solid ${cfg.color}35`, whiteSpace: 'nowrap' }}>
       {isRTL ? cfg.ar : cfg.en}
     </span>
   );
@@ -250,8 +249,7 @@ export default function OperationsPage() {
     const cfg = config[status];
     if (!cfg) return null;
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap' }}>
-        <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color }} />
+      <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, color: cfg.color, background: cfg.color + '18', border: `1px solid ${cfg.color}35`, whiteSpace: 'nowrap' }}>
         {isRTL ? cfg.ar : cfg.en}
       </span>
     );
@@ -260,16 +258,21 @@ export default function OperationsPage() {
   function FilterPills({ items, active, onChange }) {
     return (
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        <button onClick={() => onChange('all')} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${active === 'all' ? c.accent : c.border}`, background: active === 'all' ? c.accent + '18' : 'transparent', color: active === 'all' ? c.accent : c.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'inherit' }}>
+        <button onClick={() => onChange('all')} style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${active === 'all' ? c.accent : c.border}`, background: active === 'all' ? c.accent + '15' : 'transparent', color: active === 'all' ? c.accent : c.muted, fontSize: 12, fontWeight: active === 'all' ? 600 : 400, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' }}>
           {isRTL ? 'الكل' : 'All'}
         </button>
         {items.map(([key, cfg]) => (
-          <button key={key} onClick={() => onChange(key)} style={{ padding: '6px 14px', borderRadius: 8, border: `1px solid ${active === key ? cfg.color + '60' : c.border}`, background: active === key ? cfg.bg : 'transparent', color: active === key ? cfg.color : c.muted, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontFamily: 'inherit' }}>
+          <button key={key} onClick={() => onChange(key)} style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${active === key ? cfg.color + '60' : c.border}`, background: active === key ? cfg.color + '15' : 'transparent', color: active === key ? cfg.color : c.muted, fontSize: 12, fontWeight: active === key ? 600 : 400, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' }}>
             {isRTL ? cfg.ar : cfg.en}
           </button>
         ))}
       </div>
     );
+  }
+
+  function AddBtn({ label, onClick }) {
+    const [hov, setHov] = useState(false);
+    return <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: hov ? '#2B4C6F' : '#1B3347', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, transform: hov ? 'translateY(-1px)' : 'none', boxShadow: hov ? '0 6px 16px rgba(27,51,71,0.35)' : '0 2px 6px rgba(27,51,71,0.2)', transition: 'all 0.2s ease', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>;
   }
 
   function SearchBar({ placeholder }) {
@@ -365,7 +368,7 @@ export default function OperationsPage() {
           {deal.status !== 'completed' && deal.status !== 'cancelled' && (
             <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
               <button onClick={() => advanceDeal(deal.id)}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}>
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 10, border: 'none', background: '#1B3347', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s', boxShadow: '0 2px 6px rgba(27,51,71,0.2)' }}>
                 <ArrowRight size={16} /> {isRTL ? 'نقل للمرحلة التالية' : 'Advance Status'}
               </button>
               <button onClick={() => { if (window.confirm(isRTL ? 'هل أنت متأكد من إلغاء الصفقة؟' : 'Cancel this deal?')) cancelDeal(deal.id); }}
@@ -467,18 +470,18 @@ export default function OperationsPage() {
           <FilterPills items={Object.entries(DEAL_STATUS_CONFIG)} active={dealFilter} onChange={setDealFilter} />
           <div style={{ flex: 1 }} />
           <SearchBar placeholder={isRTL ? 'بحث بالاسم أو رقم الصفقة...' : 'Search by name or deal #...'} />
-          <button onClick={() => setShowDealModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,122,171,0.3)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-            <Plus size={16} /> {isRTL ? 'صفقة جديدة' : 'New Deal'}
-          </button>
+          <AddBtn label={isRTL ? '+ صفقة جديدة' : '+ New Deal'} onClick={() => setShowDealModal(true)} />
         </div>
         <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}` }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>{isRTL ? 'قائمة الصفقات' : 'Deals List'}</p>
+          </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, direction: isRTL ? 'rtl' : 'ltr' }}>
               <thead>
-                <tr style={{ background: c.thBg }}>
+                <tr style={{ background: c.thBg, borderBottom: `2px solid ${c.border}` }}>
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'الوحدة':'Unit', isRTL?'القيمة':'Value', isRTL?'المستندات':'Docs', isRTL?'الحالة':'Status', isRTL?'':''].map((h, i) => (
-                    <th key={i} style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 600, color: c.muted, fontSize: 12, borderBottom: `1px solid ${c.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={i} style={{ padding: '10px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -544,18 +547,18 @@ export default function OperationsPage() {
           <FilterPills items={Object.entries(PAYMENT_STATUS_CONFIG)} active={payFilter} onChange={setPayFilter} />
           <div style={{ flex: 1 }} />
           <SearchBar placeholder={isRTL ? 'بحث...' : 'Search...'} />
-          <button onClick={() => setShowPaymentModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#1B3347,#2B4C6F)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(43,76,111,0.3)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-            <CreditCard size={16} /> {isRTL ? 'تسجيل دفعة' : 'Record Payment'}
-          </button>
+          <AddBtn label={isRTL ? '+ تسجيل دفعة' : '+ Record Payment'} onClick={() => setShowPaymentModal(true)} />
         </div>
         <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}` }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>{isRTL ? 'جدول المدفوعات' : 'Payments Schedule'}</p>
+          </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, direction: isRTL ? 'rtl' : 'ltr' }}>
               <thead>
-                <tr style={{ background: c.thBg }}>
+                <tr style={{ background: c.thBg, borderBottom: `2px solid ${c.border}` }}>
                   {[isRTL?'الصفقة':'Deal', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'القسط':'Inst.', isRTL?'المبلغ':'Amount', isRTL?'تاريخ الاستحقاق':'Due Date', isRTL?'الحالة':'Status', isRTL?'إيصال':'Receipt'].map((h, i) => (
-                    <th key={i} style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 600, color: c.muted, fontSize: 12, borderBottom: `1px solid ${c.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={i} style={{ padding: '10px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -640,18 +643,18 @@ export default function OperationsPage() {
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <FilterPills items={Object.entries(TICKET_STATUS_CONFIG)} active={ticketFilter} onChange={setTicketFilter} />
           <div style={{ flex: 1 }} />
-          <button onClick={() => setShowTicketModal(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,122,171,0.3)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
-            <Plus size={16} /> {isRTL ? 'تذكرة جديدة' : 'New Ticket'}
-          </button>
+          <AddBtn label={isRTL ? '+ تذكرة جديدة' : '+ New Ticket'} onClick={() => setShowTicketModal(true)} />
         </div>
         <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}` }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>{isRTL ? 'قائمة التذاكر' : 'Tickets List'}</p>
+          </div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, direction: isRTL ? 'rtl' : 'ltr' }}>
               <thead>
-                <tr style={{ background: c.thBg }}>
+                <tr style={{ background: c.thBg, borderBottom: `2px solid ${c.border}` }}>
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'النوع':'Type', isRTL?'الموضوع':'Subject', isRTL?'الأولوية':'Priority', isRTL?'مسؤول':'Assigned', isRTL?'التاريخ':'Date', isRTL?'الحالة':'Status', isRTL?'التقييم':'Rating'].map((h, i) => (
-                    <th key={i} style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 600, color: c.muted, fontSize: 12, borderBottom: `1px solid ${c.border}`, whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={i} style={{ padding: '10px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -731,9 +734,9 @@ export default function OperationsPage() {
     return <select {...props} style={{ width:'100%', padding:'10px 14px', borderRadius:10, border:`1px solid ${c.border}`, background:c.input, color:c.text, fontSize:13, fontFamily:'inherit', outline:'none', boxSizing:'border-box', ...(props.style||{}) }}>{children}</select>;
   }
 
-  function PrimaryBtn({ children, onClick, color='#4A7AAB' }) {
+  function PrimaryBtn({ children, onClick, color='#1B3347' }) {
     const [h, setH] = useState(false);
-    return <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{ width:'100%', padding:'12px', borderRadius:10, border:'none', background:`linear-gradient(135deg,${color},${color}dd)`, color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', transform:h?'translateY(-1px)':'none', boxShadow:h?`0 6px 20px ${color}40`:'none', transition:'all 0.2s' }}>{children}</button>;
+    return <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{ width:'100%', padding:'12px', borderRadius:10, border:'none', background:h?'#2B4C6F':color, color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', transform:h?'translateY(-1px)':'none', boxShadow:h?'0 6px 16px rgba(27,51,71,0.35)':'0 2px 6px rgba(27,51,71,0.2)', transition:'all 0.2s' }}>{children}</button>;
   }
 
   function AddDealModal() {
@@ -844,7 +847,7 @@ export default function OperationsPage() {
 
   // ── Main Render ─────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '24px 28px', minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div style={{ padding: '24px 28px', minHeight: '100vh', background: c.bg, direction: isRTL ? 'rtl' : 'ltr' }}>
       {/* Page Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
