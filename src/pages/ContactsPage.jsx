@@ -772,6 +772,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
   const rowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(74,122,171,0.08)', fontSize: 13 };
 
   return (
+    <>
+    {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); setShowEdit(false); }} />}
     <div style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', direction: 'rtl' }}>
       <div onClick={onClose} style={{ flex: 1, background: 'rgba(0,0,0,0.45)' }} />
       <div style={{ width: 430, background: '#0F1E2D', borderRight: '1px solid rgba(74,122,171,0.2)', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
@@ -1109,6 +1111,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
         </div>
       </div>
     </div>
+    </>
   );
 }
 
