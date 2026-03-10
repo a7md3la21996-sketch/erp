@@ -146,10 +146,11 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const isRTL = i18n.language === 'ar';
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
-    full_name: '', phone: '', phone2: '', email: '',
+    prefix: '', full_name: '', phone: '', phone2: '', email: '',
     contact_type: 'lead', source: 'facebook', campaign_name: '',
     budget_min: '', budget_max: '', preferred_location: '',
-    interested_in_type: 'residential', notes: '',
+    interested_in_type: 'residential', notes: '', department: 'sales',
+    gender: '', nationality: '', birth_date: '', company: '', job_title: '',
   });
   const [dupWarning, setDupWarning] = useState(null);
   const [extraPhones, setExtraPhones] = useState([]);
@@ -207,7 +208,17 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
-                <input style={inp} placeholder="محمد أحمد..." value={form.full_name} onChange={e => set('full_name', e.target.value)} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <select style={{ ...sel, width: 110, flexShrink: 0 }} value={form.prefix} onChange={e => set('prefix', e.target.value)}>
+                    <option value="">{isRTL ? 'اللقب' : 'Prefix'}</option>
+                    <option value="Mr.">Mr.</option>
+                    <option value="Mrs.">Mrs.</option>
+                    <option value="Dr.">Dr.</option>
+                    <option value="Eng.">Eng.</option>
+                    <option value="أستاذ">أستاذ</option>
+                  </select>
+                  <input style={{ ...inp, flex: 1 }} placeholder="محمد أحمد..." value={form.full_name} onChange={e => set('full_name', e.target.value)} />
+                </div>
               </div>
               <div>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
@@ -275,8 +286,22 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'}</label>
                 <select style={sel} value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
                   <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
-                  <option value="cold">{isRTL ? 'كولد' : 'Cold'} كول</option>
+                  <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
                   <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
+                  <option value="supplier">{isRTL ? 'مورد' : 'Supplier'}</option>
+                  <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
+                  <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
+                  <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'القسم' : 'Department'}</label>
+                <select style={sel} value={form.department} onChange={e => set('department', e.target.value)}>
+                  <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
+                  <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
+                  <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
+                  <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
+                  <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
                 </select>
               </div>
               <div>
@@ -288,6 +313,39 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الشركة / جهة العمل' : 'Company'}</label>
+                <input style={inp} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} value={form.company} onChange={e => set('company', e.target.value)} />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
+                <input style={inp} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} value={form.job_title} onChange={e => set('job_title', e.target.value)} />
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنس' : 'Gender'}</label>
+                <select style={sel} value={form.gender} onChange={e => set('gender', e.target.value)}>
+                  <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                  <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
+                  <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنسية' : 'Nationality'}</label>
+                <select style={sel} value={form.nationality} onChange={e => set('nationality', e.target.value)}>
+                  <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                  <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
+                  <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
+                  <option value="emirati">{isRTL ? 'إماراتي' : 'Emirati'}</option>
+                  <option value="kuwaiti">{isRTL ? 'كويتي' : 'Kuwaiti'}</option>
+                  <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
+                  <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
+                  <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
+                <input style={inp} type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} />
               </div>
             </div>
           ) : (
@@ -510,9 +568,12 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 {contact.is_blacklisted ? <Ban size={18} /> : initials(contact.full_name)}
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : '#E2EAF4' }}>{contact.full_name || 'بدون اسم'}</div>
-                <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : '#E2EAF4' }}>
+                  {contact.prefix ? <span style={{ color: '#6B8DB5', marginLeft: 4 }}>{contact.prefix}</span> : null}{contact.full_name || 'بدون اسم'}
+                </div>
+                <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Chip label={tp?.label} color={tp?.color} bg={tp?.bg} />
+                  {contact.department && <Chip label={{ sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' }[contact.department] || contact.department} color="#8BA8C8" bg="rgba(139,168,200,0.1)" />}
                   {contact.is_blacklisted && <Chip label={isRTL ? "بلاك ليست" : "Blacklist"} color="#EF4444" bg="rgba(239,68,68,0.12)" />}
                 </div>
               </div>
@@ -577,6 +638,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 { label: isRTL ? 'نوع العقار': 'Property', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
                 { label: isRTL ? 'المسؤول'  : 'Assigned', val: contact.assigned_to_name || '—' },
                 { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: `${daysSince(contact.last_activity_at)}d` },
+                { label: isRTL ? 'الشركة' : 'Company', val: contact.company || '—' },
+                { label: isRTL ? 'المسمى الوظيفي' : 'Job Title', val: contact.job_title || '—' },
+                { label: isRTL ? 'الجنس' : 'Gender', val: contact.gender ? ({ male: 'ذكر', female: 'أنثى' }[contact.gender] || contact.gender) : '—' },
+                { label: isRTL ? 'الجنسية' : 'Nationality', val: contact.nationality ? ({ egyptian: 'مصري', saudi: 'سعودي', emirati: 'إماراتي', kuwaiti: 'كويتي', qatari: 'قطري', libyan: 'ليبي', other: 'أخرى' }[contact.nationality] || contact.nationality) : '—' },
+                { label: isRTL ? 'تاريخ الميلاد' : 'Birth Date', val: contact.birth_date || '—' },
               ].map(r => (
               <div key={r.label} style={rowStyle}>
                 <span style={{ color: '#8BA8C8' }}>{r.label}</span>
@@ -604,6 +670,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               <div style={{ marginTop: 16 }}>
                 <FollowUpReminder entityType="contact" entityId={contact.id} entityName={contact.full_name} />
               </div>
+              {contact.contact_type === 'supplier' && (
+                <button style={{ width: '100%', marginTop: 12, padding: '10px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#4A7AAB', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <span>+</span> {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
+                </button>
+              )}
             </div>
           )}
 
