@@ -268,7 +268,7 @@ export default function OpportunitiesPage() {
     </div>
 
       {selectedOpp && (
-        <div role="dialog" style={{ position:'fixed', inset:0, zIndex:200, display:'flex', flexDirection:'row-reverse' }} onClick={e => { if(e.target===e.currentTarget) setSelectedOpp(null); }}>
+        <div role="dialog" dir={isRTL ? 'rtl' : 'ltr'} style={{ position:'fixed', inset:0, zIndex:200, display:'flex', flexDirection:isRTL ? 'row' : 'row-reverse' }} onClick={e => { if(e.target===e.currentTarget) setSelectedOpp(null); }}>
           <div style={{ width:'100%', maxWidth:460, height:'100%', background:isDark?'#1a2234':'#fff', boxShadow:'-8px 0 40px rgba(0,0,0,0.2)', display:'flex', flexDirection:'column', overflowY:'auto', animation:'slideIn 0.25s ease' }}>
             {/* Header */}
             <div style={{ padding:'20px 24px', borderBottom:`1px solid ${c.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', flexDirection:isRTL?'row-reverse':'row', background:isDark?'#152232':'#F8FAFC' }}>

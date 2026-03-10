@@ -43,7 +43,8 @@ const getRankIcon = (rank, isDark) => {
 
 export default function TargetTrackerPage() {
   const { t, i18n } = useTranslation();
-  const { isDark } = useTheme();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const lang = i18n.language;
   const isRTL = lang === 'ar';
   const [selectedMonth, setSelectedMonth] = useState('mar');

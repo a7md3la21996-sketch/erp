@@ -159,7 +159,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   const td = { color: '#E2EAF4', padding: '8px 10px', borderBottom: '1px solid rgba(74,122,171,0.06)', fontSize: 12 };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', direction: isRTL ? 'rtl' : 'ltr' }}>
       <div style={{ background: '#1A2B3C', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 16, width: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         
         {/* Header */}

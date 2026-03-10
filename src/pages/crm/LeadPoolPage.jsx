@@ -336,8 +336,8 @@ export default function LeadPoolPage() {
                 <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
                   <Users size={24} color='#4A7AAB' />
                 </div>
-                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
-                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:c.text }}>{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
+                <p style={{ margin:0, fontSize:13, color:c.muted }}>{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
               </div>
             ) : visible.map((lead, idx) => {
           const aging   = getAging(lead.created_at);
@@ -443,7 +443,7 @@ export default function LeadPoolPage() {
 
       {/* Assign Modal */}
       {assignModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: c.cardBg, borderRadius: 14, padding: 24, width: 420, maxWidth: '90vw', border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: c.text }}>
@@ -487,7 +487,7 @@ export default function LeadPoolPage() {
 
       {/* Add Cold Call Modal */}
       {addModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: c.cardBg, borderRadius: 14, padding: 24, width: 380, maxWidth: '90vw', border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'إضافة كولد كول' : 'Add Cold Call'}</h3>
