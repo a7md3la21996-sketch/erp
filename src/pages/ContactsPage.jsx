@@ -438,7 +438,7 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 }
 
 // ── Contact Drawer ─────────────────────────────────────────────────────────
-function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
+function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportunity }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const [tab, setTab] = useState('info');
@@ -450,6 +450,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
   const [savingTask, setSavingTask] = useState(false);
   const [loadingActs, setLoadingActs] = useState(false);
   const [showActivityForm, setShowActivityForm] = useState(false);
+  const [showOppModal, setShowOppModal] = useState(false);
+  const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'new', temperature:'warm', priority:'medium', agent:'', notes:'' });
 
   useEffect(() => {
     if (tab === 'activities') {
@@ -725,9 +727,54 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate }) {
           {/* OPPORTUNITIES TAB */}
           {tab === 'opportunities' && (
             <div>
-              <button style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
+              <button onClick={()=>setShowOppModal(true)} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14, fontFamily:'inherit' }}>
                 {isRTL ? '+ فتح فرصة جديدة' : '+ New Opportunity'}
               </button>
+              {showOppModal && (
+                <div style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'rgba(0,0,0,0.6)' }}>
+                  <div style={{ background:'#1a2234', borderRadius:14, padding:24, width:'100%', maxWidth:420, border:'1px solid rgba(74,122,171,0.2)' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+                      <h3 style={{ margin:0, color:'#E2EAF4', fontSize:15, fontWeight:700 }}>{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
+                      <button onClick={()=>setShowOppModal(false)} style={{ background:'none', border:'none', color:'#8BA8C8', cursor:'pointer', fontSize:18 }}>✕</button>
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                      {[
+                        { key:'project', label_ar:'المشروع', label_en:'Project', type:'text' },
+                        { key:'budget',  label_ar:'الميزانية', label_en:'Budget', type:'number' },
+                        { key:'notes',   label_ar:'ملاحظات', label_en:'Notes', type:'text' },
+                      ].map(f => (
+                        <div key={f.key}>
+                          <label style={{ fontSize:12, color:'#8BA8C8', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
+                          <input type={f.type} value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
+                            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid rgba(74,122,171,0.2)', background:'#0F1E2D', color:'#E2EAF4', fontSize:13, outline:'none', boxSizing:'border-box', textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr', fontFamily:'inherit' }} />
+                        </div>
+                      ))}
+                      {[
+                        { key:'stage', label_ar:'المرحلة', label_en:'Stage', options:[{v:'new',ar:'جديد'},{v:'contacted',ar:'تم التواصل'},{v:'interested',ar:'مهتم'},{v:'negotiation',ar:'تفاوض'},{v:'reserved',ar:'محجوز'}] },
+                        { key:'temperature', label_ar:'الحرارة', label_en:'Temperature', options:[{v:'hot',ar:'ساخن'},{v:'warm',ar:'دافئ'},{v:'normal',ar:'عادي'},{v:'cold',ar:'بارد'}] },
+                        { key:'priority', label_ar:'الأولوية', label_en:'Priority', options:[{v:'urgent',ar:'عاجل'},{v:'high',ar:'عالي'},{v:'medium',ar:'متوسط'},{v:'low',ar:'منخفض'}] },
+                      ].map(f => (
+                        <div key={f.key}>
+                          <label style={{ fontSize:12, color:'#8BA8C8', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
+                          <select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
+                            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid rgba(74,122,171,0.2)', background:'#0F1E2D', color:'#E2EAF4', fontSize:13, outline:'none', cursor:'pointer', boxSizing:'border-box', fontFamily:'inherit' }}>
+                            {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.v}</option>)}
+                          </select>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display:'flex', gap:10, marginTop:20 }}>
+                      <button onClick={()=>{ onAddOpportunity&&onAddOpportunity({...newOpp, contactName:contact.full_name, contactId:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:Date.now()}); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); }}
+                        style={{ flex:1, padding:'10px 0', borderRadius:8, background:'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color:'#fff', border:'none', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        {isRTL?'حفظ':'Save'}
+                      </button>
+                      <button onClick={()=>setShowOppModal(false)} style={{ padding:'10px 16px', borderRadius:8, background:'transparent', color:'#8BA8C8', border:'1px solid rgba(74,122,171,0.2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                        {isRTL?'إلغاء':'Cancel'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {opportunities.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
                   <Star size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
@@ -1173,7 +1220,7 @@ export default function ContactsPage() {
 
       {/* Modals */}
       {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const found = contacts.find(c => c.phone === phone || c.phone2 === phone || (c.extraPhones || []).includes(phone)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => setContacts(prev => prev.map(c => c.id === updated.id ? updated : c))} />}
+      {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => setContacts(prev => prev.map(c => c.id === updated.id ? updated : c))} onAddOpportunity={(opp) => { setSelected(null); }} />}
       {logCallTarget && (
       <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setLogCallTarget(null)}>
         <div style={{ background: '#fff', borderRadius: 16, width: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
