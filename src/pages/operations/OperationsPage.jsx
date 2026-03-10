@@ -48,6 +48,64 @@ function useDS() {
   return { dark, bg:dark?'#152232':'#F0F4F8', card:dark?'#1a2234':'#ffffff', border:dark?'rgba(74,122,171,0.2)':'#E2E8F0', text:dark?'#E2EAF4':'#1A2B3C', muted:dark?'#8BA8C8':'#64748B', input:dark?'#0F1E2D':'#ffffff', rowHover:dark?'rgba(74,122,171,0.07)':'#F8FAFC', thBg:dark?'rgba(74,122,171,0.08)':'#F8FAFC', accent:'#4A7AAB', primary:'#2B4C6F' };
 }
 
+function HandoverCard({ ho, c, isRTL, isDark }) {
+  const [cardHov, setCardHov] = useState(false);
+  const hCfg = HANDOVER_STATUS_CONFIG[ho.status] || {};
+  const dLeft = daysUntil(ho.expected_handover);
+  return (
+    <div onMouseEnter={() => setCardHov(true)} onMouseLeave={() => setCardHov(false)}
+      style={{ background: c.card, borderRadius: 14, border: `1px solid ${cardHov ? hCfg.color + '60' : c.border}`, padding: 20, transition: 'all 0.2s', transform: cardHov ? 'translateY(-2px)' : 'none', boxShadow: cardHov ? '0 8px 24px rgba(0,0,0,0.08)' : 'none' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+          <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: c.text }}>{isRTL ? ho.client_ar : ho.client_en}</h4>
+          <p style={{ margin: '2px 0 0', fontSize: 12, color: c.muted }}>{ho.deal_number} — {ho.unit_code}</p>
+        </div>
+        <StatusBadgeStatic status={ho.status} config={HANDOVER_STATUS_CONFIG} isRTL={isRTL} />
+      </div>
+      {[
+        [isRTL ? 'المشروع' : 'Project', isRTL ? ho.project_ar : ho.project_en],
+        [isRTL ? 'المطور' : 'Developer', isRTL ? ho.developer_ar : ho.developer_en],
+        [isRTL ? 'تاريخ الحجز' : 'Reserved', ho.reserved_date],
+        [isRTL ? 'التسليم المتوقع' : 'Expected', ho.expected_handover],
+      ].map(([label, val], i) => (
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          <span style={{ color: c.muted }}>{label}</span>
+          <span style={{ fontWeight: 600, color: c.text }}>{val}</span>
+        </div>
+      ))}
+      {dLeft !== null && ho.status !== 'handed_over' && (
+        <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: dLeft < 0 ? 'rgba(239,68,68,0.08)' : dLeft < 30 ? 'rgba(249,115,22,0.08)' : 'rgba(74,122,171,0.08)', textAlign: 'center' }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: dLeft < 0 ? '#EF4444' : dLeft < 30 ? '#F97316' : '#4A7AAB' }}>
+            {dLeft < 0 ? (isRTL ? `متأخر ${Math.abs(dLeft)} يوم` : `${Math.abs(dLeft)}d overdue`) : (isRTL ? `متبقي ${dLeft} يوم` : `${dLeft} days left`)}
+          </span>
+        </div>
+      )}
+      {ho.dev_phone && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <a href={`tel:${ho.dev_phone}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px', borderRadius: 8, background: c.accent + '15', color: c.accent, fontSize: 12, fontWeight: 600, textDecoration: 'none', transition: 'background 0.2s' }}>
+            <Phone size={14} /> {isRTL ? 'اتصل بالمطور' : 'Call Developer'}
+          </a>
+          <a href={`https://wa.me/2${ho.dev_phone}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px', borderRadius: 8, background: '#25D36615', color: '#25D366', fontSize: 12, fontWeight: 600, textDecoration: 'none', transition: 'background 0.2s' }}>
+            <MessageSquare size={14} /> {isRTL ? 'واتساب' : 'WhatsApp'}
+          </a>
+        </div>
+      )}
+      {ho.notes_ar && <p style={{ margin: '10px 0 0', fontSize: 11, color: c.muted, textAlign: isRTL ? 'right' : 'left' }}>{isRTL ? ho.notes_ar : ho.notes_ar}</p>}
+    </div>
+  );
+}
+
+function StatusBadgeStatic({ status, config, isRTL }) {
+  const cfg = config[status];
+  if (!cfg) return null;
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px', borderRadius: 8, fontSize: 11, fontWeight: 600, color: cfg.color, background: cfg.bg, whiteSpace: 'nowrap' }}>
+      <span style={{ width: 6, height: 6, borderRadius: '50%', background: cfg.color }} />
+      {isRTL ? cfg.ar : cfg.en}
+    </span>
+  );
+}
+
 export default function OperationsPage() {
   const { i18n } = useTranslation();
   const ds = useDS();
@@ -474,53 +532,9 @@ export default function OperationsPage() {
           <FilterPills items={Object.entries(HANDOVER_STATUS_CONFIG)} active={handoverFilter} onChange={setHandoverFilter} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
-          {filteredHandovers.map(ho => {
-            const hCfg = HANDOVER_STATUS_CONFIG[ho.status] || {};
-            const dLeft = daysUntil(ho.expected_handover);
-            const [cardHov, setCardHov] = useState(false);
-            return (
-              <div key={ho.id}
-                onMouseEnter={() => setCardHov(true)} onMouseLeave={() => setCardHov(false)}
-                style={{ background: c.card, borderRadius: 14, border: `1px solid ${cardHov ? hCfg.color + '60' : c.border}`, padding: 20, transition: 'all 0.2s', transform: cardHov ? 'translateY(-2px)' : 'none', boxShadow: cardHov ? '0 8px 24px rgba(0,0,0,0.08)' : 'none' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                    <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: c.text }}>{isRTL ? ho.client_ar : ho.client_en}</h4>
-                    <p style={{ margin: '2px 0 0', fontSize: 12, color: c.muted }}>{ho.deal_number} — {ho.unit_code}</p>
-                  </div>
-                  <StatusBadge status={ho.status} config={HANDOVER_STATUS_CONFIG} />
-                </div>
-                {[
-                  [isRTL ? 'المشروع' : 'Project', isRTL ? ho.project_ar : ho.project_en],
-                  [isRTL ? 'المطور' : 'Developer', isRTL ? ho.developer_ar : ho.developer_en],
-                  [isRTL ? 'تاريخ الحجز' : 'Reserved', ho.reserved_date],
-                  [isRTL ? 'التسليم المتوقع' : 'Expected', ho.expected_handover],
-                ].map(([label, val], i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                    <span style={{ color: c.muted }}>{label}</span>
-                    <span style={{ fontWeight: 600, color: c.text }}>{val}</span>
-                  </div>
-                ))}
-                {dLeft !== null && ho.status !== 'handed_over' && (
-                  <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: dLeft < 0 ? 'rgba(239,68,68,0.08)' : dLeft < 30 ? 'rgba(249,115,22,0.08)' : 'rgba(74,122,171,0.08)', textAlign: 'center' }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: dLeft < 0 ? '#EF4444' : dLeft < 30 ? '#F97316' : '#4A7AAB' }}>
-                      {dLeft < 0 ? (isRTL ? `متأخر ${Math.abs(dLeft)} يوم` : `${Math.abs(dLeft)}d overdue`) : (isRTL ? `متبقي ${dLeft} يوم` : `${dLeft} days left`)}
-                    </span>
-                  </div>
-                )}
-                {ho.dev_phone && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    <a href={`tel:${ho.dev_phone}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px', borderRadius: 8, background: c.accent + '15', color: c.accent, fontSize: 12, fontWeight: 600, textDecoration: 'none', transition: 'background 0.2s' }}>
-                      <Phone size={14} /> {isRTL ? 'اتصل بالمطور' : 'Call Developer'}
-                    </a>
-                    <a href={`https://wa.me/2${ho.dev_phone}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px', borderRadius: 8, background: '#25D36615', color: '#25D366', fontSize: 12, fontWeight: 600, textDecoration: 'none', transition: 'background 0.2s' }}>
-                      <MessageSquare size={14} /> {isRTL ? 'واتساب' : 'WhatsApp'}
-                    </a>
-                  </div>
-                )}
-                {ho.notes_ar && <p style={{ margin: '10px 0 0', fontSize: 11, color: c.muted, textAlign: isRTL ? 'right' : 'left' }}>{isRTL ? ho.notes_ar : ho.notes_ar}</p>}
-              </div>
-            );
-          })}
+          {filteredHandovers.map(ho => (
+            <HandoverCard key={ho.id} ho={ho} c={c} isRTL={isRTL} isDark={isDark} />
+          ))}
           {filteredHandovers.length === 0 && (
             <div style={{ padding: 40, textAlign: 'center', color: c.muted, gridColumn: '1 / -1' }}>{isRTL ? 'لا توجد تسليمات' : 'No handovers found'}</div>
           )}
