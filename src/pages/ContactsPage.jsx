@@ -65,11 +65,11 @@ const MOCK = [
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
-const fmtBudget = (min, max) => {
+const fmtBudget = (min, max, isRTL = true) => {
   if (!min && !max) return '—';
-  const f = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}م` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}ك` : n;
+  const f = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}${isRTL ? 'م' : 'M'}` : n >= 1e3 ? `${(n / 1e3).toFixed(0)}${isRTL ? 'ك' : 'K'}` : n;
   if (min && max) return `${f(min)} – ${f(max)}`;
-  return min ? `من ${f(min)}` : `حتى ${f(max)}`;
+  return min ? `${isRTL ? 'من' : 'From'} ${f(min)}` : `${isRTL ? 'حتى' : 'Up to'} ${f(max)}`;
 };
 const daysSince = d => Math.floor((Date.now() - new Date(d)) / 86400000);
 const initials = name => name ? name.trim().charAt(0) : '?';
@@ -445,7 +445,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
           <div style={{ display: 'flex', gap: 10 }}>
             {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'السابق →' : '← Back'}</button>}
             {step === 1
-              ? (() => { const canNext = form.department && form.contact_type && validatePhone(form.phone) && !dupWarning; return <button onClick={() => setStep(2)} disabled={!canNext} style={{ padding: '9px 22px', background: canNext ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: canNext ? 'pointer' : 'not-allowed' }}>{isRTL ? '← التالي' : 'Next →'}</button>; })()
+              ? (() => { const canNext = form.department && form.contact_type && form.full_name.trim() && validatePhone(form.phone) && !dupWarning; return <button onClick={() => setStep(2)} disabled={!canNext} style={{ padding: '9px 22px', background: canNext ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: canNext ? 'pointer' : 'not-allowed' }}>{isRTL ? '← التالي' : 'Next →'}</button>; })()
               : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: saving ? 'rgba(74,122,171,0.3)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</button>
             }
           </div>
@@ -799,7 +799,7 @@ function EditContactModal({ contact, onClose, onSave }) {
               <label style={lbl}>{isRTL ? 'القسم' : 'Department'}</label>
               <select value={form.department} onChange={e => set('department', e.target.value)} style={sel}>
                 <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
-                <option value="hr">{isRTL ? 'HR' : 'HR'}</option>
+                <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
                 <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
                 <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
                 <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
@@ -842,16 +842,7 @@ function EditContactModal({ contact, onClose, onSave }) {
               <div>
                 <label style={lbl}>{isRTL ? 'المصدر' : 'Source'}</label>
                 <select value={form.source} onChange={e => set('source', e.target.value)} style={sel}>
-                  <option value="facebook">{isRTL ? 'فيسبوك' : 'Facebook'}</option>
-                  <option value="instagram">{isRTL ? 'إنستجرام' : 'Instagram'}</option>
-                  <option value="google">{isRTL ? 'جوجل أدز' : 'Google Ads'}</option>
-                  <option value="website">{isRTL ? 'الموقع' : 'Website'}</option>
-                  <option value="call">{isRTL ? 'اتصال وارد' : 'Inbound Call'}</option>
-                  <option value="visit">{isRTL ? 'زيارة مباشرة' : 'Walk-in'}</option>
-                  <option value="referral">{isRTL ? 'ترشيح' : 'Referral'}</option>
-                  <option value="developer">{isRTL ? 'مطور' : 'Developer'}</option>
-                  <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
-                  <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
+                  {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
                 </select>
               </div>
               <div>
@@ -869,14 +860,23 @@ function EditContactModal({ contact, onClose, onSave }) {
             <div>
               <label style={lbl}>{isRTL ? 'الجنس' : 'Gender'}</label>
               <select value={form.gender} onChange={e => set('gender', e.target.value)} style={sel}>
-                <option value="">{isRTL ? 'غير محدد' : 'Not specified'}</option>
+                <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
                 <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
                 <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
               </select>
             </div>
             <div>
               <label style={lbl}>{isRTL ? 'الجنسية' : 'Nationality'}</label>
-              <input value={form.nationality} onChange={e => set('nationality', e.target.value)} style={inp} placeholder={isRTL ? 'مصري / سعودي...' : 'Egyptian / Saudi...'} />
+              <select value={form.nationality} onChange={e => set('nationality', e.target.value)} style={sel}>
+                <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
+                <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
+                <option value="emirati">{isRTL ? 'إماراتي' : 'Emirati'}</option>
+                <option value="kuwaiti">{isRTL ? 'كويتي' : 'Kuwaiti'}</option>
+                <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
+                <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
+                <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
+              </select>
             </div>
           </div>
 
@@ -915,6 +915,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
   const [newTask, setNewTask] = useState({ title: '', type: 'followup', priority: 'medium', due_date: '', notes: '' });
   const [savingTask, setSavingTask] = useState(false);
   const [loadingActs, setLoadingActs] = useState(false);
+  const [loadingOpps, setLoadingOpps] = useState(false);
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [showOppModal, setShowOppModal] = useState(false);
   const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'new', temperature:'warm', priority:'medium', agent:'', notes:'' });
@@ -934,9 +935,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
         .catch(() => { if (!cancelled) setTasks([]); });
     }
     if (tab === 'opportunities') {
+      setLoadingOpps(true);
       fetchContactOpportunities(contact.id)
         .then(data => { if (!cancelled) setOpportunities(data); })
-        .catch(() => { if (!cancelled) setOpportunities([]); });
+        .catch(() => { if (!cancelled) setOpportunities([]); })
+        .finally(() => { if (!cancelled) setLoadingOpps(false); });
     }
     return () => { cancelled = true; };
   }, [tab, contact.id]);
@@ -992,7 +995,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               </div>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : (isDark ? '#E2EAF4' : '#1A2B3C'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>
-                  {contact.prefix ? <span style={{ color: isDark ? '#6B8DB5' : '#6b7280', marginLeft: 4 }}>{contact.prefix}</span> : null}{contact.full_name || 'بدون اسم'}
+                  {contact.prefix ? <span style={{ color: isDark ? '#6B8DB5' : '#6b7280', [`margin${isRTL ? 'Left' : 'Right'}`]: 4 }}>{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                 </div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Chip label={tp?.label} color={tp?.color} bg={tp?.bg} />
@@ -1051,7 +1054,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 </div>
                 <div style={{ background: t?.bg, borderRadius: 10, padding: 12, border: `1px solid ${t?.color}30` }}>
                   <div style={{ color: isDark ? '#8BA8C8' : '#64748B', fontSize: 11, marginBottom: 4 }}>{isRTL ? 'الحرارة' : 'Temperature'}</div>
-                  {t?.Icon && <div style={{ display:'flex', alignItems:'center', gap:6 }}><t.Icon size={14} color={t.color} /><span style={{ color: t?.color, fontWeight: 700, fontSize: 14 }}>{t?.labelAr}</span></div>}
+                  {t?.Icon && <div style={{ display:'flex', alignItems:'center', gap:6 }}><t.Icon size={14} color={t.color} /><span style={{ color: t?.color, fontWeight: 700, fontSize: 14 }}>{isRTL ? t?.labelAr : t?.label}</span></div>}
                 </div>
               </div>
 
@@ -1061,15 +1064,15 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 { label: isRTL ? 'الإيميل' : 'Email',         val: contact.email || '—' },
                 { label: isRTL ? 'المصدر'   : 'Source',   val: i18n.language === "ar" ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
                 { label: isRTL ? 'الحملة'   : 'Campaign', val: contact.campaign_name || '—' },
-                { label: isRTL ? 'الميزانية': 'Budget',   val: fmtBudget(contact.budget_min, contact.budget_max) },
+                { label: isRTL ? 'الميزانية': 'Budget',   val: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
                 { label: isRTL ? 'الموقع'   : 'Location', val: contact.preferred_location || '—' },
-                { label: isRTL ? 'نوع العقار': 'Property', val: { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' }[contact.interested_in_type] || '—' },
+                { label: isRTL ? 'نوع العقار': 'Property', val: (isRTL ? { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' } : { residential: 'Residential', commercial: 'Commercial', administrative: 'Administrative' })[contact.interested_in_type] || '—' },
                 { label: isRTL ? 'المسؤول'  : 'Assigned', val: contact.assigned_to_name || '—' },
                 { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: `${daysSince(contact.last_activity_at)}d` },
                 { label: isRTL ? 'الشركة' : 'Company', val: contact.company || '—' },
                 { label: isRTL ? 'المسمى الوظيفي' : 'Job Title', val: contact.job_title || '—' },
-                { label: isRTL ? 'الجنس' : 'Gender', val: contact.gender ? ({ male: 'ذكر', female: 'أنثى' }[contact.gender] || contact.gender) : '—' },
-                { label: isRTL ? 'الجنسية' : 'Nationality', val: contact.nationality ? ({ egyptian: 'مصري', saudi: 'سعودي', emirati: 'إماراتي', kuwaiti: 'كويتي', qatari: 'قطري', libyan: 'ليبي', other: 'أخرى' }[contact.nationality] || contact.nationality) : '—' },
+                { label: isRTL ? 'الجنس' : 'Gender', val: contact.gender ? ((isRTL ? { male: 'ذكر', female: 'أنثى' } : { male: 'Male', female: 'Female' })[contact.gender] || contact.gender) : '—' },
+                { label: isRTL ? 'الجنسية' : 'Nationality', val: contact.nationality ? ((isRTL ? { egyptian: 'مصري', saudi: 'سعودي', emirati: 'إماراتي', kuwaiti: 'كويتي', qatari: 'قطري', libyan: 'ليبي', other: 'أخرى' } : { egyptian: 'Egyptian', saudi: 'Saudi', emirati: 'Emirati', kuwaiti: 'Kuwaiti', qatari: 'Qatari', libyan: 'Libyan', other: 'Other' })[contact.nationality] || contact.nationality) : '—' },
                 { label: isRTL ? 'تاريخ الميلاد' : 'Birth Date', val: contact.birth_date || '—' },
               ].map(r => (
               <div key={r.label} style={rowStyle}>
@@ -1131,7 +1134,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
 
               {loadingActs ? (
-                <div style={{ textAlign: 'center', padding: 30, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13 }}>جاري التحميل...</div>
+                <div style={{ textAlign: 'center', padding: 30, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13 }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
               ) : activities.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
                   <Clock size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
@@ -1186,7 +1189,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                       if (!newTask.title.trim() || !newTask.due_date) return;
                       setSavingTask(true);
                       try {
-                        const t = await createTask({ ...newTask, contact_id: contact.id, contact_name: contact.full_name_ar || contact.full_name_en, dept: 'crm' });
+                        const t = await createTask({ ...newTask, contact_id: contact.id, contact_name: contact.full_name, dept: 'crm' });
                         setTasks(prev => [t, ...prev]);
                         setNewTask({ title: '', type: 'followup', priority: 'medium', due_date: '', notes: '' });
                         setAddTaskForm(false);
@@ -1244,8 +1247,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 {isRTL ? '+ فتح فرصة جديدة' : '+ New Opportunity'}
               </button>
               {showOppModal && (
-                <div style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'rgba(0,0,0,0.6)' }}>
-                  <div style={{ background: isDark ? '#1a2234' : '#ffffff', borderRadius:14, padding:24, width:'100%', maxWidth:420, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}` }}>
+                <div onClick={()=>setShowOppModal(false)} style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'rgba(0,0,0,0.6)' }}>
+                  <div onClick={e=>e.stopPropagation()} style={{ background: isDark ? '#1a2234' : '#ffffff', borderRadius:14, padding:24, width:'100%', maxWidth:420, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}` }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
                       <h3 style={{ margin:0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:15, fontWeight:700 }}>{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
                       <button onClick={()=>setShowOppModal(false)} style={{ background:'none', border:'none', color: isDark ? '#8BA8C8' : '#64748B', cursor:'pointer', fontSize:18 }}>✕</button>
@@ -1277,7 +1280,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                       ))}
                     </div>
                     <div style={{ display:'flex', gap:10, marginTop:20 }}>
-                      <button onClick={()=>{ onAddOpportunity&&onAddOpportunity({...newOpp, contactName:contact.full_name, contactId:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:Date.now()}); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); }}
+                      <button onClick={()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } onAddOpportunity&&onAddOpportunity({...newOpp, contactName:contact.full_name, contactId:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:Date.now()}); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); }}
                         style={{ flex:1, padding:'10px 0', borderRadius:8, background:'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color:'#fff', border:'none', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                         {isRTL?'حفظ':'Save'}
                       </button>
@@ -1288,7 +1291,9 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                   </div>
                 </div>
               )}
-              {opportunities.length === 0 ? (
+              {loadingOpps ? (
+                <div style={{ textAlign: 'center', padding: 30, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13 }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+              ) : opportunities.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
                   <Star size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
                   <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد فرص مرتبطة' : 'No opportunities linked'}</p>
@@ -1296,13 +1301,13 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               ) : opportunities.map(opp => (
                 <div key={opp.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, fontWeight: 600 }}>فرصة #{opp.id.slice(-4)}</span>
+                    <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, fontWeight: 600 }}>{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
                     <Chip label={stageLabel(opp.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                   </div>
                   <div style={{ fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {opp.projects?.name_ar && <span>{opp.projects.name_ar}</span>}
-                    <span>{opp.users?.full_name_ar || '—'}</span>
-                    {opp.next_follow_up && <span>متابعة: {opp.next_follow_up}</span>}
+                    {opp.projects?.name_ar && <span>{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</span>}
+                    <span>{isRTL ? (opp.users?.full_name_ar || '—') : (opp.users?.full_name_en || opp.users?.full_name_ar || '—')}</span>
+                    {opp.next_follow_up && <span>{isRTL ? 'متابعة' : 'Follow-up'}: {opp.next_follow_up}</span>}
                   </div>
                 </div>
               ))}
@@ -1369,7 +1374,11 @@ export default function ContactsPage() {
   const isAdmin = profile?.role === 'admin';
 
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const toggleSelectAll = () => setSelectedIds(selectedIds.length === filtered.length ? [] : filtered.map(c => c.id));
+  const toggleSelectAll = () => {
+    const pageIds = paged.map(c => c.id);
+    const allSelected = pageIds.every(id => selectedIds.includes(id));
+    setSelectedIds(allSelected ? selectedIds.filter(id => !pageIds.includes(id)) : [...new Set([...selectedIds, ...pageIds])]);
+  };
 
   useEffect(() => {
     const close = () => setOpenMenuId(null);
@@ -1453,7 +1462,7 @@ export default function ContactsPage() {
         // Try localStorage first
         const cached = localStorage.getItem('platform_contacts');
         if (cached) {
-          setContacts(JSON.parse(cached));
+          try { setContacts(JSON.parse(cached)); } catch { setContacts(MOCK); }
         } else {
           setContacts(MOCK);
         }
@@ -1482,7 +1491,7 @@ export default function ContactsPage() {
       if (filterType !== 'all' && c.contact_type !== filterType) return false;
       if (filterSource !== 'all' && c.source !== filterSource) return false;
       if (filterTemp !== 'all' && c.temperature !== filterTemp) return false;
-      if (filterDept !== 'all' && c.department !== filterDept) return false;
+      if (filterDept !== 'all' && (c.department || 'sales') !== filterDept) return false;
       if (search) {
         const q = search.toLowerCase();
         return (c.full_name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q) || c.campaign_name?.toLowerCase().includes(q));
@@ -1499,10 +1508,12 @@ export default function ContactsPage() {
   }, [contacts, filterType, filterSource, filterTemp, filterDept, search, showBlacklisted, sortBy]);
 
   // Reset page when filters change
-  useEffect(() => { setPage(1); }, [filterType, filterSource, filterTemp, filterDept, search, showBlacklisted, sortBy]);
+  useEffect(() => { setPage(1); setSelectedIds([]); }, [filterType, filterSource, filterTemp, filterDept, search, showBlacklisted, sortBy]);
 
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const exportCSV = (list) => {
     const headers = ['ID','Name','Phone','Email','Type','Source','Department','Temperature','Stage','Company','Created'];
@@ -1614,7 +1625,7 @@ export default function ContactsPage() {
             background: filterType === s.value ? `${s.color}15` : colors.cardBg,
             color: filterType === s.value ? s.color : colors.textMuted, fontSize: 12, fontWeight: filterType === s.value ? 700 : 400, cursor: 'pointer',
           }}>
-            {s.label} <span style={{ background: filterType === s.value ? s.color : colors.border, color: filterType === s.value ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{s.count}</span>
+            {s.label} <span style={{ background: filterType === s.value ? s.color : colors.border, color: filterType === s.value ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginInlineStart: 4 }}>{s.count}</span>
           </button>
         ))}
         <button onClick={() => setShowBlacklisted(v => !v)} style={{
@@ -1623,7 +1634,7 @@ export default function ContactsPage() {
           color: showBlacklisted ? '#EF4444' : colors.textMuted, fontSize: 12, fontWeight: showBlacklisted ? 700 : 400, cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 5,
         }}>
-          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span style={{ background: showBlacklisted ? '#EF4444' : colors.border, color: showBlacklisted ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.blacklisted}</span>
+          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span style={{ background: showBlacklisted ? '#EF4444' : colors.border, color: showBlacklisted ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginInlineStart: 4 }}>{stats.blacklisted}</span>
         </button>
         <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} style={{
           padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterTemp === 'hot' ? '#EF4444' : colors.border}`,
@@ -1631,20 +1642,20 @@ export default function ContactsPage() {
           color: filterTemp === 'hot' ? '#EF4444' : colors.textMuted, fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', gap: 5,
         }}>
-          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span style={{ background: filterTemp === 'hot' ? '#EF4444' : colors.border, color: filterTemp === 'hot' ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginRight: 4 }}>{stats.hot}</span>
+          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span style={{ background: filterTemp === 'hot' ? '#EF4444' : colors.border, color: filterTemp === 'hot' ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginInlineStart: 4 }}>{stats.hot}</span>
         </button>
       </div>
 
       {/* Filter Bar */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center', background: colors.thBg, padding: '10px 14px', borderRadius: 12, border: `1px solid ${colors.border}` }}>
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
-          <Search size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
+          <Search size={14} style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 10, top: '50%', transform: 'translateY(-50%)', color: isDark ? '#6B8DB5' : '#9ca3af' }} />
           <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={searchInput} onChange={e => setSearchInput(e.target.value)}
-            style={{ ...sel, width: '100%', paddingRight: 32, boxSizing: 'border-box', background: colors.inputBg, color: colors.text, border: `1px solid ${colors.border}` }} />
+            style={{ ...sel, width: '100%', [`padding${isRTL ? 'Left' : 'Right'}`]: 32, boxSizing: 'border-box', background: colors.inputBg, color: colors.text, border: `1px solid ${colors.border}` }} />
         </div>
         <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={sel}>
           <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
-          {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
         </select>
         <select value={filterType} onChange={e => setFilterType(e.target.value)} style={sel}>
           <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
@@ -1666,7 +1677,7 @@ export default function ContactsPage() {
         </select>
         <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} style={sel}>
           <option value="all">{isRTL ? 'كل الدرجات' : 'All Temps'}</option>
-          {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{v.labelAr} ({v.label})</option>)}
+          {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.labelAr : v.label}</option>)}
         </select>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sel}>
           <option value="last_activity">{isRTL ? 'ترتيب: آخر نشاط' : 'Sort: Last Activity'}</option>
@@ -1681,7 +1692,7 @@ export default function ContactsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
             <thead>
               <tr>
-                <th style={{...th, width: 36, padding: '10px 8px'}}><input type="checkbox" checked={selectedIds.length === filtered.length && filtered.length > 0} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /></th>
+                <th style={{...th, width: 36, padding: '10px 8px'}}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIds.includes(c.id))} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /></th>
                 <th style={{...th, width: 50}}>ID</th>
                 {(isRTL
                   ? [t('common.actions'), 'Score', t('contacts.budget'), t('contacts.stage'), t('contacts.source'), t('contacts.temperature'), t('contacts.type'), t('contacts.phone'), t('contacts.fullName')]
@@ -1693,7 +1704,7 @@ export default function ContactsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>جاري التحميل...</td></tr>
+                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: isDark ? '#6B8DB5' : '#9ca3af' }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={11} style={{ padding: 0, border: 'none' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
@@ -1713,7 +1724,7 @@ export default function ContactsPage() {
                 >
                   {/* Checkbox + ID - hidden in RTL */}
                   {!isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
-                  {!isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
+                  {!isRTL && <td style={{ ...td, fontSize: 10, color: isDark ? '#6B8DB5' : '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
                   {/* Name */}
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1727,7 +1738,7 @@ export default function ContactsPage() {
                       </div>
                       <div>
                         <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : (isDark ? '#E2EAF4' : '#1A2B3C'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</div>
-                        {c.email && <div style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.email}</div>}
+                        {c.email && <div style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.email}</div>}
                         {c.last_activity_at && (() => { const d = Math.floor((Date.now() - new Date(c.last_activity_at)) / 86400000); return <div style={{ fontSize: 10, marginTop: 2, fontWeight: 600, color: d === 0 ? '#4A7AAB' : d <= 3 ? '#6B8DB5' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</div>; })()}
                       </div>
                     </div>
@@ -1752,13 +1763,13 @@ export default function ContactsPage() {
                         {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
                       </select>
                     ) : c.stage ? <Chip label={stageLabel(c.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
-                    : c.cold_status ? <span style={{ fontSize: 11, color: '#9ca3af' }}>{coldLabel(c.cold_status, isRTL)}</span>
-                    : <span style={{ color: '#d1d5db' }}>—</span>}
+                    : c.cold_status ? <span style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#9ca3af' }}>{coldLabel(c.cold_status, isRTL)}</span>
+                    : <span style={{ color: isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db' }}>—</span>}
                   </td>
                   {/* Budget */}
-                  <td style={{ ...td, fontSize: 12, color: colors.textMuted }}>{fmtBudget(c.budget_min, c.budget_max)}</td>
+                  <td style={{ ...td, fontSize: 12, color: colors.textMuted }}>{fmtBudget(c.budget_min, c.budget_max, isRTL)}</td>
                   {/* ID + Checkbox - shown at end in RTL */}
-                  {isRTL && <td style={{ ...td, fontSize: 10, color: '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
+                  {isRTL && <td style={{ ...td, fontSize: 10, color: isDark ? '#6B8DB5' : '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
                   {isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
                   {/* Score */}
                   <td style={td}><ScorePill score={c.lead_score || 0} /></td>
@@ -1828,7 +1839,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Modals */}
-      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const found = contacts.find(c => c.phone === phone || c.phone2 === phone || (c.extraPhones || []).includes(phone)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
+      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const found = contacts.find(c => c.phone === phone || c.phone2 === phone || (c.extra_phones || []).includes(phone)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => setContacts(prev => prev.map(c => c.id === updated.id ? updated : c))} onAddOpportunity={(opp) => { setSelected(null); }} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
       {reminderTarget && <ReminderModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
@@ -1881,7 +1892,7 @@ export default function ContactsPage() {
               <button onClick={() => setBulkReassignModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {[...new Set(contacts.map(ct => ct.assigned_to_name).filter(Boolean))].map(agent => (
+              {[...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].map(agent => (
                 <button key={agent} onClick={() => handleBulkReassign(agent)}
                   style={{ padding: '10px 14px', background: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb', border: `1px solid ${colors.border}`, borderRadius: 8, color: colors.text, fontSize: 13, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
                   onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.15)' : '#f0f4f8'}
