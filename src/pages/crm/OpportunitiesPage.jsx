@@ -124,12 +124,6 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove, onSelect }) {
         <div style={{ fontSize:11, fontWeight:700, color:act.color }}>{act.text}</div>
       </div>
       {opp.notes && <div style={{ fontSize:11, color:isDark?"#8BA8C8":"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop:-4 }}>{opp.notes}</div>}
-          <button onClick={e=>{e.stopPropagation();onSelect&&onSelect(opp);}} style={{ width:'100%', padding:'7px 0', borderRadius:8, border:`1px solid ${isDark?"rgba(74,122,171,0.3)":"#e5e7eb"}`, background:'transparent', color:'#4A7AAB', fontSize:12, fontWeight:600, cursor:'pointer', marginTop:4, fontFamily:'inherit' }}>
-            {isRTL?'عرض التفاصيل':'View Details'}
-          </button>
-          <div style={{ marginTop: 4 }} onClick={e=>e.stopPropagation()}>
-            <FollowUpReminder entityType="opportunity" entityId={String(opp.id)} entityName={opp.contactName} compact={true} />
-          </div>
     </div>
   );
 }
