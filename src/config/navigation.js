@@ -2,7 +2,7 @@ import { P } from './roles';
 import {
   LayoutDashboard, Users, Target, Building2, ActivitySquare, BookUser,
   DollarSign, Megaphone, UserCog, CalendarDays,
-  ClipboardList, MessageSquare, Settings, BarChart3, Wallet,
+  ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -21,6 +21,13 @@ export const NAV_ITEMS = [
     { id: 'deals', label: { ar: 'الصفقات', en: 'Deals' }, path: '/sales/deals', permission: P.DEALS_VIEW_OWN },
     { id: 'commissions', label: { ar: 'العمولات', en: 'Commissions' }, path: '/sales/commissions', permission: P.COMM_VIEW_OWN },
     { id: 'targets', label: { ar: 'التارجت', en: 'Targets' }, path: '/sales/targets', permission: P.RPT_SALES },
+  ]},
+  { id: 'operations', label: { ar: 'العمليات', en: 'Operations' }, icon: ClipboardCheck, permission: P.OPS_VIEW, children: [
+    { id: 'ops-overview',    label: { ar: 'نظرة عامة',         en: 'Overview' },          path: '/operations',              permission: P.OPS_VIEW },
+    { id: 'ops-deals',       label: { ar: 'معالجة الصفقات',     en: 'Deal Processing' },   path: '/operations/deals',        permission: P.OPS_MANAGE },
+    { id: 'ops-payments',    label: { ar: 'المدفوعات',          en: 'Payments' },          path: '/operations/payments',     permission: P.OPS_PAYMENTS },
+    { id: 'ops-handover',    label: { ar: 'التسليمات',          en: 'Handover' },          path: '/operations/handover',     permission: P.OPS_HANDOVER },
+    { id: 'ops-after-sales', label: { ar: 'خدمة ما بعد البيع',  en: 'After-Sales' },       path: '/operations/after-sales',  permission: P.OPS_AFTERSALES },
   ]},
   { id: 'marketing', label: { ar: 'التسويق', en: 'Marketing' }, icon: Megaphone, permission: P.CAMPAIGNS_VIEW, children: [
     { id: 'campaigns', label: { ar: 'الحملات', en: 'Campaigns' }, path: '/marketing/campaigns', permission: P.CAMPAIGNS_VIEW },

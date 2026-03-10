@@ -32,6 +32,7 @@ const TrainingPage = lazy(() => import('./pages/hr/TrainingPage'));
 const SelfServicePage = lazy(() => import('./pages/hr/SelfServicePage'));
 const AssetsPage = lazy(() => import('./pages/hr/AssetsPage'));
 const OnboardingPage = lazy(() => import('./pages/hr/OnboardingPage'));
+const OperationsPage = lazy(() => import('./pages/operations/OperationsPage'));
 
 function PageLoader() {
   return (
@@ -126,6 +127,8 @@ export default function App() {
                 <Route path="/hr/assets" element={<AssetsPage />} />
                 <Route path="/hr/onboarding" element={<OnboardingPage />} />
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
+                <Route path="/operations" element={<OperationsPage />} />
+                <Route path="/operations/*" element={<OperationsPage />} />
                 <Route path="/real-estate/*" element={<ComingSoon title="Real Estate" />} />
                 <Route path="/marketing/*" element={<ComingSoon title="Marketing" />} />
                 <Route path="/calendar" element={<ComingSoon title="Calendar" />} />

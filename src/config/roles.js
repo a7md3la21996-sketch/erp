@@ -7,6 +7,7 @@ export const ROLES = {
   MARKETING: 'marketing',
   HR: 'hr',
   FINANCE: 'finance',
+  OPERATIONS: 'operations',
 };
 
 export const ROLE_LABELS = {
@@ -18,6 +19,7 @@ export const ROLE_LABELS = {
   marketing: { ar: 'تسويق', en: 'Marketing' },
   hr: { ar: 'موارد بشرية', en: 'HR' },
   finance: { ar: 'مالية', en: 'Finance' },
+  operations: { ar: 'عمليات', en: 'Operations' },
 };
 
 export const P = {
@@ -56,6 +58,11 @@ export const P = {
   SLA_MANAGE: 'sla.manage',
   SCORING_MANAGE: 'scoring.manage',
   AUDIT_VIEW: 'audit.view',
+  OPS_VIEW: 'ops.view',
+  OPS_MANAGE: 'ops.manage',
+  OPS_PAYMENTS: 'ops.payments',
+  OPS_HANDOVER: 'ops.handover',
+  OPS_AFTERSALES: 'ops.after_sales',
 };
 
 export const ROLE_PERMISSIONS = {
@@ -66,5 +73,6 @@ export const ROLE_PERMISSIONS = {
   sales_agent:    [P.DASHBOARD, P.CONTACTS_VIEW_OWN, P.OPPS_VIEW_OWN, P.DEALS_VIEW_OWN, P.PROJECTS_VIEW, P.UNITS_VIEW, P.POOL_VIEW, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
   marketing:      [P.DASHBOARD, P.CONTACTS_VIEW_OWN, P.CAMPAIGNS_VIEW, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
   hr:             [P.DASHBOARD, P.HR_VIEW_OWN, P.HR_VIEW_ALL, P.HR_POLICIES_MANAGE, P.HR_EMPLOYEES_VIEW, P.HR_EMPLOYEES_MANAGE, P.ATTEND_VIEW_OWN, P.LEAVE_REQUEST, P.PAYROLL_VIEW, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
-  finance:        [P.DASHBOARD, P.CONTACTS_VIEW_OWN, P.FINANCE_VIEW, P.EXPENSES_VIEW_OWN, P.DEALS_VIEW_OWN, P.COMM_VIEW_OWN, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
+  finance:        [P.DASHBOARD, P.CONTACTS_VIEW_OWN, P.FINANCE_VIEW, P.EXPENSES_VIEW_OWN, P.DEALS_VIEW_OWN, P.COMM_VIEW_OWN, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE, P.OPS_VIEW, P.OPS_PAYMENTS],
+  operations:     [P.DASHBOARD, P.OPS_VIEW, P.OPS_MANAGE, P.OPS_PAYMENTS, P.OPS_HANDOVER, P.OPS_AFTERSALES, P.CONTACTS_VIEW_OWN, P.DEALS_VIEW_OWN, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE],
 };
