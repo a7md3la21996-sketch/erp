@@ -173,11 +173,11 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const checkPhone = async () => {
-    if (!form.phone || form.phone.length < 10) return;
+  const checkPhoneNumber = async (phone) => {
+    if (!phone || !validatePhone(phone)) return;
     setChecking(true);
     try {
-      const dup = await checkDup(form.phone);
+      const dup = await checkDup(phone);
       setDupWarning(dup || null);
     } catch { setDupWarning(null); }
     setChecking(false);
@@ -189,10 +189,12 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
     if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
     setSaving(true);
     try {
+      const validExtras = extraPhones.filter(p => p && validatePhone(p));
       await onSave({
         ...form,
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
+        extra_phones: validExtras.length > 0 ? validExtras : null,
       });
       onClose();
     } catch (err) {
@@ -205,8 +207,8 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const sel = { ...inp, cursor: 'pointer' };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
@@ -247,14 +249,14 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                     <option value="Eng.">Eng.</option>
                     <option value="أستاذ">أستاذ</option>
                   </select>
-                  <input style={{ ...inp, flex: 1 }} placeholder="محمد أحمد..." value={form.full_name} onChange={e => set('full_name', e.target.value)} />
+                  <input style={{ ...inp, flex: 1 }} placeholder={isRTL ? 'محمد أحمد...' : 'John Doe...'} value={form.full_name} onChange={e => set('full_name', e.target.value)} />
                 </div>
               </div>
               <div>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
-                  onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkDup(v).then(dup => setDupWarning(dup || null)).catch(() => {}); } }} />
+                  onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkPhoneNumber(v); } }} />
                 {checking && <p style={{ fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 12 }}>
@@ -338,12 +340,12 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
               <div>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المصدر' : 'Source'}</label>
                 <select style={sel} value={form.source} onChange={e => set('source', e.target.value)}>
-                  {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
-                <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
+                <input style={inp} placeholder={isRTL ? 'مثال: حملة الشيخ زايد Q1' : 'e.g. Sheikh Zayed Q1 Campaign'} value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
               </>)}
               <div>
@@ -394,7 +396,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
               </div>
               <div>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الموقع المفضل' : 'Preferred Location'}</label>
-                <input style={inp} placeholder="الشيخ زايد، التجمع..." value={form.preferred_location} onChange={e => set('preferred_location', e.target.value)} />
+                <input style={inp} placeholder={isRTL ? 'الشيخ زايد، التجمع...' : 'Sheikh Zayed, New Cairo...'} value={form.preferred_location} onChange={e => set('preferred_location', e.target.value)} />
               </div>
               <div>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'نوع العقار' : 'Property Type'}</label>
@@ -404,11 +406,11 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                   <option value="administrative">{isRTL ? 'إداري' : 'Administrative'}</option>
                 </select>
               </div>
+              </>)}
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
                 <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
-              </>)}
             </div>
           )}
         </div>
