@@ -24,7 +24,7 @@ const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو
 export default function PayrollPage() {
   const { i18n } = useTranslation(); const ds = useDS();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [month, setMonth] = useState(3);
+  const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const totalSalaries = useMemo(() => MOCK_EMPLOYEES.reduce((s,e)=>s+(e.salary||0),0), []);
   const avgSalary = Math.round(totalSalaries / MOCK_EMPLOYEES.length);
   const th = { fontSize:11, fontWeight:700, color:ds.muted, padding:'10px 14px', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.05em' };

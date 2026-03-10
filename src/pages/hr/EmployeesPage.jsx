@@ -172,7 +172,7 @@ export default function EmployeesPage() {
   const [selected, setSelected] = useState(null);
 
   /* stats */
-  const today = new Date(2026, 2, 8);
+  const today = new Date();
   const expiring = MOCK_EMPLOYEES.filter(e => {
     if (!e.contract_end) return false;
     const days = Math.ceil((new Date(e.contract_end) - today) / 864e5);
