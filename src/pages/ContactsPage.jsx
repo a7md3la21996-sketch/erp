@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
-import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, UserCheck, PhoneOff, AlertOctagon, CheckCircle2, Calendar, FileDown, MoreVertical, Bell, PhoneMissed, CheckSquare, Check, Trash2, Pencil } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, UserCheck, PhoneOff, AlertOctagon, CheckCircle2, Calendar, FileDown, MoreVertical, Bell, PhoneMissed, CheckSquare, Check, Trash2, Pencil, Pin, PhoneCall, Merge, ArrowUpDown, ChevronRight, ChevronLeft, SkipForward } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, checkDuplicate,
@@ -1371,8 +1371,24 @@ export default function ContactsPage() {
   const [confirmAction, setConfirmAction] = useState(null); // { title, message, onConfirm }
   const [bulkStageModal, setBulkStageModal] = useState(false);
   const [bulkReassignModal, setBulkReassignModal] = useState(false);
+  const [pinnedIds, setPinnedIds] = useState(() => { try { return JSON.parse(localStorage.getItem('platform_pinned_contacts') || '[]'); } catch { return []; } });
+  const [batchCallMode, setBatchCallMode] = useState(false);
+  const [batchCallIndex, setBatchCallIndex] = useState(0);
+  const [batchCallNotes, setBatchCallNotes] = useState('');
+  const [batchCallResult, setBatchCallResult] = useState('');
+  const [batchCallLog, setBatchCallLog] = useState([]);
+  const [mergeMode, setMergeMode] = useState(false);
+  const [mergeTargets, setMergeTargets] = useState([]);
+  const [mergePreview, setMergePreview] = useState(null);
   const isAdmin = profile?.role === 'admin';
 
+  const togglePin = (id) => {
+    setPinnedIds(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      localStorage.setItem('platform_pinned_contacts', JSON.stringify(next));
+      return next;
+    });
+  };
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleSelectAll = () => {
     const pageIds = paged.map(c => c.id);
@@ -1475,14 +1491,16 @@ export default function ContactsPage() {
   }, [profile]);
 
   // Stats
-  const stats = useMemo(() => ({
-    total: contacts.length,
-    leads: contacts.filter(c => c.contact_type === 'lead').length,
-    cold: contacts.filter(c => c.contact_type === 'cold').length,
-    clients: contacts.filter(c => c.contact_type === 'client').length,
-    hot: contacts.filter(c => c.temperature === 'hot').length,
-    blacklisted: contacts.filter(c => c.is_blacklisted).length,
-  }), [contacts]);
+  const stats = useMemo(() => {
+    const counts = { total: contacts.length, hot: 0, blacklisted: 0 };
+    Object.keys(TYPE).forEach(k => { counts[k] = 0; });
+    contacts.forEach(c => {
+      if (c.contact_type && counts[c.contact_type] !== undefined) counts[c.contact_type]++;
+      if (c.temperature === 'hot') counts.hot++;
+      if (c.is_blacklisted) counts.blacklisted++;
+    });
+    return counts;
+  }, [contacts]);
 
   // Filter + Sort
   const filtered = useMemo(() => {
@@ -1499,13 +1517,26 @@ export default function ContactsPage() {
       return true;
     });
     list.sort((a, b) => {
-      if (sortBy === 'last_activity') return new Date(b.last_activity_at) - new Date(a.last_activity_at);
+      // Pinned contacts always first
+      const aPinned = pinnedIds.includes(a.id) ? 0 : 1;
+      const bPinned = pinnedIds.includes(b.id) ? 0 : 1;
+      if (aPinned !== bPinned) return aPinned - bPinned;
+      if (sortBy === 'last_activity') return new Date(b.last_activity_at || 0) - new Date(a.last_activity_at || 0);
       if (sortBy === 'score') return (b.lead_score || 0) - (a.lead_score || 0);
       if (sortBy === 'name') return (a.full_name || '').localeCompare(b.full_name || '', 'ar');
+      if (sortBy === 'created') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      if (sortBy === 'temperature') {
+        const order = { hot: 0, warm: 1, cool: 2, cold: 3 };
+        return (order[a.temperature] ?? 4) - (order[b.temperature] ?? 4);
+      }
+      if (sortBy === 'stale') {
+        // Contacts with oldest last activity first (stale = needs attention)
+        return new Date(a.last_activity_at || 0) - new Date(b.last_activity_at || 0);
+      }
       return 0;
     });
     return list;
-  }, [contacts, filterType, filterSource, filterTemp, filterDept, search, showBlacklisted, sortBy]);
+  }, [contacts, filterType, filterSource, filterTemp, filterDept, search, showBlacklisted, sortBy, pinnedIds]);
 
   // Reset page when filters change
   useEffect(() => { setPage(1); setSelectedIds([]); }, [filterType, filterSource, filterTemp, filterDept, search, showBlacklisted, sortBy]);
@@ -1580,6 +1611,14 @@ export default function ContactsPage() {
           <button onClick={() => setShowImportModal(true)} style={{ padding: '9px 14px', background: colors.cardBg, border: '1px solid ' + colors.border, borderRadius: 8, color: colors.textMuted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
+          <button onClick={() => setMergeMode(m => !m)} style={{ padding: '9px 14px', background: mergeMode ? 'rgba(30,64,175,0.1)' : colors.cardBg, border: '1px solid ' + (mergeMode ? '#1E40AF' : colors.border), borderRadius: 8, color: mergeMode ? '#1E40AF' : colors.textMuted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Merge size={14} /> {isRTL ? 'دمج' : 'Merge'}
+          </button>
+          {selectedIds.length > 0 && (
+            <button onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }} style={{ padding: '9px 14px', background: 'linear-gradient(135deg,#065F46,#10B981)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <PhoneCall size={14} /> {isRTL ? `اتصال جماعي (${selectedIds.length})` : `Batch Call (${selectedIds.length})`}
+            </button>
+          )}
           <button onClick={() => setShowAddModal(true)} style={{ padding: '9px 18px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Plus size={14} /> {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
           </button>
@@ -1615,10 +1654,10 @@ export default function ContactsPage() {
       {/* Type Chips */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         {[
-          { label: i18n.language === 'ar' ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
-          { label: i18n.language === 'ar' ? 'ليدز' : 'Leads', value: 'lead', count: stats.leads, color: '#4A7AAB' },
-          { label: i18n.language === 'ar' ? 'كولد' : 'Cold', value: 'cold', count: stats.cold, color: '#8BA8C8' },
-          { label: i18n.language === 'ar' ? 'عملاء' : 'Clients', value: 'client', count: stats.clients, color: '#2B4C6F' },
+          { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
+          ...Object.entries(TYPE).filter(([k]) => stats[k] > 0).map(([k, v]) => ({
+            label: isRTL ? v.label : v.labelEn, value: k, count: stats[k] || 0, color: v.color,
+          })),
         ].map(s => (
           <button key={s.value} onClick={() => setFilterType(s.value)} style={{
             padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterType === s.value ? s.color : colors.border}`,
@@ -1681,32 +1720,54 @@ export default function ContactsPage() {
         </select>
         <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sel}>
           <option value="last_activity">{isRTL ? 'ترتيب: آخر نشاط' : 'Sort: Last Activity'}</option>
-          <option value="score">{i18n.language === 'ar' ? 'ترتيب: Lead Score' : 'Sort: Lead Score'}</option>
-          <option value="name">{i18n.language === 'ar' ? 'ترتيب: الاسم' : 'Sort: Name'}</option>
+          <option value="score">{isRTL ? 'ترتيب: Lead Score' : 'Sort: Lead Score'}</option>
+          <option value="name">{isRTL ? 'ترتيب: الاسم' : 'Sort: Name'}</option>
+          <option value="created">{isRTL ? 'ترتيب: تاريخ الإنشاء' : 'Sort: Created Date'}</option>
+          <option value="temperature">{isRTL ? 'ترتيب: الحرارة' : 'Sort: Temperature'}</option>
+          <option value="stale">{isRTL ? 'ترتيب: يحتاج متابعة' : 'Sort: Needs Follow-up'}</option>
         </select>
       </div>
 
       {/* Table */}
       <div style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
+        {mergeMode && (
+          <div style={{ padding: '10px 16px', background: isDark ? 'rgba(30,64,175,0.12)' : 'rgba(30,64,175,0.06)', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#1E40AF' }}>
+              <Merge size={14} style={{ verticalAlign: 'middle', marginInlineEnd: 6 }} />
+              {isRTL ? `اختر جهتي اتصال للدمج (${mergeTargets.length}/2)` : `Select 2 contacts to merge (${mergeTargets.length}/2)`}
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {mergeTargets.length === 2 && (
+                <button onClick={() => setMergePreview(mergeTargets)} style={{ padding: '5px 14px', background: 'linear-gradient(135deg,#1E40AF,#3B82F6)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  {isRTL ? 'معاينة الدمج' : 'Preview Merge'}
+                </button>
+              )}
+              <button onClick={() => { setMergeMode(false); setMergeTargets([]); }} style={{ padding: '5px 14px', background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 6, color: colors.textMuted, fontSize: 12, cursor: 'pointer' }}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
+          <table dir={isRTL ? 'rtl' : 'ltr'} style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
             <thead>
               <tr>
                 <th style={{...th, width: 36, padding: '10px 8px'}}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIds.includes(c.id))} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /></th>
                 <th style={{...th, width: 50}}>ID</th>
-                {(isRTL
-                  ? [t('common.actions'), 'Score', t('contacts.budget'), t('contacts.stage'), t('contacts.source'), t('contacts.temperature'), t('contacts.type'), t('contacts.phone'), t('contacts.fullName')]
-                  : [t('contacts.fullName'), t('contacts.phone'), t('contacts.type'), t('contacts.temperature'), t('contacts.source'), t('contacts.stage'), t('contacts.budget'), 'Score', t('common.actions')]
-                ).map(h => (
-                  <th key={h} style={th}>{h}</th>
-                ))}
+                <th style={th}>{t('contacts.fullName')}</th>
+                <th style={th}>{t('contacts.phone')}</th>
+                <th style={th}>{t('contacts.type')}</th>
+                <th style={th}>{t('contacts.temperature')}</th>
+                <th style={th}>{t('contacts.source')}</th>
+                <th style={th}>{t('contacts.stage')}</th>
+                <th style={th}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, color: isDark ? '#6B8DB5' : '#9ca3af' }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+                <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: isDark ? '#6B8DB5' : '#9ca3af' }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={11} style={{ padding: 0, border: 'none' }}>
+                <tr><td colSpan={9} style={{ padding: 0, border: 'none' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
                     <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, rgba(27,51,71,0.08), rgba(74,122,171,0.12))', border: '1.5px dashed rgba(74,122,171,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                       <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -1715,16 +1776,23 @@ export default function ContactsPage() {
                     <p style={{ margin: 0, fontSize: 13, color: colors.textMuted }}>{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
                   </div>
                 </td></tr>
-              ) : paged.map((c) => (
+              ) : paged.map((c) => {
+                const isPinned = pinnedIds.includes(c.id);
+                const isMergeSelected = mergeTargets.includes(c.id);
+                return (
                 <tr key={c.id}
-                  onClick={() => setSelected(c)}
-                  style={{ cursor: 'pointer', background: selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
-                  onMouseEnter={e => { if (!selectedIds.includes(c.id)) e.currentTarget.style.background = colors.rowHover; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
+                  onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < 2 ? [...prev, c.id] : prev) : setSelected(c)}
+                  style={{ cursor: 'pointer', background: isMergeSelected ? 'rgba(30,64,175,0.08)' : selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
+                  onMouseEnter={e => { if (!selectedIds.includes(c.id) && !isMergeSelected) e.currentTarget.style.background = colors.rowHover; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = isMergeSelected ? 'rgba(30,64,175,0.08)' : selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
                 >
-                  {/* Checkbox + ID - hidden in RTL */}
-                  {!isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
-                  {!isRTL && <td style={{ ...td, fontSize: 10, color: isDark ? '#6B8DB5' : '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
+                  <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>
+                  <td style={{ ...td, fontSize: 10, color: isDark ? '#6B8DB5' : '#9ca3af', fontFamily: 'monospace' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {isPinned && <Pin size={10} color="#F59E0B" style={{ flexShrink: 0 }} />}
+                      #{String(c.id).slice(-4)}
+                    </div>
+                  </td>
                   {/* Name */}
                   <td style={td}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -1749,13 +1817,13 @@ export default function ContactsPage() {
                     {c.phone2 && <PhoneCell phone={c.phone2} small />}
                   </td>
                   {/* Type */}
-                  <td style={td}><Chip label={TYPE[c.contact_type]?.label} color={TYPE[c.contact_type]?.color} bg={TYPE[c.contact_type]?.bg} /></td>
+                  <td style={td}><Chip label={isRTL ? TYPE[c.contact_type]?.label : TYPE[c.contact_type]?.labelEn} color={TYPE[c.contact_type]?.color} bg={TYPE[c.contact_type]?.bg} /></td>
                   {/* Temp */}
                   <td style={td}>
                     {(() => { const TempIcon = TEMP[c.temperature]?.Icon; return TempIcon ? <TempIcon size={15} color={TEMP[c.temperature]?.color} /> : '—'; })()}
                   </td>
                   {/* Source */}
-                  <td style={td}><span style={{ fontSize: 11, background: colors.chipBg, border: '1px solid ' + colors.border, borderRadius: 6, padding: '3px 8px', color: colors.chipText }}>{i18n.language === "ar" ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></td>
+                  <td style={td}><span style={{ fontSize: 11, background: colors.chipBg, border: '1px solid ' + colors.border, borderRadius: 6, padding: '3px 8px', color: colors.chipText }}>{isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></td>
                   {/* Stage */}
                   <td style={td} onClick={e => e.stopPropagation()}>
                     {isAdmin && c.contact_type === 'lead' ? (
@@ -1766,47 +1834,39 @@ export default function ContactsPage() {
                     : c.cold_status ? <span style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#9ca3af' }}>{coldLabel(c.cold_status, isRTL)}</span>
                     : <span style={{ color: isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db' }}>—</span>}
                   </td>
-                  {/* Budget */}
-                  <td style={{ ...td, fontSize: 12, color: colors.textMuted }}>{fmtBudget(c.budget_min, c.budget_max, isRTL)}</td>
-                  {/* ID + Checkbox - shown at end in RTL */}
-                  {isRTL && <td style={{ ...td, fontSize: 10, color: isDark ? '#6B8DB5' : '#9ca3af', fontFamily: 'monospace' }}>#{String(c.id).slice(-4)}</td>}
-                  {isRTL && <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>}
-                  {/* Score */}
-                  <td style={td}><ScorePill score={c.lead_score || 0} /></td>
-                  {/* Actions */}
+                  {/* Actions - Quick access buttons */}
                   <td style={td} onClick={e => e.stopPropagation()}>
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                      <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 7, color: '#10B981', textDecoration: 'none' }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 8.91a16 16 0 0 0 6 6l.77-.77a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                      <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, color: '#10B981', textDecoration: 'none' }}>
+                        <Phone size={12} />
                       </a>
-                      <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 7, color: '#25D366', textDecoration: 'none' }}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                      <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 6, color: '#25D366', textDecoration: 'none' }}>
+                        <MessageCircle size={12} />
                       </a>
+                      <button onClick={() => setLogCallTarget(c)} title={isRTL ? 'تسجيل مكالمة' : 'Log Call'} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 6, color: '#4A7AAB', cursor: 'pointer' }}>
+                        <PhoneCall size={12} />
+                      </button>
+                      <button onClick={() => setReminderTarget(c)} title={isRTL ? 'تذكير' : 'Reminder'} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 6, color: '#F59E0B', cursor: 'pointer' }}>
+                        <Bell size={12} />
+                      </button>
+                      <button onClick={() => togglePin(c.id)} title={isRTL ? 'تثبيت' : 'Pin'} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isPinned ? 'rgba(245,158,11,0.12)' : 'transparent', border: '1px solid ' + (isPinned ? 'rgba(245,158,11,0.3)' : colors.border), borderRadius: 6, color: isPinned ? '#F59E0B' : colors.textMuted, cursor: 'pointer' }}>
+                        <Pin size={12} />
+                      </button>
                       <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
                         <button onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                          style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: openMenuId === c.id ? '#4A7AAB' : colors.cardBg, border: '1px solid ' + (openMenuId === c.id ? '#4A7AAB' : colors.border), borderRadius: 7, color: openMenuId === c.id ? '#fff' : colors.textMuted, cursor: 'pointer' }}>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                          style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: openMenuId === c.id ? '#4A7AAB' : 'transparent', border: '1px solid ' + (openMenuId === c.id ? '#4A7AAB' : colors.border), borderRadius: 6, color: openMenuId === c.id ? '#fff' : colors.textMuted, cursor: 'pointer' }}>
+                          <MoreVertical size={12} />
                         </button>
                         {openMenuId === c.id && (
-                          <div style={{ position: 'absolute', top: 32, left: 0, background: isDark ? '#1a2234' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 12, minWidth: 190, zIndex: 100, boxShadow: '0 8px 30px rgba(27,51,71,0.12)', overflow: 'hidden' }}>
-                            <div style={{ padding: 6 }}>
-                              <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07"/><path d="M8.09 8.91a16 16 0 0 0 6 6"/></svg>
-                                {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
-                              </button>
-                              <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                {isRTL ? 'إضافة تذكير' : 'Add Reminder'}
-                              </button>
-                              <button onClick={() => { const data = [['الاسم','الهاتف','النوع','المصدر','الميزانية'],[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,﻿'+csv; a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                                {isRTL ? 'تصدير بيانات العميل' : 'Export Contact'}
+                          <div style={{ position: 'absolute', top: 30, [isRTL ? 'right' : 'left']: 0, background: isDark ? '#1a2234' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 10, minWidth: 180, zIndex: 100, boxShadow: '0 8px 30px rgba(27,51,71,0.12)', overflow: 'hidden' }}>
+                            <div style={{ padding: 4 }}>
+                              <button onClick={() => { const data = [['Name','Phone','Type','Source','Budget'],[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,\uFEFF'+csv; a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                                <FileDown size={13} /> {isRTL ? 'تصدير' : 'Export'}
                               </button>
                             </div>
-                            {!c.is_blacklisted && (<><div style={{ height: 1, background: colors.border }} /><div style={{ padding: 6 }}>
-                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: '#EF4444', fontFamily: 'inherit', textAlign: 'right' }} onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.05)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-                                {isRTL ? 'بلاك ليست' : 'Blacklist'}
+                            {!c.is_blacklisted && (<><div style={{ height: 1, background: colors.border }} /><div style={{ padding: 4 }}>
+                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: '#EF4444', fontFamily: 'inherit' }} onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.05)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                                <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
                               </button>
                             </div></>)}
                           </div>
@@ -1815,7 +1875,7 @@ export default function ContactsPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              ); })}
             </tbody>
           </table>
         </div>
@@ -1845,6 +1905,164 @@ export default function ContactsPage() {
       {reminderTarget && <ReminderModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
     {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={(newContacts) => { setContacts(prev => { const updated = [...prev, ...newContacts]; localStorage.setItem('platform_contacts', JSON.stringify(updated)); return updated; }); setShowImportModal(false); }} />}
+
+      {/* Batch Call Mode */}
+      {batchCallMode && (() => {
+        const batchContacts = contacts.filter(c => selectedIds.includes(c.id));
+        const current = batchContacts[batchCallIndex];
+        if (!current) return null;
+        const progress = batchCallLog.length;
+        const total = batchContacts.length;
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1A2B3C' : '#fff', borderRadius: 20, width: '100%', maxWidth: 520, overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg,#065F46,#10B981)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <PhoneCall size={18} color="#fff" />
+                  <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{isRTL ? 'وضع الاتصال' : 'Call Mode'}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>{progress}/{total}</span>
+                  <button onClick={() => setBatchCallMode(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}><X size={14} /></button>
+                </div>
+              </div>
+              {/* Progress bar */}
+              <div style={{ height: 3, background: isDark ? '#2d3748' : '#e5e7eb' }}>
+                <div style={{ height: '100%', background: '#10B981', width: `${(progress / total) * 100}%`, transition: 'width 0.3s' }} />
+              </div>
+              {/* Contact info */}
+              <div style={{ padding: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+                  <div style={{ width: 50, height: 50, borderRadius: 14, background: avatarColor(current.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+                    {initials(current.full_name)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: colors.text }}>{current.full_name}</div>
+                    <div style={{ fontSize: 13, color: colors.textMuted, direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }}>{current.phone}</div>
+                    {current.company && <div style={{ fontSize: 12, color: colors.textMuted }}>{current.company}</div>}
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <Chip label={isRTL ? TYPE[current.contact_type]?.label : TYPE[current.contact_type]?.labelEn} color={TYPE[current.contact_type]?.color} bg={TYPE[current.contact_type]?.bg} />
+                    {current.stage && <div style={{ fontSize: 10, marginTop: 4, color: '#4A7AAB' }}>{stageLabel(current.stage, isRTL)}</div>}
+                  </div>
+                </div>
+                {/* Call button */}
+                <a href={"tel:" + current.phone} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: 'linear-gradient(135deg,#065F46,#10B981)', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none', marginBottom: 16 }}>
+                  <Phone size={16} /> {isRTL ? 'اتصل الآن' : 'Call Now'}
+                </a>
+                {/* Call result */}
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: colors.textMuted, marginBottom: 6 }}>{isRTL ? 'نتيجة المكالمة' : 'Call Result'}</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    {[
+                      { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
+                      { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
+                      { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#EF4444' },
+                      { value: 'interested', label: isRTL ? 'مهتم' : 'Interested', color: '#4A7AAB' },
+                      { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not Interested', color: '#6b7280' },
+                    ].map(r => (
+                      <button key={r.value} onClick={() => setBatchCallResult(r.value)} style={{
+                        padding: '5px 12px', borderRadius: 16, fontSize: 11, fontWeight: batchCallResult === r.value ? 700 : 400, cursor: 'pointer',
+                        background: batchCallResult === r.value ? r.color + '18' : 'transparent',
+                        border: `1px solid ${batchCallResult === r.value ? r.color : colors.border}`,
+                        color: batchCallResult === r.value ? r.color : colors.textMuted,
+                      }}>{r.label}</button>
+                    ))}
+                  </div>
+                </div>
+                {/* Notes */}
+                <textarea value={batchCallNotes} onChange={e => setBatchCallNotes(e.target.value)} placeholder={isRTL ? 'ملاحظات سريعة...' : 'Quick notes...'} rows={2}
+                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.inputBg, color: colors.text, fontSize: 12, resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 16 }} />
+                {/* Navigation */}
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+                  <button disabled={batchCallIndex === 0} onClick={() => { setBatchCallIndex(i => i - 1); setBatchCallNotes(''); setBatchCallResult(''); }}
+                    style={{ flex: 1, padding: '10px', borderRadius: 8, border: `1px solid ${colors.border}`, background: 'transparent', color: batchCallIndex === 0 ? colors.textMuted : colors.text, fontSize: 12, cursor: batchCallIndex === 0 ? 'not-allowed' : 'pointer', opacity: batchCallIndex === 0 ? 0.4 : 1 }}>
+                    {isRTL ? 'السابق' : 'Previous'}
+                  </button>
+                  <button onClick={() => {
+                    // Log current call
+                    if (batchCallResult) {
+                      setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);
+                    }
+                    if (batchCallIndex < batchContacts.length - 1) {
+                      setBatchCallIndex(i => i + 1);
+                      setBatchCallNotes(''); setBatchCallResult('');
+                    } else {
+                      // Finished - show summary
+                      const finalLog = batchCallResult ? [...batchCallLog, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }] : batchCallLog;
+                      toast.success(isRTL ? `تم الانتهاء من ${finalLog.length} مكالمة` : `Completed ${finalLog.length} calls`);
+                      setBatchCallMode(false); setSelectedIds([]);
+                    }
+                  }} style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    {batchCallIndex < batchContacts.length - 1 ? (<>{isRTL ? 'التالي' : 'Next'} <SkipForward size={13} /></>) : (isRTL ? 'إنهاء' : 'Finish')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Merge Preview Modal */}
+      {mergePreview && (() => {
+        const [c1, c2] = mergePreview.map(id => contacts.find(c => c.id === id)).filter(Boolean);
+        if (!c1 || !c2) return null;
+        const merged = { ...c2, ...c1 };
+        // Keep the richer data
+        if (!c1.email && c2.email) merged.email = c2.email;
+        if (!c1.phone2 && c2.phone2) merged.phone2 = c2.phone2;
+        if (!c1.phone2 && c2.phone !== c1.phone) merged.phone2 = c2.phone;
+        if ((c2.lead_score || 0) > (c1.lead_score || 0)) merged.lead_score = c2.lead_score;
+        if (!c1.company && c2.company) merged.company = c2.company;
+        if (!c1.preferred_location && c2.preferred_location) merged.preferred_location = c2.preferred_location;
+        const fields = ['full_name','phone','phone2','email','contact_type','source','temperature','stage','company','preferred_location'];
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h3 style={{ margin: 0, color: colors.text, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><Merge size={18} color="#1E40AF" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
+                <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={18} /></button>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr>
+                    <th style={{ padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', color: colors.textMuted, fontWeight: 600, borderBottom: `1px solid ${colors.border}` }}>{isRTL ? 'الحقل' : 'Field'}</th>
+                    <th style={{ padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', color: colors.textMuted, fontWeight: 600, borderBottom: `1px solid ${colors.border}` }}>{c1.full_name}</th>
+                    <th style={{ padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', color: colors.textMuted, fontWeight: 600, borderBottom: `1px solid ${colors.border}` }}>{c2.full_name}</th>
+                    <th style={{ padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', color: '#10B981', fontWeight: 600, borderBottom: `1px solid ${colors.border}` }}>{isRTL ? 'النتيجة' : 'Result'}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {fields.map(f => (
+                    <tr key={f} style={{ borderBottom: `1px solid ${colors.border}` }}>
+                      <td style={{ padding: '8px 10px', fontWeight: 600, color: colors.textMuted }}>{f}</td>
+                      <td style={{ padding: '8px 10px', color: merged[f] === c1[f] ? '#10B981' : colors.text }}>{c1[f] || '—'}</td>
+                      <td style={{ padding: '8px 10px', color: merged[f] === c2[f] && merged[f] !== c1[f] ? '#10B981' : colors.text }}>{c2[f] || '—'}</td>
+                      <td style={{ padding: '8px 10px', fontWeight: 600, color: '#10B981' }}>{merged[f] || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+                <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} style={{ padding: '9px 20px', background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 8, color: colors.textMuted, fontSize: 13, cursor: 'pointer' }}>
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button onClick={() => {
+                  // Perform merge: keep c1 with merged data, remove c2
+                  const updatedContacts = contacts.map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
+                  setContacts(updatedContacts);
+                  localStorage.setItem('platform_contacts', JSON.stringify(updatedContacts));
+                  toast.success(isRTL ? 'تم دمج جهتي الاتصال بنجاح' : 'Contacts merged successfully');
+                  setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
+                }} style={{ padding: '9px 20px', background: 'linear-gradient(135deg,#1E40AF,#3B82F6)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                  {isRTL ? 'تأكيد الدمج' : 'Confirm Merge'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Confirm Modal */}
       {confirmAction && (
