@@ -1,13 +1,13 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
-import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, UserCheck, PhoneOff, AlertOctagon, CheckCircle2, Calendar, FileDown, MoreVertical, Bell, PhoneMissed, CheckSquare, Check, Trash2, Pencil, Pin, PhoneCall, Merge, SkipForward } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, FileDown, MoreVertical, Bell, CheckSquare, Trash2, Pencil, Pin, PhoneCall, Merge, SkipForward } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
-  blacklistContact, checkDuplicate,
+  blacklistContact,
   fetchContactActivities, createActivity,
   fetchContactOpportunities
 } from '../services/contactsService';
@@ -17,9 +17,9 @@ import ImportModal from './crm/ImportModal';
 // ── Hooks ──────────────────────────────────────────────────────────────────
 function useEscClose(onClose) {
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    const handler = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); onClose(); } };
+    document.addEventListener('keydown', handler, true);
+    return () => document.removeEventListener('keydown', handler, true);
   }, [onClose]);
 }
 
@@ -213,6 +213,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const handleSave = async () => {
     if (!form.department) { toast.error(isRTL ? 'يرجى اختيار القسم' : 'Please select a department'); return; }
     if (!form.contact_type) { toast.error(isRTL ? 'يرجى اختيار نوع جهة الاتصال' : 'Please select contact type'); return; }
+    if (!form.full_name.trim()) { toast.error(isRTL ? 'الاسم مطلوب' : 'Name is required'); return; }
     if (!form.phone || !validatePhone(form.phone)) { toast.error(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
     const invalidExtra = extraPhones.find(p => p && !validatePhone(p));
     if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
@@ -228,15 +229,15 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
       onClose();
     } catch (err) {
       toast.error((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const inp = { background: isDark ? '#0F1E2D' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, padding: '9px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
   const sel = { ...inp, cursor: 'pointer' };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} dir={isRTL ? 'rtl' : 'ltr'}>
       <div onClick={e => e.stopPropagation()} className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -579,8 +580,8 @@ function LogCallModal({ contact, onClose }) {
   ];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content" style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
@@ -739,8 +740,8 @@ function QuickTaskModal({ contact, onClose }) {
   ];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content" style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> {isRTL ? 'مهمة سريعة' : 'Quick Task'} — {contact.full_name}</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
@@ -798,7 +799,7 @@ function BlacklistModal({ contact, onClose, onConfirm }) {
   useEscClose(onClose);
   const [reason, setReason] = useState('');
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
@@ -950,7 +951,7 @@ function EditContactModal({ contact, onClose, onSave }) {
   const row = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 950, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 580, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
         <div style={{ padding: '18px 24px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
@@ -2133,7 +2134,7 @@ export default function ContactsPage() {
         const progress = batchCallLog.length;
         const total = batchContacts.length;
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1A2B3C' : '#fff', borderRadius: 20, width: '100%', maxWidth: 520, overflow: 'hidden' }}>
               {/* Header */}
               <div style={{ background: 'linear-gradient(135deg,#065F46,#10B981)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2240,7 +2241,7 @@ export default function ContactsPage() {
         if (!c1.preferred_location && c2.preferred_location) merged.preferred_location = c2.preferred_location;
         const fields = ['full_name','phone','phone2','email','contact_type','source','temperature','stage','company','preferred_location'];
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
             <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                 <h3 style={{ margin: 0, color: colors.text, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><Merge size={18} color="#1E40AF" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
@@ -2288,7 +2289,7 @@ export default function ContactsPage() {
 
       {/* Confirm Modal */}
       {confirmAction && (
-        <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+        <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : '#e5e7eb'}`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 400, textAlign: 'center' }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 22 }}>⚠️</div>
             <h3 style={{ margin: '0 0 8px', color: colors.text, fontSize: 16, fontWeight: 700 }}>{confirmAction.title}</h3>
@@ -2303,8 +2304,8 @@ export default function ContactsPage() {
 
       {/* Bulk Stage Modal */}
       {bulkStageModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
+        <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, color: colors.text, fontSize: 15, fontWeight: 700 }}>{isRTL ? `تغيير المرحلة (${selectedIds.length})` : `Change Stage (${selectedIds.length})`}</h3>
               <button onClick={() => setBulkStageModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={16} /></button>
@@ -2325,8 +2326,8 @@ export default function ContactsPage() {
 
       {/* Bulk Reassign Modal */}
       {bulkReassignModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
+        <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0, color: colors.text, fontSize: 15, fontWeight: 700 }}>{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
               <button onClick={() => setBulkReassignModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={16} /></button>
