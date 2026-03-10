@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { Component, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -6,30 +6,41 @@ import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute } from './components/auth/PermissionGate';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
-import DashboardPage from './pages/dashboard/DashboardPage';
-import ContactsPage from './pages/ContactsPage';
-import OpportunitiesPage from './pages/crm/OpportunitiesPage';
-import LeadPoolPage from './pages/crm/LeadPoolPage';
-import ActivitiesPage from './pages/ActivitiesPage';
-import TasksPage from './pages/TasksPage';
-import PerformancePage from './pages/PerformancePage';
-import FinancePage from './pages/finance/FinancePage';
-import TargetTrackerPage from './pages/sales/TargetTrackerPage';
-import SettingsPage from './pages/settings/SettingsPage';
-import EmployeesPage from './pages/hr/EmployeesPage';
-import HRPoliciesPage from './pages/hr/HRPoliciesPage';
-import AttendancePage from './pages/hr/AttendancePage';
-import LeavePage from './pages/hr/LeavePage';
-import PayrollPage from './pages/hr/PayrollPage';
-import CompetenciesPage from './pages/hr/CompetenciesPage';
-import RecruitmentPage from './pages/hr/RecruitmentPage';
-import DisciplinaryPage from './pages/hr/DisciplinaryPage';
-import TrainingPage from './pages/hr/TrainingPage';
-import SelfServicePage from './pages/hr/SelfServicePage';
-import AssetsPage from './pages/hr/AssetsPage';
-import OnboardingPage from './pages/hr/OnboardingPage';
 import { P } from './config/roles';
 import './i18n';
+
+// Lazy-loaded pages
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
+const ContactsPage = lazy(() => import('./pages/ContactsPage'));
+const OpportunitiesPage = lazy(() => import('./pages/crm/OpportunitiesPage'));
+const LeadPoolPage = lazy(() => import('./pages/crm/LeadPoolPage'));
+const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
+const TasksPage = lazy(() => import('./pages/TasksPage'));
+const PerformancePage = lazy(() => import('./pages/PerformancePage'));
+const FinancePage = lazy(() => import('./pages/finance/FinancePage'));
+const TargetTrackerPage = lazy(() => import('./pages/sales/TargetTrackerPage'));
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+const EmployeesPage = lazy(() => import('./pages/hr/EmployeesPage'));
+const HRPoliciesPage = lazy(() => import('./pages/hr/HRPoliciesPage'));
+const AttendancePage = lazy(() => import('./pages/hr/AttendancePage'));
+const LeavePage = lazy(() => import('./pages/hr/LeavePage'));
+const PayrollPage = lazy(() => import('./pages/hr/PayrollPage'));
+const CompetenciesPage = lazy(() => import('./pages/hr/CompetenciesPage'));
+const RecruitmentPage = lazy(() => import('./pages/hr/RecruitmentPage'));
+const DisciplinaryPage = lazy(() => import('./pages/hr/DisciplinaryPage'));
+const TrainingPage = lazy(() => import('./pages/hr/TrainingPage'));
+const SelfServicePage = lazy(() => import('./pages/hr/SelfServicePage'));
+const AssetsPage = lazy(() => import('./pages/hr/AssetsPage'));
+const OnboardingPage = lazy(() => import('./pages/hr/OnboardingPage'));
+
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 12 }}>
+      <div style={{ width: 32, height: 32, border: '3px solid rgba(74,122,171,0.2)', borderTop: '3px solid #4A7AAB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 class ErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
@@ -83,6 +94,7 @@ export default function App() {
         <AuthProvider>
           <ToastProvider>
             <ErrorBoundary>
+            <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<AuthRedirect />} />
               <Route path="/" element={<AuthRedirect />} />
@@ -121,6 +133,7 @@ export default function App() {
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
+            </Suspense>
             </ErrorBoundary>
           </ToastProvider>
         </AuthProvider>

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import FollowUpReminder from '../components/ui/FollowUpReminder';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
@@ -14,6 +14,15 @@ import {
 } from '../services/contactsService';
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES, TASK_STATUSES } from '../services/tasksService';
 import ImportModal from './crm/ImportModal';
+
+// ── Hooks ──────────────────────────────────────────────────────────────────
+function useEscClose(onClose) {
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+}
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { facebook: 'فيسبوك', instagram: 'إنستجرام', google_ads: 'جوجل أدز', website: 'الموقع', call: 'اتصال وارد', walk_in: 'زيارة مباشرة', referral: 'ترشيح', developer: 'مطور', cold_call: 'كولد كول', other: 'أخرى' };
@@ -146,6 +155,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
+  useEscClose(onClose);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     prefix: '', full_name: '', phone: '', phone2: '', email: '',
@@ -421,6 +431,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
 function BlacklistModal({ contact, onClose, onConfirm }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
+  useEscClose(onClose);
   const [reason, setReason] = useState('');
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -524,6 +535,7 @@ function EditContactModal({ contact, onClose, onSave }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
+  useEscClose(onClose);
   const [form, setForm] = useState({
     prefix: contact.prefix || '',
     full_name: contact.full_name || '',
@@ -723,6 +735,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
+  useEscClose(onClose);
   const [tab, setTab] = useState('info');
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
@@ -1145,7 +1158,12 @@ export default function ContactsPage() {
 
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
   const [filterType, setFilterType] = useState('all');
   const [filterSource, setFilterSource] = useState('all');
   const [filterDept, setFilterDept] = useState('all');
@@ -1159,6 +1177,8 @@ export default function ContactsPage() {
   const [logCallTarget, setLogCallTarget] = useState(null);
   const [reminderTarget, setReminderTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
   const [showBulkMenu, setShowBulkMenu] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const isAdmin = profile?.role === 'admin';
@@ -1257,6 +1277,23 @@ export default function ContactsPage() {
     return list;
   }, [contacts, filterType, filterSource, filterTemp, search, showBlacklisted, sortBy]);
 
+  // Reset page when filters change
+  useEffect(() => { setPage(1); }, [filterType, filterSource, filterTemp, search, showBlacklisted, sortBy]);
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const exportCSV = (list) => {
+    const headers = ['ID','Name','Phone','Email','Type','Source','Department','Temperature','Stage','Company','Created'];
+    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.temperature || '', c.stage || '', c.company || '', c.created_at || '']);
+    const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `contacts_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const handleSave = async (form) => {
     const newContact = {
       ...form,
@@ -1305,7 +1342,7 @@ export default function ContactsPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button style={{ padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#6b7280', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={() => exportCSV(filtered)} style={{ padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#6b7280', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Download size={14} /> {isRTL ? 'تصدير' : 'Export'}
           </button>
           <button onClick={() => setShowImportModal(true)} style={{ padding: '9px 14px', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, color: '#6b7280', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1322,7 +1359,7 @@ export default function ContactsPage() {
               {showBulkMenu && (
                 <div style={{ position: "absolute", top: "110%", left: 0, background: "#1A2B3C", border: "1px solid rgba(74,122,171,0.3)", borderRadius: 10, minWidth: 190, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.35)", overflow: "hidden" }}>
                   {[
-                    { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => {} },
+                    { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
                     { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => {} },
                     { label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => {} },
                   ].map(item => (
@@ -1386,7 +1423,7 @@ export default function ContactsPage() {
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center', background: c.thBg, padding: '10px 14px', borderRadius: 12, border: `1px solid ${c.border}` }}>
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
           <Search size={14} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
-          <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={search} onChange={e => setSearch(e.target.value)}
+          <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={searchInput} onChange={e => setSearchInput(e.target.value)}
             style={{ ...sel, width: '100%', paddingRight: 32, boxSizing: 'border-box', background: c.inputBg, color: c.text, border: `1px solid ${c.border}` }} />
         </div>
         <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={sel}>
@@ -1451,7 +1488,7 @@ export default function ContactsPage() {
                     <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
                   </div>
                 </td></tr>
-              ) : filtered.map((c) => (
+              ) : paged.map((c) => (
                 <tr key={c.id}
                   onClick={() => setSelected(c)}
                   style={{ cursor: 'pointer', background: selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
@@ -1555,6 +1592,23 @@ export default function ContactsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '16px 0' }}>
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+              style={{ padding: '6px 14px', borderRadius: 6, border: `1px solid ${c.border}`, background: page === 1 ? 'transparent' : c.cardBg, color: page === 1 ? c.muted : c.text, fontSize: 12, cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>
+              {i18n.language === 'ar' ? '← السابق' : '← Prev'}
+            </button>
+            <span style={{ fontSize: 12, color: c.muted }}>
+              {i18n.language === 'ar' ? `${page} من ${totalPages}` : `${page} of ${totalPages}`}
+            </span>
+            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
+              style={{ padding: '6px 14px', borderRadius: 6, border: `1px solid ${c.border}`, background: page === totalPages ? 'transparent' : c.cardBg, color: page === totalPages ? c.muted : c.text, fontSize: 12, cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>
+              {i18n.language === 'ar' ? 'التالي →' : 'Next →'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modals */}
