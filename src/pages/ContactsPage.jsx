@@ -196,13 +196,26 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
         {/* Header */}
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>{i18n.language === 'ar' ? 'إضافة جهة اتصال' : 'Add Contact'}</h2>
+            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>
+              {isRTL ? ({
+                lead: 'إضافة ليد', cold: 'إضافة كولد كول', client: 'إضافة عميل',
+                supplier: 'إضافة مورد', developer: 'إضافة مطور عقاري',
+                applicant: 'إضافة متقدم لوظيفة', partner: 'إضافة شريك'
+              }[form.contact_type] || 'إضافة جهة اتصال') : ({
+                lead: 'Add Lead', cold: 'Add Cold Call', client: 'Add Client',
+                supplier: 'Add Supplier', developer: 'Add Developer',
+                applicant: 'Add Applicant', partner: 'Add Partner'
+              }[form.contact_type] || 'Add Contact')}
+            </h2>
             <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>
               {step === 1 ? (isRTL ? 'البيانات الأساسية' : 'Basic Info') : (isRTL ? 'البيانات الإضافية' : 'Additional Info')}
               {' '}<span style={{ color: 'rgba(139,168,200,0.5)' }}>({isRTL ? `${step} من 2` : `${step} of 2`})</span>
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', fontSize: 18 }}><X size={18} /></button>
+        </div>
+        <div style={{ height: 3, background: 'rgba(74,122,171,0.15)', borderRadius: '0 0 2px 2px' }}>
+          <div style={{ height: '100%', width: step === 1 ? '50%' : '100%', background: 'linear-gradient(90deg,#2B4C6F,#4A7AAB)', borderRadius: '0 0 2px 2px', transition: 'width 0.3s ease' }} />
         </div>
 
         {/* Body */}
@@ -554,7 +567,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
   const t = TEMP[contact.temperature];
   const tp = TYPE[contact.contact_type];
 
-  const tabs = [['info', isRTL ? 'البيانات' : 'Info'], ['activities', isRTL ? 'الأنشطة' : 'Activities'], ['opportunities', isRTL ? 'الفرص' : 'Opportunities'], ['tasks', isRTL ? 'المهام' : 'Tasks']];
+  const baseTabs = [['info', isRTL ? 'البيانات' : 'Info'], ['activities', isRTL ? 'الأنشطة' : 'Activities'], ['opportunities', isRTL ? 'الفرص' : 'Opportunities'], ['tasks', isRTL ? 'المهام' : 'Tasks']];
+  const tabs = contact.contact_type === 'supplier' ? [...baseTabs, ['invoices', isRTL ? 'الفواتير' : 'Invoices']] : baseTabs;
 
   const rowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(74,122,171,0.08)', fontSize: 13 };
 
@@ -683,6 +697,20 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                   <span>+</span> {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
                 </button>
               )}
+            </div>
+          )}
+
+          {/* INVOICES TAB */}
+          {tab === 'invoices' && (
+            <div>
+              <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
+                <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.4 }}>🧾</div>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#E2EAF4' }}>{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
+                <p style={{ margin: '6px 0 16px', fontSize: 12 }}>{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
+                <button style={{ padding: '9px 20px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                  + {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -907,6 +935,7 @@ export default function ContactsPage() {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [filterSource, setFilterSource] = useState('all');
+  const [filterDept, setFilterDept] = useState('all');
   const [filterTemp, setFilterTemp] = useState('all');
   const [showBlacklisted, setShowBlacklisted] = useState(false);
   const [sortBy, setSortBy] = useState('last_activity');
@@ -1150,6 +1179,24 @@ export default function ContactsPage() {
         <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={sel}>
           <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
           {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} style={sel}>
+          <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
+          <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
+          <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
+          <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
+          <option value="supplier">{isRTL ? 'مورد' : 'Supplier'}</option>
+          <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
+          <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
+          <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
+        </select>
+        <select value={filterDept} onChange={e => setFilterDept(e.target.value)} style={sel}>
+          <option value="all">{isRTL ? 'كل الأقسام' : 'All Depts'}</option>
+          <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
+          <option value="hr">{isRTL ? 'HR' : 'HR'}</option>
+          <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
+          <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
+          <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
         </select>
         <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} style={sel}>
           <option value="all">{isRTL ? 'كل الدرجات' : 'All Temps'}</option>
