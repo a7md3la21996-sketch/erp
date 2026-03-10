@@ -76,7 +76,7 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove, onSelect }) {
   return (
     <div style={{ background: isDark?"#1a2234":"#fff", border:`1px solid ${isDark?"rgba(74,122,171,0.15)":"#e5e7eb"}`, borderRadius:14, padding:"16px", display:"flex", flexDirection:"column", gap:12, position:"relative", overflow:"hidden", boxShadow: isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)", transition:"box-shadow 0.2s, transform 0.2s", cursor:"pointer" }}
       onMouseEnter={e=>{e.currentTarget.style.boxShadow=isDark?"0 8px 24px rgba(0,0,0,0.4)":"0 8px 24px rgba(27,51,71,0.12)";e.currentTarget.style.transform="translateY(-2px)";}}
-      onMouseLeave={e=>{e.currentTarget.style.boxShadow=isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)";e.currentTarget.style.transform="none";}} onClick={()=>onSelect&&onSelect(opp)}>
+      onMouseLeave={e=>{e.currentTarget.style.boxShadow=isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)";e.currentTarget.style.transform="none";}}>
       <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:stage.color, borderRadius:"14px 14px 0 0" }} />
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, marginTop:4 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0 }}>
@@ -124,7 +124,10 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove, onSelect }) {
         <div style={{ fontSize:11, fontWeight:700, color:act.color }}>{act.text}</div>
       </div>
       {opp.notes && <div style={{ fontSize:11, color:isDark?"#8BA8C8":"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop:-4 }}>{opp.notes}</div>}
-          <div style={{ marginTop: 8 }} onClick={e=>e.stopPropagation()}>
+          <button onClick={e=>{e.stopPropagation();onSelect&&onSelect(opp);}} style={{ width:'100%', padding:'7px 0', borderRadius:8, border:`1px solid ${isDark?"rgba(74,122,171,0.3)":"#e5e7eb"}`, background:'transparent', color:'#4A7AAB', fontSize:12, fontWeight:600, cursor:'pointer', marginTop:4, fontFamily:'inherit' }}>
+            {isRTL?'عرض التفاصيل':'View Details'}
+          </button>
+          <div style={{ marginTop: 4 }} onClick={e=>e.stopPropagation()}>
             <FollowUpReminder entityType="opportunity" entityId={String(opp.id)} entityName={opp.contactName} compact={true} />
           </div>
     </div>
