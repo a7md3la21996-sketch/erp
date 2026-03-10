@@ -99,7 +99,7 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove, onSelect }) {
               <div style={{ padding:"6px 0", borderBottom:`1px solid ${isDark?"rgba(74,122,171,0.1)":"#f3f4f6"}` }}>
                 <div style={{ padding:"4px 12px", fontSize:10, fontWeight:600, color:isDark?"#8BA8C8":"#9ca3af" }}>{isRTL?"نقل الى":"Move to"}</div>
                 {STAGE_CONFIG.filter(s=>s.id!=="all"&&s.id!==opp.stage).slice(0,5).map(s=>(
-                  <button key={s.id} onClick={()=>{onMove(opp.id,s.id);setMenuOpen(false);}} style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"7px 12px", background:"none", border:"none", cursor:"pointer", fontSize:12, color:isDark?"#E2EAF4":"#E2EAF4", fontFamily:"inherit", textAlign:isRTL?"right":"left" }}>
+                  <button key={s.id} onClick={()=>{onMove(opp.id,s.id);setMenuOpen(false);}} style={{ display:"flex", alignItems:"center", gap:8, width:"100%", padding:"7px 12px", background:"none", border:"none", cursor:"pointer", fontSize:12, color:isDark?"#E2EAF4":"#1A2B3C", fontFamily:"inherit", textAlign:isRTL?"right":"left" }}>
                     <div style={{ width:8, height:8, borderRadius:"50%", background:s.color, flexShrink:0 }} />
                     {isRTL?s.label_ar:s.label_en}
                   </button>

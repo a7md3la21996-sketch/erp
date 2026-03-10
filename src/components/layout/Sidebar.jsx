@@ -26,11 +26,11 @@ export default function Sidebar({ collapsed, onToggle }) {
       <div style={{ height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid ' + (isDark ? '#2d3748' : '#e5e7eb'), padding: collapsed ? '8px' : '8px 16px', overflow: 'hidden' }}>
         {collapsed ? (
           <div style={{ width: 40, height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 }}>
-            <img src={isDark ? "/logo-icon-white.png" : "/logo-icon.png"} alt="P" style={{ width: 40, height: 40, objectFit: 'contain' }} />
+            <img src={isDark ? "/logo-icon-white.png" : "/logo-icon.png"} alt={isRTL ? 'بلاتفورم' : 'Platform'} style={{ width: 40, height: 40, objectFit: 'contain' }} />
           </div>
         ) : (
           <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }}>
-            <img src={isDark ? "/logo-white.png" : "/logo.png"} alt="Platform Real Estate" style={{ width: '100%', height: 'auto', maxHeight: 56, objectFit: 'contain' }} />
+            <img src={isDark ? "/logo-white.png" : "/logo.png"} alt={isRTL ? 'بلاتفورم للعقارات' : 'Platform Real Estate'} style={{ width: '100%', height: 'auto', maxHeight: 56, objectFit: 'contain' }} />
           </div>
         )}
       </div>

@@ -152,6 +152,8 @@ function PhoneCell({ phone, small = false }) {
 
 // ── Add Contact Modal ──────────────────────────────────────────────────────
 function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -199,16 +201,16 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
     setSaving(false);
   };
 
-  const inp = { background: '#0F1E2D', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, padding: '9px 12px', color: '#E2EAF4', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const inp = { background: isDark ? '#0F1E2D' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, padding: '9px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
   const sel = { ...inp, cursor: 'pointer' };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: '#1A2B3C', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>
+            <h2 style={{ margin: 0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 17, fontWeight: 700 }}>
               {isRTL ? ({
                 lead: 'إضافة ليد', cold: 'إضافة كولد كول', client: 'إضافة عميل',
                 supplier: 'إضافة مورد', developer: 'إضافة مطور عقاري',
@@ -219,12 +221,12 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 applicant: 'Add Applicant', partner: 'Add Partner'
               }[form.contact_type] || 'Add Contact')}
             </h2>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B' }}>
               {step === 1 ? (isRTL ? 'البيانات الأساسية' : 'Basic Info') : (isRTL ? 'البيانات الإضافية' : 'Additional Info')}
               {' '}<span style={{ color: 'rgba(139,168,200,0.5)' }}>({isRTL ? `${step} من 2` : `${step} of 2`})</span>
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', fontSize: 18 }}><X size={18} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: isDark ? '#8BA8C8' : '#64748B', cursor: 'pointer', fontSize: 18 }}><X size={18} /></button>
         </div>
         <div style={{ height: 3, background: 'rgba(74,122,171,0.15)', borderRadius: '0 0 2px 2px' }}>
           <div style={{ height: '100%', width: step === 1 ? '50%' : '100%', background: 'linear-gradient(90deg,#2B4C6F,#4A7AAB)', borderRadius: '0 0 2px 2px', transition: 'width 0.3s ease' }} />
@@ -235,7 +237,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
           {step === 1 ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <select style={{ ...sel, width: 110, flexShrink: 0 }} value={form.prefix} onChange={e => set('prefix', e.target.value)}>
                     <option value="">{isRTL ? 'اللقب' : 'Prefix'}</option>
@@ -249,21 +251,21 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
                 <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
                   placeholder="010xxxxxxxx" value={form.phone}
                   onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkDup(v).then(dup => setDupWarning(dup || null)).catch(() => {}); } }} />
-                {checking && <p style={{ fontSize: 11, color: '#8BA8C8', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
+                {checking && <p style={{ fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div style={{ marginTop: 8, padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 12 }}>
-                    <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span style={{ fontSize: 11, color: '#6B8DB5', fontFamily: 'monospace' }}>— ID: {dupWarning.id}</span></div>
+                    <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#6b7280', fontFamily: 'monospace' }}>— ID: {dupWarning.id}</span></div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={() => { onOpenOpportunity(dupWarning); onClose(); }}
                         style={{ flex: 1, padding: '8px 12px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                         ✨ {isRTL ? 'فتح فرصة جديدة لـ ' + dupWarning.full_name : 'New opportunity for ' + dupWarning.full_name}
                       </button>
                       <button onClick={onClose}
-                        style={{ padding: '8px 12px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 12, cursor: 'pointer' }}>
+                        style={{ padding: '8px 12px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, cursor: 'pointer' }}>
                         {isRTL ? 'إلغاء' : 'Cancel'}
                       </button>
                     </div>
@@ -271,7 +273,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 )}
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 8 }}>{isRTL ? 'أرقام إضافية' : 'Additional Phones'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 8 }}>{isRTL ? 'أرقام إضافية' : 'Additional Phones'}</label>
                 {extraPhones.map((ph, i) => (
                   <div key={i} style={{ marginBottom: 8 }}>
                     <div style={{ display: 'flex', gap: 6 }}>
@@ -292,7 +294,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                     </div>)}
                     {extraDups[i] && (
                       <div style={{ marginTop: 6, padding: '8px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12 }}>
-                        <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 4 }}>⚠️ {isRTL ? 'مسجل باسم' : 'Registered to'}: <strong>{extraDups[i].full_name}</strong> <span style={{ color: '#6B8DB5', fontFamily: 'monospace', fontSize: 11 }}>ID: {extraDups[i].id}</span></div>
+                        <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 4 }}>⚠️ {isRTL ? 'مسجل باسم' : 'Registered to'}: <strong>{extraDups[i].full_name}</strong> <span style={{ color: isDark ? '#6B8DB5' : '#6b7280', fontFamily: 'monospace', fontSize: 11 }}>ID: {extraDups[i].id}</span></div>
                         <button type="button" onClick={() => { onOpenOpportunity(extraDups[i]); onClose(); }}
                           style={{ width: '100%', padding: '6px 10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                           ✨ {isRTL ? 'فتح فرصة جديدة' : 'New Opportunity'}
@@ -302,16 +304,16 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                   </div>
                 ))}
                 <button type="button" onClick={() => { setExtraPhones([...extraPhones, '']); setExtraDups([...extraDups, null]); }}
-                  style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#6B8DB5', fontSize: 12, cursor: 'pointer' }}>
+                  style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 12, cursor: 'pointer' }}>
                   + {isRTL ? 'إضافة رقم' : 'Add Phone'}
                 </button>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
                 <input style={inp} type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'}</label>
                 <select style={sel} value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
                   <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
                   <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
@@ -323,7 +325,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'القسم' : 'Department'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'القسم' : 'Department'}</label>
                 <select style={sel} value={form.department} onChange={e => set('department', e.target.value)}>
                   <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
                   <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
@@ -334,22 +336,22 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
               </div>
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المصدر' : 'Source'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المصدر' : 'Source'}</label>
                 <select style={sel} value={form.source} onChange={e => set('source', e.target.value)}>
                   {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
                 <input style={inp} placeholder="مثال: حملة الشيخ زايد Q1" value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
               </>)}
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الشركة / جهة العمل' : 'Company'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الشركة / جهة العمل' : 'Company'}</label>
                 <input style={inp} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} value={form.company} onChange={e => set('company', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
                 <input style={inp} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} value={form.job_title} onChange={e => set('job_title', e.target.value)} />
               </div>
 
@@ -357,7 +359,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنس' : 'Gender'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنس' : 'Gender'}</label>
                 <select style={sel} value={form.gender} onChange={e => set('gender', e.target.value)}>
                   <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
                   <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
@@ -365,7 +367,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 </select>
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنسية' : 'Nationality'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنسية' : 'Nationality'}</label>
                 <select style={sel} value={form.nationality} onChange={e => set('nationality', e.target.value)}>
                   <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
                   <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
@@ -378,24 +380,24 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
                 <input style={inp} type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} />
               </div>
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
                 <input style={inp} type="number" placeholder="1500000" value={form.budget_min} onChange={e => set('budget_min', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية إلى' : 'Budget To (EGP)'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية إلى' : 'Budget To (EGP)'}</label>
                 <input style={inp} type="number" placeholder="3000000" value={form.budget_max} onChange={e => set('budget_max', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الموقع المفضل' : 'Preferred Location'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الموقع المفضل' : 'Preferred Location'}</label>
                 <input style={inp} placeholder="الشيخ زايد، التجمع..." value={form.preferred_location} onChange={e => set('preferred_location', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'نوع العقار' : 'Property Type'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'نوع العقار' : 'Property Type'}</label>
                 <select style={sel} value={form.interested_in_type} onChange={e => set('interested_in_type', e.target.value)}>
                   <option value="residential">{isRTL ? 'سكني' : 'Residential'}</option>
                   <option value="commercial">{isRTL ? 'تجاري' : 'Commercial'}</option>
@@ -403,7 +405,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 </select>
               </div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
                 <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
               </>)}
@@ -412,10 +414,10 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+        <div style={{ padding: '16px 24px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
           <div style={{ display: 'flex', gap: 10 }}>
-            {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#6B8DB5', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
+            {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 13, cursor: 'pointer' }}>{isRTL ? '← السابق' : '← Back'}</button>}
             {step === 1
               ? <button onClick={() => setStep(2)} disabled={!validatePhone(form.phone) || !!dupWarning} style={{ padding: '9px 22px', background: (validatePhone(form.phone) && !dupWarning) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: form.phone ? 'pointer' : 'not-allowed' }}>{isRTL ? 'التالي →' : 'Next →'}</button>
               : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</button>
@@ -429,29 +431,31 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
 
 // ── Blacklist Modal ────────────────────────────────────────────────────────
 function BlacklistModal({ contact, onClose, onConfirm }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   useEscClose(onClose);
   const [reason, setReason] = useState('');
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: '#1A2B3C', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
+      <div style={{ background: isDark ? '#1a2234' : '#ffffff', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
         <div style={{ textAlign: 'center', marginBottom: 16 }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
             <Ban size={24} color="#EF4444" />
           </div>
-          <h3 style={{ color: '#E2EAF4', margin: '0 0 6px', fontSize: 16 }}>{isRTL ? 'إضافة للقائمة السوداء' : 'Add to Blacklist'}</h3>
-          <p style={{ color: '#8BA8C8', fontSize: 13, margin: 0 }}>{isRTL ? 'سيتم منع هذا الرقم من الإضافة مستقبلاً' : 'This number will be blocked from future additions'}</p>
+          <h3 style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', margin: '0 0 6px', fontSize: 16 }}>{isRTL ? 'إضافة للقائمة السوداء' : 'Add to Blacklist'}</h3>
+          <p style={{ color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, margin: 0 }}>{isRTL ? 'سيتم منع هذا الرقم من الإضافة مستقبلاً' : 'This number will be blocked from future additions'}</p>
         </div>
-        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: '#E2EAF4' }}>
+        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: isDark ? '#E2EAF4' : '#1A2B3C' }}>
           {contact?.full_name} — {contact?.phone}
         </div>
-        <label style={{ display: 'block', color: '#8BA8C8', fontSize: 12, marginBottom: 8 }}>{isRTL ? 'سبب الإضافة' : 'Reason'} <span style={{ color: '#EF4444' }}>*</span></label>
+        <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 8 }}>{isRTL ? 'سبب الإضافة' : 'Reason'} <span style={{ color: '#EF4444' }}>*</span></label>
         <input type="text" value={reason} onChange={e => setReason(e.target.value)}
           placeholder="مثال: سلوك مسيء، احتيال، رقم خاطئ متكرر..."
-          style={{ width: '100%', background: '#0F1E2D', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '9px 12px', color: '#E2EAF4', fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 20 }} />
+          style={{ width: '100%', background: isDark ? '#0F1E2D' : '#ffffff', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '9px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 20 }} />
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
           <button onClick={() => { if (reason.trim()) { onConfirm(contact, reason); onClose(); } }}
             style={{ padding: '9px 18px', background: reason.trim() ? 'linear-gradient(135deg,#7f1d1d,#EF4444)' : 'rgba(239,68,68,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: reason.trim() ? 'pointer' : 'not-allowed' }}>
             {isRTL ? 'تأكيد الإضافة' : 'Confirm'}
@@ -464,6 +468,8 @@ function BlacklistModal({ contact, onClose, onConfirm }) {
 
 // ── Activity Form ─────────────────────────────────────────────────────────
 function ActivityForm({ contactId, onSave, onCancel }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
@@ -486,7 +492,7 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 
   const [form, setForm] = useState({ type: activityTypes[0]?.key || 'call', description: '', next_action: '', next_action_date: '' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const inp = { background: '#0F1E2D', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, padding: '8px 12px', color: '#E2EAF4', fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const inp = { background: isDark ? '#0F1E2D' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, padding: '8px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box' };
 
   // Auto timestamp
   const now = new Date().toLocaleString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -499,8 +505,8 @@ function ActivityForm({ contactId, onSave, onCancel }) {
     <div style={{ background: 'rgba(74,122,171,0.07)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 10, padding: 14, marginBottom: 12 }}>
       {/* Auto timestamp - read only */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '5px 10px', background: 'rgba(74,122,171,0.08)', borderRadius: 6 }}>
-        <Clock size={11} color="#6B8DB5" />
-        <span style={{ fontSize: 11, color: '#6B8DB5' }}>{now}</span>
+        <Clock size={11} color={isDark ? '#6B8DB5' : '#6b7280'} />
+        <span style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#6b7280' }}>{now}</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
         <select style={{ ...inp, cursor: 'pointer' }} value={form.type} onChange={e => set('type', e.target.value)}>
@@ -518,7 +524,7 @@ function ActivityForm({ contactId, onSave, onCancel }) {
         placeholder={isRTL ? 'الإجراء التالي (اختياري)...' : 'Next action (optional)...'}
         value={form.next_action} onChange={e => set('next_action', e.target.value)} />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 6, color: '#8BA8C8', fontSize: 12, cursor: 'pointer' }}>
+        <button onClick={onCancel} style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 6, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, cursor: 'pointer' }}>
           {isRTL ? 'إلغاء' : 'Cancel'}
         </button>
         <button onClick={handleSave} style={{ padding: '6px 16px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
@@ -532,6 +538,8 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 // ── Contact Drawer ─────────────────────────────────────────────────────────
 
 function EditContactModal({ contact, onClose, onSave }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -576,21 +584,21 @@ function EditContactModal({ contact, onClose, onSave }) {
     setSaving(false);
   };
 
-  const inp = { background: '#0F1E2D', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, padding: '9px 12px', color: '#E2EAF4', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const inp = { background: isDark ? '#0F1E2D' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, padding: '9px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
   const sel = { ...inp, cursor: 'pointer' };
-  const lbl = { fontSize: 12, color: '#8BA8C8', marginBottom: 4, display: 'block' };
+  const lbl = { fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B', marginBottom: 4, display: 'block' };
   const row = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 };
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: '#1A2B3C', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 16, width: '100%', maxWidth: 580, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 580, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
-        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ padding: '18px 24px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <div>
-            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>{isRTL ? 'تعديل بيانات جهة الاتصال' : 'Edit Contact'}</h2>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>{contact.full_name}</p>
+            <h2 style={{ margin: 0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 17, fontWeight: 700 }}>{isRTL ? 'تعديل بيانات جهة الاتصال' : 'Edit Contact'}</h2>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B' }}>{contact.full_name}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: isDark ? '#8BA8C8' : '#64748B', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
         </div>
 
         {/* Body */}
@@ -719,8 +727,8 @@ function EditContactModal({ contact, onClose, onSave }) {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
-          <button onClick={onClose} style={{ padding: '9px 20px', background: 'transparent', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+        <div style={{ padding: '14px 24px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+          <button onClick={onClose} style={{ padding: '9px 20px', background: 'transparent', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
           <button onClick={handleSave} disabled={saving} style={{ padding: '9px 24px', background: saving ? '#2B4C6F' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
             {saving ? (isRTL ? 'جارى الحفظ...' : 'Saving...') : (isRTL ? 'حفظ التعديلات' : 'Save Changes')}
           </button>
@@ -731,6 +739,8 @@ function EditContactModal({ contact, onClose, onSave }) {
 }
 
 function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportunity }) {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const [showEdit, setShowEdit] = useState(false);
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -795,10 +805,10 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); setShowEdit(false); }} />}
     <div style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', direction: isRTL ? 'rtl' : 'ltr' }}>
       <div onClick={onClose} style={{ flex: 1, background: 'rgba(0,0,0,0.45)' }} />
-      <div style={{ width: 430, background: '#0F1E2D', borderRight: '1px solid rgba(74,122,171,0.2)', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+      <div style={{ width: 430, background: isDark ? '#0F1E2D' : '#ffffff', borderRight: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
         {/* Drawer Header */}
-        <div style={{ padding: '20px 20px 0', background: 'linear-gradient(180deg, #1B3347 0%, #0F1E2D 100%)' }}>
+        <div style={{ padding: '20px 20px 0', background: isDark ? 'linear-gradient(180deg, #1B3347 0%, #0F1E2D 100%)' : 'linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <div style={{
@@ -810,8 +820,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 {contact.is_blacklisted ? <Ban size={18} /> : initials(contact.full_name)}
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : '#E2EAF4' }}>
-                  {contact.prefix ? <span style={{ color: '#6B8DB5', marginLeft: 4 }}>{contact.prefix}</span> : null}{contact.full_name || 'بدون اسم'}
+                <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : (isDark ? '#E2EAF4' : '#1A2B3C') }}>
+                  {contact.prefix ? <span style={{ color: isDark ? '#6B8DB5' : '#6b7280', marginLeft: 4 }}>{contact.prefix}</span> : null}{contact.full_name || 'بدون اسم'}
                 </div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Chip label={tp?.label} color={tp?.color} bg={tp?.bg} />
@@ -824,7 +834,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               <button onClick={() => setShowEdit(true)} style={{ background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 6, color: '#4A7AAB', cursor: 'pointer', padding: '4px 10px', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Pencil size={12} /> {isRTL ? 'تعديل' : 'Edit'}
               </button>
-              <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', color: isDark ? '#8BA8C8' : '#64748B', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
             </div>
           </div>
 
@@ -837,7 +847,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               <MessageCircle size={13} /> {isRTL ? 'واتساب' : 'WhatsApp'}
             </a>
             {contact.email && (
-              <a href={`mailto:${contact.email}`} style={{ flex: 1, padding: '8px 0', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#6B8DB5', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <a href={`mailto:${contact.email}`} style={{ flex: 1, padding: '8px 0', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
                 <Mail size={13} /> {isRTL ? 'إيميل' : 'Email'}
               </a>
             )}
@@ -849,9 +859,9 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid rgba(74,122,171,0.15)' }}>
+          <div style={{ display: 'flex', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}` }}>
             {tabs.map(([k, v]) => (
-              <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: '9px 0', background: 'none', border: 'none', borderBottom: tab === k ? '2px solid #4A7AAB' : '2px solid transparent', color: tab === k ? '#4A7AAB' : '#8BA8C8', fontSize: 12, fontWeight: tab === k ? 700 : 400, cursor: 'pointer' }}>{v}</button>
+              <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: '9px 0', background: 'none', border: 'none', borderBottom: tab === k ? '2px solid #4A7AAB' : '2px solid transparent', color: tab === k ? '#4A7AAB' : (isDark ? '#8BA8C8' : '#64748B'), fontSize: 12, fontWeight: tab === k ? 700 : 400, cursor: 'pointer' }}>{v}</button>
             ))}
           </div>
         </div>
@@ -865,11 +875,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               {/* Score + Temp Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
                 <div style={{ background: 'rgba(74,122,171,0.07)', borderRadius: 10, padding: 12, border: '1px solid rgba(74,122,171,0.12)' }}>
-                  <div style={{ color: '#8BA8C8', fontSize: 11, marginBottom: 8 }}>Lead Score</div>
+                  <div style={{ color: isDark ? '#8BA8C8' : '#64748B', fontSize: 11, marginBottom: 8 }}>Lead Score</div>
                   <ScorePill score={contact.lead_score} />
                 </div>
                 <div style={{ background: t?.bg, borderRadius: 10, padding: 12, border: `1px solid ${t?.color}30` }}>
-                  <div style={{ color: '#8BA8C8', fontSize: 11, marginBottom: 4 }}>الحرارة</div>
+                  <div style={{ color: isDark ? '#8BA8C8' : '#64748B', fontSize: 11, marginBottom: 4 }}>الحرارة</div>
                   {t?.Icon && <div style={{ display:'flex', alignItems:'center', gap:6 }}><t.Icon size={14} color={t.color} /><span style={{ color: t?.color, fontWeight: 700, fontSize: 14 }}>{t?.labelAr}</span></div>}
                 </div>
               </div>
@@ -892,20 +902,20 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 { label: isRTL ? 'تاريخ الميلاد' : 'Birth Date', val: contact.birth_date || '—' },
               ].map(r => (
               <div key={r.label} style={rowStyle}>
-                <span style={{ color: '#8BA8C8' }}>{r.label}</span>
-                <span style={{ color: '#E2EAF4', fontWeight: 500, maxWidth: '55%', textAlign: 'left' }}>{r.val}</span>
+                <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>{r.label}</span>
+                <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontWeight: 500, maxWidth: '55%', textAlign: 'left' }}>{r.val}</span>
               </div>
               ))}
 
               {contact.stage && (
                 <div style={rowStyle}>
-                  <span style={{ color: '#8BA8C8' }}>المرحلة</span>
+                  <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>المرحلة</span>
                   <Chip label={STAGE_LABELS[contact.stage]} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                 </div>
               )}
               {contact.cold_status && (
                 <div style={rowStyle}>
-                  <span style={{ color: '#8BA8C8' }}>حالة الكولد</span>
+                  <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>حالة الكولد</span>
                   <Chip label={COLD_LABELS[contact.cold_status]} color="#6B8DB5" bg="rgba(107,141,181,0.1)" />
                 </div>
               )}
@@ -928,9 +938,9 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
           {/* INVOICES TAB */}
           {tab === 'invoices' && (
             <div>
-              <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
+              <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
                 <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.4 }}>🧾</div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#E2EAF4' }}>{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: isDark ? '#E2EAF4' : '#1A2B3C' }}>{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
                 <p style={{ margin: '6px 0 16px', fontSize: 12 }}>{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
                 <button style={{ padding: '9px 20px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   + {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
@@ -950,23 +960,23 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
 
               {loadingActs ? (
-                <div style={{ textAlign: 'center', padding: 30, color: '#8BA8C8', fontSize: 13 }}>جاري التحميل...</div>
+                <div style={{ textAlign: 'center', padding: 30, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13 }}>جاري التحميل...</div>
               ) : activities.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
+                <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
                   <Clock size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
                   <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد أنشطة بعد' : 'No activities yet'}</p>
                 </div>
               ) : activities.map(act => (
                 <div key={act.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ color: '#E2EAF4', fontSize: 13, fontWeight: 600 }}>{act.description}</span>
+                    <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, fontWeight: 600 }}>{act.description}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#8BA8C8' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B' }}>
                     <span>{act.users?.full_name_ar || 'مجهول'}</span>
                     <span>{act.created_at?.slice(0, 10)}</span>
                   </div>
                   {act.next_action && (
-                    <div style={{ marginTop: 8, padding: '5px 10px', background: 'rgba(74,122,171,0.08)', borderRadius: 6, fontSize: 11, color: '#6B8DB5' }}>
+                    <div style={{ marginTop: 8, padding: '5px 10px', background: 'rgba(74,122,171,0.08)', borderRadius: 6, fontSize: 11, color: isDark ? '#6B8DB5' : '#6b7280' }}>
                       › {act.next_action}{act.next_action_date ? ` — ${act.next_action_date}` : ''}
                     </div>
                   )}
@@ -988,19 +998,19 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <input value={newTask.title} onChange={e => setNewTask(f => ({...f, title: e.target.value}))}
                       placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
-                      style={{ padding: '7px 10px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: 'rgba(15,30,45,0.6)', color: '#E2EAF4', fontSize: 12, outline: 'none', direction: isRTL ? 'rtl' : 'ltr' }} />
+                      style={{ padding: '7px 10px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: isDark ? 'rgba(15,30,45,0.6)' : '#f8fafc', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 12, outline: 'none', direction: isRTL ? 'rtl' : 'ltr' }} />
                     <div style={{ display: 'flex', gap: 6 }}>
                       <select value={newTask.type} onChange={e => setNewTask(f => ({...f, type: e.target.value}))}
-                        style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: 'rgba(15,30,45,0.6)', color: '#E2EAF4', fontSize: 11, outline: 'none' }}>
+                        style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: isDark ? 'rgba(15,30,45,0.6)' : '#f8fafc', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 11, outline: 'none' }}>
                         {Object.entries(TASK_TYPES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
                       </select>
                       <select value={newTask.priority} onChange={e => setNewTask(f => ({...f, priority: e.target.value}))}
-                        style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: 'rgba(15,30,45,0.6)', color: '#E2EAF4', fontSize: 11, outline: 'none' }}>
+                        style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: isDark ? 'rgba(15,30,45,0.6)' : '#f8fafc', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 11, outline: 'none' }}>
                         {Object.entries(TASK_PRIORITIES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
                       </select>
                     </div>
                     <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
-                      style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: 'rgba(15,30,45,0.6)', color: '#E2EAF4', fontSize: 11, outline: 'none' }} />
+                      style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: isDark ? 'rgba(15,30,45,0.6)' : '#f8fafc', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 11, outline: 'none' }} />
                     <button onClick={async () => {
                       if (!newTask.title.trim() || !newTask.due_date) return;
                       setSavingTask(true);
@@ -1019,7 +1029,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               )}
 
               {tasks.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
+                <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
                   <CheckSquare size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
                   <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد مهام مرتبطة' : 'No tasks linked'}</p>
                 </div>
@@ -1033,7 +1043,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                   <div key={task.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: '#E2EAF4', marginBottom: 4, textDecoration: task.status === 'done' ? 'line-through' : 'none', opacity: task.status === 'done' ? 0.6 : 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#E2EAF4' : '#1A2B3C', marginBottom: 4, textDecoration: task.status === 'done' ? 'line-through' : 'none', opacity: task.status === 'done' ? 0.6 : 1 }}>
                           {task.title}
                         </div>
                         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -1043,7 +1053,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                           <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 5, background: (st?.color || '#4A7AAB') + '22', color: st?.color || '#4A7AAB' }}>
                             {isRTL ? st?.ar : st?.en}
                           </span>
-                          <span style={{ fontSize: 10, color: overdue ? '#EF4444' : '#8BA8C8', display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <span style={{ fontSize: 10, color: overdue ? '#EF4444' : (isDark ? '#8BA8C8' : '#64748B'), display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Clock size={9} />
                             {due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
@@ -1064,10 +1074,10 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               </button>
               {showOppModal && (
                 <div style={{ position:'fixed', inset:0, zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'rgba(0,0,0,0.6)' }}>
-                  <div style={{ background:'#1a2234', borderRadius:14, padding:24, width:'100%', maxWidth:420, border:'1px solid rgba(74,122,171,0.2)' }}>
+                  <div style={{ background: isDark ? '#1a2234' : '#ffffff', borderRadius:14, padding:24, width:'100%', maxWidth:420, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}` }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-                      <h3 style={{ margin:0, color:'#E2EAF4', fontSize:15, fontWeight:700 }}>{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
-                      <button onClick={()=>setShowOppModal(false)} style={{ background:'none', border:'none', color:'#8BA8C8', cursor:'pointer', fontSize:18 }}>✕</button>
+                      <h3 style={{ margin:0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:15, fontWeight:700 }}>{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
+                      <button onClick={()=>setShowOppModal(false)} style={{ background:'none', border:'none', color: isDark ? '#8BA8C8' : '#64748B', cursor:'pointer', fontSize:18 }}>✕</button>
                     </div>
                     <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                       {[
@@ -1076,9 +1086,9 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                         { key:'notes',   label_ar:'ملاحظات', label_en:'Notes', type:'text' },
                       ].map(f => (
                         <div key={f.key}>
-                          <label style={{ fontSize:12, color:'#8BA8C8', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
+                          <label style={{ fontSize:12, color: isDark ? '#8BA8C8' : '#64748B', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
                           <input type={f.type} value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid rgba(74,122,171,0.2)', background:'#0F1E2D', color:'#E2EAF4', fontSize:13, outline:'none', boxSizing:'border-box', textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr', fontFamily:'inherit' }} />
+                            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}`, background: isDark ? '#0F1E2D' : '#ffffff', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:13, outline:'none', boxSizing:'border-box', textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr', fontFamily:'inherit' }} />
                         </div>
                       ))}
                       {[
@@ -1087,9 +1097,9 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                         { key:'priority', label_ar:'الأولوية', label_en:'Priority', options:[{v:'urgent',ar:'عاجل'},{v:'high',ar:'عالي'},{v:'medium',ar:'متوسط'},{v:'low',ar:'منخفض'}] },
                       ].map(f => (
                         <div key={f.key}>
-                          <label style={{ fontSize:12, color:'#8BA8C8', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
+                          <label style={{ fontSize:12, color: isDark ? '#8BA8C8' : '#64748B', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
                           <select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:'1px solid rgba(74,122,171,0.2)', background:'#0F1E2D', color:'#E2EAF4', fontSize:13, outline:'none', cursor:'pointer', boxSizing:'border-box', fontFamily:'inherit' }}>
+                            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}`, background: isDark ? '#0F1E2D' : '#ffffff', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:13, outline:'none', cursor:'pointer', boxSizing:'border-box', fontFamily:'inherit' }}>
                             {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.v}</option>)}
                           </select>
                         </div>
@@ -1100,7 +1110,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                         style={{ flex:1, padding:'10px 0', borderRadius:8, background:'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color:'#fff', border:'none', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                         {isRTL?'حفظ':'Save'}
                       </button>
-                      <button onClick={()=>setShowOppModal(false)} style={{ padding:'10px 16px', borderRadius:8, background:'transparent', color:'#8BA8C8', border:'1px solid rgba(74,122,171,0.2)', fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                      <button onClick={()=>setShowOppModal(false)} style={{ padding:'10px 16px', borderRadius:8, background:'transparent', color: isDark ? '#8BA8C8' : '#64748B', border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}`, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
                         {isRTL?'إلغاء':'Cancel'}
                       </button>
                     </div>
@@ -1108,17 +1118,17 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 </div>
               )}
               {opportunities.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#8BA8C8' }}>
+                <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
                   <Star size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
                   <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد فرص مرتبطة' : 'No opportunities linked'}</p>
                 </div>
               ) : opportunities.map(opp => (
                 <div key={opp.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ color: '#E2EAF4', fontSize: 13, fontWeight: 600 }}>فرصة #{opp.id.slice(-4)}</span>
+                    <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, fontWeight: 600 }}>فرصة #{opp.id.slice(-4)}</span>
                     <Chip label={STAGE_LABELS[opp.stage] || opp.stage} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                   </div>
-                  <div style={{ fontSize: 11, color: '#8BA8C8', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div style={{ fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B', display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {opp.projects?.name_ar && <span>{opp.projects.name_ar}</span>}
                     <span>{opp.users?.full_name_ar || '—'}</span>
                     {opp.next_follow_up && <span>متابعة: {opp.next_follow_up}</span>}

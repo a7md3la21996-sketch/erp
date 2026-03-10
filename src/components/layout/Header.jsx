@@ -40,9 +40,9 @@ export default function Header() {
           <Globe size={18} />{i18n.language === 'ar' ? 'EN' : 'عربي'}
         </button>
         <button onClick={toggleTheme} style={iconBtn}>{isDark ? <Sun size={18} /> : <Moon size={18} />}</button>
-        <button style={{ ...iconBtn, position: 'relative' }}>
+        <button aria-label={isRTL ? 'الإشعارات' : 'Notifications'} style={{ ...iconBtn, position: 'relative' }}>
           <Bell size={18} />
-          <span style={{ position: 'absolute', top: 6, right: 6, width: 7, height: 7, background: '#EF4444', borderRadius: '50%' }} />
+          <span style={{ position: 'absolute', top: 6, [isRTL ? 'left' : 'right']: 6, width: 7, height: 7, background: '#EF4444', borderRadius: '50%' }} />
         </button>
         <div style={{ width: 1, height: 24, margin: '0 4px', background: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb' }} />
         <div ref={ref} style={{ position: 'relative' }}>
