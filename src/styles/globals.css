@@ -19,7 +19,7 @@
 
 html { font-family: 'Cairo', 'Plus Jakarta Sans', sans-serif; }
 body { margin: 0; background: #f9fafb; color: #111827; }
-.dark body { background: #030712; color: #f3f4f6; }
+html.dark body, body.dark { background: #030712; color: #f3f4f6; }
 
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }

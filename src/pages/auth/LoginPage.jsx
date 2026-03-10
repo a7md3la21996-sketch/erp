@@ -69,7 +69,7 @@ export default function LoginPage() {
           <p style={{ color: '#6b7280', margin: '0 0 32px' }}>{t('auth.loginSubtitle')}</p>
 
           {error && (
-            <div style={{ padding: 12, borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 14, marginBottom: 24 }}>
+            <div style={{ padding: 12, borderRadius: 8, background: theme === 'dark' ? 'rgba(239,68,68,0.1)' : '#fef2f2', border: `1px solid ${theme === 'dark' ? 'rgba(239,68,68,0.3)' : '#fecaca'}`, color: '#dc2626', fontSize: 14, marginBottom: 24 }}>
               {error}
             </div>
           )}
