@@ -736,23 +736,25 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
   const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'new', temperature:'warm', priority:'medium', agent:'', notes:'' });
 
   useEffect(() => {
+    let cancelled = false;
     if (tab === 'activities') {
       setLoadingActs(true);
       fetchContactActivities(contact.id)
-        .then(data => setActivities(data))
-        .catch(() => setActivities([]))
-        .finally(() => setLoadingActs(false));
+        .then(data => { if (!cancelled) setActivities(data); })
+        .catch(() => { if (!cancelled) { setActivities([]); toast.error(isRTL ? 'تعذر تحميل النشاطات' : 'Failed to load activities'); } })
+        .finally(() => { if (!cancelled) setLoadingActs(false); });
     }
     if (tab === 'tasks') {
       fetchTasks({ contactId: contact.id })
-        .then(data => setTasks(data))
-        .catch(() => setTasks([]));
+        .then(data => { if (!cancelled) setTasks(data); })
+        .catch(() => { if (!cancelled) setTasks([]); });
     }
     if (tab === 'opportunities') {
       fetchContactOpportunities(contact.id)
-        .then(data => setOpportunities(data))
-        .catch(() => setOpportunities([]));
+        .then(data => { if (!cancelled) setOpportunities(data); })
+        .catch(() => { if (!cancelled) setOpportunities([]); });
     }
+    return () => { cancelled = true; };
   }, [tab, contact.id]);
 
   const handleSaveActivity = async (form) => {

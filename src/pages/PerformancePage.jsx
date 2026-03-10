@@ -39,8 +39,8 @@ const EMP_COMP_SCORES = Object.fromEntries(
   MOCK_EMPLOYEES.map(emp => [emp.id, calcWeightedScore(genCompScores(emp.id))])
 );
 
-const YEAR = 2026;
-const MONTH = 3;
+const YEAR = new Date().getFullYear();
+const MONTH = new Date().getMonth() + 1;
 
 // KPI definitions per department with frequency
 const DEPT_KPIS = {
@@ -74,8 +74,8 @@ const FREQ_CONFIG = {
 // Build employee performance data
 function buildEmpData(emp, attendance) {
   const att = attendance.filter(r => r.employee_id === emp.id);
-  const presentDays = att.filter(r => r.status === 'present' || r.status === 'late').length;
-  const lateDays = att.filter(r => r.status === 'late').length;
+  const presentDays = att.filter(r => r.check_in && !r.absent).length;
+  const lateDays = att.filter(r => r.check_in && !r.absent).filter(r => { const [h, m] = (r.check_in || '').split(':').map(Number); return h > 10 || (h === 10 && m > 30); }).length;
   const crm = MOCK_CRM_ACTIVITY[emp.id] || {};
   const kpis = DEPT_KPIS[emp.department] || DEPT_KPIS.hr;
 

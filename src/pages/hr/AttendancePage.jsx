@@ -23,11 +23,10 @@ function KpiCard({ icon: Icon, label, value, color='#4A7AAB' }) {
 
 function AttendanceRow({ emp, attendance, isRTL, ds }) {
   const [hov, setHov] = useState(false);
-  const raw = attendance[emp.employee_id];
-  const recs = Array.isArray(raw) ? raw : Object.values(raw || {});
-  const p = recs.filter(r => r.status === 'present').length;
-  const a = recs.filter(r => r.status === 'absent').length;
-  const l = recs.filter(r => r.status === 'late').length;
+  const recs = attendance[emp.employee_id] || [];
+  const p = recs.filter(r => r.check_in && !r.absent).length;
+  const a = recs.filter(r => r.absent).length;
+  const l = recs.filter(r => r.check_in && !r.absent).filter(r => { const [h, m] = (r.check_in || '').split(':').map(Number); return h > 10 || (h === 10 && m > 30); }).length;
   const total = recs.length || 1;
   const rate = Math.round((p / total) * 100);
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
@@ -67,23 +66,29 @@ function AttendanceRow({ emp, attendance, isRTL, ds }) {
 export default function AttendancePage() {
   const { i18n } = useTranslation(); const ds = useDS();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [month, setMonth] = useState(3);
-  const [year] = useState(2026);
-  const attendance = useMemo(() => getAttendanceForMonth(year, month), [year, month]);
+  const [month, setMonth] = useState(() => new Date().getMonth() + 1);
+  const [year] = useState(() => new Date().getFullYear());
+  const allRecords = useMemo(() => getAttendanceForMonth(year, month), [year, month]);
+  const attendance = useMemo(() => {
+    const grouped = {};
+    allRecords.forEach(r => {
+      if (!grouped[r.employee_id]) grouped[r.employee_id] = [];
+      grouped[r.employee_id].push(r);
+    });
+    return grouped;
+  }, [allRecords]);
   const stats = useMemo(() => {
     let present=0, absent=0, late=0, leave=0;
-    Object.values(attendance).forEach(recs => {
-      const arr = Array.isArray(recs) ? recs : Object.values(recs || {});
-      arr.forEach(r => {
-        if (!r || !r.status) return;
-        if (r.status==='present') present++;
-        else if (r.status==='absent') absent++;
-        else if (r.status==='late') late++;
-        else if (r.status==='leave') leave++;
-      });
+    allRecords.forEach(r => {
+      if (r.absent) { absent++; return; }
+      if (r.check_in) {
+        const [h, m] = r.check_in.split(':').map(Number);
+        if (h > 10 || (h === 10 && m > 30)) late++;
+        else present++;
+      }
     });
     return { present, absent, late, leave };
-  }, [attendance]);
+  }, [allRecords]);
   const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
   const th = { fontSize:11, fontWeight:700, color:ds.muted, padding:'10px 14px', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.05em' };
   const td = { fontSize:13, color:ds.text, padding:'12px 14px', verticalAlign:'middle' };

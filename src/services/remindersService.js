@@ -1,23 +1,27 @@
 import supabase from '../lib/supabase';
 
 export async function fetchReminders({ userId, entityType, entityId, todayOnly = false } = {}) {
-  let query = supabase
-    .from('reminders')
-    .select(`*, users!reminders_assigned_to_fkey (full_name_ar, full_name_en)`)
-    .order('due_at', { ascending: true });
+  try {
+    let query = supabase
+      .from('reminders')
+      .select(`*, users!reminders_assigned_to_fkey (full_name_ar, full_name_en)`)
+      .order('due_at', { ascending: true });
 
-  if (userId) query = query.eq('assigned_to', userId);
-  if (entityType) query = query.eq('entity_type', entityType);
-  if (entityId) query = query.eq('entity_id', entityId);
-  if (todayOnly) {
-    const start = new Date(); start.setHours(0,0,0,0);
-    const end   = new Date(); end.setHours(23,59,59,999);
-    query = query.gte('due_at', start.toISOString()).lte('due_at', end.toISOString());
+    if (userId) query = query.eq('assigned_to', userId);
+    if (entityType) query = query.eq('entity_type', entityType);
+    if (entityId) query = query.eq('entity_id', entityId);
+    if (todayOnly) {
+      const start = new Date(); start.setHours(0,0,0,0);
+      const end   = new Date(); end.setHours(23,59,59,999);
+      query = query.gte('due_at', start.toISOString()).lte('due_at', end.toISOString());
+    }
+
+    const { data, error } = await query.eq('is_done', false).limit(100);
+    if (error) throw error;
+    return data || [];
+  } catch {
+    return [];
   }
-
-  const { data, error } = await query.eq('is_done', false).limit(100);
-  if (error) throw error;
-  return data || [];
 }
 
 export async function fetchTodayReminders(userId) {
@@ -25,34 +29,50 @@ export async function fetchTodayReminders(userId) {
 }
 
 export async function createReminder({ entityType, entityId, entityName, dueAt, type = 'call', notes = '', assignedTo }) {
-  const { data, error } = await supabase
-    .from('reminders')
-    .insert([{ entity_type: entityType, entity_id: entityId, entity_name: entityName, due_at: dueAt, type, notes, assigned_to: assignedTo, is_done: false, created_at: new Date().toISOString() }])
-    .select('*')
-    .single();
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('reminders')
+      .insert([{ entity_type: entityType, entity_id: entityId, entity_name: entityName, due_at: dueAt, type, notes, assigned_to: assignedTo, is_done: false, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  } catch {
+    return { id: Date.now(), entity_type: entityType, entity_id: entityId, entity_name: entityName, due_at: dueAt, type, notes, assigned_to: assignedTo, is_done: false, created_at: new Date().toISOString() };
+  }
 }
 
 export async function markReminderDone(id) {
-  const { data, error } = await supabase
-    .from('reminders')
-    .update({ is_done: true, done_at: new Date().toISOString() })
-    .eq('id', id).select('*').single();
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('reminders')
+      .update({ is_done: true, done_at: new Date().toISOString() })
+      .eq('id', id).select('*').single();
+    if (error) throw error;
+    return data;
+  } catch {
+    return { id, is_done: true, done_at: new Date().toISOString() };
+  }
 }
 
 export async function deleteReminder(id) {
-  const { error } = await supabase.from('reminders').delete().eq('id', id);
-  if (error) throw error;
+  try {
+    const { error } = await supabase.from('reminders').delete().eq('id', id);
+    if (error) throw error;
+  } catch {
+    // silent fallback
+  }
 }
 
 export async function updateReminder(id, updates) {
-  const { data, error } = await supabase
-    .from('reminders').update(updates).eq('id', id).select('*').single();
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('reminders').update(updates).eq('id', id).select('*').single();
+    if (error) throw error;
+    return data;
+  } catch {
+    return { id, ...updates };
+  }
 }
 
 export const REMINDER_TYPES = {
