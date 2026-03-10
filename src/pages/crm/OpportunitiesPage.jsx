@@ -61,7 +61,7 @@ const IFlame   = (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="curr
 const IGrid    = (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
 const IBuilding= (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>;
 
-function OppCard({ opp, isDark, isRTL, onDelete, onMove }) {
+function OppCard({ opp, isDark, isRTL, onDelete, onMove, onSelect }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const temp  = TEMP_CONFIG[opp.temperature]  || TEMP_CONFIG.cold;
@@ -76,7 +76,7 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove }) {
   return (
     <div style={{ background: isDark?"#1a2234":"#fff", border:`1px solid ${isDark?"rgba(74,122,171,0.15)":"#e5e7eb"}`, borderRadius:14, padding:"16px", display:"flex", flexDirection:"column", gap:12, position:"relative", overflow:"hidden", boxShadow: isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)", transition:"box-shadow 0.2s, transform 0.2s", cursor:"pointer" }}
       onMouseEnter={e=>{e.currentTarget.style.boxShadow=isDark?"0 8px 24px rgba(0,0,0,0.4)":"0 8px 24px rgba(27,51,71,0.12)";e.currentTarget.style.transform="translateY(-2px)";}}
-      onMouseLeave={e=>{e.currentTarget.style.boxShadow=isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)";e.currentTarget.style.transform="none";}}>
+      onMouseLeave={e=>{e.currentTarget.style.boxShadow=isDark?"0 2px 8px rgba(0,0,0,0.3)":"0 1px 4px rgba(0,0,0,0.06)";e.currentTarget.style.transform="none";}} onClick={()=>onSelect&&onSelect(opp)}>
       <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:stage.color, borderRadius:"14px 14px 0 0" }} />
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:8, marginTop:4 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, flex:1, minWidth:0 }}>
@@ -180,6 +180,7 @@ export default function OpportunitiesPage() {
   const [filterAgent, setFilterAgent] = useState("all");
   const [filterTemp, setFilterTemp] = useState("all");
   const [showModal, setShowModal]   = useState(false);
+  const [selectedOpp, setSelectedOpp] = useState(null);
   const c = { bg:isDark?"#152232":"#f9fafb", cardBg:isDark?"#1a2234":"#fff", border:isDark?"rgba(74,122,171,0.2)":"#e5e7eb", text:isDark?"#E2EAF4":"#111827", textMuted:isDark?"#8BA8C8":"#6b7280", inputBg:isDark?"#0F1E2D":"#fff" };
   const totalBudget = opps.reduce((s,o)=>s+(o.budget||0),0);
   const wonCount    = opps.filter(o=>o.stage==="closed_won").length;
@@ -195,7 +196,7 @@ export default function OpportunitiesPage() {
   const handleDelete = (id) => setOpps(p=>p.filter(o=>o.id!==id));
   const handleSave   = (opp) => { setOpps(p=>[...p,opp]); setShowModal(false); };
   const sel = { padding:"8px 12px", borderRadius:8, fontSize:13, border:`1px solid ${c.border}`, background:c.inputBg, color:c.text, fontFamily:"inherit", outline:"none", cursor:"pointer" };
-  return (
+  return (<>
     <div style={{ minHeight:"100vh", background:c.bg, fontFamily:"Cairo,Tajawal,sans-serif", direction:isRTL?"rtl":"ltr", padding:"20px 20px 40px" }}>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
@@ -248,14 +249,86 @@ export default function OpportunitiesPage() {
                 <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
                   <TrendingUp size={24} color='#4A7AAB' />
                 </div>
-                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد فرص بيع':'No Opportunities Found'}</p>
-                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي فرص بيع بعد':'No sales opportunities have been added yet'}</p>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:c.text }}>{isRTL?'لا توجد فرص بيع':'No Opportunities Found'}</p>
+                <p style={{ margin:0, fontSize:13, color:c.textMuted }}>{isRTL?'لم يتم إضافة أي فرص بيع بعد':'No sales opportunities have been added yet'}</p>
               </div>)
         : <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))", gap:16 }}>
-            {filtered.map(opp=><OppCard key={opp.id} opp={opp} isDark={isDark} isRTL={isRTL} onDelete={handleDelete} onMove={handleMove} />)}
+            {filtered.map(opp=><OppCard key={opp.id} opp={opp} isDark={isDark} isRTL={isRTL} onDelete={handleDelete} onMove={handleMove} onSelect={setSelectedOpp} />)}
           </div>
       }
       {showModal&&<AddModal isDark={isDark} isRTL={isRTL} onClose={()=>setShowModal(false)} onSave={handleSave} />}
-</div>
-  );
+    </div>
+
+      {selectedOpp && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, display:'flex', flexDirection:'row-reverse' }} onClick={e => { if(e.target===e.currentTarget) setSelectedOpp(null); }}>
+          <div style={{ width:'100%', maxWidth:460, height:'100%', background:isDark?'#1a2234':'#fff', boxShadow:'-8px 0 40px rgba(0,0,0,0.2)', display:'flex', flexDirection:'column', overflowY:'auto', animation:'slideIn 0.25s ease' }}>
+            {/* Header */}
+            <div style={{ padding:'20px 24px', borderBottom:`1px solid ${c.border}`, display:'flex', alignItems:'center', justifyContent:'space-between', flexDirection:isRTL?'row-reverse':'row', background:isDark?'#152232':'#F8FAFC' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, flexDirection:isRTL?'row-reverse':'row' }}>
+                <div style={{ width:44, height:44, borderRadius:'50%', background:avatarColor(selectedOpp.contactId), display:'flex', alignItems:'center', justifyContent:'center', fontSize:15, fontWeight:700, color:'#fff' }}>{initials(selectedOpp.contactName)}</div>
+                <div style={{ textAlign:isRTL?'right':'left' }}>
+                  <p style={{ margin:0, fontSize:16, fontWeight:700, color:isDark?'#E2EAF4':'#1B3347' }}>{selectedOpp.contactName}</p>
+                  <div style={{ display:'flex', alignItems:'center', gap:5, flexDirection:isRTL?'row-reverse':'row' }}>
+                    <div style={{ width:7, height:7, borderRadius:'50%', background:(STAGE_CONFIG.find(s=>s.id===selectedOpp.stage)||STAGE_CONFIG[1]).color }} />
+                    <span style={{ fontSize:12, color:(STAGE_CONFIG.find(s=>s.id===selectedOpp.stage)||STAGE_CONFIG[1]).color, fontWeight:600 }}>{isRTL?(STAGE_CONFIG.find(s=>s.id===selectedOpp.stage)||STAGE_CONFIG[1]).label_ar:(STAGE_CONFIG.find(s=>s.id===selectedOpp.stage)||STAGE_CONFIG[1]).label_en}</span>
+                  </div>
+                </div>
+              </div>
+              <button onClick={()=>setSelectedOpp(null)} style={{ background:'none', border:'none', cursor:'pointer', color:isDark?'#8BA8C8':'#6b7280', fontSize:20, lineHeight:1, padding:4 }}>✕</button>
+            </div>
+
+            {/* Details */}
+            <div style={{ padding:'20px 24px', display:'flex', flexDirection:'column', gap:16 }}>
+              {/* KPIs */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                {[
+                  { label:isRTL?'الميزانية':'Budget', value:fmtBudget(selectedOpp.budget)+' '+(isRTL?'ج':'EGP'), color:'#4A7AAB' },
+                  { label:isRTL?'الحرارة':'Temperature', value:isRTL?(TEMP_CONFIG[selectedOpp.temperature]||TEMP_CONFIG.cold).label_ar:(TEMP_CONFIG[selectedOpp.temperature]||TEMP_CONFIG.cold).label_en, color:(TEMP_CONFIG[selectedOpp.temperature]||TEMP_CONFIG.cold).color },
+                  { label:isRTL?'الأولوية':'Priority', value:isRTL?(PRIORITY_CONFIG[selectedOpp.priority]||PRIORITY_CONFIG.medium).label_ar:(PRIORITY_CONFIG[selectedOpp.priority]||PRIORITY_CONFIG.medium).label_en, color:(PRIORITY_CONFIG[selectedOpp.priority]||PRIORITY_CONFIG.medium).color },
+                  { label:isRTL?'المسؤول':'Agent', value:selectedOpp.agent||'-', color:isDark?'#E2EAF4':'#1B3347' },
+                ].map((item,i) => (
+                  <div key={i} style={{ background:isDark?'rgba(74,122,171,0.08)':'#F0F4F8', borderRadius:10, padding:'12px 14px' }}>
+                    <p style={{ margin:'0 0 4px', fontSize:11, color:isDark?'#8BA8C8':'#6b7280', textAlign:isRTL?'right':'left' }}>{item.label}</p>
+                    <p style={{ margin:0, fontSize:14, fontWeight:700, color:item.color, textAlign:isRTL?'right':'left' }}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Project */}
+              {selectedOpp.project && (
+                <div style={{ background:isDark?'rgba(74,122,171,0.08)':'#F0F4F8', borderRadius:10, padding:'12px 14px' }}>
+                  <p style={{ margin:'0 0 4px', fontSize:11, color:isDark?'#8BA8C8':'#6b7280', textAlign:isRTL?'right':'left' }}>{isRTL?'المشروع':'Project'}</p>
+                  <p style={{ margin:0, fontSize:14, fontWeight:600, color:isDark?'#E2EAF4':'#1B3347', textAlign:isRTL?'right':'left' }}>{selectedOpp.project}</p>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedOpp.notes && (
+                <div style={{ background:isDark?'rgba(74,122,171,0.08)':'#F0F4F8', borderRadius:10, padding:'12px 14px' }}>
+                  <p style={{ margin:'0 0 4px', fontSize:11, color:isDark?'#8BA8C8':'#6b7280', textAlign:isRTL?'right':'left' }}>{isRTL?'ملاحظات':'Notes'}</p>
+                  <p style={{ margin:0, fontSize:13, color:isDark?'#E2EAF4':'#1B3347', textAlign:isRTL?'right':'left', lineHeight:1.6 }}>{selectedOpp.notes}</p>
+                </div>
+              )}
+
+              {/* Change Stage */}
+              <div>
+                <p style={{ margin:'0 0 8px', fontSize:12, fontWeight:600, color:isDark?'#8BA8C8':'#6b7280', textAlign:isRTL?'right':'left' }}>{isRTL?'تغيير المرحلة':'Change Stage'}</p>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6, flexDirection:isRTL?'row-reverse':'row' }}>
+                  {STAGE_CONFIG.filter(s=>s.id!=='all').map(s => (
+                    <button key={s.id} onClick={()=>{ setOpps(prev=>prev.map(o=>o.id===selectedOpp.id?{...o,stage:s.id}:o)); setSelectedOpp(p=>({...p,stage:s.id})); }}
+                      style={{ padding:'6px 12px', borderRadius:8, border:`1px solid ${s.id===selectedOpp.stage?s.color:c.border}`, background:s.id===selectedOpp.stage?s.color+'18':'transparent', color:s.id===selectedOpp.stage?s.color:isDark?'#8BA8C8':'#6b7280', fontSize:11, fontWeight:s.id===selectedOpp.stage?700:400, cursor:'pointer' }}>
+                      {isRTL?s.label_ar:s.label_en}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Follow Up Reminder */}
+              <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={selectedOpp.contactName} />
+            </div>
+          </div>
+          <div style={{ flex:1, background:'rgba(0,0,0,0.4)' }} onClick={()=>setSelectedOpp(null)} />
+        </div>
+      )}
+  </>);
 }
