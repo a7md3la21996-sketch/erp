@@ -121,53 +121,97 @@ export default function OperationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [hoverRow, setHoverRow] = useState(null);
   const [selectedDeal, setSelectedDeal] = useState(null);
+  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showDealModal, setShowDealModal] = useState(false);
+  // Local state for interactive data
+  const [deals, setDeals] = useState(MOCK_OPS_DEALS);
+  const [tickets, setTickets] = useState(MOCK_TICKETS);
+  const [installments, setInstallments] = useState(MOCK_INSTALLMENTS);
 
   const c = ds;
 
   // ── Derived KPIs ────────────────────────────────────────────────────
-  const activeDeals      = MOCK_OPS_DEALS.filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
-  const newDeals         = MOCK_OPS_DEALS.filter(d => d.status === 'new_deal').length;
-  const underReview      = MOCK_OPS_DEALS.filter(d => d.status === 'under_review').length;
-  const awaitingSign     = MOCK_OPS_DEALS.filter(d => d.status === 'contract_prep').length;
-  const completedDeals   = MOCK_OPS_DEALS.filter(d => d.status === 'completed').length;
+  const activeDeals      = deals.filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
+  const newDeals         = deals.filter(d => d.status === 'new_deal').length;
+  const underReview      = deals.filter(d => d.status === 'under_review').length;
+  const awaitingSign     = deals.filter(d => d.status === 'contract_prep').length;
+  const completedDeals   = deals.filter(d => d.status === 'completed').length;
 
-  const overduePayments  = MOCK_INSTALLMENTS.filter(i => i.status === 'overdue');
+  const overduePayments  = installments.filter(i => i.status === 'overdue');
   const overdueSum       = overduePayments.reduce((s, i) => s + i.amount, 0);
-  const duePayments      = MOCK_INSTALLMENTS.filter(i => i.status === 'due');
-  const paidThisMonth    = MOCK_INSTALLMENTS.filter(i => i.status === 'paid' && i.paid_date?.startsWith('2026-03'));
+  const paidThisMonth    = installments.filter(i => i.status === 'paid' && i.paid_date?.startsWith('2026-03'));
   const paidSum          = paidThisMonth.reduce((s, i) => s + i.amount, 0);
-  const totalDue         = MOCK_INSTALLMENTS.filter(i => ['due', 'overdue'].includes(i.status)).reduce((s, i) => s + i.amount, 0);
-  const totalPaid        = MOCK_INSTALLMENTS.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0);
+  const totalDue         = installments.filter(i => ['due', 'overdue'].includes(i.status)).reduce((s, i) => s + i.amount, 0);
+  const totalPaid        = installments.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0);
   const collectionRate   = totalPaid + totalDue > 0 ? Math.round((totalPaid / (totalPaid + totalDue)) * 100) : 0;
 
   const handoverThisMonth = MOCK_HANDOVERS.filter(h => h.expected_handover?.startsWith('2026-03') || h.expected_handover?.startsWith('2026-04')).length;
-  const openTickets      = MOCK_TICKETS.filter(t => ['open', 'in_progress'].includes(t.status)).length;
-  const complaints       = MOCK_TICKETS.filter(t => t.type === 'complaint' && ['open', 'in_progress'].includes(t.status)).length;
-  const resolvedTickets  = MOCK_TICKETS.filter(t => t.resolved_at);
+  const openTickets      = tickets.filter(t => ['open', 'in_progress'].includes(t.status)).length;
+  const complaints       = tickets.filter(t => t.type === 'complaint' && ['open', 'in_progress'].includes(t.status)).length;
+  const resolvedTickets  = tickets.filter(t => t.resolved_at);
   const avgRating        = resolvedTickets.filter(t => t.rating).length > 0
     ? (resolvedTickets.filter(t => t.rating).reduce((s, t) => s + t.rating, 0) / resolvedTickets.filter(t => t.rating).length).toFixed(1)
     : '-';
 
+  // ── Handlers ──────────────────────────────────────────────────────
+  const advanceDeal = (dealId) => {
+    const order = ['new_deal','under_review','docs_collection','contract_prep','contract_signed','completed'];
+    setDeals(prev => prev.map(d => {
+      if (d.id !== dealId) return d;
+      const idx = order.indexOf(d.status);
+      if (idx < 0 || idx >= order.length - 1) return d;
+      return { ...d, status: order[idx + 1] };
+    }));
+    setSelectedDeal(prev => {
+      if (!prev || prev.id !== dealId) return prev;
+      const idx = order.indexOf(prev.status);
+      if (idx < 0 || idx >= order.length - 1) return prev;
+      return { ...prev, status: order[idx + 1] };
+    });
+  };
+
+  const cancelDeal = (dealId) => {
+    setDeals(prev => prev.map(d => d.id === dealId ? { ...d, status: 'cancelled' } : d));
+    setSelectedDeal(null);
+  };
+
+  const addDeal = (deal) => {
+    setDeals(prev => [deal, ...prev]);
+    setShowDealModal(false);
+  };
+
+  const addTicket = (ticket) => {
+    setTickets(prev => [ticket, ...prev]);
+    setShowTicketModal(false);
+  };
+
+  const recordPayment = (instId) => {
+    const today = new Date().toISOString().split('T')[0];
+    setInstallments(prev => prev.map(i => i.id === instId ? { ...i, status: 'paid', paid_date: today, method: 'bank_transfer', receipt: `R-${Date.now().toString().slice(-6)}` } : i));
+    setShowPaymentModal(false);
+  };
+
   // ── Filtered data ───────────────────────────────────────────────────
   const filteredDeals = useMemo(() => {
-    let d = MOCK_OPS_DEALS;
+    let d = deals;
     if (dealFilter !== 'all') d = d.filter(deal => deal.status === dealFilter);
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
       d = d.filter(deal => deal.client_ar.includes(s) || deal.client_en.toLowerCase().includes(s) || deal.deal_number.toLowerCase().includes(s) || deal.project_ar.includes(s));
     }
     return d;
-  }, [dealFilter, searchTerm]);
+  }, [dealFilter, searchTerm, deals]);
 
   const filteredPayments = useMemo(() => {
-    let p = MOCK_INSTALLMENTS;
+    let p = installments;
     if (payFilter !== 'all') p = p.filter(i => i.status === payFilter);
     if (searchTerm) {
       const s = searchTerm.toLowerCase();
       p = p.filter(i => i.client_ar.includes(s) || i.client_en.toLowerCase().includes(s) || i.deal_number.toLowerCase().includes(s));
     }
     return p;
-  }, [payFilter, searchTerm]);
+  }, [payFilter, searchTerm, installments]);
 
   const filteredHandovers = useMemo(() => {
     let h = MOCK_HANDOVERS;
@@ -176,10 +220,10 @@ export default function OperationsPage() {
   }, [handoverFilter]);
 
   const filteredTickets = useMemo(() => {
-    let t = MOCK_TICKETS;
+    let t = tickets;
     if (ticketFilter !== 'all') t = t.filter(tk => tk.status === ticketFilter);
     return t;
-  }, [ticketFilter]);
+  }, [ticketFilter, tickets]);
 
   // ── Shared Components ───────────────────────────────────────────────
   function KpiCard({ icon: Icon, label, value, sub, color = '#4A7AAB' }) {
@@ -317,6 +361,31 @@ export default function OperationsPage() {
               })}
             </div>
           )}
+          {/* Action buttons */}
+          {deal.status !== 'completed' && deal.status !== 'cancelled' && (
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button onClick={() => advanceDeal(deal.id)}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}>
+                <ArrowRight size={16} /> {isRTL ? 'نقل للمرحلة التالية' : 'Advance Status'}
+              </button>
+              <button onClick={() => { if (window.confirm(isRTL ? 'هل أنت متأكد من إلغاء الصفقة؟' : 'Cancel this deal?')) cancelDeal(deal.id); }}
+                style={{ padding: '12px 20px', borderRadius: 10, border: `1px solid #EF4444`, background: 'rgba(239,68,68,0.08)', color: '#EF4444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </button>
+            </div>
+          )}
+          {deal.status === 'completed' && (
+            <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(74,122,171,0.08)', textAlign: 'center' }}>
+              <CheckCircle size={20} color="#4A7AAB" style={{ marginBottom: 4 }} />
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#4A7AAB' }}>{isRTL ? 'الصفقة مكتملة' : 'Deal Completed'}</p>
+            </div>
+          )}
+          {deal.status === 'cancelled' && (
+            <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', textAlign: 'center' }}>
+              <X size={20} color="#EF4444" style={{ marginBottom: 4 }} />
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#EF4444' }}>{isRTL ? 'الصفقة ملغية' : 'Deal Cancelled'}</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -398,6 +467,10 @@ export default function OperationsPage() {
           <FilterPills items={Object.entries(DEAL_STATUS_CONFIG)} active={dealFilter} onChange={setDealFilter} />
           <div style={{ flex: 1 }} />
           <SearchBar placeholder={isRTL ? 'بحث بالاسم أو رقم الصفقة...' : 'Search by name or deal #...'} />
+          <button onClick={() => setShowDealModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,122,171,0.3)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+            <Plus size={16} /> {isRTL ? 'صفقة جديدة' : 'New Deal'}
+          </button>
         </div>
         <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
@@ -471,6 +544,10 @@ export default function OperationsPage() {
           <FilterPills items={Object.entries(PAYMENT_STATUS_CONFIG)} active={payFilter} onChange={setPayFilter} />
           <div style={{ flex: 1 }} />
           <SearchBar placeholder={isRTL ? 'بحث...' : 'Search...'} />
+          <button onClick={() => setShowPaymentModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#1B3347,#2B4C6F)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(43,76,111,0.3)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+            <CreditCard size={16} /> {isRTL ? 'تسجيل دفعة' : 'Record Payment'}
+          </button>
         </div>
         <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
@@ -500,7 +577,14 @@ export default function OperationsPage() {
                         {isOverdue && <span style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', display: 'block' }}>{isRTL ? `متأخر ${overdueDays} يوم` : `${overdueDays}d overdue`}</span>}
                       </td>
                       <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}><StatusBadge status={inst.status} config={PAYMENT_STATUS_CONFIG} /></td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted }}>{inst.receipt || '—'}</td>
+                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted }}>
+                        {inst.receipt ? inst.receipt : ['due','overdue'].includes(inst.status) ? (
+                          <button onClick={(e) => { e.stopPropagation(); recordPayment(inst.id); }}
+                            style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#2B4C6F', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                            {isRTL ? 'تأكيد الدفع' : 'Confirm'}
+                          </button>
+                        ) : '—'}
+                      </td>
                     </tr>
                   );
                 })}
@@ -555,6 +639,11 @@ export default function OperationsPage() {
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
           <FilterPills items={Object.entries(TICKET_STATUS_CONFIG)} active={ticketFilter} onChange={setTicketFilter} />
+          <div style={{ flex: 1 }} />
+          <button onClick={() => setShowTicketModal(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(74,122,171,0.3)', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+            <Plus size={16} /> {isRTL ? 'تذكرة جديدة' : 'New Ticket'}
+          </button>
         </div>
         <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
           <div style={{ overflowX: 'auto' }}>
@@ -611,6 +700,148 @@ export default function OperationsPage() {
     );
   }
 
+  // ── Modals ─────────────────────────────────────────────────────────
+  const AGENTS = ['أحمد محمد','سارة علي','محمود حسن','نورا احمد','خالد عمر'];
+  const PROJECTS = [{ar:'سيليا العاصمة الادارية',en:'Celia New Capital',dev_ar:'طلعت مصطفى',dev_en:'Talaat Moustafa'},{ar:'ريفان الشيخ زايد',en:'Rivan Sheikh Zayed',dev_ar:'ريبورتاج',dev_en:'Reportage'},{ar:'بلو تري المرج',en:'Blue Tree El Marg',dev_ar:'سيتي إيدج',dev_en:'City Edge'},{ar:'تاون جيت 6 اكتوبر',en:'Town Gate October',dev_ar:'اورا',dev_en:'ORA'}];
+
+  function ModalOverlay({ title, onClose, children }) {
+    return (
+      <>
+        <div onClick={onClose} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', zIndex:1100 }} />
+        <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto', background:c.card, borderRadius:16, boxShadow:'0 20px 60px rgba(0,0,0,0.3)', zIndex:1101, direction:isRTL?'rtl':'ltr' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'20px 24px', borderBottom:`1px solid ${c.border}` }}>
+            <h2 style={{ margin:0, fontSize:17, fontWeight:800, color:c.text }}>{title}</h2>
+            <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:c.muted, padding:4 }}><X size={20} /></button>
+          </div>
+          <div style={{ padding:24 }}>{children}</div>
+        </div>
+      </>
+    );
+  }
+
+  function FieldLabel({ children }) {
+    return <label style={{ display:'block', fontSize:12, fontWeight:600, color:c.muted, marginBottom:6 }}>{children}</label>;
+  }
+
+  function FieldInput(props) {
+    return <input {...props} style={{ width:'100%', padding:'10px 14px', borderRadius:10, border:`1px solid ${c.border}`, background:c.input, color:c.text, fontSize:13, fontFamily:'inherit', outline:'none', boxSizing:'border-box', ...(props.style||{}) }} />;
+  }
+
+  function FieldSelect({ children, ...props }) {
+    return <select {...props} style={{ width:'100%', padding:'10px 14px', borderRadius:10, border:`1px solid ${c.border}`, background:c.input, color:c.text, fontSize:13, fontFamily:'inherit', outline:'none', boxSizing:'border-box', ...(props.style||{}) }}>{children}</select>;
+  }
+
+  function PrimaryBtn({ children, onClick, color='#4A7AAB' }) {
+    const [h, setH] = useState(false);
+    return <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{ width:'100%', padding:'12px', borderRadius:10, border:'none', background:`linear-gradient(135deg,${color},${color}dd)`, color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', transform:h?'translateY(-1px)':'none', boxShadow:h?`0 6px 20px ${color}40`:'none', transition:'all 0.2s' }}>{children}</button>;
+  }
+
+  function AddDealModal() {
+    const [form, setForm] = useState({ client_ar:'', client_en:'', phone:'', agent:'', project:0, unit_code:'', unit_type_ar:'شقة', deal_value:'', down_payment:'', installments_count:'8' });
+    const set = (k,v) => setForm(p=>({...p,[k]:v}));
+    const proj = PROJECTS[form.project] || PROJECTS[0];
+    const submit = () => {
+      if (!form.client_ar || !form.deal_value) return;
+      addDeal({
+        id: `deal-new-${Date.now()}`, deal_number: `D-2026-${String(deals.length+1).padStart(3,'0')}`,
+        client_ar: form.client_ar, client_en: form.client_en || form.client_ar, phone: form.phone,
+        agent_ar: form.agent || AGENTS[0], agent_en: form.agent,
+        project_ar: proj.ar, project_en: proj.en, developer_ar: proj.dev_ar, developer_en: proj.dev_en,
+        unit_code: form.unit_code, unit_type_ar: form.unit_type_ar, unit_type_en: 'Unit',
+        deal_value: Number(form.deal_value), down_payment: Number(form.down_payment) || 0,
+        installments_count: Number(form.installments_count) || 8,
+        status: 'new_deal', created_at: new Date().toISOString().split('T')[0],
+        documents: { national_id:false, reservation_form:false, down_payment_receipt:false, contract:false, developer_receipt:false },
+      });
+    };
+    return (
+      <ModalOverlay title={isRTL?'صفقة جديدة':'New Deal'} onClose={()=>setShowDealModal(false)}>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div><FieldLabel>{isRTL?'اسم العميل (عربي)':'Client Name (Arabic)'}</FieldLabel><FieldInput value={form.client_ar} onChange={e=>set('client_ar',e.target.value)} placeholder={isRTL?'محمد أحمد':'Mohamed Ahmed'} /></div>
+          <div><FieldLabel>{isRTL?'رقم الموبايل':'Phone'}</FieldLabel><FieldInput value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="01xxxxxxxxx" /></div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div><FieldLabel>{isRTL?'المشروع':'Project'}</FieldLabel><FieldSelect value={form.project} onChange={e=>set('project',Number(e.target.value))}>{PROJECTS.map((p,i)=><option key={i} value={i}>{isRTL?p.ar:p.en}</option>)}</FieldSelect></div>
+            <div><FieldLabel>{isRTL?'كود الوحدة':'Unit Code'}</FieldLabel><FieldInput value={form.unit_code} onChange={e=>set('unit_code',e.target.value)} placeholder="A-101" /></div>
+          </div>
+          <div><FieldLabel>{isRTL?'السيلز':'Agent'}</FieldLabel><FieldSelect value={form.agent} onChange={e=>set('agent',e.target.value)}><option value="">{isRTL?'اختر':'Select'}</option>{AGENTS.map(a=><option key={a} value={a}>{a}</option>)}</FieldSelect></div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div><FieldLabel>{isRTL?'قيمة الصفقة':'Deal Value'}</FieldLabel><FieldInput type="number" value={form.deal_value} onChange={e=>set('deal_value',e.target.value)} placeholder="2,500,000" /></div>
+            <div><FieldLabel>{isRTL?'المقدم':'Down Payment'}</FieldLabel><FieldInput type="number" value={form.down_payment} onChange={e=>set('down_payment',e.target.value)} placeholder="500,000" /></div>
+          </div>
+          <div><FieldLabel>{isRTL?'عدد الأقساط':'Installments'}</FieldLabel><FieldInput type="number" value={form.installments_count} onChange={e=>set('installments_count',e.target.value)} /></div>
+          <PrimaryBtn onClick={submit}>{isRTL?'إضافة الصفقة':'Add Deal'}</PrimaryBtn>
+        </div>
+      </ModalOverlay>
+    );
+  }
+
+  function AddTicketModal() {
+    const [form, setForm] = useState({ client_ar:'', type:'inquiry', priority:'medium', subject_ar:'', assigned:'' });
+    const set = (k,v) => setForm(p=>({...p,[k]:v}));
+    const submit = () => {
+      if (!form.client_ar || !form.subject_ar) return;
+      addTicket({
+        id: `tkt-new-${Date.now()}`, ticket_number: `T-2026-${String(tickets.length+1).padStart(3,'0')}`,
+        deal_id: null, client_ar: form.client_ar, client_en: form.client_ar,
+        type: form.type, priority: form.priority,
+        subject_ar: form.subject_ar, subject_en: form.subject_ar,
+        assigned_ar: form.assigned || AGENTS[0], assigned_en: form.assigned,
+        status: 'open', created_at: new Date().toISOString().split('T')[0],
+        resolved_at: null, rating: null,
+      });
+    };
+    return (
+      <ModalOverlay title={isRTL?'تذكرة جديدة':'New Ticket'} onClose={()=>setShowTicketModal(false)}>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div><FieldLabel>{isRTL?'اسم العميل':'Client Name'}</FieldLabel><FieldInput value={form.client_ar} onChange={e=>set('client_ar',e.target.value)} /></div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+            <div><FieldLabel>{isRTL?'النوع':'Type'}</FieldLabel><FieldSelect value={form.type} onChange={e=>set('type',e.target.value)}>{Object.entries(TICKET_TYPE_CONFIG).map(([k,v])=><option key={k} value={k}>{isRTL?v.ar:v.en}</option>)}</FieldSelect></div>
+            <div><FieldLabel>{isRTL?'الأولوية':'Priority'}</FieldLabel><FieldSelect value={form.priority} onChange={e=>set('priority',e.target.value)}>{Object.entries(PRIORITY_CONFIG).map(([k,v])=><option key={k} value={k}>{isRTL?v.ar:v.en}</option>)}</FieldSelect></div>
+          </div>
+          <div><FieldLabel>{isRTL?'الموضوع':'Subject'}</FieldLabel><FieldInput value={form.subject_ar} onChange={e=>set('subject_ar',e.target.value)} /></div>
+          <div><FieldLabel>{isRTL?'المسؤول':'Assigned To'}</FieldLabel><FieldSelect value={form.assigned} onChange={e=>set('assigned',e.target.value)}><option value="">{isRTL?'اختر':'Select'}</option>{AGENTS.map(a=><option key={a} value={a}>{a}</option>)}</FieldSelect></div>
+          <PrimaryBtn onClick={submit}>{isRTL?'فتح التذكرة':'Open Ticket'}</PrimaryBtn>
+        </div>
+      </ModalOverlay>
+    );
+  }
+
+  function RecordPaymentModal() {
+    const unpaid = installments.filter(i => ['due','overdue','upcoming'].includes(i.status));
+    const [selected, setSelected] = useState('');
+    return (
+      <ModalOverlay title={isRTL?'تسجيل دفعة':'Record Payment'} onClose={()=>setShowPaymentModal(false)}>
+        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+          <div><FieldLabel>{isRTL?'اختر القسط':'Select Installment'}</FieldLabel>
+            <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:300, overflowY:'auto' }}>
+              {unpaid.map(inst => {
+                const isOv = inst.status === 'overdue';
+                const active = selected === inst.id;
+                return (
+                  <div key={inst.id} onClick={()=>setSelected(inst.id)}
+                    style={{ padding:'12px 14px', borderRadius:10, border:`2px solid ${active ? c.accent : c.border}`, background: active ? c.accent+'10' : (isOv ? 'rgba(239,68,68,0.04)' : 'transparent'), cursor:'pointer', transition:'all 0.2s' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:600, color:c.text }}>{isRTL?inst.client_ar:inst.client_en}</div>
+                        <div style={{ fontSize:11, color:c.muted }}>{inst.deal_number} — {isRTL?`قسط ${inst.num}/${inst.total}`:`Inst. ${inst.num}/${inst.total}`}</div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ fontSize:13, fontWeight:700, color:c.text }}>{fmtMoneyShort(inst.amount)}</div>
+                        <div style={{ fontSize:11, color:isOv?'#EF4444':c.muted }}>{inst.due_date}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {unpaid.length === 0 && <p style={{ textAlign:'center', color:c.muted, padding:20 }}>{isRTL?'لا توجد أقساط مستحقة':'No pending installments'}</p>}
+            </div>
+          </div>
+          {selected && <PrimaryBtn onClick={()=>recordPayment(selected)} color="#2B4C6F">{isRTL?'تأكيد الدفع':'Confirm Payment'}</PrimaryBtn>}
+        </div>
+      </ModalOverlay>
+    );
+  }
+
   // ── Main Render ─────────────────────────────────────────────────────
   return (
     <div style={{ padding: '24px 28px', minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
@@ -656,6 +887,11 @@ export default function OperationsPage() {
           <DealDrawer deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
         </>
       )}
+
+      {/* Modals */}
+      {showDealModal && <AddDealModal />}
+      {showTicketModal && <AddTicketModal />}
+      {showPaymentModal && <RecordPaymentModal />}
     </div>
   );
 }
