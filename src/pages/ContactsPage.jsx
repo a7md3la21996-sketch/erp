@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import FollowUpReminder from '../components/ui/FollowUpReminder';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
@@ -518,25 +517,29 @@ function LogCallModal({ contact, onClose }) {
   );
 }
 
-// ── Reminder Modal ──────────────────────────────────────────────────────────
-const REMINDER_PRESETS = [
+// ── Quick Task Modal (replaces ReminderModal) ─────────────────────────────────
+const QUICK_TASK_PRESETS = [
   { key: 'tomorrow', ar: 'غداً', en: 'Tomorrow', days: 1 },
   { key: '3days', ar: '3 أيام', en: '3 Days', days: 3 },
   { key: 'week', ar: 'أسبوع', en: 'Week', days: 7 },
   { key: 'custom', ar: 'تاريخ محدد', en: 'Custom', days: 0 },
 ];
 
-function ReminderModal({ contact, onClose }) {
+function QuickTaskModal({ contact, onClose }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
+  const { profile } = useAuth();
   useEscClose(onClose);
 
   const [selectedPreset, setSelectedPreset] = useState('');
   const [customDate, setCustomDate] = useState('');
-  const [message, setMessage] = useState('');
+  const [title, setTitle] = useState('');
+  const [taskType, setTaskType] = useState('followup');
+  const [priority, setPriority] = useState('medium');
+  const [saving, setSaving] = useState(false);
 
   const handlePreset = (preset) => {
     setSelectedPreset(preset.key);
@@ -549,42 +552,88 @@ function ReminderModal({ contact, onClose }) {
     }
   };
 
-  const handleSaveReminder = async () => {
-    if (!customDate) { toast.warning(isRTL ? 'اختر موعد التذكير' : 'Select reminder date'); return; }
-    const activity = { type: 'note', description: `${isRTL ? 'تذكير' : 'Reminder'}: ${message || (isRTL ? 'متابعة' : 'Follow up')}`, next_action: isRTL ? 'تذكير' : 'Reminder', next_action_date: customDate, contact_id: contact.id, created_at: new Date().toISOString() };
-    try { await createActivity(activity); toast.success(isRTL ? 'تم حفظ التذكير' : 'Reminder saved'); } catch { toast.success(isRTL ? 'تم حفظ التذكير محلياً' : 'Reminder saved locally'); }
+  const handleSave = async () => {
+    if (!customDate) { toast.warning(isRTL ? 'اختر الموعد' : 'Select a date'); return; }
+    setSaving(true);
+    const task = {
+      title: title || (isRTL ? `متابعة ${contact.full_name}` : `Follow up with ${contact.full_name}`),
+      type: taskType,
+      priority,
+      status: 'pending',
+      contact_id: contact.id,
+      contact_name: contact.full_name,
+      due_date: customDate,
+      dept: 'crm',
+      notes: '',
+      assigned_to_name_ar: profile?.full_name_ar || '',
+      assigned_to_name_en: profile?.full_name_en || '',
+    };
+    try { await createTask(task); toast.success(isRTL ? 'تم إنشاء المهمة' : 'Task created'); } catch { toast.success(isRTL ? 'تم إنشاء المهمة محلياً' : 'Task created locally'); }
+    setSaving(false);
     onClose();
   };
 
   const btnBorder = isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0';
   const lblColor = isDark ? '#8BA8C8' : '#4A5568';
+  const taskTypes = [
+    { value: 'followup', ar: 'متابعة', en: 'Follow-up' },
+    { value: 'call', ar: 'مكالمة', en: 'Call' },
+    { value: 'meeting', ar: 'اجتماع', en: 'Meeting' },
+    { value: 'email', ar: 'إيميل', en: 'Email' },
+    { value: 'whatsapp', ar: 'واتساب', en: 'WhatsApp' },
+  ];
+  const priorities = [
+    { value: 'high', ar: 'عالية', en: 'High', color: '#EF4444' },
+    { value: 'medium', ar: 'متوسطة', en: 'Medium', color: '#F59E0B' },
+    { value: 'low', ar: 'منخفضة', en: 'Low', color: '#10B981' },
+  ];
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-      <div style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+      <div dir={isRTL ? 'rtl' : 'ltr'} style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
         <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Bell size={14} /> {isRTL ? 'إضافة تذكير' : 'Add Reminder'} — {contact.full_name}</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> {isRTL ? 'مهمة سريعة' : 'Quick Task'} — {contact.full_name}</h3>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
         </div>
         <div style={{ padding: '18px 20px' }}>
+          {/* Title */}
+          <input value={title} onChange={e => setTitle(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box', marginBottom: 14 }} placeholder={isRTL ? `متابعة ${contact.full_name}` : `Follow up with ${contact.full_name}`} />
+          {/* When */}
           <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 8 }}>{isRTL ? 'متى؟' : 'When?'}</div>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-            {REMINDER_PRESETS.map(p => (
+            {QUICK_TASK_PRESETS.map(p => (
               <button key={p.key} onClick={() => handlePreset(p)} style={{ padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${selectedPreset === p.key ? '#4A7AAB' : btnBorder}`, background: selectedPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none', fontSize: 12, color: selectedPreset === p.key ? '#4A7AAB' : (isDark ? '#E2EAF4' : '#4A5568'), cursor: 'pointer', fontFamily: 'inherit', fontWeight: selectedPreset === p.key ? 700 : 400 }}>{isRTL ? p.ar : p.en}</button>
             ))}
           </div>
           {selectedPreset === 'custom' && (
-            <>
-              <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'التاريخ والوقت' : 'Date & Time'}</div>
-              <input type="datetime-local" value={customDate} onChange={e => setCustomDate(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, outline: 'none', marginBottom: 14, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} />
-            </>
+            <input type="datetime-local" value={customDate} onChange={e => setCustomDate(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, outline: 'none', marginBottom: 14, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} />
           )}
-          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'الرسالة' : 'Message'}</div>
-          <input value={message} onChange={e => setMessage(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} placeholder={isRTL ? 'متابعة العميل...' : 'Follow up with client...'} />
+          {/* Type + Priority row */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 4 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'}</div>
+              <select value={taskType} onChange={e => setTaskType(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', outline: 'none', cursor: 'pointer' }}>
+                {taskTypes.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'الأولوية' : 'Priority'}</div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {priorities.map(p => (
+                  <button key={p.value} onClick={() => setPriority(p.value)} style={{
+                    flex: 1, padding: '6px 0', borderRadius: 6, fontSize: 11, fontWeight: priority === p.value ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit',
+                    background: priority === p.value ? p.color + '18' : 'transparent',
+                    border: `1px solid ${priority === p.value ? p.color : btnBorder}`,
+                    color: priority === p.value ? p.color : (isDark ? '#8BA8C8' : '#6B7280'),
+                  }}>{isRTL ? p.ar : p.en}</button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
         <div style={{ padding: '14px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${btnBorder}`, background: isDark ? '#152232' : '#F8FAFC', fontSize: 13, color: isDark ? '#8BA8C8' : '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-          <button onClick={handleSaveReminder} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: (selectedPreset && (selectedPreset !== 'custom' || customDate)) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: (selectedPreset && (selectedPreset !== 'custom' || customDate)) ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>{isRTL ? 'حفظ التذكير' : 'Save Reminder'}</button>
+          <button onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: (selectedPreset && (selectedPreset !== 'custom' || customDate)) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: (selectedPreset && (selectedPreset !== 'custom' || customDate)) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: saving ? 0.6 : 1 }}>{saving ? '...' : (isRTL ? 'إنشاء مهمة' : 'Create Task')}</button>
         </div>
       </div>
     </div>
@@ -1098,9 +1147,6 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                   <Ban size={13} style={{ flexShrink: 0, marginTop: 2 }} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
                 </div>
               )}
-              <div style={{ marginTop: 16 }}>
-                <FollowUpReminder entityType="contact" entityId={contact.id} entityName={contact.full_name} />
-              </div>
               {contact.contact_type === 'supplier' && (
                 <button style={{ width: '100%', marginTop: 12, padding: '10px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#4A7AAB', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   <span>+</span> {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
@@ -1902,7 +1948,7 @@ export default function ContactsPage() {
       {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const found = contacts.find(c => c.phone === phone || c.phone2 === phone || (c.extra_phones || []).includes(phone)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => setContacts(prev => prev.map(c => c.id === updated.id ? updated : c))} onAddOpportunity={(opp) => { setSelected(null); }} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
-      {reminderTarget && <ReminderModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
+      {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
     {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={(newContacts) => { setContacts(prev => { const updated = [...prev, ...newContacts]; localStorage.setItem('platform_contacts', JSON.stringify(updated)); return updated; }); setShowImportModal(false); }} />}
 
