@@ -10,8 +10,8 @@ import { fetchTodayReminders } from '../../services/remindersService';
 import { useState, useEffect } from 'react';
 import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2 , Bell , Phone , MessageCircle , MapPin , Mail , CheckCircle } from 'lucide-react';
 
-const YEAR = 2026;
-const MONTH = 3;
+const YEAR = new Date().getFullYear();
+const MONTH = new Date().getMonth() + 1;
 const MOCK_CRM = { totalLeads: 142, newLeadsThisMonth: 38, activeOpps: 24, closedDeals: 11, revenue: 1250000 };
 const MOCK_SALES = { target: 1500000, achieved: 1250000, topSales: [{ name_ar: 'أحمد محمود', name_en: 'Ahmed Mahmoud', revenue: 310000, pct: 84 }, { name_ar: 'سارة خالد', name_en: 'Sara Khaled', revenue: 285000, pct: 77 }, { name_ar: 'محمد علي', name_en: 'Mohamed Ali', revenue: 195000, pct: 53 }, { name_ar: 'نورا حسن', name_en: 'Nora Hassan', revenue: 175000, pct: 47 }] };
 const REVENUE_TREND = [{ label_ar: 'أكتوبر', label_en: 'Oct', value: 820000 }, { label_ar: 'نوفمبر', label_en: 'Nov', value: 950000 }, { label_ar: 'ديسمبر', label_en: 'Dec', value: 1100000 }, { label_ar: 'يناير', label_en: 'Jan', value: 880000 }, { label_ar: 'فبراير', label_en: 'Feb', value: 1050000 }, { label_ar: 'مارس', label_en: 'Mar', value: 1250000 }];
@@ -20,9 +20,9 @@ const EXPENSE_CATS = [{ name_ar: 'رواتب', name_en: 'Salaries', value: 18000
 const BRAND = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#A8BFD5'];
 
 function buildHRStats(attendance) {
-  const presentDays = attendance.filter(r => r.status === 'present' || r.status === 'late');
-  const lateDays = attendance.filter(r => r.status === 'late');
-  const absentDays = attendance.filter(r => r.status === 'absent');
+  const presentDays = attendance.filter(r => r.check_in && !r.absent);
+  const lateDays = presentDays.filter(r => { const [h, m] = (r.check_in || '').split(':').map(Number); return h > 10 || (h === 10 && m > 30); });
+  const absentDays = attendance.filter(r => r.absent);
   const uniqueEmps = [...new Set(attendance.map(r => r.employee_id))].length;
   const attendanceRate = uniqueEmps > 0 ? Math.round((presentDays.length / (uniqueEmps * 22)) * 100) : 0;
   const today = new Date();

@@ -778,7 +778,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
   return (
     <>
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); setShowEdit(false); }} />}
-    <div style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', direction: 'rtl' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', direction: isRTL ? 'rtl' : 'ltr' }}>
       <div onClick={onClose} style={{ flex: 1, background: 'rgba(0,0,0,0.45)' }} />
       <div style={{ width: 430, background: '#0F1E2D', borderRight: '1px solid rgba(74,122,171,0.2)', display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
@@ -800,7 +800,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 </div>
                 <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Chip label={tp?.label} color={tp?.color} bg={tp?.bg} />
-                  {contact.department && <Chip label={{ sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' }[contact.department] || contact.department} color="#8BA8C8" bg="rgba(139,168,200,0.1)" />}
+                  {contact.department && <Chip label={(isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : { sales: 'Sales', hr: 'HR', finance: 'Finance', marketing: 'Marketing', operations: 'Operations' })[contact.department] || contact.department} color="#8BA8C8" bg="rgba(139,168,200,0.1)" />}
                   {contact.is_blacklisted && <Chip label={isRTL ? "بلاك ليست" : "Blacklist"} color="#EF4444" bg="rgba(239,68,68,0.12)" />}
                 </div>
               </div>
@@ -816,14 +816,14 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
           {/* Quick Actions */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
             <a href={`tel:${contact.phone}`} style={{ flex: 1, padding: '8px 0', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, color: '#10B981', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-              <Phone size={13} /> اتصال
+              <Phone size={13} /> {isRTL ? 'اتصال' : 'Call'}
             </a>
-            <a href={`https://wa.me/2${contact.phone}`} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '8px 0', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 8, color: '#25D366', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-              <MessageCircle size={13} /> واتساب
+            <a href={`https://wa.me/${normalizePhone(contact.phone).replace('+', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '8px 0', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 8, color: '#25D366', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <MessageCircle size={13} /> {isRTL ? 'واتساب' : 'WhatsApp'}
             </a>
             {contact.email && (
               <a href={`mailto:${contact.email}`} style={{ flex: 1, padding: '8px 0', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#6B8DB5', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                <Mail size={13} /> إيميل
+                <Mail size={13} /> {isRTL ? 'إيميل' : 'Email'}
               </a>
             )}
             {!contact.is_blacklisted && (

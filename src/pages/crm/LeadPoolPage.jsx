@@ -88,7 +88,7 @@ export default function LeadPoolPage() {
   const canManage      = hasPermission(P.POOL_MANAGE);
   const canViewAll     = canManage; // managers/directors see all teams
 
-  const [leads, setLeads]             = useState(makeMockLeads);
+  const [leads, setLeads]             = useState(() => makeMockLeads());
   const [selected, setSelected]       = useState([]);
   const [sourceFilter, setSourceFilter] = useState('all');
   const [typeFilter, setTypeFilter]   = useState('all');

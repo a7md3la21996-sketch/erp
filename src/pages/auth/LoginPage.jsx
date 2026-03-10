@@ -25,6 +25,7 @@ export default function LoginPage() {
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || t('auth.invalidCredentials'));
+    } finally {
       setLoading(false);
     }
   };

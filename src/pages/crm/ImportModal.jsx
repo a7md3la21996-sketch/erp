@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../contexts/ThemeContext';
+
 import * as XLSX from 'xlsx';
 
 const COLUMN_MAP = {
@@ -48,7 +48,6 @@ const validatePhone = (p) => {
 
 export default function ImportModal({ onClose, existingContacts, onImportDone }) {
   const { t, i18n } = useTranslation();
-  const { c } = useTheme();
   const isRTL = i18n.language === 'ar';
   const [step, setStep] = useState(1);
   const [rows, setRows] = useState([]);

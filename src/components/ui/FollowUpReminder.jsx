@@ -145,7 +145,7 @@ export default function FollowUpReminder({ entityType = 'contact', entityId, ent
     finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, [entityId]);
+  useEffect(() => { load(); }, [entityId, entityType]);
 
   const handleSave = async (data) => { await createReminder(data); load(); };
   const handleDone = async (id) => { await markReminderDone(id); setReminders(p => p.filter(r => r.id !== id)); };
