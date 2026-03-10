@@ -4,6 +4,7 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useToast } from '../contexts/ToastContext';
 import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, UserCheck, PhoneOff, AlertOctagon, CheckCircle2, Calendar, FileDown, MoreVertical, Bell, PhoneMissed, CheckSquare, Check, Trash2, Pencil } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
@@ -144,6 +145,7 @@ function PhoneCell({ phone, small = false }) {
 function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
+  const toast = useToast();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     prefix: '', full_name: '', phone: '', phone2: '', email: '',
@@ -170,9 +172,9 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   };
 
   const handleSave = async () => {
-    if (!form.phone || !validatePhone(form.phone)) { alert(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
+    if (!form.phone || !validatePhone(form.phone)) { toast.error(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
     const invalidExtra = extraPhones.find(p => p && !validatePhone(p));
-    if (invalidExtra) { alert(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
+    if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
     setSaving(true);
     try {
       await onSave({
@@ -182,7 +184,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
       });
       onClose();
     } catch (err) {
-      alert((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
+      toast.error((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
     }
     setSaving(false);
   };
@@ -521,6 +523,7 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 function EditContactModal({ contact, onClose, onSave }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
+  const toast = useToast();
   const [form, setForm] = useState({
     prefix: contact.prefix || '',
     full_name: contact.full_name || '',
@@ -547,7 +550,7 @@ function EditContactModal({ contact, onClose, onSave }) {
   const isSalesType = ['lead','cold','client'].includes(form.contact_type);
 
   const handleSave = async () => {
-    if (!form.full_name.trim()) { alert(isRTL ? 'الاسم مطلوب' : 'Name is required'); return; }
+    if (!form.full_name.trim()) { toast.warning(isRTL ? 'الاسم مطلوب' : 'Name is required'); return; }
     setSaving(true);
     try {
       await onSave({ ...contact, ...form,
@@ -556,7 +559,7 @@ function EditContactModal({ contact, onClose, onSave }) {
       });
       onClose();
     } catch (err) {
-      alert((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
+      toast.error((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
     }
     setSaving(false);
   };
@@ -719,6 +722,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
   const [showEdit, setShowEdit] = useState(false);
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
+  const toast = useToast();
   const [tab, setTab] = useState('info');
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
@@ -758,7 +762,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
       setActivities(prev => [act, ...prev]);
       setShowActivityForm(false);
     } catch (err) {
-      alert('خطأ: ' + err.message);
+      toast.error((isRTL ? 'خطأ: ' : 'Error: ') + err.message);
     }
   };
 
