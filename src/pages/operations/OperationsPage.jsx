@@ -3,12 +3,11 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart2, FileCheck, Banknote, KeyRound, Headphones,
-  AlertTriangle, Clock, CheckCircle, Plus, Search, Filter,
-  ChevronDown, DollarSign, TrendingUp, PieChart, Building2,
+  AlertTriangle, Clock, CheckCircle, Plus, Search,
+  DollarSign, TrendingUp, PieChart, Building2,
   Star, Phone, MessageSquare, FileText, Eye, ArrowRight,
-  ChevronRight, User, Calendar, Hash, CreditCard, Send,
-  Printer, MoreVertical, X, ClipboardCheck, Wrench, HelpCircle,
-  Edit3, AlertCircle, ChevronLeft,
+  X, ClipboardCheck, Wrench, HelpCircle,
+  Edit3, AlertCircle,
 } from 'lucide-react';
 import {
   DEAL_STATUS_CONFIG, PAYMENT_STATUS_CONFIG, HANDOVER_STATUS_CONFIG,
@@ -90,7 +89,7 @@ function HandoverCard({ ho, c, isRTL, isDark }) {
           </a>
         </div>
       )}
-      {ho.notes_ar && <p style={{ margin: '10px 0 0', fontSize: 11, color: c.muted, textAlign: isRTL ? 'right' : 'left' }}>{isRTL ? ho.notes_ar : ho.notes_ar}</p>}
+      {ho.notes_ar && <p style={{ margin: '10px 0 0', fontSize: 11, color: c.muted, textAlign: isRTL ? 'right' : 'left' }}>{ho.notes_ar}</p>}
     </div>
   );
 }
@@ -290,8 +289,7 @@ export default function OperationsPage() {
   function DealDrawer({ deal, onClose }) {
     if (!deal) return null;
     const sCfg = DEAL_STATUS_CONFIG[deal.status] || {};
-    const dealInstallments = MOCK_INSTALLMENTS.filter(i => i.deal_id === deal.id);
-    const dealHandover = MOCK_HANDOVERS.find(h => h.deal_id === deal.id);
+    const dealInstallments = installments.filter(i => i.deal_id === deal.id);
     const totalDocs = DOCUMENT_CHECKLIST.filter(d => d.required).length;
     const doneDocs = DOCUMENT_CHECKLIST.filter(d => d.required && deal.documents[d.key]).length;
     return (
@@ -398,7 +396,7 @@ export default function OperationsPage() {
   function renderOverview() {
     const sortedActivity = [...MOCK_OPS_ACTIVITY].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     const pipelineCounts = Object.entries(DEAL_STATUS_CONFIG).filter(([k]) => k !== 'cancelled').map(([key, cfg]) => ({
-      key, label: isRTL ? cfg.ar : cfg.en, color: cfg.color, count: MOCK_OPS_DEALS.filter(d => d.status === key).length,
+      key, label: isRTL ? cfg.ar : cfg.en, color: cfg.color, count: deals.filter(d => d.status === key).length,
     }));
     const totalPipeline = Math.max(pipelineCounts.reduce((s, p) => s + p.count, 0), 1);
     return (
