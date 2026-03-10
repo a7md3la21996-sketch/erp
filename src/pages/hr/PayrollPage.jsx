@@ -55,7 +55,7 @@ export default function PayrollPage() {
           <RunBtn label={lang==='ar'?'تشغيل المسير':'Run Payroll'} ds={ds} />
         </div>
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={DollarSign} label={lang==='ar'?'إجمالي الرواتب':'Total Salaries'} value={(totalSalaries/1000).toFixed(0)+'K'} sub="EGP" color="#1B3347" />
         <KpiCard icon={Users} label={lang==='ar'?'عدد الموظفين':'Employees'} value={MOCK_EMPLOYEES.length} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={lang==='ar'?'متوسط الراتب':'Avg Salary'} value={(avgSalary/1000).toFixed(1)+'K'} sub="EGP" color="#6B8DB5" />
@@ -68,10 +68,32 @@ export default function PayrollPage() {
         </div>
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead><tr style={{ background:ds.thBg, borderBottom:`2px solid ${ds.border}` }}>{[lang==='ar'?'الموظف':'Employee',lang==='ar'?'الراتب الأساسي':'Base Salary',lang==='ar'?'البدلات':'Allowances',lang==='ar'?'الاستقطاعات':'Deductions',lang==='ar'?'الصافي':'Net Pay',lang==='ar'?'الحالة':'Status',''].map((h,i)=>(<th key={i} style={{...th,textAlign:isRTL?'right':'left'}}>{h}</th>))}</tr></thead>
-          <tbody>{MOCK_EMPLOYEES.map(emp=>{ const name=(isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar; const base=emp.salary||0; const allow=Math.round(base*0.2); const ded=Math.round(base*0.1); const net=base+allow-ded; const initials=name?.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()||'??'; const [hov,setHov]=useState(false); return (<tr key={emp.id} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{borderBottom:`1px solid ${ds.border}`,background:hov?ds.rowHover:'transparent',transition:'background 0.15s'}}><td style={{...td}}><div style={{display:'flex',alignItems:'center',gap:10,flexDirection:isRTL?'row-reverse':'row'}}><div style={{width:32,height:32,borderRadius:9,background:'#2B4C6F',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}><span style={{fontSize:11,fontWeight:700,color:'#fff'}}>{initials}</span></div><div style={{textAlign:isRTL?'right':'left'}}><p style={{margin:0,fontSize:13,fontWeight:700,color:ds.text}}>{name}</p><p style={{margin:0,fontSize:11,color:ds.muted}}>{emp.employee_id}</p></div></div></td><td style={{...td}}>{base.toLocaleString()} ج.م</td><td style={{...td,color:'#4A7AAB',fontWeight:600}}>+{allow.toLocaleString()}</td><td style={{...td,color:'#EF4444',fontWeight:600}}>-{ded.toLocaleString()}</td><td style={{...td,fontWeight:800,color:ds.text}}>{net.toLocaleString()} ج.م</td><td style={{...td}}><span style={{display:'inline-flex',padding:'3px 10px',borderRadius:20,fontSize:11,fontWeight:600,background:'rgba(74,122,171,0.15)',color:'#4A7AAB',border:'1px solid rgba(74,122,171,0.3)'}}>{lang==='ar'?'تم الصرف':'Paid'}</span></td><td style={{...td}}><SlipBtn label="Payslip" ds={ds} /></td></tr>); })}</tbody>
+          <tbody>{MOCK_EMPLOYEES.map(emp=>(
+            <PayrollRow key={emp.id} emp={emp} isRTL={isRTL} lang={lang} ds={ds} td={td} />
+          ))}</tbody>
         </table>
       </div>
     </div>
+  );
+}
+function PayrollRow({ emp, isRTL, lang, ds, td }) {
+  const [hov, setHov] = useState(false);
+  const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
+  const base = emp.salary || 0;
+  const allow = Math.round(base * 0.2);
+  const ded = Math.round(base * 0.1);
+  const net = base + allow - ded;
+  const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
+  return (
+    <tr onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ borderBottom: `1px solid ${ds.border}`, background: hov ? ds.rowHover : 'transparent', transition: 'background 0.15s' }}>
+      <td style={{ ...td }}><div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}><div style={{ width: 32, height: 32, borderRadius: 9, background: '#2B4C6F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{initials}</span></div><div style={{ textAlign: isRTL ? 'right' : 'left' }}><p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: ds.text }}>{name}</p><p style={{ margin: 0, fontSize: 11, color: ds.muted }}>{emp.employee_id}</p></div></div></td>
+      <td style={{ ...td }}>{base.toLocaleString()} ج.م</td>
+      <td style={{ ...td, color: '#4A7AAB', fontWeight: 600 }}>+{allow.toLocaleString()}</td>
+      <td style={{ ...td, color: '#EF4444', fontWeight: 600 }}>-{ded.toLocaleString()}</td>
+      <td style={{ ...td, fontWeight: 800, color: ds.text }}>{net.toLocaleString()} ج.م</td>
+      <td style={{ ...td }}><span style={{ display: 'inline-flex', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: 'rgba(74,122,171,0.15)', color: '#4A7AAB', border: '1px solid rgba(74,122,171,0.3)' }}>{lang === 'ar' ? 'تم الصرف' : 'Paid'}</span></td>
+      <td style={{ ...td }}><SlipBtn label="Payslip" ds={ds} /></td>
+    </tr>
   );
 }
 function RunBtn({label,ds}){const [hov,setHov]=useState(false);return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{padding:'10px 20px',borderRadius:10,background:hov?'#2B4C6F':'#1B3347',border:'none',cursor:'pointer',color:'#fff',fontSize:13,fontWeight:700,transform:hov?'translateY(-1px)':'none',boxShadow:hov?'0 6px 16px rgba(27,51,71,0.35)':'0 2px 6px rgba(27,51,71,0.2)',transition:'all 0.2s ease'}}>{label}</button>;}

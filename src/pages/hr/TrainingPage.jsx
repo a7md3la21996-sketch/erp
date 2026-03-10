@@ -55,7 +55,7 @@ export default function TrainingPage() {
         <AddBtn label={lang==='ar'?'+ برنامج جديد':'+ New Program'} ds={ds} />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={BookOpen}    label={lang==='ar'?'إجمالي البرامج':'Total Programs'} value={programs.length} color="#1B3347" />
         <KpiCard icon={Clock}       label={lang==='ar'?'نشطة':'Active'}            value={active}          color="#6B8DB5" />
         <KpiCard icon={Users}       label={lang==='ar'?'إجمالي المسجلين':'Enrolled'}         value={totalEnr}        color="#4A7AAB" />

@@ -149,7 +149,7 @@ export default function FinancePage() {
   const renderOverview = () => (
     <div>
       {/* KPI Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
         <KpiCard icon={TrendingUp}   label={lang === 'ar' ? 'الإيرادات الشهرية' : 'Monthly Revenue'}   value={'1.25M'}    sub="EGP" color="#4A7AAB"  trend="up"   trendVal="+15.7%" />
         <KpiCard icon={TrendingDown} label={lang === 'ar' ? 'إجمالي المصروفات'  : 'Total Expenses'}    value={(totalExpenses/1000).toFixed(0)+'K'} sub="EGP" color="#EF4444" trend="down" trendVal="+5%" />
         <KpiCard icon={DollarSign}   label={lang === 'ar' ? 'صافي الربح'         : 'Net Profit'}        value={(netProfit/1000).toFixed(0)+'K'}     sub="EGP" color="#2B4C6F" />
@@ -261,7 +261,7 @@ export default function FinancePage() {
   const renderCommissions = () => (
     <div>
       {/* KPI Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
         <KpiCard icon={Clock}        label={lang === 'ar' ? 'معلق الاعتماد' : 'Pending Approval'} value={(pendingComm/1000).toFixed(1)+'K'} sub="EGP" color="#6B8DB5" />
         <KpiCard icon={CheckCircle}  label={lang === 'ar' ? 'معتمد - لم يُصرف' : 'Approved - Unpaid'} value={(approvedComm/1000).toFixed(1)+'K'} sub="EGP" color="#4A7AAB" />
         <KpiCard icon={DollarSign}   label={lang === 'ar' ? 'مدفوع هذا الشهر' : 'Paid This Month'} value="21.3K" sub="EGP" color="#2B4C6F" />
@@ -427,7 +427,7 @@ export default function FinancePage() {
   const renderExpenses = () => (
     <div>
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
+      <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14, marginBottom: 20 }}>
         <KpiCard icon={Receipt}     label={lang === 'ar' ? 'إجمالي المصروفات' : 'Total Expenses'}   value={(totalExpenses/1000).toFixed(0)+'K'} sub="EGP" color="#EF4444" />
         <KpiCard icon={Clock}       label={lang === 'ar' ? 'معلق الاعتماد'    : 'Pending Approval'} value="2" sub={lang === 'ar' ? 'طلب' : 'requests'} color="#6B8DB5" />
         <KpiCard icon={CheckCircle} label={lang === 'ar' ? 'المعتمد هذا الشهر' : 'Approved This Month'} value={(MOCK_EXPENSES.filter(e=>e.status==='approved').reduce((s,e)=>s+e.amount,0)/1000).toFixed(0)+'K'} sub="EGP" color="#4A7AAB" />

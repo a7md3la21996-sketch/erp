@@ -23,3 +23,29 @@ html.dark body, body.dark { background: #030712; color: #f3f4f6; }
 
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+
+/* Dark mode native form controls */
+html.dark select, body.dark select,
+html.dark input, body.dark input,
+html.dark textarea, body.dark textarea {
+  color-scheme: dark;
+}
+
+/* Responsive: KPI grids stack on mobile */
+@media (max-width: 768px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Tables: horizontal scroll on small screens */
+@media (max-width: 768px) {
+  table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  thead, tbody, tr { min-width: 600px; }
+}
+
+/* Modal responsive */
+@media (max-width: 560px) {
+  .modal-content { width: 95vw !important; max-width: 95vw !important; margin: 16px !important; }
+}

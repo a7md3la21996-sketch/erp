@@ -68,7 +68,7 @@ export default function AssetsPage() {
         <AddBtn label={lang==='ar'?'+ أضف أصل':'+ Add Asset'} ds={ds} />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={Package}      label={lang==='ar'?'إجمالي الأصول':'Total Assets'}   value={assets.length}  color="#1B3347" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'مستخدمة':'Active'}            value={active}         color="#4A7AAB" />
         <KpiCard icon={AlertCircle}  label={lang==='ar'?'متاحة':'Available'}          value={available}      color="#6B8DB5" />
@@ -102,29 +102,9 @@ export default function AssetsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(asset => {
-              const emp = MOCK_EMPLOYEES.find(e=>e.employee_id===asset.assigned_to||e.id===asset.assigned_to);
-              const empName = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : (lang==='ar'?'غير مخصص':'Unassigned');
-              const [hov, setHov] = useState(false);
-              return (
-                <tr key={asset.id} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ borderBottom:`1px solid ${ds.border}`, background:hov?ds.rowHover:'transparent', transition:'background 0.15s' }}>
-                  <td style={{ ...td }}>
-                    <p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{asset.name}</p>
-                    <p style={{ margin:0, fontSize:11, color:ds.muted }}>{asset.serial}</p>
-                  </td>
-                  <td style={{ ...td }}><span style={{ display:'inline-flex', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:'rgba(74,122,171,0.12)', color:'#4A7AAB', border:'1px solid rgba(74,122,171,0.25)' }}>{asset.type}</span></td>
-                  <td style={{ ...td, color:ds.muted }}>{empName}</td>
-                  <td style={{ ...td }}><span style={{ display:'inline-flex', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor(asset.status)+'18', color:statusColor(asset.status), border:`1px solid ${statusColor(asset.status)}35` }}>{statusLabel(asset.status,lang)}</span></td>
-                  <td style={{ ...td, fontWeight:700, color:ds.accent }}>{asset.value.toLocaleString()} ج.م</td>
-                  <td style={{ ...td }}>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <ActionBtn icon={Edit2} color="#4A7AAB" ds={ds} />
-                      <ActionBtn icon={Trash2} color="#EF4444" ds={ds} />
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {filtered.map(asset => (
+              <AssetRow key={asset.id} asset={asset} isRTL={isRTL} lang={lang} ds={ds} td={td} statusColor={statusColor} statusLabel={statusLabel} />
+            ))}
           </tbody>
         </table>
         <div style={{ padding:'12px 18px', borderTop:`1px solid ${ds.border}`, display:'flex', justifyContent:'space-between', flexDirection:isRTL?'row-reverse':'row' }}>
@@ -137,6 +117,29 @@ export default function AssetsPage() {
   );
 }
 
+function AssetRow({ asset, isRTL, lang, ds, td, statusColor, statusLabel }) {
+  const [hov, setHov] = useState(false);
+  const emp = MOCK_EMPLOYEES.find(e=>e.employee_id===asset.assigned_to||e.id===asset.assigned_to);
+  const empName = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : (lang==='ar'?'غير مخصص':'Unassigned');
+  return (
+    <tr onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ borderBottom:`1px solid ${ds.border}`, background:hov?ds.rowHover:'transparent', transition:'background 0.15s' }}>
+      <td style={{ ...td }}>
+        <p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{asset.name}</p>
+        <p style={{ margin:0, fontSize:11, color:ds.muted }}>{asset.serial}</p>
+      </td>
+      <td style={{ ...td }}><span style={{ display:'inline-flex', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:'rgba(74,122,171,0.12)', color:'#4A7AAB', border:'1px solid rgba(74,122,171,0.25)' }}>{asset.type}</span></td>
+      <td style={{ ...td, color:ds.muted }}>{empName}</td>
+      <td style={{ ...td }}><span style={{ display:'inline-flex', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:statusColor(asset.status)+'18', color:statusColor(asset.status), border:`1px solid ${statusColor(asset.status)}35` }}>{statusLabel(asset.status,lang)}</span></td>
+      <td style={{ ...td, fontWeight:700, color:ds.accent }}>{asset.value.toLocaleString()} ج.م</td>
+      <td style={{ ...td }}>
+        <div style={{ display:'flex', gap:6 }}>
+          <ActionBtn icon={Edit2} color="#4A7AAB" ds={ds} />
+          <ActionBtn icon={Trash2} color="#EF4444" ds={ds} />
+        </div>
+      </td>
+    </tr>
+  );
+}
 function AddBtn({ label, ds }) {
   const [hov, setHov] = useState(false);
   return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10, background:hov?'#2B4C6F':'#1B3347', border:'none', cursor:'pointer', color:'#fff', fontSize:13, fontWeight:700, transform:hov?'translateY(-1px)':'none', boxShadow:hov?'0 6px 16px rgba(27,51,71,0.35)':'0 2px 6px rgba(27,51,71,0.2)', transition:'all 0.2s ease' }}><Plus size={16}/>{label}</button>;

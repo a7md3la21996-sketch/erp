@@ -81,7 +81,7 @@ export default function SelfServicePage() {
 
       {/* Quick Actions */}
       <p style={{ margin:'0 0 12px', fontSize:14, fontWeight:700, color:ds.text }}>{lang==='ar'?'إجراءات سريعة':'Quick Actions'}</p>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:20 }}>
         {QUICK_ACTIONS.map(action => (
           <ActionCard key={action.key} icon={action.icon} label={lang==='ar'?action.label_ar:action.label_en} color={action.color} ds={ds} />
         ))}

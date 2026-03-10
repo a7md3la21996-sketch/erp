@@ -57,7 +57,7 @@ export default function DisciplinaryPage() {
         <AddBtn label={lang==='ar'?'+ حالة جديدة':'+ New Case'} ds={ds} />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={Shield}       label={lang==='ar'?'إجمالي الحالات':'Total Cases'} value={cases.length} color="#1B3347" />
         <KpiCard icon={AlertTriangle} label={lang==='ar'?'مفتوحة':'Open'}           value={open}         color="#6B8DB5" />
         <KpiCard icon={XCircle}      label={lang==='ar'?'خطورة عالية':'High Severity'} value={high}         color="#EF4444" />

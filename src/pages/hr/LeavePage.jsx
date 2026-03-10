@@ -64,7 +64,7 @@ export default function LeavePage() {
         </div>
         <AddBtn label={lang==='ar'?'+ طلب إجازة':'+ Request Leave'} ds={ds} />
       </div>
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={CalendarOff}  label={lang==='ar'?'إجمالي الطلبات':'Total Requests'} value={leaves.length} color="#1B3347" />
         <KpiCard icon={Clock}        label={lang==='ar'?'معلقة':'Pending'} value={pending} color="#6B8DB5" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'موافق عليها':'Approved'} value={approved} color="#4A7AAB" />

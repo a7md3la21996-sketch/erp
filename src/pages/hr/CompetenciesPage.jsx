@@ -46,7 +46,7 @@ export default function CompetenciesPage() {
         <AddBtn label={lang==='ar'?'+ كفاءة جديدة':'+ Add Competency'} ds={ds} />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={Award} label={lang==='ar'?'إجمالي الكفاءات':'Total Competencies'} value={COMPETENCIES.length} color="#1B3347" />
         <KpiCard icon={Users} label={lang==='ar'?'عدد الفئات':'Categories'} value={categories.length} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={lang==='ar'?'متوسط المستوى':'Avg Level'} value={avgLevel+'/5'} color="#6B8DB5" />

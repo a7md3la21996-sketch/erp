@@ -55,7 +55,7 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={UserPlus}     label={lang==='ar'?'إجمالي':'Total'}        value={MOCK_ONBOARDING.length} color="#1B3347" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'مكتمل':'Completed'}    value={completed}             color="#4A7AAB" />
         <KpiCard icon={Clock}        label={lang==='ar'?'جاري':'In Progress'}   value={inProgress}            color="#6B8DB5" />

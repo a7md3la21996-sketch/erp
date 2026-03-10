@@ -192,7 +192,7 @@ export default function DashboardPage() {
       </div>
 
       {sections.showCRM && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+        <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
           <KpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={MOCK_CRM.totalLeads}                        trend={lang === 'ar' ? '+12 هذا الشهر' : '+12 this month'} trendUp color="#4A7AAB" />
           <KpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={MOCK_CRM.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" />
           <KpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={MOCK_CRM.closedDeals}                       trend={lang === 'ar' ? '+3 هذا الشهر' : '+3 this month'} trendUp color="#6B8DB5" />
@@ -274,7 +274,7 @@ export default function DashboardPage() {
 
       {sections.showHR && (
         <div style={{ marginBottom: 20 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
+          <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 16 }}>
             <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={hr.total}                color="#1B3347" />
             <KpiCard icon={CalendarCheck} label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'}  value={hr.attendanceRate + '%'} color="#2B4C6F" trend={lang === 'ar' ? 'هذا الشهر' : 'This month'} trendUp />
             <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#4A7AAB" />

@@ -56,7 +56,7 @@ export default function Header() {
             </div>
           </button>
           {showProfile && (
-            <div style={{ position: 'absolute', top: '100%', marginTop: 8, [isRTL ? 'left' : 'right']: 0, width: 220, borderRadius: 12, background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`, boxShadow: isDark ? '0 10px 25px rgba(0,0,0,0.4)' : '0 10px 25px rgba(0,0,0,0.1)', padding: '8px 0', zIndex: 50 }}>
+            <div style={{ position: 'absolute', top: '100%', marginTop: 8, [isRTL ? 'left' : 'right']: 0, width: 220, borderRadius: 12, background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`, boxShadow: isDark ? '0 10px 25px rgba(0,0,0,0.4)' : '0 10px 25px rgba(0,0,0,0.1)', padding: '8px 0', zIndex: 100 }}>
               <div style={{ padding: '10px 16px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#f3f4f6'}` }}>
                 <div style={{ fontSize: 14, fontWeight: 600, color: isDark ? '#E2EAF4' : '#1f2937' }}>{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
                 <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#9ca3af', marginTop: 2 }}>{profile?.email}</div>

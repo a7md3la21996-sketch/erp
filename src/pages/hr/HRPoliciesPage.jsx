@@ -60,7 +60,7 @@ export default function HRPoliciesPage() {
         <AddBtn label={lang==='ar'?'+ سياسة جديدة':'+ New Policy'} ds={ds} />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={FileText}  label={lang==='ar'?'إجمالي السياسات':'Total Policies'} value={MOCK_POLICIES.length} color="#1B3347" />
         <KpiCard icon={Shield}    label={lang==='ar'?'نشطة':'Active'}               value={active}                color="#4A7AAB" />
         <KpiCard icon={Clock}     label={lang==='ar'?'مسودة':'Draft'}                value={draft}                 color="#6B8DB5" />

@@ -54,7 +54,7 @@ export default function RecruitmentPage() {
         <AddBtn label={lang==='ar'?'+ وظيفة جديدة':'+ New Job'} ds={ds} />
       </div>
 
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
         <KpiCard icon={Briefcase} label={lang==='ar'?'إجمالي الوظائف':'Total Jobs'} value={jobs.length} color="#1B3347" />
         <KpiCard icon={Clock} label={lang==='ar'?'مفتوحة':'Open'} value={open} color="#4A7AAB" />
         <KpiCard icon={Users} label={lang==='ar'?'المتقدمون':'Applicants'} value={totalApplicants} color="#6B8DB5" />
