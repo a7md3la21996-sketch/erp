@@ -134,14 +134,16 @@ function PhoneCell({ phone, small = false }) {
   const isDark = theme === 'dark';
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const copyTimer = useRef(null);
+  useEffect(() => () => clearTimeout(copyTimer.current), []);
   if (!phone) return null;
   const masked = phone.slice(0, 6) + '****';
   const handleCopy = (e) => {
     e.stopPropagation();
     navigator.clipboard.writeText(phone).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
+      copyTimer.current = setTimeout(() => setCopied(false), 1500);
+    }).catch(() => {});
   };
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "3px 0" }}
@@ -263,7 +265,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
         {/* Body */}
         <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
           {step === 1 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               {/* القسم والنوع - أول حاجة */}
               <div>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'القسم' : 'Department'} <span style={{ color: '#EF4444' }}>*</span></label>
@@ -383,7 +385,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
 
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنس' : 'Gender'}</label>
                 <select style={sel} value={form.gender} onChange={e => set('gender', e.target.value)}>
@@ -480,8 +482,7 @@ function LogCallModal({ contact, onClose }) {
   const handleSaveCall = async () => {
     if (!callResult) { toast.warning(isRTL ? 'اختر نتيجة المكالمة' : 'Select call result'); return; }
     const activity = { type: 'call', description: `${isRTL ? 'مكالمة' : 'Call'}: ${CALL_RESULTS.find(r => r.key === callResult)?.[isRTL ? 'ar' : 'en'] || callResult}${callNotes ? ' — ' + callNotes : ''}`, next_action: callFollowup ? (isRTL ? 'متابعة' : 'Follow up') : '', next_action_date: callFollowup || '', contact_id: contact.id, created_at: new Date().toISOString() };
-    try { await createActivity(activity); } catch { /* saved locally */ }
-    toast.success(isRTL ? 'تم حفظ المكالمة' : 'Call saved');
+    try { await createActivity(activity); toast.success(isRTL ? 'تم حفظ المكالمة' : 'Call saved'); } catch { toast.success(isRTL ? 'تم حفظ المكالمة محلياً' : 'Call saved locally'); }
     onClose();
   };
 
@@ -551,8 +552,7 @@ function ReminderModal({ contact, onClose }) {
   const handleSaveReminder = async () => {
     if (!customDate) { toast.warning(isRTL ? 'اختر موعد التذكير' : 'Select reminder date'); return; }
     const activity = { type: 'note', description: `${isRTL ? 'تذكير' : 'Reminder'}: ${message || (isRTL ? 'متابعة' : 'Follow up')}`, next_action: isRTL ? 'تذكير' : 'Reminder', next_action_date: customDate, contact_id: contact.id, created_at: new Date().toISOString() };
-    try { await createActivity(activity); } catch { /* saved locally */ }
-    toast.success(isRTL ? 'تم حفظ التذكير' : 'Reminder saved');
+    try { await createActivity(activity); toast.success(isRTL ? 'تم حفظ التذكير' : 'Reminder saved'); } catch { toast.success(isRTL ? 'تم حفظ التذكير محلياً' : 'Reminder saved locally'); }
     onClose();
   };
 
@@ -810,7 +810,7 @@ function EditContactModal({ contact, onClose, onSave }) {
           {/* الهاتف والإيميل */}
           <div style={row}>
             <div>
-              <label style={lbl}>{isRTL ? 'رقم الهاتف' : 'Phone'} *</label>
+              <label style={lbl}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span></label>
               <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="010xxxxxxxx" />
             </div>
             <div>
@@ -932,7 +932,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
     if (tab === 'tasks') {
       fetchTasks({ contactId: contact.id })
         .then(data => { if (!cancelled) setTasks(data); })
-        .catch(() => { if (!cancelled) setTasks([]); });
+        .catch(() => { if (!cancelled) { setTasks([]); toast.error(isRTL ? 'تعذر تحميل المهام' : 'Failed to load tasks'); } });
     }
     if (tab === 'opportunities') {
       setLoadingOpps(true);
@@ -979,7 +979,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); setShowEdit(false); }} />}
     <div style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', direction: isRTL ? 'rtl' : 'ltr' }}>
       <div onClick={onClose} style={{ flex: 1, background: 'rgba(0,0,0,0.45)' }} />
-      <div style={{ width: 430, background: isDark ? '#0F1E2D' : '#ffffff', borderRight: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+      <div className="contact-drawer" style={{ width: 430, background: isDark ? '#0F1E2D' : '#ffffff', borderRight: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
 
         {/* Drawer Header */}
         <div style={{ padding: '20px 20px 0', background: isDark ? 'linear-gradient(180deg, #1B3347 0%, #0F1E2D 100%)' : 'linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%)' }}>
@@ -1113,7 +1113,7 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
           {tab === 'invoices' && (
             <div>
               <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
-                <div style={{ fontSize: 32, marginBottom: 12, opacity: 0.4 }}>🧾</div>
+                <FileDown size={32} style={{ marginBottom: 12, opacity: 0.4, color: isDark ? '#8BA8C8' : '#64748B' }} />
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: isDark ? '#E2EAF4' : '#1A2B3C' }}>{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
                 <p style={{ margin: '6px 0 16px', fontSize: 12 }}>{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
                 <button style={{ padding: '9px 20px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
@@ -1266,15 +1266,15 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                         </div>
                       ))}
                       {[
-                        { key:'stage', label_ar:'المرحلة', label_en:'Stage', options:[{v:'new',ar:'جديد'},{v:'contacted',ar:'تم التواصل'},{v:'interested',ar:'مهتم'},{v:'negotiation',ar:'تفاوض'},{v:'reserved',ar:'محجوز'}] },
-                        { key:'temperature', label_ar:'الحرارة', label_en:'Temperature', options:[{v:'hot',ar:'ساخن'},{v:'warm',ar:'دافئ'},{v:'normal',ar:'عادي'},{v:'cold',ar:'بارد'}] },
-                        { key:'priority', label_ar:'الأولوية', label_en:'Priority', options:[{v:'urgent',ar:'عاجل'},{v:'high',ar:'عالي'},{v:'medium',ar:'متوسط'},{v:'low',ar:'منخفض'}] },
+                        { key:'stage', label_ar:'المرحلة', label_en:'Stage', options:[{v:'new',ar:'جديد',en:'New'},{v:'contacted',ar:'تم التواصل',en:'Contacted'},{v:'interested',ar:'مهتم',en:'Interested'},{v:'negotiation',ar:'تفاوض',en:'Negotiation'},{v:'reserved',ar:'محجوز',en:'Reserved'}] },
+                        { key:'temperature', label_ar:'الحرارة', label_en:'Temperature', options:[{v:'hot',ar:'ساخن',en:'Hot'},{v:'warm',ar:'دافئ',en:'Warm'},{v:'normal',ar:'عادي',en:'Normal'},{v:'cold',ar:'بارد',en:'Cold'}] },
+                        { key:'priority', label_ar:'الأولوية', label_en:'Priority', options:[{v:'urgent',ar:'عاجل',en:'Urgent'},{v:'high',ar:'عالي',en:'High'},{v:'medium',ar:'متوسط',en:'Medium'},{v:'low',ar:'منخفض',en:'Low'}] },
                       ].map(f => (
                         <div key={f.key}>
                           <label style={{ fontSize:12, color: isDark ? '#8BA8C8' : '#64748B', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
                           <select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
                             style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}`, background: isDark ? '#0F1E2D' : '#ffffff', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:13, outline:'none', cursor:'pointer', boxSizing:'border-box', fontFamily:'inherit' }}>
-                            {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.v}</option>)}
+                            {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.en}</option>)}
                           </select>
                         </div>
                       ))}
@@ -1537,8 +1537,8 @@ export default function ContactsPage() {
       stage: form.contact_type === 'lead' ? 'new' : null,
       is_blacklisted: false,
       assigned_to_name: profile?.full_name_ar || '—',
-      created_at: new Date().toISOString().slice(0, 10),
-      last_activity_at: new Date().toISOString().slice(0, 10),
+      created_at: new Date().toISOString(),
+      last_activity_at: new Date().toISOString(),
     };
     try {
       const saved = await createContact(form);
@@ -1589,7 +1589,7 @@ export default function ContactsPage() {
                 {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
               </button>
               {showBulkMenu && (
-                <div style={{ position: "absolute", top: "110%", left: 0, background: isDark ? '#1a2234' : '#fff', border: '1px solid ' + colors.border, borderRadius: 10, minWidth: 190, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.35)", overflow: "hidden" }}>
+                <div style={{ position: "absolute", top: "110%", [isRTL ? 'right' : 'left']: 0, background: isDark ? '#1a2234' : '#fff', border: '1px solid ' + colors.border, borderRadius: 10, minWidth: 190, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.35)", overflow: "hidden" }}>
                   {[
                     { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
                     { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => setBulkReassignModal(true) },

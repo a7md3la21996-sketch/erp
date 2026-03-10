@@ -56,4 +56,10 @@ html.dark textarea, body.dark textarea {
 /* Modal responsive */
 @media (max-width: 560px) {
   .modal-content { width: 95vw !important; max-width: 95vw !important; margin: 16px !important; }
+  .modal-content .modal-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Drawer responsive */
+@media (max-width: 480px) {
+  .contact-drawer { width: 100vw !important; }
 }
