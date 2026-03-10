@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import FollowUpReminder from '../../components/ui/FollowUpReminder';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
+import { TrendingUp } from 'lucide-react';
 
 const STAGE_CONFIG = [
   { id: "all",                  label_ar: "الكل",            label_en: "All",             color: "#4A7AAB" },

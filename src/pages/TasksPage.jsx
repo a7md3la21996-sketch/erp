@@ -216,8 +216,8 @@ export default function TasksPage() {
                 <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
                   <CheckSquare size={24} color='#4A7AAB' />
                 </div>
-                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
-                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي مهام بعد أو جرّب تغيير الفلتر':'No tasks found, try changing the filter'}</p>
+                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:c.text }}>{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
+                <p style={{ margin:0, fontSize:13, color:c.muted }}>{lang==='ar'?'لم يتم إضافة أي مهام بعد أو جرّب تغيير الفلتر':'No tasks found, try changing the filter'}</p>
               </div>
             ) : filtered.map((task, idx) => {
           const typeDef = TASK_TYPES[task.type] || TASK_TYPES.general;
