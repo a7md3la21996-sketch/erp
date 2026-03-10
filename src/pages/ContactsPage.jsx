@@ -160,11 +160,18 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   useEscClose(onClose);
   const dupTimer = useRef(null);
   const [step, setStep] = useState(1);
+  const DEPT_TYPES = {
+    sales: ['lead','cold','client','developer','partner'],
+    hr: ['applicant'],
+    finance: ['supplier'],
+    marketing: ['lead','cold'],
+    operations: ['partner','supplier'],
+  };
   const [form, setForm] = useState({
     prefix: '', full_name: '', phone: '', phone2: '', email: '',
-    contact_type: 'lead', source: 'facebook', campaign_name: '',
+    contact_type: '', source: 'facebook', campaign_name: '',
     budget_min: '', budget_max: '', preferred_location: '',
-    interested_in_type: 'residential', notes: '', department: 'sales',
+    interested_in_type: 'residential', notes: '', department: '',
     gender: '', nationality: '', birth_date: '', company: '', job_title: '',
   });
   const [dupWarning, setDupWarning] = useState(null);
@@ -173,6 +180,11 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setDept = (dept) => {
+    const types = DEPT_TYPES[dept] || [];
+    setForm(f => ({ ...f, department: dept, contact_type: types[0] || '' }));
+  };
+  const availableTypes = DEPT_TYPES[form.department] || [];
 
   const checkPhoneNumber = (phone) => {
     if (!phone || !validatePhone(phone)) return;
@@ -188,6 +200,8 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
   };
 
   const handleSave = async () => {
+    if (!form.department) { toast.error(isRTL ? 'يرجى اختيار القسم' : 'Please select a department'); return; }
+    if (!form.contact_type) { toast.error(isRTL ? 'يرجى اختيار نوع جهة الاتصال' : 'Please select contact type'); return; }
     if (!form.phone || !validatePhone(form.phone)) { toast.error(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
     const invalidExtra = extraPhones.find(p => p && !validatePhone(p));
     if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
@@ -242,6 +256,26 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
         <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
           {step === 1 ? (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              {/* القسم والنوع - أول حاجة */}
+              <div>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'القسم' : 'Department'} <span style={{ color: '#EF4444' }}>*</span></label>
+                <select style={{ ...sel, borderColor: !form.department ? (isDark ? 'rgba(74,122,171,0.5)' : '#9ca3af') : undefined }} value={form.department} onChange={e => setDept(e.target.value)}>
+                  <option value="">{isRTL ? 'اختر القسم...' : 'Select department...'}</option>
+                  <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
+                  <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
+                  <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
+                  <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
+                  <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'} <span style={{ color: '#EF4444' }}>*</span></label>
+                <select style={sel} value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department}>
+                  {!form.department && <option value="">{isRTL ? 'اختر القسم أولاً...' : 'Select department first...'}</option>}
+                  {availableTypes.map(t => <option key={t} value={t}>{isRTL ? ({lead:'ليد',cold:'كولد كول',client:'عميل',supplier:'مورد',developer:'مطور عقاري',applicant:'متقدم لوظيفة',partner:'شريك'}[t]) : ({lead:'Lead',cold:'Cold Call',client:'Client',supplier:'Supplier',developer:'Developer',applicant:'Applicant',partner:'Partner'}[t])}</option>)}
+                </select>
+              </div>
+
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -317,28 +351,6 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
               <div style={{ gridColumn: '1 / -1' }}>
                 <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
                 <input style={inp} type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
-              </div>
-              <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'}</label>
-                <select style={sel} value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
-                  <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
-                  <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
-                  <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
-                  <option value="supplier">{isRTL ? 'مورد' : 'Supplier'}</option>
-                  <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
-                  <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
-                  <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'القسم' : 'Department'}</label>
-                <select style={sel} value={form.department} onChange={e => set('department', e.target.value)}>
-                  <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
-                  <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
-                  <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
-                  <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
-                  <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
-                </select>
               </div>
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
@@ -425,7 +437,7 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
           <div style={{ display: 'flex', gap: 10 }}>
             {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'السابق →' : '← Back'}</button>}
             {step === 1
-              ? <button onClick={() => setStep(2)} disabled={!validatePhone(form.phone) || !!dupWarning} style={{ padding: '9px 22px', background: (validatePhone(form.phone) && !dupWarning) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: (validatePhone(form.phone) && !dupWarning) ? 'pointer' : 'not-allowed' }}>{isRTL ? '← التالي' : 'Next →'}</button>
+              ? (() => { const canNext = form.department && form.contact_type && validatePhone(form.phone) && !dupWarning; return <button onClick={() => setStep(2)} disabled={!canNext} style={{ padding: '9px 22px', background: canNext ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: canNext ? 'pointer' : 'not-allowed' }}>{isRTL ? '← التالي' : 'Next →'}</button>; })()
               : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: saving ? 'rgba(74,122,171,0.3)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</button>
             }
           </div>
