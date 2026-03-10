@@ -112,6 +112,16 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove, onSelect }) {
         </div>
       </div>
       {opp.project && <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:isDark?"#8BA8C8":"#6b7280" }}><IBuilding style={{ width:12, height:12, flexShrink:0 }} /><span style={{ whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{opp.project}</span></div>}
+      <div onClick={e=>e.stopPropagation()} style={{ borderTop:`1px solid ${isDark?"rgba(74,122,171,0.1)":"#f3f4f6"}`, paddingTop:8, marginTop:0 }}>
+        <select value={opp.stage} onChange={e=>{e.stopPropagation();onMove(opp.id,e.target.value);}}
+          style={{ width:"100%", padding:"6px 10px", borderRadius:8, border:`1px solid ${stage.color}44`, background:isDark?"#0F1E2D":"#f8fafc", color:stage.color, fontSize:11, fontWeight:700, cursor:"pointer", outline:"none", fontFamily:"inherit" }}>
+          {STAGE_CONFIG.filter(s=>s.id!=="all").map(s=>(
+            <option key={s.id} value={s.id} style={{ color: isDark?"#E2EAF4":"#1B3347", background: isDark?"#0F1E2D":"#fff", fontWeight: s.id===opp.stage?700:400 }}>
+              {isRTL?s.label_ar:s.label_en}
+            </option>
+          ))}
+        </select>
+      </div>
       <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
         <div style={{ display:"flex", alignItems:"center", gap:4, background:isDark?"rgba(74,122,171,0.1)":"rgba(74,122,171,0.08)", borderRadius:6, padding:"4px 9px", fontSize:12, fontWeight:700, color:"#4A7AAB" }}>
           <IMoney style={{ width:11, height:11 }} />{fmtBudget(opp.budget)} {isRTL?"ج":"EGP"}

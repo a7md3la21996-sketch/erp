@@ -25,7 +25,7 @@ function buildHRStats(attendance) {
   const absentDays = attendance.filter(r => r.status === 'absent');
   const uniqueEmps = [...new Set(attendance.map(r => r.employee_id))].length;
   const attendanceRate = uniqueEmps > 0 ? Math.round((presentDays.length / (uniqueEmps * 22)) * 100) : 0;
-  const today = new Date(2026, 2, 8);
+  const today = new Date();
   const alerts = MOCK_EMPLOYEES.filter(emp => { if (!emp.contract_end) return false; const end = new Date(emp.contract_end); const days = Math.ceil((end - today) / (1000 * 60 * 60 * 24)); return days > 0 && days <= 30; });
   const probation = MOCK_EMPLOYEES.filter(emp => emp.employment_type === 'probation');
   const deptCounts = DEPARTMENTS.map(d => ({ ...d, count: MOCK_EMPLOYEES.filter(e => e.department === d.id).length })).filter(d => d.count > 0);
@@ -140,7 +140,7 @@ export default function DashboardPage() {
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const hr = useMemo(() => buildHRStats(attendance), [attendance]);
   const c = { bg: isDark ? '#152232' : '#F0F4F8', cardBg: isDark ? '#1a2234' : '#ffffff', border: isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0', text: isDark ? '#E2EAF4' : '#1A2B3C', textMuted: isDark ? '#8BA8C8' : '#64748B', thBg: isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC', accent: '#4A7AAB', primary: '#2B4C6F' };
-  const dateStr = new Date(2026, 2, 8).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const dateStr = new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const greeting = lang === 'ar' ? 'صباح الخير' : 'Good morning';
   const targetPct = Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
   const chartData = REVENUE_TREND.map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en }));

@@ -517,7 +517,206 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 }
 
 // ── Contact Drawer ─────────────────────────────────────────────────────────
+
+function EditContactModal({ contact, onClose, onSave }) {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+  const [form, setForm] = useState({
+    prefix: contact.prefix || '',
+    full_name: contact.full_name || '',
+    phone: contact.phone || '',
+    phone2: contact.phone2 || '',
+    email: contact.email || '',
+    contact_type: contact.contact_type || 'lead',
+    source: contact.source || 'facebook',
+    campaign_name: contact.campaign_name || '',
+    budget_min: contact.budget_min || '',
+    budget_max: contact.budget_max || '',
+    preferred_location: contact.preferred_location || '',
+    interested_in_type: contact.interested_in_type || 'residential',
+    notes: contact.notes || '',
+    department: contact.department || 'sales',
+    gender: contact.gender || '',
+    nationality: contact.nationality || '',
+    birth_date: contact.birth_date || '',
+    company: contact.company || '',
+    job_title: contact.job_title || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const isSalesType = ['lead','cold','client'].includes(form.contact_type);
+
+  const handleSave = async () => {
+    if (!form.full_name.trim()) { alert(isRTL ? 'الاسم مطلوب' : 'Name is required'); return; }
+    setSaving(true);
+    try {
+      await onSave({ ...contact, ...form,
+        budget_min: form.budget_min ? Number(form.budget_min) : null,
+        budget_max: form.budget_max ? Number(form.budget_max) : null,
+      });
+      onClose();
+    } catch (err) {
+      alert((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
+    }
+    setSaving(false);
+  };
+
+  const inp = { background: '#0F1E2D', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, padding: '9px 12px', color: '#E2EAF4', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
+  const sel = { ...inp, cursor: 'pointer' };
+  const lbl = { fontSize: 12, color: '#8BA8C8', marginBottom: 4, display: 'block' };
+  const row = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: '#1A2B3C', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 16, width: '100%', maxWidth: 580, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <div>
+            <h2 style={{ margin: 0, color: '#E2EAF4', fontSize: 17, fontWeight: 700 }}>{isRTL ? 'تعديل بيانات جهة الاتصال' : 'Edit Contact'}</h2>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: '#8BA8C8' }}>{contact.full_name}</p>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#8BA8C8', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* الاسم والـ prefix */}
+          <div>
+            <label style={lbl}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 10 }}>
+              <select value={form.prefix} onChange={e => set('prefix', e.target.value)} style={sel}>
+                <option value="">{isRTL ? 'اللقب' : 'Prefix'}</option>
+                <option value="Mr.">Mr.</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Dr.">Dr.</option>
+                <option value="Eng.">Eng.</option>
+                <option value="أستاذ">أستاذ</option>
+              </select>
+              <input value={form.full_name} onChange={e => set('full_name', e.target.value)} style={inp} placeholder={isRTL ? 'الاسم الكامل...' : 'Full name...'} />
+            </div>
+          </div>
+
+          {/* النوع والقسم */}
+          <div style={row}>
+            <div>
+              <label style={lbl}>{isRTL ? 'النوع' : 'Type'}</label>
+              <select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} style={sel}>
+                <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
+                <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
+                <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
+                <option value="supplier">{isRTL ? 'مورد' : 'Supplier'}</option>
+                <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
+                <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
+                <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>{isRTL ? 'القسم' : 'Department'}</label>
+              <select value={form.department} onChange={e => set('department', e.target.value)} style={sel}>
+                <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
+                <option value="hr">{isRTL ? 'HR' : 'HR'}</option>
+                <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
+                <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
+                <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
+              </select>
+            </div>
+          </div>
+
+          {/* الهاتف والإيميل */}
+          <div style={row}>
+            <div>
+              <label style={lbl}>{isRTL ? 'رقم الهاتف' : 'Phone'} *</label>
+              <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="010xxxxxxxx" />
+            </div>
+            <div>
+              <label style={lbl}>{isRTL ? 'هاتف 2' : 'Phone 2'}</label>
+              <input value={form.phone2} onChange={e => set('phone2', e.target.value)} style={inp} placeholder="011xxxxxxxx" />
+            </div>
+          </div>
+
+          <div>
+            <label style={lbl}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
+            <input value={form.email} onChange={e => set('email', e.target.value)} style={inp} placeholder="email@domain.com" />
+          </div>
+
+          {/* الشركة والمسمى */}
+          <div style={row}>
+            <div>
+              <label style={lbl}>{isRTL ? 'الشركة' : 'Company'}</label>
+              <input value={form.company} onChange={e => set('company', e.target.value)} style={inp} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} />
+            </div>
+            <div>
+              <label style={lbl}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
+              <input value={form.job_title} onChange={e => set('job_title', e.target.value)} style={inp} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} />
+            </div>
+          </div>
+
+          {/* المصدر — للـ sales types فقط */}
+          {isSalesType && (
+            <div style={row}>
+              <div>
+                <label style={lbl}>{isRTL ? 'المصدر' : 'Source'}</label>
+                <select value={form.source} onChange={e => set('source', e.target.value)} style={sel}>
+                  <option value="facebook">{isRTL ? 'فيسبوك' : 'Facebook'}</option>
+                  <option value="instagram">{isRTL ? 'إنستجرام' : 'Instagram'}</option>
+                  <option value="google">{isRTL ? 'جوجل أدز' : 'Google Ads'}</option>
+                  <option value="website">{isRTL ? 'الموقع' : 'Website'}</option>
+                  <option value="call">{isRTL ? 'اتصال وارد' : 'Inbound Call'}</option>
+                  <option value="visit">{isRTL ? 'زيارة مباشرة' : 'Walk-in'}</option>
+                  <option value="referral">{isRTL ? 'ترشيح' : 'Referral'}</option>
+                  <option value="developer">{isRTL ? 'مطور' : 'Developer'}</option>
+                  <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
+                  <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
+                </select>
+              </div>
+              <div>
+                <label style={lbl}>{isRTL ? 'الميزانية (من - إلى)' : 'Budget (min - max)'}</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <input value={form.budget_min} onChange={e => set('budget_min', e.target.value)} style={inp} placeholder={isRTL ? 'من' : 'Min'} type="number" />
+                  <input value={form.budget_max} onChange={e => set('budget_max', e.target.value)} style={inp} placeholder={isRTL ? 'إلى' : 'Max'} type="number" />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* الجنس والجنسية */}
+          <div style={row}>
+            <div>
+              <label style={lbl}>{isRTL ? 'الجنس' : 'Gender'}</label>
+              <select value={form.gender} onChange={e => set('gender', e.target.value)} style={sel}>
+                <option value="">{isRTL ? 'غير محدد' : 'Not specified'}</option>
+                <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
+                <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>{isRTL ? 'الجنسية' : 'Nationality'}</label>
+              <input value={form.nationality} onChange={e => set('nationality', e.target.value)} style={inp} placeholder={isRTL ? 'مصري / سعودي...' : 'Egyptian / Saudi...'} />
+            </div>
+          </div>
+
+          {/* ملاحظات */}
+          <div>
+            <label style={lbl}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
+            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: 70, resize: 'vertical' }} placeholder={isRTL ? 'أي ملاحظات...' : 'Any notes...'} />
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px', borderTop: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+          <button onClick={onClose} style={{ padding: '9px 20px', background: 'transparent', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
+          <button onClick={handleSave} disabled={saving} style={{ padding: '9px 24px', background: saving ? '#2B4C6F' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+            {saving ? (isRTL ? 'جارى الحفظ...' : 'Saving...') : (isRTL ? 'حفظ التعديلات' : 'Save Changes')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportunity }) {
+  const [showEdit, setShowEdit] = useState(false);
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const [tab, setTab] = useState('info');
