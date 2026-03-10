@@ -124,7 +124,7 @@ function OppCard({ opp, isDark, isRTL, onDelete, onMove, onSelect }) {
         <div style={{ fontSize:11, fontWeight:700, color:act.color }}>{act.text}</div>
       </div>
       {opp.notes && <div style={{ fontSize:11, color:isDark?"#8BA8C8":"#9ca3af", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop:-4 }}>{opp.notes}</div>}
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 8 }} onClick={e=>e.stopPropagation()}>
             <FollowUpReminder entityType="opportunity" entityId={String(opp.id)} entityName={opp.contactName} compact={true} />
           </div>
     </div>
