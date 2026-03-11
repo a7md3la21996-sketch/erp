@@ -43,8 +43,8 @@ export default function DisciplinaryPage() {
   const statusLabel   = (s,lang) => ({ open:lang==='ar'?'مفتوح':'Open', closed:lang==='ar'?'مغلق':'Closed' }[s]||s);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
-      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+      <div className={`flex flex-wrap justify-between items-center gap-3 mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <Shield size={22} color="#fff" />
@@ -74,7 +74,7 @@ export default function DisciplinaryPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Shield}       label={lang==='ar'?'إجمالي الحالات':'Total Cases'} value={cases.length} color="#1B3347" />
         <KpiCard icon={AlertTriangle} label={lang==='ar'?'مفتوحة':'Open'}           value={open}         color="#6B8DB5" />
         <KpiCard icon={XCircle}      label={lang==='ar'?'خطورة عالية':'High Severity'} value={high}         color="#EF4444" />

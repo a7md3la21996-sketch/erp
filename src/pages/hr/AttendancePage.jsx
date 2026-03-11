@@ -84,7 +84,7 @@ export default function AttendancePage() {
   const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Header */}
       <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -116,7 +116,7 @@ export default function AttendancePage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'حاضر':'Present'}  value={stats.present} color="#4A7AAB" />
         <KpiCard icon={XCircle}      label={lang==='ar'?'غائب':'Absent'}   value={stats.absent}  color="#EF4444" />
         <KpiCard icon={AlertCircle}  label={lang==='ar'?'متأخر':'Late'}     value={stats.late}    color="#6B8DB5" />

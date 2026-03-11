@@ -35,7 +35,7 @@ export default function LeavePage() {
   const typeLabel   = (t,lang) => ({ annual:lang==='ar'?'سنوية':'Annual', sick:lang==='ar'?'مرضية':'Sick', unpaid:lang==='ar'?'بدون راتب':'Unpaid', emergency:lang==='ar'?'طارئة':'Emergency' }[t]||t);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Header */}
       <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -66,7 +66,7 @@ export default function LeavePage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={CalendarOff}  label={lang==='ar'?'إجمالي الطلبات':'Total Requests'} value={leaves.length} color="#1B3347" />
         <KpiCard icon={Clock}        label={lang==='ar'?'معلقة':'Pending'} value={pending} color="#6B8DB5" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'موافق عليها':'Approved'} value={approved} color="#4A7AAB" />

@@ -198,10 +198,10 @@ export default function PerformancePage() {
   ];
 
   return (
-    <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
-      <div className={`flex items-center justify-between mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className="w-10 h-10 rounded-[10px] bg-brand-800 flex items-center justify-center">
             <Target size={20} color="#fff" />
@@ -238,7 +238,7 @@ export default function PerformancePage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-3.5 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
         {[
           { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg Performance', value: avgPerf + '%', icon: '', color: '#4A7AAB' },
           { label: lang === 'ar' ? 'متميزون' : 'Top Performers',       value: topPerformers,  icon: '', color: '#4A7AAB' },
@@ -254,7 +254,7 @@ export default function PerformancePage() {
       </div>
 
       {/* Tabs */}
-      <div className={`flex gap-0 mb-5 border-b border-edge dark:border-edge-dark ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap gap-0 mb-5 border-b border-edge dark:border-edge-dark overflow-x-auto ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
             className={`px-5 py-[11px] border-none cursor-pointer text-[13px] font-medium bg-transparent transition-colors duration-200
@@ -269,7 +269,7 @@ export default function PerformancePage() {
       </div>
 
       {/* Filters */}
-      <div className={`flex gap-2.5 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap gap-2.5 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="relative flex-1 max-w-[300px]">
           <Search size={14} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-3" />
           <Input value={search} onChange={e => setSearch(e.target.value)}
@@ -444,7 +444,7 @@ export default function PerformancePage() {
           <div className="px-4 py-3 rounded-lg bg-brand-500/[0.08] border border-brand-500/20 mb-5 text-[13px] text-brand-500 dark:text-brand-300">
             {lang === 'ar' ? ' المحور الأفقي: الأداء (KPIs) · المحور الرأسي: الالتزام (الحضور)' : 'X-axis: Performance (KPIs) · Y-axis: Commitment (Attendance)'}
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {[2,1,0].map(potential => (
               [0,1,2].map(perf => {
                 const boxEmps = filtered.filter(d => {
@@ -482,7 +482,7 @@ export default function PerformancePage() {
       {activeTab === 'activity' && (
         <div className="flex flex-col gap-4">
           {/* Activity Legend */}
-          <div className="grid grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             {[
               { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.calls, 0), icon: '', color: '#4A7AAB' },
               { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.opportunities, 0), icon: '', color: '#4A7AAB' },
@@ -561,7 +561,7 @@ export default function PerformancePage() {
       {/* ── BSC TAB ── */}
       {activeTab === 'bsc' && (
         <div className="flex flex-col gap-4">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {BSC_PERSPECTIVES.map(p => {
               const avg = Math.round(p.objectives.reduce((s,o) => s + Math.min((o.actual / o.target) * 100, 100), 0) / p.objectives.length);
               return (

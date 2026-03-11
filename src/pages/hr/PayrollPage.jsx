@@ -22,8 +22,8 @@ export default function PayrollPage() {
   const avgSalary = employees.length ? Math.round(totalSalaries / employees.length) : 0;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
-      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+      <div className={`flex flex-wrap justify-between items-center gap-3 mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <DollarSign size={22} color="#fff" />
@@ -62,7 +62,7 @@ export default function PayrollPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={DollarSign} label={lang==='ar'?'إجمالي الرواتب':'Total Salaries'} value={(totalSalaries/1000).toFixed(0)+'K'} sub="EGP" color="#1B3347" />
         <KpiCard icon={Users} label={lang==='ar'?'عدد الموظفين':'Employees'} value={employees.length} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={lang==='ar'?'متوسط الراتب':'Avg Salary'} value={(avgSalary/1000).toFixed(1)+'K'} sub="EGP" color="#6B8DB5" />

@@ -259,7 +259,7 @@ export default function GlobalSearch({ onClose }) {
                     key={item.id}
                     onClick={() => handleSelect(item)}
                     onMouseEnter={() => setActiveIndex(i)}
-                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-[10px] border-none cursor-pointer font-[inherit] transition-colors duration-100 ${isRTL ? 'text-right' : 'text-left'} ${isActiveItem ? 'bg-brand-50 dark:bg-brand-500/15' : 'bg-transparent'} text-content dark:text-content-dark`}
+                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-[10px] border-none cursor-pointer font-[inherit] transition-colors duration-100 text-start ${isActiveItem ? 'bg-brand-50 dark:bg-brand-500/15' : 'bg-transparent'} text-content dark:text-content-dark`}
                   >
                     {/* Icon */}
                     <div

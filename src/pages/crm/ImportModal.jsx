@@ -232,7 +232,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 <table className="w-full border-collapse">
                   <thead><tr>
                     {[isRTL ? 'الاسم' : 'Name', isRTL ? 'الرقم' : 'Phone', isRTL ? 'الحالة' : 'Status', isRTL ? 'السبب' : 'Note'].map((h, i) => (
-                      <th key={i} className={`text-content-muted dark:text-content-muted-dark py-2 px-2.5 ${isRTL ? 'text-right' : 'text-left'} border-b border-edge dark:border-edge-dark text-[11px] font-semibold`}>{h}</th>
+                      <th key={i} className={`text-content-muted dark:text-content-muted-dark py-2 px-2.5 text-start border-b border-edge dark:border-edge-dark text-[11px] font-semibold`}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>

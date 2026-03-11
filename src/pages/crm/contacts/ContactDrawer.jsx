@@ -177,7 +177,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </div>
               <div>
                 <div className={`text-base font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px] ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
-                  {contact.prefix ? <span className={`text-[#6B8DB5] dark:text-[#6B8DB5] ${isRTL ? 'ml-1' : 'mr-1'}`}>{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                  {contact.prefix ? <span className={`text-[#6B8DB5] dark:text-[#6B8DB5] me-1`}>{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                 </div>
                 <div className="mt-1 flex gap-1.5 items-center flex-wrap">
                   {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
@@ -260,7 +260,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               ].map(r => (
               <div key={r.label} className={rowCls}>
                 <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
-                <span className={`text-content dark:text-content-dark font-medium max-w-[55%] ${isRTL ? 'text-left' : 'text-right'} whitespace-nowrap overflow-hidden text-ellipsis`}>{r.val}</span>
+                <span className={`text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis`}>{r.val}</span>
               </div>
               ))}
               {contact.notes && (
@@ -458,7 +458,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         { key:'notes',   label_ar:'ملاحظات', label_en:'Notes', type:'text' },
                       ].map(f => (
                         <div key={f.key}>
-                          <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL?f.label_ar:f.label_en}</label>
+                          <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start`}>{isRTL?f.label_ar:f.label_en}</label>
                           <input type={f.type} value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
                             className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[13px] outline-none box-border font-inherit"
                             style={{ textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr' }} />
@@ -470,7 +470,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         { key:'priority', label_ar:'الأولوية', label_en:'Priority', options:[{v:'urgent',ar:'عاجل',en:'Urgent'},{v:'high',ar:'عالي',en:'High'},{v:'medium',ar:'متوسط',en:'Medium'},{v:'low',ar:'منخفض',en:'Low'}] },
                       ].map(f => (
                         <div key={f.key}>
-                          <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL?f.label_ar:f.label_en}</label>
+                          <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start`}>{isRTL?f.label_ar:f.label_en}</label>
                           <select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
                             className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[13px] outline-none cursor-pointer box-border font-inherit">
                             {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.en}</option>)}

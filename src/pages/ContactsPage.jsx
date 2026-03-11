@@ -289,7 +289,7 @@ export default function ContactsPage() {
   const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-[13px] text-content dark:text-content-dark text-start`;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6">
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>
@@ -298,9 +298,9 @@ export default function ContactsPage() {
             {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${filtered.length} ${isRTL ? 'نتيجة' : 'results'}`}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={() => exportCSV(filtered)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
-            <Download size={14} /> {isRTL ? 'تصدير' : 'Export'}
+            <Download size={14} /> <span className="hidden sm:inline">{isRTL ? 'تصدير' : 'Export'}</span>
           </button>
           <button onClick={() => setShowImportModal(true)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}

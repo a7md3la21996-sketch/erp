@@ -56,7 +56,7 @@ function ReminderModal({ onClose, onSave, entityType, entityId, entityName, lang
             <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center">
               <Bell size={16} color="#fff" />
             </div>
-            <div className={isRTL ? 'text-right' : 'text-left'}>
+            <div className="text-start">
               <div className="text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'جدول متابعة' : 'Schedule Follow-up'}</div>
               <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{entityName}</div>
             </div>
@@ -201,7 +201,7 @@ export default function FollowUpReminder({ entityType = 'contact', entityId, ent
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: typeDef.color + '18' }}>
                   <Ic size={14} color={typeDef.color} />
                 </div>
-                <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <div className={`flex-1 min-w-0 text-start`}>
                   <div className={`text-xs font-semibold ${od ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>{formatDue(r.due_at, lang)}</div>
                   {r.notes && <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-px overflow-hidden text-ellipsis whitespace-nowrap">{r.notes}</div>}
                 </div>

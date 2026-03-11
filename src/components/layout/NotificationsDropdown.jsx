@@ -57,7 +57,7 @@ export default function NotificationsDropdown({ show, onClose }) {
   return (
     <div
       ref={ref}
-      className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-[340px] max-h-[420px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-xl dark:shadow-2xl z-[100] overflow-hidden ${isRTL ? 'direction-rtl' : 'direction-ltr'}`}
+      className={`absolute top-full mt-2 end-0 w-[340px] max-h-[420px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-xl dark:shadow-2xl z-[100] overflow-hidden ${isRTL ? 'direction-rtl' : 'direction-ltr'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* Header */}

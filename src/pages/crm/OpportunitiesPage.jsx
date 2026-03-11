@@ -486,9 +486,9 @@ export default function OpportunitiesPage() {
   };
 
   return (<>
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark font-cairo p-5 pb-10">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark font-cairo px-4 py-4 md:p-5 pb-10">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
             <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center">

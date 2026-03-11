@@ -80,7 +80,7 @@ export default function TargetTrackerPage() {
   };
 
   return (
-    <div className="p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className="px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
       {/* Header */}
       <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -115,10 +115,10 @@ export default function TargetTrackerPage() {
       </div>
 
       {/* Main content grid */}
-      <div className="grid grid-cols-[1fr_340px] gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
         {/* Team Ranking Table */}
-        <Card className="overflow-hidden">
-          <CardHeader className="flex items-center justify-between">
+        <Card className="overflow-x-auto overflow-hidden">
+          <CardHeader className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-semibold text-content dark:text-content-dark flex items-center gap-1.5">
               <BarChart2 size={16} className="text-brand-500" />
               {lang === 'ar' ? 'ترتيب الفريق' : 'Team Ranking'}

@@ -38,13 +38,13 @@ export default function RecruitmentPage() {
   const totalApplicants = jobs.reduce((s,j)=>s+j.applicants,0);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 px-7 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-[46px] h-[46px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <Briefcase size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className="text-start">
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'التوظيف':'Recruitment'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة طلبات التوظيف':'Manage job openings & applicants'}</p>
           </div>
@@ -69,7 +69,7 @@ export default function RecruitmentPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Briefcase} label={lang==='ar'?'إجمالي الوظائف':'Total Jobs'} value={jobs.length} color="#1B3347" />
         <KpiCard icon={Clock} label={lang==='ar'?'مفتوحة':'Open'} value={open} color="#4A7AAB" />
         <KpiCard icon={Users} label={lang==='ar'?'المتقدمون':'Applicants'} value={totalApplicants} color="#6B8DB5" />
@@ -84,7 +84,7 @@ export default function RecruitmentPage() {
           <thead>
             <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
               {[lang==='ar'?'الوظيفة':'Position', lang==='ar'?'القسم':'Dept', lang==='ar'?'المتقدمون':'Applicants', lang==='ar'?'تاريخ النشر':'Posted', lang==='ar'?'الحالة':'Status', ''].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
+                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wide text-start`}>{h}</th>
               ))}
             </tr>
           </thead>

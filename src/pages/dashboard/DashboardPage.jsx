@@ -229,9 +229,9 @@ export default function DashboardPage() {
   const Box = ({ children, className: cn = '' }) => <Card className={`p-5 ${cn}`}>{children}</Card>;
 
   return (
-    <div className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
       {/* Hero banner */}
-      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-7 py-[22px] mb-6 flex justify-between items-center relative overflow-hidden ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-4 py-4 md:px-7 md:py-[22px] mb-6 flex flex-wrap md:flex-nowrap justify-between items-center gap-4 relative overflow-hidden ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`absolute w-40 h-40 rounded-full bg-white/[0.04] pointer-events-none ${isRTL ? '-left-5 top-[-40px]' : '-right-5 top-[-40px]'}`} />
         <div className="relative">
           <p className="m-0 mb-1 text-xl font-bold text-white">{greeting}، {name}</p>
@@ -248,7 +248,7 @@ export default function DashboardPage() {
       </div>
 
       {sections.showCRM && (
-        <div className="grid grid-cols-4 gap-3.5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" />
           <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : crm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" />
           <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : crm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" />
@@ -257,7 +257,7 @@ export default function DashboardPage() {
       )}
 
       {sections.showCRM && (
-        <div className="grid grid-cols-[2fr_1fr] gap-4 mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 mb-5">
           <Box>
             <CardTitle icon={TrendingUp} title={lang === 'ar' ? 'تطور الإيرادات' : 'Revenue Trend'} sub={lang === 'ar' ? 'آخر 6 أشهر' : 'Last 6 months'} />
             <ResponsiveContainer width="100%" height={200}>
@@ -289,7 +289,7 @@ export default function DashboardPage() {
       )}
 
       {sections.showSales && (
-        <div className="grid grid-cols-2 gap-4 mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           <Box>
             <CardTitle icon={Activity} title={lang === 'ar' ? 'خط الأنابيب' : 'Sales Pipeline'} sub={lang === 'ar' ? 'فرص لكل مرحلة' : 'Opps per stage'} />
             <ResponsiveContainer width="100%" height={185}>
@@ -330,13 +330,13 @@ export default function DashboardPage() {
 
       {sections.showHR && (
         <div className="mb-5">
-          <div className="grid grid-cols-4 gap-3.5 mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
             <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={dashLoading ? '...' : employeeCount}                color="#1B3347" />
             <KpiCard icon={CalendarCheck} label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'}  value={hr.attendanceRate + '%'} color="#2B4C6F" />
             <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#4A7AAB" />
             <KpiCard icon={UserCheck}     label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}   value={hr.pendingLeaves}        color="#6B8DB5" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Box>
               <CardTitle icon={Building2} title={lang === 'ar' ? 'توزيع الأقسام' : 'Departments'} sub={lang === 'ar' ? 'عدد الموظفين' : 'Headcount'} />
               <ResponsiveContainer width="100%" height={160}>

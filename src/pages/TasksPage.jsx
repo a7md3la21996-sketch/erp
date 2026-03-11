@@ -84,10 +84,10 @@ export default function TasksPage() {
   };
 
   return (
-    <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
-      <div className={`flex items-center justify-between mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className="w-[42px] h-[42px] rounded-[10px] bg-brand-500 flex items-center justify-center">
             <CheckSquare size={20} color="#fff" />
@@ -124,7 +124,7 @@ export default function TasksPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-2.5 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
         {[
           { label: lang==='ar'?'الكل':'Total',    value: stats.total,   color: '#4A7AAB'  },
           { label: lang==='ar'?'معلقة':'Pending', value: stats.pending, color: '#F97316' },

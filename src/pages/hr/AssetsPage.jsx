@@ -41,8 +41,8 @@ export default function AssetsPage() {
   ];
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
-      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+      <div className={`flex flex-wrap justify-between items-center gap-3 mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <Package size={22} color="#fff" />
@@ -72,7 +72,7 @@ export default function AssetsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Package}      label={lang==='ar'?'إجمالي الأصول':'Total Assets'}   value={assets.length}  color="#1B3347" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'مستخدمة':'Active'}            value={active}         color="#4A7AAB" />
         <KpiCard icon={AlertCircle}  label={lang==='ar'?'متاحة':'Available'}          value={available}      color="#6B8DB5" />

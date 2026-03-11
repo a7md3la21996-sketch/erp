@@ -69,9 +69,9 @@ export default function AuditLogPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Header */}
-      <div className="flex justify-between items-center mb-5">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
             <History size={20} className="text-brand-500" />

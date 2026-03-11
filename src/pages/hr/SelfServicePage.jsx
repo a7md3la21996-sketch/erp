@@ -93,7 +93,7 @@ export default function SelfServicePage() {
   ];
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 px-7 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Header */}
       <div className={`flex items-center gap-3.5 mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className="w-[46px] h-[46px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
@@ -126,7 +126,7 @@ export default function SelfServicePage() {
 
       {/* Quick Actions */}
       <p className="m-0 mb-3 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'إجراءات سريعة':'Quick Actions'}</p>
-      <div className="grid grid-cols-3 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 mb-5">
         {QUICK_ACTIONS.map(action => (
           <ActionCard key={action.key} icon={action.icon} label={lang==='ar'?action.label_ar:action.label_en} color={action.color} />
         ))}

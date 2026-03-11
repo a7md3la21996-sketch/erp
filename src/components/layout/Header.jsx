@@ -2,12 +2,12 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const { t, i18n } = useTranslation();
   const { profile, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -43,19 +43,33 @@ export default function Header() {
 
   return (
     <>
-    <header className="h-16 bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark flex items-center justify-between px-6 sticky top-0 z-50">
-      <div className="flex items-center gap-3 flex-1 max-w-[420px]">
-        <button onClick={() => setShowSearch(true)} className={`w-full h-10 rounded-[10px] flex items-center gap-2.5 border border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-input-dark cursor-pointer text-content-muted dark:text-brand-400 text-sm font-[inherit] ${isRTL ? 'pr-3.5 pl-2.5' : 'pl-3.5 pr-2.5'}`}>
+    <header className="h-16 bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark flex items-center justify-between px-3 md:px-6 sticky top-0 z-30">
+      <div className="flex items-center gap-2 md:gap-3 flex-1 md:max-w-[420px]">
+        {/* Hamburger menu - mobile only */}
+        <button
+          onClick={onMenuClick}
+          className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark md:hidden"
+          aria-label="Open menu"
+        >
+          <Menu size={22} />
+        </button>
+
+        {/* Search button - full on desktop, icon-only on mobile */}
+        <button onClick={() => setShowSearch(true)} className={`hidden md:flex w-full h-10 rounded-[10px] items-center gap-2.5 border border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-input-dark cursor-pointer text-content-muted dark:text-brand-400 text-sm font-[inherit] ps-3.5 pe-2.5`}>
           <Search size={16} className="shrink-0" />
-          <span className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? 'بحث...' : 'Search...'}</span>
+          <span className={`flex-1 text-start`}>{isRTL ? 'بحث...' : 'Search...'}</span>
           <kbd className="px-1.5 py-0.5 rounded-[5px] text-[11px] font-mono bg-brand-50 dark:bg-brand-500/10 border border-edge dark:border-brand-500/15 text-content-muted dark:text-brand-400 flex items-center gap-0.5">
             <Command size={10} />K
           </kbd>
         </button>
+        {/* Mobile search icon */}
+        <button onClick={() => setShowSearch(true)} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark md:hidden">
+          <Search size={20} />
+        </button>
       </div>
       <div className="flex items-center gap-1">
         <button onClick={handleLangToggle} className="p-2 px-3 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark flex items-center gap-1 text-[13px] font-semibold">
-          <Globe size={18} />{i18n.language === 'ar' ? 'EN' : 'عربي'}
+          <Globe size={18} /><span className="hidden sm:inline">{i18n.language === 'ar' ? 'EN' : 'عربي'}</span>
         </button>
         <button onClick={toggleTheme} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark">
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -63,23 +77,24 @@ export default function Header() {
         <div className="relative">
           <button onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative">
             <Bell size={18} />
-            <span className={`absolute top-1.5 ${isRTL ? 'left-1.5' : 'right-1.5'} w-[7px] h-[7px] bg-red-500 rounded-full`} />
+            <span className={`absolute top-1.5 end-1.5 w-[7px] h-[7px] bg-red-500 rounded-full`} />
           </button>
           <NotificationsDropdown show={showNotifications} onClose={() => setShowNotifications(false)} />
         </div>
-        <div className="w-px h-6 mx-1 bg-edge dark:bg-edge-dark" />
+        <div className="w-px h-6 mx-1 bg-edge dark:bg-edge-dark hidden sm:block" />
         <div ref={ref} className="relative">
           <button onClick={() => setShowProfile(!showProfile)} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg border-none cursor-pointer bg-transparent">
             <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0">
               <User size={16} color="#fff" />
             </div>
-            <div className={isRTL ? 'text-right' : 'text-left'}>
+            {/* Full name/role - hidden on small screens */}
+            <div className="text-start hidden sm:block">
               <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
               <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{roleLabel}</div>
             </div>
           </button>
           {showProfile && (
-            <div className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-[220px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-2xl py-2 z-[100]`}>
+            <div className={`absolute top-full mt-2 end-0 w-[220px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-2xl py-2 z-[100]`}>
               <div className="px-4 py-2.5 border-b border-edge dark:border-edge-dark/75">
                 <div className="text-sm font-semibold text-content dark:text-content-dark">{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
                 <div className="text-xs text-content-muted dark:text-content-muted-dark mt-0.5">{profile?.email}</div>

@@ -100,7 +100,7 @@ function ProfileSection({ profile, isRTL }) {
       <h3 className="m-0 mb-4 text-[15px] font-bold text-content dark:text-content-dark flex items-center gap-2">
         <User size={16} className="text-brand-500" />{isRTL ? 'الملف الشخصي' : 'Profile'}
       </h3>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الاسم بالعربي' : 'Arabic Name'}</label>
           <Input value={profile?.full_name_ar || ''} readOnly />
@@ -180,7 +180,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
           <Settings size={20} className="text-brand-500" />
@@ -191,7 +191,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-5 max-w-[900px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-[900px]">
         <div>
           <ProfileSection profile={profile} isRTL={isRTL} />
           <AppearanceSection isRTL={isRTL} isDark={isDark} toggleTheme={toggleTheme} handleLangToggle={handleLangToggle} lang={lang} />

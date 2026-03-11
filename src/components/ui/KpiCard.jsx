@@ -16,7 +16,7 @@ export default function KpiCard({ icon: Icon, label, value, sub, color = '#4A7AA
     >
       {/* Side accent bar */}
       <div
-        className="absolute top-0 right-0 w-1 h-full rounded-l-xl transition-opacity duration-200"
+        className="absolute top-0 end-0 w-1 h-full rounded-s-xl transition-opacity duration-200"
         style={{ background: `linear-gradient(180deg,${color},transparent)`, opacity: hov ? 1 : 0.6 }}
       />
 

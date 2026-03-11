@@ -31,7 +31,7 @@ export default function OnboardingPage() {
   const notStarted = MOCK_ONBOARDING.filter(o=>Object.values(o.progress).every(v=>!v)).length;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 px-7 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-[46px] h-[46px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
@@ -44,7 +44,7 @@ export default function OnboardingPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={UserPlus}     label={lang==='ar'?'إجمالي':'Total'}        value={MOCK_ONBOARDING.length} color="#1B3347" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'مكتمل':'Completed'}    value={completed}             color="#4A7AAB" />
         <KpiCard icon={Clock}        label={lang==='ar'?'جاري':'In Progress'}   value={inProgress}            color="#6B8DB5" />

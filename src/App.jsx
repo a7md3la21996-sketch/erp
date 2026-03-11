@@ -34,6 +34,9 @@ const AssetsPage = lazy(() => import('./pages/hr/AssetsPage'));
 const OnboardingPage = lazy(() => import('./pages/hr/OnboardingPage'));
 const OperationsPage = lazy(() => import('./pages/operations/OperationsPage'));
 const AuditLogPage = lazy(() => import('./pages/settings/AuditLogPage'));
+const CalendarPage = lazy(() => import('./pages/CalendarPage'));
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const MarketingPage = lazy(() => import('./pages/MarketingPage'));
 
 function PageLoader() {
   return (
@@ -126,10 +129,11 @@ export default function App() {
                 <Route path="/operations" element={<OperationsPage />} />
                 <Route path="/operations/*" element={<OperationsPage />} />
                 <Route path="/real-estate/*" element={<ComingSoon title="Real Estate" />} />
-                <Route path="/marketing/*" element={<ComingSoon title="Marketing" />} />
-                <Route path="/calendar" element={<ComingSoon title="Calendar" />} />
+                <Route path="/marketing" element={<MarketingPage />} />
+                <Route path="/marketing/*" element={<MarketingPage />} />
+                <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/chat" element={<ComingSoon title="Chat" />} />
-                <Route path="/reports" element={<ComingSoon title="Reports" />} />
+                <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings/general" element={<SettingsPage />} />
                 <Route path="/settings/audit-log" element={<AuditLogPage />} />
                 <Route path="/settings/*" element={<SettingsPage />} />

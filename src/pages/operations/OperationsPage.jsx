@@ -480,7 +480,7 @@ export default function OperationsPage() {
     return (
       <>
         {/* KPIs */}
-        <div className="grid grid-cols-4 gap-3.5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={FileCheck} label={isRTL ? 'صفقات نشطة' : 'Active Deals'} value={activeDeals} sub={isRTL ? `${newDeals} جديدة` : `${newDeals} new`} color="#4A7AAB" />
           <KpiCard icon={AlertTriangle} label={isRTL ? 'أقساط متأخرة' : 'Overdue Payments'} value={overduePayments.length} sub={fmtMoney(overdueSum)} color="#EF4444" />
           <KpiCard icon={KeyRound} label={isRTL ? 'تسليمات قريبة' : 'Upcoming Handovers'} value={handoverThisMonth} color="#2B4C6F" />
@@ -536,7 +536,7 @@ export default function OperationsPage() {
   function renderDeals() {
     return (
       <>
-        <div className="grid grid-cols-4 gap-3.5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={Plus} label={isRTL ? 'صفقات جديدة' : 'New Deals'} value={newDeals} color="#4A7AAB" />
           <KpiCard icon={Clock} label={isRTL ? 'قيد المراجعة' : 'Under Review'} value={underReview} color="#6B8DB5" />
           <KpiCard icon={FileText} label={isRTL ? 'بانتظار التوقيع' : 'Awaiting Signature'} value={awaitingSign} color="#2B4C6F" />
@@ -619,7 +619,7 @@ export default function OperationsPage() {
   function renderPayments() {
     return (
       <>
-        <div className="grid grid-cols-4 gap-3.5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المستحق' : 'Total Due'} value={fmtMoneyShort(totalDue)} color="#4A7AAB" />
           <KpiCard icon={AlertTriangle} label={isRTL ? 'متأخر السداد' : 'Overdue'} value={overduePayments.length} sub={fmtMoney(overdueSum)} color="#EF4444" />
           <KpiCard icon={TrendingUp} label={isRTL ? 'محصّل هذا الشهر' : 'Collected This Month'} value={fmtMoneyShort(paidSum)} color="#2B4C6F" />
@@ -696,7 +696,7 @@ export default function OperationsPage() {
     const handedCount = handovers.filter(h => h.status === 'handed_over').length;
     return (
       <>
-        <div className="grid grid-cols-4 gap-3.5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={Building2} label={isRTL ? 'وحدات محجوزة' : 'Reserved Units'} value={reservedCount} color="#4A7AAB" />
           <KpiCard icon={Clock} label={isRTL ? 'تحت الإنشاء' : 'Under Construction'} value={constructionCount} color="#6B8DB5" />
           <KpiCard icon={KeyRound} label={isRTL ? 'جاهز للتسليم' : 'Ready'} value={handovers.filter(h => h.status === 'ready').length} color="#2B4C6F" />
@@ -721,7 +721,7 @@ export default function OperationsPage() {
   function renderAfterSales() {
     return (
       <>
-        <div className="grid grid-cols-4 gap-3.5 mb-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={AlertCircle} label={isRTL ? 'تذاكر مفتوحة' : 'Open Tickets'} value={openTickets} color="#EF4444" />
           <KpiCard icon={Clock} label={isRTL ? 'متوسط وقت الحل' : 'Avg Resolution'} value={resolvedTickets.length > 0 ? `${Math.round(resolvedTickets.reduce((s, t) => s + daysSince(t.created_at) - (daysSince(t.resolved_at) || 0), 0) / resolvedTickets.length)}d` : '-'} color="#4A7AAB" />
           <KpiCard icon={AlertTriangle} label={isRTL ? 'شكاوى مفتوحة' : 'Open Complaints'} value={complaints} color="#F97316" />
@@ -918,9 +918,9 @@ export default function OperationsPage() {
 
   // ── Main Render ─────────────────────────────────────────────────────
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 min-h-screen bg-surface-bg dark:bg-surface-bg-dark">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 min-h-screen bg-surface-bg dark:bg-surface-bg-dark">
       {/* Page Header */}
-      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap justify-between items-center gap-3 mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-[0_4px_12px_rgba(74,122,171,0.3)]">
             <ClipboardCheck size={22} color="#fff" />

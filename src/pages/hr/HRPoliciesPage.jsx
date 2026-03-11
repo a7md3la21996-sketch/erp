@@ -30,13 +30,13 @@ export default function HRPoliciesPage() {
   const draft = MOCK_POLICIES.filter(p=>p.status==='draft').length;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <FileText size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'سياسات الموارد البشرية':'HR Policies'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة سياسات وأنظمة الشركة':'Manage company policies & guidelines'}</p>
           </div>
@@ -46,7 +46,7 @@ export default function HRPoliciesPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={FileText}  label={lang==='ar'?'إجمالي السياسات':'Total Policies'} value={MOCK_POLICIES.length} color="#1B3347" />
         <KpiCard icon={Shield}    label={lang==='ar'?'نشطة':'Active'}               value={active}                color="#4A7AAB" />
         <KpiCard icon={Clock}     label={lang==='ar'?'مسودة':'Draft'}                value={draft}                 color="#6B8DB5" />
@@ -76,7 +76,7 @@ export default function HRPoliciesPage() {
           <thead>
             <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
               {[lang==='ar'?'السياسة':'Policy', lang==='ar'?'التصنيف':'Category', lang==='ar'?'الإصدار':'Version', lang==='ar'?'آخر تحديث':'Updated', lang==='ar'?'الحالة':'Status', lang==='ar'?'المشاهدات':'Views', ''].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${isRTL?'text-right':'text-left'}`}>{h}</th>
+                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${'text-start'}`}>{h}</th>
               ))}
             </tr>
           </thead>

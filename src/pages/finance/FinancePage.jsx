@@ -389,7 +389,7 @@ export default function FinancePage() {
   const renderOverview = () => (
     <div className="flex flex-col gap-4">
       {/* KPI Row */}
-      <div className="grid grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         <KpiCard icon={TrendingUp} label={L('إيرادات الشهر', 'Monthly Revenue')} value={fmtShort(totalRevenue)} sub="EGP" color="#4A7AAB" />
         <KpiCard icon={TrendingDown} label={L('إجمالي المصروفات', 'Total Expenses')} value={fmtShort(totalExpenseAmt)} sub="EGP" color="#EF4444" />
         <KpiCard icon={DollarSign} label={L('ذمم مدينة (مطورين)', 'Receivable (Devs)')} value={fmtShort(receivable)} sub="EGP" color="#2B4C6F" />
@@ -397,7 +397,7 @@ export default function FinancePage() {
       </div>
 
       {/* Revenue Chart + Expense Breakdown */}
-      <div className="grid grid-cols-[1.6fr_1fr] gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[1.6fr_1fr] gap-4">
         {/* Bar Chart */}
         <CardWrap title={L('الإيرادات مقابل المصروفات', 'Revenue vs Expenses')} icon={BarChart2}>
           <div className="px-[18px] py-4">
@@ -464,7 +464,7 @@ export default function FinancePage() {
       </div>
 
       {/* Commission + Invoice Quick Summary */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Company Commissions Summary */}
         <CardWrap title={L('ملخص عمولات المطورين', 'Developer Commission Summary')} icon={Building2}>
           <div className="px-[18px] py-3">
@@ -547,7 +547,7 @@ export default function FinancePage() {
     return (
       <div className="flex flex-col gap-4">
         {/* KPIs per account type */}
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {Object.entries(ACCOUNT_TYPES).map(([key, info]) => {
             const count = chartOfAccounts.filter(a => a.type === key && !a.is_group).length;
             return <KpiCard key={key} icon={FolderTree} label={L(info.ar, info.en)} value={count} sub={L('حساب', 'accounts')} color={info.color} />;
@@ -597,7 +597,7 @@ export default function FinancePage() {
 
     return (
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           <KpiCard icon={BookOpen} label={L('إجمالي القيود', 'Total Entries')} value={journalEntries.length} color="#4A7AAB" />
           <KpiCard icon={CheckCircle} label={L('مرحّلة', 'Posted')} value={postedEntries.length} color="#2B4C6F" />
           <KpiCard icon={Clock} label={L('مسودات', 'Drafts')} value={draftCount} color="#6B8DB5" />
@@ -682,7 +682,7 @@ export default function FinancePage() {
 
     return (
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           <KpiCard icon={TrendingUp} label={L('فواتير بيع', 'Sales Invoices')} value={fmtShort(salesTotal)} sub="EGP" color="#4A7AAB" />
           <KpiCard icon={TrendingDown} label={L('فواتير شراء', 'Purchase Bills')} value={fmtShort(purchaseTotal)} sub="EGP" color="#EF4444" />
           <KpiCard icon={AlertTriangle} label={L('متأخرات', 'Overdue')} value={fmtShort(overdueTotal)} sub="EGP" color="#EF4444" />
@@ -767,7 +767,7 @@ export default function FinancePage() {
 
     return (
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-3 gap-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
           <KpiCard icon={Clock} label={L('معلق', 'Pending')} value={fmtShort(pendingAmt)} sub="EGP" color="#6B8DB5" />
           <KpiCard icon={CheckCircle} label={L('معتمد', 'Approved')} value={fmtShort(approvedAmt)} sub="EGP" color="#4A7AAB" />
           <KpiCard icon={DollarSign} label={L('مصروف', 'Paid')} value={fmtShort(paidAmt)} sub="EGP" color="#2B4C6F" />
@@ -900,14 +900,14 @@ export default function FinancePage() {
 
     return (
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           <KpiCard icon={Receipt} label={L('إجمالي المصروفات', 'Total Expenses')} value={fmtShort(totalExpenseAmt)} sub="EGP" color="#EF4444" />
           <KpiCard icon={CheckCircle} label={L('معتمد + مدفوع', 'Approved + Paid')} value={fmtShort(approvedAmt)} sub="EGP" color="#4A7AAB" />
           <KpiCard icon={Clock} label={L('في الانتظار', 'Pending')} value={pendingExpenses.length} sub={fmtMoney(pendingAmt)} color="#6B8DB5" />
           <KpiCard icon={PieChart} label={L('أكبر بند', 'Largest Category')} value={sortedCats[0]?.[0] || '—'} sub={sortedCats[0] ? fmtMoney(sortedCats[0][1]) : ''} color="#2B4C6F" />
         </div>
 
-        <div className="grid grid-cols-[1fr_280px] gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
           {/* Main table */}
           <CardWrap title={L('سجل المصروفات', 'Expense Log')} icon={Receipt}
             headerRight={
@@ -1182,7 +1182,7 @@ export default function FinancePage() {
 
         {/* ── INCOME STATEMENT ── */}
         {reportView === 'income_statement' && (
-          <div className="grid grid-cols-[1fr_320px] gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
             <CardWrap title={L('قائمة الدخل', 'Income Statement')} icon={TrendingUp}>
               <div className="px-[18px] py-4">
                 <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('مارس 2026', 'March 2026')}</div>
@@ -1260,7 +1260,7 @@ export default function FinancePage() {
 
         {/* ── CASH FLOW STATEMENT ── */}
         {reportView === 'cash_flow' && (
-          <div className="grid grid-cols-[1fr_320px] gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
             <CardWrap title={L('قائمة التدفقات النقدية', 'Cash Flow Statement')} icon={Wallet}>
               <div className="px-[18px] py-4">
                 <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('مارس 2026', 'March 2026')}</div>
@@ -1343,7 +1343,7 @@ export default function FinancePage() {
 
     return (
       <div className="flex flex-col gap-4">
-        <div className="grid grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
           <KpiCard icon={Target} label={L('الموازنة الشهرية', 'Monthly Budget')} value={fmtShort(totalMonthly)} sub="EGP" color="#4A7AAB" />
           <KpiCard icon={BarChart2} label={L('الفعلي YTD', 'Actual YTD')} value={fmtShort(totalActualYtd)} sub="EGP" color="#2B4C6F" />
           <KpiCard icon={PieChart} label={L('نسبة الاستهلاك', 'Usage Rate')} value={overallPct + '%'} sub={L('من الموازنة', 'of budget')} color={overallPct > 100 ? '#EF4444' : '#4A7AAB'} />
@@ -1531,7 +1531,7 @@ export default function FinancePage() {
 
     return (
       <Modal open={true} onClose={() => setViewInvoice(null)} title={inv.number} width="max-w-2xl">
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <div>
             <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('النوع', 'Type')}</div>
             <StatusBadge label={inv.type === 'sales' ? L('فاتورة بيع', 'Sales Invoice') : L('فاتورة شراء', 'Purchase Bill')} color={inv.type === 'sales' ? '#4A7AAB' : '#6B8DB5'} />
@@ -1625,9 +1625,9 @@ export default function FinancePage() {
      ═══════════════════════════════════════════════════════════════════════ */
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Page Header */}
-      <div className="flex justify-between items-center mb-5">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div>
           <h1 className="text-xl font-extrabold text-content dark:text-content-dark m-0">{L('المالية', 'Finance')}</h1>
           <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{L('النظام المحاسبي الشامل', 'Comprehensive Accounting System')}</p>
@@ -1646,7 +1646,7 @@ export default function FinancePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-surface-card dark:bg-surface-card-dark rounded-[10px] p-1 border border-edge dark:border-edge-dark w-fit overflow-x-auto">
+      <div className="flex gap-1 mb-5 bg-surface-card dark:bg-surface-card-dark rounded-[10px] p-1 border border-edge dark:border-edge-dark w-full md:w-fit overflow-x-auto">
         {TABS.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-[7px] px-4 py-[7px] rounded-[7px] border-none cursor-pointer text-[13px] font-medium transition-all duration-150 whitespace-nowrap

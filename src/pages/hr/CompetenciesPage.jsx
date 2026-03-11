@@ -15,14 +15,14 @@ export default function CompetenciesPage() {
   const avgLevel = Math.round(COMPETENCIES.reduce((s,c)=>s+(c.required_level||3),0)/COMPETENCIES.length);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Header */}
       <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-[46px] h-[46px] rounded-xl flex items-center justify-center shadow-md" style={{ background:'linear-gradient(135deg,#1B3347,#4A7AAB)' }}>
             <Award size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'الكفاءات':'Competencies'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة كفاءات الموظفين':'Manage employee competencies'}</p>
           </div>
@@ -31,7 +31,7 @@ export default function CompetenciesPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={Award} label={lang==='ar'?'إجمالي الكفاءات':'Total Competencies'} value={COMPETENCIES.length} color="#1B3347" />
         <KpiCard icon={Users} label={lang==='ar'?'عدد الفئات':'Categories'} value={categories.length} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={lang==='ar'?'متوسط المستوى':'Avg Level'} value={avgLevel+'/5'} color="#6B8DB5" />
@@ -61,7 +61,7 @@ export default function CompetenciesPage() {
           <thead>
             <tr>
               {[lang==='ar'?'الكفاءة':'Competency', lang==='ar'?'الفئة':'Category', lang==='ar'?'المستوى المطلوب':'Required Level', lang==='ar'?'التقييم':'Rating', ''].map((h,i)=>(
-                <Th key={i} className={isRTL?'text-right':'text-left'}>{h}</Th>
+                <Th key={i} className={'text-start'}>{h}</Th>
               ))}
             </tr>
           </thead>

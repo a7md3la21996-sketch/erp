@@ -171,10 +171,10 @@ export default function LeadPoolPage() {
   const toggleAll = () => setSelected(prev => prev.length === visible.length ? [] : visible.map(l => l.id));
 
   return (
-    <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className={`px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
 
       {/* Header */}
-      <div className={`flex items-center justify-between mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      <div className={`flex flex-wrap items-center justify-between gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-[42px] h-[42px] rounded-[10px] bg-brand-600 flex items-center justify-center">
             <Zap size={20} color="#fff" />
@@ -199,7 +199,7 @@ export default function LeadPoolPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-5 gap-2.5 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 mb-4">
         {[
           { label: lang === 'ar' ? 'إجمالي' : 'Total',         value: stats.total,       icon: Users,        color: '#4A7AAB' },
           { label: lang === 'ar' ? 'فريش' : 'Fresh',           value: stats.fresh,       icon: Flame,        color: '#EF4444', hide: !canViewFresh },

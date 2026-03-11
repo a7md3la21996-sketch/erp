@@ -33,14 +33,14 @@ export default function ExportButton({ data, filename = 'export', title = '', co
         <ChevronDown size={12} />
       </button>
       {open && (
-        <div className={`absolute top-full mt-1 ${isRTL ? 'right-0' : 'left-0'} min-w-[170px] rounded-[10px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)] z-50 overflow-hidden`}>
+        <div className={`absolute top-full mt-1 start-0 min-w-[170px] rounded-[10px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-[0_8px_24px_rgba(0,0,0,0.4)] z-50 overflow-hidden`}>
           {items.map((item, i) => {
             const Icon = item.icon;
             return (
               <button
                 key={i}
                 onClick={() => { item.action(); setOpen(false); }}
-                className={`w-full flex items-center gap-2 py-2.5 px-3.5 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] font-[inherit] ${isRTL ? 'text-right' : 'text-left'} hover:bg-gray-100 dark:hover:bg-brand-500/10`}
+                className={`w-full flex items-center gap-2 py-2.5 px-3.5 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] font-[inherit] text-start hover:bg-gray-100 dark:hover:bg-brand-500/10`}
               >
                 <Icon size={14} className="text-brand-400 dark:text-brand-400" />
                 {item.label}
