@@ -4,6 +4,7 @@ import { Briefcase, Users, Clock, CheckCircle2, Plus, Eye } from 'lucide-react';
 import KpiCard from '../../components/ui/KpiCard';
 import Button from '../../components/ui/Button';
 import { Table, Th, Td, Tr } from '../../components/ui/Table';
+import ExportButton from '../../components/ui/ExportButton';
 
 const MOCK_JOBS = [
   { id:1, title_ar:'مدير مبيعات', title_en:'Sales Manager', dept:'المبيعات', type:'full-time', status:'open', applicants:12, posted:'2026-02-15' },
@@ -48,9 +49,24 @@ export default function RecruitmentPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة طلبات التوظيف':'Manage job openings & applicants'}</p>
           </div>
         </div>
-        <Button size="md">
-          <Plus size={16} />{lang==='ar'?'+ وظيفة جديدة':'+ New Job'}
-        </Button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <ExportButton
+            data={jobs}
+            filename={isRTL ? 'التوظيف' : 'recruitment'}
+            title={isRTL ? 'التوظيف' : 'Recruitment'}
+            columns={[
+              { header: isRTL ? 'الوظيفة' : 'Job Title', key: r => isRTL ? r.title_ar : r.title_en },
+              { header: isRTL ? 'القسم' : 'Department', key: 'dept' },
+              { header: isRTL ? 'النوع' : 'Type', key: 'type' },
+              { header: isRTL ? 'المتقدمين' : 'Applicants', key: 'applicants' },
+              { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(r.status, lang) },
+              { header: isRTL ? 'تاريخ النشر' : 'Posted', key: 'posted' },
+            ]}
+          />
+          <Button size="md">
+            <Plus size={16} />{lang==='ar'?'+ وظيفة جديدة':'+ New Job'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-3.5 mb-5">

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Button, Card, Badge, Modal, KpiCard, Table, Th, Td, Tr } from '../../components/ui';
 import { Select as UISelect } from '../../components/ui';
+import ExportButton from '../../components/ui/ExportButton';
 
 
 /* ─── Icon Button ─── */
@@ -105,9 +106,24 @@ export default function EmployeesPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{MOCK_EMPLOYEES.length} {lang === 'ar' ? 'موظف' : 'employees'}</p>
           </div>
         </div>
-        <Button size="md">
-          <Plus size={16} />{lang === 'ar' ? '+ موظف جديد' : '+ New Employee'}
-        </Button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <ExportButton
+            data={filtered}
+            filename={isRTL ? 'الموظفين' : 'employees'}
+            title={isRTL ? 'الموظفين' : 'Employees'}
+            columns={[
+              { header: isRTL ? 'الاسم' : 'Name', key: r => isRTL ? r.full_name_ar : r.full_name_en },
+              { header: isRTL ? 'الوظيفة' : 'Job Title', key: r => isRTL ? r.job_title_ar : r.job_title_en },
+              { header: isRTL ? 'القسم' : 'Department', key: 'department' },
+              { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
+              { header: isRTL ? 'الراتب' : 'Salary', key: 'salary' },
+              { header: isRTL ? 'تاريخ التعيين' : 'Hire Date', key: 'hire_date' },
+            ]}
+          />
+          <Button size="md">
+            <Plus size={16} />{lang === 'ar' ? '+ موظف جديد' : '+ New Employee'}
+          </Button>
+        </div>
       </div>
 
       {/* ── KPI Strip ── */}

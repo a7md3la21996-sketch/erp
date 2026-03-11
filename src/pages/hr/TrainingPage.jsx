@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { BookOpen, Users, CheckCircle2, Clock, Plus, GraduationCap } from 'lucide-react';
 import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr } from '../../components/ui';
+import ExportButton from '../../components/ui/ExportButton';
 
 const MOCK_PROGRAMS = [
   { id:1, title:'مهارات التفاوض', title_en:'Negotiation Skills', category:'sales', duration:16, enrolled:6, completed:4, status:'active', start:'2026-03-10' },
@@ -36,7 +37,22 @@ export default function TrainingPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'برامج تطوير الكفاءات':'Skills development programs'}</p>
           </div>
         </div>
-        <Button size="md"><Plus size={16}/>{lang==='ar'?'+ برنامج جديد':'+ New Program'}</Button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <ExportButton
+            data={programs}
+            filename={isRTL ? 'التدريب' : 'training'}
+            title={isRTL ? 'التدريب والتطوير' : 'Training & Development'}
+            columns={[
+              { header: isRTL ? 'البرنامج' : 'Program', key: r => isRTL ? r.title : r.title_en },
+              { header: isRTL ? 'التصنيف' : 'Category', key: 'category' },
+              { header: isRTL ? 'المدة (ساعات)' : 'Duration (hrs)', key: 'duration' },
+              { header: isRTL ? 'المسجلين' : 'Enrolled', key: 'enrolled' },
+              { header: isRTL ? 'المكتملين' : 'Completed', key: 'completed' },
+              { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(r.status, lang) },
+            ]}
+          />
+          <Button size="md"><Plus size={16}/>{lang==='ar'?'+ برنامج جديد':'+ New Program'}</Button>
+        </div>
       </div>
 
       {/* KPIs */}

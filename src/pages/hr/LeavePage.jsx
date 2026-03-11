@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { CalendarOff, Clock, CheckCircle2, XCircle, Plus, Check, X } from 'lucide-react';
 import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr } from '../../components/ui';
+import ExportButton from '../../components/ui/ExportButton';
 
 const MOCK_LEAVES = [
   { id:1, emp_id:'EMP-001', type:'annual', days:5, from:'2026-03-10', to:'2026-03-14', status:'pending', notes:'رحلة عائلية' },
@@ -41,7 +42,22 @@ export default function LeavePage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة طلبات الإجازات':'Manage leave requests'}</p>
           </div>
         </div>
-        <Button size="md"><Plus size={16}/>{lang==='ar'?'+ طلب إجازة':'+ Request Leave'}</Button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <ExportButton
+            data={leaves}
+            filename={isRTL ? 'الإجازات' : 'leaves'}
+            title={isRTL ? 'الإجازات' : 'Leave Management'}
+            columns={[
+              { header: isRTL ? 'رقم الموظف' : 'Employee ID', key: 'emp_id' },
+              { header: isRTL ? 'النوع' : 'Type', key: r => typeLabel(r.type, lang) },
+              { header: isRTL ? 'الأيام' : 'Days', key: 'days' },
+              { header: isRTL ? 'من' : 'From', key: 'from' },
+              { header: isRTL ? 'إلى' : 'To', key: 'to' },
+              { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(r.status, lang) },
+            ]}
+          />
+          <Button size="md"><Plus size={16}/>{lang==='ar'?'+ طلب إجازة':'+ Request Leave'}</Button>
+        </div>
       </div>
 
       {/* KPIs */}

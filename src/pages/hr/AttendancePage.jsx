@@ -4,6 +4,7 @@ import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { getAttendanceForMonth } from '../../data/attendanceStore';
 import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Download } from 'lucide-react';
 import { KpiCard, Button, Card, CardHeader, Table, Th, Td, Tr } from '../../components/ui';
+import ExportButton from '../../components/ui/ExportButton';
 
 function AttendanceRow({ emp, attendance, isRTL }) {
   const recs = attendance[emp.employee_id] || [];
@@ -89,7 +90,18 @@ export default function AttendancePage() {
           <select value={month} onChange={e=>setMonth(+e.target.value)} className="px-3.5 py-2 rounded-[9px] border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[13px] cursor-pointer outline-none">
             {MONTHS_AR.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
           </select>
-          <Button variant="secondary" size="sm"><Download size={14}/>{lang==='ar'?'تصدير':'Export'}</Button>
+          <ExportButton
+            data={allRecords}
+            filename={isRTL ? 'الحضور' : 'attendance'}
+            title={isRTL ? 'الحضور والغياب' : 'Attendance'}
+            columns={[
+              { header: isRTL ? 'رقم الموظف' : 'Employee ID', key: 'employee_id' },
+              { header: isRTL ? 'التاريخ' : 'Date', key: 'date' },
+              { header: isRTL ? 'وقت الحضور' : 'Check In', key: 'check_in' },
+              { header: isRTL ? 'وقت الانصراف' : 'Check Out', key: 'check_out' },
+              { header: isRTL ? 'غائب' : 'Absent', key: r => r.absent ? (isRTL ? 'نعم' : 'Yes') : (isRTL ? 'لا' : 'No') },
+            ]}
+          />
         </div>
       </div>
 

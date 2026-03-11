@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button';
 import Input, { Select } from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
 import { Table, Th, Td, Tr } from '../../components/ui/Table';
+import ExportButton from '../../components/ui/ExportButton';
 
 const ACTION_CONFIG = {
   create: { variant: 'success', icon: Plus, ar: 'إنشاء', en: 'Create' },
@@ -80,9 +81,22 @@ export default function AuditLogPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'جميع التغييرات في النظام' : 'All system changes'}</p>
           </div>
         </div>
-        <Button variant="secondary" onClick={() => { setPage(0); fetchLogs(); }}>
-          <RefreshCw size={14} />{isRTL ? 'تحديث' : 'Refresh'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton
+            data={logs}
+            filename={isRTL ? 'سجل_التعديلات' : 'audit_log'}
+            title={isRTL ? 'سجل التعديلات' : 'Audit Log'}
+            columns={[
+              { header: isRTL ? 'الإجراء' : 'Action', key: r => isRTL ? ACTION_CONFIG[r.action]?.ar : ACTION_CONFIG[r.action]?.en },
+              { header: isRTL ? 'الكيان' : 'Entity', key: r => isRTL ? (ENTITY_LABELS[r.entity]?.ar || r.entity) : (ENTITY_LABELS[r.entity]?.en || r.entity) },
+              { header: isRTL ? 'الوصف' : 'Description', key: 'description' },
+              { header: isRTL ? 'التاريخ' : 'Date', key: 'created_at' },
+            ]}
+          />
+          <Button variant="secondary" onClick={() => { setPage(0); fetchLogs(); }}>
+            <RefreshCw size={14} />{isRTL ? 'تحديث' : 'Refresh'}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}

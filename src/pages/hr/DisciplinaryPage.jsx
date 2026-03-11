@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, Eye, ShieldAlert } from 'lucide-react';
 import { Button, Card, KpiCard, Tr, Td } from '../../components/ui';
+import ExportButton from '../../components/ui/ExportButton';
 
 
 const MOCK_CASES = [
@@ -50,9 +51,24 @@ export default function DisciplinaryPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة الحالات التأديبية':'Manage disciplinary cases'}</p>
           </div>
         </div>
-        <Button size="md">
-          <Plus size={16} />{lang==='ar'?'+ حالة جديدة':'+ New Case'}
-        </Button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <ExportButton
+            data={cases}
+            filename={isRTL ? 'الشؤون_التأديبية' : 'disciplinary'}
+            title={isRTL ? 'الشؤون التأديبية' : 'Disciplinary Cases'}
+            columns={[
+              { header: isRTL ? 'رقم الموظف' : 'Employee ID', key: 'emp_id' },
+              { header: isRTL ? 'النوع' : 'Type', key: r => typeLabel(r.type, lang) },
+              { header: isRTL ? 'السبب' : 'Reason', key: 'reason' },
+              { header: isRTL ? 'التاريخ' : 'Date', key: 'date' },
+              { header: isRTL ? 'الخطورة' : 'Severity', key: r => severityLabel(r.severity, lang) },
+              { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(r.status, lang) },
+            ]}
+          />
+          <Button size="md">
+            <Plus size={16} />{lang==='ar'?'+ حالة جديدة':'+ New Case'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-3.5 mb-5">

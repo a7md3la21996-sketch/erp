@@ -24,6 +24,7 @@ import Badge from '../../components/ui/Badge';
 import Modal, { ModalFooter } from '../../components/ui/Modal';
 import { Table, Th, Td, Tr } from '../../components/ui/Table';
 import KpiCard from '../../components/ui/KpiCard';
+import ExportButton from '../../components/ui/ExportButton';
 
 
 /* ── Shared sub-components ──────────────────────────────────────────────── */
@@ -1613,10 +1614,17 @@ export default function FinancePage() {
           <h1 className="text-xl font-extrabold text-content dark:text-content-dark m-0">{L('المالية', 'Finance')}</h1>
           <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{L('النظام المحاسبي الشامل', 'Comprehensive Accounting System')}</p>
         </div>
-        <Button variant="secondary" size="sm">
-          <Download size={14} />
-          {L('تصدير التقرير', 'Export Report')}
-        </Button>
+        <ExportButton
+          data={activeTab === 'journal' ? journalEntries : activeTab === 'invoices' ? invoices : activeTab === 'commissions' ? [...companyComm, ...agentComm] : activeTab === 'expenses' ? expenses : journalEntries}
+          filename={isRTL ? 'المالية' : 'finance'}
+          title={isRTL ? 'المالية' : 'Finance'}
+          columns={[
+            { header: isRTL ? 'التاريخ' : 'Date', key: 'date' },
+            { header: isRTL ? 'الوصف' : 'Description', key: 'description' },
+            { header: isRTL ? 'المبلغ' : 'Amount', key: 'amount' },
+            { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
+          ]}
+        />
       </div>
 
       {/* Tabs */}

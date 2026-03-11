@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
 import { Button, Card, Input, Select, Textarea, Badge, KpiCard } from '../components/ui';
+import ExportButton from '../components/ui/ExportButton';
 
 const ICONS = { Phone, PhoneCall, Users, Mail, MessageCircle, CheckSquare };
 
@@ -96,15 +97,30 @@ export default function TasksPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'كل المهام والمتابعات' : 'All tasks & follow-ups'}</p>
           </div>
         </div>
-        <Button
-          variant={showAdd ? 'secondary' : 'primary'}
-          size="sm"
-          onClick={() => setShowAdd(!showAdd)}
-          className={isRTL ? 'flex-row-reverse' : ''}
-        >
-          {showAdd ? <X size={15} /> : <Plus size={15} />}
-          {showAdd ? (lang === 'ar' ? 'إلغاء' : 'Cancel') : (lang === 'ar' ? 'مهمة جديدة' : 'New Task')}
-        </Button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <ExportButton
+            data={filtered}
+            filename={isRTL ? 'المهام' : 'tasks'}
+            title={isRTL ? 'المهام' : 'Tasks'}
+            columns={[
+              { header: isRTL ? 'العنوان' : 'Title', key: 'title' },
+              { header: isRTL ? 'النوع' : 'Type', key: r => isRTL ? TASK_TYPES[r.type]?.ar : TASK_TYPES[r.type]?.en },
+              { header: isRTL ? 'الأولوية' : 'Priority', key: r => isRTL ? TASK_PRIORITIES[r.priority]?.ar : TASK_PRIORITIES[r.priority]?.en },
+              { header: isRTL ? 'الحالة' : 'Status', key: r => isRTL ? TASK_STATUSES[r.status]?.ar : TASK_STATUSES[r.status]?.en },
+              { header: isRTL ? 'تاريخ الاستحقاق' : 'Due Date', key: 'due_date' },
+              { header: isRTL ? 'العميل' : 'Contact', key: 'contact_name' },
+            ]}
+          />
+          <Button
+            variant={showAdd ? 'secondary' : 'primary'}
+            size="sm"
+            onClick={() => setShowAdd(!showAdd)}
+            className={isRTL ? 'flex-row-reverse' : ''}
+          >
+            {showAdd ? <X size={15} /> : <Plus size={15} />}
+            {showAdd ? (lang === 'ar' ? 'إلغاء' : 'Cancel') : (lang === 'ar' ? 'مهمة جديدة' : 'New Task')}
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

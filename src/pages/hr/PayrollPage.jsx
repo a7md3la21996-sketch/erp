@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download } from 'lucide-react';
 import { Button, Card, CardHeader, KpiCard, Tr, Td, Th } from '../../components/ui';
+import ExportButton from '../../components/ui/ExportButton';
 
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -35,6 +36,22 @@ export default function PayrollPage() {
             </select>
             <ChevronDown size={14} className="absolute right-2.5 pointer-events-none text-content-muted dark:text-content-muted-dark" />
           </div>
+          <ExportButton
+            data={MOCK_EMPLOYEES.map(e => ({
+              name: isRTL ? e.full_name_ar : e.full_name_en,
+              department: e.department,
+              salary: e.salary,
+              status: e.status,
+            }))}
+            filename={isRTL ? 'مسير_الرواتب' : 'payroll'}
+            title={isRTL ? 'مسير الرواتب' : 'Payroll'}
+            columns={[
+              { header: isRTL ? 'الاسم' : 'Name', key: 'name' },
+              { header: isRTL ? 'القسم' : 'Department', key: 'department' },
+              { header: isRTL ? 'الراتب' : 'Salary', key: 'salary' },
+              { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
+            ]}
+          />
           <Button size="md">{lang==='ar'?'تشغيل المسير':'Run Payroll'}</Button>
         </div>
       </div>

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Card, Input, Select, Textarea, Badge, KpiCard } from '../components/ui';
+import ExportButton from '../components/ui/ExportButton';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -113,15 +114,28 @@ export default function ActivitiesPage() {
             </p>
           </div>
         </div>
-        <Button
-          variant={adding ? 'secondary' : 'primary'}
-          size="sm"
-          onClick={() => setAdding(!adding)}
-          className={isRTL ? 'flex-row-reverse' : ''}
-        >
-          {adding ? <X size={15} /> : <Plus size={15} />}
-          {adding ? (lang === 'ar' ? 'إلغاء' : 'Cancel') : (lang === 'ar' ? 'نشاط جديد' : 'New Activity')}
-        </Button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <ExportButton
+            data={filtered}
+            filename={isRTL ? 'سجل_الأنشطة' : 'activities'}
+            title={isRTL ? 'سجل الأنشطة' : 'Activity Log'}
+            columns={[
+              { header: isRTL ? 'النوع' : 'Type', key: r => isRTL ? ACTIVITY_TYPES[r.type]?.ar : ACTIVITY_TYPES[r.type]?.en },
+              { header: isRTL ? 'القسم' : 'Department', key: r => isRTL ? DEPT_LABELS[r.dept]?.ar : DEPT_LABELS[r.dept]?.en },
+              { header: isRTL ? 'الملاحظات' : 'Notes', key: 'notes' },
+              { header: isRTL ? 'التاريخ' : 'Date', key: 'created_at' },
+            ]}
+          />
+          <Button
+            variant={adding ? 'secondary' : 'primary'}
+            size="sm"
+            onClick={() => setAdding(!adding)}
+            className={isRTL ? 'flex-row-reverse' : ''}
+          >
+            {adding ? <X size={15} /> : <Plus size={15} />}
+            {adding ? (lang === 'ar' ? 'إلغاء' : 'Cancel') : (lang === 'ar' ? 'نشاط جديد' : 'New Activity')}
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}

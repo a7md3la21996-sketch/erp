@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { Package, CheckCircle2, AlertCircle, Clock, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Button, Card, KpiCard, Tr, Td } from '../../components/ui';
+import ExportButton from '../../components/ui/ExportButton';
 
 
 const MOCK_ASSETS = [
@@ -48,9 +49,24 @@ export default function AssetsPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'تتبع أصول الشركة':'Track company assets'}</p>
           </div>
         </div>
-        <Button size="md">
-          <Plus size={16} />{lang==='ar'?'+ أضف أصل':'+ Add Asset'}
-        </Button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <ExportButton
+            data={filtered}
+            filename={isRTL ? 'الأصول' : 'assets'}
+            title={isRTL ? 'إدارة الأصول' : 'Asset Management'}
+            columns={[
+              { header: isRTL ? 'الاسم' : 'Name', key: 'name' },
+              { header: isRTL ? 'النوع' : 'Type', key: 'type' },
+              { header: isRTL ? 'الرقم التسلسلي' : 'Serial', key: 'serial' },
+              { header: isRTL ? 'مخصص لـ' : 'Assigned To', key: 'assigned_to' },
+              { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(r.status, lang) },
+              { header: isRTL ? 'القيمة' : 'Value', key: 'value' },
+            ]}
+          />
+          <Button size="md">
+            <Plus size={16} />{lang==='ar'?'+ أضف أصل':'+ Add Asset'}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-3.5 mb-5">

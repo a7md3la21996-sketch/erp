@@ -11,6 +11,7 @@ import Card, { CardHeader, CardBody } from '../components/ui/Card';
 import Input, { Select } from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import KpiCard from '../components/ui/KpiCard';
+import ExportButton from '../components/ui/ExportButton';
 
 // ── Mock CRM Activity Data ─────────────────────────────────────
 const MOCK_CRM_ACTIVITY = {
@@ -200,7 +201,7 @@ export default function PerformancePage() {
     <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
-      <div className="mb-6">
+      <div className={`flex items-center justify-between mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className="w-10 h-10 rounded-[10px] bg-brand-800 flex items-center justify-center">
             <Target size={20} color="#fff" />
@@ -214,6 +215,26 @@ export default function PerformancePage() {
             </p>
           </div>
         </div>
+        <ExportButton
+          data={filtered.map(d => ({
+            name: lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en,
+            job_title: lang === 'ar' ? d.emp.job_title_ar : d.emp.job_title_en,
+            department: d.emp.department,
+            performance: d.avgPct + '%',
+            attendance: d.presentDays + ' days',
+            competency: d.compScore,
+          }))}
+          filename={isRTL ? 'الأداء' : 'performance'}
+          title={isRTL ? 'متابعة الأداء' : 'Performance Tracking'}
+          columns={[
+            { header: isRTL ? 'الاسم' : 'Name', key: 'name' },
+            { header: isRTL ? 'الوظيفة' : 'Job Title', key: 'job_title' },
+            { header: isRTL ? 'القسم' : 'Department', key: 'department' },
+            { header: isRTL ? 'الأداء' : 'Performance', key: 'performance' },
+            { header: isRTL ? 'الحضور' : 'Attendance', key: 'attendance' },
+            { header: isRTL ? 'الكفاءة' : 'Competency', key: 'competency' },
+          ]}
+        />
       </div>
 
       {/* KPI Cards */}

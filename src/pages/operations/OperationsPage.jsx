@@ -23,6 +23,7 @@ import Input, { Select } from '../../components/ui/Input';
 import Badge from '../../components/ui/Badge';
 import Modal, { ModalFooter } from '../../components/ui/Modal';
 import { Table, Th, Td, Tr } from '../../components/ui/Table';
+import ExportButton from '../../components/ui/ExportButton';
 
 // ── Tabs ────────────────────────────────────────────────────────────────
 const TABS = [
@@ -898,6 +899,18 @@ export default function OperationsPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'إدارة الصفقات والمدفوعات والتسليمات' : 'Manage deals, payments & handovers'}</p>
           </div>
         </div>
+        <ExportButton
+          data={deals}
+          filename={isRTL ? 'العمليات' : 'operations'}
+          title={isRTL ? 'العمليات' : 'Operations'}
+          columns={[
+            { header: isRTL ? 'العميل' : 'Client', key: 'client_name' },
+            { header: isRTL ? 'المشروع' : 'Project', key: 'project' },
+            { header: isRTL ? 'الوحدة' : 'Unit', key: 'unit' },
+            { header: isRTL ? 'القيمة' : 'Value', key: 'deal_value' },
+            { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
+          ]}
+        />
       </div>
 
       {/* Tabs */}
