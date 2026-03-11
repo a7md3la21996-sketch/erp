@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
+import { fetchEmployees } from '../../services/employeesService';
 import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, Eye, ShieldAlert } from 'lucide-react';
 import { Button, Card, KpiCard, Tr, Td } from '../../components/ui';
 import ExportButton from '../../components/ui/ExportButton';
@@ -29,6 +29,9 @@ export default function DisciplinaryPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [cases] = useState(MOCK_CASES);
+  const [employees, setEmployees] = useState([]);
+
+  useEffect(() => { fetchEmployees().then(data => setEmployees(data)); }, []);
 
   const open   = cases.filter(c=>c.status==='open').length;
   const closed = cases.filter(c=>c.status==='closed').length;
@@ -46,7 +49,7 @@ export default function DisciplinaryPage() {
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <Shield size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'الشؤون التأديبية':'Disciplinary'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة الحالات التأديبية':'Manage disciplinary cases'}</p>
           </div>
@@ -86,7 +89,7 @@ export default function DisciplinaryPage() {
           <thead>
             <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
               {[lang==='ar'?'الموظف':'Employee', lang==='ar'?'النوع':'Type', lang==='ar'?'السبب':'Reason', lang==='ar'?'التاريخ':'Date', lang==='ar'?'الخطورة':'Severity', lang==='ar'?'الحالة':'Status'].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${isRTL?'text-right':'text-left'}`}>{h}</th>
+                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${'text-start'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -104,7 +107,7 @@ export default function DisciplinaryPage() {
                 </td>
               </tr>
             ) : cases.map(cas => {
-              const emp = MOCK_EMPLOYEES.find(e=>e.employee_id===cas.emp_id||e.id===cas.emp_id);
+              const emp = employees.find(e=>e.employee_id===cas.emp_id||e.id===cas.emp_id);
               const name = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : cas.emp_id;
               return (
                 <Tr key={cas.id}>

@@ -1,4 +1,5 @@
 import supabase from '../lib/supabase';
+import { logCreate, logUpdate, logDelete } from './auditService';
 
 export const TASK_PRIORITIES = {
   high:   { ar: 'عالية',   en: 'High',   color: '#EF4444' },
@@ -53,6 +54,7 @@ export async function createTask(data) {
   try {
     const { data: d, error } = await supabase.from('tasks').insert([{ ...data, created_at: new Date().toISOString() }]).select('*').single();
     if (error) throw error;
+    logCreate('task', d.id, d);
     return d;
   } catch {
     const mock = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
@@ -63,8 +65,10 @@ export async function createTask(data) {
 
 export async function updateTask(id, updates) {
   try {
+    const { data: oldData } = await supabase.from('tasks').select('*').eq('id', id).single();
     const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select('*').single();
     if (error) throw error;
+    logUpdate('task', id, oldData, data);
     return data;
   } catch {
     const idx = MOCK_TASKS.findIndex(t => t.id === id);
@@ -74,6 +78,9 @@ export async function updateTask(id, updates) {
 }
 
 export async function deleteTask(id) {
-  try { await supabase.from('tasks').delete().eq('id', id); }
-  catch { const idx = MOCK_TASKS.findIndex(t => t.id === id); if (idx > -1) MOCK_TASKS.splice(idx, 1); }
+  try {
+    const { data: oldData } = await supabase.from('tasks').select('*').eq('id', id).single();
+    await supabase.from('tasks').delete().eq('id', id);
+    logDelete('task', id, oldData);
+  } catch { const idx = MOCK_TASKS.findIndex(t => t.id === id); if (idx > -1) MOCK_TASKS.splice(idx, 1); }
 }

@@ -7,6 +7,7 @@ import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 import { getAttendanceForMonth } from '../../data/attendanceStore';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fetchTodayReminders } from '../../services/remindersService';
+import { fetchAllDashboardData, buildPipelineData } from '../../services/dashboardService';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle } from 'lucide-react';
@@ -83,7 +84,7 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
           <div className="w-9 h-9 rounded-[10px] bg-brand-500/[0.12] flex items-center justify-center">
             <Bell size={18} className="text-brand-500" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className="text-start">
             <p className="m-0 text-[15px] font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups"}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{reminders.length > 0 ? (lang === 'ar' ? reminders.length + ' متابعة مجدولة' : reminders.length + ' scheduled') : (lang === 'ar' ? 'لا متابعات اليوم' : 'No follow-ups today')}</p>
           </div>
@@ -112,7 +113,7 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: t.color + '18' }}>
                   <TIcon size={15} color={t.color} />
                 </div>
-                <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <div className={`flex-1 text-start`}>
                   <p className="m-0 text-[13px] font-semibold text-content dark:text-content-dark">{r.entity_name || (lang === 'ar' ? 'جهة اتصال' : 'Contact')}</p>
                   <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? t.ar : t.en}{r.notes ? ' · ' + r.notes : ''}</p>
                 </div>
@@ -149,18 +150,62 @@ export default function DashboardPage() {
   const greeting = lang === 'ar'
     ? (hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء الخير' : 'مساء الخير')
     : (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening');
-  const targetPct = Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
+
+  // ── Real Supabase data ──────────────────────────────────────────────────
+  const [dashData, setDashData] = useState(null);
+  const [dashLoading, setDashLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAllDashboardData().then(data => {
+      setDashData(data);
+      setDashLoading(false);
+    }).catch(() => setDashLoading(false));
+  }, []);
+
+  // Derive CRM KPIs — use real data when available, fallback to MOCK_CRM
+  const crm = useMemo(() => {
+    const c = dashData?.contacts;
+    const o = dashData?.opportunities;
+    if (c && o) {
+      return {
+        totalLeads: c.totalLeads,
+        newLeadsThisMonth: c.newLeadsThisMonth,
+        activeOpps: o.activeOpps,
+        closedDeals: o.closedDeals,
+        revenue: o.revenue,
+        closedThisMonth: o.closedThisMonth,
+      };
+    }
+    return MOCK_CRM;
+  }, [dashData]);
+
+  // TODO: Revenue trend and top sellers cannot be sourced from current services — keep mock
+  const targetPct = crm.revenue > 0 && MOCK_SALES.target > 0
+    ? Math.round((crm.revenue / MOCK_SALES.target) * 100)
+    : Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
   const chartData = REVENUE_TREND.map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en }));
-  const pipeData = PIPELINE_DATA.map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en }));
+
+  // Pipeline chart — real data if available
+  const realPipeline = useMemo(() => {
+    if (dashData?.opportunities?.stageCounts) {
+      const built = buildPipelineData(dashData.opportunities.stageCounts);
+      if (built && built.length > 0) return built;
+    }
+    return null;
+  }, [dashData]);
+  const pipeData = (realPipeline || PIPELINE_DATA).map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en }));
+
+  // Employee count from real data
+  const employeeCount = dashData?.employees?.totalEmployees ?? hr.total;
 
   // Recharts needs raw color strings for tick fills
   const mutedColor = isDark ? '#8BA8C8' : '#64748B';
 
   const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB' }) => (
     <Card className="relative overflow-hidden px-5 py-[18px]">
-      <div className="absolute top-0 ltr:left-0 rtl:right-0 w-1 h-full rounded-l-xl" style={{ background: 'linear-gradient(180deg,' + color + ',transparent)' }} />
+      <div className="absolute top-0 start-0 w-1 h-full rounded-s-xl" style={{ background: 'linear-gradient(180deg,' + color + ',transparent)' }} />
       <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-        <div className={isRTL ? 'text-right' : 'text-left'}>
+        <div className="text-start">
           <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark font-medium">{label}</p>
           <p className="m-0 text-[26px] font-extrabold text-content dark:text-content-dark leading-none">{value}</p>
           {sub && <p className="m-0 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">{sub}</p>}
@@ -174,7 +219,7 @@ export default function DashboardPage() {
   const CardTitle = ({ icon: Icon, title, sub }) => (
     <div className={`flex items-center gap-2.5 mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
       <div className="w-[34px] h-[34px] rounded-[9px] bg-brand-500/[0.12] flex items-center justify-center"><Icon size={16} className="text-brand-500" /></div>
-      <div className={isRTL ? 'text-right' : 'text-left'}>
+      <div className="text-start">
         <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{title}</p>
         {sub && <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{sub}</p>}
       </div>
@@ -193,7 +238,7 @@ export default function DashboardPage() {
           <p className="m-0 text-[13px] text-white/65">{roleLabel} · {dateStr}</p>
         </div>
         <div className={`flex gap-3 relative ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: MOCK_CRM.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: MOCK_CRM.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
+          {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: crm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
             <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-[10px]">
               <p className="m-0 text-[22px] font-extrabold text-white">{s.v}</p>
               <p className="m-0 text-[11px] text-white/65">{s.l}</p>
@@ -204,10 +249,10 @@ export default function DashboardPage() {
 
       {sections.showCRM && (
         <div className="grid grid-cols-4 gap-3.5 mb-5">
-          <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={MOCK_CRM.totalLeads}                        trend={lang === 'ar' ? '+12 هذا الشهر' : '+12 this month'} trendUp color="#4A7AAB" />
-          <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={MOCK_CRM.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" />
-          <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={MOCK_CRM.closedDeals}                       trend={lang === 'ar' ? '+3 هذا الشهر' : '+3 this month'} trendUp color="#6B8DB5" />
-          <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={(MOCK_CRM.revenue / 1000).toFixed(0) + 'K'} sub="EGP" trend={lang === 'ar' ? '83% من التارجت' : '83% of target'} trendUp color="#4A7AAB" />
+          <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" />
+          <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : crm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" />
+          <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : crm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" />
+          <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (crm.revenue / 1000).toFixed(0) + 'K'} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" />
         </div>
       )}
 
@@ -277,7 +322,7 @@ export default function DashboardPage() {
             <div className="mt-3.5 pt-3 border-t border-edge dark:border-edge-dark">
               <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span><span className="text-xs font-bold text-brand-500">{targetPct}%</span></div>
               <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: targetPct + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
-              <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(MOCK_SALES.achieved / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(MOCK_SALES.target / 1000).toFixed(0)}K EGP</span></div>
+              <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(crm.revenue / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(MOCK_SALES.target / 1000).toFixed(0)}K EGP</span></div>
             </div>
           </Box>
         </div>
@@ -286,7 +331,7 @@ export default function DashboardPage() {
       {sections.showHR && (
         <div className="mb-5">
           <div className="grid grid-cols-4 gap-3.5 mb-4">
-            <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={hr.total}                color="#1B3347" />
+            <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={dashLoading ? '...' : employeeCount}                color="#1B3347" />
             <KpiCard icon={CalendarCheck} label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'}  value={hr.attendanceRate + '%'} color="#2B4C6F" />
             <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#4A7AAB" />
             <KpiCard icon={UserCheck}     label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}   value={hr.pendingLeaves}        color="#6B8DB5" />

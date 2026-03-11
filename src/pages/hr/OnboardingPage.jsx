@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
+import { fetchEmployees } from '../../services/employeesService';
 import { UserPlus, CheckCircle2, Clock, AlertCircle, ChevronRight, UserCheck } from 'lucide-react';
 import KpiCard from '../../components/ui/KpiCard';
 
@@ -22,6 +22,9 @@ export default function OnboardingPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [expanded, setExpanded] = useState(null);
+  const [employees, setEmployees] = useState([]);
+
+  useEffect(() => { fetchEmployees().then(data => setEmployees(data)); }, []);
 
   const completed = MOCK_ONBOARDING.filter(o=>Object.values(o.progress).every(Boolean)).length;
   const inProgress = MOCK_ONBOARDING.filter(o=>!Object.values(o.progress).every(Boolean)&&Object.values(o.progress).some(Boolean)).length;
@@ -34,7 +37,7 @@ export default function OnboardingPage() {
           <div className="w-[46px] h-[46px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <UserPlus size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'استقبال الموظفين':'Employee Onboarding'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'تتبع مسار استقبال الموظفين الجدد':'Track new employee onboarding'}</p>
           </div>
@@ -58,7 +61,7 @@ export default function OnboardingPage() {
             <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي موظفين في مرحلة التهيئة':'No employees in onboarding'}</p>
           </div>
         ) : MOCK_ONBOARDING.map(ob => {
-          const emp = MOCK_EMPLOYEES.find(e=>e.employee_id===ob.emp_id||e.id===ob.emp_id);
+          const emp = employees.find(e=>e.employee_id===ob.emp_id||e.id===ob.emp_id);
           const name = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : ob.emp_id;
           const initials = name?.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()||'??';
           const done = Object.values(ob.progress).filter(Boolean).length;
@@ -90,7 +93,7 @@ function OnboardingRow({ ob, name, initials, done, total, pct, isExpanded, isRTL
           <div className="w-[38px] h-[38px] rounded-[10px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0">
             <span className="text-xs font-bold text-white">{initials}</span>
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{name}</p>
             <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'بدأ:':' Started:'} {ob.start}</p>
           </div>
@@ -103,7 +106,7 @@ function OnboardingRow({ ob, name, initials, done, total, pct, isExpanded, isRTL
           <div className="w-20 h-1.5 rounded-full bg-gray-200 dark:bg-white/[0.08]">
             <div className="h-full rounded-full transition-[width] duration-500" style={{ width: pct+'%', background: pct===100 ? '#4A7AAB' : '#6B8DB5' }} />
           </div>
-          <div className={`text-content-muted dark:text-content-muted-dark transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+          <div className={`text-content-muted dark:text-content-muted-dark transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''} ${isRTL && !isExpanded ? 'rotate-180' : ''}`}>
             <ChevronRight size={16} />
           </div>
         </div>

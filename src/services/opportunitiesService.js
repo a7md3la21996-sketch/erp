@@ -1,4 +1,5 @@
 import supabase from '../lib/supabase';
+import { logCreate, logUpdate, logDelete } from './auditService';
 
 // ─── Fetch all opportunities with related data ───
 export async function fetchOpportunities({ role, userId, teamId } = {}) {
@@ -41,6 +42,7 @@ export async function createOpportunity(oppData) {
       .select('*, contacts!left (id, full_name, phone, email, company, contact_type), users!opportunities_assigned_to_fkey (id, full_name_ar, full_name_en), projects!left (id, name_ar, name_en)')
       .single();
     if (error) throw error;
+    logCreate('opportunity', data.id, data);
     return data;
   } catch {
     // Return mock for fallback
@@ -51,6 +53,7 @@ export async function createOpportunity(oppData) {
 // ─── Update opportunity ───
 export async function updateOpportunity(id, updates) {
   try {
+    const { data: oldData } = await supabase.from('opportunities').select('*').eq('id', id).single();
     const { data, error } = await supabase
       .from('opportunities')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -58,6 +61,7 @@ export async function updateOpportunity(id, updates) {
       .select('*, contacts!left (id, full_name, phone, email, company, contact_type), users!opportunities_assigned_to_fkey (id, full_name_ar, full_name_en), projects!left (id, name_ar, name_en)')
       .single();
     if (error) throw error;
+    logUpdate('opportunity', id, oldData, data);
     return data;
   } catch {
     return { id, ...updates };
@@ -67,8 +71,10 @@ export async function updateOpportunity(id, updates) {
 // ─── Delete opportunity ───
 export async function deleteOpportunity(id) {
   try {
+    const { data: oldData } = await supabase.from('opportunities').select('*').eq('id', id).single();
     const { error } = await supabase.from('opportunities').delete().eq('id', id);
     if (error) throw error;
+    logDelete('opportunity', id, oldData);
   } catch { /* silent */ }
 }
 

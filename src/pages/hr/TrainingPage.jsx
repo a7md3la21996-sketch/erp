@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { BookOpen, Users, CheckCircle2, Clock, Plus, GraduationCap } from 'lucide-react';
 import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr } from '../../components/ui';
 import ExportButton from '../../components/ui/ExportButton';
@@ -32,7 +31,7 @@ export default function TrainingPage() {
           <div className="w-[46px] h-[46px] rounded-xl flex items-center justify-center shadow-md" style={{ background:'linear-gradient(135deg,#1B3347,#4A7AAB)' }}>
             <BookOpen size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'التدريب والتطوير':'Training & Development'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'برامج تطوير الكفاءات':'Skills development programs'}</p>
           </div>
@@ -78,7 +77,7 @@ export default function TrainingPage() {
           return (
             <Card key={prog.id} hover className="p-5">
               <div className={`flex justify-between items-start mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <div className={isRTL ? 'text-right' : 'text-left'}>
+                <div className={'text-start'}>
                   <p className="m-0 mb-1 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?prog.title:prog.title_en}</p>
                   <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{prog.duration} {lang==='ar'?'ساعة':'hrs'} • {prog.start}</p>
                 </div>
@@ -105,7 +104,7 @@ export default function TrainingPage() {
           <thead>
             <tr>
               {[lang==='ar'?'البرنامج':'Program', lang==='ar'?'المدة':'Duration', lang==='ar'?'مسجلون':'Enrolled', lang==='ar'?'أتموا':'Completed', lang==='ar'?'الحالة':'Status'].map((h,i)=>(
-                <Th key={i} className={isRTL?'text-right':'text-left'}>{h}</Th>
+                <Th key={i} className={'text-start'}>{h}</Th>
               ))}
             </tr>
           </thead>

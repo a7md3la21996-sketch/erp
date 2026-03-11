@@ -1,4 +1,5 @@
 import supabase from '../lib/supabase';
+import { logCreate, logDelete } from './auditService';
 
 // ── Activity Types ─────────────────────────────────────────────────────────
 export const ACTIVITY_TYPES = {
@@ -77,6 +78,7 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
       .single();
     if (error) throw error;
 
+    logCreate('activity', data.id, data);
     // update last_activity_at on entity
     if (entityType === 'contact' && entityId) {
       await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
@@ -92,8 +94,10 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
 
 export async function deleteActivity(id) {
   try {
+    const { data: oldData } = await supabase.from('activities').select('*').eq('id', id).single();
     const { error } = await supabase.from('activities').delete().eq('id', id);
     if (error) throw error;
+    logDelete('activity', id, oldData);
   } catch {
     const idx = MOCK_ACTIVITIES.findIndex(a => a.id === id);
     if (idx > -1) MOCK_ACTIVITIES.splice(idx, 1);

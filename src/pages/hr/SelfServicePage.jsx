@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
+import { fetchEmployees } from '../../services/employeesService';
 import { User, FileText, CalendarOff, DollarSign, Bell, ChevronRight } from 'lucide-react';
 
 const QUICK_ACTIONS = [
@@ -48,7 +48,7 @@ function RequestRow({ req, i, isRTL, lang }) {
     >
       <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className="w-2 h-2 rounded-full shrink-0" style={{ background: req.color }} />
-        <div className={isRTL ? 'text-right' : 'text-left'}>
+        <div className="text-start">
           <p className="m-0 text-[13px] font-semibold text-content dark:text-content-dark">{req.label}</p>
           <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{req.date}</p>
         </div>
@@ -69,9 +69,12 @@ function RequestRow({ req, i, isRTL, lang }) {
 export default function SelfServicePage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
+  const [employees, setEmployees] = useState([]);
+
+  useEffect(() => { fetchEmployees().then(data => setEmployees(data)); }, []);
 
   // Use first employee as logged-in user simulation
-  const emp = MOCK_EMPLOYEES[0];
+  const emp = employees[0];
   const name = (isRTL ? emp?.full_name_ar : emp?.full_name_en) || emp?.full_name_ar || 'موظف';
   const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
 
@@ -96,7 +99,7 @@ export default function SelfServicePage() {
         <div className="w-[46px] h-[46px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
           <User size={22} color="#fff" />
         </div>
-        <div className={isRTL ? 'text-right' : 'text-left'}>
+        <div className="text-start">
           <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'الخدمة الذاتية':'Self Service'}</h1>
           <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'بوابتك الشخصية':'Your personal portal'}</p>
         </div>
@@ -107,12 +110,12 @@ export default function SelfServicePage() {
         <div className="w-[72px] h-[72px] rounded-2xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0 shadow-md">
           <span className="text-2xl font-extrabold text-white">{initials}</span>
         </div>
-        <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+        <div className={`flex-1 text-start`}>
           <p className="m-0 mb-1 text-xl font-extrabold text-content dark:text-content-dark">{name}</p>
           <p className="m-0 mb-3 text-[13px] text-content-muted dark:text-content-muted-dark">{emp?.employee_id || 'EMP-001'} • {emp?.department || (lang==='ar'?'المبيعات':'Sales')}</p>
           <div className={`flex gap-4 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
             {infoItems.map((item,i) => (
-              <div key={i} className={isRTL ? 'text-right' : 'text-left'}>
+              <div key={i} className="text-start">
                 <p className="m-0 mb-0.5 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide font-semibold">{item.label}</p>
                 <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{item.value}</p>
               </div>

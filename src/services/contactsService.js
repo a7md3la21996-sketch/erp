@@ -1,4 +1,5 @@
 import supabase from '../lib/supabase';
+import { logCreate, logUpdate } from './auditService';
 
 export async function fetchContacts({ role, userId, teamId, filters = {} }) {
   let query = supabase
@@ -44,10 +45,12 @@ export async function createContact(contactData) {
     .select('*')
     .single();
   if (error) throw error;
+  logCreate('contact', data.id, data);
   return data;
 }
 
 export async function updateContact(id, updates) {
+  const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
   const { data, error } = await supabase
     .from('contacts')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -55,6 +58,7 @@ export async function updateContact(id, updates) {
     .select('*')
     .single();
   if (error) throw error;
+  logUpdate('contact', id, oldData, data);
   return data;
 }
 
