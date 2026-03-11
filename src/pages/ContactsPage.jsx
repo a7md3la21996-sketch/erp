@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
+// useTheme removed — dark mode handled via Tailwind dark: classes
 import { useToast } from '../contexts/ToastContext';
 import { Phone, MessageCircle, Mail, Plus, Upload, Download, Search, Ban, X, Clock, Star, Flame, Wind, Snowflake, Thermometer, Users, FileDown, MoreVertical, Bell, CheckSquare, Trash2, Pencil, Pin, PhoneCall, Merge, SkipForward } from 'lucide-react';
 import {
@@ -13,6 +13,7 @@ import {
 } from '../services/contactsService';
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES, TASK_STATUSES } from '../services/tasksService';
 import ImportModal from './crm/ImportModal';
+import { Button, Input, Select, Textarea, Modal, ModalFooter, Table, Th, Td, Tr, Badge } from '../components/ui/';
 
 // ── Hooks ──────────────────────────────────────────────────────────────────
 function useEscClose(onClose) {
@@ -106,11 +107,10 @@ const getPhoneInfo = (p) => {
 // ── Sub-components ─────────────────────────────────────────────────────────
 function Chip({ label, color, bg, size = 'sm' }) {
   return (
-    <span style={{
-      color, background: bg, padding: size === 'sm' ? '2px 9px' : '3px 12px',
-      borderRadius: 20, fontSize: size === 'sm' ? 11 : 12, fontWeight: 700, whiteSpace: 'nowrap',
-      display: 'inline-block',
-    }}>{label}</span>
+    <span
+      className={`inline-block rounded-full font-bold whitespace-nowrap ${size === 'sm' ? 'text-[11px] px-2.5 py-0.5' : 'text-xs px-3 py-[3px]'}`}
+      style={{ color, background: bg }}
+    >{label}</span>
   );
 }
 
@@ -118,19 +118,17 @@ function ScorePill({ score }) {
   const s = score ?? 0;
   const color = s >= 75 ? '#4A7AAB' : s >= 50 ? '#6B8DB5' : s >= 25 ? '#8BA8C8' : '#EF4444';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 70 }}>
-      <div style={{ flex: 1, height: 4, background: 'rgba(74,122,171,0.15)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ width: `${s}%`, height: '100%', background: color, borderRadius: 2 }} />
+    <div className="flex items-center gap-1.5 min-w-[70px]">
+      <div className="flex-1 h-1 bg-brand-500/15 rounded-sm overflow-hidden">
+        <div className="h-full rounded-sm" style={{ width: `${s}%`, background: color }} />
       </div>
-      <span style={{ fontSize: 11, color, fontWeight: 700, minWidth: 20 }}>{s}</span>
+      <span className="text-[11px] font-bold min-w-[20px]" style={{ color }}>{s}</span>
     </div>
   );
 }
 
 // ── Phone Cell ─────────────────────────────────────────────────────────────
 function PhoneCell({ phone, small = false }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const [revealed, setRevealed] = useState(false);
@@ -147,13 +145,15 @@ function PhoneCell({ phone, small = false }) {
     }).catch(() => {});
   };
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", padding: "3px 0", direction: 'ltr' }}
+    <div className="flex items-center gap-1.5 cursor-pointer py-[3px]" style={{ direction: 'ltr' }}
       onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}>
-      <span style={{ fontSize: small ? 11 : 13, color: small ? "#9ca3af" : (isDark ? '#E2EAF4' : '#374151'), fontFamily: "monospace", letterSpacing: revealed ? 0 : 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150, display: 'inline-block' }}>
+      <span className={`font-mono whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] ${small ? 'text-[11px] text-gray-400' : 'text-[13px] text-content dark:text-content-dark'}`}
+        style={{ letterSpacing: revealed ? 0 : 1 }}>
         {revealed ? phone : masked}
       </span>
       {revealed && (
-        <button onClick={handleCopy} style={{ padding: "2px 8px", background: copied ? "rgba(16,185,129,0.15)" : "rgba(74,122,171,0.15)", border: copied ? "1px solid rgba(16,185,129,0.4)" : "1px solid rgba(74,122,171,0.3)", borderRadius: 5, color: copied ? "#10B981" : "#6B8DB5", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>
+        <button onClick={handleCopy}
+          className={`px-2 py-0.5 rounded text-[11px] cursor-pointer font-semibold border ${copied ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500' : 'bg-brand-500/15 border-brand-500/30 text-brand-400'}`}>
           {copied ? (isRTL ? '✓ تم' : '✓ copied') : (isRTL ? 'نسخ' : 'copy')}
         </button>
       )}
@@ -163,8 +163,6 @@ function PhoneCell({ phone, small = false }) {
 
 // ── Add Contact Modal ──────────────────────────────────────────────────────
 function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -233,16 +231,13 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
     }
   };
 
-  const inp = { background: isDark ? '#0F1E2D' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, padding: '9px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
-  const sel = { ...inp, cursor: 'pointer' };
-
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div onClick={e => e.stopPropagation()} className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+    <div onClick={onClose} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[560px] max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <div>
-            <h2 style={{ margin: 0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 17, fontWeight: 700 }}>
+            <h2 className="m-0 text-content dark:text-content-dark text-[17px] font-bold">
               {isRTL ? ({
                 lead: 'إضافة ليد', cold: 'إضافة كولد كول', client: 'إضافة عميل',
                 supplier: 'إضافة مورد', developer: 'إضافة مطور عقاري',
@@ -253,83 +248,81 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                 applicant: 'Add Applicant', partner: 'Add Partner'
               }[form.contact_type] || 'Add Contact')}
             </h2>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B' }}>
+            <p className="mt-[3px] mb-0 text-xs text-content-muted dark:text-content-muted-dark">
               {step === 1 ? (isRTL ? 'البيانات الأساسية' : 'Basic Info') : (isRTL ? 'البيانات الإضافية' : 'Additional Info')}
-              {' '}<span style={{ color: 'rgba(139,168,200,0.5)' }}>({isRTL ? `${step} من 2` : `${step} of 2`})</span>
+              {' '}<span className="text-brand-400/50">({isRTL ? `${step} من 2` : `${step} of 2`})</span>
             </p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: isDark ? '#8BA8C8' : '#64748B', cursor: 'pointer', fontSize: 18 }}><X size={18} /></button>
+          <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer text-lg"><X size={18} /></button>
         </div>
-        <div style={{ height: 3, background: 'rgba(74,122,171,0.15)', borderRadius: '0 0 2px 2px' }}>
-          <div style={{ height: '100%', width: step === 1 ? '50%' : '100%', background: 'linear-gradient(90deg,#2B4C6F,#4A7AAB)', borderRadius: '0 0 2px 2px', transition: 'width 0.3s ease' }} />
+        <div className="h-[3px] bg-brand-500/15 rounded-b-sm">
+          <div className="h-full bg-gradient-to-r from-brand-900 to-brand-500 rounded-b-sm transition-[width] duration-300 ease-in-out" style={{ width: step === 1 ? '50%' : '100%' }} />
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '20px 24px' }}>
+        <div className="flex-1 overflow-auto px-6 py-5">
           {step === 1 ? (
-            <div className="modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="modal-grid grid grid-cols-2 gap-3.5">
               {/* القسم والنوع - أول حاجة */}
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'القسم' : 'Department'} <span style={{ color: '#EF4444' }}>*</span></label>
-                <select style={{ ...sel, borderColor: !form.department ? (isDark ? 'rgba(74,122,171,0.5)' : '#9ca3af') : undefined }} value={form.department} onChange={e => setDept(e.target.value)}>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'القسم' : 'Department'} <span className="text-red-500">*</span></label>
+                <Select value={form.department} onChange={e => setDept(e.target.value)}>
                   <option value="">{isRTL ? 'اختر القسم...' : 'Select department...'}</option>
                   <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
                   <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
                   <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
                   <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
                   <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
-                </select>
+                </Select>
               </div>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'} <span style={{ color: '#EF4444' }}>*</span></label>
-                <select style={sel} value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department}>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'النوع' : 'Type'} <span className="text-red-500">*</span></label>
+                <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department}>
                   {!form.department && <option value="">{isRTL ? 'اختر القسم أولاً...' : 'Select department first...'}</option>}
                   {availableTypes.map(t => <option key={t} value={t}>{isRTL ? ({lead:'ليد',cold:'كولد كول',client:'عميل',supplier:'مورد',developer:'مطور عقاري',applicant:'متقدم لوظيفة',partner:'شريك'}[t]) : ({lead:'Lead',cold:'Cold Call',client:'Client',supplier:'Supplier',developer:'Developer',applicant:'Applicant',partner:'Partner'}[t])}</option>)}
-                </select>
+                </Select>
               </div>
 
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <select style={{ ...sel, width: 110, flexShrink: 0 }} value={form.prefix} onChange={e => set('prefix', e.target.value)}>
+              <div className="col-span-full">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
+                <div className="flex gap-2">
+                  <Select className="!w-[110px] shrink-0" value={form.prefix} onChange={e => set('prefix', e.target.value)}>
                     <option value="">{isRTL ? 'اللقب' : 'Prefix'}</option>
                     <option value="Mr.">{isRTL ? 'السيد' : 'Mr.'}</option>
                     <option value="Mrs.">{isRTL ? 'السيدة' : 'Mrs.'}</option>
                     <option value="Dr.">{isRTL ? 'د.' : 'Dr.'}</option>
                     <option value="Eng.">{isRTL ? 'م.' : 'Eng.'}</option>
                     <option value="أستاذ">{isRTL ? 'أستاذ' : 'Prof.'}</option>
-                  </select>
-                  <input style={{ ...inp, flex: 1 }} placeholder={isRTL ? 'محمد أحمد...' : 'John Doe...'} value={form.full_name} onChange={e => set('full_name', e.target.value)} />
+                  </Select>
+                  <Input className="flex-1" placeholder={isRTL ? 'محمد أحمد...' : 'John Doe...'} value={form.full_name} onChange={e => set('full_name', e.target.value)} />
                 </div>
               </div>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
-                <input style={{ ...inp, borderColor: dupWarning ? '#EF4444' : 'rgba(74,122,171,0.25)' }}
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span className="text-[11px] text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
+                <Input className={dupWarning ? '!border-red-500' : ''}
                   placeholder="010xxxxxxxx" value={form.phone}
                   onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkPhoneNumber(v); } }} />
-                {checking && <p style={{ fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B', margin: '4px 0 0' }}>{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
+                {checking && <p className="text-[11px] text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
-                  <div style={{ marginTop: 8, padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, fontSize: 12 }}>
-                    <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 8 }}>⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#6b7280', fontFamily: 'monospace' }}>— ID: {dupWarning.id}</span></div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => { onOpenOpportunity(dupWarning); onClose(); }}
-                        style={{ flex: 1, padding: '8px 12px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                  <div className="mt-2 p-3 bg-red-500/[0.08] border border-red-500/30 rounded-[10px] text-xs">
+                    <div className="text-red-500 font-bold mb-2">⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-mono">— ID: {dupWarning.id}</span></div>
+                    <div className="flex gap-2">
+                      <Button size="sm" onClick={() => { onOpenOpportunity(dupWarning); onClose(); }} className="flex-1">
                         ✨ {isRTL ? 'فتح فرصة جديدة لـ ' + dupWarning.full_name : 'New opportunity for ' + dupWarning.full_name}
-                      </button>
-                      <button onClick={onClose}
-                        style={{ padding: '8px 12px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, cursor: 'pointer' }}>
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={onClose}>
                         {isRTL ? 'إلغاء' : 'Cancel'}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
               </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 8 }}>{isRTL ? 'أرقام إضافية' : 'Additional Phones'}</label>
+              <div className="col-span-full">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-2">{isRTL ? 'أرقام إضافية' : 'Additional Phones'}</label>
                 {extraPhones.map((ph, i) => (
-                  <div key={i} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      <input style={{ ...inp, flex: 1 }} placeholder="012xxxxxxxx or +966..."
+                  <div key={i} className="mb-2">
+                    <div className="flex gap-1.5">
+                      <Input className="flex-1" placeholder="012xxxxxxxx or +966..."
                         value={ph}
                         onChange={e => {
                           const v = e.target.value.replace(/[^0-9+]/g, '');
@@ -338,67 +331,65 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                           if (validatePhone(v)) { checkDup(v).then(dup => { setExtraDups(d => { const nd = [...d]; nd[i] = dup || null; return nd; }); }).catch(() => {}); }
                         }} />
                       <button type="button" onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraDups(d => d.filter((_, j) => j !== i)); }}
-                        style={{ padding: '0 12px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, color: '#EF4444', cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+                        className="px-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-lg leading-none">×</button>
                     </div>
-                    {ph && (<div style={{ marginTop: 4 }}>
-                      {!validatePhone(ph) && <span style={{ fontSize: 11, color: '#F97316' }}>⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}
-                      {validatePhone(ph) && (() => { const info = getPhoneInfo(ph); return info ? <span style={{ fontSize: 12, color: '#10B981' }}>{info.flag} {info.country} — {info.formatted}</span> : null; })()}
+                    {ph && (<div className="mt-1">
+                      {!validatePhone(ph) && <span className="text-[11px] text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}
+                      {validatePhone(ph) && (() => { const info = getPhoneInfo(ph); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}
                     </div>)}
                     {extraDups[i] && (
-                      <div style={{ marginTop: 6, padding: '8px 10px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, fontSize: 12 }}>
-                        <div style={{ color: '#EF4444', fontWeight: 700, marginBottom: 4 }}>⚠️ {isRTL ? 'مسجل باسم' : 'Registered to'}: <strong>{extraDups[i].full_name}</strong> <span style={{ color: isDark ? '#6B8DB5' : '#6b7280', fontFamily: 'monospace', fontSize: 11 }}>ID: {extraDups[i].id}</span></div>
-                        <button type="button" onClick={() => { onOpenOpportunity(extraDups[i]); onClose(); }}
-                          style={{ width: '100%', padding: '6px 10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      <div className="mt-1.5 p-2 bg-red-500/[0.08] border border-red-500/30 rounded-lg text-xs">
+                        <div className="text-red-500 font-bold mb-1">⚠️ {isRTL ? 'مسجل باسم' : 'Registered to'}: <strong>{extraDups[i].full_name}</strong> <span className="text-content-muted dark:text-content-muted-dark font-mono text-[11px]">ID: {extraDups[i].id}</span></div>
+                        <Button size="sm" onClick={() => { onOpenOpportunity(extraDups[i]); onClose(); }} className="w-full">
                           ✨ {isRTL ? 'فتح فرصة جديدة' : 'New Opportunity'}
-                        </button>
+                        </Button>
                       </div>
                     )}
                   </div>
                 ))}
-                <button type="button" onClick={() => { setExtraPhones([...extraPhones, '']); setExtraDups([...extraDups, null]); }}
-                  style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 12, cursor: 'pointer' }}>
+                <Button variant="secondary" size="sm" onClick={() => { setExtraPhones([...extraPhones, '']); setExtraDups([...extraDups, null]); }}>
                   + {isRTL ? 'إضافة رقم' : 'Add Phone'}
-                </button>
+                </Button>
               </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
-                <input style={inp} type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
+              <div className="col-span-full">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
+                <Input type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
               </div>
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المصدر' : 'Source'}</label>
-                <select style={sel} value={form.source} onChange={e => set('source', e.target.value)}>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المصدر' : 'Source'}</label>
+                <Select value={form.source} onChange={e => set('source', e.target.value)}>
                   {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
-                </select>
+                </Select>
               </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
-                <input style={inp} placeholder={isRTL ? 'مثال: حملة الشيخ زايد Q1' : 'e.g. Sheikh Zayed Q1 Campaign'} value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
+              <div className="col-span-full">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
+                <Input placeholder={isRTL ? 'مثال: حملة الشيخ زايد Q1' : 'e.g. Sheikh Zayed Q1 Campaign'} value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
               </>)}
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الشركة / جهة العمل' : 'Company'}</label>
-                <input style={inp} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} value={form.company} onChange={e => set('company', e.target.value)} />
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الشركة / جهة العمل' : 'Company'}</label>
+                <Input placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} value={form.company} onChange={e => set('company', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
-                <input style={inp} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} value={form.job_title} onChange={e => set('job_title', e.target.value)} />
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
+                <Input placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} value={form.job_title} onChange={e => set('job_title', e.target.value)} />
               </div>
 
             </div>
           ) : (
-            <div className="modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="modal-grid grid grid-cols-2 gap-3.5">
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنس' : 'Gender'}</label>
-                <select style={sel} value={form.gender} onChange={e => set('gender', e.target.value)}>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنس' : 'Gender'}</label>
+                <Select value={form.gender} onChange={e => set('gender', e.target.value)}>
                   <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
                   <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
                   <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
-                </select>
+                </Select>
               </div>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الجنسية' : 'Nationality'}</label>
-                <select style={sel} value={form.nationality} onChange={e => set('nationality', e.target.value)}>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنسية' : 'Nationality'}</label>
+                <Select value={form.nationality} onChange={e => set('nationality', e.target.value)}>
                   <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
                   <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
                   <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
@@ -407,50 +398,50 @@ function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
                   <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
                   <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
                   <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
-                </select>
+                </Select>
               </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
-                <input style={inp} type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} />
+              <div className="col-span-full">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
+                <Input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} />
               </div>
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
-                <input style={inp} type="number" placeholder="1500000" value={form.budget_min} onChange={e => set('budget_min', e.target.value)} />
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
+                <Input type="number" placeholder="1500000" value={form.budget_min} onChange={e => set('budget_min', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ميزانية إلى' : 'Budget To (EGP)'}</label>
-                <input style={inp} type="number" placeholder="3000000" value={form.budget_max} onChange={e => set('budget_max', e.target.value)} />
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ميزانية إلى' : 'Budget To (EGP)'}</label>
+                <Input type="number" placeholder="3000000" value={form.budget_max} onChange={e => set('budget_max', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'الموقع المفضل' : 'Preferred Location'}</label>
-                <input style={inp} placeholder={isRTL ? 'الشيخ زايد، التجمع...' : 'Sheikh Zayed, New Cairo...'} value={form.preferred_location} onChange={e => set('preferred_location', e.target.value)} />
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الموقع المفضل' : 'Preferred Location'}</label>
+                <Input placeholder={isRTL ? 'الشيخ زايد، التجمع...' : 'Sheikh Zayed, New Cairo...'} value={form.preferred_location} onChange={e => set('preferred_location', e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'نوع العقار' : 'Property Type'}</label>
-                <select style={sel} value={form.interested_in_type} onChange={e => set('interested_in_type', e.target.value)}>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نوع العقار' : 'Property Type'}</label>
+                <Select value={form.interested_in_type} onChange={e => set('interested_in_type', e.target.value)}>
                   <option value="residential">{isRTL ? 'سكني' : 'Residential'}</option>
                   <option value="commercial">{isRTL ? 'تجاري' : 'Commercial'}</option>
                   <option value="administrative">{isRTL ? 'إداري' : 'Administrative'}</option>
-                </select>
+                </Select>
               </div>
               </>)}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
-                <textarea style={{ ...inp, resize: 'vertical' }} rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
+              <div className="col-span-full">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ملاحظات' : 'Notes'}</label>
+                <Textarea rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-          <div style={{ display: 'flex', gap: 10 }}>
-            {step === 2 && <button onClick={() => setStep(1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'السابق →' : '← Back'}</button>}
+        <div className="px-6 py-4 border-t border-edge dark:border-edge-dark flex justify-between items-center">
+          <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <div className="flex gap-2.5">
+            {step === 2 && <Button variant="secondary" onClick={() => setStep(1)}>{isRTL ? 'السابق →' : '← Back'}</Button>}
             {step === 1
-              ? (() => { const canNext = form.department && form.contact_type && form.full_name.trim() && validatePhone(form.phone) && !dupWarning; return <button onClick={() => setStep(2)} disabled={!canNext} style={{ padding: '9px 22px', background: canNext ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: canNext ? 'pointer' : 'not-allowed' }}>{isRTL ? '← التالي' : 'Next →'}</button>; })()
-              : <button onClick={handleSave} disabled={saving} style={{ padding: '9px 22px', background: saving ? 'rgba(74,122,171,0.3)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</button>
+              ? (() => { const canNext = form.department && form.contact_type && form.full_name.trim() && validatePhone(form.phone) && !dupWarning; return <Button onClick={() => setStep(2)} disabled={!canNext}>{isRTL ? '← التالي' : 'Next →'}</Button>; })()
+              : <Button onClick={handleSave} disabled={saving}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</Button>
             }
           </div>
         </div>
@@ -482,8 +473,6 @@ const FOLLOWUP_TYPES = [
 ];
 
 function LogCallModal({ contact, onClose }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -571,8 +560,6 @@ function LogCallModal({ contact, onClose }) {
     onClose();
   };
 
-  const btnBorder = isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0';
-  const lblColor = isDark ? '#8BA8C8' : '#4A5568';
   const priorities = [
     { value: 'high', ar: 'عالية', en: 'High', color: '#EF4444' },
     { value: 'medium', ar: 'متوسطة', en: 'Medium', color: '#F59E0B' },
@@ -580,72 +567,69 @@ function LogCallModal({ contact, onClose }) {
   ];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content" style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 420, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={onClose}>
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[420px] max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
-        <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
+        <div className="px-5 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
+          <h3 className="text-[15px] font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
+          <button onClick={onClose} className="bg-transparent border-none text-xl text-content-muted dark:text-content-muted-dark cursor-pointer">×</button>
         </div>
-        <div style={{ padding: '18px 20px' }}>
+        <div className="px-5 py-[18px]">
           {/* Call Result */}
-          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 8 }}>{isRTL ? 'نتيجة المكالمة' : 'Call Result'} <span style={{ color: '#EF4444' }}>*</span></div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-2">{isRTL ? 'نتيجة المكالمة' : 'Call Result'} <span className="text-red-500">*</span></div>
+          <div className="flex gap-1.5 flex-wrap mb-3.5">
             {CALL_RESULTS.map(r => (
-              <button key={r.key} onClick={() => setCallResult(r.key)} style={{
-                padding: '5px 12px', borderRadius: 20, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit',
-                border: `1.5px solid ${callResult === r.key ? r.color : btnBorder}`,
+              <button key={r.key} onClick={() => setCallResult(r.key)} className="px-3 py-[5px] rounded-full text-xs cursor-pointer font-inherit transition-colors" style={{
+                border: `1.5px solid ${callResult === r.key ? r.color : 'var(--border-edge, #E2E8F0)'}`,
                 background: callResult === r.key ? r.color + '18' : 'none',
-                color: callResult === r.key ? r.color : (isDark ? '#E2EAF4' : '#4A5568'),
+                color: callResult === r.key ? r.color : undefined,
                 fontWeight: callResult === r.key ? 700 : 400,
               }}>{isRTL ? r.ar : r.en}</button>
             ))}
           </div>
           {/* Notes */}
-          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'ملاحظات' : 'Notes'}</div>
-          <textarea rows={2} value={callNotes} onChange={e => setCallNotes(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', resize: 'none', marginBottom: 16, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
+          <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'ملاحظات' : 'Notes'}</div>
+          <Textarea rows={2} value={callNotes} onChange={e => setCallNotes(e.target.value)} className="!resize-none mb-4" placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
 
           {/* Follow-up Section */}
-          <div style={{ background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: `1px solid ${addFollowup ? (isDark ? 'rgba(74,122,171,0.25)' : '#4A7AAB30') : btnBorder}`, borderRadius: 10, padding: 14, transition: 'border-color 0.2s' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: addFollowup ? '#4A7AAB' : lblColor }}>
-              <input type="checkbox" checked={addFollowup} onChange={e => setAddFollowup(e.target.checked)} style={{ accentColor: '#4A7AAB', cursor: 'pointer' }} />
+          <div className={`bg-brand-500/[0.06] dark:bg-brand-500/[0.06] rounded-[10px] p-3.5 transition-colors ${addFollowup ? 'border border-brand-500/25' : 'border border-edge dark:border-edge-dark'}`}>
+            <label className={`flex items-center gap-2 cursor-pointer text-[13px] font-semibold ${addFollowup ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+              <input type="checkbox" checked={addFollowup} onChange={e => setAddFollowup(e.target.checked)} className="accent-brand-500 cursor-pointer" />
               <Clock size={14} /> {isRTL ? 'إنشاء مهمة متابعة' : 'Create follow-up task'}
             </label>
             {addFollowup && (
-              <div style={{ marginTop: 12 }}>
+              <div className="mt-3">
                 {/* When */}
-                <div style={{ fontSize: 11, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'متى؟' : 'When?'}</div>
-                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 10 }}>
+                <div className="text-[11px] text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'متى؟' : 'When?'}</div>
+                <div className="flex gap-[5px] flex-wrap mb-2.5">
                   {FOLLOWUP_PRESETS.map(p => (
-                    <button key={p.key} onClick={() => handlePreset(p)} style={{
-                      padding: '4px 12px', borderRadius: 16, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit',
-                      border: `1.5px solid ${followupPreset === p.key ? '#4A7AAB' : btnBorder}`,
+                    <button key={p.key} onClick={() => handlePreset(p)} className="px-3 py-1 rounded-2xl text-[11px] cursor-pointer font-inherit transition-colors" style={{
+                      border: `1.5px solid ${followupPreset === p.key ? '#4A7AAB' : 'var(--border-edge, #E2E8F0)'}`,
                       background: followupPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none',
-                      color: followupPreset === p.key ? '#4A7AAB' : (isDark ? '#E2EAF4' : '#4A5568'),
+                      color: followupPreset === p.key ? '#4A7AAB' : undefined,
                       fontWeight: followupPreset === p.key ? 700 : 400,
                     }}>{isRTL ? p.ar : p.en}</button>
                   ))}
                 </div>
                 {followupPreset === 'custom' && (
-                  <input type="datetime-local" value={followupDate} onChange={e => setFollowupDate(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, outline: 'none', marginBottom: 10, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} />
+                  <Input type="datetime-local" value={followupDate} onChange={e => setFollowupDate(e.target.value)} size="sm" className="mb-2.5" />
                 )}
                 {/* Type + Priority */}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: lblColor, fontWeight: 600, marginBottom: 4 }}>{isRTL ? 'نوع المتابعة' : 'Follow-up type'}</div>
-                    <select value={followupType} onChange={e => setFollowupType(e.target.value)} style={{ width: '100%', padding: '6px 8px', border: `1px solid ${btnBorder}`, borderRadius: 6, fontSize: 11, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', outline: 'none', cursor: 'pointer' }}>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark font-semibold mb-1">{isRTL ? 'نوع المتابعة' : 'Follow-up type'}</div>
+                    <Select size="sm" value={followupType} onChange={e => setFollowupType(e.target.value)}>
                       {FOLLOWUP_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
-                    </select>
+                    </Select>
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, color: lblColor, fontWeight: 600, marginBottom: 4 }}>{isRTL ? 'الأولوية' : 'Priority'}</div>
-                    <div style={{ display: 'flex', gap: 3 }}>
+                  <div className="flex-1">
+                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark font-semibold mb-1">{isRTL ? 'الأولوية' : 'Priority'}</div>
+                    <div className="flex gap-[3px]">
                       {priorities.map(p => (
-                        <button key={p.value} onClick={() => setFollowupPriority(p.value)} style={{
-                          flex: 1, padding: '5px 0', borderRadius: 5, fontSize: 10, cursor: 'pointer', fontFamily: 'inherit',
+                        <button key={p.value} onClick={() => setFollowupPriority(p.value)} className="flex-1 py-[5px] rounded-[5px] text-[10px] cursor-pointer font-inherit" style={{
                           background: followupPriority === p.value ? p.color + '18' : 'transparent',
-                          border: `1px solid ${followupPriority === p.value ? p.color : btnBorder}`,
-                          color: followupPriority === p.value ? p.color : (isDark ? '#8BA8C8' : '#6B7280'),
+                          border: `1px solid ${followupPriority === p.value ? p.color : 'var(--border-edge, #E2E8F0)'}`,
+                          color: followupPriority === p.value ? p.color : undefined,
                           fontWeight: followupPriority === p.value ? 700 : 400,
                         }}>{isRTL ? p.ar : p.en}</button>
                       ))}
@@ -657,11 +641,11 @@ function LogCallModal({ contact, onClose }) {
           </div>
         </div>
         {/* Footer */}
-        <div style={{ padding: '14px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${btnBorder}`, background: isDark ? '#152232' : '#F8FAFC', fontSize: 13, color: isDark ? '#8BA8C8' : '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-          <button onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: callResult ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: callResult ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: saving ? 0.6 : 1 }}>
+        <div className="px-5 py-3.5 border-t border-edge dark:border-edge-dark flex gap-2 justify-end">
+          <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleSave} disabled={saving || !callResult}>
             {saving ? '...' : addFollowup ? (isRTL ? 'حفظ + إنشاء مهمة' : 'Save + Create Task') : (isRTL ? 'حفظ المكالمة' : 'Save Call')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -677,8 +661,6 @@ const QUICK_TASK_PRESETS = [
 ];
 
 function QuickTaskModal({ contact, onClose }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -724,8 +706,6 @@ function QuickTaskModal({ contact, onClose }) {
     onClose();
   };
 
-  const btnBorder = isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0';
-  const lblColor = isDark ? '#8BA8C8' : '#4A5568';
   const taskTypes = [
     { value: 'followup', ar: 'متابعة', en: 'Follow-up' },
     { value: 'call', ar: 'مكالمة', en: 'Call' },
@@ -740,51 +720,56 @@ function QuickTaskModal({ contact, onClose }) {
   ];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content" style={{ background: isDark ? '#1a2234' : '#fff', borderRadius: 16, width: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding: '18px 20px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: isDark ? '#E2EAF4' : '#1B3347', display: 'flex', alignItems: 'center', gap: 6 }}><Clock size={14} /> {isRTL ? 'مهمة سريعة' : 'Quick Task'} — {contact.full_name}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: isDark ? '#8BA8C8' : '#9CA3AF', cursor: 'pointer' }}>×</button>
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={onClose}>
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[400px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
+          <h3 className="text-[15px] font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Clock size={14} /> {isRTL ? 'مهمة سريعة' : 'Quick Task'} — {contact.full_name}</h3>
+          <button onClick={onClose} className="bg-transparent border-none text-xl text-content-muted dark:text-content-muted-dark cursor-pointer">×</button>
         </div>
-        <div style={{ padding: '18px 20px' }}>
+        <div className="px-5 py-[18px]">
           {/* Title */}
-          <input value={title} onChange={e => setTitle(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 13, outline: 'none', background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box', marginBottom: 14 }} placeholder={isRTL ? `متابعة ${contact.full_name}` : `Follow up with ${contact.full_name}`} />
+          <Input value={title} onChange={e => setTitle(e.target.value)} className="mb-3.5" placeholder={isRTL ? `متابعة ${contact.full_name}` : `Follow up with ${contact.full_name}`} />
           {/* When */}
-          <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 8 }}>{isRTL ? 'متى؟' : 'When?'}</div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+          <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-2">{isRTL ? 'متى؟' : 'When?'}</div>
+          <div className="flex gap-1.5 flex-wrap mb-3.5">
             {QUICK_TASK_PRESETS.map(p => (
-              <button key={p.key} onClick={() => handlePreset(p)} style={{ padding: '5px 14px', borderRadius: 20, border: `1.5px solid ${selectedPreset === p.key ? '#4A7AAB' : btnBorder}`, background: selectedPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none', fontSize: 12, color: selectedPreset === p.key ? '#4A7AAB' : (isDark ? '#E2EAF4' : '#4A5568'), cursor: 'pointer', fontFamily: 'inherit', fontWeight: selectedPreset === p.key ? 700 : 400 }}>{isRTL ? p.ar : p.en}</button>
+              <button key={p.key} onClick={() => handlePreset(p)} className="px-3.5 py-[5px] rounded-full text-xs cursor-pointer font-inherit transition-colors" style={{
+                border: `1.5px solid ${selectedPreset === p.key ? '#4A7AAB' : 'var(--border-edge, #E2E8F0)'}`,
+                background: selectedPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none',
+                color: selectedPreset === p.key ? '#4A7AAB' : undefined,
+                fontWeight: selectedPreset === p.key ? 700 : 400,
+              }}>{isRTL ? p.ar : p.en}</button>
             ))}
           </div>
           {selectedPreset === 'custom' && (
-            <input type="datetime-local" value={customDate} onChange={e => setCustomDate(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, outline: 'none', marginBottom: 14, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', boxSizing: 'border-box' }} />
+            <Input type="datetime-local" value={customDate} onChange={e => setCustomDate(e.target.value)} size="sm" className="mb-3.5" />
           )}
           {/* Type + Priority row */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 4 }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'النوع' : 'Type'}</div>
-              <select value={taskType} onChange={e => setTaskType(e.target.value)} style={{ width: '100%', padding: '7px 10px', border: `1px solid ${btnBorder}`, borderRadius: 8, fontSize: 12, background: isDark ? '#0F1E2D' : '#fff', color: isDark ? '#E2EAF4' : '#1A2B3C', outline: 'none', cursor: 'pointer' }}>
+          <div className="flex gap-2.5 mb-1">
+            <div className="flex-1">
+              <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'النوع' : 'Type'}</div>
+              <Select size="sm" value={taskType} onChange={e => setTaskType(e.target.value)}>
                 {taskTypes.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
-              </select>
+              </Select>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 12, color: lblColor, fontWeight: 600, marginBottom: 6 }}>{isRTL ? 'الأولوية' : 'Priority'}</div>
-              <div style={{ display: 'flex', gap: 4 }}>
+            <div className="flex-1">
+              <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'الأولوية' : 'Priority'}</div>
+              <div className="flex gap-1">
                 {priorities.map(p => (
-                  <button key={p.value} onClick={() => setPriority(p.value)} style={{
-                    flex: 1, padding: '6px 0', borderRadius: 6, fontSize: 11, fontWeight: priority === p.value ? 700 : 400, cursor: 'pointer', fontFamily: 'inherit',
+                  <button key={p.value} onClick={() => setPriority(p.value)} className="flex-1 py-1.5 rounded-md text-[11px] cursor-pointer font-inherit" style={{
                     background: priority === p.value ? p.color + '18' : 'transparent',
-                    border: `1px solid ${priority === p.value ? p.color : btnBorder}`,
-                    color: priority === p.value ? p.color : (isDark ? '#8BA8C8' : '#6B7280'),
+                    border: `1px solid ${priority === p.value ? p.color : 'var(--border-edge, #E2E8F0)'}`,
+                    color: priority === p.value ? p.color : undefined,
+                    fontWeight: priority === p.value ? 700 : 400,
                   }}>{isRTL ? p.ar : p.en}</button>
                 ))}
               </div>
             </div>
           </div>
         </div>
-        <div style={{ padding: '14px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#E2E8F0'}`, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${btnBorder}`, background: isDark ? '#152232' : '#F8FAFC', fontSize: 13, color: isDark ? '#8BA8C8' : '#6B7280', cursor: 'pointer', fontFamily: 'inherit' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-          <button onClick={handleSave} disabled={saving} style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: (selectedPreset && (selectedPreset !== 'custom' || customDate)) ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : 'rgba(74,122,171,0.3)', fontSize: 13, color: '#fff', fontWeight: 700, cursor: (selectedPreset && (selectedPreset !== 'custom' || customDate)) ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: saving ? 0.6 : 1 }}>{saving ? '...' : (isRTL ? 'إنشاء مهمة' : 'Create Task')}</button>
+        <div className="px-5 py-3.5 border-t border-edge dark:border-edge-dark flex gap-2 justify-end">
+          <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleSave} disabled={saving || !(selectedPreset && (selectedPreset !== 'custom' || customDate))}>{saving ? '...' : (isRTL ? 'إنشاء مهمة' : 'Create Task')}</Button>
         </div>
       </div>
     </div>
@@ -792,35 +777,32 @@ function QuickTaskModal({ contact, onClose }) {
 }
 
 function BlacklistModal({ contact, onClose, onConfirm }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   useEscClose(onClose);
   const [reason, setReason] = useState('');
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
-        <div style={{ textAlign: 'center', marginBottom: 16 }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5">
+      <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-red-500/35 rounded-2xl p-7 w-full max-w-[420px]">
+        <div className="text-center mb-4">
+          <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/25 flex items-center justify-center mx-auto mb-3">
             <Ban size={24} color="#EF4444" />
           </div>
-          <h3 style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', margin: '0 0 6px', fontSize: 16 }}>{isRTL ? 'إضافة للقائمة السوداء' : 'Add to Blacklist'}</h3>
-          <p style={{ color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, margin: 0 }}>{isRTL ? 'سيتم منع هذا الرقم من الإضافة مستقبلاً' : 'This number will be blocked from future additions'}</p>
+          <h3 className="text-content dark:text-content-dark m-0 mb-1.5 text-base">{isRTL ? 'إضافة للقائمة السوداء' : 'Add to Blacklist'}</h3>
+          <p className="text-content-muted dark:text-content-muted-dark text-[13px] m-0">{isRTL ? 'سيتم منع هذا الرقم من الإضافة مستقبلاً' : 'This number will be blocked from future additions'}</p>
         </div>
-        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: isDark ? '#E2EAF4' : '#1A2B3C' }}>
+        <div className="bg-red-500/[0.08] border border-red-500/20 rounded-[10px] px-3.5 py-2.5 mb-4 text-[13px] text-content dark:text-content-dark">
           {contact?.full_name} — {contact?.phone}
         </div>
-        <label style={{ display: 'block', color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, marginBottom: 8 }}>{isRTL ? 'سبب الإضافة' : 'Reason'} <span style={{ color: '#EF4444' }}>*</span></label>
-        <input type="text" value={reason} onChange={e => setReason(e.target.value)}
+        <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-2">{isRTL ? 'سبب الإضافة' : 'Reason'} <span className="text-red-500">*</span></label>
+        <Input type="text" value={reason} onChange={e => setReason(e.target.value)}
           placeholder={isRTL ? 'مثال: سلوك مسيء، احتيال، رقم خاطئ متكرر...' : 'e.g. Abusive behavior, fraud, repeated wrong number...'}
-          style={{ width: '100%', background: isDark ? '#0F1E2D' : '#ffffff', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '9px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, outline: 'none', boxSizing: 'border-box', marginBottom: 20 }} />
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-          <button onClick={() => { if (reason.trim()) { onConfirm(contact, reason); onClose(); } }}
-            style={{ padding: '9px 18px', background: reason.trim() ? 'linear-gradient(135deg,#7f1d1d,#EF4444)' : 'rgba(239,68,68,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: reason.trim() ? 'pointer' : 'not-allowed' }}>
+          className="!border-red-500/30 mb-5" />
+        <div className="flex gap-2.5 justify-end">
+          <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <Button variant="danger" onClick={() => { if (reason.trim()) { onConfirm(contact, reason); onClose(); } }} disabled={!reason.trim()}>
             {isRTL ? 'تأكيد الإضافة' : 'Confirm'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -829,8 +811,6 @@ function BlacklistModal({ contact, onClose, onConfirm }) {
 
 // ── Activity Form ─────────────────────────────────────────────────────────
 function ActivityForm({ contactId, onSave, onCancel }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
@@ -853,7 +833,6 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 
   const [form, setForm] = useState({ type: activityTypes[0]?.key || 'call', description: '', next_action: '', next_action_date: '' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const inp = { background: isDark ? '#0F1E2D' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, padding: '8px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 12, outline: 'none', width: '100%', boxSizing: 'border-box' };
 
   // Auto timestamp
   const now = new Date().toLocaleString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -863,34 +842,34 @@ function ActivityForm({ contactId, onSave, onCancel }) {
   };
 
   return (
-    <div style={{ background: 'rgba(74,122,171,0.07)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 10, padding: 14, marginBottom: 12 }}>
+    <div className="bg-brand-500/[0.07] border border-brand-500/20 rounded-[10px] p-3.5 mb-3">
       {/* Auto timestamp - read only */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, padding: '5px 10px', background: 'rgba(74,122,171,0.08)', borderRadius: 6 }}>
-        <Clock size={11} color={isDark ? '#6B8DB5' : '#6b7280'} />
-        <span style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#6b7280' }}>{now}</span>
+      <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-[5px] bg-brand-500/[0.08] rounded-md">
+        <Clock size={11} className="text-content-muted dark:text-content-muted-dark" />
+        <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{now}</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-        <select style={{ ...inp, cursor: 'pointer' }} value={form.type} onChange={e => set('type', e.target.value)}>
+      <div className="grid grid-cols-2 gap-2.5 mb-2.5">
+        <Select size="sm" value={form.type} onChange={e => set('type', e.target.value)}>
           {activityTypes.map(v => (
             <option key={v.key} value={v.key}>{isRTL ? (v.labelAr || v.label) : v.label}</option>
           ))}
-        </select>
-        <input style={inp} type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)}
+        </Select>
+        <Input size="sm" type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)}
           placeholder={isRTL ? 'تاريخ المتابعة' : 'Follow-up date'} />
       </div>
-      <textarea style={{ ...inp, resize: 'vertical', marginBottom: 10 }} rows={2}
+      <Textarea size="sm" className="mb-2.5" rows={2}
         placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
         value={form.description} onChange={e => set('description', e.target.value)} />
-      <input style={{ ...inp, marginBottom: 12 }}
+      <Input size="sm" className="mb-3"
         placeholder={isRTL ? 'الإجراء التالي (اختياري)...' : 'Next action (optional)...'}
         value={form.next_action} onChange={e => set('next_action', e.target.value)} />
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button onClick={onCancel} style={{ padding: '6px 14px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 6, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 12, cursor: 'pointer' }}>
+      <div className="flex gap-2 justify-end">
+        <Button variant="secondary" size="sm" onClick={onCancel}>
           {isRTL ? 'إلغاء' : 'Cancel'}
-        </button>
-        <button onClick={handleSave} style={{ padding: '6px 16px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+        </Button>
+        <Button size="sm" onClick={handleSave}>
           {isRTL ? 'حفظ' : 'Save'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -899,8 +878,6 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 // ── Contact Drawer ─────────────────────────────────────────────────────────
 
 function EditContactModal({ contact, onClose, onSave }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -945,47 +922,42 @@ function EditContactModal({ contact, onClose, onSave }) {
     }
   };
 
-  const inp = { background: isDark ? '#0F1E2D' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, padding: '9px 12px', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box' };
-  const sel = { ...inp, cursor: 'pointer' };
-  const lbl = { fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B', marginBottom: 4, display: 'block' };
-  const row = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 };
-
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 950, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 16, width: '100%', maxWidth: 580, maxHeight: '92vh', display: 'flex', flexDirection: 'column' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[950] flex items-center justify-center p-5">
+      <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[580px] max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div style={{ padding: '18px 24px 14px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div className="px-6 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center shrink-0">
           <div>
-            <h2 style={{ margin: 0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 17, fontWeight: 700 }}>{isRTL ? 'تعديل بيانات جهة الاتصال' : 'Edit Contact'}</h2>
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 300 }}>{contact.full_name}</p>
+            <h2 className="m-0 text-content dark:text-content-dark text-[17px] font-bold">{isRTL ? 'تعديل بيانات جهة الاتصال' : 'Edit Contact'}</h2>
+            <p className="mt-[3px] mb-0 text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px]">{contact.full_name}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: isDark ? '#8BA8C8' : '#64748B', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+          <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1"><X size={18} /></button>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="px-6 py-5 overflow-y-auto flex-1 flex flex-col gap-3.5">
 
           {/* الاسم والـ prefix */}
           <div>
-            <label style={lbl}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
-            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 10 }}>
-              <select value={form.prefix} onChange={e => set('prefix', e.target.value)} style={sel}>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
+            <div className="grid grid-cols-[120px_1fr] gap-2.5">
+              <Select value={form.prefix} onChange={e => set('prefix', e.target.value)}>
                 <option value="">{isRTL ? 'اللقب' : 'Prefix'}</option>
                 <option value="Mr.">Mr.</option>
                 <option value="Mrs.">Mrs.</option>
                 <option value="Dr.">Dr.</option>
                 <option value="Eng.">Eng.</option>
                 <option value="أستاذ">أستاذ</option>
-              </select>
-              <input value={form.full_name} onChange={e => set('full_name', e.target.value)} style={inp} placeholder={isRTL ? 'الاسم الكامل...' : 'Full name...'} />
+              </Select>
+              <Input value={form.full_name} onChange={e => set('full_name', e.target.value)} placeholder={isRTL ? 'الاسم الكامل...' : 'Full name...'} />
             </div>
           </div>
 
           {/* النوع والقسم */}
-          <div style={row}>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={lbl}>{isRTL ? 'النوع' : 'Type'}</label>
-              <select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} style={sel}>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النوع' : 'Type'}</label>
+              <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
                 <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
                 <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
                 <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
@@ -993,81 +965,81 @@ function EditContactModal({ contact, onClose, onSave }) {
                 <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
                 <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
                 <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
-              </select>
+              </Select>
             </div>
             <div>
-              <label style={lbl}>{isRTL ? 'القسم' : 'Department'}</label>
-              <select value={form.department} onChange={e => set('department', e.target.value)} style={sel}>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'القسم' : 'Department'}</label>
+              <Select value={form.department} onChange={e => set('department', e.target.value)}>
                 <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
                 <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
                 <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
                 <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
                 <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
-              </select>
+              </Select>
             </div>
           </div>
 
           {/* الهاتف والإيميل */}
-          <div style={row}>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={lbl}>{isRTL ? 'رقم الهاتف' : 'Phone'} <span style={{ color: '#EF4444' }}>*</span></label>
-              <input value={form.phone} onChange={e => set('phone', e.target.value)} style={inp} placeholder="010xxxxxxxx" />
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span></label>
+              <Input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="010xxxxxxxx" />
             </div>
             <div>
-              <label style={lbl}>{isRTL ? 'هاتف 2' : 'Phone 2'}</label>
-              <input value={form.phone2} onChange={e => set('phone2', e.target.value)} style={inp} placeholder="011xxxxxxxx" />
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'هاتف 2' : 'Phone 2'}</label>
+              <Input value={form.phone2} onChange={e => set('phone2', e.target.value)} placeholder="011xxxxxxxx" />
             </div>
           </div>
 
           <div>
-            <label style={lbl}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
-            <input value={form.email} onChange={e => set('email', e.target.value)} style={inp} placeholder="email@domain.com" />
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
+            <Input value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@domain.com" />
           </div>
 
           {/* الشركة والمسمى */}
-          <div style={row}>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={lbl}>{isRTL ? 'الشركة' : 'Company'}</label>
-              <input value={form.company} onChange={e => set('company', e.target.value)} style={inp} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} />
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الشركة' : 'Company'}</label>
+              <Input value={form.company} onChange={e => set('company', e.target.value)} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} />
             </div>
             <div>
-              <label style={lbl}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
-              <input value={form.job_title} onChange={e => set('job_title', e.target.value)} style={inp} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} />
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
+              <Input value={form.job_title} onChange={e => set('job_title', e.target.value)} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} />
             </div>
           </div>
 
           {/* المصدر — للـ sales types فقط */}
           {isSalesType && (
-            <div style={row}>
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label style={lbl}>{isRTL ? 'المصدر' : 'Source'}</label>
-                <select value={form.source} onChange={e => set('source', e.target.value)} style={sel}>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المصدر' : 'Source'}</label>
+                <Select value={form.source} onChange={e => set('source', e.target.value)}>
                   {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
-                </select>
+                </Select>
               </div>
               <div>
-                <label style={lbl}>{isRTL ? 'الميزانية (من - إلى)' : 'Budget (min - max)'}</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  <input value={form.budget_min} onChange={e => set('budget_min', e.target.value)} style={inp} placeholder={isRTL ? 'من' : 'Min'} type="number" />
-                  <input value={form.budget_max} onChange={e => set('budget_max', e.target.value)} style={inp} placeholder={isRTL ? 'إلى' : 'Max'} type="number" />
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الميزانية (من - إلى)' : 'Budget (min - max)'}</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Input value={form.budget_min} onChange={e => set('budget_min', e.target.value)} placeholder={isRTL ? 'من' : 'Min'} type="number" />
+                  <Input value={form.budget_max} onChange={e => set('budget_max', e.target.value)} placeholder={isRTL ? 'إلى' : 'Max'} type="number" />
                 </div>
               </div>
             </div>
           )}
 
           {/* الجنس والجنسية */}
-          <div style={row}>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label style={lbl}>{isRTL ? 'الجنس' : 'Gender'}</label>
-              <select value={form.gender} onChange={e => set('gender', e.target.value)} style={sel}>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الجنس' : 'Gender'}</label>
+              <Select value={form.gender} onChange={e => set('gender', e.target.value)}>
                 <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
                 <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
                 <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
-              </select>
+              </Select>
             </div>
             <div>
-              <label style={lbl}>{isRTL ? 'الجنسية' : 'Nationality'}</label>
-              <select value={form.nationality} onChange={e => set('nationality', e.target.value)} style={sel}>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الجنسية' : 'Nationality'}</label>
+              <Select value={form.nationality} onChange={e => set('nationality', e.target.value)}>
                 <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
                 <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
                 <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
@@ -1076,23 +1048,23 @@ function EditContactModal({ contact, onClose, onSave }) {
                 <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
                 <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
                 <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
-              </select>
+              </Select>
             </div>
           </div>
 
           {/* ملاحظات */}
           <div>
-            <label style={lbl}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
-            <textarea value={form.notes} onChange={e => set('notes', e.target.value)} style={{ ...inp, minHeight: 70, resize: 'vertical' }} placeholder={isRTL ? 'أي ملاحظات...' : 'Any notes...'} />
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'ملاحظات' : 'Notes'}</label>
+            <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder={isRTL ? 'أي ملاحظات...' : 'Any notes...'} />
           </div>
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '14px 24px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, display: 'flex', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
-          <button onClick={onClose} style={{ padding: '9px 20px', background: 'transparent', border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`, borderRadius: 8, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-          <button onClick={handleSave} disabled={saving} style={{ padding: '9px 24px', background: saving ? '#2B4C6F' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer' }}>
+        <div className="px-6 py-3.5 border-t border-edge dark:border-edge-dark flex justify-end gap-2.5 shrink-0">
+          <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleSave} disabled={saving}>
             {saving ? (isRTL ? 'جارى الحفظ...' : 'Saving...') : (isRTL ? 'حفظ التعديلات' : 'Save Changes')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -1100,8 +1072,6 @@ function EditContactModal({ contact, onClose, onSave }) {
 }
 
 function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportunity }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const [showEdit, setShowEdit] = useState(false);
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -1183,89 +1153,84 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
   const baseTabs = [['info', isRTL ? 'البيانات' : 'Info'], ['activities', isRTL ? 'الأنشطة' : 'Activities'], ['opportunities', isRTL ? 'الفرص' : 'Opportunities'], ['tasks', isRTL ? 'المهام' : 'Tasks']];
   const tabs = contact.contact_type === 'supplier' ? [...baseTabs, ['invoices', isRTL ? 'الفواتير' : 'Invoices']] : baseTabs;
 
-  const rowStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid rgba(74,122,171,0.08)', fontSize: 13 };
+  const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.08] text-[13px]';
 
   return (
     <>
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); setShowEdit(false); }} />}
-    <div style={{ position: 'fixed', inset: 0, zIndex: 900, display: 'flex', direction: isRTL ? 'rtl' : 'ltr' }}>
-      <div onClick={onClose} style={{ flex: 1, background: 'rgba(0,0,0,0.45)' }} />
-      <div className="contact-drawer" style={{ width: 430, background: isDark ? '#0F1E2D' : '#ffffff', [`border${isRTL ? 'Left' : 'Right'}`]: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`, display: 'flex', flexDirection: 'column', overflowX: 'hidden' }}>
+    <div className="fixed inset-0 z-[900] flex" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      <div onClick={onClose} className="flex-1 bg-black/45" />
+      <div className={`contact-drawer w-[430px] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
 
         {/* Drawer Header */}
-        <div style={{ padding: '20px 20px 0', background: isDark ? 'linear-gradient(180deg, #1B3347 0%, #0F1E2D 100%)' : 'linear-gradient(180deg, #f0f4f8 0%, #ffffff 100%)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
-            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <div style={{
-                width: 48, height: 48, borderRadius: '50%', flexShrink: 0,
-                background: contact.is_blacklisted ? 'rgba(239,68,68,0.2)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 800, color: contact.is_blacklisted ? '#EF4444' : '#fff',
-              }}>
+        <div className="px-5 pt-5 bg-gradient-to-b from-surface-bg to-surface-card dark:from-[#1B3347] dark:to-surface-card-dark">
+          <div className="flex justify-between items-start mb-3.5">
+            <div className="flex gap-3 items-center">
+              <div className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-lg font-extrabold ${contact.is_blacklisted ? 'bg-red-500/20 text-red-500' : 'bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white'}`}>
                 {contact.is_blacklisted ? <Ban size={18} /> : initials(contact.full_name)}
               </div>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: contact.is_blacklisted ? '#EF4444' : (isDark ? '#E2EAF4' : '#1A2B3C'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>
-                  {contact.prefix ? <span style={{ color: isDark ? '#6B8DB5' : '#6b7280', [`margin${isRTL ? 'Left' : 'Right'}`]: 4 }}>{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                <div className={`text-base font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px] ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                  {contact.prefix ? <span className={`text-[#6B8DB5] dark:text-[#6B8DB5] ${isRTL ? 'ml-1' : 'mr-1'}`}>{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                 </div>
-                <div style={{ marginTop: 4, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div className="mt-1 flex gap-1.5 items-center flex-wrap">
                   {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
                   {contact.department && <Chip label={(isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : { sales: 'Sales', hr: 'HR', finance: 'Finance', marketing: 'Marketing', operations: 'Operations' })[contact.department] || contact.department} color="#8BA8C8" bg="rgba(139,168,200,0.1)" />}
                   {contact.is_blacklisted && <Chip label={isRTL ? "بلاك ليست" : "Blacklist"} color="#EF4444" bg="rgba(239,68,68,0.12)" />}
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <button onClick={() => setShowEdit(true)} style={{ background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 6, color: '#4A7AAB', cursor: 'pointer', padding: '4px 10px', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="flex gap-2 items-center">
+              <button onClick={() => setShowEdit(true)} className="bg-brand-500/10 border border-brand-500/25 rounded-md text-brand-500 cursor-pointer px-2.5 py-1 text-[11px] font-semibold flex items-center gap-1">
                 <Pencil size={12} /> {isRTL ? 'تعديل' : 'Edit'}
               </button>
-              <button onClick={onClose} style={{ background: 'none', border: 'none', color: isDark ? '#8BA8C8' : '#64748B', cursor: 'pointer', padding: 4 }}><X size={18} /></button>
+              <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1"><X size={18} /></button>
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <a href={`tel:${contact.phone}`} style={{ flex: 1, padding: '8px 0', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, color: '#10B981', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          <div className="flex gap-2 mb-4">
+            <a href={`tel:${contact.phone}`} className="flex-1 py-2 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-500 text-xs font-semibold text-center no-underline flex items-center justify-center gap-1.5">
               <Phone size={13} /> {isRTL ? 'اتصال' : 'Call'}
             </a>
-            <a href={`https://wa.me/${normalizePhone(contact.phone).replace('+', '')}`} target="_blank" rel="noreferrer" style={{ flex: 1, padding: '8px 0', background: 'rgba(37,211,102,0.1)', border: '1px solid rgba(37,211,102,0.25)', borderRadius: 8, color: '#25D366', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <a href={`https://wa.me/${normalizePhone(contact.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="flex-1 py-2 bg-[#25D366]/10 border border-[#25D366]/25 rounded-lg text-[#25D366] text-xs font-semibold text-center no-underline flex items-center justify-center gap-1.5">
               <MessageCircle size={13} /> {isRTL ? 'واتساب' : 'WhatsApp'}
             </a>
             {contact.email && (
-              <a href={`mailto:${contact.email}`} style={{ flex: 1, padding: '8px 0', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: isDark ? '#6B8DB5' : '#6b7280', fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <a href={`mailto:${contact.email}`} className="flex-1 py-2 bg-brand-500/10 border border-brand-500/25 rounded-lg text-[#6B8DB5] dark:text-[#6B8DB5] text-xs font-semibold text-center no-underline flex items-center justify-center gap-1.5">
                 <Mail size={13} /> {isRTL ? 'إيميل' : 'Email'}
               </a>
             )}
             {!contact.is_blacklisted && (
-              <button onClick={() => onBlacklist(contact)} style={{ flex: 1, padding: '8px 0', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 8, color: '#EF4444', fontSize: 12, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+              <button onClick={() => onBlacklist(contact)} className="flex-1 py-2 bg-red-500/[0.08] border border-red-500/25 rounded-lg text-red-500 text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5">
                 <Ban size={13} /> {isRTL ? 'بلاك' : 'Block'}
               </button>
             )}
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}` }}>
+          <div className="flex border-b border-edge dark:border-edge-dark">
             {tabs.map(([k, v]) => (
-              <button key={k} onClick={() => setTab(k)} style={{ flex: 1, padding: '9px 0', background: 'none', border: 'none', borderBottom: tab === k ? '2px solid #4A7AAB' : '2px solid transparent', color: tab === k ? '#4A7AAB' : (isDark ? '#8BA8C8' : '#64748B'), fontSize: 12, fontWeight: tab === k ? 700 : 400, cursor: 'pointer' }}>{v}</button>
+              <button key={k} onClick={() => setTab(k)} className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer ${tab === k ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal'}`}>{v}</button>
             ))}
           </div>
         </div>
 
         {/* Drawer Body */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
+        <div className="flex-1 overflow-auto p-5">
 
           {/* INFO TAB */}
           {tab === 'info' && (
             <div>
               {/* Score + Temp Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-                <div style={{ background: 'rgba(74,122,171,0.07)', borderRadius: 10, padding: 12, border: '1px solid rgba(74,122,171,0.12)' }}>
-                  <div style={{ color: isDark ? '#8BA8C8' : '#64748B', fontSize: 11, marginBottom: 8 }}>{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
+              <div className="grid grid-cols-2 gap-2.5 mb-4">
+                <div className="bg-brand-500/[0.07] rounded-[10px] p-3 border border-brand-500/[0.12]">
+                  <div className="text-content-muted dark:text-content-muted-dark text-[11px] mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
                   <ScorePill score={contact.lead_score} />
                 </div>
-                <div style={{ background: tempInfo?.bg, borderRadius: 10, padding: 12, border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
-                  <div style={{ color: isDark ? '#8BA8C8' : '#64748B', fontSize: 11, marginBottom: 4 }}>{isRTL ? 'الحرارة' : 'Temperature'}</div>
-                  {tempInfo?.Icon && <div style={{ display:'flex', alignItems:'center', gap:6 }}><tempInfo.Icon size={14} color={tempInfo.color} /><span style={{ color: tempInfo?.color, fontWeight: 700, fontSize: 14 }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div>}
+                <div className="rounded-[10px] p-3" style={{ background: tempInfo?.bg, border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
+                  <div className="text-content-muted dark:text-content-muted-dark text-[11px] mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
+                  {tempInfo?.Icon && <div className="flex items-center gap-1.5"><tempInfo.Icon size={14} color={tempInfo.color} /><span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div>}
                 </div>
               </div>
 
@@ -1288,37 +1253,37 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 { label: isRTL ? 'الجنسية' : 'Nationality', val: contact.nationality ? ((isRTL ? { egyptian: 'مصري', saudi: 'سعودي', emirati: 'إماراتي', kuwaiti: 'كويتي', qatari: 'قطري', libyan: 'ليبي', other: 'أخرى' } : { egyptian: 'Egyptian', saudi: 'Saudi', emirati: 'Emirati', kuwaiti: 'Kuwaiti', qatari: 'Qatari', libyan: 'Libyan', other: 'Other' })[contact.nationality] || contact.nationality) : '—' },
                 { label: isRTL ? 'تاريخ الميلاد' : 'Birth Date', val: contact.birth_date || '—' },
               ].map(r => (
-              <div key={r.label} style={rowStyle}>
-                <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>{r.label}</span>
-                <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontWeight: 500, maxWidth: '55%', textAlign: isRTL ? 'left' : 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.val}</span>
+              <div key={r.label} className={rowCls}>
+                <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
+                <span className={`text-content dark:text-content-dark font-medium max-w-[55%] ${isRTL ? 'text-left' : 'text-right'} whitespace-nowrap overflow-hidden text-ellipsis`}>{r.val}</span>
               </div>
               ))}
               {contact.notes && (
-                <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, fontSize: 12, color: isDark ? '#8BA8C8' : '#64748B' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 11, color: isDark ? '#6B8DB5' : '#9ca3af' }}>{isRTL ? 'ملاحظات' : 'Notes'}</div>
+                <div className="mt-3 px-3.5 py-2.5 bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] text-xs text-content-muted dark:text-content-muted-dark">
+                  <div className="font-semibold mb-1 text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'ملاحظات' : 'Notes'}</div>
                   {contact.notes}
                 </div>
               )}
 
               {contact.stage && (
-                <div style={rowStyle}>
-                  <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>{isRTL ? 'المرحلة' : 'Stage'}</span>
+                <div className={rowCls}>
+                  <span className="text-content-muted dark:text-content-muted-dark">{isRTL ? 'المرحلة' : 'Stage'}</span>
                   <Chip label={stageLabel(contact.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                 </div>
               )}
               {contact.cold_status && (
-                <div style={rowStyle}>
-                  <span style={{ color: isDark ? '#8BA8C8' : '#64748B' }}>{isRTL ? 'حالة الكولد' : 'Cold Status'}</span>
+                <div className={rowCls}>
+                  <span className="text-content-muted dark:text-content-muted-dark">{isRTL ? 'حالة الكولد' : 'Cold Status'}</span>
                   <Chip label={coldLabel(contact.cold_status, isRTL)} color="#6B8DB5" bg="rgba(107,141,181,0.1)" />
                 </div>
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
-                <div style={{ marginTop: 14, padding: '10px 14px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 12, color: '#EF4444', display:'flex', gap:6, alignItems:'flex-start' }}>
-                  <Ban size={13} style={{ flexShrink: 0, marginTop: 2 }} /> <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
+                <div className="mt-3.5 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-[10px] text-xs text-red-500 flex gap-1.5 items-start">
+                  <Ban size={13} className="shrink-0 mt-0.5" /> <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
                 </div>
               )}
               {contact.contact_type === 'supplier' && (
-                <button style={{ width: '100%', marginTop: 12, padding: '10px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#4A7AAB', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <button className="w-full mt-3 p-2.5 bg-brand-500/10 border border-brand-500/25 rounded-lg text-brand-500 text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5">
                   <span>+</span> {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
                 </button>
               )}
@@ -1328,11 +1293,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
           {/* INVOICES TAB */}
           {tab === 'invoices' && (
             <div>
-              <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
-                <FileDown size={32} style={{ marginBottom: 12, opacity: 0.4, color: isDark ? '#8BA8C8' : '#64748B' }} />
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: isDark ? '#E2EAF4' : '#1A2B3C' }}>{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
-                <p style={{ margin: '6px 0 16px', fontSize: 12 }}>{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
-                <button style={{ padding: '9px 20px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
+                <FileDown size={32} className="mb-3 opacity-40 text-content-muted dark:text-content-muted-dark" />
+                <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
+                <p className="mt-1.5 mb-4 text-xs">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
+                <button className="px-5 py-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-[13px] font-semibold cursor-pointer">
                   + {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
                 </button>
               </div>
@@ -1343,38 +1308,38 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
           {tab === 'activities' && (
             <div>
               {!showActivityForm && (
-                <button onClick={() => setShowActivityForm(true)} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
+                <button onClick={() => setShowActivityForm(true)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer mb-3.5">
                   {isRTL ? '+ إضافة نشاط' : '+ Add Activity'}
                 </button>
               )}
               {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
 
               {loadingActs ? (
-                <div style={{ textAlign: 'center', padding: 30, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13 }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-[13px]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
               ) : activities.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
-                  <Clock size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                  <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد أنشطة بعد' : 'No activities yet'}</p>
+                <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
+                  <Clock size={32} className="opacity-30 mb-2" />
+                  <p className="m-0 text-[13px]">{isRTL ? 'لا توجد أنشطة بعد' : 'No activities yet'}</p>
                 </div>
               ) : activities.map(act => {
                 const actIcon = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock, site_visit: Star }[act.type];
                 const ActIcon = actIcon || Clock;
                 return (
-                <div key={act.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, alignItems: 'flex-start', gap: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, flex: 1 }}>
-                      <div style={{ width: 26, height: 26, borderRadius: 7, background: 'rgba(74,122,171,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] p-3 mb-2.5">
+                  <div className="flex justify-between mb-1.5 items-start gap-2">
+                    <div className="flex items-start gap-2 flex-1">
+                      <div className="w-[26px] h-[26px] rounded-[7px] bg-brand-500/10 flex items-center justify-center shrink-0 mt-px">
                         <ActIcon size={13} color="#4A7AAB" />
                       </div>
-                      <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, fontWeight: 600 }}>{act.description}</span>
+                      <span className="text-content dark:text-content-dark text-[13px] font-semibold">{act.description}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B' }}>
+                  <div className="flex justify-between text-[11px] text-content-muted dark:text-content-muted-dark">
                     <span>{isRTL ? (act.users?.full_name_ar || 'مجهول') : (act.users?.full_name_en || act.users?.full_name_ar || 'Unknown')}</span>
                     <span>{act.created_at?.slice(0, 10)}</span>
                   </div>
                   {act.next_action && (
-                    <div style={{ marginTop: 8, padding: '5px 10px', background: 'rgba(74,122,171,0.08)', borderRadius: 6, fontSize: 11, color: isDark ? '#6B8DB5' : '#6b7280' }}>
+                    <div className="mt-2 px-2.5 py-1.5 bg-brand-500/[0.08] rounded-md text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">
                       › {act.next_action}{act.next_action_date ? ` — ${act.next_action_date}` : ''}
                     </div>
                   )}
@@ -1387,28 +1352,29 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
           {/* TASKS TAB */}
           {tab === 'tasks' && (
             <div>
-              <button onClick={() => setAddTaskForm(f => !f)} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14 }}>
+              <button onClick={() => setAddTaskForm(f => !f)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer mb-3.5">
                 {addTaskForm ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '+ مهمة جديدة' : '+ New Task')}
               </button>
 
               {addTaskForm && (
-                <div style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 12, marginBottom: 14 }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] p-3 mb-3.5">
+                  <div className="flex flex-col gap-2">
                     <input value={newTask.title} onChange={e => setNewTask(f => ({...f, title: e.target.value}))}
                       placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
-                      style={{ padding: '7px 10px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: isDark ? 'rgba(15,30,45,0.6)' : '#f8fafc', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 12, outline: 'none', direction: isRTL ? 'rtl' : 'ltr' }} />
-                    <div style={{ display: 'flex', gap: 6 }}>
+                      className="px-2.5 py-[7px] rounded-[7px] border border-brand-500/20 bg-[#f8fafc] dark:bg-[rgba(15,30,45,0.6)] text-content dark:text-content-dark text-xs outline-none"
+                      style={{ direction: isRTL ? 'rtl' : 'ltr' }} />
+                    <div className="flex gap-1.5">
                       <select value={newTask.type} onChange={e => setNewTask(f => ({...f, type: e.target.value}))}
-                        style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: isDark ? 'rgba(15,30,45,0.6)' : '#f8fafc', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 11, outline: 'none' }}>
+                        className="flex-1 px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[11px] outline-none">
                         {Object.entries(TASK_TYPES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
                       </select>
                       <select value={newTask.priority} onChange={e => setNewTask(f => ({...f, priority: e.target.value}))}
-                        style={{ flex: 1, padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: isDark ? 'rgba(15,30,45,0.6)' : '#f8fafc', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 11, outline: 'none' }}>
+                        className="flex-1 px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[11px] outline-none">
                         {Object.entries(TASK_PRIORITIES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
                       </select>
                     </div>
                     <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
-                      style={{ padding: '6px 8px', borderRadius: 7, border: '1px solid rgba(74,122,171,0.2)', background: isDark ? 'rgba(15,30,45,0.6)' : '#f8fafc', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 11, outline: 'none' }} />
+                      className="px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[11px] outline-none" />
                     <button onClick={async () => {
                       if (!newTask.title.trim() || !newTask.due_date) return;
                       setSavingTask(true);
@@ -1419,7 +1385,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                         setAddTaskForm(false);
                       } finally { setSavingTask(false); }
                     }} disabled={savingTask || !newTask.title.trim() || !newTask.due_date}
-                      style={{ padding: '7px', borderRadius: 7, border: 'none', background: '#2B4C6F', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: savingTask || !newTask.title.trim() || !newTask.due_date ? 0.5 : 1 }}>
+                      className="py-[7px] rounded-[7px] border-none bg-[#2B4C6F] text-white text-xs font-semibold cursor-pointer"
+                      style={{ opacity: savingTask || !newTask.title.trim() || !newTask.due_date ? 0.5 : 1 }}>
                       {savingTask ? '...' : (isRTL ? 'حفظ' : 'Save')}
                     </button>
                   </div>
@@ -1427,11 +1394,11 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
               )}
 
               {loadingTasks ? (
-                <div style={{ textAlign: 'center', padding: 30, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13 }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-[13px]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
               ) : tasks.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
-                  <CheckSquare size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                  <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد مهام مرتبطة' : 'No tasks linked'}</p>
+                <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
+                  <CheckSquare size={32} className="opacity-30 mb-2" />
+                  <p className="m-0 text-[13px]">{isRTL ? 'لا توجد مهام مرتبطة' : 'No tasks linked'}</p>
                 </div>
               ) : tasks.map(task => {
                 const pri = TASK_PRIORITIES[task.priority];
@@ -1440,20 +1407,20 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 const due = new Date(task.due_date);
                 const overdue = due < new Date() && task.status !== 'done';
                 return (
-                  <div key={task.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: '10px 12px', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#E2EAF4' : '#1A2B3C', marginBottom: 4, textDecoration: task.status === 'done' ? 'line-through' : 'none', opacity: task.status === 'done' ? 0.6 : 1 }}>
+                  <div key={task.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] px-3 py-2.5 mb-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1">
+                        <div className={`text-[13px] font-semibold text-content dark:text-content-dark mb-1 ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
                           {task.title}
                         </div>
-                        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 5, background: (pri?.color || '#4A7AAB') + '22', color: pri?.color || '#4A7AAB', fontWeight: 600 }}>
+                        <div className="flex gap-1.5 flex-wrap">
+                          <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold" style={{ background: (pri?.color || '#4A7AAB') + '22', color: pri?.color || '#4A7AAB' }}>
                             {isRTL ? pri?.ar : pri?.en}
                           </span>
-                          <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 5, background: (st?.color || '#4A7AAB') + '22', color: st?.color || '#4A7AAB' }}>
+                          <span className="text-[10px] px-1.5 py-px rounded-[5px]" style={{ background: (st?.color || '#4A7AAB') + '22', color: st?.color || '#4A7AAB' }}>
                             {isRTL ? st?.ar : st?.en}
                           </span>
-                          <span style={{ fontSize: 10, color: overdue ? '#EF4444' : (isDark ? '#8BA8C8' : '#64748B'), display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
                             <Clock size={9} />
                             {due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
@@ -1469,26 +1436,27 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
           {/* OPPORTUNITIES TAB */}
           {tab === 'opportunities' && (
             <div>
-              <button onClick={()=>setShowOppModal(true)} style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 14, fontFamily:'inherit' }}>
+              <button onClick={()=>setShowOppModal(true)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer mb-3.5 font-inherit">
                 {isRTL ? '+ فتح فرصة جديدة' : '+ New Opportunity'}
               </button>
               {showOppModal && (
-                <div onClick={()=>setShowOppModal(false)} style={{ position:'fixed', inset:0, zIndex:1100, display:'flex', alignItems:'center', justifyContent:'center', padding:20, background:'rgba(0,0,0,0.5)' }}>
-                  <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e=>e.stopPropagation()} className="modal-content" style={{ background: isDark ? '#1a2234' : '#ffffff', borderRadius:14, padding:24, width:'100%', maxWidth:420, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}` }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
-                      <h3 style={{ margin:0, color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:15, fontWeight:700 }}>{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
-                      <button onClick={()=>setShowOppModal(false)} style={{ background:'none', border:'none', color: isDark ? '#8BA8C8' : '#64748B', cursor:'pointer', fontSize:18 }}>✕</button>
+                <div onClick={()=>setShowOppModal(false)} className="fixed inset-0 z-[1100] flex items-center justify-center p-5 bg-black/50">
+                  <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e=>e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[14px] p-6 w-full max-w-[420px] border border-edge dark:border-edge-dark">
+                    <div className="flex justify-between items-center mb-5">
+                      <h3 className="m-0 text-content dark:text-content-dark text-[15px] font-bold">{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
+                      <button onClick={()=>setShowOppModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer text-lg">✕</button>
                     </div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                    <div className="flex flex-col gap-3">
                       {[
                         { key:'project', label_ar:'المشروع', label_en:'Project', type:'text' },
                         { key:'budget',  label_ar:'الميزانية', label_en:'Budget', type:'number' },
                         { key:'notes',   label_ar:'ملاحظات', label_en:'Notes', type:'text' },
                       ].map(f => (
                         <div key={f.key}>
-                          <label style={{ fontSize:12, color: isDark ? '#8BA8C8' : '#64748B', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
+                          <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL?f.label_ar:f.label_en}</label>
                           <input type={f.type} value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}`, background: isDark ? '#0F1E2D' : '#ffffff', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:13, outline:'none', boxSizing:'border-box', textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr', fontFamily:'inherit' }} />
+                            className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[13px] outline-none box-border font-inherit"
+                            style={{ textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr' }} />
                         </div>
                       ))}
                       {[
@@ -1497,20 +1465,20 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                         { key:'priority', label_ar:'الأولوية', label_en:'Priority', options:[{v:'urgent',ar:'عاجل',en:'Urgent'},{v:'high',ar:'عالي',en:'High'},{v:'medium',ar:'متوسط',en:'Medium'},{v:'low',ar:'منخفض',en:'Low'}] },
                       ].map(f => (
                         <div key={f.key}>
-                          <label style={{ fontSize:12, color: isDark ? '#8BA8C8' : '#64748B', display:'block', marginBottom:4, textAlign:isRTL?'right':'left' }}>{isRTL?f.label_ar:f.label_en}</label>
+                          <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL?f.label_ar:f.label_en}</label>
                           <select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            style={{ width:'100%', padding:'9px 12px', borderRadius:8, border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}`, background: isDark ? '#0F1E2D' : '#ffffff', color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize:13, outline:'none', cursor:'pointer', boxSizing:'border-box', fontFamily:'inherit' }}>
+                            className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[13px] outline-none cursor-pointer box-border font-inherit">
                             {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.en}</option>)}
                           </select>
                         </div>
                       ))}
                     </div>
-                    <div style={{ display:'flex', gap:10, marginTop:20 }}>
+                    <div className="flex gap-2.5 mt-5">
                       <button onClick={()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const opp = {...newOpp, contactName:contact.full_name, contactId:contact.id, contact_id:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:String(Date.now()), created_at:new Date().toISOString(), projects:{name_ar:newOpp.project,name_en:newOpp.project}}; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}
-                        style={{ flex:1, padding:'10px 0', borderRadius:8, background:'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color:'#fff', border:'none', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                        className="flex-1 py-2.5 rounded-lg bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white border-none text-[13px] font-bold cursor-pointer font-inherit">
                         {isRTL?'حفظ':'Save'}
                       </button>
-                      <button onClick={()=>setShowOppModal(false)} style={{ padding:'10px 16px', borderRadius:8, background:'transparent', color: isDark ? '#8BA8C8' : '#64748B', border:`1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#d1d5db'}`, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>
+                      <button onClick={()=>setShowOppModal(false)} className="px-4 py-2.5 rounded-lg bg-transparent text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark text-[13px] cursor-pointer font-inherit">
                         {isRTL?'إلغاء':'Cancel'}
                       </button>
                     </div>
@@ -1518,19 +1486,19 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
                 </div>
               )}
               {loadingOpps ? (
-                <div style={{ textAlign: 'center', padding: 30, color: isDark ? '#8BA8C8' : '#64748B', fontSize: 13 }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-[13px]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
               ) : opportunities.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: isDark ? '#8BA8C8' : '#64748B' }}>
-                  <Star size={32} style={{ opacity: 0.3, marginBottom: 8 }} />
-                  <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد فرص مرتبطة' : 'No opportunities linked'}</p>
+                <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
+                  <Star size={32} className="opacity-30 mb-2" />
+                  <p className="m-0 text-[13px]">{isRTL ? 'لا توجد فرص مرتبطة' : 'No opportunities linked'}</p>
                 </div>
               ) : opportunities.map(opp => (
-                <div key={opp.id} style={{ background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.12)', borderRadius: 10, padding: 13, marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <span style={{ color: isDark ? '#E2EAF4' : '#1A2B3C', fontSize: 13, fontWeight: 600 }}>{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
+                <div key={opp.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] p-3 mb-2.5">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-content dark:text-content-dark text-[13px] font-semibold">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
                     <Chip label={stageLabel(opp.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                   </div>
-                  <div style={{ fontSize: 11, color: isDark ? '#8BA8C8' : '#64748B', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark flex flex-col gap-1">
                     {opp.projects?.name_ar && <span>{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</span>}
                     <span>{isRTL ? (opp.users?.full_name_ar || '—') : (opp.users?.full_name_en || opp.users?.full_name_ar || '—')}</span>
                     {opp.next_follow_up && <span>{isRTL ? 'متابعة' : 'Follow-up'}: {opp.next_follow_up}</span>}
@@ -1550,23 +1518,8 @@ function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, onAddOpportuni
 export default function ContactsPage() {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
-
-  const colors = {
-    cardBg: isDark ? '#152232' : '#ffffff',
-    border: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text: isDark ? '#E2EAF4' : '#111827',
-    textMuted: isDark ? '#8BA8C8' : '#6b7280',
-    rowHover: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC',
-    inputBg: isDark ? '#0F1E2D' : '#ffffff',
-    thBg: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb',
-    chipBg: isDark ? 'rgba(74,122,171,0.12)' : '#f3f4f6',
-    chipText: isDark ? '#8BA8C8' : '#6b7280',
-    surface: isDark ? '#0F1E2D' : '#F8FAFC',
-  };
 
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1828,59 +1781,56 @@ export default function ContactsPage() {
     if (selected?.id === contact.id) setSelected(null);
   };
 
-  // Styles — theme aware
-  const sel = { background: colors.inputBg, border: `1px solid ${colors.border}`, borderRadius: 8, padding: '8px 12px', color: colors.text, fontSize: 12, outline: 'none', cursor: 'pointer' };
-  const th = { fontSize: 11, color: '#6B8DB5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, padding: '11px 14px', background: colors.thBg, borderBottom: `1px solid ${colors.border}`, whiteSpace: 'nowrap', textAlign: isRTL ? 'right' : 'left' };
-  const td = { padding: '13px 14px', borderBottom: `1px solid ${colors.border}`, verticalAlign: 'middle', fontSize: 13, color: colors.text, textAlign: isRTL ? 'right' : 'left' };
+  const selCls = 'bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg px-3 py-2 text-content dark:text-content-dark text-xs outline-none cursor-pointer';
+  const thCls = `text-[11px] text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`;
+  const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-[13px] text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ fontFamily: "'Cairo','Tajawal',sans-serif", color: colors.text }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark">
       {/* Page Header */}
-      <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+      <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: isDark ? '#E2EAF4' : '#1B3347' }}>{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: colors.textMuted }}>
+          <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
+          <p className="mt-1 mb-0 text-[13px] text-content-muted dark:text-content-muted-dark">
             {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${filtered.length} ${isRTL ? 'نتيجة' : 'results'}`}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => exportCSV(filtered)} style={{ padding: '9px 14px', background: colors.cardBg, border: '1px solid ' + colors.border, borderRadius: 8, color: colors.textMuted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="flex gap-2">
+          <button onClick={() => exportCSV(filtered)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
             <Download size={14} /> {isRTL ? 'تصدير' : 'Export'}
           </button>
-          <button onClick={() => setShowImportModal(true)} style={{ padding: '9px 14px', background: colors.cardBg, border: '1px solid ' + colors.border, borderRadius: 8, color: colors.textMuted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={() => setShowImportModal(true)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
-          <button onClick={() => setMergeMode(m => !m)} style={{ padding: '9px 14px', background: mergeMode ? 'rgba(30,64,175,0.1)' : colors.cardBg, border: '1px solid ' + (mergeMode ? '#1E40AF' : colors.border), borderRadius: 8, color: mergeMode ? '#1E40AF' : colors.textMuted, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={() => setMergeMode(m => !m)} className={`px-3.5 py-2.5 rounded-lg text-xs cursor-pointer flex items-center gap-1.5 ${mergeMode ? 'bg-blue-800/10 border border-blue-800 text-blue-800' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
             <Merge size={14} /> {isRTL ? 'دمج' : 'Merge'}
           </button>
           {selectedIds.length > 0 && (
-            <button onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }} style={{ padding: '9px 14px', background: 'linear-gradient(135deg,#065F46,#10B981)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }} className="px-3.5 py-2.5 bg-gradient-to-br from-[#065F46] to-emerald-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer flex items-center gap-1.5">
               <PhoneCall size={14} /> {isRTL ? `اتصال جماعي (${selectedIds.length})` : `Batch Call (${selectedIds.length})`}
             </button>
           )}
-          <button onClick={() => setShowAddModal(true)} style={{ padding: '9px 18px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={() => setShowAddModal(true)} className="px-4.5 py-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer flex items-center gap-1.5">
             <Plus size={14} /> {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
           </button>
           {isAdmin && selectedIds.length > 0 && (
-            <div style={{ position: "relative" }}>
-              <button onClick={() => setShowBulkMenu(v => !v)} style={{ padding: "9px 14px", background: "linear-gradient(135deg,#2B4C6F,#4A7AAB)", border: "none", borderRadius: 8, color: "#fff", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="relative">
+              <button onClick={() => setShowBulkMenu(v => !v)} className="px-3.5 py-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer flex items-center gap-1.5">
                 {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
               </button>
               {showBulkMenu && (
-                <div style={{ position: "absolute", top: "110%", [isRTL ? 'right' : 'left']: 0, background: isDark ? '#1a2234' : '#fff', border: '1px solid ' + colors.border, borderRadius: 10, minWidth: 190, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.35)", overflow: "hidden" }}>
+                <div className={`absolute top-[110%] ${isRTL ? 'right-0' : 'left-0'} bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] min-w-[190px] z-[200] shadow-[0_8px_24px_rgba(0,0,0,0.35)] overflow-hidden`}>
                   {[
                     { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
                     { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => setBulkReassignModal(true) },
                     { label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => setBulkStageModal(true) },
                   ].map(item => (
-                    <button key={item.label} onClick={item.action} style={{ width: "100%", padding: "10px 16px", background: "none", border: "none", color: isDark ? '#E2EAF4' : '#4A5568', fontSize: 13, cursor: "pointer", textAlign: isRTL ? "right" : "left", display: "flex", alignItems: "center", gap: 8 }}
-                      onMouseEnter={e => e.currentTarget.style.background="rgba(74,122,171,0.15)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
+                    <button key={item.label} onClick={item.action} className={`w-full px-4 py-2.5 bg-transparent border-none text-content dark:text-content-dark text-[13px] cursor-pointer ${isRTL ? 'text-right' : 'text-left'} flex items-center gap-2 hover:bg-brand-500/[0.15]`}>
                       {item.label}
                     </button>
                   ))}
-                  <div style={{ height: 1, background: "rgba(239,68,68,0.2)", margin: "4px 0" }} />
-                  <button onClick={handleDeleteSelected} style={{ width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#EF4444", fontSize: 13, cursor: "pointer", textAlign: isRTL ? "right" : "left", display: "flex", alignItems: "center", gap: 8 }}
-                    onMouseEnter={e => e.currentTarget.style.background="rgba(239,68,68,0.1)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
+                  <div className="h-px bg-red-500/20 my-1" />
+                  <button onClick={handleDeleteSelected} className={`w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-[13px] cursor-pointer ${isRTL ? 'text-right' : 'text-left'} flex items-center gap-2 hover:bg-red-500/10`}>
                     {isRTL ? "حذف المحددين" : "Delete Selected"}
                   </button>
                 </div>
@@ -1891,51 +1841,44 @@ export default function ContactsPage() {
       </div>
 
       {/* Type Chips */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+      <div className="flex gap-2 mb-3.5 flex-wrap">
         {[
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
           ...Object.entries(TYPE).filter(([k]) => stats[k] > 0).map(([k, v]) => ({
             label: isRTL ? v.label : v.labelEn, value: k, count: stats[k] || 0, color: v.color,
           })),
-        ].map(s => (
-          <button key={s.value} onClick={() => setFilterType(s.value)} style={{
-            padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterType === s.value ? s.color : colors.border}`,
-            background: filterType === s.value ? `${s.color}15` : colors.cardBg,
-            color: filterType === s.value ? s.color : colors.textMuted, fontSize: 12, fontWeight: filterType === s.value ? 700 : 400, cursor: 'pointer',
-          }}>
-            {s.label} <span style={{ background: filterType === s.value ? s.color : colors.border, color: filterType === s.value ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginInlineStart: 4 }}>{s.count}</span>
+        ].map(s => {
+          const active = filterType === s.value;
+          return (
+          <button key={s.value} onClick={() => setFilterType(s.value)}
+            className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+            style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
+            {s.label} <span
+              className={`rounded-[10px] px-[7px] py-px text-[10px] mis-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+              style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
           </button>
-        ))}
-        <button onClick={() => setShowBlacklisted(v => !v)} style={{
-          padding: '6px 14px', borderRadius: 20, border: `1px solid ${showBlacklisted ? '#EF4444' : colors.border}`,
-          background: showBlacklisted ? 'rgba(239,68,68,0.08)' : colors.cardBg,
-          color: showBlacklisted ? '#EF4444' : colors.textMuted, fontSize: 12, fontWeight: showBlacklisted ? 700 : 400, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 5,
-        }}>
-          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span style={{ background: showBlacklisted ? '#EF4444' : colors.border, color: showBlacklisted ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginInlineStart: 4 }}>{stats.blacklisted}</span>
+          );
+        })}
+        <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
+          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-[10px] px-[7px] py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
         </button>
-        <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} style={{
-          padding: '6px 14px', borderRadius: 20, border: `1px solid ${filterTemp === 'hot' ? '#EF4444' : colors.border}`,
-          background: filterTemp === 'hot' ? 'rgba(239,68,68,0.08)' : colors.cardBg,
-          color: filterTemp === 'hot' ? '#EF4444' : colors.textMuted, fontSize: 12, cursor: 'pointer',
-          display: 'flex', alignItems: 'center', gap: 5,
-        }}>
-          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span style={{ background: filterTemp === 'hot' ? '#EF4444' : colors.border, color: filterTemp === 'hot' ? '#fff' : colors.textMuted, borderRadius: 10, padding: '1px 7px', fontSize: 10, marginInlineStart: 4 }}>{stats.hot}</span>
+        <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${filterTemp === 'hot' ? 'border border-red-500 bg-red-500/[0.08] text-red-500' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
+          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span className={`rounded-[10px] px-[7px] py-px text-[10px] mis-1 ${filterTemp === 'hot' ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.hot}</span>
         </button>
       </div>
 
       {/* Filter Bar */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center', background: colors.thBg, padding: '10px 14px', borderRadius: 12, border: `1px solid ${colors.border}` }}>
-        <div style={{ position: 'relative', flex: '1 1 220px' }}>
-          <Search size={14} style={{ position: 'absolute', [isRTL ? 'left' : 'right']: 10, top: '50%', transform: 'translateY(-50%)', color: isDark ? '#6B8DB5' : '#9ca3af' }} />
+      <div className="flex gap-2.5 mb-4 flex-wrap items-center bg-gray-50 dark:bg-brand-500/[0.08] px-3.5 py-2.5 rounded-xl border border-edge dark:border-edge-dark">
+        <div className="relative flex-[1_1_220px]">
+          <Search size={14} className={`absolute ${isRTL ? 'left-2.5' : 'right-2.5'} top-1/2 -translate-y-1/2 text-[#6B8DB5] dark:text-[#6B8DB5]`} />
           <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={searchInput} onChange={e => setSearchInput(e.target.value)}
-            style={{ ...sel, width: '100%', [`padding${isRTL ? 'Left' : 'Right'}`]: 32, boxSizing: 'border-box', background: colors.inputBg, color: colors.text, border: `1px solid ${colors.border}` }} />
+            className={`${selCls} w-full box-border ${isRTL ? 'pl-8' : 'pr-8'}`} />
         </div>
-        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={sel}>
+        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} className={selCls}>
           <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
           {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
         </select>
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} style={sel}>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} className={selCls}>
           <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
           <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
           <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
@@ -1945,7 +1888,7 @@ export default function ContactsPage() {
           <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
           <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
         </select>
-        <select value={filterDept} onChange={e => setFilterDept(e.target.value)} style={sel}>
+        <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className={selCls}>
           <option value="all">{isRTL ? 'كل الأقسام' : 'All Depts'}</option>
           <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
           <option value="hr">{isRTL ? 'HR' : 'HR'}</option>
@@ -1953,11 +1896,11 @@ export default function ContactsPage() {
           <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
           <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
         </select>
-        <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} style={sel}>
+        <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} className={selCls}>
           <option value="all">{isRTL ? 'كل الدرجات' : 'All Temps'}</option>
           {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.labelAr : v.label}</option>)}
         </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)} style={sel}>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)} className={selCls}>
           <option value="last_activity">{isRTL ? 'ترتيب: آخر نشاط' : 'Sort: Last Activity'}</option>
           <option value="score">{isRTL ? 'ترتيب: Lead Score' : 'Sort: Lead Score'}</option>
           <option value="name">{isRTL ? 'ترتيب: الاسم' : 'Sort: Name'}</option>
@@ -1968,51 +1911,51 @@ export default function ContactsPage() {
       </div>
 
       {/* Table */}
-      <div style={{ background: colors.cardBg, border: `1px solid ${colors.border}`, borderRadius: 12, overflow: 'hidden' }}>
+      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
         {mergeMode && (
-          <div style={{ padding: '10px 16px', background: isDark ? 'rgba(30,64,175,0.12)' : 'rgba(30,64,175,0.06)', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#1E40AF' }}>
-              <Merge size={14} style={{ verticalAlign: 'middle', marginInlineEnd: 6 }} />
+          <div className="px-4 py-2.5 bg-blue-800/[0.06] dark:bg-blue-800/[0.12] border-b border-edge dark:border-edge-dark flex items-center gap-2.5 justify-between">
+            <span className="text-[13px] font-semibold text-blue-800">
+              <Merge size={14} className="align-middle me-1.5 inline" />
               {isRTL ? `اختر جهتي اتصال للدمج (${mergeTargets.length}/2)` : `Select 2 contacts to merge (${mergeTargets.length}/2)`}
             </span>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="flex gap-2">
               {mergeTargets.length === 2 && (
-                <button onClick={() => setMergePreview(mergeTargets)} style={{ padding: '5px 14px', background: 'linear-gradient(135deg,#1E40AF,#3B82F6)', border: 'none', borderRadius: 6, color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                <button onClick={() => setMergePreview(mergeTargets)} className="px-3.5 py-1.5 bg-gradient-to-br from-blue-800 to-blue-500 border-none rounded-md text-white text-xs font-semibold cursor-pointer">
                   {isRTL ? 'معاينة الدمج' : 'Preview Merge'}
                 </button>
               )}
-              <button onClick={() => { setMergeMode(false); setMergeTargets([]); }} style={{ padding: '5px 14px', background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 6, color: colors.textMuted, fontSize: 12, cursor: 'pointer' }}>
+              <button onClick={() => { setMergeMode(false); setMergeTargets([]); }} className="px-3.5 py-1.5 bg-transparent border border-edge dark:border-edge-dark rounded-md text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
                 {isRTL ? 'إلغاء' : 'Cancel'}
               </button>
             </div>
           </div>
         )}
-        <div style={{ overflowX: 'auto' }}>
-          <table dir={isRTL ? 'rtl' : 'ltr'} style={{ width: '100%', borderCollapse: 'collapse', minWidth: 800 }}>
+        <div className="overflow-x-auto">
+          <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[800px]">
             <thead>
               <tr>
-                <th style={{...th, width: 36, padding: '10px 8px'}}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIds.includes(c.id))} onChange={toggleSelectAll} style={{ cursor: 'pointer' }} /></th>
-                <th style={{...th, width: 50}}>ID</th>
-                <th style={th}>{t('contacts.fullName')}</th>
-                <th style={th}>{t('contacts.phone')}</th>
-                <th style={th}>{t('contacts.type')}</th>
-                <th style={th}>{t('contacts.temperature')}</th>
-                <th style={th}>{t('contacts.source')}</th>
-                <th style={th}>{t('contacts.stage')}</th>
-                <th style={th}>{t('common.actions')}</th>
+                <th className={`${thCls} w-9 !px-2 !py-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIds.includes(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
+                <th className={`${thCls} w-[50px]`}>ID</th>
+                <th className={thCls}>{t('contacts.fullName')}</th>
+                <th className={thCls}>{t('contacts.phone')}</th>
+                <th className={thCls}>{t('contacts.type')}</th>
+                <th className={thCls}>{t('contacts.temperature')}</th>
+                <th className={thCls}>{t('contacts.source')}</th>
+                <th className={thCls}>{t('contacts.stage')}</th>
+                <th className={thCls}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: isDark ? '#6B8DB5' : '#9ca3af' }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+                <tr><td colSpan={9} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} style={{ padding: 0, border: 'none' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
-                    <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, rgba(27,51,71,0.08), rgba(74,122,171,0.12))', border: '1.5px dashed rgba(74,122,171,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                <tr><td colSpan={9} className="p-0 border-none">
+                  <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+                    <div className="w-16 h-16 rounded-[18px] bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border-[1.5px] border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                       <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
                     </div>
-                    <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: colors.text }}>{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
-                    <p style={{ margin: 0, fontSize: 13, color: colors.textMuted }}>{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
+                    <p className="m-0 mb-1.5 font-bold text-[15px] text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
+                    <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
                   </div>
                 </td></tr>
               ) : paged.map((c) => {
@@ -2021,93 +1964,87 @@ export default function ContactsPage() {
                 return (
                 <tr key={c.id}
                   onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < 2 ? [...prev, c.id] : prev) : setSelected(c)}
-                  style={{ cursor: 'pointer', background: isMergeSelected ? 'rgba(30,64,175,0.08)' : selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent' }}
-                  onMouseEnter={e => { if (!selectedIds.includes(c.id) && !isMergeSelected) e.currentTarget.style.background = colors.rowHover; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = isMergeSelected ? 'rgba(30,64,175,0.08)' : selectedIds.includes(c.id) ? 'rgba(74,122,171,0.08)' : c.is_blacklisted ? 'rgba(239,68,68,0.03)' : 'transparent'; }}
+                  className={`cursor-pointer transition-colors ${isMergeSelected ? 'bg-blue-800/[0.08]' : selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.06]'}`}
                 >
-                  <td style={{...td, padding: '12px 8px'}} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} style={{ cursor: 'pointer' }} /></td>
-                  <td style={{ ...td, fontSize: 10, color: isDark ? '#6B8DB5' : '#9ca3af', fontFamily: 'monospace' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {isPinned && <Pin size={10} color="#F59E0B" style={{ flexShrink: 0 }} />}
+                  <td className={`${tdCls} !px-2 !py-3`} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} className="cursor-pointer" /></td>
+                  <td className={`${tdCls} text-[10px] text-[#6B8DB5] dark:text-[#6B8DB5] font-mono`}>
+                    <div className="flex items-center gap-1">
+                      {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
                       #{String(c.id).slice(-4)}
                     </div>
                   </td>
                   {/* Name */}
-                  <td style={td}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                        background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id),
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 13, fontWeight: 700, color: c.is_blacklisted ? '#EF4444' : '#fff',
-                      }}>
+                  <td className={tdCls}>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-[34px] h-[34px] rounded-[10px] shrink-0 flex items-center justify-center text-[13px] font-bold"
+                        style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
                         {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                       </div>
                       <div>
-                        <div style={{ fontWeight: 600, color: c.is_blacklisted ? '#EF4444' : (isDark ? '#E2EAF4' : '#1A2B3C'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</div>
-                        {c.email && <div style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{c.email}</div>}
-                        {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <div style={{ fontSize: 10, marginTop: 2, fontWeight: 600, color: d === 0 ? '#4A7AAB' : d <= 3 ? '#6B8DB5' : '#EF4444' }}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</div>; })()}
+                        <div className={`font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</div>
+                        {c.email && <div className="text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5] whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">{c.email}</div>}
+                        {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <div className={`text-[10px] mt-0.5 font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</div>; })()}
                       </div>
                     </div>
                   </td>
                   {/* Phone */}
-                  <td style={td} onClick={e => e.stopPropagation()}>
+                  <td className={tdCls} onClick={e => e.stopPropagation()}>
                     <PhoneCell phone={c.phone} />
                     {c.phone2 && <PhoneCell phone={c.phone2} small />}
                   </td>
                   {/* Type */}
-                  <td style={td}>{TYPE[c.contact_type] ? <Chip label={isRTL ? TYPE[c.contact_type].label : TYPE[c.contact_type].labelEn} color={TYPE[c.contact_type].color} bg={TYPE[c.contact_type].bg} /> : <span style={{ color: colors.textMuted }}>—</span>}</td>
+                  <td className={tdCls}>{TYPE[c.contact_type] ? <Chip label={isRTL ? TYPE[c.contact_type].label : TYPE[c.contact_type].labelEn} color={TYPE[c.contact_type].color} bg={TYPE[c.contact_type].bg} /> : <span className="text-content-muted dark:text-content-muted-dark">—</span>}</td>
                   {/* Temp */}
-                  <td style={td}>
+                  <td className={tdCls}>
                     {(() => { const TempIcon = TEMP[c.temperature]?.Icon; return TempIcon ? <TempIcon size={15} color={TEMP[c.temperature]?.color} /> : '—'; })()}
                   </td>
                   {/* Source */}
-                  <td style={td}><span style={{ fontSize: 11, background: colors.chipBg, border: '1px solid ' + colors.border, borderRadius: 6, padding: '3px 8px', color: colors.chipText }}>{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</span></td>
+                  <td className={tdCls}><span className="text-[11px] bg-gray-100 dark:bg-brand-500/[0.12] border border-edge dark:border-edge-dark rounded-md px-2 py-1 text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</span></td>
                   {/* Stage */}
-                  <td style={td} onClick={e => e.stopPropagation()}>
+                  <td className={tdCls} onClick={e => e.stopPropagation()}>
                     {isAdmin && c.contact_type === 'lead' ? (
-                      <select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} style={{ fontSize: 11, background: 'transparent', border: '1px solid rgba(74,122,171,0.1)', borderRadius: 6, color: '#4A7AAB', padding: '3px 6px', cursor: 'pointer', outline: 'none' }}>
+                      <select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} className="text-[11px] bg-transparent border border-brand-500/10 rounded-md text-brand-500 px-1.5 py-1 cursor-pointer outline-none">
                         {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
                       </select>
                     ) : c.stage ? <Chip label={stageLabel(c.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
-                    : c.cold_status ? <span style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#9ca3af' }}>{coldLabel(c.cold_status, isRTL)}</span>
-                    : <span style={{ color: isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db' }}>—</span>}
+                    : c.cold_status ? <span className="text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">{coldLabel(c.cold_status, isRTL)}</span>
+                    : <span className="text-brand-500/30 dark:text-brand-500/30">—</span>}
                   </td>
                   {/* Actions - Quick access buttons */}
-                  <td style={td} onClick={e => e.stopPropagation()}>
-                    <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                      <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 6, color: '#10B981', textDecoration: 'none' }}>
+                  <td className={tdCls} onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-1 items-center">
+                      <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} className="w-[26px] h-[26px] flex items-center justify-center bg-emerald-500/[0.06] border border-emerald-500/20 rounded-md text-emerald-500 no-underline">
                         <Phone size={12} />
                       </a>
-                      <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(37,211,102,0.06)', border: '1px solid rgba(37,211,102,0.2)', borderRadius: 6, color: '#25D366', textDecoration: 'none' }}>
+                      <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-[26px] h-[26px] flex items-center justify-center bg-[#25D366]/[0.06] border border-[#25D366]/20 rounded-md text-[#25D366] no-underline">
                         <MessageCircle size={12} />
                       </a>
-                      <button onClick={() => setLogCallTarget(c)} title={isRTL ? 'تسجيل مكالمة' : 'Log Call'} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(74,122,171,0.06)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 6, color: '#4A7AAB', cursor: 'pointer' }}>
+                      <button onClick={() => setLogCallTarget(c)} title={isRTL ? 'تسجيل مكالمة' : 'Log Call'} className="w-[26px] h-[26px] flex items-center justify-center bg-brand-500/[0.06] border border-brand-500/20 rounded-md text-brand-500 cursor-pointer">
                         <PhoneCall size={12} />
                       </button>
-                      <button onClick={() => setReminderTarget(c)} title={isRTL ? 'تذكير' : 'Reminder'} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 6, color: '#F59E0B', cursor: 'pointer' }}>
+                      <button onClick={() => setReminderTarget(c)} title={isRTL ? 'تذكير' : 'Reminder'} className="w-[26px] h-[26px] flex items-center justify-center bg-amber-500/[0.06] border border-amber-500/20 rounded-md text-amber-500 cursor-pointer">
                         <Bell size={12} />
                       </button>
-                      <button onClick={() => togglePin(c.id)} title={isRTL ? 'تثبيت' : 'Pin'} style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isPinned ? 'rgba(245,158,11,0.12)' : 'transparent', border: '1px solid ' + (isPinned ? 'rgba(245,158,11,0.3)' : colors.border), borderRadius: 6, color: isPinned ? '#F59E0B' : colors.textMuted, cursor: 'pointer' }}>
+                      <button onClick={() => togglePin(c.id)} title={isRTL ? 'تثبيت' : 'Pin'} className={`w-[26px] h-[26px] flex items-center justify-center rounded-md cursor-pointer ${isPinned ? 'bg-amber-500/[0.12] border border-amber-500/30 text-amber-500' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
                         <Pin size={12} />
                       </button>
-                      <div style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
+                      <div className="relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                          style={{ width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', background: openMenuId === c.id ? '#4A7AAB' : 'transparent', border: '1px solid ' + (openMenuId === c.id ? '#4A7AAB' : colors.border), borderRadius: 6, color: openMenuId === c.id ? '#fff' : colors.textMuted, cursor: 'pointer' }}>
+                          className={`w-[26px] h-[26px] flex items-center justify-center rounded-md cursor-pointer ${openMenuId === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
                           <MoreVertical size={12} />
                         </button>
                         {openMenuId === c.id && (
-                          <div style={{ position: 'absolute', top: 30, [isRTL ? 'left' : 'right']: 0, background: isDark ? '#1a2234' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 10, minWidth: 180, zIndex: 100, boxShadow: '0 8px 30px rgba(27,51,71,0.12)', overflow: 'hidden' }}>
-                            <div style={{ padding: 4 }}>
-                              <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                          <div className={`absolute top-[30px] ${isRTL ? 'left-0' : 'right-0'} bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] min-w-[180px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.12)] overflow-hidden`}>
+                            <div className="p-1">
+                              <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                                 <FileDown size={13} /> {isRTL ? 'تصدير' : 'Export'}
                               </button>
-                              <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: isDark?'#E2EAF4':'#4A5568', fontFamily: 'inherit' }} onMouseEnter={e => e.currentTarget.style.background=isDark?'rgba(74,122,171,0.1)':'#F8FAFC'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                              <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                                 <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
                               </button>
                             </div>
-                            {!c.is_blacklisted && (<><div style={{ height: 1, background: colors.border }} /><div style={{ padding: 4 }}>
-                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 6, border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: '#EF4444', fontFamily: 'inherit' }} onMouseEnter={e => e.currentTarget.style.background='rgba(239,68,68,0.05)'} onMouseLeave={e => e.currentTarget.style.background='none'}>
+                            {!c.is_blacklisted && (<><div className="h-px bg-edge dark:bg-edge-dark" /><div className="p-1">
+                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
                                 <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
                               </button>
                             </div></>)}
@@ -2124,16 +2061,16 @@ export default function ContactsPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, padding: '16px 0' }}>
+          <div className="flex justify-center items-center gap-2 py-4">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              style={{ padding: '6px 14px', borderRadius: 6, border: `1px solid ${colors.border}`, background: page === 1 ? 'transparent' : colors.cardBg, color: page === 1 ? colors.textMuted : colors.text, fontSize: 12, cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.5 : 1 }}>
+              className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === 1 ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
               {isRTL ? 'السابق →' : '← Prev'}
             </button>
-            <span style={{ fontSize: 12, color: colors.textMuted }}>
+            <span className="text-xs text-content-muted dark:text-content-muted-dark">
               {isRTL ? `${page} من ${totalPages}` : `${page} of ${totalPages}`}
             </span>
             <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-              style={{ padding: '6px 14px', borderRadius: 6, border: `1px solid ${colors.border}`, background: page === totalPages ? 'transparent' : colors.cardBg, color: page === totalPages ? colors.textMuted : colors.text, fontSize: 12, cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.5 : 1 }}>
+              className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === totalPages ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
               {isRTL ? '← التالي' : 'Next →'}
             </button>
           </div>
@@ -2156,47 +2093,47 @@ export default function ContactsPage() {
         const progress = batchCallLog.length;
         const total = batchContacts.length;
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', borderRadius: 20, width: '100%', maxWidth: 520, overflow: 'hidden' }}>
+          <div className="fixed inset-0 bg-black/60 z-[1200] flex items-center justify-center p-5">
+            <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[20px] w-full max-w-[520px] overflow-hidden">
               {/* Header */}
-              <div style={{ background: 'linear-gradient(135deg,#065F46,#10B981)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="bg-gradient-to-br from-[#065F46] to-emerald-500 px-6 py-4 flex justify-between items-center">
+                <div className="flex items-center gap-2.5">
                   <PhoneCall size={18} color="#fff" />
-                  <span style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>{isRTL ? 'وضع الاتصال' : 'Call Mode'}</span>
+                  <span className="text-white font-bold text-[15px]">{isRTL ? 'وضع الاتصال' : 'Call Mode'}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>{progress}/{total}</span>
-                  <button onClick={() => setBatchCallMode(false)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}><X size={14} /></button>
+                <div className="flex items-center gap-3">
+                  <span className="text-white/80 text-xs">{progress}/{total}</span>
+                  <button onClick={() => setBatchCallMode(false)} className="bg-white/15 border-none rounded-md w-7 h-7 flex items-center justify-center cursor-pointer text-white"><X size={14} /></button>
                 </div>
               </div>
               {/* Progress bar */}
-              <div style={{ height: 3, background: isDark ? '#2d3748' : '#e5e7eb' }}>
-                <div style={{ height: '100%', background: '#10B981', width: `${(progress / total) * 100}%`, transition: 'width 0.3s' }} />
+              <div className="h-[3px] bg-gray-200 dark:bg-gray-700">
+                <div className="h-full bg-emerald-500 transition-[width] duration-300" style={{ width: `${(progress / total) * 100}%` }} />
               </div>
               {/* Contact info */}
-              <div style={{ padding: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                  <div style={{ width: 50, height: 50, borderRadius: 14, background: avatarColor(current.id), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+              <div className="p-6">
+                <div className="flex items-center gap-3.5 mb-5">
+                  <div className="w-[50px] h-[50px] rounded-[14px] flex items-center justify-center text-lg font-bold text-white" style={{ background: avatarColor(current.id) }}>
                     {initials(current.full_name)}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 16, color: colors.text }}>{current.full_name}</div>
-                    <div style={{ fontSize: 13, color: colors.textMuted, direction: 'ltr', textAlign: isRTL ? 'right' : 'left' }}>{current.phone}</div>
-                    {current.company && <div style={{ fontSize: 12, color: colors.textMuted }}>{current.company}</div>}
+                  <div className="flex-1">
+                    <div className="font-bold text-base text-content dark:text-content-dark">{current.full_name}</div>
+                    <div className={`text-[13px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`} style={{ direction: 'ltr' }}>{current.phone}</div>
+                    {current.company && <div className="text-xs text-content-muted dark:text-content-muted-dark">{current.company}</div>}
                   </div>
-                  <div style={{ textAlign: 'center' }}>
+                  <div className="text-center">
                     <Chip label={isRTL ? TYPE[current.contact_type]?.label : TYPE[current.contact_type]?.labelEn} color={TYPE[current.contact_type]?.color} bg={TYPE[current.contact_type]?.bg} />
-                    {current.stage && <div style={{ fontSize: 10, marginTop: 4, color: '#4A7AAB' }}>{stageLabel(current.stage, isRTL)}</div>}
+                    {current.stage && <div className="text-[10px] mt-1 text-brand-500">{stageLabel(current.stage, isRTL)}</div>}
                   </div>
                 </div>
                 {/* Call button */}
-                <a href={"tel:" + current.phone} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: 'linear-gradient(135deg,#065F46,#10B981)', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none', marginBottom: 16 }}>
+                <a href={"tel:" + current.phone} className="flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#065F46] to-emerald-500 rounded-[10px] text-white font-bold text-sm no-underline mb-4">
                   <Phone size={16} /> {isRTL ? 'اتصل الآن' : 'Call Now'}
                 </a>
                 {/* Call result */}
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: colors.textMuted, marginBottom: 6 }}>{isRTL ? 'نتيجة المكالمة' : 'Call Result'}</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <div className="mb-3">
+                  <div className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نتيجة المكالمة' : 'Call Result'}</div>
+                  <div className="flex gap-1.5 flex-wrap">
                     {[
                       { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
                       { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
@@ -2204,22 +2141,19 @@ export default function ContactsPage() {
                       { value: 'interested', label: isRTL ? 'مهتم' : 'Interested', color: '#4A7AAB' },
                       { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not Interested', color: '#6b7280' },
                     ].map(r => (
-                      <button key={r.value} onClick={() => setBatchCallResult(r.value)} style={{
-                        padding: '5px 12px', borderRadius: 16, fontSize: 11, fontWeight: batchCallResult === r.value ? 700 : 400, cursor: 'pointer',
-                        background: batchCallResult === r.value ? r.color + '18' : 'transparent',
-                        border: `1px solid ${batchCallResult === r.value ? r.color : colors.border}`,
-                        color: batchCallResult === r.value ? r.color : colors.textMuted,
-                      }}>{r.label}</button>
+                      <button key={r.value} onClick={() => setBatchCallResult(r.value)}
+                        className={`px-3 py-1.5 rounded-2xl text-[11px] cursor-pointer ${batchCallResult === r.value ? 'font-bold' : 'font-normal bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                        style={batchCallResult === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>{r.label}</button>
                     ))}
                   </div>
                 </div>
                 {/* Notes */}
                 <textarea value={batchCallNotes} onChange={e => setBatchCallNotes(e.target.value)} placeholder={isRTL ? 'ملاحظات سريعة...' : 'Quick notes...'} rows={2}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${colors.border}`, background: colors.inputBg, color: colors.text, fontSize: 12, resize: 'none', boxSizing: 'border-box', fontFamily: 'inherit', marginBottom: 16 }} />
+                  className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs resize-none box-border font-inherit mb-4" />
                 {/* Navigation */}
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+                <div className="flex gap-2.5 justify-between">
                   <button disabled={batchCallIndex === 0} onClick={() => { setBatchCallIndex(i => i - 1); setBatchCallNotes(''); setBatchCallResult(''); }}
-                    style={{ flex: 1, padding: '10px', borderRadius: 8, border: `1px solid ${colors.border}`, background: 'transparent', color: batchCallIndex === 0 ? colors.textMuted : colors.text, fontSize: 12, cursor: batchCallIndex === 0 ? 'not-allowed' : 'pointer', opacity: batchCallIndex === 0 ? 0.4 : 1 }}>
+                    className={`flex-1 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs ${batchCallIndex === 0 ? 'text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-40' : 'text-content dark:text-content-dark cursor-pointer'}`}>
                     {isRTL ? 'السابق' : 'Previous'}
                   </button>
                   <button onClick={async () => {
@@ -2239,7 +2173,7 @@ export default function ContactsPage() {
                       toast.success(isRTL ? `تم الانتهاء من ${finalLog.length} مكالمة` : `Completed ${finalLog.length} calls`);
                       setBatchCallMode(false); setSelectedIds([]);
                     }
-                  }} style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  }} className="flex-[2] p-2.5 rounded-lg border-none bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5">
                     {batchCallIndex < batchContacts.length - 1 ? (<>{isRTL ? 'التالي' : 'Next'} <SkipForward size={13} /></>) : (isRTL ? 'إنهاء' : 'Finish')}
                   </button>
                 </div>
@@ -2263,34 +2197,34 @@ export default function ContactsPage() {
         if (!c1.preferred_location && c2.preferred_location) merged.preferred_location = c2.preferred_location;
         const fields = ['full_name','phone','phone2','email','contact_type','source','temperature','stage','company','preferred_location'];
         return (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h3 style={{ margin: 0, color: colors.text, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><Merge size={18} color="#1E40AF" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
-                <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={18} /></button>
+          <div className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
+            <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[600px] max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-5">
+                <h3 className="m-0 text-content dark:text-content-dark text-base font-bold flex items-center gap-2"><Merge size={18} color="#1E40AF" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
+                <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={18} /></button>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr>
-                    <th style={{ padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', color: colors.textMuted, fontWeight: 600, borderBottom: `1px solid ${colors.border}` }}>{isRTL ? 'الحقل' : 'Field'}</th>
-                    <th style={{ padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', color: colors.textMuted, fontWeight: 600, borderBottom: `1px solid ${colors.border}` }}>{c1.full_name}</th>
-                    <th style={{ padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', color: colors.textMuted, fontWeight: 600, borderBottom: `1px solid ${colors.border}` }}>{c2.full_name}</th>
-                    <th style={{ padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', color: '#10B981', fontWeight: 600, borderBottom: `1px solid ${colors.border}` }}>{isRTL ? 'النتيجة' : 'Result'}</th>
+                    <th className={`px-2.5 py-2 ${isRTL ? 'text-right' : 'text-left'} text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{isRTL ? 'الحقل' : 'Field'}</th>
+                    <th className={`px-2.5 py-2 ${isRTL ? 'text-right' : 'text-left'} text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{c1.full_name}</th>
+                    <th className={`px-2.5 py-2 ${isRTL ? 'text-right' : 'text-left'} text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{c2.full_name}</th>
+                    <th className={`px-2.5 py-2 ${isRTL ? 'text-right' : 'text-left'} text-emerald-500 font-semibold border-b border-edge dark:border-edge-dark`}>{isRTL ? 'النتيجة' : 'Result'}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {fields.map(f => (
-                    <tr key={f} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                      <td style={{ padding: '8px 10px', fontWeight: 600, color: colors.textMuted }}>{f}</td>
-                      <td style={{ padding: '8px 10px', color: merged[f] === c1[f] ? '#10B981' : colors.text }}>{c1[f] || '—'}</td>
-                      <td style={{ padding: '8px 10px', color: merged[f] === c2[f] && merged[f] !== c1[f] ? '#10B981' : colors.text }}>{c2[f] || '—'}</td>
-                      <td style={{ padding: '8px 10px', fontWeight: 600, color: '#10B981' }}>{merged[f] || '—'}</td>
+                    <tr key={f} className="border-b border-edge dark:border-edge-dark">
+                      <td className="px-2.5 py-2 font-semibold text-content-muted dark:text-content-muted-dark">{f}</td>
+                      <td className={`px-2.5 py-2 ${merged[f] === c1[f] ? 'text-emerald-500' : 'text-content dark:text-content-dark'}`}>{c1[f] || '—'}</td>
+                      <td className={`px-2.5 py-2 ${merged[f] === c2[f] && merged[f] !== c1[f] ? 'text-emerald-500' : 'text-content dark:text-content-dark'}`}>{c2[f] || '—'}</td>
+                      <td className="px-2.5 py-2 font-semibold text-emerald-500">{merged[f] || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
-                <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} style={{ padding: '9px 20px', background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 8, color: colors.textMuted, fontSize: 13, cursor: 'pointer' }}>
+              <div className="flex gap-2.5 mt-5 justify-end">
+                <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-[13px] cursor-pointer">
                   {isRTL ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button onClick={() => {
@@ -2300,7 +2234,7 @@ export default function ContactsPage() {
                   localStorage.setItem('platform_contacts', JSON.stringify(updatedContacts));
                   toast.success(isRTL ? 'تم دمج جهتي الاتصال بنجاح' : 'Contacts merged successfully');
                   setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
-                }} style={{ padding: '9px 20px', background: 'linear-gradient(135deg,#1E40AF,#3B82F6)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                }} className="px-5 py-2.5 bg-gradient-to-br from-blue-800 to-blue-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer">
                   {isRTL ? 'تأكيد الدمج' : 'Confirm Merge'}
                 </button>
               </div>
@@ -2311,14 +2245,14 @@ export default function ContactsPage() {
 
       {/* Confirm Modal */}
       {confirmAction && (
-        <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${isDark ? 'rgba(239,68,68,0.3)' : '#e5e7eb'}`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 400, textAlign: 'center' }}>
-            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', fontSize: 22 }}>⚠️</div>
-            <h3 style={{ margin: '0 0 8px', color: colors.text, fontSize: 16, fontWeight: 700 }}>{confirmAction.title}</h3>
-            <p style={{ margin: '0 0 20px', color: colors.textMuted, fontSize: 13 }}>{confirmAction.message}</p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={() => setConfirmAction(null)} style={{ padding: '9px 20px', background: 'transparent', border: `1px solid ${colors.border}`, borderRadius: 8, color: colors.textMuted, fontSize: 13, cursor: 'pointer' }}>{isRTL ? 'إلغاء' : 'Cancel'}</button>
-              <button onClick={confirmAction.onConfirm} style={{ padding: '9px 20px', background: 'linear-gradient(135deg,#7f1d1d,#EF4444)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</button>
+        <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
+          <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-red-500/30 dark:border-red-500/30 rounded-2xl p-7 w-full max-w-[400px] text-center">
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4 text-[22px]">⚠️</div>
+            <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">{confirmAction.title}</h3>
+            <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-[13px]">{confirmAction.message}</p>
+            <div className="flex gap-2.5 justify-center">
+              <button onClick={() => setConfirmAction(null)} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-[13px] cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
+              <button onClick={confirmAction.onConfirm} className="px-5 py-2.5 bg-gradient-to-br from-red-900 to-red-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer">{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</button>
             </div>
           </div>
         </div>
@@ -2326,18 +2260,16 @@ export default function ContactsPage() {
 
       {/* Bulk Stage Modal */}
       {bulkStageModal && (
-        <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, color: colors.text, fontSize: 15, fontWeight: 700 }}>{isRTL ? `تغيير المرحلة (${selectedIds.length})` : `Change Stage (${selectedIds.length})`}</h3>
-              <button onClick={() => setBulkStageModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={16} /></button>
+        <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
+          <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[380px]">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="m-0 text-content dark:text-content-dark text-[15px] font-bold">{isRTL ? `تغيير المرحلة (${selectedIds.length})` : `Change Stage (${selectedIds.length})`}</h3>
+              <button onClick={() => setBulkStageModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={16} /></button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               {Object.entries(STAGE_LABELS).map(([key, val]) => (
                 <button key={key} onClick={() => handleBulkStage(key)}
-                  style={{ padding: '10px 14px', background: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb', border: `1px solid ${colors.border}`, borderRadius: 8, color: colors.text, fontSize: 13, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
-                  onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.15)' : '#f0f4f8'}
-                  onMouseLeave={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb'}>
+                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-[13px] cursor-pointer ${isRTL ? 'text-right' : 'text-left'} hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
                   {isRTL ? val.ar : val.en}
                 </button>
               ))}
@@ -2348,18 +2280,16 @@ export default function ContactsPage() {
 
       {/* Bulk Reassign Modal */}
       {bulkReassignModal && (
-        <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div className="modal-content" style={{ background: isDark ? '#1A2B3C' : '#fff', border: `1px solid ${colors.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0, color: colors.text, fontSize: 15, fontWeight: 700 }}>{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
-              <button onClick={() => setBulkReassignModal(false)} style={{ background: 'none', border: 'none', color: colors.textMuted, cursor: 'pointer' }}><X size={16} /></button>
+        <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
+          <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[380px]">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="m-0 text-content dark:text-content-dark text-[15px] font-bold">{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
+              <button onClick={() => setBulkReassignModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={16} /></button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="flex flex-col gap-1.5">
               {[...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].map(agent => (
                 <button key={agent} onClick={() => handleBulkReassign(agent)}
-                  style={{ padding: '10px 14px', background: isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb', border: `1px solid ${colors.border}`, borderRadius: 8, color: colors.text, fontSize: 13, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
-                  onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.15)' : '#f0f4f8'}
-                  onMouseLeave={e => e.currentTarget.style.background = isDark ? 'rgba(74,122,171,0.08)' : '#f9fafb'}>
+                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-[13px] cursor-pointer ${isRTL ? 'text-right' : 'text-left'} hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
                   {agent}
                 </button>
               ))}
