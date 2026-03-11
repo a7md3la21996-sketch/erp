@@ -1,9 +1,13 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDS } from '../../hooks/useDesignSystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { Trophy, TrendingUp, Target, Award, Star, Medal, ChevronUp, ChevronDown, Minus, Calendar, Users, BarChart2, DollarSign, Crown, Zap } from 'lucide-react';
+import Card, { CardHeader } from '../../components/ui/Card';
+import KpiCard from '../../components/ui/KpiCard';
+import Button from '../../components/ui/Button';
+import Badge from '../../components/ui/Badge';
+import { Th, Td, Tr } from '../../components/ui/Table';
 
 const MONTHS = [
   { id: 'jan', ar: 'يناير', en: 'January' },
@@ -34,17 +38,15 @@ const MOCK_TARGETS = [
 
 const SALES_ROLES = ['sales_director', 'sales_manager', 'team_leader', 'sales_agent'];
 const fmt = (n) => { if (n >= 1000000) return (n/1000000).toFixed(1)+'M'; if (n >= 1000) return (n/1000).toFixed(0)+'K'; return n; };
-const getRankIcon = (rank, isDark) => {
+const getRankIcon = (rank) => {
   if (rank === 1) return <Crown size={18} style={{ color: '#FFD700' }} />;
   if (rank === 2) return <Medal size={18} style={{ color: '#C0C0C0' }} />;
   if (rank === 3) return <Award size={18} style={{ color: '#CD7F32' }} />;
-  return <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#8BA8C8' : '#6b7280', width: 18, textAlign: 'center', display: 'inline-block' }}>{rank}</span>;
+  return <span className="inline-block w-[18px] text-center text-[13px] font-bold text-content-muted dark:text-content-muted-dark">{rank}</span>;
 };
 
 export default function TargetTrackerPage() {
   const { t, i18n } = useTranslation();
-  const c = useDS();
-  const isDark = c.dark;
   const lang = i18n.language;
   const isRTL = lang === 'ar';
   const [selectedMonth, setSelectedMonth] = useState('mar');
@@ -78,58 +80,70 @@ export default function TargetTrackerPage() {
   };
 
   return (
-    <div style={{ padding: 24, direction: isRTL ? 'rtl' : 'ltr', background: c.bg, minHeight: '100vh' }}>
-      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+    <div className="p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: c.text, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Trophy size={22} style={{ color: c.accent }} />
+          <h1 className="text-[22px] font-bold text-content dark:text-content-dark m-0 flex items-center gap-2">
+            <Trophy size={22} className="text-brand-500" />
             {lang === 'ar' ? 'متابعة التارجت والترتيب' : 'Target Tracker & Leaderboard'}
           </h1>
-          <p style={{ fontSize: 13, color: c.muted, margin: '4px 0 0' }}>{lang === 'ar' ? 'أداء فريق المبيعات الشهري' : 'Monthly Sales Team Performance'}</p>
+          <p className="text-[13px] text-content-muted dark:text-content-muted-dark mt-1 m-0">
+            {lang === 'ar' ? 'أداء فريق المبيعات الشهري' : 'Monthly Sales Team Performance'}
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="flex gap-1.5 flex-wrap">
           {MONTHS.map(m => (
-            <button key={m.id} onClick={() => setSelectedMonth(m.id)} style={{
-              padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-              border: `1px solid ${selectedMonth === m.id ? c.accent : c.border}`,
-              background: selectedMonth === m.id ? c.accent : c.card,
-              color: selectedMonth === m.id ? '#fff' : c.muted, cursor: 'pointer', transition: 'all 0.15s',
-            }}>{lang === 'ar' ? m.ar : m.en}</button>
+            <Button
+              key={m.id}
+              variant={selectedMonth === m.id ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setSelectedMonth(m.id)}
+            >
+              {lang === 'ar' ? m.ar : m.en}
+            </Button>
           ))}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-        {[
-          { icon: <Target size={18} style={{ color: c.accent }} />, label: lang === 'ar' ? 'إجمالي التارجت' : 'Total Target', value: fmt(totalTarget) + ' EGP', sub: monthLabel(selectedMonth) },
-          { icon: <TrendingUp size={18} style={{ color: totalPct >= 100 ? c.accent : '#EF4444' }} />, label: lang === 'ar' ? 'إجمالي المحقق' : 'Total Achieved', value: fmt(totalAchieved) + ' EGP', sub: `${totalPct}% ${lang === 'ar' ? 'من التارجت' : 'of target'}`, pct: totalPct },
-          { icon: <Crown size={18} style={{ color: '#FFD700' }} />, label: lang === 'ar' ? 'الأول هذا الشهر' : 'Top Performer', value: topPerformer ? (lang === 'ar' ? topPerformer.full_name_ar : topPerformer.full_name_en) : '—', sub: topPerformer ? `${topPerformer.pct}%` : '' },
-          { icon: <Zap size={18} style={{ color: c.accent }} />, label: lang === 'ar' ? 'حققوا التارجت' : 'Hit Target', value: `${aboveTarget} / ${monthData.length}`, sub: lang === 'ar' ? 'موظف' : 'agents' },
-        ].map((kpi, i) => (
-          <div key={i} style={{ background: c.card, borderRadius: 12, padding: '16px 20px', border: `1px solid ${c.border}` }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>{kpi.icon}<span style={{ fontSize: 12, color: c.muted, fontWeight: 500 }}>{kpi.label}</span></div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: c.text, marginBottom: 4 }}>{kpi.value}</div>
-            {kpi.pct !== undefined && (<div style={{ height: 4, borderRadius: 4, background: isDark ? 'rgba(74,122,171,0.15)' : '#e2e8f0', marginBottom: 4 }}><div style={{ height: '100%', borderRadius: 4, width: `${Math.min(kpi.pct, 100)}%`, background: getPctColor(kpi.pct) }} /></div>)}
-            <div style={{ fontSize: 12, color: c.muted }}>{kpi.sub}</div>
-          </div>
-        ))}
+      {/* KPI Cards */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-6">
+        <KpiCard icon={Target} label={lang === 'ar' ? 'إجمالي التارجت' : 'Total Target'} value={fmt(totalTarget) + ' EGP'} sub={monthLabel(selectedMonth)} color="#4A7AAB" />
+        <KpiCard icon={TrendingUp} label={lang === 'ar' ? 'إجمالي المحقق' : 'Total Achieved'} value={fmt(totalAchieved) + ' EGP'} sub={`${totalPct}% ${lang === 'ar' ? 'من التارجت' : 'of target'}`} color={totalPct >= 100 ? '#4A7AAB' : '#EF4444'} />
+        <KpiCard icon={Crown} label={lang === 'ar' ? 'الأول هذا الشهر' : 'Top Performer'} value={topPerformer ? (lang === 'ar' ? topPerformer.full_name_ar : topPerformer.full_name_en) : '—'} sub={topPerformer ? `${topPerformer.pct}%` : ''} color="#FFD700" />
+        <KpiCard icon={Zap} label={lang === 'ar' ? 'حققوا التارجت' : 'Hit Target'} value={`${aboveTarget} / ${monthData.length}`} sub={lang === 'ar' ? 'موظف' : 'agents'} color="#4A7AAB" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
-        <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 20px', borderBottom: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: c.text, display: 'flex', alignItems: 'center', gap: 6 }}><BarChart2 size={16} style={{ color: c.accent }} />{lang === 'ar' ? 'ترتيب الفريق' : 'Team Ranking'}</span>
-            <div style={{ display: 'flex', gap: 6 }}>
+      {/* Main content grid */}
+      <div className="grid grid-cols-[1fr_340px] gap-5 items-start">
+        {/* Team Ranking Table */}
+        <Card className="overflow-hidden">
+          <CardHeader className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-content dark:text-content-dark flex items-center gap-1.5">
+              <BarChart2 size={16} className="text-brand-500" />
+              {lang === 'ar' ? 'ترتيب الفريق' : 'Team Ranking'}
+            </span>
+            <div className="flex gap-1.5">
               {[{ key: 'pct', ar: 'بالنسبة', en: '% Target' }, { key: 'achieved', ar: 'بالمبلغ', en: 'Amount' }, { key: 'deals', ar: 'بالصفقات', en: 'Deals' }].map(s => (
-                <button key={s.key} onClick={() => setSortBy(s.key)} style={{ padding: '5px 12px', borderRadius: 6, fontSize: 11, fontWeight: 600, border: `1px solid ${sortBy === s.key ? c.accent : c.border}`, background: sortBy === s.key ? c.accent : 'transparent', color: sortBy === s.key ? '#fff' : c.muted, cursor: 'pointer' }}>{lang === 'ar' ? s.ar : s.en}</button>
+                <Button
+                  key={s.key}
+                  variant={sortBy === s.key ? 'primary' : 'ghost'}
+                  size="sm"
+                  onClick={() => setSortBy(s.key)}
+                  className="!text-[11px] !px-3 !py-1"
+                >
+                  {lang === 'ar' ? s.ar : s.en}
+                </Button>
               ))}
             </div>
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          </CardHeader>
+          <table className="w-full border-collapse">
             <thead>
-              <tr style={{ background: c.thBg }}>
-                {[{ ar: '#', en: '#', w: 40 }, { ar: 'الموظف', en: 'Agent' }, { ar: 'التارجت', en: 'Target', w: 100 }, { ar: 'المحقق', en: 'Achieved', w: 100 }, { ar: 'النسبة', en: '% Done', w: 140 }, { ar: 'الصفقات', en: 'Deals', w: 70 }, { ar: 'التغيير', en: 'vs Last', w: 80 }].map((h, i) => (
-                  <th key={i} style={{ padding: '10px 14px', fontSize: 11, fontWeight: 600, color: c.muted, textAlign: isRTL ? 'right' : 'left', whiteSpace: 'nowrap', width: h.w || undefined }}>{lang === 'ar' ? h.ar : h.en}</th>
+              <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
+                {[{ ar: '#', en: '#', w: 'w-10' }, { ar: 'الموظف', en: 'Agent' }, { ar: 'التارجت', en: 'Target', w: 'w-[100px]' }, { ar: 'المحقق', en: 'Achieved', w: 'w-[100px]' }, { ar: 'النسبة', en: '% Done', w: 'w-[140px]' }, { ar: 'الصفقات', en: 'Deals', w: 'w-[70px]' }, { ar: 'التغيير', en: 'vs Last', w: 'w-[80px]' }].map((h, i) => (
+                  <Th key={i} className={`whitespace-nowrap ${h.w || ''}`}>
+                    {lang === 'ar' ? h.ar : h.en}
+                  </Th>
                 ))}
               </tr>
             </thead>
@@ -138,83 +152,128 @@ export default function TargetTrackerPage() {
                 const trend = getTrend(emp.id, emp.pct);
                 const pctColor = getPctColor(emp.pct);
                 return (
-                  <tr key={emp.id} onMouseEnter={() => setHoveredRow(emp.id)} onMouseLeave={() => setHoveredRow(null)} style={{ background: hoveredRow === emp.id ? c.rowHover : 'transparent', borderBottom: `1px solid ${c.border}`, transition: 'background 0.15s' }}>
-                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>{getRankIcon(idx + 1, isDark)}</td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 34, height: 34, borderRadius: '50%', background: emp.avatar_color || c.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{(lang === 'ar' ? emp.full_name_ar : emp.full_name_en).charAt(0)}</div>
+                  <Tr key={emp.id} onMouseEnter={() => setHoveredRow(emp.id)} onMouseLeave={() => setHoveredRow(null)}>
+                    <Td className="text-center">{getRankIcon(idx + 1)}</Td>
+                    <Td>
+                      <div className="flex items-center gap-2.5">
+                        <div
+                          className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] font-bold text-white shrink-0"
+                          style={{ background: emp.avatar_color || '#4A7AAB' }}
+                        >
+                          {(lang === 'ar' ? emp.full_name_ar : emp.full_name_en).charAt(0)}
+                        </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
-                          <div style={{ fontSize: 11, color: c.muted, marginTop: 1 }}>{emp.role === 'sales_director' ? (lang === 'ar' ? 'مدير مبيعات' : 'Sales Director') : emp.role === 'sales_manager' ? (lang === 'ar' ? 'مدير فريق' : 'Sales Manager') : emp.role === 'team_leader' ? (lang === 'ar' ? 'قائد فريق' : 'Team Leader') : (lang === 'ar' ? 'موظف مبيعات' : 'Sales Agent')}</div>
+                          <div className="text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
+                          <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-px">{emp.role === 'sales_director' ? (lang === 'ar' ? 'مدير مبيعات' : 'Sales Director') : emp.role === 'sales_manager' ? (lang === 'ar' ? 'مدير فريق' : 'Sales Manager') : emp.role === 'team_leader' ? (lang === 'ar' ? 'قائد فريق' : 'Team Leader') : (lang === 'ar' ? 'موظف مبيعات' : 'Sales Agent')}</div>
                         </div>
                       </div>
-                    </td>
-                    <td style={{ padding: '12px 14px', fontSize: 13, color: c.muted, fontWeight: 500 }}>{fmt(emp.target)}</td>
-                    <td style={{ padding: '12px 14px', fontSize: 13, fontWeight: 700, color: c.text }}>{fmt(emp.achieved)}</td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ flex: 1, height: 6, borderRadius: 4, background: isDark ? 'rgba(74,122,171,0.12)' : '#e2e8f0', minWidth: 60 }}><div style={{ height: '100%', borderRadius: 4, width: `${Math.min(emp.pct, 100)}%`, background: pctColor }} /></div>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: pctColor, minWidth: 36, textAlign: 'center' }}>{emp.pct}%</span>
+                    </Td>
+                    <Td className="text-[13px] text-content-muted dark:text-content-muted-dark font-medium">{fmt(emp.target)}</Td>
+                    <Td className="text-[13px] font-bold text-content dark:text-content-dark">{fmt(emp.achieved)}</Td>
+                    <Td>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 rounded bg-gray-200 dark:bg-brand-500/[0.12] min-w-[60px]">
+                          <div className="h-full rounded" style={{ width: `${Math.min(emp.pct, 100)}%`, background: pctColor }} />
+                        </div>
+                        <span className="text-xs font-bold min-w-[36px] text-center" style={{ color: pctColor }}>{emp.pct}%</span>
                       </div>
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 13, fontWeight: 600, color: c.text }}>{emp.deals}</td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                      {trend > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: c.accent, fontSize: 12, fontWeight: 700 }}><ChevronUp size={14} />+{trend}%</span> : trend < 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: '#EF4444', fontSize: 12, fontWeight: 700 }}><ChevronDown size={14} />{trend}%</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, color: c.muted, fontSize: 12 }}><Minus size={14} />—</span>}
-                    </td>
-                  </tr>
+                    </Td>
+                    <Td className="text-center text-[13px] font-semibold text-content dark:text-content-dark">{emp.deals}</Td>
+                    <Td className="text-center">
+                      {trend > 0 ? (
+                        <span className="inline-flex items-center gap-0.5 text-brand-500 text-xs font-bold"><ChevronUp size={14} />+{trend}%</span>
+                      ) : trend < 0 ? (
+                        <span className="inline-flex items-center gap-0.5 text-red-500 text-xs font-bold"><ChevronDown size={14} />{trend}%</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-0.5 text-content-muted dark:text-content-muted-dark text-xs"><Minus size={14} />—</span>
+                      )}
+                    </Td>
+                  </Tr>
                 );
               })}
             </tbody>
           </table>
-        </div>
+        </Card>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, padding: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: c.text, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 6 }}><Trophy size={15} style={{ color: '#FFD700' }} />{lang === 'ar' ? 'البودييم' : 'Podium'}</div>
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 8, marginBottom: 20, height: 100 }}>
+        {/* Sidebar */}
+        <div className="flex flex-col gap-4">
+          {/* Podium Card */}
+          <Card className="p-5">
+            <div className="text-[13px] font-semibold text-content dark:text-content-dark mb-4 flex items-center gap-1.5">
+              <Trophy size={15} style={{ color: '#FFD700' }} />
+              {lang === 'ar' ? 'البودييم' : 'Podium'}
+            </div>
+            <div className="flex items-end justify-center gap-2 mb-5 h-[100px]">
               {[1, 0, 2].map((idx) => {
                 const emp = monthData[idx];
                 if (!emp) return null;
                 const heights = [80, 100, 65];
                 const podiumColors = ['#C0C0C0', '#FFD700', '#CD7F32'];
                 return (
-                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 80 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: '50%', background: emp.avatar_color || c.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', marginBottom: 6, border: `2px solid ${podiumColors[idx]}` }}>{(lang === 'ar' ? emp.full_name_ar : emp.full_name_en).charAt(0)}</div>
-                    <div style={{ fontSize: 10, color: c.muted, marginBottom: 4, textAlign: 'center' }}>{lang === 'ar' ? emp.full_name_ar.split(' ')[0] : emp.full_name_en.split(' ')[0]}</div>
-                    <div style={{ width: 72, height: heights[idx], borderRadius: '6px 6px 0 0', background: `${podiumColors[idx]}22`, border: `1px solid ${podiumColors[idx]}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: podiumColors[idx] }}>{idx + 1}</div>
+                  <div key={idx} className="flex flex-col items-center w-20">
+                    <div
+                      className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white mb-1.5"
+                      style={{ background: emp.avatar_color || '#4A7AAB', border: `2px solid ${podiumColors[idx]}` }}
+                    >
+                      {(lang === 'ar' ? emp.full_name_ar : emp.full_name_en).charAt(0)}
+                    </div>
+                    <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1 text-center">
+                      {lang === 'ar' ? emp.full_name_ar.split(' ')[0] : emp.full_name_en.split(' ')[0]}
+                    </div>
+                    <div
+                      className="w-[72px] rounded-t-md flex items-center justify-center text-[13px] font-extrabold"
+                      style={{ height: heights[idx], background: `${podiumColors[idx]}22`, border: `1px solid ${podiumColors[idx]}`, color: podiumColors[idx] }}
+                    >
+                      {idx + 1}
+                    </div>
                   </div>
                 );
               })}
             </div>
             {monthData.slice(0, 3).map((emp, idx) => (
-              <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: idx < 2 ? `1px solid ${c.border}` : 'none' }}>
-                <div style={{ width: 20, textAlign: 'center' }}>{getRankIcon(idx + 1, isDark)}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: c.text }}>{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
-                  <div style={{ fontSize: 11, color: c.muted }}>{fmt(emp.achieved)} EGP</div>
+              <div key={emp.id} className={`flex items-center gap-2.5 py-2 ${idx < 2 ? 'border-b border-edge dark:border-edge-dark' : ''}`}>
+                <div className="w-5 text-center">{getRankIcon(idx + 1)}</div>
+                <div className="flex-1">
+                  <div className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{fmt(emp.achieved)} EGP</div>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: getPctColor(emp.pct), background: `${getPctColor(emp.pct)}15`, padding: '2px 8px', borderRadius: 6 }}>{emp.pct}%</div>
+                <Badge
+                  size="sm"
+                  className="font-bold rounded-md"
+                  style={{ color: getPctColor(emp.pct), background: `${getPctColor(emp.pct)}15` }}
+                >
+                  {emp.pct}%
+                </Badge>
               </div>
             ))}
-          </div>
+          </Card>
 
-          <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, padding: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: c.text, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}><TrendingUp size={15} style={{ color: c.accent }} />{lang === 'ar' ? 'اتجاه الفريق (آخر 3 أشهر)' : 'Team Trend (Last 3M)'}</div>
+          {/* Team Trend Card */}
+          <Card className="p-5">
+            <div className="text-[13px] font-semibold text-content dark:text-content-dark mb-3.5 flex items-center gap-1.5">
+              <TrendingUp size={15} className="text-brand-500" />
+              {lang === 'ar' ? 'اتجاه الفريق (آخر 3 أشهر)' : 'Team Trend (Last 3M)'}
+            </div>
             {['mar', 'feb', 'jan'].map((m) => {
               const mData = MOCK_TARGETS.filter(t => t.month === m);
               const mPct = Math.round((mData.reduce((s,t)=>s+t.achieved,0) / mData.reduce((s,t)=>s+t.target,0)) * 100);
               const mLabel = MONTHS.find(mo => mo.id === m);
               return (
-                <div key={m} style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: c.muted }}>{lang === 'ar' ? mLabel.ar : mLabel.en}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: getPctColor(mPct) }}>{mPct}%</span>
+                <div key={m} className="mb-2.5">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? mLabel.ar : mLabel.en}</span>
+                    <span className="text-xs font-bold" style={{ color: getPctColor(mPct) }}>{mPct}%</span>
                   </div>
-                  <div style={{ height: 6, borderRadius: 4, background: isDark ? 'rgba(74,122,171,0.12)' : '#e2e8f0' }}><div style={{ height: '100%', borderRadius: 4, width: `${Math.min(mPct,100)}%`, background: m === selectedMonth ? c.accent : '#6B8DB5' }} /></div>
+                  <div className="h-1.5 rounded bg-gray-200 dark:bg-brand-500/[0.12]">
+                    <div
+                      className="h-full rounded"
+                      style={{ width: `${Math.min(mPct,100)}%`, background: m === selectedMonth ? '#4A7AAB' : '#6B8DB5' }}
+                    />
+                  </div>
                 </div>
               );
             })}
-          </div>
+          </Card>
         </div>
       </div>
     </div>

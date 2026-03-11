@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDS } from '../../hooks/useDesignSystem';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -8,6 +7,8 @@ import {
   RefreshCw, CheckSquare, Plus, X, Clock, Trash2
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../../services/activitiesService';
+import { Button, Badge } from '../../components/ui';
+import { Textarea } from '../../components/ui/Input';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -25,10 +26,8 @@ function timeAgo(dateStr, lang) {
 
 export default function ActivityFeed({ entityType = 'contact', entityId, dept = 'crm', compact = false }) {
   const { i18n } = useTranslation();
-  const c = useDS();
   const { user } = useAuth();
   const lang = i18n.language;
-  const isDark = c.dark;
   const isRTL = lang === 'ar';
 
   const [activities, setActivities] = useState([]);
@@ -74,46 +73,52 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
   const availableTypes = Object.entries(ACTIVITY_TYPES).filter(([, v]) => v.dept.includes(dept));
 
   return (
-    <div style={{ fontFamily: 'inherit' }}>
+    <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <Clock size={15} color={c.accent} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: c.text }}>
+      <div className={`flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <Clock size={15} className="text-brand-500" />
+          <span className="text-[13px] font-semibold text-content dark:text-content-dark">
             {lang === 'ar' ? 'سجل الأنشطة' : 'Activity Log'}
           </span>
           {activities.length > 0 && (
-            <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 10, background: c.accent + '20', color: c.accent, fontWeight: 600 }}>
+            <Badge variant="default" size="sm">
               {activities.length}
-            </span>
+            </Badge>
           )}
         </div>
-        <button onClick={() => setAdding(!adding)} style={{
-          display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 7,
-          border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
-          background: adding ? 'transparent' : c.accent, color: adding ? c.muted : '#fff',
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-        }}>
-          {adding ? <X size={13} /> : <Plus size={13} />}
-          {adding ? (lang === 'ar' ? 'إلغاء' : 'Cancel') : (lang === 'ar' ? 'إضافة نشاط' : 'Add Activity')}
-        </button>
+        {adding ? (
+          <Button variant="ghost" size="sm" onClick={() => setAdding(false)} className={isRTL ? 'flex-row-reverse' : ''}>
+            <X size={13} />
+            {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+          </Button>
+        ) : (
+          <Button variant="primary" size="sm" onClick={() => setAdding(true)} className={isRTL ? 'flex-row-reverse' : ''}>
+            <Plus size={13} />
+            {lang === 'ar' ? 'إضافة نشاط' : 'Add Activity'}
+          </Button>
+        )}
       </div>
 
       {/* Add Form */}
       {adding && (
-        <div style={{ background: isDark ? 'rgba(74,122,171,0.08)' : '#f8fafc', borderRadius: 10, padding: 14, marginBottom: 14, border: '1px solid ' + c.border }}>
+        <div className="bg-blue-50/60 dark:bg-brand-500/[0.08] rounded-[10px] p-3.5 mb-3.5 border border-edge dark:border-edge-dark">
           {/* Type selector */}
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+          <div className={`flex gap-1.5 flex-wrap mb-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
             {availableTypes.map(([key, val]) => {
               const Ic = ICONS[val.icon];
               const sel = form.type === key;
               return (
-                <button key={key} onClick={() => setForm(f => ({ ...f, type: key }))} style={{
-                  display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 6,
-                  border: '1px solid ' + (sel ? val.color : c.border), cursor: 'pointer', fontSize: 11, fontWeight: sel ? 600 : 400,
-                  background: sel ? val.color + '18' : 'transparent', color: sel ? val.color : c.muted,
-                  flexDirection: isRTL ? 'row-reverse' : 'row',
-                }}>
+                <button
+                  key={key}
+                  onClick={() => setForm(f => ({ ...f, type: key }))}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] cursor-pointer transition-colors duration-150 border ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${sel ? 'font-semibold' : 'font-normal'}`}
+                  style={{
+                    borderColor: sel ? val.color : undefined,
+                    background: sel ? val.color + '18' : 'transparent',
+                    color: sel ? val.color : undefined,
+                  }}
+                >
                   {Ic && <Ic size={12} />}
                   {lang === 'ar' ? val.ar : val.en}
                 </button>
@@ -121,86 +126,80 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
             })}
           </div>
           {/* Notes */}
-          <textarea
+          <Textarea
             value={form.notes}
             onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             placeholder={lang === 'ar' ? 'ملاحظات...' : 'Notes...'}
             rows={2}
-            style={{
-              width: '100%', padding: '8px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-              background: c.input, color: c.text, fontSize: 13, resize: 'vertical',
-              outline: 'none', boxSizing: 'border-box', direction: isRTL ? 'rtl' : 'ltr',
-            }}
+            size="md"
+            className={isRTL ? 'direction-rtl' : ''}
+            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
           />
-          <div style={{ display: 'flex', justifyContent: isRTL ? 'flex-start' : 'flex-end', marginTop: 8 }}>
-            <button onClick={handleAdd} disabled={saving || !form.notes.trim()} style={{
-              padding: '6px 16px', borderRadius: 7, border: 'none', cursor: 'pointer',
-              background: c.primary, color: '#fff', fontSize: 12, fontWeight: 600,
-              opacity: saving || !form.notes.trim() ? 0.6 : 1,
-            }}>
+          <div className={`flex mt-2 ${isRTL ? 'justify-start' : 'justify-end'}`}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAdd}
+              disabled={saving || !form.notes.trim()}
+            >
               {saving ? '...' : (lang === 'ar' ? 'حفظ' : 'Save')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* List */}
       {loading ? (
-        <div style={{ textAlign: 'center', color: c.muted, fontSize: 12, padding: 20 }}>
+        <div className="text-center text-content-muted dark:text-content-muted-dark text-xs py-5">
           {lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}
         </div>
       ) : activities.length === 0 ? (
-        <div style={{ textAlign: 'center', color: c.muted, fontSize: 12, padding: 20 }}>
+        <div className="text-center text-content-muted dark:text-content-muted-dark text-xs py-5">
           {lang === 'ar' ? 'لا يوجد أنشطة بعد' : 'No activities yet'}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div className="flex flex-col gap-0.5">
           {activities.slice(0, compact ? 5 : 999).map((act, idx) => {
             const typeDef = ACTIVITY_TYPES[act.type] || ACTIVITY_TYPES.note;
             const Ic = ICONS[typeDef.icon] || FileText;
             return (
-              <div key={act.id} className="activity-row" style={{
-                display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 6px', borderRadius: 8,
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                borderBottom: idx < activities.length - 1 ? '1px solid ' + c.border : 'none',
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              <div
+                key={act.id}
+                className={`group flex items-start gap-2.5 py-2 px-1.5 rounded-lg transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.06] ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${idx < activities.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}`}
               >
                 {/* Icon */}
-                <div style={{
-                  width: 30, height: 30, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-                  background: typeDef.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
+                <div
+                  className="w-[30px] h-[30px] rounded-full shrink-0 mt-0.5 flex items-center justify-center"
+                  style={{ background: typeDef.color + '18' }}
+                >
                   <Ic size={13} color={typeDef.color} />
                 </div>
                 {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: typeDef.color }}>
+                <div className="flex-1 min-w-0">
+                  <div className={`flex items-center gap-1.5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className="text-xs font-semibold" style={{ color: typeDef.color }}>
                       {lang === 'ar' ? typeDef.ar : typeDef.en}
                     </span>
-                    <span style={{ fontSize: 11, color: c.muted }}>
+                    <span className="text-[11px] text-content-muted dark:text-content-muted-dark">
                       {act.user_name_ar && lang === 'ar' ? act.user_name_ar : act.user_name_en || ''}
                     </span>
-                    <span style={{ fontSize: 11, color: c.muted, marginRight: 'auto' }}>
+                    <span className="text-[11px] text-content-muted dark:text-content-muted-dark mr-auto">
                       {timeAgo(act.created_at, lang)}
                     </span>
                   </div>
                   {act.notes && (
-                    <div style={{ fontSize: 12, color: c.text, marginTop: 2, lineHeight: 1.5, direction: isRTL ? 'rtl' : 'ltr' }}>
+                    <div
+                      className="text-xs text-content dark:text-content-dark mt-0.5 leading-relaxed"
+                      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                    >
                       {act.notes}
                     </div>
                   )}
                 </div>
                 {/* Delete */}
-                <button onClick={() => handleDelete(act.id)} style={{
-                  background: 'transparent', border: 'none', cursor: 'pointer', padding: 3,
-                  color: c.muted, opacity: 0, flexShrink: 0,
-                }}
-                  className="delete-btn"
-                  onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                  onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                <button
+                  onClick={() => handleDelete(act.id)}
+                  className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0"
                 >
                   <Trash2 size={12} />
                 </button>

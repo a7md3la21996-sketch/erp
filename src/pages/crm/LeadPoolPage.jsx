@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDS } from '../../hooks/useDesignSystem';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Users, Phone, Clock, AlertTriangle, CheckSquare, Filter,
@@ -9,6 +8,7 @@ import {
   RefreshCw, Upload, Plus, Eye, Zap
 } from 'lucide-react';
 import { P } from '../../config/roles';
+import { Button, Card, Input, Select, Badge, KpiCard, Modal, ModalFooter } from '../../components/ui';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCES = {
@@ -104,9 +104,6 @@ export default function LeadPoolPage() {
     return () => clearInterval(t);
   }, []);
 
-  const c = useDS();
-  const isDark = c.dark;
-
   // Filter leads based on permissions and filters
   const visible = useMemo(() => {
     return leads.filter(l => {
@@ -174,161 +171,141 @@ export default function LeadPoolPage() {
   const toggleAll = () => setSelected(prev => prev.length === visible.length ? [] : visible.map(l => l.id));
 
   return (
-    <div style={{ padding: 24, background: c.bg, minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 42, height: 42, borderRadius: 10, background: c.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className={`flex items-center justify-between mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="w-[42px] h-[42px] rounded-[10px] bg-brand-600 flex items-center justify-center">
             <Zap size={20} color="#fff" />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'بركة الليدز' : 'Lead Pool'}</h1>
-            <p style={{ margin: 0, fontSize: 12, color: c.muted }}>{lang === 'ar' ? 'إدارة وتوزيع الليدز' : 'Manage & distribute leads'}</p>
+            <h1 className="m-0 text-[22px] font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'بركة الليدز' : 'Lead Pool'}</h1>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'إدارة وتوزيع الليدز' : 'Manage & distribute leads'}</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           {selected.length > 0 && canAssign && (
-            <button onClick={() => setAssignModal('bulk')} style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8,
-              border: 'none', cursor: 'pointer', background: c.accent, color: '#fff', fontSize: 13, fontWeight: 600,
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-            }}>
+            <Button variant="primary" size="sm" onClick={() => setAssignModal('bulk')} className={isRTL ? 'flex-row-reverse' : ''}>
               <UserPlus size={15} />
               {lang === 'ar' ? `توزيع (${selected.length})` : `Assign (${selected.length})`}
-            </button>
+            </Button>
           )}
-          <button onClick={() => setAddModal(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8,
-            border: 'none', cursor: 'pointer', background: c.primary, color: '#fff', fontSize: 13, fontWeight: 600,
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-          }}>
+          <Button variant="primary" size="sm" onClick={() => setAddModal(true)} className={isRTL ? 'flex-row-reverse' : ''}>
             <Plus size={15} />
             {lang === 'ar' ? 'كولد كول جديد' : 'Add Cold Call'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, marginBottom: 16 }}>
+      <div className="grid grid-cols-5 gap-2.5 mb-4">
         {[
-          { label: lang === 'ar' ? 'إجمالي' : 'Total',         value: stats.total,       icon: Users,        color: c.accent },
+          { label: lang === 'ar' ? 'إجمالي' : 'Total',         value: stats.total,       icon: Users,        color: '#4A7AAB' },
           { label: lang === 'ar' ? 'فريش' : 'Fresh',           value: stats.fresh,       icon: Flame,        color: '#EF4444', hide: !canViewFresh },
-          { label: lang === 'ar' ? 'كولد كول' : 'Cold Calls',  value: stats.cold,        icon: Phone,        color: c.primary },
+          { label: lang === 'ar' ? 'كولد كول' : 'Cold Calls',  value: stats.cold,        icon: Phone,        color: '#2B4C6F' },
           { label: lang === 'ar' ? 'تعدى SLA' : 'SLA Breached',value: stats.slaBreached, icon: AlertTriangle,color: '#EF4444' },
           { label: lang === 'ar' ? 'متوسط انتظار' : 'Avg Wait', value: `${stats.avgWait}د`, icon: Clock,     color: '#6B8DB5' },
-        ].filter(s => !s.hide).map((s, i) => {
-          const Ic = s.icon;
-          return (
-            <div key={i} style={{ background: c.card, borderRadius: 10, padding: '12px 14px', border: '1px solid ' + c.border }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <Ic size={14} color={s.color} />
-                <span style={{ fontSize: 11, color: c.muted }}>{s.label}</span>
-              </div>
-              <div style={{ fontSize: 24, fontWeight: 700, color: c.text, marginTop: 4, textAlign: isRTL ? 'right' : 'left' }}>{s.value}</div>
-            </div>
-          );
-        })}
+        ].filter(s => !s.hide).map((s, i) => (
+          <KpiCard key={i} icon={s.icon} label={s.label} value={s.value} color={s.color} />
+        ))}
       </div>
 
       {/* SLA Warning */}
       {stats.slaBreached > 0 && (
-        <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div className={`bg-red-500/[0.08] border border-red-500/30 rounded-[10px] px-3.5 py-2.5 mb-3.5 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <Bell size={15} color="#EF4444" />
-          <span style={{ fontSize: 13, color: '#EF4444', fontWeight: 600 }}>
+          <span className="text-[13px] text-red-500 font-semibold">
             {lang === 'ar' ? `${stats.slaBreached} ليد تعدى وقت SLA — يحتاج توزيع عاجل` : `${stats.slaBreached} leads breached SLA — urgent assignment needed`}
           </span>
         </div>
       )}
 
       {/* Filters */}
-      <div style={{ background: c.card, borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: '1px solid ' + c.border, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+      <Card className={`px-3.5 py-2.5 mb-3 flex gap-2 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
         {/* Search */}
-        <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
-          <Search size={13} style={{ position: 'absolute', [isRTL?'right':'left']: 10, top: '50%', transform: 'translateY(-50%)', color: c.muted }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={lang === 'ar' ? 'بحث...' : 'Search...'} style={{
-            width: '100%', padding: isRTL ? '7px 30px 7px 10px' : '7px 10px 7px 30px',
-            borderRadius: 7, border: '1px solid ' + c.border, background: c.input, color: c.text, fontSize: 12, outline: 'none', boxSizing: 'border-box',
-          }} />
+        <div className="relative flex-1 min-w-[160px]">
+          <Search size={13} className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-2.5' : 'left-2.5'}`} />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
+            size="sm"
+            className={isRTL ? 'pr-[30px] pl-2.5' : 'pl-[30px] pr-2.5'}
+          />
         </div>
 
         {/* Type filter */}
         {canViewFresh && ['all','fresh','cold_call'].map(t => (
-          <button key={t} onClick={() => setTypeFilter(t)} style={{
-            padding: '5px 12px', borderRadius: 6, border: '1px solid ' + (typeFilter === t ? c.accent : c.border),
-            background: typeFilter === t ? c.accent + '18' : 'transparent', color: typeFilter === t ? c.accent : c.muted,
-            fontSize: 12, fontWeight: typeFilter === t ? 600 : 400, cursor: 'pointer',
-          }}>
+          <button key={t} onClick={() => setTypeFilter(t)} className={`
+            px-3 py-1 rounded-md border text-xs cursor-pointer transition-colors
+            ${typeFilter === t
+              ? 'border-brand-500 bg-brand-500/10 text-brand-500 font-semibold'
+              : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'}
+          `}>
             {t === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : t === 'fresh' ? (lang === 'ar' ? 'فريش' : 'Fresh') : (lang === 'ar' ? 'كولد كول' : 'Cold Call')}
           </button>
         ))}
 
         {/* Source filter */}
-        <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} style={{
-          padding: '6px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-          background: c.input, color: c.text, fontSize: 12, outline: 'none',
-        }}>
+        <Select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} size="sm" className="w-auto flex-none">
           <option value="all">{lang === 'ar' ? 'كل المصادر' : 'All Sources'}</option>
           {Object.entries(SOURCES).map(([k, v]) => (
             <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
           ))}
-        </select>
+        </Select>
 
         {/* Aging filter */}
         {['all','fresh','warn','old'].map(a => (
-          <button key={a} onClick={() => setAgingFilter(a)} style={{
-            padding: '5px 10px', borderRadius: 6, border: '1px solid ' + (agingFilter === a ? c.accent : c.border),
-            background: agingFilter === a ? c.accent + '18' : 'transparent', color: agingFilter === a ? c.accent : c.muted,
-            fontSize: 12, cursor: 'pointer',
-          }}>
+          <button key={a} onClick={() => setAgingFilter(a)} className={`
+            px-2.5 py-1 rounded-md border text-xs cursor-pointer transition-colors
+            ${agingFilter === a
+              ? 'border-brand-500 bg-brand-500/10 text-brand-500 font-semibold'
+              : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark'}
+          `}>
             {a === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : a === 'fresh' ? (lang === 'ar' ? 'جديد' : 'Fresh') : a === 'warn' ? (lang === 'ar' ? 'تحذير' : 'Warn') : (lang === 'ar' ? 'قديم' : 'Old')}
           </button>
         ))}
 
-
-          {/* Team / Global Pool Toggle — visible to managers only */}
-          {canViewAll && (
-            <div style={{ display: 'flex', borderRadius: 8, border: '1px solid ' + c.border, overflow: 'hidden' }}>
-              {[
-                { value: 'my_team', ar: 'تيمي', en: 'My Team' },
-                { value: 'all',     ar: 'الكل',  en: 'All Teams' },
-              ].map(opt => (
-                <button key={opt.value} onClick={() => setPoolScope(opt.value)} style={{
-                  padding: '7px 14px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
-                  background: poolScope === opt.value ? c.accent : c.card,
-                  color: poolScope === opt.value ? '#fff' : c.muted,
-                  transition: 'all 0.15s',
-                }}>
-                  {lang === 'ar' ? opt.ar : opt.en}
-                </button>
-              ))}
-            </div>
-          )}
+        {/* Team / Global Pool Toggle — visible to managers only */}
+        {canViewAll && (
+          <div className="flex rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
+            {[
+              { value: 'my_team', ar: 'تيمي', en: 'My Team' },
+              { value: 'all',     ar: 'الكل',  en: 'All Teams' },
+            ].map(opt => (
+              <button key={opt.value} onClick={() => setPoolScope(opt.value)} className={`
+                px-3.5 py-[7px] text-xs font-semibold border-none cursor-pointer transition-all duration-150
+                ${poolScope === opt.value
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}
+              `}>
+                {lang === 'ar' ? opt.ar : opt.en}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Select all */}
         {canAssign && (
-          <button onClick={toggleAll} style={{
-            padding: '5px 10px', borderRadius: 6, border: '1px solid ' + c.border,
-            background: 'transparent', color: c.muted, fontSize: 12, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}>
+          <Button variant="ghost" size="sm" onClick={toggleAll}>
             <CheckSquare size={13} />
             {lang === 'ar' ? 'تحديد الكل' : 'Select All'}
-          </button>
+          </Button>
         )}
-      </div>
+      </Card>
 
       {/* Leads List */}
-      <div style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+      <Card className="overflow-hidden">
         {visible.length === 0 ? (
-            <div style={{ textAlign:'center', padding:'60px 20px' }}>
-                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
-                  <Users size={24} color='#4A7AAB' />
-                </div>
-                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:c.text }}>{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
-                <p style={{ margin:0, fontSize:13, color:c.muted }}>{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
-              </div>
-            ) : visible.map((lead, idx) => {
+          <div className="text-center py-[60px] px-5">
+            <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
+              <Users size={24} color='#4A7AAB' />
+            </div>
+            <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
+            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
+          </div>
+        ) : visible.map((lead, idx) => {
           const aging   = getAging(lead.created_at);
           const sla     = getSLAStatus(lead);
           const src     = SOURCES[lead.source];
@@ -337,179 +314,148 @@ export default function LeadPoolPage() {
           const isReserved = lead.reserved_by && new Date(lead.reserved_until) > new Date();
 
           return (
-            <div key={lead.id} style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px',
-              borderBottom: idx < visible.length - 1 ? '1px solid ' + c.border : 'none',
-              background: isSel ? c.accent + '08' : isReserved ? 'rgba(239,68,68,0.04)' : 'transparent',
-              flexDirection: isRTL ? 'row-reverse' : 'row',
-              transition: 'background 0.15s',
-            }}
-              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = c.rowHover; }}
-              onMouseLeave={e => { e.currentTarget.style.background = isSel ? c.accent + '08' : isReserved ? 'rgba(239,68,68,0.04)' : 'transparent'; }}
-            >
+            <div key={lead.id} className={`
+              flex items-center gap-3 px-4 py-3 transition-colors duration-150
+              ${idx < visible.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}
+              ${isSel ? 'bg-brand-500/[0.08]' : isReserved ? 'bg-red-500/[0.04]' : 'hover:bg-[#F8FAFC] dark:hover:bg-brand-500/[0.07]'}
+              ${isRTL ? 'flex-row-reverse' : ''}
+            `}>
               {/* Checkbox */}
               {canAssign && (
                 <input type="checkbox" checked={isSel} onChange={() => toggleSelect(lead.id)}
-                  style={{ width: 15, height: 15, cursor: 'pointer', flexShrink: 0, accentColor: c.accent }} />
+                  className="w-[15px] h-[15px] cursor-pointer shrink-0 accent-brand-500" />
               )}
 
               {/* Aging dot */}
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: aging.color, flexShrink: 0, marginTop: 4 }} />
+              <div className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ background: aging.color }} />
 
               {/* Lead info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: c.text }}>{lead.name}</span>
-                  <span style={{ fontSize: 11, padding: '1px 7px', borderRadius: 6, background: (src?.color || c.accent) + '18', color: src?.color || c.accent, fontWeight: 500 }}>
+              <div className="flex-1 min-w-0">
+                <div className={`flex items-center gap-2 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <span className="text-sm font-semibold text-content dark:text-content-dark">{lead.name}</span>
+                  <Badge size="sm" style={{ background: (src?.color || '#4A7AAB') + '18', color: src?.color || '#4A7AAB' }}>
                     {lang === 'ar' ? src?.ar : src?.en}
-                  </span>
+                  </Badge>
                   {lead.type === 'fresh' && canViewFresh && (
-                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: '#EF444418', color: '#EF4444', fontWeight: 600 }}>
-                      {lang === 'ar' ? 'فريش' : 'Fresh'}
-                    </span>
+                    <Badge variant="danger" size="sm">{lang === 'ar' ? 'فريش' : 'Fresh'}</Badge>
                   )}
                   {isReserved && (
-                    <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 6, background: 'rgba(74,122,171,0.12)', color: '#4A7AAB' }}>
-                      {lang === 'ar' ? 'محجوز' : 'Reserved'}
-                    </span>
+                    <Badge variant="info" size="sm">{lang === 'ar' ? 'محجوز' : 'Reserved'}</Badge>
                   )}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 3, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <span style={{ fontSize: 12, color: c.muted }}>{lead.phone}</span>
-                  <span style={{ fontSize: 11, color: aging.color, fontWeight: 500 }}>
-                    <Clock size={10} style={{ display: 'inline', marginLeft: 3 }} />
+                <div className={`flex items-center gap-2.5 mt-0.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <span className="text-xs text-content-muted dark:text-content-muted-dark">{lead.phone}</span>
+                  <span className="text-[11px] font-medium" style={{ color: aging.color }}>
+                    <Clock size={10} className="inline ml-0.5" />
                     {aging.label} {lang === 'ar' ? 'في الانتظار' : 'waiting'}
                   </span>
                 </div>
 
                 {/* SLA Bar */}
-                <div style={{ marginTop: 5, maxWidth: 200 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: 10, color: c.muted }}>SLA</span>
-                    <span style={{ fontSize: 10, color: sla.breached ? '#EF4444' : c.muted, fontWeight: sla.breached ? 700 : 400 }}>
+                <div className="mt-1.5 max-w-[200px]">
+                  <div className="flex justify-between mb-0.5">
+                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark">SLA</span>
+                    <span className={`text-[10px] ${sla.breached ? 'text-red-500 font-bold' : 'text-content-muted dark:text-content-muted-dark font-normal'}`}>
                       {sla.breached ? (lang === 'ar' ? 'تعدى الوقت' : 'Breached') : `${sla.remaining}د`}
                     </span>
                   </div>
-                  <div style={{ height: 3, borderRadius: 2, background: c.border, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: sla.pct + '%', borderRadius: 2, background: sla.breached ? '#EF4444' : sla.pct > 75 ? '#6B8DB5' : c.accent, transition: 'width 0.3s' }} />
+                  <div className="h-[3px] rounded-sm bg-edge dark:bg-edge-dark overflow-hidden">
+                    <div className={`h-full rounded-sm transition-[width] duration-300 ${sla.breached ? 'bg-red-500' : sla.pct > 75 ? 'bg-[#6B8DB5]' : 'bg-brand-500'}`} style={{ width: sla.pct + '%' }} />
                   </div>
                 </div>
               </div>
 
               {/* Score */}
-              <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                <div style={{ fontSize: 18, fontWeight: 700, color: score > 75 ? '#EF4444' : score > 50 ? '#6B8DB5' : c.accent }}>{score}</div>
-                <div style={{ fontSize: 10, color: c.muted }}>{lang === 'ar' ? 'سكور' : 'Score'}</div>
+              <div className="text-center shrink-0">
+                <div className={`text-lg font-bold ${score > 75 ? 'text-red-500' : score > 50 ? 'text-[#6B8DB5]' : 'text-brand-500'}`}>{score}</div>
+                <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سكور' : 'Score'}</div>
               </div>
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <div className={`flex gap-1.5 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 {!isReserved && (
-                  <button onClick={() => handleReserve(lead)} style={{
-                    padding: '5px 10px', borderRadius: 6, border: '1px solid ' + c.border,
-                    background: 'transparent', color: c.muted, fontSize: 11, cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
+                  <Button variant="ghost" size="sm" onClick={() => handleReserve(lead)}>
                     <Eye size={12} />
                     {lang === 'ar' ? 'حجز' : 'Reserve'}
-                  </button>
+                  </Button>
                 )}
                 {canAssign && (
-                  <button onClick={() => setAssignModal([lead.id])} style={{
-                    padding: '5px 12px', borderRadius: 6, border: 'none',
-                    background: c.primary, color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 600,
-                    display: 'flex', alignItems: 'center', gap: 4,
-                  }}>
+                  <Button variant="primary" size="sm" onClick={() => setAssignModal([lead.id])}>
                     <UserPlus size={12} />
                     {lang === 'ar' ? 'توزيع' : 'Assign'}
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
           );
         })}
-      </div>
+      </Card>
 
       {/* Assign Modal */}
-      {assignModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: c.card, borderRadius: 14, padding: 24, width: 420, maxWidth: '90vw', border: '1px solid ' + c.border }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: c.text }}>
-                {lang === 'ar' ? `توزيع ${assignModal === 'bulk' ? selected.length + ' ليدز' : 'ليد'}` : `Assign ${assignModal === 'bulk' ? selected.length + ' leads' : 'lead'}`}
-              </h3>
-              <button onClick={() => setAssignModal(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: c.muted }}>
-                <X size={18} />
+      <Modal
+        open={!!assignModal}
+        onClose={() => setAssignModal(null)}
+        title={lang === 'ar' ? `توزيع ${assignModal === 'bulk' ? selected.length + ' ليدز' : 'ليد'}` : `Assign ${assignModal === 'bulk' ? selected.length + ' leads' : 'lead'}`}
+        width="max-w-md"
+      >
+        <div className="flex flex-col gap-2">
+          {MOCK_AGENTS.map(agent => {
+            const level = LEVELS[agent.level];
+            const atCap = agent.today_count >= level.dailyCap;
+            return (
+              <button key={agent.id} onClick={() => !atCap && handleAssign(assignModal === 'bulk' ? selected : assignModal, agent.id)}
+                disabled={atCap}
+                className={`
+                  flex items-center justify-between px-3.5 py-2.5 rounded-lg border border-edge dark:border-edge-dark
+                  transition-colors cursor-pointer
+                  ${atCap ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-brand-500/[0.07]' : 'bg-transparent hover:bg-gray-50 dark:hover:bg-brand-500/[0.07]'}
+                  ${isRTL ? 'flex-row-reverse' : ''}
+                `}>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
+                  <div className="text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? agent.name_ar : agent.name_en}</div>
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? level.ar : level.en} · وزن {level.weight}</div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-xs font-semibold ${atCap ? 'text-red-500' : 'text-brand-500'}`}>
+                    {agent.today_count}/{level.dailyCap}
+                  </div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'اليوم' : 'today'}</div>
+                </div>
               </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {MOCK_AGENTS.map(agent => {
-                const level = LEVELS[agent.level];
-                const atCap = agent.today_count >= level.dailyCap;
-                return (
-                  <button key={agent.id} onClick={() => !atCap && handleAssign(assignModal === 'bulk' ? selected : assignModal, agent.id)}
-                    disabled={atCap}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '10px 14px', borderRadius: 8, border: '1px solid ' + c.border,
-                      background: atCap ? c.rowHover : 'transparent', cursor: atCap ? 'not-allowed' : 'pointer',
-                      opacity: atCap ? 0.5 : 1, flexDirection: isRTL ? 'row-reverse' : 'row',
-                    }}>
-                    <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? agent.name_ar : agent.name_en}</div>
-                      <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? level.ar : level.en} · وزن {level.weight}</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: 12, color: atCap ? '#EF4444' : c.accent, fontWeight: 600 }}>
-                        {agent.today_count}/{level.dailyCap}
-                      </div>
-                      <div style={{ fontSize: 10, color: c.muted }}>{lang === 'ar' ? 'اليوم' : 'today'}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+            );
+          })}
         </div>
-      )}
+      </Modal>
 
       {/* Add Cold Call Modal */}
-      {addModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: c.card, borderRadius: 14, padding: 24, width: 380, maxWidth: '90vw', border: '1px solid ' + c.border }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'إضافة كولد كول' : 'Add Cold Call'}</h3>
-              <button onClick={() => setAddModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: c.muted }}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <input value={newLead.name} onChange={e => setNewLead(f => ({...f, name: e.target.value}))}
-                placeholder={lang === 'ar' ? 'الاسم' : 'Name'} style={{
-                  padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border,
-                  background: c.input, color: c.text, fontSize: 13, outline: 'none', direction: isRTL ? 'rtl' : 'ltr',
-                }} />
-              <input value={newLead.phone} onChange={e => setNewLead(f => ({...f, phone: e.target.value}))}
-                placeholder={lang === 'ar' ? 'رقم الهاتف' : 'Phone'} style={{
-                  padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border,
-                  background: c.input, color: c.text, fontSize: 13, outline: 'none',
-                }} />
-              <div style={{ display: 'flex', gap: 8, justifyContent: isRTL ? 'flex-start' : 'flex-end' }}>
-                <button onClick={() => setAddModal(false)} style={{
-                  padding: '8px 14px', borderRadius: 8, border: '1px solid ' + c.border,
-                  background: 'transparent', color: c.muted, fontSize: 13, cursor: 'pointer',
-                }}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
-                <button onClick={handleAddCold} disabled={!newLead.name || !newLead.phone} style={{
-                  padding: '8px 16px', borderRadius: 8, border: 'none',
-                  background: c.primary, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                  opacity: !newLead.name || !newLead.phone ? 0.6 : 1,
-                }}>{lang === 'ar' ? 'إضافة' : 'Add'}</button>
-              </div>
-            </div>
-          </div>
+      <Modal
+        open={addModal}
+        onClose={() => setAddModal(false)}
+        title={lang === 'ar' ? 'إضافة كولد كول' : 'Add Cold Call'}
+        width="max-w-sm"
+      >
+        <div className="flex flex-col gap-3">
+          <Input
+            value={newLead.name}
+            onChange={e => setNewLead(f => ({...f, name: e.target.value}))}
+            placeholder={lang === 'ar' ? 'الاسم' : 'Name'}
+            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+          />
+          <Input
+            value={newLead.phone}
+            onChange={e => setNewLead(f => ({...f, phone: e.target.value}))}
+            placeholder={lang === 'ar' ? 'رقم الهاتف' : 'Phone'}
+          />
+          <ModalFooter className={isRTL ? 'justify-start' : 'justify-end'}>
+            <Button variant="secondary" size="sm" onClick={() => setAddModal(false)}>
+              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button variant="primary" size="sm" onClick={handleAddCold} disabled={!newLead.name || !newLead.phone}>
+              {lang === 'ar' ? 'إضافة' : 'Add'}
+            </Button>
+          </ModalFooter>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }
