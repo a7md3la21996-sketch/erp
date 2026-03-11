@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useDS } from '../hooks/useDesignSystem';
 import { useTranslation } from 'react-i18next';
 import {
   Target, TrendingUp, TrendingDown, Users, Star,
@@ -8,6 +7,10 @@ import {
 } from 'lucide-react';
 import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
+import Card, { CardHeader, CardBody } from '../components/ui/Card';
+import Input, { Select } from '../components/ui/Input';
+import Badge from '../components/ui/Badge';
+import KpiCard from '../components/ui/KpiCard';
 
 // ── Mock CRM Activity Data ─────────────────────────────────────
 const MOCK_CRM_ACTIVITY = {
@@ -123,8 +126,6 @@ const BOX_COLORS = [
 
 export default function PerformancePage() {
   const { i18n } = useTranslation();
-  const c = useDS();
-  const isDark = c.dark;
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
 
@@ -196,19 +197,19 @@ export default function PerformancePage() {
   ];
 
   return (
-    <div style={{ padding: 24, background: c.bg, minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: '#2B4C6F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="mb-6">
+        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className="w-10 h-10 rounded-[10px] bg-brand-800 flex items-center justify-center">
             <Target size={20} color="#fff" />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: c.text }}>
+            <h1 className="m-0 text-[22px] font-bold text-content dark:text-content-dark">
               {lang === 'ar' ? 'متابعة الأداء' : 'Performance Tracking'}
             </h1>
-            <p style={{ margin: 0, fontSize: 13, color: c.muted }}>
+            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">
               {lang === 'ar' ? 'KPIs مبنية على بيانات CRM + الحضور — مارس 2026' : 'KPIs from CRM + Attendance data — March 2026'}
             </p>
           </div>
@@ -216,99 +217,110 @@ export default function PerformancePage() {
       </div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 24 }}>
+      <div className="grid grid-cols-4 gap-3.5 mb-6">
         {[
           { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg Performance', value: avgPerf + '%', icon: '', color: '#4A7AAB' },
           { label: lang === 'ar' ? 'متميزون' : 'Top Performers',       value: topPerformers,  icon: '', color: '#4A7AAB' },
           { label: lang === 'ar' ? 'يحتاجون متابعة' : 'Need Attention', value: atRisk,         icon: '', color: '#EF4444' },
           { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: MOCK_EMPLOYEES.length, icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
-          <div key={i} style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
-            <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
-            <div style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 12, color: c.muted }}>{s.label}</div>
-          </div>
+          <Card key={i} className="px-[18px] py-4">
+            <div className="text-[22px] mb-1.5">{s.icon}</div>
+            <div className="text-[26px] font-extrabold" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-xs text-content-muted dark:text-content-muted-dark">{s.label}</div>
+          </Card>
         ))}
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '1px solid ' + c.border, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+      <div className={`flex gap-0 mb-5 border-b border-edge dark:border-edge-dark ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         {tabs.map(t => (
-          <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
-            padding: '11px 20px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-            background: 'transparent', color: activeTab === t.key ? c.accent : c.muted,
-            borderBottom: activeTab === t.key ? '2px solid ' + c.accent : '2px solid transparent',
-          }}>
+          <button key={t.key} onClick={() => setActiveTab(t.key)}
+            className={`px-5 py-[11px] border-none cursor-pointer text-[13px] font-medium bg-transparent transition-colors duration-200
+              ${activeTab === t.key
+                ? 'text-brand-500 border-b-2 border-brand-500'
+                : 'text-content-muted dark:text-content-muted-dark border-b-2 border-transparent'
+              }`}
+          >
             {lang === 'ar' ? t.ar : t.en}
           </button>
         ))}
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <Search size={14} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRTL ? 'right' : 'left']: 12, color: c.muted }} />
-          <input value={search} onChange={e => setSearch(e.target.value)}
+      <div className={`flex gap-2.5 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className="relative flex-1 max-w-[300px]">
+          <Search size={14} className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-3' : 'left-3'}`} />
+          <Input value={search} onChange={e => setSearch(e.target.value)}
             placeholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employee...'}
-            style={{ width: '100%', padding: isRTL ? '9px 38px 9px 12px' : '9px 12px 9px 38px', borderRadius: 8, border: '1px solid ' + c.border, background: c.input, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+            className={isRTL ? 'pr-[38px] pl-3' : 'pl-[38px] pr-3'}
           />
         </div>
-        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid ' + c.border, background: c.input, color: c.text, fontSize: 13, cursor: 'pointer' }}>
+        <Select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} className="w-auto">
           <option value="all">{lang === 'ar' ? 'كل الأقسام' : 'All Departments'}</option>
           {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{lang === 'ar' ? d.name_ar : d.name_en}</option>)}
-        </select>
+        </Select>
       </div>
 
       {/* ── OVERVIEW TAB ── */}
       {activeTab === 'overview' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {filtered.sort((a, b) => b.avgPct - a.avgPct).map((d, idx) => {
             const dept = DEPARTMENTS.find(dep => dep.id === d.emp.department);
             const color = d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444';
             return (
-              <div key={d.emp.id} role="button" tabIndex={0} onClick={() => setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d)}
+              <Card key={d.emp.id} hover
+                role="button" tabIndex={0}
+                onClick={() => setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d)}
                 onKeyDown={e => { if(e.key==='Enter'||e.key===' ') setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d); }}
-                style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, padding: '14px 18px', cursor: 'pointer', transition: 'all 0.15s', flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = c.accent}
-                onMouseLeave={e => e.currentTarget.style.borderColor = c.border}
+                className="px-[18px] py-3.5"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                   {/* Rank */}
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: idx < 3 ? ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] + '20' : c.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: idx < 3 ? ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] : c.muted, flexShrink: 0 }}>
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${idx >= 3 ? 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark' : ''}`}
+                    style={idx < 3 ? {
+                      background: ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] + '20',
+                      color: ['#6B8DB5','#8BA8C8','#4A7AAB'][idx],
+                    } : undefined}
+                  >
                     {idx + 1}
                   </div>
                   {/* Avatar */}
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: d.emp.avatar_color || '#2B4C6F', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                  <div
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                    style={{ background: d.emp.avatar_color || '#2B4C6F' }}
+                  >
                     {(lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en).charAt(0)}
                   </div>
                   {/* Info */}
-                  <div style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: c.text }}>{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
-                    <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? d.emp.job_title_ar : d.emp.job_title_en} · {dept ? (lang === 'ar' ? dept.name_ar : dept.name_en) : ''}</div>
+                  <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className="text-sm font-semibold text-content dark:text-content-dark">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
+                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? d.emp.job_title_ar : d.emp.job_title_en} · {dept ? (lang === 'ar' ? dept.name_ar : dept.name_en) : ''}</div>
                   </div>
                   {/* Quick Stats */}
-                  <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                    <div style={{ textAlign: 'center', minWidth: 50 }}>
-                      <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? 'حضور' : 'Attend'}</div>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{d.presentDays}d</div>
+                  <div className={`flex gap-4 items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className="text-center min-w-[50px]">
+                      <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'حضور' : 'Attend'}</div>
+                      <div className="text-[13px] font-bold text-content dark:text-content-dark">{d.presentDays}d</div>
                     </div>
                     {d.crm.calls > 0 && (
-                      <div style={{ textAlign: 'center', minWidth: 50 }}>
-                        <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? 'مكالمات' : 'Calls'}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{d.crm.calls}</div>
+                      <div className="text-center min-w-[50px]">
+                        <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مكالمات' : 'Calls'}</div>
+                        <div className="text-[13px] font-bold text-content dark:text-content-dark">{d.crm.calls}</div>
                       </div>
                     )}
                     {d.crm.deals_closed > 0 && (
-                      <div style={{ textAlign: 'center', minWidth: 50 }}>
-                        <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? 'صفقات' : 'Deals'}</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#4A7AAB' }}>{d.crm.deals_closed}</div>
+                      <div className="text-center min-w-[50px]">
+                        <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'صفقات' : 'Deals'}</div>
+                        <div className="text-[13px] font-bold text-brand-500">{d.crm.deals_closed}</div>
                       </div>
                     )}
                     {/* Score */}
-                    <div style={{ textAlign: 'center', minWidth: 60 }}>
-                      <div style={{ fontSize: 20, fontWeight: 800, color }}>{d.avgPct}%</div>
-                      <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', marginTop: 4, width: 60 }}>
-                        <div style={{ height: '100%', borderRadius: 2, width: Math.min(d.avgPct, 100) + '%', background: color }} />
+                    <div className="text-center min-w-[60px]">
+                      <div className="text-xl font-extrabold" style={{ color }}>{d.avgPct}%</div>
+                      <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08] mt-1 w-[60px]">
+                        <div className="h-full rounded-sm" style={{ width: Math.min(d.avgPct, 100) + '%', background: color }} />
                       </div>
                     </div>
                   </div>
@@ -316,35 +328,35 @@ export default function PerformancePage() {
 
                 {/* Expanded KPIs */}
                 {selectedEmp?.emp.id === d.emp.id && (
-                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid ' + c.border }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px,1fr))', gap: 10 }}>
+                  <div className="mt-3.5 pt-3.5 border-t border-edge dark:border-edge-dark">
+                    <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2.5">
                       {d.scores.map((kpi, i) => {
                         const freq = FREQ_CONFIG[kpi.freq];
                         const kpiColor = kpi.pct >= 90 ? '#4A7AAB' : kpi.pct >= 60 ? '#6B8DB5' : '#EF4444';
                         return (
-                          <div key={i} style={{ padding: '10px 12px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: '1px solid ' + c.border }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                              <span style={{ fontSize: 12, color: c.muted }}>{lang === 'ar' ? kpi.ar : kpi.en}</span>
-                              <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: freq.color + '20', color: freq.color }}>{lang === 'ar' ? freq.ar : freq.en}</span>
+                          <div key={i} className="px-3 py-2.5 rounded-lg bg-brand-500/[0.06] dark:bg-brand-500/[0.06] border border-edge dark:border-edge-dark">
+                            <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                              <span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? kpi.ar : kpi.en}</span>
+                              <Badge size="sm" className="rounded-[10px]" style={{ background: freq.color + '20', color: freq.color }}>{lang === 'ar' ? freq.ar : freq.en}</Badge>
                             </div>
-                            <div style={{ fontSize: 18, fontWeight: 800, color: kpiColor, textAlign: isRTL ? 'right' : 'left' }}>
+                            <div className={`text-lg font-extrabold ${isRTL ? 'text-right' : 'text-left'}`} style={{ color: kpiColor }}>
                               {kpi.actual.toLocaleString()}{kpi.unit === 'EGP' ? '' : ''}
-                              <span style={{ fontSize: 11, fontWeight: 400, color: c.muted }}> / {kpi.target.toLocaleString()}</span>
+                              <span className="text-[11px] font-normal text-content-muted dark:text-content-muted-dark"> / {kpi.target.toLocaleString()}</span>
                             </div>
-                            <div style={{ height: 3, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', marginTop: 6 }}>
-                              <div style={{ height: '100%', borderRadius: 2, width: Math.min(kpi.pct, 100) + '%', background: kpiColor }} />
+                            <div className="h-[3px] rounded-sm bg-gray-200 dark:bg-white/[0.08] mt-1.5">
+                              <div className="h-full rounded-sm" style={{ width: Math.min(kpi.pct, 100) + '%', background: kpiColor }} />
                             </div>
                           </div>
                         );
                       })}
                     </div>
                     {/* Source note */}
-                    <div style={{ marginTop: 10, fontSize: 11, color: c.muted, textAlign: isRTL ? 'right' : 'left' }}>
+                    <div className={`mt-2.5 text-[11px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>
                        {lang === 'ar' ? 'البيانات من: CRM + الحضور' : 'Data from: CRM + Attendance'}
                     </div>
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -352,54 +364,54 @@ export default function PerformancePage() {
 
       {/* ── KPIs TAB ── */}
       {activeTab === 'kpis' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="flex flex-col gap-5">
           {Object.entries(DEPT_KPIS).map(([deptKey, kpis]) => {
             const dept = DEPARTMENTS.find(d => d.id === deptKey);
             if (!dept) return null;
             const deptEmps = empData.filter(d => d.emp.department === deptKey);
             if (deptEmps.length === 0) return null;
             return (
-              <div key={deptKey} style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid ' + c.border, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: c.text }}>{lang === 'ar' ? dept.name_ar : dept.name_en}</div>
-                  <div style={{ fontSize: 12, color: c.muted }}>{deptEmps.length} {lang === 'ar' ? 'موظف' : 'employees'}</div>
+              <Card key={deptKey} className="overflow-hidden">
+                <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark bg-brand-500/[0.06] dark:bg-brand-500/[0.06] flex justify-between items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className="text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? dept.name_ar : dept.name_en}</div>
+                  <div className="text-xs text-content-muted dark:text-content-muted-dark">{deptEmps.length} {lang === 'ar' ? 'موظف' : 'employees'}</div>
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table className="w-full border-collapse">
                   <thead>
                     <tr>
-                      <th style={{ padding: '10px 16px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.muted }}>{lang === 'ar' ? 'الموظف' : 'Employee'}</th>
+                      <th className={`px-4 py-2.5 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>{lang === 'ar' ? 'الموظف' : 'Employee'}</th>
                       {kpis.map(kpi => (
-                        <th key={kpi.key} style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: c.muted, whiteSpace: 'nowrap' }}>
+                        <th key={kpi.key} className="px-3 py-2.5 text-center text-[11px] font-semibold text-content-muted dark:text-content-muted-dark whitespace-nowrap">
                           <div>{lang === 'ar' ? kpi.ar : kpi.en}</div>
-                          <div style={{ fontSize: 10, color: FREQ_CONFIG[kpi.freq]?.color }}>{lang === 'ar' ? FREQ_CONFIG[kpi.freq]?.ar : FREQ_CONFIG[kpi.freq]?.en}</div>
+                          <div className="text-[10px] text-brand-500">{lang === 'ar' ? FREQ_CONFIG[kpi.freq]?.ar : FREQ_CONFIG[kpi.freq]?.en}</div>
                         </th>
                       ))}
-                      <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: c.muted }}>{lang === 'ar' ? 'الإجمالي' : 'Total'}</th>
+                      <th className="px-3 py-2.5 text-center text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'الإجمالي' : 'Total'}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {deptEmps.map((d, i) => (
-                      <tr key={d.emp.id} style={{ borderTop: '1px solid ' + c.border }}>
-                        <td style={{ padding: '10px 16px' }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
+                      <tr key={d.emp.id} className="border-t border-edge dark:border-edge-dark">
+                        <td className="px-4 py-2.5">
+                          <div className="text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
                         </td>
                         {d.scores.map((kpi, j) => {
                           const kpiColor = kpi.pct >= 90 ? '#4A7AAB' : kpi.pct >= 60 ? '#6B8DB5' : '#EF4444';
                           return (
-                            <td key={j} style={{ padding: '10px 12px', textAlign: 'center' }}>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: kpiColor }}>{kpi.actual.toLocaleString()}</div>
-                              <div style={{ fontSize: 10, color: c.muted }}>/{kpi.target}</div>
+                            <td key={j} className="px-3 py-2.5 text-center">
+                              <div className="text-[13px] font-bold" style={{ color: kpiColor }}>{kpi.actual.toLocaleString()}</div>
+                              <div className="text-[10px] text-content-muted dark:text-content-muted-dark">/{kpi.target}</div>
                             </td>
                           );
                         })}
-                        <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444' }}>{d.avgPct}%</span>
+                        <td className="px-3 py-2.5 text-center">
+                          <span className="text-[13px] font-extrabold" style={{ color: d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444' }}>{d.avgPct}%</span>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -408,10 +420,10 @@ export default function PerformancePage() {
       {/* ── 9-BOX TAB ── */}
       {activeTab === 'ninebox' && (
         <div>
-          <div style={{ padding: '12px 16px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.2)'), marginBottom: 20, fontSize: 13, color: isDark ? '#8BA8C8' : '#4A7AAB' }}>
+          <div className="px-4 py-3 rounded-lg bg-brand-500/[0.08] border border-brand-500/20 mb-5 text-[13px] text-brand-500 dark:text-brand-300">
             {lang === 'ar' ? ' المحور الأفقي: الأداء (KPIs) · المحور الرأسي: الالتزام (الحضور)' : 'X-axis: Performance (KPIs) · Y-axis: Commitment (Attendance)'}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
+          <div className="grid grid-cols-3 gap-3">
             {[2,1,0].map(potential => (
               [0,1,2].map(perf => {
                 const boxEmps = filtered.filter(d => {
@@ -421,20 +433,23 @@ export default function PerformancePage() {
                 const label = BOX_LABELS[lang][2 - potential][perf];
                 const color = BOX_COLORS[2 - potential][perf];
                 return (
-                  <div key={`${potential}-${perf}`} style={{ background: c.card, borderRadius: 10, border: '2px solid ' + color + '30', padding: '14px', minHeight: 100 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{label}</div>
+                  <Card key={`${potential}-${perf}`} className="p-3.5 min-h-[100px]" style={{ borderWidth: 2, borderColor: color + '30' }}>
+                    <div className={`text-xs font-bold mb-2 ${isRTL ? 'text-right' : 'text-left'}`} style={{ color }}>{label}</div>
                     {boxEmps.length === 0 ? (
-                      <div style={{ fontSize: 11, color: c.muted, textAlign: 'center', padding: '10px 0' }}>—</div>
+                      <div className="text-[11px] text-content-muted dark:text-content-muted-dark text-center py-2.5">—</div>
                     ) : (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      <div className="flex flex-wrap gap-1.5">
                         {boxEmps.map(d => (
-                          <div key={d.emp.id} title={lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en} style={{ width: 30, height: 30, borderRadius: '50%', background: `hsl(${d.emp.id.charCodeAt(1) * 40},60%,50%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
+                          <div key={d.emp.id} title={lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}
+                            className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[11px] font-bold text-white cursor-pointer"
+                            style={{ background: `hsl(${d.emp.id.charCodeAt(1) * 40},60%,50%)` }}
+                          >
                             {(lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en).charAt(0)}
                           </div>
                         ))}
                       </div>
                     )}
-                  </div>
+                  </Card>
                 );
               })
             ))}
@@ -444,32 +459,32 @@ export default function PerformancePage() {
 
       {/* ── ACTIVITY TAB ── */}
       {activeTab === 'activity' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="flex flex-col gap-4">
           {/* Activity Legend */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+          <div className="grid grid-cols-3 gap-3.5">
             {[
               { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.calls, 0), icon: '', color: '#4A7AAB' },
               { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.opportunities, 0), icon: '', color: '#4A7AAB' },
               { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.deals_closed, 0), icon: '', color: '#4A7AAB' },
             ].map((s, i) => (
-              <div key={i} style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
-                <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
-                <div style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: c.muted }}>{s.label}</div>
-              </div>
+              <Card key={i} className="px-[18px] py-4">
+                <div className="text-[22px] mb-1.5">{s.icon}</div>
+                <div className="text-[26px] font-extrabold" style={{ color: s.color }}>{s.value}</div>
+                <div className="text-xs text-content-muted dark:text-content-muted-dark">{s.label}</div>
+              </Card>
             ))}
           </div>
 
           {/* Activity vs Results */}
-          <div style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
-            <div style={{ padding: '14px 20px', borderBottom: '1px solid ' + c.border, fontSize: 14, fontWeight: 700, color: c.text, textAlign: isRTL ? 'right' : 'left' }}>
+          <Card className="overflow-hidden">
+            <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark text-sm font-bold text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`}>
               {lang === 'ar' ? 'النشاط مقابل النتائج — Sales' : 'Activity vs Results — Sales'}
             </div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="w-full border-collapse">
               <thead>
-                <tr style={{ background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC' }}>
+                <tr className="bg-brand-500/[0.06] dark:bg-brand-500/[0.06]">
                   {[lang === 'ar' ? 'الموظف' : 'Employee', lang === 'ar' ? 'مكالمات' : 'Calls', lang === 'ar' ? 'فرص' : 'Opps', lang === 'ar' ? 'صفقات' : 'Deals', lang === 'ar' ? 'الإيرادات' : 'Revenue', lang === 'ar' ? 'التحليل' : 'Analysis'].map((h, i) => (
-                    <th key={i} style={{ padding: '10px 16px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.muted }}>{h}</th>
+                    <th key={i} className={`px-4 py-2.5 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -484,38 +499,38 @@ export default function PerformancePage() {
                     ? { ar: 'نشاط منخفض', en: 'Low Activity', color: '#EF4444' }
                     : { ar: 'جيد ', en: 'Good ', color: '#4A7AAB' };
                   return (
-                    <tr key={d.emp.id} style={{ borderTop: i > 0 ? '1px solid ' + c.border : 'none' }}>
-                      <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: c.text }}>{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 13, color: c.text }}>{d.crm.calls}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 13, color: c.text }}>{d.crm.opportunities}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#4A7AAB' }}>{d.crm.deals_closed}</td>
-                      <td style={{ padding: '12px 16px', fontSize: 13, color: c.accent }}>{d.crm.revenue > 0 ? (d.crm.revenue / 1000).toFixed(0) + 'K' : '—'}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, background: analysis.color + '20', color: analysis.color }}>
+                    <tr key={d.emp.id} className={i > 0 ? 'border-t border-edge dark:border-edge-dark' : ''}>
+                      <td className="px-4 py-3 text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</td>
+                      <td className="px-4 py-3 text-[13px] text-content dark:text-content-dark">{d.crm.calls}</td>
+                      <td className="px-4 py-3 text-[13px] text-content dark:text-content-dark">{d.crm.opportunities}</td>
+                      <td className="px-4 py-3 text-[13px] font-bold text-brand-500">{d.crm.deals_closed}</td>
+                      <td className="px-4 py-3 text-[13px] text-brand-500">{d.crm.revenue > 0 ? (d.crm.revenue / 1000).toFixed(0) + 'K' : '—'}</td>
+                      <td className="px-4 py-3">
+                        <Badge size="sm" className="rounded-[20px]" style={{ background: analysis.color + '20', color: analysis.color }}>
                           {lang === 'ar' ? analysis.ar : analysis.en}
-                        </span>
+                        </Badge>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
-          </div>
+          </Card>
 
           {/* Golden Rule */}
-          <div style={{ padding: '14px 20px', borderRadius: 10, background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(74,122,171,0.08)', border: '1px solid ' + (isDark ? 'rgba(99,102,241,0.2)' : '#8BA8C8') }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#8BA8C8' : '#2B4C6F', marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>
+          <div className="px-5 py-3.5 rounded-[10px] bg-brand-500/[0.08] dark:bg-indigo-500/10 border border-brand-300 dark:border-indigo-500/20">
+            <div className={`text-[13px] font-bold text-brand-800 dark:text-brand-300 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
               {lang === 'ar' ? ' القاعدة الذهبية' : 'Golden Rule'}
             </div>
-            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <div className={`flex gap-5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
               {[
                 { ar: 'نشاط عالي + نتيجة عالية = نجم → مكافأة', en: 'High Activity + High Results = Star → Reward', color: '#4A7AAB' },
                 { ar: 'نشاط عالي + نتيجة ضعيفة = مشكلة مهارة → تدريب', en: 'High Activity + Low Results = Skill Gap → Training', color: '#6B8DB5' },
                 { ar: 'نشاط منخفض + نتيجة ضعيفة = مشكلة التزام → متابعة', en: 'Low Activity + Low Results = Commitment Issue → Follow Up', color: '#EF4444' },
               ].map((r, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, flexShrink: 0 }} />
-                  <span style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#2B4C6F' }}>{lang === 'ar' ? r.ar : r.en}</span>
+                <div key={i} className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: r.color }} />
+                  <span className="text-xs text-brand-800 dark:text-brand-300">{lang === 'ar' ? r.ar : r.en}</span>
                 </div>
               ))}
             </div>
@@ -524,29 +539,29 @@ export default function PerformancePage() {
       )}
       {/* ── BSC TAB ── */}
       {activeTab === 'bsc' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12 }}>
+        <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-4 gap-3">
             {BSC_PERSPECTIVES.map(p => {
               const avg = Math.round(p.objectives.reduce((s,o) => s + Math.min((o.actual / o.target) * 100, 100), 0) / p.objectives.length);
               return (
-                <div key={p.key} style={{ background: c.card, borderRadius: 12, border: `2px solid ${p.color}30`, padding: '16px 18px', textAlign: isRTL ? 'right' : 'left' }}>
-                  <div style={{ fontSize: 24, marginBottom: 6 }}>{p.icon}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 4 }}>{lang === 'ar' ? p.ar : p.en}</div>
-                  <div style={{ fontSize: 28, fontWeight: 900, color: p.color }}>{avg}%</div>
-                  <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', marginTop: 8 }}>
-                    <div style={{ height: '100%', borderRadius: 2, width: avg + '%', background: p.color }} />
+                <Card key={p.key} className={`px-[18px] py-4 ${isRTL ? 'text-right' : 'text-left'}`} style={{ borderWidth: 2, borderColor: p.color + '30' }}>
+                  <div className="text-2xl mb-1.5">{p.icon}</div>
+                  <div className="text-[13px] font-bold text-content dark:text-content-dark mb-1">{lang === 'ar' ? p.ar : p.en}</div>
+                  <div className="text-[28px] font-black" style={{ color: p.color }}>{avg}%</div>
+                  <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08] mt-2">
+                    <div className="h-full rounded-sm" style={{ width: avg + '%', background: p.color }} />
                   </div>
-                </div>
+                </Card>
               );
             })}
           </div>
           {BSC_PERSPECTIVES.map(p => (
-            <div key={p.key} style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
-              <div style={{ padding: '12px 18px', borderBottom: '1px solid ' + c.border, background: p.color + '10', display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <span style={{ fontSize: 16 }}>{p.icon}</span>
-                <span style={{ fontSize: 14, fontWeight: 700, color: p.color }}>{lang === 'ar' ? p.ar : p.en}</span>
+            <Card key={p.key} className="overflow-hidden">
+              <div className={`px-[18px] py-3 border-b border-edge dark:border-edge-dark flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`} style={{ background: p.color + '10' }}>
+                <span className="text-base">{p.icon}</span>
+                <span className="text-sm font-bold" style={{ color: p.color }}>{lang === 'ar' ? p.ar : p.en}</span>
               </div>
-              <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div className="px-[18px] py-3.5 flex flex-col gap-3.5">
                 {p.objectives.map((o, i) => {
                   const pct  = Math.min(Math.round((o.actual / o.target) * 100), 150);
                   const disp = Math.min(pct, 100);
@@ -554,25 +569,25 @@ export default function PerformancePage() {
                   const fmt  = v => typeof v === 'number' && v > 1000 ? (v / 1000).toFixed(0) + 'K' : v;
                   return (
                     <div key={i}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                        <span style={{ fontSize: 13, color: c.text, fontWeight: 500 }}>{lang === 'ar' ? o.ar : o.en}</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: col }}>{fmt(o.actual)}{o.unit}</span>
-                          <span style={{ fontSize: 11, color: c.muted }}>/ {fmt(o.target)}{o.unit}</span>
-                          {pct > 100 && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: '#4A7AAB20', color: '#4A7AAB', fontWeight: 600 }}>+{pct - 100}%</span>}
+                      <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <span className="text-[13px] text-content dark:text-content-dark font-medium">{lang === 'ar' ? o.ar : o.en}</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[13px] font-bold" style={{ color: col }}>{fmt(o.actual)}{o.unit}</span>
+                          <span className="text-[11px] text-content-muted dark:text-content-muted-dark">/ {fmt(o.target)}{o.unit}</span>
+                          {pct > 100 && <Badge size="sm" className="rounded-[10px] bg-brand-500/[0.12] text-brand-500 font-semibold">+{pct - 100}%</Badge>}
                         </div>
                       </div>
-                      <div style={{ height: 8, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                        <div style={{ height: '100%', borderRadius: 4, width: disp + '%', background: `linear-gradient(90deg,${col}99,${col})` }} />
+                      <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08]">
+                        <div className="h-full rounded" style={{ width: disp + '%', background: `linear-gradient(90deg,${col}99,${col})` }} />
                       </div>
-                      <div style={{ fontSize: 11, color: c.muted, marginTop: 3, textAlign: isRTL ? 'right' : 'left' }}>{pct}%</div>
+                      <div className={`text-[11px] text-content-muted dark:text-content-muted-dark mt-[3px] ${isRTL ? 'text-right' : 'text-left'}`}>{pct}%</div>
                     </div>
                   );
                 })}
               </div>
-            </div>
+            </Card>
           ))}
-          <div style={{ padding: '14px 18px', borderRadius: 10, background: isDark ? 'rgba(139,92,246,0.08)' : 'rgba(74,122,171,0.06)', border: '1px solid ' + (isDark ? 'rgba(139,92,246,0.2)' : 'rgba(74,122,171,0.15)'), fontSize: 12, color: isDark ? '#8BA8C8' : '#2B4C6F', textAlign: isRTL ? 'right' : 'left' }}>
+          <div className={`px-[18px] py-3.5 rounded-[10px] bg-brand-500/[0.06] dark:bg-purple-500/[0.08] border border-brand-500/[0.15] dark:border-purple-500/20 text-xs text-brand-800 dark:text-brand-300 ${isRTL ? 'text-right' : 'text-left'}`}>
              {lang === 'ar' ? 'البيانات ستكون حقيقية بعد ربط الـ modules — Finance + CRM + Sales' : 'Data will be live once Finance, CRM & Sales modules are connected.'}
           </div>
         </div>

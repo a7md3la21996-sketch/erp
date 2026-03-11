@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDS } from '../hooks/useDesignSystem';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -9,6 +8,7 @@ import {
   Clock, Activity, TrendingUp
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
+import { Button, Card, Input, Select, Textarea, Badge, KpiCard } from '../components/ui';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -35,10 +35,8 @@ function timeAgo(dateStr, lang) {
 
 export default function ActivitiesPage() {
   const { i18n } = useTranslation();
-  const c = useDS();
   const { user } = useAuth();
   const lang  = i18n.language;
-  const isDark = c.dark;
   const isRTL  = lang === 'ar';
 
   const [activities, setActivities] = useState([]);
@@ -98,167 +96,180 @@ export default function ActivitiesPage() {
   );
 
   return (
-    <div style={{ padding: '24px', background: c.bg, minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 40, height: 40, borderRadius: 10, background: c.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className={`flex items-center justify-between mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className="w-10 h-10 rounded-[10px] bg-brand-800 flex items-center justify-center">
             <Activity size={20} color="#fff" />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: c.text }}>
+            <h1 className="m-0 text-[22px] font-bold text-content dark:text-content-dark">
               {lang === 'ar' ? 'سجل الأنشطة' : 'Activity Log'}
             </h1>
-            <p style={{ margin: 0, fontSize: 13, color: c.muted }}>
+            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">
               {lang === 'ar' ? 'كل الأنشطة من كل الأقسام' : 'All activities across all departments'}
             </p>
           </div>
         </div>
-        <button onClick={() => setAdding(!adding)} style={{
-          display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8,
-          border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600,
-          background: adding ? c.border : c.primary, color: adding ? c.muted : '#fff',
-          flexDirection: isRTL ? 'row-reverse' : 'row',
-        }}>
+        <Button
+          variant={adding ? 'secondary' : 'primary'}
+          size="sm"
+          onClick={() => setAdding(!adding)}
+          className={isRTL ? 'flex-row-reverse' : ''}
+        >
           {adding ? <X size={15} /> : <Plus size={15} />}
           {adding ? (lang === 'ar' ? 'إلغاء' : 'Cancel') : (lang === 'ar' ? 'نشاط جديد' : 'New Activity')}
-        </button>
+        </Button>
       </div>
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
-        {[
-          { label: lang === 'ar' ? 'إجمالي الأنشطة' : 'Total Activities', value: stats.total, icon: Activity, color: c.accent },
-          { label: lang === 'ar' ? 'اليوم' : 'Today', value: stats.today, icon: Clock, color: c.primary },
-          { label: lang === 'ar' ? 'النشاط الأكثر' : 'Top Activity', value: stats.topType ? (lang === 'ar' ? ACTIVITY_TYPES[stats.topType[0]]?.ar : ACTIVITY_TYPES[stats.topType[0]]?.en) : '—', icon: TrendingUp, color: '#6B8DB5' },
-        ].map((s, i) => {
-          const Ic = s.icon;
-          return (
-            <div key={i} style={{ background: c.card, borderRadius: 10, padding: '14px 16px', border: '1px solid ' + c.border }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <Ic size={16} color={s.color} />
-                <span style={{ fontSize: 11, color: c.muted }}>{s.label}</span>
-              </div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: c.text, marginTop: 4, textAlign: isRTL ? 'right' : 'left' }}>{s.value}</div>
-            </div>
-          );
-        })}
+      <div className="grid grid-cols-3 gap-3 mb-5">
+        <KpiCard
+          icon={Activity}
+          label={lang === 'ar' ? 'إجمالي الأنشطة' : 'Total Activities'}
+          value={stats.total}
+          color="#4A7AAB"
+        />
+        <KpiCard
+          icon={Clock}
+          label={lang === 'ar' ? 'اليوم' : 'Today'}
+          value={stats.today}
+          color="#2B4C6F"
+        />
+        <KpiCard
+          icon={TrendingUp}
+          label={lang === 'ar' ? 'النشاط الأكثر' : 'Top Activity'}
+          value={stats.topType ? (lang === 'ar' ? ACTIVITY_TYPES[stats.topType[0]]?.ar : ACTIVITY_TYPES[stats.topType[0]]?.en) : '—'}
+          color="#6B8DB5"
+        />
       </div>
 
       {/* Add Form */}
       {adding && (
-        <div style={{ background: c.card, borderRadius: 12, padding: 18, marginBottom: 16, border: '1px solid ' + c.border }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+        <Card className="p-[18px] mb-4">
+          <div className="grid grid-cols-2 gap-2.5 mb-3">
             {/* Dept */}
             <div>
-              <label style={{ fontSize: 11, color: c.muted, display: 'block', marginBottom: 4 }}>
+              <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1">
                 {lang === 'ar' ? 'القسم' : 'Department'}
               </label>
-              <select value={form.dept} onChange={e => setForm(f => ({ ...f, dept: e.target.value, type: 'call' }))} style={{
-                width: '100%', padding: '7px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-                background: c.input, color: c.text, fontSize: 13, outline: 'none',
-              }}>
+              <Select
+                size="sm"
+                value={form.dept}
+                onChange={e => setForm(f => ({ ...f, dept: e.target.value, type: 'call' }))}
+              >
                 {Object.entries(DEPT_LABELS).filter(([k]) => k !== 'all').map(([k, v]) => (
                   <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             {/* Type */}
             <div>
-              <label style={{ fontSize: 11, color: c.muted, display: 'block', marginBottom: 4 }}>
+              <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1">
                 {lang === 'ar' ? 'النوع' : 'Type'}
               </label>
-              <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={{
-                width: '100%', padding: '7px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-                background: c.input, color: c.text, fontSize: 13, outline: 'none',
-              }}>
+              <Select
+                size="sm"
+                value={form.type}
+                onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+              >
                 {availableTypes.map(([k, v]) => (
                   <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
-          <textarea
+          <Textarea
             value={form.notes}
             onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
             placeholder={lang === 'ar' ? 'ملاحظات النشاط...' : 'Activity notes...'}
             rows={3}
-            style={{
-              width: '100%', padding: '8px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-              background: c.input, color: c.text, fontSize: 13, resize: 'vertical',
-              outline: 'none', boxSizing: 'border-box', direction: isRTL ? 'rtl' : 'ltr',
-            }}
+            size="sm"
+            dir={isRTL ? 'rtl' : 'ltr'}
           />
-          <div style={{ display: 'flex', justifyContent: isRTL ? 'flex-start' : 'flex-end', marginTop: 10, gap: 8 }}>
-            <button onClick={() => setAdding(false)} style={{ padding: '6px 14px', borderRadius: 7, border: '1px solid ' + c.border, background: 'transparent', color: c.muted, fontSize: 12, cursor: 'pointer' }}>
+          <div className={`flex mt-2.5 gap-2 ${isRTL ? 'justify-start' : 'justify-end'}`}>
+            <Button variant="secondary" size="sm" onClick={() => setAdding(false)}>
               {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-            </button>
-            <button onClick={handleAdd} disabled={saving || !form.notes.trim()} style={{
-              padding: '6px 16px', borderRadius: 7, border: 'none', cursor: 'pointer',
-              background: c.primary, color: '#fff', fontSize: 12, fontWeight: 600,
-              opacity: saving || !form.notes.trim() ? 0.6 : 1,
-            }}>
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAdd}
+              disabled={saving || !form.notes.trim()}
+            >
               {saving ? '...' : (lang === 'ar' ? 'حفظ النشاط' : 'Save Activity')}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Filters */}
-      <div style={{ background: c.card, borderRadius: 12, padding: '12px 16px', marginBottom: 12, border: '1px solid ' + c.border, display: 'flex', gap: 10, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center' }}>
+      <Card className={`px-4 py-3 mb-3 flex gap-2.5 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         {/* Search */}
-        <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
-          <Search size={13} style={{ position: 'absolute', [isRTL ? 'right' : 'left']: 10, top: '50%', transform: 'translateY(-50%)', color: c.muted }} />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder={lang === 'ar' ? 'بحث...' : 'Search...'} style={{
-            width: '100%', padding: isRTL ? '7px 30px 7px 10px' : '7px 10px 7px 30px', borderRadius: 7,
-            border: '1px solid ' + c.border, background: c.input, color: c.text, fontSize: 12, outline: 'none', boxSizing: 'border-box',
-          }} />
+        <div className="relative flex-1 min-w-[160px]">
+          <Search
+            size={13}
+            className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-2.5' : 'left-2.5'}`}
+          />
+          <Input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
+            size="sm"
+            className={isRTL ? 'pr-[30px] pl-2.5' : 'pl-[30px] pr-2.5'}
+          />
         </div>
         {/* Dept filter */}
         {Object.entries(DEPT_LABELS).map(([k, v]) => (
-          <button key={k} onClick={() => setDeptFilter(k)} style={{
-            padding: '5px 12px', borderRadius: 6, border: '1px solid ' + (deptFilter === k ? c.accent : c.border),
-            background: deptFilter === k ? c.accent + '18' : 'transparent', color: deptFilter === k ? c.accent : c.muted,
-            fontSize: 12, fontWeight: deptFilter === k ? 600 : 400, cursor: 'pointer',
-          }}>
+          <button
+            key={k}
+            onClick={() => setDeptFilter(k)}
+            className={`px-3 py-[5px] rounded-md border text-xs cursor-pointer transition-colors duration-150
+              ${deptFilter === k
+                ? 'border-brand-500 bg-brand-500/[0.09] text-brand-500 font-semibold'
+                : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'
+              }`}
+          >
             {lang === 'ar' ? v.ar : v.en}
           </button>
         ))}
         {/* Type filter */}
-        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={{
-          padding: '6px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-          background: c.input, color: c.text, fontSize: 12, outline: 'none',
-        }}>
+        <Select
+          size="sm"
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          className="w-auto min-w-[110px]"
+        >
           <option value="all">{lang === 'ar' ? 'كل الأنواع' : 'All Types'}</option>
           {Object.entries(ACTIVITY_TYPES).map(([k, v]) => (
             <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </Card>
 
       {/* Activities List */}
-      <div style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+      <Card className="overflow-hidden">
         {loading ? (
-          <div style={{ padding: 24 }}>
+          <div className="p-6">
             {[1,2,3,4,5].map(i => (
-              <div key={i} style={{ display: 'flex', gap: 12, padding: '14px 16px', borderBottom: '1px solid ' + c.border, alignItems: 'flex-start' }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: c.border, flexShrink: 0, animation: 'pulse 1.5s ease-in-out infinite', opacity: 0.6 }} />
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <div style={{ width: '40%', height: 12, borderRadius: 6, background: c.border, animation: 'pulse 1.5s ease-in-out infinite' }} />
-                  <div style={{ width: '70%', height: 10, borderRadius: 6, background: c.border, animation: 'pulse 1.5s ease-in-out infinite', opacity: 0.7 }} />
+              <div key={i} className="flex gap-3 px-4 py-3.5 border-b border-edge dark:border-edge-dark items-start">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-edge dark:bg-edge-dark flex-shrink-0 animate-pulse opacity-60" />
+                <div className="flex-1 flex flex-col gap-2">
+                  <div className="w-[40%] h-3 rounded-md bg-edge dark:bg-edge-dark animate-pulse" />
+                  <div className="w-[70%] h-2.5 rounded-md bg-edge dark:bg-edge-dark animate-pulse opacity-70" />
                 </div>
               </div>
             ))}
-            <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }`}</style>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
-            <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, rgba(27,51,71,0.08), rgba(74,122,171,0.12))', border: '1.5px dashed rgba(74,122,171,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-              <Activity size={28} color="#4A7AAB" strokeWidth={1.5} />
+          <div className="flex flex-col items-center justify-center py-[60px] px-6 text-center">
+            <div className="w-16 h-16 rounded-[18px] bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border-[1.5px] border-dashed border-brand-500/30 flex items-center justify-center mb-4">
+              <Activity size={28} className="text-brand-500" strokeWidth={1.5} />
             </div>
-            <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: c.text }}>{lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}</p>
-            <p style={{ margin: 0, fontSize: 13, color: c.muted }}>{lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started'}</p>
+            <p className="m-0 mb-1.5 font-bold text-[15px] text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}</p>
+            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started'}</p>
           </div>
         ) : (
           filtered.map((act, idx) => {
@@ -266,55 +277,47 @@ export default function ActivitiesPage() {
             const Ic = ICONS[typeDef.icon] || FileText;
             const deptDef = DEPT_LABELS[act.dept];
             return (
-              <div key={act.id} style={{
-                display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 16px',
-                borderBottom: idx < filtered.length - 1 ? '1px solid ' + c.border : 'none',
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-                transition: 'background 0.15s',
-              }}
-                onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              <div
+                key={act.id}
+                className={`group flex items-start gap-3 px-4 py-3 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.07] ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${idx < filtered.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}`}
               >
                 {/* Icon */}
-                <div style={{
-                  width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-                  background: typeDef.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
+                <div
+                  className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center"
+                  style={{ background: typeDef.color + '18' }}
+                >
                   <Ic size={15} color={typeDef.color} />
                 </div>
 
                 {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 3, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: typeDef.color }}>
+                <div className="flex-1 min-w-0">
+                  <div className={`flex items-center gap-2 flex-wrap mb-[3px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className="text-[13px] font-semibold" style={{ color: typeDef.color }}>
                       {lang === 'ar' ? typeDef.ar : typeDef.en}
                     </span>
                     {deptDef && (
-                      <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 8, background: c.accent + '15', color: c.accent, fontWeight: 500 }}>
+                      <Badge variant="default" size="sm">
                         {lang === 'ar' ? deptDef.ar : deptDef.en}
-                      </span>
+                      </Badge>
                     )}
-                    <span style={{ fontSize: 11, color: c.muted }}>
+                    <span className="text-[11px] text-content-muted dark:text-content-muted-dark">
                       {act.user_name_ar && lang === 'ar' ? act.user_name_ar : act.user_name_en || ''}
                     </span>
-                    <span style={{ fontSize: 11, color: c.muted, [isRTL ? 'marginRight' : 'marginLeft']: 'auto' }}>
+                    <span className={`text-[11px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'mr-auto' : 'ml-auto'}`}>
                       {timeAgo(act.created_at, lang)}
                     </span>
                   </div>
                   {act.notes && (
-                    <div style={{ fontSize: 13, color: c.text, lineHeight: 1.5, direction: isRTL ? 'rtl' : 'ltr' }}>
+                    <div className="text-[13px] text-content dark:text-content-dark leading-relaxed" dir={isRTL ? 'rtl' : 'ltr'}>
                       {act.notes}
                     </div>
                   )}
                 </div>
 
                 {/* Delete */}
-                <button onClick={() => { deleteActivity(act.id); setActivities(prev => prev.filter(a => a.id !== act.id)); }} style={{
-                  background: 'transparent', border: 'none', cursor: 'pointer', padding: 4, color: c.muted, flexShrink: 0,
-                  opacity: 0, transition: 'opacity 0.15s',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = 1}
-                  onMouseLeave={e => e.currentTarget.style.opacity = 0}
+                <button
+                  onClick={() => { deleteActivity(act.id); setActivities(prev => prev.filter(a => a.id !== act.id)); }}
+                  className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
                 >
                   <X size={13} />
                 </button>
@@ -322,7 +325,7 @@ export default function ActivitiesPage() {
             );
           })
         )}
-      </div>
+      </Card>
     </div>
   );
 }
