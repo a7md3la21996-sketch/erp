@@ -1,20 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDS } from '../../hooks/useDesignSystem';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
-import { UserPlus, CheckCircle2, Clock, AlertCircle, ChevronDown, ChevronRight , UserCheck } from 'lucide-react';
-
-
-function KpiCard({ icon: Icon, label, value, color='#4A7AAB' }) {
-  const ds = useDS(); const [hov, setHov] = useState(false);
-  return <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ background:ds.card, borderRadius:14, border:`1px solid ${hov?color+'60':ds.border}`, padding:'18px 20px', position:'relative', overflow:'hidden', transform:hov?'translateY(-2px)':'none', boxShadow:hov?`0 8px 24px ${color}22`:'0 1px 3px rgba(0,0,0,0.06)', transition:'all 0.2s ease' }}>
-    <div style={{ position:'absolute', top:0, right:0, width:4, height:'100%', background:`linear-gradient(180deg,${color},transparent)`, borderRadius:'14px 0 0 14px', opacity:hov?1:0.6, transition:'opacity 0.2s' }} />
-    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-      <div><p style={{ margin:'0 0 6px', fontSize:12, color:ds.muted, fontWeight:500 }}>{label}</p><p style={{ margin:0, fontSize:26, fontWeight:800, color:ds.text, lineHeight:1 }}>{value}</p></div>
-      <div style={{ width:42, height:42, borderRadius:11, background:color+(hov?'25':'15'), display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><Icon size={20} color={color} /></div>
-    </div>
-  </div>;
-}
+import { UserPlus, CheckCircle2, Clock, AlertCircle, ChevronRight, UserCheck } from 'lucide-react';
+import KpiCard from '../../components/ui/KpiCard';
 
 const ONBOARDING_STEPS = [
   { id:'docs', label_ar:'المستندات', label_en:'Documents', icon:'📄' },
@@ -31,7 +19,7 @@ const MOCK_ONBOARDING = [
 ];
 
 export default function OnboardingPage() {
-  const { i18n } = useTranslation(); const ds = useDS();
+  const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [expanded, setExpanded] = useState(null);
 
@@ -40,34 +28,36 @@ export default function OnboardingPage() {
   const notStarted = MOCK_ONBOARDING.filter(o=>Object.values(o.progress).every(v=>!v)).length;
 
   return (
-    <div style={{ padding:'24px 28px', background:ds.bg, minHeight:'100vh', direction:isRTL?'rtl':'ltr' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexDirection:isRTL?'row-reverse':'row' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:14, flexDirection:isRTL?'row-reverse':'row' }}>
-          <div style={{ width:46, height:46, borderRadius:13, background:'linear-gradient(135deg,#1B3347,#4A7AAB)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(74,122,171,0.3)' }}><UserPlus size={22} color="#fff" /></div>
-          <div style={{ textAlign:isRTL?'right':'left' }}>
-            <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:ds.text }}>{lang==='ar'?'استقبال الموظفين':'Employee Onboarding'}</h1>
-            <p style={{ margin:0, fontSize:12, color:ds.muted }}>{lang==='ar'?'تتبع مسار استقبال الموظفين الجدد':'Track new employee onboarding'}</p>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 px-7 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="w-[46px] h-[46px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
+            <UserPlus size={22} color="#fff" />
+          </div>
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'استقبال الموظفين':'Employee Onboarding'}</h1>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'تتبع مسار استقبال الموظفين الجدد':'Track new employee onboarding'}</p>
           </div>
         </div>
       </div>
 
-      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="grid grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={UserPlus}     label={lang==='ar'?'إجمالي':'Total'}        value={MOCK_ONBOARDING.length} color="#1B3347" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'مكتمل':'Completed'}    value={completed}             color="#4A7AAB" />
         <KpiCard icon={Clock}        label={lang==='ar'?'جاري':'In Progress'}   value={inProgress}            color="#6B8DB5" />
         <KpiCard icon={AlertCircle}  label={lang==='ar'?'لم يبدأ':'Not Started'}  value={notStarted}            color="#EF4444" />
       </div>
 
-      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+      <div className="flex flex-col gap-3">
         {MOCK_ONBOARDING.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'60px 20px' }}>
-                <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
-                  <UserCheck size={24} color='#4A7AAB' />
-                </div>
-                <p style={{ margin:'0 0 6px', fontSize:15, fontWeight:700, color:ds.text }}>{lang==='ar'?'لا يوجد موظفون في التهيئة':'No Onboarding Employees'}</p>
-                <p style={{ margin:0, fontSize:13, color:ds.muted }}>{lang==='ar'?'لم يتم إضافة أي موظفين في مرحلة التهيئة':'No employees in onboarding'}</p>
-              </div>
-            ) : MOCK_ONBOARDING.map(ob => {
+          <div className="text-center py-16 px-5">
+            <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
+              <UserCheck size={24} color='#4A7AAB' />
+            </div>
+            <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا يوجد موظفون في التهيئة':'No Onboarding Employees'}</p>
+            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي موظفين في مرحلة التهيئة':'No employees in onboarding'}</p>
+          </div>
+        ) : MOCK_ONBOARDING.map(ob => {
           const emp = MOCK_EMPLOYEES.find(e=>e.employee_id===ob.emp_id||e.id===ob.emp_id);
           const name = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : ob.emp_id;
           const initials = name?.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()||'??';
@@ -75,46 +65,66 @@ export default function OnboardingPage() {
           const total = Object.values(ob.progress).length;
           const pct = Math.round(done/total*100);
           const isExpanded = expanded===ob.emp_id;
-          const [hov, setHov] = useState(false);
-          return (
-            <div key={ob.emp_id} style={{ background:ds.card, borderRadius:14, border:`1px solid ${hov||isExpanded?ds.accent+'40':ds.border}`, overflow:'hidden', transition:'border-color 0.2s, box-shadow 0.2s', boxShadow:isExpanded?`0 4px 16px rgba(74,122,171,0.12)`:'none' }}>
-              <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={()=>setExpanded(isExpanded?null:ob.emp_id)} style={{ padding:'16px 20px', cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center', flexDirection:isRTL?'row-reverse':'row' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:12, flexDirection:isRTL?'row-reverse':'row' }}>
-                  <div style={{ width:38, height:38, borderRadius:10, background:'linear-gradient(135deg,#1B3347,#4A7AAB)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><span style={{ fontSize:12, fontWeight:700, color:'#fff' }}>{initials}</span></div>
-                  <div style={{ textAlign:isRTL?'right':'left' }}>
-                    <p style={{ margin:0, fontSize:14, fontWeight:700, color:ds.text }}>{name}</p>
-                    <p style={{ margin:0, fontSize:11, color:ds.muted }}>{lang==='ar'?'بدأ:':' Started:'} {ob.start}</p>
-                  </div>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:16, flexDirection:isRTL?'row-reverse':'row' }}>
-                  <div style={{ textAlign:'center' }}>
-                    <p style={{ margin:0, fontSize:20, fontWeight:800, color:pct===100?'#4A7AAB':ds.accent }}>{pct}%</p>
-                    <p style={{ margin:0, fontSize:10, color:ds.muted }}>{done}/{total}</p>
-                  </div>
-                  <div style={{ width:80, height:6, borderRadius:3, background:ds.dark?'rgba(255,255,255,0.08)':'#E2E8F0' }}>
-                    <div style={{ height:'100%', borderRadius:3, width:pct+'%', background:pct===100?'#4A7AAB':'#6B8DB5', transition:'width 0.5s' }} />
-                  </div>
-                  <div style={{ transform:isExpanded?'rotate(90deg)':'none', transition:'transform 0.2s', color:ds.muted }}><ChevronRight size={16} /></div>
-                </div>
-              </div>
-              {isExpanded && (
-                <div style={{ padding:'0 20px 16px', borderTop:`1px solid ${ds.border}`, display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:8, paddingTop:14 }}>
-                  {ONBOARDING_STEPS.map(step => {
-                    const done = ob.progress[step.id];
-                    return (
-                      <div key={step.id} style={{ padding:'10px 12px', borderRadius:10, border:`1px solid ${done?'#4A7AAB40':ds.border}`, background:done?'rgba(74,122,171,0.08)':'transparent', textAlign:'center' }}>
-                        <div style={{ fontSize:20, marginBottom:4 }}>{step.icon}</div>
-                        <p style={{ margin:'0 0 6px', fontSize:11, color:ds.text, fontWeight:600 }}>{lang==='ar'?step.label_ar:step.label_en}</p>
-                        {done ? <CheckCircle2 size={16} color="#4A7AAB" /> : <Clock size={16} color={ds.muted} />}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
+          return <OnboardingRow key={ob.emp_id} ob={ob} name={name} initials={initials} done={done} total={total} pct={pct} isExpanded={isExpanded} isRTL={isRTL} lang={lang} onToggle={()=>setExpanded(isExpanded?null:ob.emp_id)} />;
         })}
       </div>
+    </div>
+  );
+}
+
+function OnboardingRow({ ob, name, initials, done, total, pct, isExpanded, isRTL, lang, onToggle }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden transition-all duration-200"
+      style={{
+        borderColor: hov || isExpanded ? 'rgba(74,122,171,0.25)' : undefined,
+        boxShadow: isExpanded ? '0 4px 16px rgba(74,122,171,0.12)' : 'none',
+      }}
+    >
+      <div
+        onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} onClick={onToggle}
+        className={`px-5 py-4 cursor-pointer flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}
+      >
+        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="w-[38px] h-[38px] rounded-[10px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0">
+            <span className="text-xs font-bold text-white">{initials}</span>
+          </div>
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{name}</p>
+            <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'بدأ:':' Started:'} {ob.start}</p>
+          </div>
+        </div>
+        <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="text-center">
+            <p className="m-0 text-xl font-extrabold text-brand-500">{pct}%</p>
+            <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark">{done}/{total}</p>
+          </div>
+          <div className="w-20 h-1.5 rounded-full bg-gray-200 dark:bg-white/[0.08]">
+            <div className="h-full rounded-full transition-[width] duration-500" style={{ width: pct+'%', background: pct===100 ? '#4A7AAB' : '#6B8DB5' }} />
+          </div>
+          <div className={`text-content-muted dark:text-content-muted-dark transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+            <ChevronRight size={16} />
+          </div>
+        </div>
+      </div>
+      {isExpanded && (
+        <div className="px-5 pb-4 pt-3.5 border-t border-edge dark:border-edge-dark grid grid-cols-5 gap-2">
+          {ONBOARDING_STEPS.map(step => {
+            const stepDone = ob.progress[step.id];
+            return (
+              <div
+                key={step.id}
+                className={`px-3 py-2.5 rounded-[10px] border text-center ${stepDone ? 'border-brand-500/25 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark bg-transparent'}`}
+              >
+                <div className="text-xl mb-1">{step.icon}</div>
+                <p className="m-0 mb-1.5 text-[11px] font-semibold text-content dark:text-content-dark">{lang==='ar'?step.label_ar:step.label_en}</p>
+                {stepDone ? <CheckCircle2 size={16} color="#4A7AAB" /> : <Clock size={16} className="text-content-muted dark:text-content-muted-dark" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

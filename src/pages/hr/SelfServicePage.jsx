@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDS } from '../../hooks/useDesignSystem';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { User, FileText, CalendarOff, DollarSign, Bell, ChevronRight } from 'lucide-react';
-
 
 const QUICK_ACTIONS = [
   { icon: CalendarOff, key: 'leave',   label_ar: 'طلب إجازة',     label_en: 'Request Leave',   color: '#4A7AAB' },
@@ -14,22 +12,62 @@ const QUICK_ACTIONS = [
   { icon: User,       key: 'profile', label_ar: 'تعديل البيانات', label_en: 'Update Profile',  color: '#4A7AAB' },
 ];
 
-function ActionCard({ icon: Icon, label, color, ds }) {
+function ActionCard({ icon: Icon, label, color }) {
   const [hov, setHov] = useState(false);
   return (
-    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      style={{ background:ds.card, borderRadius:14, border:`1px solid ${hov?color+'60':ds.border}`, padding:'20px 18px', cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:12, transform:hov?'translateY(-3px)':'none', boxShadow:hov?`0 10px 28px ${color}22`:'0 1px 3px rgba(0,0,0,0.06)', transition:'all 0.2s ease', position:'relative', overflow:'hidden' }}>
-      <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${color},transparent)`, opacity:hov?1:0, transition:'opacity 0.2s' }} />
-      <div style={{ width:48, height:48, borderRadius:13, background:color+(hov?'22':'14'), display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}>
+    <div
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      className="relative overflow-hidden bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark px-[18px] py-5 cursor-pointer flex flex-col items-center gap-3 transition-all duration-200"
+      style={{
+        borderColor: hov ? `${color}60` : undefined,
+        transform: hov ? 'translateY(-3px)' : 'none',
+        boxShadow: hov ? `0 10px 28px ${color}22` : '0 1px 3px rgba(0,0,0,0.06)',
+      }}
+    >
+      <div
+        className="absolute top-0 left-0 right-0 h-[3px] transition-opacity duration-200"
+        style={{ background: `linear-gradient(90deg,${color},transparent)`, opacity: hov ? 1 : 0 }}
+      />
+      <div
+        className="w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-200"
+        style={{ background: `${color}${hov ? '22' : '14'}` }}
+      >
         <Icon size={22} color={color} />
       </div>
-      <p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text, textAlign:'center' }}>{label}</p>
+      <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark text-center">{label}</p>
+    </div>
+  );
+}
+
+function RequestRow({ req, i, isRTL, lang }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <div
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      className={`flex justify-between items-center py-2.5 px-2 rounded-lg cursor-pointer transition-colors duration-150 ${isRTL ? 'flex-row-reverse' : ''} ${i < 2 ? 'border-b border-edge dark:border-edge-dark' : ''} ${hov ? 'bg-[#F8FAFC] dark:bg-brand-500/[0.07]' : 'bg-transparent'}`}
+    >
+      <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: req.color }} />
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <p className="m-0 text-[13px] font-semibold text-content dark:text-content-dark">{req.label}</p>
+          <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{req.date}</p>
+        </div>
+      </div>
+      <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <span
+          className="text-[11px] font-semibold px-2 py-0.5 rounded-[10px]"
+          style={{ background: `${req.color}18`, color: req.color }}
+        >
+          {req.status==='pending'?(lang==='ar'?'معلق':'Pending'):(lang==='ar'?'مكتمل':'Done')}
+        </span>
+        <ChevronRight size={14} className={`text-content-muted dark:text-content-muted-dark ${isRTL ? 'rotate-180' : ''}`} />
+      </div>
     </div>
   );
 }
 
 export default function SelfServicePage() {
-  const { i18n } = useTranslation(); const ds = useDS();
+  const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
 
   // Use first employee as logged-in user simulation
@@ -45,30 +83,38 @@ export default function SelfServicePage() {
     { label: lang==='ar'?'رصيد الإجازة':'Leave Balance', value: `${emp?.leave_balance ?? 21} ${lang==='ar'?'يوم':'days'}` },
   ];
 
+  const recentRequests = [
+    { label: lang==='ar'?'طلب إجازة - 5 أيام':'Leave Request - 5 days', date:'2026-03-01', status:'pending', color:'#6B8DB5' },
+    { label: lang==='ar'?'كشف راتب فبراير':'Payslip Feb 2026', date:'2026-02-28', status:'completed', color:'#4A7AAB' },
+    { label: lang==='ar'?'شهادة عمل':'Work Certificate', date:'2026-02-15', status:'completed', color:'#4A7AAB' },
+  ];
+
   return (
-    <div style={{ padding:'24px 28px', background:ds.bg, minHeight:'100vh', direction:isRTL?'rtl':'ltr' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 px-7 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:24, flexDirection:isRTL?'row-reverse':'row' }}>
-        <div style={{ width:46, height:46, borderRadius:13, background:'linear-gradient(135deg,#1B3347,#4A7AAB)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(74,122,171,0.3)' }}><User size={22} color="#fff" /></div>
-        <div style={{ textAlign:isRTL?'right':'left' }}>
-          <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:ds.text }}>{lang==='ar'?'الخدمة الذاتية':'Self Service'}</h1>
-          <p style={{ margin:0, fontSize:12, color:ds.muted }}>{lang==='ar'?'بوابتك الشخصية':'Your personal portal'}</p>
+      <div className={`flex items-center gap-3.5 mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="w-[46px] h-[46px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
+          <User size={22} color="#fff" />
+        </div>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'الخدمة الذاتية':'Self Service'}</h1>
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'بوابتك الشخصية':'Your personal portal'}</p>
         </div>
       </div>
 
       {/* Profile Card */}
-      <div style={{ background:ds.card, borderRadius:16, border:`1px solid ${ds.border}`, padding:24, marginBottom:20, display:'flex', alignItems:'center', gap:20, flexDirection:isRTL?'row-reverse':'row' }}>
-        <div style={{ width:72, height:72, borderRadius:18, background:'linear-gradient(135deg,#1B3347,#4A7AAB)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 4px 16px rgba(74,122,171,0.3)' }}>
-          <span style={{ fontSize:24, fontWeight:800, color:'#fff' }}>{initials}</span>
+      <div className={`bg-surface-card dark:bg-surface-card-dark rounded-2xl border border-edge dark:border-edge-dark p-6 mb-5 flex items-center gap-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="w-[72px] h-[72px] rounded-2xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0 shadow-md">
+          <span className="text-2xl font-extrabold text-white">{initials}</span>
         </div>
-        <div style={{ flex:1, textAlign:isRTL?'right':'left' }}>
-          <p style={{ margin:'0 0 4px', fontSize:20, fontWeight:800, color:ds.text }}>{name}</p>
-          <p style={{ margin:'0 0 12px', fontSize:13, color:ds.muted }}>{emp?.employee_id || 'EMP-001'} • {emp?.department || (lang==='ar'?'المبيعات':'Sales')}</p>
-          <div style={{ display:'flex', gap:16, flexWrap:'wrap', flexDirection:isRTL?'row-reverse':'row' }}>
+        <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <p className="m-0 mb-1 text-xl font-extrabold text-content dark:text-content-dark">{name}</p>
+          <p className="m-0 mb-3 text-[13px] text-content-muted dark:text-content-muted-dark">{emp?.employee_id || 'EMP-001'} • {emp?.department || (lang==='ar'?'المبيعات':'Sales')}</p>
+          <div className={`flex gap-4 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
             {infoItems.map((item,i) => (
-              <div key={i} style={{ textAlign:isRTL?'right':'left' }}>
-                <p style={{ margin:'0 0 2px', fontSize:10, color:ds.muted, textTransform:'uppercase', letterSpacing:'0.05em', fontWeight:600 }}>{item.label}</p>
-                <p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{item.value}</p>
+              <div key={i} className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="m-0 mb-0.5 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide font-semibold">{item.label}</p>
+                <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{item.value}</p>
               </div>
             ))}
           </div>
@@ -76,44 +122,22 @@ export default function SelfServicePage() {
       </div>
 
       {/* Quick Actions */}
-      <p style={{ margin:'0 0 12px', fontSize:14, fontWeight:700, color:ds.text }}>{lang==='ar'?'إجراءات سريعة':'Quick Actions'}</p>
-      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14, marginBottom:20 }}>
+      <p className="m-0 mb-3 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'إجراءات سريعة':'Quick Actions'}</p>
+      <div className="grid grid-cols-3 gap-3.5 mb-5">
         {QUICK_ACTIONS.map(action => (
-          <ActionCard key={action.key} icon={action.icon} label={lang==='ar'?action.label_ar:action.label_en} color={action.color} ds={ds} />
+          <ActionCard key={action.key} icon={action.icon} label={lang==='ar'?action.label_ar:action.label_en} color={action.color} />
         ))}
       </div>
 
       {/* Recent Requests */}
-      <div style={{ background:ds.card, borderRadius:14, border:`1px solid ${ds.border}`, overflow:'hidden' }}>
-        <div style={{ padding:'14px 18px', borderBottom:`1px solid ${ds.border}` }}>
-          <p style={{ margin:0, fontSize:14, fontWeight:700, color:ds.text }}>{lang==='ar'?'طلباتي الأخيرة':'Recent Requests'}</p>
+      <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
+        <div className="px-[18px] py-3.5 border-b border-edge dark:border-edge-dark">
+          <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'طلباتي الأخيرة':'Recent Requests'}</p>
         </div>
-        <div style={{ padding:'12px 18px' }}>
-          {[
-            { label: lang==='ar'?'طلب إجازة - 5 أيام':'Leave Request - 5 days', date:'2026-03-01', status:'pending', color:'#6B8DB5' },
-            { label: lang==='ar'?'كشف راتب فبراير':'Payslip Feb 2026', date:'2026-02-28', status:'completed', color:'#4A7AAB' },
-            { label: lang==='ar'?'شهادة عمل':'Work Certificate', date:'2026-02-15', status:'completed', color:'#4A7AAB' },
-          ].map((req,i) => {
-            const [hov, setHov] = useState(false);
-            return (
-              <div key={i} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-                style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 0', borderBottom: i<2?`1px solid ${ds.border}`:'none', background:hov?ds.rowHover:'transparent', borderRadius:8, paddingInline:8, transition:'background 0.15s', cursor:'pointer', flexDirection:isRTL?'row-reverse':'row' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:12, flexDirection:isRTL?'row-reverse':'row' }}>
-                  <div style={{ width:8, height:8, borderRadius:'50%', background:req.color, flexShrink:0 }} />
-                  <div style={{ textAlign:isRTL?'right':'left' }}>
-                    <p style={{ margin:0, fontSize:13, fontWeight:600, color:ds.text }}>{req.label}</p>
-                    <p style={{ margin:0, fontSize:11, color:ds.muted }}>{req.date}</p>
-                  </div>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flexDirection:isRTL?'row-reverse':'row' }}>
-                  <span style={{ fontSize:11, fontWeight:600, padding:'2px 8px', borderRadius:10, background:req.color+'18', color:req.color }}>
-                    {req.status==='pending'?(lang==='ar'?'معلق':'Pending'):(lang==='ar'?'مكتمل':'Done')}
-                  </span>
-                  <ChevronRight size={14} color={ds.muted} style={{ transform:isRTL?'rotate(180deg)':'none' }} />
-                </div>
-              </div>
-            );
-          })}
+        <div className="px-[18px] py-3">
+          {recentRequests.map((req, i) => (
+            <RequestRow key={i} req={req} i={i} isRTL={isRTL} lang={lang} />
+          ))}
         </div>
       </div>
     </div>
