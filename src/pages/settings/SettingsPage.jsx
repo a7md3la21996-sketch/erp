@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import { Plus, Trash2, Save, Settings, Palette, Bell, Shield, Globe, User } from 'lucide-react';
 
 const DEFAULT_ACTIVITY_TYPES = [
@@ -49,7 +50,7 @@ function ActivityTypesSettings({ c, inp }) {
           {isRTL ? 'أنواع الأنشطة' : 'Activity Types'}
         </h3>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setTypes(DEFAULT_ACTIVITY_TYPES)} style={{ padding: '6px 14px', background: c.inputBg, border: `1px solid ${c.border}`, borderRadius: 8, color: c.muted, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={() => setTypes(DEFAULT_ACTIVITY_TYPES)} style={{ padding: '6px 14px', background: c.input, border: `1px solid ${c.border}`, borderRadius: 8, color: c.muted, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
             {isRTL ? 'إعادة تعيين' : 'Reset'}
           </button>
           <button onClick={handleSave} style={{ padding: '6px 14px', background: saved ? 'rgba(16,185,129,0.2)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: saved ? '1px solid #10B981' : 'none', borderRadius: 8, color: saved ? '#10B981' : '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
@@ -60,7 +61,7 @@ function ActivityTypesSettings({ c, inp }) {
 
       <div style={{ marginBottom: 16 }}>
         {types.map((type, idx) => (
-          <div key={type.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: c.inputBg, border: `1px solid ${c.border}`, borderRadius: 8, marginBottom: 8 }}>
+          <div key={type.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: c.input, border: `1px solid ${c.border}`, borderRadius: 8, marginBottom: 8 }}>
             <span style={{ fontSize: 18, minWidth: 28 }}>{type.icon}</span>
             <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 60px', gap: 8 }}>
               <input style={inp} value={type.label} onChange={e => setTypes(prev => prev.map((t, i) => i === idx ? { ...t, label: e.target.value } : t))} placeholder="English name" />
@@ -74,7 +75,7 @@ function ActivityTypesSettings({ c, inp }) {
         ))}
       </div>
 
-      <div style={{ padding: 12, background: c.inputBg, border: `1px dashed ${c.border}`, borderRadius: 8 }}>
+      <div style={{ padding: 12, background: c.input, border: `1px dashed ${c.border}`, borderRadius: 8 }}>
         <p style={{ margin: '0 0 10px', color: c.muted, fontSize: 12, fontWeight: 600 }}>
           {isRTL ? '+ إضافة نوع جديد' : '+ Add New Type'}
         </p>
@@ -82,7 +83,7 @@ function ActivityTypesSettings({ c, inp }) {
           <input style={inp} value={newType.label} onChange={e => setNewType(p => ({ ...p, label: e.target.value }))} placeholder="English name" />
           <input style={inp} value={newType.labelAr} onChange={e => setNewType(p => ({ ...p, labelAr: e.target.value }))} placeholder="الاسم بالعربي" dir="rtl" />
           <input style={{ ...inp, textAlign: 'center', fontSize: 18, padding: '4px' }} value={newType.icon} onChange={e => setNewType(p => ({ ...p, icon: e.target.value }))} maxLength={2} />
-          <button onClick={handleAdd} disabled={!newType.label.trim()} style={{ padding: '8px 14px', background: newType.label.trim() ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : (c.inputBg), border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: newType.label.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+          <button onClick={handleAdd} disabled={!newType.label.trim()} style={{ padding: '8px 14px', background: newType.label.trim() ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : (c.input), border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: newType.label.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
             <Plus size={13} /> {isRTL ? 'إضافة' : 'Add'}
           </button>
         </div>
@@ -146,7 +147,7 @@ function AppearanceSection({ c, isRTL, isDark, toggleTheme, handleLangToggle, la
           {!isDark && <div style={{ fontSize: 10, color: '#4A7AAB', marginTop: 4 }}>{isRTL ? 'مفعّل' : 'Active'}</div>}
         </button>
       </div>
-      <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: c.inputBg, border: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: c.input, border: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Globe size={16} color="#4A7AAB" />
           <span style={{ fontSize: 13, color: c.text }}>{isRTL ? 'اللغة' : 'Language'}</span>
@@ -162,22 +163,14 @@ function AppearanceSection({ c, isRTL, isDark, toggleTheme, handleLangToggle, la
 export default function SettingsPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === 'dark';
+  const { toggleTheme } = useTheme();
+  const c = useDS();
+  const isDark = c.dark;
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
 
-  const c = {
-    bg: isDark ? '#0F1E2D' : '#F0F4F8',
-    card: isDark ? '#1a2234' : '#ffffff',
-    border: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text: isDark ? '#E2EAF4' : '#1f2937',
-    muted: isDark ? '#8BA8C8' : '#6b7280',
-    inputBg: isDark ? '#0F1E2D' : '#f9fafb',
-  };
-
   const inp = {
-    background: c.inputBg, border: `1px solid ${c.border}`,
+    background: c.input, border: `1px solid ${c.border}`,
     borderRadius: 8, padding: '8px 12px', color: c.text,
     fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
     fontFamily: 'inherit',

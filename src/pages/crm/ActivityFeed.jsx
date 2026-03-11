@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -25,10 +25,10 @@ function timeAgo(dateStr, lang) {
 
 export default function ActivityFeed({ entityType = 'contact', entityId, dept = 'crm', compact = false }) {
   const { i18n } = useTranslation();
-  const { theme } = useTheme();
+  const c = useDS();
   const { user } = useAuth();
   const lang = i18n.language;
-  const isDark = theme === 'dark';
+  const isDark = c.dark;
   const isRTL = lang === 'ar';
 
   const [activities, setActivities] = useState([]);
@@ -36,17 +36,6 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
   const [adding, setAdding]         = useState(false);
   const [form, setForm]             = useState({ type: 'call', notes: '' });
   const [saving, setSaving]         = useState(false);
-
-  const c = {
-    bg:       isDark ? '#1a2234' : '#ffffff',
-    border:   isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text:     isDark ? '#E2EAF4' : '#111827',
-    muted:    isDark ? '#8BA8C8' : '#6b7280',
-    inputBg:  isDark ? '#0F1E2D' : '#f9fafb',
-    rowHover: isDark ? 'rgba(74,122,171,0.06)' : '#f8fafc',
-    accent:   '#4A7AAB',
-    primary:  '#2B4C6F',
-  };
 
   const load = async () => {
     setLoading(true);
@@ -139,7 +128,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
             rows={2}
             style={{
               width: '100%', padding: '8px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-              background: c.inputBg, color: c.text, fontSize: 13, resize: 'vertical',
+              background: c.input, color: c.text, fontSize: 13, resize: 'vertical',
               outline: 'none', boxSizing: 'border-box', direction: isRTL ? 'rtl' : 'ltr',
             }}
           />

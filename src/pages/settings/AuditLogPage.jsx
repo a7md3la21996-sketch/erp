@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import supabase from '../../lib/supabase';
 import { History, Search, Filter, ChevronDown, ChevronUp, User, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
 
@@ -21,8 +21,8 @@ const ENTITY_LABELS = {
 
 export default function AuditLogPage() {
   const { i18n } = useTranslation();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const c = useDS();
+  const isDark = c.dark;
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
 
@@ -34,15 +34,6 @@ export default function AuditLogPage() {
   const [expandedId, setExpandedId] = useState(null);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 30;
-
-  const c = {
-    bg: isDark ? '#0F1E2D' : '#F0F4F8',
-    card: isDark ? '#1a2234' : '#ffffff',
-    border: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text: isDark ? '#E2EAF4' : '#1f2937',
-    muted: isDark ? '#8BA8C8' : '#6b7280',
-    input: isDark ? '#152232' : '#f9fafb',
-  };
 
   const fetchLogs = async () => {
     setLoading(true);

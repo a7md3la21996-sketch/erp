@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../contexts/ThemeContext';
+import { useDS } from '../hooks/useDesignSystem';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -35,10 +35,10 @@ function timeAgo(dateStr, lang) {
 
 export default function ActivitiesPage() {
   const { i18n } = useTranslation();
-  const { theme } = useTheme();
+  const c = useDS();
   const { user } = useAuth();
   const lang  = i18n.language;
-  const isDark = theme === 'dark';
+  const isDark = c.dark;
   const isRTL  = lang === 'ar';
 
   const [activities, setActivities] = useState([]);
@@ -49,19 +49,6 @@ export default function ActivitiesPage() {
   const [adding, setAdding]         = useState(false);
   const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'crm' });
   const [saving, setSaving]         = useState(false);
-
-  const c = {
-    bg:      isDark ? '#152232' : '#f9fafb',
-    cardBg:  isDark ? '#1a2234' : '#ffffff',
-    border:  isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text:    isDark ? '#E2EAF4' : '#111827',
-    muted:   isDark ? '#8BA8C8' : '#6b7280',
-    inputBg: isDark ? '#0F1E2D' : '#ffffff',
-    thBg:    isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC',
-    hover:   isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC',
-    accent:  '#4A7AAB',
-    primary: '#2B4C6F',
-  };
 
   const load = async () => {
     setLoading(true);
@@ -148,7 +135,7 @@ export default function ActivitiesPage() {
         ].map((s, i) => {
           const Ic = s.icon;
           return (
-            <div key={i} style={{ background: c.cardBg, borderRadius: 10, padding: '14px 16px', border: '1px solid ' + c.border }}>
+            <div key={i} style={{ background: c.card, borderRadius: 10, padding: '14px 16px', border: '1px solid ' + c.border }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <Ic size={16} color={s.color} />
                 <span style={{ fontSize: 11, color: c.muted }}>{s.label}</span>
@@ -161,7 +148,7 @@ export default function ActivitiesPage() {
 
       {/* Add Form */}
       {adding && (
-        <div style={{ background: c.cardBg, borderRadius: 12, padding: 18, marginBottom: 16, border: '1px solid ' + c.border }}>
+        <div style={{ background: c.card, borderRadius: 12, padding: 18, marginBottom: 16, border: '1px solid ' + c.border }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             {/* Dept */}
             <div>
@@ -170,7 +157,7 @@ export default function ActivitiesPage() {
               </label>
               <select value={form.dept} onChange={e => setForm(f => ({ ...f, dept: e.target.value, type: 'call' }))} style={{
                 width: '100%', padding: '7px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-                background: c.inputBg, color: c.text, fontSize: 13, outline: 'none',
+                background: c.input, color: c.text, fontSize: 13, outline: 'none',
               }}>
                 {Object.entries(DEPT_LABELS).filter(([k]) => k !== 'all').map(([k, v]) => (
                   <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
@@ -184,7 +171,7 @@ export default function ActivitiesPage() {
               </label>
               <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} style={{
                 width: '100%', padding: '7px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-                background: c.inputBg, color: c.text, fontSize: 13, outline: 'none',
+                background: c.input, color: c.text, fontSize: 13, outline: 'none',
               }}>
                 {availableTypes.map(([k, v]) => (
                   <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
@@ -199,7 +186,7 @@ export default function ActivitiesPage() {
             rows={3}
             style={{
               width: '100%', padding: '8px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-              background: c.inputBg, color: c.text, fontSize: 13, resize: 'vertical',
+              background: c.input, color: c.text, fontSize: 13, resize: 'vertical',
               outline: 'none', boxSizing: 'border-box', direction: isRTL ? 'rtl' : 'ltr',
             }}
           />
@@ -219,13 +206,13 @@ export default function ActivitiesPage() {
       )}
 
       {/* Filters */}
-      <div style={{ background: c.cardBg, borderRadius: 12, padding: '12px 16px', marginBottom: 12, border: '1px solid ' + c.border, display: 'flex', gap: 10, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center' }}>
+      <div style={{ background: c.card, borderRadius: 12, padding: '12px 16px', marginBottom: 12, border: '1px solid ' + c.border, display: 'flex', gap: 10, flexWrap: 'wrap', flexDirection: isRTL ? 'row-reverse' : 'row', alignItems: 'center' }}>
         {/* Search */}
         <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
           <Search size={13} style={{ position: 'absolute', [isRTL ? 'right' : 'left']: 10, top: '50%', transform: 'translateY(-50%)', color: c.muted }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder={lang === 'ar' ? 'بحث...' : 'Search...'} style={{
             width: '100%', padding: isRTL ? '7px 30px 7px 10px' : '7px 10px 7px 30px', borderRadius: 7,
-            border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 12, outline: 'none', boxSizing: 'border-box',
+            border: '1px solid ' + c.border, background: c.input, color: c.text, fontSize: 12, outline: 'none', boxSizing: 'border-box',
           }} />
         </div>
         {/* Dept filter */}
@@ -241,7 +228,7 @@ export default function ActivitiesPage() {
         {/* Type filter */}
         <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} style={{
           padding: '6px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-          background: c.inputBg, color: c.text, fontSize: 12, outline: 'none',
+          background: c.input, color: c.text, fontSize: 12, outline: 'none',
         }}>
           <option value="all">{lang === 'ar' ? 'كل الأنواع' : 'All Types'}</option>
           {Object.entries(ACTIVITY_TYPES).map(([k, v]) => (
@@ -251,7 +238,7 @@ export default function ActivitiesPage() {
       </div>
 
       {/* Activities List */}
-      <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+      <div style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: 24 }}>
             {[1,2,3,4,5].map(i => (
@@ -285,7 +272,7 @@ export default function ActivitiesPage() {
                 flexDirection: isRTL ? 'row-reverse' : 'row',
                 transition: 'background 0.15s',
               }}
-                onMouseEnter={e => e.currentTarget.style.background = c.hover}
+                onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 {/* Icon */}

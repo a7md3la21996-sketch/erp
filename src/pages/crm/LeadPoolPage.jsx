@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Users, Phone, Clock, AlertTriangle, CheckSquare, Filter,
@@ -77,10 +77,8 @@ function getLeadScore(lead) {
 
 export default function LeadPoolPage() {
   const { i18n } = useTranslation();
-  const { theme } = useTheme();
   const { hasPermission, user } = useAuth();
   const lang  = i18n.language;
-  const isDark = theme === 'dark';
   const isRTL  = lang === 'ar';
 
   const canViewFresh   = hasPermission(P.POOL_VIEW_FRESH);
@@ -106,17 +104,8 @@ export default function LeadPoolPage() {
     return () => clearInterval(t);
   }, []);
 
-  const c = {
-    bg:      isDark ? '#152232' : '#f9fafb',
-    cardBg:  isDark ? '#1a2234' : '#ffffff',
-    border:  isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text:    isDark ? '#E2EAF4' : '#111827',
-    muted:   isDark ? '#8BA8C8' : '#6b7280',
-    inputBg: isDark ? '#0F1E2D' : '#ffffff',
-    hover:   isDark ? 'rgba(74,122,171,0.06)' : '#f8fafc',
-    accent:  '#4A7AAB',
-    primary: '#2B4C6F',
-  };
+  const c = useDS();
+  const isDark = c.dark;
 
   // Filter leads based on permissions and filters
   const visible = useMemo(() => {
@@ -231,7 +220,7 @@ export default function LeadPoolPage() {
         ].filter(s => !s.hide).map((s, i) => {
           const Ic = s.icon;
           return (
-            <div key={i} style={{ background: c.cardBg, borderRadius: 10, padding: '12px 14px', border: '1px solid ' + c.border }}>
+            <div key={i} style={{ background: c.card, borderRadius: 10, padding: '12px 14px', border: '1px solid ' + c.border }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <Ic size={14} color={s.color} />
                 <span style={{ fontSize: 11, color: c.muted }}>{s.label}</span>
@@ -253,13 +242,13 @@ export default function LeadPoolPage() {
       )}
 
       {/* Filters */}
-      <div style={{ background: c.cardBg, borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: '1px solid ' + c.border, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+      <div style={{ background: c.card, borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: '1px solid ' + c.border, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         {/* Search */}
         <div style={{ position: 'relative', flex: 1, minWidth: 160 }}>
           <Search size={13} style={{ position: 'absolute', [isRTL?'right':'left']: 10, top: '50%', transform: 'translateY(-50%)', color: c.muted }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder={lang === 'ar' ? 'بحث...' : 'Search...'} style={{
             width: '100%', padding: isRTL ? '7px 30px 7px 10px' : '7px 10px 7px 30px',
-            borderRadius: 7, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 12, outline: 'none', boxSizing: 'border-box',
+            borderRadius: 7, border: '1px solid ' + c.border, background: c.input, color: c.text, fontSize: 12, outline: 'none', boxSizing: 'border-box',
           }} />
         </div>
 
@@ -277,7 +266,7 @@ export default function LeadPoolPage() {
         {/* Source filter */}
         <select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} style={{
           padding: '6px 10px', borderRadius: 7, border: '1px solid ' + c.border,
-          background: c.inputBg, color: c.text, fontSize: 12, outline: 'none',
+          background: c.input, color: c.text, fontSize: 12, outline: 'none',
         }}>
           <option value="all">{lang === 'ar' ? 'كل المصادر' : 'All Sources'}</option>
           {Object.entries(SOURCES).map(([k, v]) => (
@@ -306,7 +295,7 @@ export default function LeadPoolPage() {
               ].map(opt => (
                 <button key={opt.value} onClick={() => setPoolScope(opt.value)} style={{
                   padding: '7px 14px', fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer',
-                  background: poolScope === opt.value ? c.accent : c.cardBg,
+                  background: poolScope === opt.value ? c.accent : c.card,
                   color: poolScope === opt.value ? '#fff' : c.muted,
                   transition: 'all 0.15s',
                 }}>
@@ -330,7 +319,7 @@ export default function LeadPoolPage() {
       </div>
 
       {/* Leads List */}
-      <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+      <div style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
         {visible.length === 0 ? (
             <div style={{ textAlign:'center', padding:'60px 20px' }}>
                 <div style={{ width:64, height:64, borderRadius:16, background:'rgba(74,122,171,0.1)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
@@ -355,7 +344,7 @@ export default function LeadPoolPage() {
               flexDirection: isRTL ? 'row-reverse' : 'row',
               transition: 'background 0.15s',
             }}
-              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = c.hover; }}
+              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = c.rowHover; }}
               onMouseLeave={e => { e.currentTarget.style.background = isSel ? c.accent + '08' : isReserved ? 'rgba(239,68,68,0.04)' : 'transparent'; }}
             >
               {/* Checkbox */}
@@ -444,7 +433,7 @@ export default function LeadPoolPage() {
       {/* Assign Modal */}
       {assignModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: c.cardBg, borderRadius: 14, padding: 24, width: 420, maxWidth: '90vw', border: '1px solid ' + c.border }}>
+          <div style={{ background: c.card, borderRadius: 14, padding: 24, width: 420, maxWidth: '90vw', border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: c.text }}>
                 {lang === 'ar' ? `توزيع ${assignModal === 'bulk' ? selected.length + ' ليدز' : 'ليد'}` : `Assign ${assignModal === 'bulk' ? selected.length + ' leads' : 'lead'}`}
@@ -464,7 +453,7 @@ export default function LeadPoolPage() {
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                       padding: '10px 14px', borderRadius: 8, border: '1px solid ' + c.border,
-                      background: atCap ? c.hover : 'transparent', cursor: atCap ? 'not-allowed' : 'pointer',
+                      background: atCap ? c.rowHover : 'transparent', cursor: atCap ? 'not-allowed' : 'pointer',
                       opacity: atCap ? 0.5 : 1, flexDirection: isRTL ? 'row-reverse' : 'row',
                     }}>
                     <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
@@ -488,7 +477,7 @@ export default function LeadPoolPage() {
       {/* Add Cold Call Modal */}
       {addModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: c.cardBg, borderRadius: 14, padding: 24, width: 380, maxWidth: '90vw', border: '1px solid ' + c.border }}>
+          <div style={{ background: c.card, borderRadius: 14, padding: 24, width: 380, maxWidth: '90vw', border: '1px solid ' + c.border }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'إضافة كولد كول' : 'Add Cold Call'}</h3>
               <button onClick={() => setAddModal(false)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: c.muted }}>
@@ -499,12 +488,12 @@ export default function LeadPoolPage() {
               <input value={newLead.name} onChange={e => setNewLead(f => ({...f, name: e.target.value}))}
                 placeholder={lang === 'ar' ? 'الاسم' : 'Name'} style={{
                   padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border,
-                  background: c.inputBg, color: c.text, fontSize: 13, outline: 'none', direction: isRTL ? 'rtl' : 'ltr',
+                  background: c.input, color: c.text, fontSize: 13, outline: 'none', direction: isRTL ? 'rtl' : 'ltr',
                 }} />
               <input value={newLead.phone} onChange={e => setNewLead(f => ({...f, phone: e.target.value}))}
                 placeholder={lang === 'ar' ? 'رقم الهاتف' : 'Phone'} style={{
                   padding: '9px 12px', borderRadius: 8, border: '1px solid ' + c.border,
-                  background: c.inputBg, color: c.text, fontSize: 13, outline: 'none',
+                  background: c.input, color: c.text, fontSize: 13, outline: 'none',
                 }} />
               <div style={{ display: 'flex', gap: 8, justifyContent: isRTL ? 'flex-start' : 'flex-end' }}>
                 <button onClick={() => setAddModal(false)} style={{

@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import { ROLE_LABELS } from '../../config/roles';
 import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 import { getAttendanceForMonth } from '../../data/attendanceStore';
@@ -82,7 +82,7 @@ function TodayReminders({ lang, isRTL, c, isDark, userId }) {
           </div>
           <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
             <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: c.text }}>{lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups"}</p>
-            <p style={{ margin: 0, fontSize: 12, color: c.textMuted }}>{reminders.length > 0 ? (lang === 'ar' ? reminders.length + ' متابعة مجدولة' : reminders.length + ' scheduled') : (lang === 'ar' ? 'لا متابعات اليوم' : 'No follow-ups today')}</p>
+            <p style={{ margin: 0, fontSize: 12, color: c.muted }}>{reminders.length > 0 ? (lang === 'ar' ? reminders.length + ' متابعة مجدولة' : reminders.length + ' scheduled') : (lang === 'ar' ? 'لا متابعات اليوم' : 'No follow-ups today')}</p>
           </div>
         </div>
         {reminders.length > 0 && (
@@ -97,7 +97,7 @@ function TodayReminders({ lang, isRTL, c, isDark, userId }) {
       ) : reminders.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '24px 0' }}>
           <CheckCircle size={32} color="#4A7AAB" style={{ opacity: 0.4, marginBottom: 8 }} />
-          <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{lang === 'ar' ? 'أنجزت كل متابعاتك اليوم!' : 'All caught up for today!'}</p>
+          <p style={{ margin: 0, fontSize: 13, color: c.muted }}>{lang === 'ar' ? 'أنجزت كل متابعاتك اليوم!' : 'All caught up for today!'}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -111,14 +111,14 @@ function TodayReminders({ lang, isRTL, c, isDark, userId }) {
                 </div>
                 <div style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: c.text }}>{r.entity_name || (lang === 'ar' ? 'جهة اتصال' : 'Contact')}</p>
-                  <p style={{ margin: 0, fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? t.ar : t.en}{r.notes ? ' · ' + r.notes : ''}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: c.muted }}>{lang === 'ar' ? t.ar : t.en}{r.notes ? ' · ' + r.notes : ''}</p>
                 </div>
-                <span style={{ fontSize: 11, color: c.textMuted, flexShrink: 0 }}>{formatTime(r.due_at)}</span>
+                <span style={{ fontSize: 11, color: c.muted, flexShrink: 0 }}>{formatTime(r.due_at)}</span>
               </div>
             );
           })}
           {reminders.length > 5 && (
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: c.textMuted, textAlign: 'center' }}>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: c.muted, textAlign: 'center' }}>
               {lang === 'ar' ? '+ ' + (reminders.length - 5) + ' متابعات أخرى' : '+ ' + (reminders.length - 5) + ' more'}
             </p>
           )}
@@ -132,15 +132,14 @@ function TodayReminders({ lang, isRTL, c, isDark, userId }) {
 export default function DashboardPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark'; const isRTL = i18n.language === 'ar'; const lang = i18n.language;
+  const c = useDS();
+  const isDark = c.dark; const isRTL = i18n.language === 'ar'; const lang = i18n.language;
   const role = profile?.role || 'admin';
   const name = isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar);
   const roleLabel = ROLE_LABELS[role]?.[lang] || '';
   const sections = getSections(role);
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const hr = useMemo(() => buildHRStats(attendance), [attendance]);
-  const c = { bg: isDark ? '#152232' : '#F0F4F8', card: isDark ? '#1a2234' : '#ffffff', cardBg: isDark ? '#1a2234' : '#ffffff', border: isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0', text: isDark ? '#E2EAF4' : '#1A2B3C', textMuted: isDark ? '#8BA8C8' : '#64748B', thBg: isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC', accent: '#4A7AAB', primary: '#2B4C6F' };
   const dateStr = new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const hour = new Date().getHours();
   const greeting = lang === 'ar'
@@ -151,13 +150,13 @@ export default function DashboardPage() {
   const pipeData = PIPELINE_DATA.map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en }));
 
   const KpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB' }) => (
-    <div style={{ background: c.cardBg, borderRadius: 14, border: '1px solid ' + c.border, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ background: c.card, borderRadius: 14, border: '1px solid ' + c.border, padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 0, [isRTL ? 'right' : 'left']: 0, width: 4, height: '100%', background: 'linear-gradient(180deg,' + color + ',transparent)', borderRadius: isRTL ? '0 14px 14px 0' : '14px 0 0 14px' }} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-          <p style={{ margin: '0 0 6px', fontSize: 12, color: c.textMuted, fontWeight: 500 }}>{label}</p>
+          <p style={{ margin: '0 0 6px', fontSize: 12, color: c.muted, fontWeight: 500 }}>{label}</p>
           <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: c.text, lineHeight: 1 }}>{value}</p>
-          {sub && <p style={{ margin: '3px 0 0', fontSize: 11, color: c.textMuted }}>{sub}</p>}
+          {sub && <p style={{ margin: '3px 0 0', fontSize: 11, color: c.muted }}>{sub}</p>}
           {trend && <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 5, flexDirection: isRTL ? 'row-reverse' : 'row' }}>{trendUp ? <ArrowUpRight size={12} color="#4A7AAB" /> : <ArrowDownRight size={12} color="#EF4444" />}<span style={{ fontSize: 11, color: trendUp ? '#4A7AAB' : '#EF4444', fontWeight: 600 }}>{trend}</span></div>}
         </div>
         <div style={{ width: 42, height: 42, borderRadius: 11, background: color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon size={20} color={color} /></div>
@@ -170,12 +169,12 @@ export default function DashboardPage() {
       <div style={{ width: 34, height: 34, borderRadius: 9, background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon size={16} color={c.accent} /></div>
       <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
         <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>{title}</p>
-        {sub && <p style={{ margin: 0, fontSize: 11, color: c.textMuted }}>{sub}</p>}
+        {sub && <p style={{ margin: 0, fontSize: 11, color: c.muted }}>{sub}</p>}
       </div>
     </div>
   );
 
-  const Box = ({ children, style = {} }) => <div style={{ background: c.cardBg, borderRadius: 14, border: '1px solid ' + c.border, padding: 20, ...style }}>{children}</div>;
+  const Box = ({ children, style = {} }) => <div style={{ background: c.card, borderRadius: 14, border: '1px solid ' + c.border, padding: 20, ...style }}>{children}</div>;
 
   return (
     <div style={{ padding: '24px 28px', background: c.bg, minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
@@ -212,8 +211,8 @@ export default function DashboardPage() {
               <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4A7AAB" stopOpacity={0.25} /><stop offset="95%" stopColor="#4A7AAB" stopOpacity={0} /></linearGradient></defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.1)' : 'rgba(0,0,0,0.06)'} />
-                <XAxis dataKey="label" tick={{ fill: c.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: c.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => (v / 1000) + 'K'} />
+                <XAxis dataKey="label" tick={{ fill: c.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: c.muted, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => (v / 1000) + 'K'} />
                 <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
                 <Area type="monotone" dataKey="value" stroke="#4A7AAB" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#4A7AAB', r: 3 }} activeDot={{ r: 5 }} />
               </AreaChart>
@@ -227,7 +226,7 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginTop: 6 }}>
               {EXPENSE_CATS.map((cat, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: BRAND[i + 1] }} /><span style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? cat.name_ar : cat.name_en}</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}><div style={{ width: 7, height: 7, borderRadius: '50%', background: BRAND[i + 1] }} /><span style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? cat.name_ar : cat.name_en}</span></div>
                   <span style={{ fontSize: 11, fontWeight: 700, color: c.text }}>{cat.pct}%</span>
                 </div>
               ))}
@@ -243,8 +242,8 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={185}>
               <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
-                <XAxis dataKey="label" tick={{ fill: c.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: c.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="label" tick={{ fill: c.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: c.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
                 <Bar dataKey="count" radius={[6, 6, 0, 0]}>{pipeData.map((_, i) => <Cell key={i} fill={'rgba(74,122,171,' + (0.35 + i * 0.13) + ')'} />)}</Bar>
               </BarChart>
@@ -263,14 +262,14 @@ export default function DashboardPage() {
                     </div>
                     <div style={{ height: 4, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' }}><div style={{ height: '100%', borderRadius: 2, width: s.pct + '%', background: i === 0 ? '#4A7AAB' : i === 1 ? '#6B8DB5' : '#8BA8C8' }} /></div>
                   </div>
-                  <span style={{ fontSize: 10, color: c.textMuted, minWidth: 26, textAlign: 'center' }}>{s.pct}%</span>
+                  <span style={{ fontSize: 10, color: c.muted, minWidth: 26, textAlign: 'center' }}>{s.pct}%</span>
                 </div>
               ))}
             </div>
             <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid ' + c.border }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, flexDirection: isRTL ? 'row-reverse' : 'row' }}><span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span><span style={{ fontSize: 12, fontWeight: 700, color: c.accent }}>{targetPct}%</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, flexDirection: isRTL ? 'row-reverse' : 'row' }}><span style={{ fontSize: 12, color: c.muted }}>{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span><span style={{ fontSize: 12, fontWeight: 700, color: c.accent }}>{targetPct}%</span></div>
               <div style={{ height: 8, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0', overflow: 'hidden' }}><div style={{ height: '100%', borderRadius: 4, width: targetPct + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, flexDirection: isRTL ? 'row-reverse' : 'row' }}><span style={{ fontSize: 10, color: c.textMuted }}>{(MOCK_SALES.achieved / 1000).toFixed(0)}K</span><span style={{ fontSize: 10, color: c.textMuted }}>{(MOCK_SALES.target / 1000).toFixed(0)}K EGP</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3, flexDirection: isRTL ? 'row-reverse' : 'row' }}><span style={{ fontSize: 10, color: c.muted }}>{(MOCK_SALES.achieved / 1000).toFixed(0)}K</span><span style={{ fontSize: 10, color: c.muted }}>{(MOCK_SALES.target / 1000).toFixed(0)}K EGP</span></div>
             </div>
           </Box>
         </div>
@@ -290,8 +289,8 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height={160}>
                 <BarChart data={hr.deptCounts} layout="vertical" margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
-                  <XAxis type="number" tick={{ fill: c.textMuted, fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey={lang === 'ar' ? 'name_ar' : 'name_en'} tick={{ fill: c.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+                  <XAxis type="number" tick={{ fill: c.muted, fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey={lang === 'ar' ? 'name_ar' : 'name_en'} tick={{ fill: c.muted, fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
                   <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
                   <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#4A7AAB" />
                 </BarChart>
@@ -301,7 +300,7 @@ export default function DashboardPage() {
               <CardTitle icon={ShieldAlert} title={lang === 'ar' ? 'تنبيهات HR' : 'HR Alerts'} sub={lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention'} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[{ I: AlertTriangle, color: '#EF4444', bg: 'rgba(239,68,68,0.08)', label: lang === 'ar' ? hr.contractAlerts + ' عقد ينتهي قريباً' : hr.contractAlerts + ' contracts expiring', show: hr.contractAlerts > 0 }, { I: Clock, color: '#6B8DB5', bg: 'rgba(107,141,181,0.1)', label: lang === 'ar' ? hr.probationCount + ' موظف في فترة تجربة' : hr.probationCount + ' on probation', show: hr.probationCount > 0 }, { I: UserCheck, color: '#EF4444', bg: 'rgba(239,68,68,0.08)', label: lang === 'ar' ? hr.absentCount + ' غائب اليوم' : hr.absentCount + ' absent today', show: hr.absentCount > 0 }, { I: Clock, color: '#4A7AAB', bg: 'rgba(74,122,171,0.08)', label: lang === 'ar' ? hr.lateCount + ' متأخر اليوم' : hr.lateCount + ' late today', show: hr.lateCount > 0 }].filter(a => a.show).map((a, i) => { const AI = a.I; return <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, background: a.bg, flexDirection: isRTL ? 'row-reverse' : 'row' }}><AI size={14} color={a.color} /><span style={{ fontSize: 12, color: a.color, fontWeight: 500 }}>{a.label}</span></div>; })}
-                {hr.contractAlerts === 0 && hr.absentCount === 0 && hr.lateCount === 0 && <div style={{ textAlign: 'center', padding: '16px 0' }}><p style={{ fontSize: 13, color: c.textMuted, margin: 0 }}>{lang === 'ar' ? 'لا تنبيهات اليوم' : 'No alerts today'}</p></div>}
+                {hr.contractAlerts === 0 && hr.absentCount === 0 && hr.lateCount === 0 && <div style={{ textAlign: 'center', padding: '16px 0' }}><p style={{ fontSize: 13, color: c.muted, margin: 0 }}>{lang === 'ar' ? 'لا تنبيهات اليوم' : 'No alerts today'}</p></div>}
               </div>
             </Box>
           </div>
@@ -315,7 +314,7 @@ export default function DashboardPage() {
       <Box>
         <CardTitle icon={BarChart2} title={lang === 'ar' ? 'روابط سريعة' : 'Quick Links'} />
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          {[{ l_ar: 'الموظفين', l_en: 'Employees', path: '/hr/employees', show: sections.showHR, icon: Users }, { l_ar: 'الحضور', l_en: 'Attendance', path: '/hr/attendance', show: sections.showHR, icon: CalendarCheck }, { l_ar: 'الرواتب', l_en: 'Payroll', path: '/hr/payroll', show: sections.showHR, icon: DollarSign }, { l_ar: 'التوظيف', l_en: 'Recruitment', path: '/hr/recruitment', show: sections.showHR, icon: Briefcase }, { l_ar: 'الفرص', l_en: 'Opportunities', path: '/crm/opportunities', show: sections.showCRM, icon: Star }, { l_ar: 'ليد بول', l_en: 'Lead Pool', path: '/crm/lead-pool', show: sections.showCRM, icon: Users }, { l_ar: 'الأداء', l_en: 'Performance', path: '/performance', show: true, icon: TrendingUp }, { l_ar: 'بوابة الموظف', l_en: 'Self-Service', path: '/hr/self-service', show: true, icon: UserCheck }, { l_ar: 'المالية', l_en: 'Finance', path: '/finance', show: sections.showFinance, icon: Wallet }, { l_ar: 'التارجت', l_en: 'Targets', path: '/sales/targets', show: sections.showSales, icon: Target }].filter(l => l.show).map((l, i) => { const LI = l.icon; return <Link key={i} to={l.path} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 8, border: '1px solid ' + c.border, background: c.thBg, textDecoration: 'none', color: c.textMuted, fontSize: 12, fontWeight: 500, flexDirection: isRTL ? 'row-reverse' : 'row', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = c.accent; e.currentTarget.style.color = c.accent; e.currentTarget.style.background = 'rgba(74,122,171,0.08)'; }} onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted; e.currentTarget.style.background = c.thBg; }}><LI size={13} /><span>{lang === 'ar' ? l.l_ar : l.l_en}</span></Link>; })}
+          {[{ l_ar: 'الموظفين', l_en: 'Employees', path: '/hr/employees', show: sections.showHR, icon: Users }, { l_ar: 'الحضور', l_en: 'Attendance', path: '/hr/attendance', show: sections.showHR, icon: CalendarCheck }, { l_ar: 'الرواتب', l_en: 'Payroll', path: '/hr/payroll', show: sections.showHR, icon: DollarSign }, { l_ar: 'التوظيف', l_en: 'Recruitment', path: '/hr/recruitment', show: sections.showHR, icon: Briefcase }, { l_ar: 'الفرص', l_en: 'Opportunities', path: '/crm/opportunities', show: sections.showCRM, icon: Star }, { l_ar: 'ليد بول', l_en: 'Lead Pool', path: '/crm/lead-pool', show: sections.showCRM, icon: Users }, { l_ar: 'الأداء', l_en: 'Performance', path: '/performance', show: true, icon: TrendingUp }, { l_ar: 'بوابة الموظف', l_en: 'Self-Service', path: '/hr/self-service', show: true, icon: UserCheck }, { l_ar: 'المالية', l_en: 'Finance', path: '/finance', show: sections.showFinance, icon: Wallet }, { l_ar: 'التارجت', l_en: 'Targets', path: '/sales/targets', show: sections.showSales, icon: Target }].filter(l => l.show).map((l, i) => { const LI = l.icon; return <Link key={i} to={l.path} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 8, border: '1px solid ' + c.border, background: c.thBg, textDecoration: 'none', color: c.muted, fontSize: 12, fontWeight: 500, flexDirection: isRTL ? 'row-reverse' : 'row', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = c.accent; e.currentTarget.style.color = c.accent; e.currentTarget.style.background = 'rgba(74,122,171,0.08)'; }} onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.muted; e.currentTarget.style.background = c.thBg; }}><LI size={13} /><span>{lang === 'ar' ? l.l_ar : l.l_en}</span></Link>; })}
         </div>
       </Box>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../contexts/ThemeContext';
+import { useDS } from '../hooks/useDesignSystem';
 import { useAuth } from '../contexts/AuthContext';
 import {
   CheckSquare, Plus, X, Search, Clock, Phone, PhoneCall,
@@ -22,10 +22,10 @@ function formatDue(dateStr, lang) {
 
 export default function TasksPage() {
   const { i18n } = useTranslation();
-  const { theme } = useTheme();
+  const c = useDS();
+  const isDark = c.dark;
   const { user } = useAuth();
   const lang   = i18n.language;
-  const isDark  = theme === 'dark';
   const isRTL   = lang === 'ar';
 
   const [tasks, setTasks]           = useState([]);
@@ -37,18 +37,6 @@ export default function TasksPage() {
   const [showAdd, setShowAdd]       = useState(false);
   const [form, setForm]             = useState({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'crm', due_date: '', notes: '', contact_name: '' });
   const [saving, setSaving]         = useState(false);
-
-  const c = {
-    bg:      isDark ? '#152232' : '#f9fafb',
-    cardBg:  isDark ? '#1a2234' : '#ffffff',
-    border:  isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text:    isDark ? '#E2EAF4' : '#111827',
-    muted:   isDark ? '#8BA8C8' : '#6b7280',
-    inputBg: isDark ? '#0F1E2D' : '#ffffff',
-    hover:   isDark ? 'rgba(74,122,171,0.06)' : '#f8fafc',
-    accent:  '#4A7AAB',
-    primary: '#2B4C6F',
-  };
 
   const load = async () => {
     setLoading(true);
@@ -98,7 +86,7 @@ export default function TasksPage() {
 
   const inputStyle = {
     width: '100%', padding: '8px 11px', borderRadius: 8, border: '1px solid ' + c.border,
-    background: c.inputBg, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box',
+    background: c.input, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box',
     direction: isRTL ? 'rtl' : 'ltr',
   };
 
@@ -134,7 +122,7 @@ export default function TasksPage() {
           { label: lang==='ar'?'متأخرة':'Overdue',value: stats.overdue, color: '#EF4444' },
           { label: lang==='ar'?'مكتملة':'Done',   value: stats.done,    color: c.primary },
         ].map((s,i) => (
-          <div key={i} style={{ background: c.cardBg, borderRadius: 10, padding: '12px 16px', border: '1px solid ' + c.border }}>
+          <div key={i} style={{ background: c.card, borderRadius: 10, padding: '12px 16px', border: '1px solid ' + c.border }}>
             <div style={{ fontSize: 11, color: c.muted, marginBottom: 4 }}>{s.label}</div>
             <div style={{ fontSize: 26, fontWeight: 700, color: s.color }}>{s.value}</div>
           </div>
@@ -143,7 +131,7 @@ export default function TasksPage() {
 
       {/* Add Form */}
       {showAdd && (
-        <div style={{ background: c.cardBg, borderRadius: 12, padding: 18, marginBottom: 14, border: '1px solid ' + c.border }}>
+        <div style={{ background: c.card, borderRadius: 12, padding: 18, marginBottom: 14, border: '1px solid ' + c.border }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
             <div style={{ gridColumn: '1/-1' }}>
               <input value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))}
@@ -182,12 +170,12 @@ export default function TasksPage() {
       )}
 
       {/* Filters */}
-      <div style={{ background: c.cardBg, borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: '1px solid ' + c.border, display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', flexDirection: isRTL?'row-reverse':'row' }}>
+      <div style={{ background: c.card, borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: '1px solid ' + c.border, display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', flexDirection: isRTL?'row-reverse':'row' }}>
         <div style={{ position:'relative', flex:1, minWidth:160 }}>
           <Search size={13} style={{ position:'absolute', [isRTL?'right':'left']:10, top:'50%', transform:'translateY(-50%)', color:c.muted }} />
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={lang==='ar'?'بحث...':'Search...'} style={{
             width:'100%', padding: isRTL?'7px 30px 7px 10px':'7px 10px 7px 30px',
-            borderRadius:7, border:'1px solid '+c.border, background:c.inputBg, color:c.text, fontSize:12, outline:'none', boxSizing:'border-box',
+            borderRadius:7, border:'1px solid '+c.border, background:c.input, color:c.text, fontSize:12, outline:'none', boxSizing:'border-box',
           }} />
         </div>
         {/* Status */}
@@ -201,14 +189,14 @@ export default function TasksPage() {
           </button>
         ))}
         {/* Priority */}
-        <select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)} style={{ padding:'6px 10px', borderRadius:7, border:'1px solid '+c.border, background:c.inputBg, color:c.text, fontSize:12, outline:'none' }}>
+        <select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)} style={{ padding:'6px 10px', borderRadius:7, border:'1px solid '+c.border, background:c.input, color:c.text, fontSize:12, outline:'none' }}>
           <option value="all">{lang==='ar'?'كل الأولويات':'All Priorities'}</option>
           {Object.entries(TASK_PRIORITIES).map(([k,v])=><option key={k} value={k}>{lang==='ar'?v.ar:v.en}</option>)}
         </select>
       </div>
 
       {/* Tasks List */}
-      <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow:'hidden' }}>
+      <div style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow:'hidden' }}>
         {loading ? (
           <div style={{ textAlign:'center', padding:48, color:c.muted }}>{lang==='ar'?'جاري التحميل...':'Loading...'}</div>
         ) : filtered.length === 0 ? (
@@ -234,7 +222,7 @@ export default function TasksPage() {
               flexDirection: isRTL?'row-reverse':'row', opacity: isDone ? 0.65 : 1,
               transition:'background 0.15s',
             }}
-              onMouseEnter={e => e.currentTarget.style.background = c.hover}
+              onMouseEnter={e => e.currentTarget.style.background = c.rowHover}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
               {/* Done toggle */}

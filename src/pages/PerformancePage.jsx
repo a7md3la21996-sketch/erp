@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useTheme } from '../contexts/ThemeContext';
+import { useDS } from '../hooks/useDesignSystem';
 import { useTranslation } from 'react-i18next';
 import {
   Target, TrendingUp, TrendingDown, Users, Star,
@@ -122,9 +122,9 @@ const BOX_COLORS = [
 ];
 
 export default function PerformancePage() {
-  const { theme } = useTheme();
   const { i18n } = useTranslation();
-  const isDark = theme === 'dark';
+  const c = useDS();
+  const isDark = c.dark;
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
 
@@ -132,17 +132,6 @@ export default function PerformancePage() {
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [selectedEmp, setSelectedEmp] = useState(null);
-
-  const c = {
-    bg:        isDark ? '#152232' : '#f9fafb',
-    cardBg:    isDark ? '#1a2234' : '#ffffff',
-    border:    isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb',
-    text:      isDark ? '#E2EAF4' : '#111827',
-    textMuted: isDark ? '#8BA8C8' : '#6b7280',
-    inputBg:   isDark ? '#0F1E2D' : '#ffffff',
-    accent:    '#4A7AAB',
-    primary:   '#2B4C6F',
-  };
 
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const empData = useMemo(() =>
@@ -219,7 +208,7 @@ export default function PerformancePage() {
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: c.text }}>
               {lang === 'ar' ? 'متابعة الأداء' : 'Performance Tracking'}
             </h1>
-            <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>
+            <p style={{ margin: 0, fontSize: 13, color: c.muted }}>
               {lang === 'ar' ? 'KPIs مبنية على بيانات CRM + الحضور — مارس 2026' : 'KPIs from CRM + Attendance data — March 2026'}
             </p>
           </div>
@@ -234,10 +223,10 @@ export default function PerformancePage() {
           { label: lang === 'ar' ? 'يحتاجون متابعة' : 'Need Attention', value: atRisk,         icon: '', color: '#EF4444' },
           { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: MOCK_EMPLOYEES.length, icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
-          <div key={i} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
+          <div key={i} style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
             <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
             <div style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{s.value}</div>
-            <div style={{ fontSize: 12, color: c.textMuted }}>{s.label}</div>
+            <div style={{ fontSize: 12, color: c.muted }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -247,7 +236,7 @@ export default function PerformancePage() {
         {tabs.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)} style={{
             padding: '11px 20px', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-            background: 'transparent', color: activeTab === t.key ? c.accent : c.textMuted,
+            background: 'transparent', color: activeTab === t.key ? c.accent : c.muted,
             borderBottom: activeTab === t.key ? '2px solid ' + c.accent : '2px solid transparent',
           }}>
             {lang === 'ar' ? t.ar : t.en}
@@ -258,13 +247,13 @@ export default function PerformancePage() {
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <Search size={14} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRTL ? 'right' : 'left']: 12, color: c.textMuted }} />
+          <Search size={14} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRTL ? 'right' : 'left']: 12, color: c.muted }} />
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employee...'}
-            style={{ width: '100%', padding: isRTL ? '9px 38px 9px 12px' : '9px 12px 9px 38px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: isRTL ? '9px 38px 9px 12px' : '9px 12px 9px 38px', borderRadius: 8, border: '1px solid ' + c.border, background: c.input, color: c.text, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
           />
         </div>
-        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid ' + c.border, background: c.inputBg, color: c.text, fontSize: 13, cursor: 'pointer' }}>
+        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} style={{ padding: '9px 14px', borderRadius: 8, border: '1px solid ' + c.border, background: c.input, color: c.text, fontSize: 13, cursor: 'pointer' }}>
           <option value="all">{lang === 'ar' ? 'كل الأقسام' : 'All Departments'}</option>
           {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{lang === 'ar' ? d.name_ar : d.name_en}</option>)}
         </select>
@@ -279,13 +268,13 @@ export default function PerformancePage() {
             return (
               <div key={d.emp.id} role="button" tabIndex={0} onClick={() => setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d)}
                 onKeyDown={e => { if(e.key==='Enter'||e.key===' ') setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d); }}
-                style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '14px 18px', cursor: 'pointer', transition: 'all 0.15s', flexDirection: isRTL ? 'row-reverse' : 'row' }}
+                style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, padding: '14px 18px', cursor: 'pointer', transition: 'all 0.15s', flexDirection: isRTL ? 'row-reverse' : 'row' }}
                 onMouseEnter={e => e.currentTarget.style.borderColor = c.accent}
                 onMouseLeave={e => e.currentTarget.style.borderColor = c.border}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                   {/* Rank */}
-                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: idx < 3 ? ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] + '20' : c.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: idx < 3 ? ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] : c.textMuted, flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: idx < 3 ? ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] + '20' : c.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: idx < 3 ? ['#6B8DB5','#8BA8C8','#4A7AAB'][idx] : c.muted, flexShrink: 0 }}>
                     {idx + 1}
                   </div>
                   {/* Avatar */}
@@ -295,23 +284,23 @@ export default function PerformancePage() {
                   {/* Info */}
                   <div style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>
                     <div style={{ fontSize: 14, fontWeight: 600, color: c.text }}>{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
-                    <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? d.emp.job_title_ar : d.emp.job_title_en} · {dept ? (lang === 'ar' ? dept.name_ar : dept.name_en) : ''}</div>
+                    <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? d.emp.job_title_ar : d.emp.job_title_en} · {dept ? (lang === 'ar' ? dept.name_ar : dept.name_en) : ''}</div>
                   </div>
                   {/* Quick Stats */}
                   <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                     <div style={{ textAlign: 'center', minWidth: 50 }}>
-                      <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'حضور' : 'Attend'}</div>
+                      <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? 'حضور' : 'Attend'}</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{d.presentDays}d</div>
                     </div>
                     {d.crm.calls > 0 && (
                       <div style={{ textAlign: 'center', minWidth: 50 }}>
-                        <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'مكالمات' : 'Calls'}</div>
+                        <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? 'مكالمات' : 'Calls'}</div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{d.crm.calls}</div>
                       </div>
                     )}
                     {d.crm.deals_closed > 0 && (
                       <div style={{ textAlign: 'center', minWidth: 50 }}>
-                        <div style={{ fontSize: 11, color: c.textMuted }}>{lang === 'ar' ? 'صفقات' : 'Deals'}</div>
+                        <div style={{ fontSize: 11, color: c.muted }}>{lang === 'ar' ? 'صفقات' : 'Deals'}</div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#4A7AAB' }}>{d.crm.deals_closed}</div>
                       </div>
                     )}
@@ -335,12 +324,12 @@ export default function PerformancePage() {
                         return (
                           <div key={i} style={{ padding: '10px 12px', borderRadius: 8, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', border: '1px solid ' + c.border }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                              <span style={{ fontSize: 12, color: c.textMuted }}>{lang === 'ar' ? kpi.ar : kpi.en}</span>
+                              <span style={{ fontSize: 12, color: c.muted }}>{lang === 'ar' ? kpi.ar : kpi.en}</span>
                               <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: freq.color + '20', color: freq.color }}>{lang === 'ar' ? freq.ar : freq.en}</span>
                             </div>
                             <div style={{ fontSize: 18, fontWeight: 800, color: kpiColor, textAlign: isRTL ? 'right' : 'left' }}>
                               {kpi.actual.toLocaleString()}{kpi.unit === 'EGP' ? '' : ''}
-                              <span style={{ fontSize: 11, fontWeight: 400, color: c.textMuted }}> / {kpi.target.toLocaleString()}</span>
+                              <span style={{ fontSize: 11, fontWeight: 400, color: c.muted }}> / {kpi.target.toLocaleString()}</span>
                             </div>
                             <div style={{ height: 3, borderRadius: 2, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', marginTop: 6 }}>
                               <div style={{ height: '100%', borderRadius: 2, width: Math.min(kpi.pct, 100) + '%', background: kpiColor }} />
@@ -350,7 +339,7 @@ export default function PerformancePage() {
                       })}
                     </div>
                     {/* Source note */}
-                    <div style={{ marginTop: 10, fontSize: 11, color: c.textMuted, textAlign: isRTL ? 'right' : 'left' }}>
+                    <div style={{ marginTop: 10, fontSize: 11, color: c.muted, textAlign: isRTL ? 'right' : 'left' }}>
                        {lang === 'ar' ? 'البيانات من: CRM + الحضور' : 'Data from: CRM + Attendance'}
                     </div>
                   </div>
@@ -370,22 +359,22 @@ export default function PerformancePage() {
             const deptEmps = empData.filter(d => d.emp.department === deptKey);
             if (deptEmps.length === 0) return null;
             return (
-              <div key={deptKey} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+              <div key={deptKey} style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid ' + c.border, background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: c.text }}>{lang === 'ar' ? dept.name_ar : dept.name_en}</div>
-                  <div style={{ fontSize: 12, color: c.textMuted }}>{deptEmps.length} {lang === 'ar' ? 'موظف' : 'employees'}</div>
+                  <div style={{ fontSize: 12, color: c.muted }}>{deptEmps.length} {lang === 'ar' ? 'موظف' : 'employees'}</div>
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
-                      <th style={{ padding: '10px 16px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.textMuted }}>{lang === 'ar' ? 'الموظف' : 'Employee'}</th>
+                      <th style={{ padding: '10px 16px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.muted }}>{lang === 'ar' ? 'الموظف' : 'Employee'}</th>
                       {kpis.map(kpi => (
-                        <th key={kpi.key} style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: c.textMuted, whiteSpace: 'nowrap' }}>
+                        <th key={kpi.key} style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: c.muted, whiteSpace: 'nowrap' }}>
                           <div>{lang === 'ar' ? kpi.ar : kpi.en}</div>
                           <div style={{ fontSize: 10, color: FREQ_CONFIG[kpi.freq]?.color }}>{lang === 'ar' ? FREQ_CONFIG[kpi.freq]?.ar : FREQ_CONFIG[kpi.freq]?.en}</div>
                         </th>
                       ))}
-                      <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: c.textMuted }}>{lang === 'ar' ? 'الإجمالي' : 'Total'}</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'center', fontSize: 11, fontWeight: 600, color: c.muted }}>{lang === 'ar' ? 'الإجمالي' : 'Total'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -399,7 +388,7 @@ export default function PerformancePage() {
                           return (
                             <td key={j} style={{ padding: '10px 12px', textAlign: 'center' }}>
                               <div style={{ fontSize: 13, fontWeight: 700, color: kpiColor }}>{kpi.actual.toLocaleString()}</div>
-                              <div style={{ fontSize: 10, color: c.textMuted }}>/{kpi.target}</div>
+                              <div style={{ fontSize: 10, color: c.muted }}>/{kpi.target}</div>
                             </td>
                           );
                         })}
@@ -432,10 +421,10 @@ export default function PerformancePage() {
                 const label = BOX_LABELS[lang][2 - potential][perf];
                 const color = BOX_COLORS[2 - potential][perf];
                 return (
-                  <div key={`${potential}-${perf}`} style={{ background: c.cardBg, borderRadius: 10, border: '2px solid ' + color + '30', padding: '14px', minHeight: 100 }}>
+                  <div key={`${potential}-${perf}`} style={{ background: c.card, borderRadius: 10, border: '2px solid ' + color + '30', padding: '14px', minHeight: 100 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 8, textAlign: isRTL ? 'right' : 'left' }}>{label}</div>
                     {boxEmps.length === 0 ? (
-                      <div style={{ fontSize: 11, color: c.textMuted, textAlign: 'center', padding: '10px 0' }}>—</div>
+                      <div style={{ fontSize: 11, color: c.muted, textAlign: 'center', padding: '10px 0' }}>—</div>
                     ) : (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {boxEmps.map(d => (
@@ -463,16 +452,16 @@ export default function PerformancePage() {
               { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.opportunities, 0), icon: '', color: '#4A7AAB' },
               { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.deals_closed, 0), icon: '', color: '#4A7AAB' },
             ].map((s, i) => (
-              <div key={i} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
+              <div key={i} style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, padding: '16px 18px' }}>
                 <div style={{ fontSize: 22, marginBottom: 6 }}>{s.icon}</div>
                 <div style={{ fontSize: 26, fontWeight: 800, color: s.color }}>{s.value}</div>
-                <div style={{ fontSize: 12, color: c.textMuted }}>{s.label}</div>
+                <div style={{ fontSize: 12, color: c.muted }}>{s.label}</div>
               </div>
             ))}
           </div>
 
           {/* Activity vs Results */}
-          <div style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+          <div style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid ' + c.border, fontSize: 14, fontWeight: 700, color: c.text, textAlign: isRTL ? 'right' : 'left' }}>
               {lang === 'ar' ? 'النشاط مقابل النتائج — Sales' : 'Activity vs Results — Sales'}
             </div>
@@ -480,7 +469,7 @@ export default function PerformancePage() {
               <thead>
                 <tr style={{ background: isDark ? 'rgba(74,122,171,0.06)' : '#F8FAFC' }}>
                   {[lang === 'ar' ? 'الموظف' : 'Employee', lang === 'ar' ? 'مكالمات' : 'Calls', lang === 'ar' ? 'فرص' : 'Opps', lang === 'ar' ? 'صفقات' : 'Deals', lang === 'ar' ? 'الإيرادات' : 'Revenue', lang === 'ar' ? 'التحليل' : 'Analysis'].map((h, i) => (
-                    <th key={i} style={{ padding: '10px 16px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.textMuted }}>{h}</th>
+                    <th key={i} style={{ padding: '10px 16px', textAlign: isRTL ? 'right' : 'left', fontSize: 11, fontWeight: 600, color: c.muted }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -540,7 +529,7 @@ export default function PerformancePage() {
             {BSC_PERSPECTIVES.map(p => {
               const avg = Math.round(p.objectives.reduce((s,o) => s + Math.min((o.actual / o.target) * 100, 100), 0) / p.objectives.length);
               return (
-                <div key={p.key} style={{ background: c.cardBg, borderRadius: 12, border: `2px solid ${p.color}30`, padding: '16px 18px', textAlign: isRTL ? 'right' : 'left' }}>
+                <div key={p.key} style={{ background: c.card, borderRadius: 12, border: `2px solid ${p.color}30`, padding: '16px 18px', textAlign: isRTL ? 'right' : 'left' }}>
                   <div style={{ fontSize: 24, marginBottom: 6 }}>{p.icon}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 4 }}>{lang === 'ar' ? p.ar : p.en}</div>
                   <div style={{ fontSize: 28, fontWeight: 900, color: p.color }}>{avg}%</div>
@@ -552,7 +541,7 @@ export default function PerformancePage() {
             })}
           </div>
           {BSC_PERSPECTIVES.map(p => (
-            <div key={p.key} style={{ background: c.cardBg, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
+            <div key={p.key} style={{ background: c.card, borderRadius: 12, border: '1px solid ' + c.border, overflow: 'hidden' }}>
               <div style={{ padding: '12px 18px', borderBottom: '1px solid ' + c.border, background: p.color + '10', display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                 <span style={{ fontSize: 16 }}>{p.icon}</span>
                 <span style={{ fontSize: 14, fontWeight: 700, color: p.color }}>{lang === 'ar' ? p.ar : p.en}</span>
@@ -569,14 +558,14 @@ export default function PerformancePage() {
                         <span style={{ fontSize: 13, color: c.text, fontWeight: 500 }}>{lang === 'ar' ? o.ar : o.en}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 13, fontWeight: 700, color: col }}>{fmt(o.actual)}{o.unit}</span>
-                          <span style={{ fontSize: 11, color: c.textMuted }}>/ {fmt(o.target)}{o.unit}</span>
+                          <span style={{ fontSize: 11, color: c.muted }}>/ {fmt(o.target)}{o.unit}</span>
                           {pct > 100 && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: '#4A7AAB20', color: '#4A7AAB', fontWeight: 600 }}>+{pct - 100}%</span>}
                         </div>
                       </div>
                       <div style={{ height: 8, borderRadius: 4, background: isDark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
                         <div style={{ height: '100%', borderRadius: 4, width: disp + '%', background: `linear-gradient(90deg,${col}99,${col})` }} />
                       </div>
-                      <div style={{ fontSize: 11, color: c.textMuted, marginTop: 3, textAlign: isRTL ? 'right' : 'left' }}>{pct}%</div>
+                      <div style={{ fontSize: 11, color: c.muted, marginTop: 3, textAlign: isRTL ? 'right' : 'left' }}>{pct}%</div>
                     </div>
                   );
                 })}

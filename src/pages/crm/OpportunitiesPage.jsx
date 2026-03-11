@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import FollowUpReminder from '../../components/ui/FollowUpReminder';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
@@ -313,8 +313,8 @@ function AddModal({ isDark, isRTL, lang, onClose, onSave, agents, projects }) {
 // Main Page
 // ═══════════════════════════════════════════════
 export default function OpportunitiesPage() {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const c = useDS();
+  const isDark = c.dark;
   const { i18n } = useTranslation();
   const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
@@ -331,8 +331,6 @@ export default function OpportunitiesPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
-
-  const c = { bg: isDark ? '#152232' : '#f9fafb', cardBg: isDark ? '#1a2234' : '#fff', border: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb', text: isDark ? '#E2EAF4' : '#111827', textMuted: isDark ? '#8BA8C8' : '#6b7280', inputBg: isDark ? '#0F1E2D' : '#fff' };
 
   // Load data
   useEffect(() => {
@@ -395,7 +393,7 @@ export default function OpportunitiesPage() {
     setShowModal(false);
   };
 
-  const sel = { padding: '8px 12px', borderRadius: 8, fontSize: 13, border: `1px solid ${c.border}`, background: c.inputBg, color: c.text, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' };
+  const sel = { padding: '8px 12px', borderRadius: 8, fontSize: 13, border: `1px solid ${c.border}`, background: c.input, color: c.text, fontFamily: 'inherit', outline: 'none', cursor: 'pointer' };
 
   return (<>
     <div style={{ minHeight: '100vh', background: c.bg, fontFamily: 'Cairo,Tajawal,sans-serif', direction: isRTL ? 'rtl' : 'ltr', padding: '20px 20px 40px' }}>
@@ -406,7 +404,7 @@ export default function OpportunitiesPage() {
             <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#1B3347,#4A7AAB)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Grid3X3 size={18} color="#fff" /></div>
             <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: c.text }}>{isRTL ? 'الفرص البيعية' : 'Opportunities'}</h1>
           </div>
-          <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{isRTL ? 'إدارة وتتبع فرص المبيعات' : 'Manage and track sales opportunities'}</p>
+          <p style={{ margin: 0, fontSize: 13, color: c.muted }}>{isRTL ? 'إدارة وتتبع فرص المبيعات' : 'Manage and track sales opportunities'}</p>
         </div>
         <button onClick={() => setShowModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg,#1B3347,#2B4C6F)', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(27,51,71,0.3)' }}>
           <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
@@ -421,21 +419,21 @@ export default function OpportunitiesPage() {
           { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', I: Building2 },
           { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', I: Flame },
         ].map((s, i) => (
-          <div key={i} style={{ flex: '1 1 140px', background: c.cardBg, borderRadius: 12, padding: '14px 16px', border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div key={i} style={{ flex: '1 1 140px', background: c.card, borderRadius: 12, padding: '14px 16px', border: `1px solid ${c.border}`, display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: s.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><s.I size={16} color={s.color} /></div>
-            <div><div style={{ fontSize: 18, fontWeight: 800, color: c.text }}>{s.value}</div><div style={{ fontSize: 11, color: c.textMuted }}>{s.label}</div></div>
+            <div><div style={{ fontSize: 18, fontWeight: 800, color: c.text }}>{s.value}</div><div style={{ fontSize: 11, color: c.muted }}>{s.label}</div></div>
           </div>
         ))}
       </div>
 
       {/* Stage Tabs */}
-      <div style={{ background: c.cardBg, borderRadius: 12, padding: '10px 14px', marginBottom: 16, border: `1px solid ${c.border}`, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      <div style={{ background: c.card, borderRadius: 12, padding: '10px 14px', marginBottom: 16, border: `1px solid ${c.border}`, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {STAGE_CONFIG.map(s => {
           const count = s.id === 'all' ? opps.length : opps.filter(o => o.stage === s.id).length;
           const active = activeStage === s.id;
-          return <button key={s.id} onClick={() => setActiveStage(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: active ? 700 : 500, whiteSpace: 'nowrap', background: active ? s.color : 'transparent', color: active ? '#fff' : c.textMuted, transition: 'all 0.15s' }}>
+          return <button key={s.id} onClick={() => setActiveStage(s.id)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: active ? 700 : 500, whiteSpace: 'nowrap', background: active ? s.color : 'transparent', color: active ? '#fff' : c.muted, transition: 'all 0.15s' }}>
             {isRTL ? s.label_ar : s.label_en}
-            <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '1px 6px', background: active ? 'rgba(255,255,255,0.25)' : (isDark ? 'rgba(74,122,171,0.15)' : '#f3f4f6'), color: active ? '#fff' : c.textMuted }}>{count}</span>
+            <span style={{ fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '1px 6px', background: active ? 'rgba(255,255,255,0.25)' : (isDark ? 'rgba(74,122,171,0.15)' : '#f3f4f6'), color: active ? '#fff' : c.muted }}>{count}</span>
           </button>;
         })}
       </div>
@@ -443,7 +441,7 @@ export default function OpportunitiesPage() {
       {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: '1 1 200px' }}>
-          <Search size={14} color={c.textMuted} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRTL ? 'right' : 'left']: 10, pointerEvents: 'none' }} />
+          <Search size={14} color={c.muted} style={{ position: 'absolute', top: '50%', transform: 'translateY(-50%)', [isRTL ? 'right' : 'left']: 10, pointerEvents: 'none' }} />
           <input placeholder={isRTL ? 'بحث...' : 'Search...'} value={search} onChange={e => setSearch(e.target.value)} style={{ ...sel, width: '100%', boxSizing: 'border-box', [isRTL ? 'paddingRight' : 'paddingLeft']: 32 }} />
         </div>
         <select style={sel} value={filterAgent} onChange={e => setFilterAgent(e.target.value)}>
@@ -455,14 +453,14 @@ export default function OpportunitiesPage() {
           {Object.entries(TEMP_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
         </select>
         {(search || filterAgent !== 'all' || filterTemp !== 'all') && <button onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); }} style={{ padding: '8px 10px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#ef444422', color: '#ef4444', display: 'flex' }}><X size={14} /></button>}
-        <div style={{ marginInlineStart: 'auto', fontSize: 12, color: c.textMuted }}>{filtered.length} {isRTL ? 'فرصة' : 'opportunities'}</div>
+        <div style={{ marginInlineStart: 'auto', fontSize: 12, color: c.muted }}>{filtered.length} {isRTL ? 'فرصة' : 'opportunities'}</div>
       </div>
 
       {/* Content */}
       {loading ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} style={{ background: c.cardBg, borderRadius: 14, border: `1px solid ${c.border}`, padding: 16, height: 180 }}>
+            <div key={i} style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, padding: 16, height: 180 }}>
               <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 38, height: 38, borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.05)' : '#f0f0f0', animation: 'shimmer 1.5s infinite linear', backgroundSize: '800px 100%', backgroundImage: isDark ? 'linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%)' : 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)' }} />
                 <div style={{ flex: 1 }}>
@@ -484,7 +482,7 @@ export default function OpportunitiesPage() {
             <TrendingUp size={24} color="#4A7AAB" />
           </div>
           <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: c.text }}>{isRTL ? 'لا توجد فرص بيع' : 'No Opportunities Found'}</p>
-          <p style={{ margin: 0, fontSize: 13, color: c.textMuted }}>{isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet'}</p>
+          <p style={{ margin: 0, fontSize: 13, color: c.muted }}>{isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet'}</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>

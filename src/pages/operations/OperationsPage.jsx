@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart2, FileCheck, Banknote, KeyRound, Headphones,
@@ -43,10 +43,6 @@ const TICKET_TYPE_ICONS = { complaint: AlertTriangle, maintenance: Wrench, inqui
 const initials = (n) => (n || '').trim().split(' ').map(w => w[0]).slice(0, 2).join('') || '?';
 const ACOLORS = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8'];
 
-function useDS() {
-  const { theme } = useTheme(); const dark = theme==='dark';
-  return { dark, bg:dark?'#152232':'#F0F4F8', card:dark?'#1a2234':'#ffffff', border:dark?'rgba(74,122,171,0.2)':'#E2E8F0', text:dark?'#E2EAF4':'#1A2B3C', muted:dark?'#8BA8C8':'#64748B', input:dark?'#0F1E2D':'#ffffff', rowHover:dark?'rgba(74,122,171,0.07)':'#F8FAFC', thBg:dark?'rgba(74,122,171,0.08)':'#F8FAFC', accent:'#4A7AAB', primary:'#2B4C6F' };
-}
 
 function HandoverCard({ ho, c, isRTL, isDark }) {
   const [cardHov, setCardHov] = useState(false);

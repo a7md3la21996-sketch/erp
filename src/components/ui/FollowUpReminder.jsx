@@ -1,24 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { Phone, MessageCircle, MapPin, Users, Mail, Bell, Plus, X, Check, Trash2, Clock, ChevronDown } from 'lucide-react';
 import { fetchReminders, createReminder, markReminderDone, deleteReminder, REMINDER_TYPES } from '../../services/remindersService';
 
 const ICONS = { Phone, MessageCircle, MapPin, Users, Mail };
 
-function useDS() {
-  const { theme } = useTheme();
-  const dark = theme === 'dark';
-  return {
-    dark, card: dark ? '#1a2234' : '#ffffff',
-    border: dark ? 'rgba(74,122,171,0.2)' : '#E2E8F0',
-    text: dark ? '#E2EAF4' : '#1A2B3C',
-    muted: dark ? '#8BA8C8' : '#64748B',
-    input: dark ? '#0F1E2D' : '#F8FAFC',
-    hover: dark ? 'rgba(74,122,171,0.07)' : '#F8FAFC',
-  };
-}
 
 function formatDue(dateStr, lang) {
   if (!dateStr) return '';
@@ -202,7 +190,7 @@ export default function FollowUpReminder({ entityType = 'contact', entityId, ent
             const od = isOverdue(r.due_at);
             return (
               <div key={r.id} style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: idx < Math.min(active.length, expanded ? 999 : 3) - 1 ? `1px solid ${ds.border}` : 'none', flexDirection: isRTL ? 'row-reverse' : 'row' }}
-                onMouseEnter={e => e.currentTarget.style.background = ds.hover}
+                onMouseEnter={e => e.currentTarget.style.background = ds.rowHover}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                 <div style={{ width: 32, height: 32, borderRadius: 8, background: typeDef.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Ic size={14} color={typeDef.color} />

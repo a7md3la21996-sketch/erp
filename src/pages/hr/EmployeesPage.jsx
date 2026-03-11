@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useDS } from '../../hooks/useDesignSystem';
 import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 import {
   Users, Plus, Search, Eye, Edit2, FileText,
@@ -8,24 +8,6 @@ import {
   UserCheck, Briefcase, Shield, X, Check
 } from 'lucide-react';
 
-/* ─── shared design tokens ─── */
-function useDS() {
-  const { theme } = useTheme();
-  const dark = theme === 'dark';
-  return {
-    dark,
-    bg:        dark ? '#152232' : '#F0F4F8',
-    card:      dark ? '#1a2234' : '#ffffff',
-    border:    dark ? 'rgba(74,122,171,0.2)' : '#E2E8F0',
-    text:      dark ? '#E2EAF4' : '#1A2B3C',
-    muted:     dark ? '#8BA8C8' : '#64748B',
-    input:     dark ? '#0F1E2D' : '#ffffff',
-    rowHover:  dark ? 'rgba(74,122,171,0.07)' : '#F8FAFC',
-    thBg:      dark ? 'rgba(74,122,171,0.08)' : '#F8FAFC',
-    accent:    '#4A7AAB',
-    primary:   '#2B4C6F',
-  };
-}
 
 /* ─── Hover-aware row ─── */
 function TR({ children, onClick, style = {} }) {
