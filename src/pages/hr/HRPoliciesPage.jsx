@@ -1,19 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDS } from '../../hooks/useDesignSystem';
 import { FileText, BookOpen, Shield, Clock, Plus, Eye, Download } from 'lucide-react';
+import { Button, Card, KpiCard, Tr, Td } from '../../components/ui';
 
-
-function KpiCard({ icon: Icon, label, value, color='#4A7AAB' }) {
-  const ds = useDS(); const [hov, setHov] = useState(false);
-  return <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ background:ds.card, borderRadius:14, border:`1px solid ${hov?color+'60':ds.border}`, padding:'18px 20px', position:'relative', overflow:'hidden', transform:hov?'translateY(-2px)':'none', boxShadow:hov?`0 8px 24px ${color}22`:'0 1px 3px rgba(0,0,0,0.06)', transition:'all 0.2s ease' }}>
-    <div style={{ position:'absolute', top:0, right:0, width:4, height:'100%', background:`linear-gradient(180deg,${color},transparent)`, borderRadius:'14px 0 0 14px', opacity:hov?1:0.6, transition:'opacity 0.2s' }} />
-    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-      <div><p style={{ margin:'0 0 6px', fontSize:12, color:ds.muted, fontWeight:500 }}>{label}</p><p style={{ margin:0, fontSize:26, fontWeight:800, color:ds.text, lineHeight:1 }}>{value}</p></div>
-      <div style={{ width:42, height:42, borderRadius:11, background:color+(hov?'25':'15'), display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s' }}><Icon size={20} color={color} /></div>
-    </div>
-  </div>;
-}
 
 const MOCK_POLICIES = [
   { id:1, title_ar:'سياسة الحضور', title_en:'Attendance Policy', category:'attendance', status:'active', version:'2.1', updated:'2026-01-15', views:124 },
@@ -32,7 +21,7 @@ const CATEGORIES = [
 ];
 
 export default function HRPoliciesPage() {
-  const { i18n } = useTranslation(); const ds = useDS();
+  const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [cat, setCat] = useState('all');
 
@@ -40,87 +29,106 @@ export default function HRPoliciesPage() {
   const active = MOCK_POLICIES.filter(p=>p.status==='active').length;
   const draft = MOCK_POLICIES.filter(p=>p.status==='draft').length;
 
-  const th = { fontSize:11, fontWeight:700, color:ds.muted, padding:'10px 14px', textAlign:'left', textTransform:'uppercase', letterSpacing:'0.05em' };
-  const td = { fontSize:13, color:ds.text, padding:'12px 14px', verticalAlign:'middle' };
-
   return (
-    <div style={{ padding:'24px 28px', background:ds.bg, minHeight:'100vh', direction:isRTL?'rtl':'ltr' }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:24, flexDirection:isRTL?'row-reverse':'row' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:14, flexDirection:isRTL?'row-reverse':'row' }}>
-          <div style={{ width:46, height:46, borderRadius:13, background:'linear-gradient(135deg,#1B3347,#4A7AAB)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(74,122,171,0.3)' }}><FileText size={22} color="#fff" /></div>
-          <div style={{ textAlign:isRTL?'right':'left' }}>
-            <h1 style={{ margin:0, fontSize:22, fontWeight:800, color:ds.text }}>{lang==='ar'?'سياسات الموارد البشرية':'HR Policies'}</h1>
-            <p style={{ margin:0, fontSize:12, color:ds.muted }}>{lang==='ar'?'إدارة سياسات وأنظمة الشركة':'Manage company policies & guidelines'}</p>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
+            <FileText size={22} color="#fff" />
+          </div>
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'سياسات الموارد البشرية':'HR Policies'}</h1>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة سياسات وأنظمة الشركة':'Manage company policies & guidelines'}</p>
           </div>
         </div>
-        <AddBtn label={lang==='ar'?'+ سياسة جديدة':'+ New Policy'} ds={ds} />
+        <Button size="md">
+          <Plus size={16} />{lang==='ar'?'+ سياسة جديدة':'+ New Policy'}
+        </Button>
       </div>
 
-      <div className="kpi-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:20 }}>
+      <div className="grid grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={FileText}  label={lang==='ar'?'إجمالي السياسات':'Total Policies'} value={MOCK_POLICIES.length} color="#1B3347" />
         <KpiCard icon={Shield}    label={lang==='ar'?'نشطة':'Active'}               value={active}                color="#4A7AAB" />
         <KpiCard icon={Clock}     label={lang==='ar'?'مسودة':'Draft'}                value={draft}                 color="#6B8DB5" />
         <KpiCard icon={BookOpen}  label={lang==='ar'?'إجمالي المشاهدات':'Total Views'}     value={MOCK_POLICIES.reduce((s,p)=>s+p.views,0)} color="#2B4C6F" />
       </div>
 
-      <div style={{ background:ds.card, borderRadius:14, border:`1px solid ${ds.border}`, overflow:'hidden' }}>
-        <div style={{ padding:'14px 18px', borderBottom:`1px solid ${ds.border}`, display:'flex', justifyContent:'space-between', alignItems:'center', flexDirection:isRTL?'row-reverse':'row' }}>
-          <p style={{ margin:0, fontSize:14, fontWeight:700, color:ds.text }}>{lang==='ar'?'قائمة السياسات':'Policies List'}</p>
-          <div style={{ display:'flex', gap:6 }}>
+      <Card className="!rounded-xl overflow-hidden">
+        <div className={`px-4 py-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'قائمة السياسات':'Policies List'}</p>
+          <div className="flex gap-1.5">
             {CATEGORIES.map(c => (
-              <button key={c.key} onClick={()=>setCat(c.key)} style={{ padding:'5px 12px', borderRadius:8, border:`1px solid ${cat===c.key?ds.accent+'60':ds.border}`, background:cat===c.key?ds.accent+'15':'transparent', color:cat===c.key?ds.accent:ds.muted, fontSize:12, fontWeight:600, cursor:'pointer', transition:'all 0.15s' }}>{lang==='ar'?c.label_ar:c.label_en}</button>
+              <button
+                key={c.key}
+                onClick={()=>setCat(c.key)}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-150 border
+                  ${cat===c.key
+                    ? 'border-brand-500/60 bg-brand-500/15 text-brand-500'
+                    : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark hover:border-brand-500/40'
+                  }`}
+              >
+                {lang==='ar'?c.label_ar:c.label_en}
+              </button>
             ))}
           </div>
         </div>
-        <table style={{ width:'100%', borderCollapse:'collapse' }}>
+        <table className="w-full border-collapse">
           <thead>
-            <tr style={{ background:ds.thBg, borderBottom:`2px solid ${ds.border}` }}>
+            <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
               {[lang==='ar'?'السياسة':'Policy', lang==='ar'?'التصنيف':'Category', lang==='ar'?'الإصدار':'Version', lang==='ar'?'آخر تحديث':'Updated', lang==='ar'?'الحالة':'Status', lang==='ar'?'المشاهدات':'Views', ''].map((h,i)=>(
-                <th key={i} style={{ ...th, textAlign:isRTL?'right':'left' }}>{h}</th>
+                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${isRTL?'text-right':'text-left'}`}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {filtered.map(policy => {
-              const [hov, setHov] = useState(false);
-              return (
-                <tr key={policy.id} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ borderBottom:`1px solid ${ds.border}`, background:hov?ds.rowHover:'transparent', transition:'background 0.15s' }}>
-                  <td style={{ ...td }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:10, flexDirection:isRTL?'row-reverse':'row' }}>
-                      <div style={{ width:34, height:34, borderRadius:9, background:'rgba(74,122,171,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><FileText size={15} color="#4A7AAB" /></div>
-                      <p style={{ margin:0, fontSize:13, fontWeight:700, color:ds.text }}>{lang==='ar'?policy.title_ar:policy.title_en}</p>
-                    </div>
-                  </td>
-                  <td style={{ ...td }}><span style={{ display:'inline-flex', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:'rgba(74,122,171,0.12)', color:'#4A7AAB', border:'1px solid rgba(74,122,171,0.25)' }}>{policy.category}</span></td>
-                  <td style={{ ...td, color:ds.muted }}>v{policy.version}</td>
-                  <td style={{ ...td, color:ds.muted }}>{policy.updated}</td>
-                  <td style={{ ...td }}>
-                    <span style={{ display:'inline-flex', padding:'3px 10px', borderRadius:20, fontSize:11, fontWeight:600, background:policy.status==='active'?'rgba(74,122,171,0.15)':'rgba(107,141,181,0.15)', color:policy.status==='active'?'#4A7AAB':'#6B8DB5', border:`1px solid ${policy.status==='active'?'rgba(74,122,171,0.3)':'rgba(107,141,181,0.3)'}` }}>
-                      {policy.status==='active'?(lang==='ar'?'نشط':'Active'):(lang==='ar'?'مسودة':'Draft')}
-                    </span>
-                  </td>
-                  <td style={{ ...td, color:ds.muted }}>{policy.views}</td>
-                  <td style={{ ...td }}>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <ActionBtn icon={Eye} color="#4A7AAB" ds={ds} />
-                      <ActionBtn icon={Download} color="#6B8DB5" ds={ds} />
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {filtered.map(policy => (
+              <PolicyRow key={policy.id} policy={policy} isRTL={isRTL} lang={lang} />
+            ))}
           </tbody>
         </table>
-      </div>
+      </Card>
     </div>
   );
 }
 
-function AddBtn({ label, ds }) {
-  const [hov, setHov] = useState(false);
-  return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10, background:hov?'#2B4C6F':'#1B3347', border:'none', cursor:'pointer', color:'#fff', fontSize:13, fontWeight:700, transform:hov?'translateY(-1px)':'none', boxShadow:hov?'0 6px 16px rgba(27,51,71,0.35)':'0 2px 6px rgba(27,51,71,0.2)', transition:'all 0.2s ease' }}><Plus size={16}/>{label}</button>;
-}
-function ActionBtn({ icon: Icon, color, ds }) {
-  const [hov, setHov] = useState(false);
-  return <button onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} style={{ width:30, height:30, borderRadius:8, border:`1px solid ${hov?color+'60':ds.border}`, background:hov?color+'15':'transparent', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transform:hov?'scale(1.08)':'scale(1)', transition:'all 0.15s ease' }}><Icon size={13} color={hov?color:ds.muted} /></button>;
+function PolicyRow({ policy, isRTL, lang }) {
+  return (
+    <Tr>
+      <Td>
+        <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="w-[34px] h-[34px] rounded-lg bg-brand-500/[0.12] flex items-center justify-center shrink-0">
+            <FileText size={15} color="#4A7AAB" />
+          </div>
+          <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{lang==='ar'?policy.title_ar:policy.title_en}</p>
+        </div>
+      </Td>
+      <Td>
+        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/[0.12] text-brand-500 border border-brand-500/25">
+          {policy.category}
+        </span>
+      </Td>
+      <Td className="text-content-muted dark:text-content-muted-dark">v{policy.version}</Td>
+      <Td className="text-content-muted dark:text-content-muted-dark">{policy.updated}</Td>
+      <Td>
+        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+          policy.status==='active'
+            ? 'bg-brand-500/15 text-brand-500 border-brand-500/30'
+            : 'bg-brand-300/15 text-brand-300 border-brand-300/30'
+        }`}>
+          {policy.status==='active'?(lang==='ar'?'نشط':'Active'):(lang==='ar'?'مسودة':'Draft')}
+        </span>
+      </Td>
+      <Td className="text-content-muted dark:text-content-muted-dark">{policy.views}</Td>
+      <Td>
+        <div className="flex gap-1.5">
+          <button className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-brand-500/15 hover:border-brand-500/60 cursor-pointer flex items-center justify-center transition-all duration-150 text-content-muted dark:text-content-muted-dark hover:text-brand-500">
+            <Eye size={13} />
+          </button>
+          <button className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-brand-300/15 hover:border-brand-300/60 cursor-pointer flex items-center justify-center transition-all duration-150 text-content-muted dark:text-content-muted-dark hover:text-brand-300">
+            <Download size={13} />
+          </button>
+        </div>
+      </Td>
+    </Tr>
+  );
 }
