@@ -33,6 +33,7 @@ const SelfServicePage = lazy(() => import('./pages/hr/SelfServicePage'));
 const AssetsPage = lazy(() => import('./pages/hr/AssetsPage'));
 const OnboardingPage = lazy(() => import('./pages/hr/OnboardingPage'));
 const OperationsPage = lazy(() => import('./pages/operations/OperationsPage'));
+const AuditLogPage = lazy(() => import('./pages/settings/AuditLogPage'));
 
 function PageLoader() {
   return (
@@ -135,6 +136,7 @@ export default function App() {
                 <Route path="/chat" element={<ComingSoon title="Chat" />} />
                 <Route path="/reports" element={<ComingSoon title="Reports" />} />
                 <Route path="/settings/general" element={<SettingsPage />} />
+                <Route path="/settings/audit-log" element={<AuditLogPage />} />
                 <Route path="/settings/*" element={<SettingsPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />

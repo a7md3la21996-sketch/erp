@@ -5,6 +5,7 @@ import { ROLE_LABELS } from '../../config/roles';
 import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
+import NotificationsDropdown from './NotificationsDropdown';
 
 export default function Header() {
   const { t, i18n } = useTranslation();
@@ -12,6 +13,7 @@ export default function Header() {
   const { theme, toggleTheme } = useTheme();
   const [showProfile, setShowProfile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const ref = useRef(null);
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
@@ -69,10 +71,13 @@ export default function Header() {
           <Globe size={18} />{i18n.language === 'ar' ? 'EN' : 'عربي'}
         </button>
         <button onClick={toggleTheme} style={iconBtn}>{isDark ? <Sun size={18} /> : <Moon size={18} />}</button>
-        <button aria-label={isRTL ? 'الإشعارات' : 'Notifications'} style={{ ...iconBtn, position: 'relative' }}>
-          <Bell size={18} />
-          <span style={{ position: 'absolute', top: 6, [isRTL ? 'left' : 'right']: 6, width: 7, height: 7, background: '#EF4444', borderRadius: '50%' }} />
-        </button>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} style={{ ...iconBtn, position: 'relative' }}>
+            <Bell size={18} />
+            <span style={{ position: 'absolute', top: 6, [isRTL ? 'left' : 'right']: 6, width: 7, height: 7, background: '#EF4444', borderRadius: '50%' }} />
+          </button>
+          <NotificationsDropdown show={showNotifications} onClose={() => setShowNotifications(false)} />
+        </div>
         <div style={{ width: 1, height: 24, margin: '0 4px', background: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb' }} />
         <div ref={ref} style={{ position: 'relative' }}>
           <button onClick={() => setShowProfile(!showProfile)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent' }}>
