@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
+import { fetchEmployees, fetchDepartments } from '../../services/employeesService';
 import {
   Users, Plus, Search, Eye, Edit2, FileText,
   AlertTriangle, Clock, ChevronDown, Building2,
@@ -66,18 +66,25 @@ export default function EmployeesPage() {
   const [contractF, setContractF] = useState('all');
   const [view,    setView]    = useState('list');
   const [selected, setSelected] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    fetchEmployees().then(setEmployees);
+    fetchDepartments().then(setDepartments);
+  }, []);
 
   /* stats */
   const today = new Date();
-  const expiring = MOCK_EMPLOYEES.filter(e => {
+  const expiring = employees.filter(e => {
     if (!e.contract_end) return false;
     const days = Math.ceil((new Date(e.contract_end) - today) / 864e5);
     return days > 0 && days <= 30;
   });
-  const probation = MOCK_EMPLOYEES.filter(e => e.employment_type === 'probation');
-  const active    = MOCK_EMPLOYEES.filter(e => e.status === 'active');
+  const probation = employees.filter(e => e.employment_type === 'probation');
+  const active    = employees.filter(e => e.status === 'active');
 
-  const filtered = useMemo(() => MOCK_EMPLOYEES.filter(e => {
+  const filtered = useMemo(() => employees.filter(e => {
     const name = (isRTL ? e.full_name_ar : e.full_name_en) || e.full_name_ar || '';
     const matchSearch = name.toLowerCase().includes(search.toLowerCase()) ||
                         (e.employee_id || '').toLowerCase().includes(search.toLowerCase());
@@ -86,7 +93,7 @@ export default function EmployeesPage() {
     return matchSearch && matchDept && matchCont;
   }), [search, deptF, contractF, isRTL]);
 
-  const deptOptions  = [{ value: 'all', label: lang === 'ar' ? 'كل الأقسام' : 'All Departments' }, ...DEPARTMENTS.map(d => ({ value: d.id, label: isRTL ? d.name_ar : d.name_en }))];
+  const deptOptions  = [{ value: 'all', label: lang === 'ar' ? 'كل الأقسام' : 'All Departments' }, ...departments.map(d => ({ value: d.id, label: isRTL ? d.name_ar : d.name_en }))];
   const contractOpts = [{ value: 'all', label: lang === 'ar' ? 'كل العقود' : 'All Contracts' }, { value: 'full_time', label: lang === 'ar' ? 'دوام كامل' : 'Full Time' }, { value: 'part_time', label: lang === 'ar' ? 'دوام جزئي' : 'Part Time' }, { value: 'probation', label: lang === 'ar' ? 'فترة تجربة' : 'Probation' }];
 
   const statusColor = s => s === 'active' ? '#4A7AAB' : s === 'on_leave' ? '#6B8DB5' : '#94a3b8';
@@ -101,9 +108,9 @@ export default function EmployeesPage() {
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <Users size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang === 'ar' ? 'الموظفين' : 'Employees'}</h1>
-            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{MOCK_EMPLOYEES.length} {lang === 'ar' ? 'موظف' : 'employees'}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{employees.length} {lang === 'ar' ? 'موظف' : 'employees'}</p>
           </div>
         </div>
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -128,7 +135,7 @@ export default function EmployeesPage() {
 
       {/* ── KPI Strip ── */}
       <div className="grid grid-cols-4 gap-3.5 mb-5">
-        <KpiCard icon={Users}     label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={MOCK_EMPLOYEES.length} color="#1B3347" />
+        <KpiCard icon={Users}     label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={employees.length} color="#1B3347" />
         <KpiCard icon={UserCheck} label={lang === 'ar' ? 'نشط'             : 'Active'}           value={active.length}         color="#4A7AAB" />
         <KpiCard icon={Clock}     label={lang === 'ar' ? 'فترة تجربة'      : 'Probation'}        value={probation.length}      color="#6B8DB5" />
         <KpiCard icon={AlertTriangle} label={lang === 'ar' ? 'عقود تنتهي قريباً' : 'Expiring Soon'} value={expiring.length} color="#EF4444" />
@@ -178,14 +185,14 @@ export default function EmployeesPage() {
                 lang === 'ar' ? 'الحالة' : 'Status',
                 '',
               ].map((h, i) => (
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
+                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider whitespace-nowrap ${'text-start'}`}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.map(emp => {
               const name   = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
-              const dept   = DEPARTMENTS.find(d => d.id === emp.department);
+              const dept   = departments.find(d => d.id === emp.department);
               const deptName = dept ? (isRTL ? dept.name_ar : dept.name_en) : '—';
               const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
               const avatarColors = ['#1B3347','#2B4C6F','#4A7AAB','#6B8DB5','#8BA8C8'];
@@ -198,7 +205,7 @@ export default function EmployeesPage() {
                       <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: avatarBg }}>
                         <span className="text-[13px] font-bold text-white">{initials}</span>
                       </div>
-                      <div className={isRTL ? 'text-right' : 'text-left'}>
+                      <div className={'text-start'}>
                         <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{name}</p>
                         <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id || emp.id?.toString().slice(0,6)}</p>
                       </div>
@@ -277,7 +284,7 @@ function EmployeeModal({ emp, onClose, isRTL, lang }) {
           <div className="w-[52px] h-[52px] rounded-[14px] bg-white/15 flex items-center justify-center shrink-0">
             <span className="text-lg font-extrabold text-white">{initials}</span>
           </div>
-          <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <div className={`flex-1 ${'text-start'}`}>
             <p className="m-0 text-lg font-extrabold text-white">{name}</p>
             <p className="m-0 mt-0.5 text-xs text-white/70">{emp.job_title || (lang === 'ar' ? 'موظف' : 'Employee')}</p>
           </div>

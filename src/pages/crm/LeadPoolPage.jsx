@@ -225,13 +225,13 @@ export default function LeadPoolPage() {
       <Card className={`px-3.5 py-2.5 mb-3 flex gap-2 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
         {/* Search */}
         <div className="relative flex-1 min-w-[160px]">
-          <Search size={13} className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-2.5' : 'left-2.5'}`} />
+          <Search size={13} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-2.5" />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
             size="sm"
-            className={isRTL ? 'pr-[30px] pl-2.5' : 'pl-[30px] pr-2.5'}
+            className="ps-[30px] pe-2.5"
           />
         </div>
 
@@ -346,7 +346,7 @@ export default function LeadPoolPage() {
                 <div className={`flex items-center gap-2.5 mt-0.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <span className="text-xs text-content-muted dark:text-content-muted-dark">{lead.phone}</span>
                   <span className="text-[11px] font-medium" style={{ color: aging.color }}>
-                    <Clock size={10} className="inline ml-0.5" />
+                    <Clock size={10} className="inline ms-0.5" />
                     {aging.label} {lang === 'ar' ? 'في الانتظار' : 'waiting'}
                   </span>
                 </div>
@@ -411,7 +411,7 @@ export default function LeadPoolPage() {
                   ${atCap ? 'opacity-50 cursor-not-allowed bg-gray-50 dark:bg-brand-500/[0.07]' : 'bg-transparent hover:bg-gray-50 dark:hover:bg-brand-500/[0.07]'}
                   ${isRTL ? 'flex-row-reverse' : ''}
                 `}>
-                <div className={isRTL ? 'text-right' : 'text-left'}>
+                <div className="text-start">
                   <div className="text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? agent.name_ar : agent.name_en}</div>
                   <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? level.ar : level.en} · وزن {level.weight}</div>
                 </div>

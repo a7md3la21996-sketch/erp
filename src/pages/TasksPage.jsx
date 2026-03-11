@@ -178,10 +178,10 @@ export default function TasksPage() {
       {/* Filters */}
       <Card className={`px-3.5 py-2.5 mb-3 flex gap-2 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="relative flex-1 min-w-[160px]">
-          <Search size={13} className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-2.5' : 'left-2.5'}`} />
+          <Search size={13} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-2.5" />
           <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder={lang==='ar'?'بحث...':'Search...'}
             size="sm"
-            className={isRTL ? 'pr-[30px] pl-2.5' : 'pl-[30px] pr-2.5'} />
+            className="ps-[30px] pe-2.5" />
         </div>
         {/* Status */}
         {['all','pending','in_progress','done'].map(s => (

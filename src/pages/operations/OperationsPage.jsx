@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart2, FileCheck, Banknote, KeyRound, Headphones,
@@ -11,10 +11,22 @@ import {
 import {
   DEAL_STATUS_CONFIG, PAYMENT_STATUS_CONFIG, HANDOVER_STATUS_CONFIG,
   TICKET_STATUS_CONFIG, TICKET_TYPE_CONFIG, PRIORITY_CONFIG, DOCUMENT_CHECKLIST,
-  MOCK_OPS_DEALS, MOCK_INSTALLMENTS, MOCK_HANDOVERS, MOCK_TICKETS,
   MOCK_OPS_ACTIVITY, fmtMoney, fmtMoneyShort, daysSince, daysUntil,
 } from '../../data/operations_mock_data';
 import { getWonDeals } from '../../services/dealsService';
+import {
+  fetchDeals as svcFetchDeals,
+  createDeal as svcCreateDeal,
+  updateDeal as svcUpdateDeal,
+  fetchInstallments as svcFetchInstallments,
+  createInstallment as svcCreateInstallment,
+  updateInstallmentStatus as svcUpdateInstallmentStatus,
+  fetchHandovers as svcFetchHandovers,
+  createHandover as svcCreateHandover,
+  fetchTickets as svcFetchTickets,
+  createTicket as svcCreateTicket,
+  updateTicketStatus as svcUpdateTicketStatus,
+} from '../../services/operationsService';
 import { useTheme } from '../../contexts/ThemeContext';
 import KpiCard from '../../components/ui/KpiCard';
 import Button from '../../components/ui/Button';
@@ -68,7 +80,7 @@ function HandoverCard({ ho, isRTL, isDark }) {
       }}
     >
       <div className={`flex justify-between items-start mb-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-        <div className={isRTL ? 'text-right' : 'text-left'}>
+        <div className="text-start">
           <h4 className="m-0 text-[15px] font-bold text-content dark:text-content-dark">{isRTL ? ho.client_ar : ho.client_en}</h4>
           <p className="m-0 mt-0.5 text-xs text-content-muted dark:text-content-muted-dark">{ho.deal_number} — {ho.unit_code}</p>
         </div>
@@ -110,7 +122,7 @@ function HandoverCard({ ho, isRTL, isDark }) {
           </a>
         </div>
       )}
-      {ho.notes_ar && <p className={`m-0 mt-2.5 text-[11px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>{ho.notes_ar}</p>}
+      {ho.notes_ar && <p className={`m-0 mt-2.5 text-[11px] text-content-muted dark:text-content-muted-dark text-start`}>{ho.notes_ar}</p>}
     </div>
   );
 }
@@ -145,13 +157,29 @@ export default function OperationsPage() {
   const [showTicketModal, setShowTicketModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDealModal, setShowDealModal] = useState(false);
-  // Local state for interactive data
-  const [deals, setDeals] = useState(() => {
-    const wonDeals = getWonDeals();
-    return [...wonDeals, ...MOCK_OPS_DEALS];
-  });
-  const [tickets, setTickets] = useState(MOCK_TICKETS);
-  const [installments, setInstallments] = useState(MOCK_INSTALLMENTS);
+  // Local state — populated from Supabase (or mock fallback) on mount
+  const [deals, setDeals] = useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [installments, setInstallments] = useState([]);
+  const [handovers, setHandovers] = useState([]);
+
+  // Fetch data on mount via service layer (falls back to mock inside services)
+  useEffect(() => {
+    async function loadData() {
+      const wonDeals = getWonDeals();
+      const [svcDeals, svcInstallments, svcHandovers, svcTickets] = await Promise.all([
+        svcFetchDeals(),
+        svcFetchInstallments(),
+        svcFetchHandovers(),
+        svcFetchTickets(),
+      ]);
+      setDeals([...wonDeals, ...svcDeals]);
+      setInstallments(svcInstallments);
+      setHandovers(svcHandovers);
+      setTickets(svcTickets);
+    }
+    loadData();
+  }, []);
 
   // ── Derived KPIs ────────────────────────────────────────────────────
   const activeDeals      = deals.filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
@@ -168,7 +196,7 @@ export default function OperationsPage() {
   const totalPaid        = installments.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0);
   const collectionRate   = totalPaid + totalDue > 0 ? Math.round((totalPaid / (totalPaid + totalDue)) * 100) : 0;
 
-  const handoverThisMonth = MOCK_HANDOVERS.filter(h => h.expected_handover?.startsWith('2026-03') || h.expected_handover?.startsWith('2026-04')).length;
+  const handoverThisMonth = handovers.filter(h => h.expected_handover?.startsWith('2026-03') || h.expected_handover?.startsWith('2026-04')).length;
   const openTickets      = tickets.filter(t => ['open', 'in_progress'].includes(t.status)).length;
   const complaints       = tickets.filter(t => t.type === 'complaint' && ['open', 'in_progress'].includes(t.status)).length;
   const resolvedTickets  = tickets.filter(t => t.resolved_at);
@@ -177,40 +205,43 @@ export default function OperationsPage() {
     : '-';
 
   // ── Handlers ──────────────────────────────────────────────────────
-  const advanceDeal = (dealId) => {
+  const advanceDeal = async (dealId) => {
     const order = ['new_deal','under_review','docs_collection','contract_prep','contract_signed','completed'];
-    setDeals(prev => prev.map(d => {
-      if (d.id !== dealId) return d;
-      const idx = order.indexOf(d.status);
-      if (idx < 0 || idx >= order.length - 1) return d;
-      return { ...d, status: order[idx + 1] };
-    }));
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal) return;
+    const idx = order.indexOf(deal.status);
+    if (idx < 0 || idx >= order.length - 1) return;
+    const newStatus = order[idx + 1];
+    const updated = await svcUpdateDeal(dealId, { status: newStatus });
+    setDeals(prev => prev.map(d => d.id === dealId ? { ...d, ...updated, status: newStatus } : d));
     setSelectedDeal(prev => {
       if (!prev || prev.id !== dealId) return prev;
-      const idx = order.indexOf(prev.status);
-      if (idx < 0 || idx >= order.length - 1) return prev;
-      return { ...prev, status: order[idx + 1] };
+      return { ...prev, ...updated, status: newStatus };
     });
   };
 
-  const cancelDeal = (dealId) => {
+  const cancelDeal = async (dealId) => {
+    await svcUpdateDeal(dealId, { status: 'cancelled' });
     setDeals(prev => prev.map(d => d.id === dealId ? { ...d, status: 'cancelled' } : d));
     setSelectedDeal(null);
   };
 
-  const addDeal = (deal) => {
-    setDeals(prev => [deal, ...prev]);
+  const addDeal = async (deal) => {
+    const saved = await svcCreateDeal(deal);
+    setDeals(prev => [saved, ...prev]);
     setShowDealModal(false);
   };
 
-  const addTicket = (ticket) => {
-    setTickets(prev => [ticket, ...prev]);
+  const addTicket = async (ticket) => {
+    const saved = await svcCreateTicket(ticket);
+    setTickets(prev => [saved, ...prev]);
     setShowTicketModal(false);
   };
 
-  const recordPayment = (instId) => {
+  const recordPayment = async (instId) => {
     const today = new Date().toISOString().split('T')[0];
-    setInstallments(prev => prev.map(i => i.id === instId ? { ...i, status: 'paid', paid_date: today, method: 'bank_transfer', receipt: `R-${Date.now().toString().slice(-6)}` } : i));
+    const updated = await svcUpdateInstallmentStatus(instId, 'paid', { paid_date: today, method: 'bank_transfer', receipt: `R-${Date.now().toString().slice(-6)}` });
+    setInstallments(prev => prev.map(i => i.id === instId ? { ...i, ...updated, status: 'paid', paid_date: today, method: 'bank_transfer', receipt: updated?.receipt || `R-${Date.now().toString().slice(-6)}` } : i));
     setShowPaymentModal(false);
   };
 
@@ -236,10 +267,10 @@ export default function OperationsPage() {
   }, [payFilter, searchTerm, installments]);
 
   const filteredHandovers = useMemo(() => {
-    let h = MOCK_HANDOVERS;
+    let h = handovers;
     if (handoverFilter !== 'all') h = h.filter(ho => ho.status === handoverFilter);
     return h;
-  }, [handoverFilter]);
+  }, [handoverFilter, handovers]);
 
   const filteredTickets = useMemo(() => {
     let t = tickets;
@@ -304,13 +335,13 @@ export default function OperationsPage() {
   function SearchBar({ placeholder }) {
     return (
       <div className="relative flex-[0_1_280px]">
-        <Search size={16} className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-3' : 'left-3'}`} />
+        <Search size={16} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-3" />
         <Input
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           placeholder={placeholder}
           size="md"
-          className={isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'}
+          className="ps-9 pe-3"
         />
       </div>
     );
@@ -325,7 +356,7 @@ export default function OperationsPage() {
     const doneDocs = DOCUMENT_CHECKLIST.filter(d => d.required && deal.documents[d.key]).length;
     return (
       <div
-        className={`fixed top-0 bottom-0 w-full max-w-[520px] bg-surface-card dark:bg-surface-card-dark z-[200] shadow-[-8px_0_40px_rgba(0,0,0,0.2)] overflow-y-auto ${isRTL ? 'left-0' : 'right-0'}`}
+        className={`fixed top-0 bottom-0 w-full max-w-[520px] bg-surface-card dark:bg-surface-card-dark z-[200] shadow-[-8px_0_40px_rgba(0,0,0,0.2)] overflow-y-auto end-0`}
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <div className="sticky top-0 bg-surface-card dark:bg-surface-card-dark z-[1] px-6 py-5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
@@ -396,7 +427,7 @@ export default function OperationsPage() {
                   <div key={inst.id} className="flex justify-between items-center px-3 py-2.5 rounded-lg mb-1.5 bg-[#F8FAFC] dark:bg-brand-500/[0.05] border border-edge dark:border-edge-dark">
                     <div>
                       <span className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? `قسط ${inst.num}` : `Inst. ${inst.num}`}</span>
-                      <span className={`text-xs text-content-muted dark:text-content-muted-dark ${isRTL ? 'ml-2' : 'mr-2'}`}> — {inst.due_date}</span>
+                      <span className={`text-xs text-content-muted dark:text-content-muted-dark me-2`}> — {inst.due_date}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</span>
@@ -457,7 +488,7 @@ export default function OperationsPage() {
         </div>
         {/* Pipeline bar */}
         <Card className="p-5 mb-6">
-          <h3 className={`m-0 mb-4 text-sm font-bold text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? 'خط سير الصفقات' : 'Deal Pipeline'}</h3>
+          <h3 className={`m-0 mb-4 text-sm font-bold text-content dark:text-content-dark text-start`}>{isRTL ? 'خط سير الصفقات' : 'Deal Pipeline'}</h3>
           <div className="flex rounded-lg overflow-hidden h-7">
             {pipelineCounts.filter(p => p.count > 0).map(p => (
               <div key={p.key} title={`${p.label}: ${p.count}`} className="flex items-center justify-center transition-all duration-300" style={{ flex: p.count, background: p.color, minWidth: p.count > 0 ? 32 : 0 }}>
@@ -476,7 +507,7 @@ export default function OperationsPage() {
         </Card>
         {/* Activity timeline */}
         <Card className="p-5">
-          <h3 className={`m-0 mb-4 text-sm font-bold text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? 'آخر الأنشطة' : 'Recent Activity'}</h3>
+          <h3 className={`m-0 mb-4 text-sm font-bold text-content dark:text-content-dark text-start`}>{isRTL ? 'آخر الأنشطة' : 'Recent Activity'}</h3>
           <div className="flex flex-col">
             {sortedActivity.map((act, idx) => {
               const actCfg = ACT_TYPE[act.type] || { icon: Clock, color: '#8BA8C8' };
@@ -488,7 +519,7 @@ export default function OperationsPage() {
                   <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: actCfg.color + '18' }}>
                     <ActIcon size={16} color={actCfg.color} />
                   </div>
-                  <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <div className={`flex-1 min-w-0 text-start`}>
                     <p className="m-0 text-[13px] text-content dark:text-content-dark leading-normal">{isRTL ? act.description_ar : act.description_en}</p>
                     <p className="m-0 mt-0.5 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? act.user_ar : act.user_en} — {timeStr}</p>
                   </div>
@@ -526,7 +557,7 @@ export default function OperationsPage() {
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'الوحدة':'Unit', isRTL?'القيمة':'Value', isRTL?'المستندات':'Docs', isRTL?'الحالة':'Status', isRTL?'':''].map((h, i) => (
-                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -549,7 +580,7 @@ export default function OperationsPage() {
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark">
                         <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: ACOLORS[deal.id.charCodeAt(5) % ACOLORS.length] }}>{initials(isRTL ? deal.client_ar : deal.client_en)}</div>
-                          <div className={isRTL ? 'text-right' : 'text-left'}>
+                          <div className="text-start">
                             <div className="font-semibold text-content dark:text-content-dark">{isRTL ? deal.client_ar : deal.client_en}</div>
                             <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? deal.agent_ar : deal.agent_en}</div>
                           </div>
@@ -609,7 +640,7 @@ export default function OperationsPage() {
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'الصفقة':'Deal', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'القسط':'Inst.', isRTL?'المبلغ':'Amount', isRTL?'تاريخ الاستحقاق':'Due Date', isRTL?'الحالة':'Status', isRTL?'إيصال':'Receipt'].map((h, i) => (
-                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -660,15 +691,15 @@ export default function OperationsPage() {
 
   // ── HANDOVER TAB ────────────────────────────────────────────────────
   function renderHandover() {
-    const reservedCount = MOCK_HANDOVERS.filter(h => ['reserved', 'developer_confirmed'].includes(h.status)).length;
-    const constructionCount = MOCK_HANDOVERS.filter(h => ['under_construction', 'finishing'].includes(h.status)).length;
-    const handedCount = MOCK_HANDOVERS.filter(h => h.status === 'handed_over').length;
+    const reservedCount = handovers.filter(h => ['reserved', 'developer_confirmed'].includes(h.status)).length;
+    const constructionCount = handovers.filter(h => ['under_construction', 'finishing'].includes(h.status)).length;
+    const handedCount = handovers.filter(h => h.status === 'handed_over').length;
     return (
       <>
         <div className="grid grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={Building2} label={isRTL ? 'وحدات محجوزة' : 'Reserved Units'} value={reservedCount} color="#4A7AAB" />
           <KpiCard icon={Clock} label={isRTL ? 'تحت الإنشاء' : 'Under Construction'} value={constructionCount} color="#6B8DB5" />
-          <KpiCard icon={KeyRound} label={isRTL ? 'جاهز للتسليم' : 'Ready'} value={MOCK_HANDOVERS.filter(h => h.status === 'ready').length} color="#2B4C6F" />
+          <KpiCard icon={KeyRound} label={isRTL ? 'جاهز للتسليم' : 'Ready'} value={handovers.filter(h => h.status === 'ready').length} color="#2B4C6F" />
           <KpiCard icon={CheckCircle} label={isRTL ? 'تم التسليم' : 'Handed Over'} value={handedCount} color="#1B3347" />
         </div>
         <div className={`flex gap-3 items-center flex-wrap mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -710,7 +741,7 @@ export default function OperationsPage() {
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'النوع':'Type', isRTL?'الموضوع':'Subject', isRTL?'الأولوية':'Priority', isRTL?'مسؤول':'Assigned', isRTL?'التاريخ':'Date', isRTL?'الحالة':'Status', isRTL?'التقييم':'Rating'].map((h, i) => (
-                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -868,7 +899,7 @@ export default function OperationsPage() {
                         <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL?inst.client_ar:inst.client_en}</div>
                         <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{inst.deal_number} — {isRTL?`قسط ${inst.num}/${inst.total}`:`Inst. ${inst.num}/${inst.total}`}</div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-end">
                         <div className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</div>
                         <div className={`text-[11px] ${isOv ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>{inst.due_date}</div>
                       </div>
@@ -894,7 +925,7 @@ export default function OperationsPage() {
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-[0_4px_12px_rgba(74,122,171,0.3)]">
             <ClipboardCheck size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className="text-start">
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{isRTL ? 'العمليات' : 'Operations'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'إدارة الصفقات والمدفوعات والتسليمات' : 'Manage deals, payments & handovers'}</p>
           </div>

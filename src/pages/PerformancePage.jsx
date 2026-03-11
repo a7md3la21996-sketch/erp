@@ -271,10 +271,10 @@ export default function PerformancePage() {
       {/* Filters */}
       <div className={`flex gap-2.5 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="relative flex-1 max-w-[300px]">
-          <Search size={14} className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-3' : 'left-3'}`} />
+          <Search size={14} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-3" />
           <Input value={search} onChange={e => setSearch(e.target.value)}
             placeholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employee...'}
-            className={isRTL ? 'pr-[38px] pl-3' : 'pl-[38px] pr-3'}
+            className="ps-[38px] pe-3"
           />
         </div>
         <Select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} className="w-auto">
@@ -315,7 +315,7 @@ export default function PerformancePage() {
                     {(lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en).charAt(0)}
                   </div>
                   {/* Info */}
-                  <div className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <div className={`flex-1 text-start`}>
                     <div className="text-sm font-semibold text-content dark:text-content-dark">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
                     <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? d.emp.job_title_ar : d.emp.job_title_en} · {dept ? (lang === 'ar' ? dept.name_ar : dept.name_en) : ''}</div>
                   </div>
@@ -360,7 +360,7 @@ export default function PerformancePage() {
                               <span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? kpi.ar : kpi.en}</span>
                               <Badge size="sm" className="rounded-[10px]" style={{ background: freq.color + '20', color: freq.color }}>{lang === 'ar' ? freq.ar : freq.en}</Badge>
                             </div>
-                            <div className={`text-lg font-extrabold ${isRTL ? 'text-right' : 'text-left'}`} style={{ color: kpiColor }}>
+                            <div className={`text-lg font-extrabold text-start`} style={{ color: kpiColor }}>
                               {kpi.actual.toLocaleString()}{kpi.unit === 'EGP' ? '' : ''}
                               <span className="text-[11px] font-normal text-content-muted dark:text-content-muted-dark"> / {kpi.target.toLocaleString()}</span>
                             </div>
@@ -372,7 +372,7 @@ export default function PerformancePage() {
                       })}
                     </div>
                     {/* Source note */}
-                    <div className={`mt-2.5 text-[11px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <div className={`mt-2.5 text-[11px] text-content-muted dark:text-content-muted-dark text-start`}>
                        {lang === 'ar' ? 'البيانات من: CRM + الحضور' : 'Data from: CRM + Attendance'}
                     </div>
                   </div>
@@ -400,7 +400,7 @@ export default function PerformancePage() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr>
-                      <th className={`px-4 py-2.5 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>{lang === 'ar' ? 'الموظف' : 'Employee'}</th>
+                      <th className={`px-4 py-2.5 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark text-start`}>{lang === 'ar' ? 'الموظف' : 'Employee'}</th>
                       {kpis.map(kpi => (
                         <th key={kpi.key} className="px-3 py-2.5 text-center text-[11px] font-semibold text-content-muted dark:text-content-muted-dark whitespace-nowrap">
                           <div>{lang === 'ar' ? kpi.ar : kpi.en}</div>
@@ -455,7 +455,7 @@ export default function PerformancePage() {
                 const color = BOX_COLORS[2 - potential][perf];
                 return (
                   <Card key={`${potential}-${perf}`} className="p-3.5 min-h-[100px]" style={{ borderWidth: 2, borderColor: color + '30' }}>
-                    <div className={`text-xs font-bold mb-2 ${isRTL ? 'text-right' : 'text-left'}`} style={{ color }}>{label}</div>
+                    <div className={`text-xs font-bold mb-2 text-start`} style={{ color }}>{label}</div>
                     {boxEmps.length === 0 ? (
                       <div className="text-[11px] text-content-muted dark:text-content-muted-dark text-center py-2.5">—</div>
                     ) : (
@@ -498,14 +498,14 @@ export default function PerformancePage() {
 
           {/* Activity vs Results */}
           <Card className="overflow-hidden">
-            <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark text-sm font-bold text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`}>
+            <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark text-sm font-bold text-content dark:text-content-dark text-start`}>
               {lang === 'ar' ? 'النشاط مقابل النتائج — Sales' : 'Activity vs Results — Sales'}
             </div>
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-brand-500/[0.06] dark:bg-brand-500/[0.06]">
                   {[lang === 'ar' ? 'الموظف' : 'Employee', lang === 'ar' ? 'مكالمات' : 'Calls', lang === 'ar' ? 'فرص' : 'Opps', lang === 'ar' ? 'صفقات' : 'Deals', lang === 'ar' ? 'الإيرادات' : 'Revenue', lang === 'ar' ? 'التحليل' : 'Analysis'].map((h, i) => (
-                    <th key={i} className={`px-4 py-2.5 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
+                    <th key={i} className={`px-4 py-2.5 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark text-start`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -540,7 +540,7 @@ export default function PerformancePage() {
 
           {/* Golden Rule */}
           <div className="px-5 py-3.5 rounded-[10px] bg-brand-500/[0.08] dark:bg-indigo-500/10 border border-brand-300 dark:border-indigo-500/20">
-            <div className={`text-[13px] font-bold text-brand-800 dark:text-brand-300 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <div className={`text-[13px] font-bold text-brand-800 dark:text-brand-300 mb-2 text-start`}>
               {lang === 'ar' ? ' القاعدة الذهبية' : 'Golden Rule'}
             </div>
             <div className={`flex gap-5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -565,7 +565,7 @@ export default function PerformancePage() {
             {BSC_PERSPECTIVES.map(p => {
               const avg = Math.round(p.objectives.reduce((s,o) => s + Math.min((o.actual / o.target) * 100, 100), 0) / p.objectives.length);
               return (
-                <Card key={p.key} className={`px-[18px] py-4 ${isRTL ? 'text-right' : 'text-left'}`} style={{ borderWidth: 2, borderColor: p.color + '30' }}>
+                <Card key={p.key} className={`px-[18px] py-4 text-start`} style={{ borderWidth: 2, borderColor: p.color + '30' }}>
                   <div className="text-2xl mb-1.5">{p.icon}</div>
                   <div className="text-[13px] font-bold text-content dark:text-content-dark mb-1">{lang === 'ar' ? p.ar : p.en}</div>
                   <div className="text-[28px] font-black" style={{ color: p.color }}>{avg}%</div>
@@ -601,14 +601,14 @@ export default function PerformancePage() {
                       <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08]">
                         <div className="h-full rounded" style={{ width: disp + '%', background: `linear-gradient(90deg,${col}99,${col})` }} />
                       </div>
-                      <div className={`text-[11px] text-content-muted dark:text-content-muted-dark mt-[3px] ${isRTL ? 'text-right' : 'text-left'}`}>{pct}%</div>
+                      <div className={`text-[11px] text-content-muted dark:text-content-muted-dark mt-[3px] text-start`}>{pct}%</div>
                     </div>
                   );
                 })}
               </div>
             </Card>
           ))}
-          <div className={`px-[18px] py-3.5 rounded-[10px] bg-brand-500/[0.06] dark:bg-purple-500/[0.08] border border-brand-500/[0.15] dark:border-purple-500/20 text-xs text-brand-800 dark:text-brand-300 ${isRTL ? 'text-right' : 'text-left'}`}>
+          <div className={`px-[18px] py-3.5 rounded-[10px] bg-brand-500/[0.06] dark:bg-purple-500/[0.08] border border-brand-500/[0.15] dark:border-purple-500/20 text-xs text-brand-800 dark:text-brand-300 text-start`}>
              {lang === 'ar' ? 'البيانات ستكون حقيقية بعد ربط الـ modules — Finance + CRM + Sales' : 'Data will be live once Finance, CRM & Sales modules are connected.'}
           </div>
         </div>

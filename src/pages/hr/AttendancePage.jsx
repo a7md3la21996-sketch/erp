@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
-import { getAttendanceForMonth } from '../../data/attendanceStore';
+import { fetchEmployees } from '../../services/employeesService';
+import { fetchAttendance } from '../../services/attendanceService';
 import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Download } from 'lucide-react';
 import { KpiCard, Button, Card, CardHeader, Table, Th, Td, Tr } from '../../components/ui';
 import ExportButton from '../../components/ui/ExportButton';
@@ -23,7 +23,7 @@ function AttendanceRow({ emp, attendance, isRTL }) {
           <div className="w-8 h-8 rounded-[9px] bg-[#2B4C6F] flex items-center justify-center shrink-0">
             <span className="text-[11px] font-bold text-white">{ini}</span>
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{name}</p>
             <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id}</p>
           </div>
@@ -50,7 +50,17 @@ export default function AttendancePage() {
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const [year] = useState(() => new Date().getFullYear());
-  const allRecords = useMemo(() => getAttendanceForMonth(year, month), [year, month]);
+  const [employees, setEmployees] = useState([]);
+  const [allRecords, setAllRecords] = useState([]);
+
+  useEffect(() => {
+    fetchEmployees().then(setEmployees);
+  }, []);
+
+  useEffect(() => {
+    fetchAttendance({ month, year }).then(setAllRecords);
+  }, [month, year]);
+
   const attendance = useMemo(() => {
     const grouped = {};
     allRecords.forEach(r => {
@@ -81,7 +91,7 @@ export default function AttendancePage() {
           <div className="w-[46px] h-[46px] rounded-xl flex items-center justify-center shadow-md" style={{ background:'linear-gradient(135deg,#1B3347,#4A7AAB)' }}>
             <Clock size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className={'text-start'}>
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'الحضور والغياب':'Attendance'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{MONTHS_AR[month-1]} {year}</p>
           </div>
@@ -122,12 +132,12 @@ export default function AttendancePage() {
           <thead>
             <tr>
               {[lang==='ar'?'الموظف':'Employee', lang==='ar'?'القسم':'Dept', lang==='ar'?'حاضر':'Present', lang==='ar'?'غائب':'Absent', lang==='ar'?'متأخر':'Late', lang==='ar'?'نسبة':'Rate'].map((h,i)=>(
-                <Th key={i} className={isRTL?'text-right':'text-left'}>{h}</Th>
+                <Th key={i} className={'text-start'}>{h}</Th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {MOCK_EMPLOYEES.length === 0 ? (
+            {employees.length === 0 ? (
               <tr><td colSpan={6} className="text-center py-16 px-5">
                 <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                   <Clock size={24} color='#4A7AAB' />
@@ -135,7 +145,7 @@ export default function AttendancePage() {
                 <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد بيانات حضور':'No Attendance Data'}</p>
                 <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي بيانات حضور بعد':'No attendance records yet'}</p>
               </td></tr>
-            ) : MOCK_EMPLOYEES.map(emp => (
+            ) : employees.map(emp => (
               <AttendanceRow key={emp.id} emp={emp} attendance={attendance} isRTL={isRTL} />
             ))}
           </tbody>

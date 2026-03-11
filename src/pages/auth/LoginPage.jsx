@@ -50,7 +50,7 @@ export default function LoginPage() {
 
       {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-6 bg-white dark:bg-surface-bg-dark relative">
-        <div className="absolute top-6 right-6 flex gap-2">
+        <div className="absolute top-6 end-6 flex gap-2">
           <button onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
             className="flex items-center gap-1 py-2 px-3 rounded-lg border-none cursor-pointer bg-gray-100 dark:bg-brand-900/30 text-gray-500 dark:text-content-muted-dark text-[13px]">
             <Globe size={16} /> {i18n.language === 'ar' ? 'EN' : 'عربي'}
@@ -85,9 +85,9 @@ export default function LoginPage() {
             <div className="relative">
               <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown}
                 placeholder="••••••••" dir="ltr"
-                className="w-full h-11 pr-11 pl-4 rounded-lg border border-gray-300 dark:border-edge-dark bg-white dark:bg-surface-input-dark text-gray-900 dark:text-content-dark text-sm outline-none box-border" />
+                className="w-full h-11 pe-11 ps-4 rounded-lg border border-gray-300 dark:border-edge-dark bg-white dark:bg-surface-input-dark text-gray-900 dark:text-content-dark text-sm outline-none box-border" />
               <button onClick={() => setShowPw(!showPw)}
-                className={`absolute top-2.5 ${isRTL ? 'left-3' : 'right-3'} bg-transparent border-none cursor-pointer text-gray-400 dark:text-content-muted-dark`}>
+                className="absolute top-2.5 end-3 bg-transparent border-none cursor-pointer text-gray-400 dark:text-content-muted-dark">
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>

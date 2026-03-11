@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
+import { fetchEmployees } from '../../services/employeesService';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download } from 'lucide-react';
 import { Button, Card, CardHeader, KpiCard, Tr, Td, Th } from '../../components/ui';
 import ExportButton from '../../components/ui/ExportButton';
@@ -12,8 +12,14 @@ export default function PayrollPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
-  const totalSalaries = useMemo(() => MOCK_EMPLOYEES.reduce((s,e)=>s+(e.salary||0),0), []);
-  const avgSalary = Math.round(totalSalaries / MOCK_EMPLOYEES.length);
+  const [employees, setEmployees] = useState([]);
+
+  useEffect(() => {
+    fetchEmployees().then(setEmployees);
+  }, []);
+
+  const totalSalaries = useMemo(() => employees.reduce((s,e)=>s+(e.salary||0),0), [employees]);
+  const avgSalary = employees.length ? Math.round(totalSalaries / employees.length) : 0;
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -22,7 +28,7 @@ export default function PayrollPage() {
           <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
             <DollarSign size={22} color="#fff" />
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className="text-start">
             <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'مسير الرواتب':'Payroll'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{MONTHS_AR[month-1]} 2026</p>
           </div>
@@ -34,10 +40,10 @@ export default function PayrollPage() {
             >
               {MONTHS_AR.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
             </select>
-            <ChevronDown size={14} className="absolute right-2.5 pointer-events-none text-content-muted dark:text-content-muted-dark" />
+            <ChevronDown size={14} className="absolute end-2.5 pointer-events-none text-content-muted dark:text-content-muted-dark" />
           </div>
           <ExportButton
-            data={MOCK_EMPLOYEES.map(e => ({
+            data={employees.map(e => ({
               name: isRTL ? e.full_name_ar : e.full_name_en,
               department: e.department,
               salary: e.salary,
@@ -58,9 +64,9 @@ export default function PayrollPage() {
 
       <div className="grid grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={DollarSign} label={lang==='ar'?'إجمالي الرواتب':'Total Salaries'} value={(totalSalaries/1000).toFixed(0)+'K'} sub="EGP" color="#1B3347" />
-        <KpiCard icon={Users} label={lang==='ar'?'عدد الموظفين':'Employees'} value={MOCK_EMPLOYEES.length} color="#4A7AAB" />
+        <KpiCard icon={Users} label={lang==='ar'?'عدد الموظفين':'Employees'} value={employees.length} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={lang==='ar'?'متوسط الراتب':'Avg Salary'} value={(avgSalary/1000).toFixed(1)+'K'} sub="EGP" color="#6B8DB5" />
-        <KpiCard icon={FileText} label={lang==='ar'?'تم الصرف':'Processed'} value={MOCK_EMPLOYEES.length} color="#2B4C6F" />
+        <KpiCard icon={FileText} label={lang==='ar'?'تم الصرف':'Processed'} value={employees.length} color="#2B4C6F" />
       </div>
 
       <Card className="!rounded-xl overflow-hidden">
@@ -74,11 +80,11 @@ export default function PayrollPage() {
           <thead>
             <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
               {[lang==='ar'?'الموظف':'Employee',lang==='ar'?'الراتب الأساسي':'Base Salary',lang==='ar'?'البدلات':'Allowances',lang==='ar'?'الاستقطاعات':'Deductions',lang==='ar'?'الصافي':'Net Pay',lang==='ar'?'الحالة':'Status',''].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${isRTL?'text-right':'text-left'}`}>{h}</th>
+                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider text-start`}>{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody>{MOCK_EMPLOYEES.map(emp=>(
+          <tbody>{employees.map(emp=>(
             <PayrollRow key={emp.id} emp={emp} isRTL={isRTL} lang={lang} />
           ))}</tbody>
         </table>
@@ -101,7 +107,7 @@ function PayrollRow({ emp, isRTL, lang }) {
           <div className="w-8 h-8 rounded-lg bg-brand-800 flex items-center justify-center shrink-0">
             <span className="text-[11px] font-bold text-white">{initials}</span>
           </div>
-          <div className={isRTL ? 'text-right' : 'text-left'}>
+          <div className="text-start">
             <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{name}</p>
             <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id}</p>
           </div>

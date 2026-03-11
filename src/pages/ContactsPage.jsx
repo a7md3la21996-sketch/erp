@@ -285,8 +285,8 @@ export default function ContactsPage() {
   };
 
   const selCls = 'bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg px-3 py-2 text-content dark:text-content-dark text-xs outline-none cursor-pointer';
-  const thCls = `text-[11px] text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`;
-  const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-[13px] text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`;
+  const thCls = `text-[11px] text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap text-start`;
+  const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-[13px] text-content dark:text-content-dark text-start`;
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark">
@@ -322,18 +322,18 @@ export default function ContactsPage() {
                 {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
               </button>
               {showBulkMenu && (
-                <div className={`absolute top-[110%] ${isRTL ? 'right-0' : 'left-0'} bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] min-w-[190px] z-[200] shadow-[0_8px_24px_rgba(0,0,0,0.35)] overflow-hidden`}>
+                <div className={`absolute top-[110%] start-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] min-w-[190px] z-[200] shadow-[0_8px_24px_rgba(0,0,0,0.35)] overflow-hidden`}>
                   {[
                     { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
                     { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => setBulkReassignModal(true) },
                     { label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => setBulkStageModal(true) },
                   ].map(item => (
-                    <button key={item.label} onClick={item.action} className={`w-full px-4 py-2.5 bg-transparent border-none text-content dark:text-content-dark text-[13px] cursor-pointer ${isRTL ? 'text-right' : 'text-left'} flex items-center gap-2 hover:bg-brand-500/[0.15]`}>
+                    <button key={item.label} onClick={item.action} className={`w-full px-4 py-2.5 bg-transparent border-none text-content dark:text-content-dark text-[13px] cursor-pointer text-start flex items-center gap-2 hover:bg-brand-500/[0.15]`}>
                       {item.label}
                     </button>
                   ))}
                   <div className="h-px bg-red-500/20 my-1" />
-                  <button onClick={handleDeleteSelected} className={`w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-[13px] cursor-pointer ${isRTL ? 'text-right' : 'text-left'} flex items-center gap-2 hover:bg-red-500/10`}>
+                  <button onClick={handleDeleteSelected} className={`w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-[13px] cursor-pointer text-start flex items-center gap-2 hover:bg-red-500/10`}>
                     {isRTL ? "حذف المحددين" : "Delete Selected"}
                   </button>
                 </div>
@@ -373,9 +373,9 @@ export default function ContactsPage() {
       {/* Filter Bar */}
       <div className="flex gap-2.5 mb-4 flex-wrap items-center bg-gray-50 dark:bg-brand-500/[0.08] px-3.5 py-2.5 rounded-xl border border-edge dark:border-edge-dark">
         <div className="relative flex-[1_1_220px]">
-          <Search size={14} className={`absolute ${isRTL ? 'left-2.5' : 'right-2.5'} top-1/2 -translate-y-1/2 text-[#6B8DB5] dark:text-[#6B8DB5]`} />
+          <Search size={14} className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[#6B8DB5] dark:text-[#6B8DB5]" />
           <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={searchInput} onChange={e => setSearchInput(e.target.value)}
-            className={`${selCls} w-full box-border ${isRTL ? 'pl-8' : 'pr-8'}`} />
+            className={`${selCls} w-full box-border pe-8`} />
         </div>
         <select value={filterSource} onChange={e => setFilterSource(e.target.value)} className={selCls}>
           <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
@@ -530,7 +530,7 @@ export default function ContactsPage() {
                           <MoreVertical size={12} />
                         </button>
                         {openMenuId === c.id && (
-                          <div className={`absolute top-[30px] ${isRTL ? 'left-0' : 'right-0'} bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] min-w-[180px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.12)] overflow-hidden`}>
+                          <div className={`absolute top-[30px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] min-w-[180px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.12)] overflow-hidden`}>
                             <div className="p-1">
                               <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                                 <FileDown size={13} /> {isRTL ? 'تصدير' : 'Export'}
@@ -611,7 +611,7 @@ export default function ContactsPage() {
                   </div>
                   <div className="flex-1">
                     <div className="font-bold text-base text-content dark:text-content-dark">{current.full_name}</div>
-                    <div className={`text-[13px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`} style={{ direction: 'ltr' }}>{current.phone}</div>
+                    <div className={`text-[13px] text-content-muted dark:text-content-muted-dark text-start`} style={{ direction: 'ltr' }}>{current.phone}</div>
                     {current.company && <div className="text-xs text-content-muted dark:text-content-muted-dark">{current.company}</div>}
                   </div>
                   <div className="text-center">
@@ -692,10 +692,10 @@ export default function ContactsPage() {
               <table className="w-full border-collapse text-xs">
                 <thead>
                   <tr>
-                    <th className={`px-2.5 py-2 ${isRTL ? 'text-right' : 'text-left'} text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{isRTL ? 'الحقل' : 'Field'}</th>
-                    <th className={`px-2.5 py-2 ${isRTL ? 'text-right' : 'text-left'} text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{c1.full_name}</th>
-                    <th className={`px-2.5 py-2 ${isRTL ? 'text-right' : 'text-left'} text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{c2.full_name}</th>
-                    <th className={`px-2.5 py-2 ${isRTL ? 'text-right' : 'text-left'} text-emerald-500 font-semibold border-b border-edge dark:border-edge-dark`}>{isRTL ? 'النتيجة' : 'Result'}</th>
+                    <th className={`px-2.5 py-2 text-start text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{isRTL ? 'الحقل' : 'Field'}</th>
+                    <th className={`px-2.5 py-2 text-start text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{c1.full_name}</th>
+                    <th className={`px-2.5 py-2 text-start text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{c2.full_name}</th>
+                    <th className={`px-2.5 py-2 text-start text-emerald-500 font-semibold border-b border-edge dark:border-edge-dark`}>{isRTL ? 'النتيجة' : 'Result'}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -754,7 +754,7 @@ export default function ContactsPage() {
             <div className="flex flex-col gap-1.5">
               {Object.entries(STAGE_LABELS).map(([key, val]) => (
                 <button key={key} onClick={() => handleBulkStage(key)}
-                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-[13px] cursor-pointer ${isRTL ? 'text-right' : 'text-left'} hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
+                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-[13px] cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
                   {isRTL ? val.ar : val.en}
                 </button>
               ))}
@@ -774,7 +774,7 @@ export default function ContactsPage() {
             <div className="flex flex-col gap-1.5">
               {[...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].map(agent => (
                 <button key={agent} onClick={() => handleBulkReassign(agent)}
-                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-[13px] cursor-pointer ${isRTL ? 'text-right' : 'text-left'} hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
+                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-[13px] cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
                   {agent}
                 </button>
               ))}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
@@ -12,11 +12,20 @@ import {
 import {
   JOURNAL_STATUS, INVOICE_STATUS, COMMISSION_STATUS, EXPENSE_STATUS,
   ACCOUNT_TYPES, EXPENSE_CATEGORIES, PAYMENT_METHODS,
-  CHART_OF_ACCOUNTS, MOCK_JOURNAL_ENTRIES, MOCK_INVOICES,
   MOCK_COMPANY_COMMISSIONS, MOCK_AGENT_COMMISSIONS,
-  MOCK_EXPENSES as MOCK_EXPENSES_DATA, MONTHLY_REVENUE, MOCK_BUDGET,
+  MONTHLY_REVENUE, MOCK_BUDGET,
   fmtMoney, fmtShort, calcAccountBalance,
 } from '../../data/finance_mock_data';
+import {
+  fetchJournalEntries as svcFetchJournalEntries,
+  createJournalEntry as svcCreateJournalEntry,
+  fetchInvoices as svcFetchInvoices,
+  createInvoice as svcCreateInvoice,
+  updateInvoiceStatus as svcUpdateInvoiceStatus,
+  fetchExpenses as svcFetchExpenses,
+  createExpense as svcCreateExpense,
+  fetchChartOfAccounts as svcFetchChartOfAccounts,
+} from '../../services/financeService';
 import Button from '../../components/ui/Button';
 import Card, { CardHeader, CardBody } from '../../components/ui/Card';
 import Input, { Select } from '../../components/ui/Input';
@@ -110,7 +119,7 @@ function CardWrap({ title, icon: Icon, headerRight, children }) {
    ADD JOURNAL ENTRY MODAL (proper component — hooks safe)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function AddJournalModal({ L, onClose, onSave, entryCount }) {
+function AddJournalModal({ L, onClose, onSave, entryCount, chartOfAccounts }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [desc, setDesc] = useState('');
   const [ref, setRef] = useState('');
@@ -119,7 +128,7 @@ function AddJournalModal({ L, onClose, onSave, entryCount }) {
     { account_id: '', debit: '', credit: '' },
   ]);
 
-  const leafAccounts = CHART_OF_ACCOUNTS.filter(a => !a.is_group);
+  const leafAccounts = (chartOfAccounts || []).filter(a => !a.is_group);
   const totalDebit = lines.reduce((s, l) => s + (Number(l.debit) || 0), 0);
   const totalCredit = lines.reduce((s, l) => s + (Number(l.credit) || 0), 0);
   const balanced = totalDebit > 0 && totalDebit === totalCredit;
@@ -313,12 +322,21 @@ export default function FinancePage() {
 
   const [activeTab, setActiveTab] = useState('overview');
 
-  // State
-  const [journalEntries, setJournalEntries] = useState(MOCK_JOURNAL_ENTRIES);
-  const [invoices, setInvoices] = useState(MOCK_INVOICES);
+  // State — initialised empty, populated from Supabase (or mock fallback) on mount
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [companyComm, setCompanyComm] = useState(MOCK_COMPANY_COMMISSIONS);
   const [agentComm, setAgentComm] = useState(MOCK_AGENT_COMMISSIONS);
-  const [expenses, setExpenses] = useState(MOCK_EXPENSES_DATA);
+  const [expenses, setExpenses] = useState([]);
+  const [chartOfAccounts, setChartOfAccounts] = useState([]);
+
+  // Fetch data on mount via service layer (falls back to mock inside services)
+  useEffect(() => {
+    svcFetchJournalEntries().then(setJournalEntries);
+    svcFetchInvoices().then(setInvoices);
+    svcFetchExpenses().then(setExpenses);
+    svcFetchChartOfAccounts().then(setChartOfAccounts);
+  }, []);
 
   // Filters
   const [journalFilter, setJournalFilter] = useState('all');
@@ -475,7 +493,7 @@ export default function FinancePage() {
                   <div className="text-[13px] text-content dark:text-content-dark font-medium">{L(inv.counterparty_ar, inv.counterparty_en)}</div>
                   <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{inv.number}</div>
                 </div>
-                <div className="text-right">
+                <div className="text-end">
                   <div className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoney(inv.total - inv.paid)}</div>
                   <StatusBadge label={L(INVOICE_STATUS[inv.status].ar, INVOICE_STATUS[inv.status].en)} color={INVOICE_STATUS[inv.status].color} />
                 </div>
@@ -495,7 +513,7 @@ export default function FinancePage() {
     const toggleExpand = (id) => setCoaExpanded(prev => ({ ...prev, [id]: !prev[id] }));
 
     const renderRow = (acc, level) => {
-      const children = CHART_OF_ACCOUNTS.filter(a => a.parent_id === acc.id);
+      const children = chartOfAccounts.filter(a => a.parent_id === acc.id);
       const hasChildren = children.length > 0;
       const expanded = coaExpanded[acc.id];
       const typeInfo = ACCOUNT_TYPES[acc.type];
@@ -503,10 +521,10 @@ export default function FinancePage() {
 
       return [
         <Tr key={acc.id} onClick={hasChildren ? () => toggleExpand(acc.id) : undefined} className={hasChildren ? 'cursor-pointer' : ''}>
-          <Td style={{ paddingLeft: 12 + level * 24 }}>
+          <Td style={{ paddingInlineStart: 12 + level * 24 }}>
             <div className="flex items-center gap-1.5">
               {hasChildren ? (
-                expanded ? <ChevronDown size={14} className="text-content-muted dark:text-content-muted-dark" /> : <ChevronRight size={14} className="text-content-muted dark:text-content-muted-dark" />
+                expanded ? <ChevronDown size={14} className="text-content-muted dark:text-content-muted-dark" /> : <ChevronRight size={14} className={`text-content-muted dark:text-content-muted-dark ${isRTL ? 'rotate-180' : ''}`} />
               ) : <div className="w-3.5" />}
               <span className={acc.is_group ? 'font-bold' : ''}>
                 {L(acc.name_ar, acc.name_en)}
@@ -524,14 +542,14 @@ export default function FinancePage() {
       ];
     };
 
-    const rootAccounts = CHART_OF_ACCOUNTS.filter(a => a.parent_id === null);
+    const rootAccounts = chartOfAccounts.filter(a => a.parent_id === null);
 
     return (
       <div className="flex flex-col gap-4">
         {/* KPIs per account type */}
         <div className="grid grid-cols-5 gap-3">
           {Object.entries(ACCOUNT_TYPES).map(([key, info]) => {
-            const count = CHART_OF_ACCOUNTS.filter(a => a.type === key && !a.is_group).length;
+            const count = chartOfAccounts.filter(a => a.type === key && !a.is_group).length;
             return <KpiCard key={key} icon={FolderTree} label={L(info.ar, info.en)} value={count} sub={L('حساب', 'accounts')} color={info.color} />;
           })}
         </div>
@@ -998,7 +1016,7 @@ export default function FinancePage() {
 
     // Helper: sum balance of all leaf accounts under a parent
     const sumGroup = (parentId) => {
-      const children = CHART_OF_ACCOUNTS.filter(a => a.parent_id === parentId);
+      const children = chartOfAccounts.filter(a => a.parent_id === parentId);
       let total = 0;
       children.forEach(c => {
         if (c.is_group) total += sumGroup(c.id);
@@ -1029,8 +1047,8 @@ export default function FinancePage() {
     const netIncomeCalc = totalRevenue - totalExpPosted;
 
     // ── Income Statement data ──
-    const revAccounts = CHART_OF_ACCOUNTS.filter(a => a.type === 'revenue' && !a.is_group);
-    const expAccounts = CHART_OF_ACCOUNTS.filter(a => a.type === 'expense' && !a.is_group);
+    const revAccounts = chartOfAccounts.filter(a => a.type === 'revenue' && !a.is_group);
+    const expAccounts = chartOfAccounts.filter(a => a.type === 'expense' && !a.is_group);
 
     // ── Cash Flow data ──
     const cashBal = bal('acc-1110');
@@ -1058,7 +1076,7 @@ export default function FinancePage() {
         <div className="border-t-2 border-edge dark:border-edge-dark my-2" />
       );
       return (
-        <div className="flex justify-between items-center py-1.5 border-b border-edge/20 dark:border-edge-dark/20" style={{ paddingLeft: indent * 20 }}>
+        <div className="flex justify-between items-center py-1.5 border-b border-edge/20 dark:border-edge-dark/20" style={{ paddingInlineStart: indent * 20 }}>
           <span className={`text-[13px] ${bold ? 'font-bold text-content dark:text-content-dark' : 'font-normal text-content-muted dark:text-content-muted-dark'}`}>{label}</span>
           <span className={`text-[13px] ${bold ? 'font-extrabold' : 'font-semibold'} ${negative ? 'text-red-500' : amount === 0 ? 'text-content-muted dark:text-content-muted-dark' : bold ? 'text-brand-500' : 'text-content dark:text-content-dark'}`}>
             {fmtMoney(Math.abs(amount))}
@@ -1093,11 +1111,11 @@ export default function FinancePage() {
                 <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('كما في مارس 2026', 'As of March 2026')}</div>
 
                 <ReportHeader title={L('الأصول', 'ASSETS')} />
-                {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-1000' && !a.is_group).map(a => (
+                {chartOfAccounts.filter(a => a.parent_id === 'acc-1000' && !a.is_group).map(a => (
                   <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={bal(a.id)} indent={1} />
                 ))}
-                {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-1000' && a.is_group).map(g => {
-                  const leaves = CHART_OF_ACCOUNTS.filter(a => a.parent_id === g.id && !a.is_group);
+                {chartOfAccounts.filter(a => a.parent_id === 'acc-1000' && a.is_group).map(g => {
+                  const leaves = chartOfAccounts.filter(a => a.parent_id === g.id && !a.is_group);
                   return [
                     <ReportLine key={g.id + '-h'} label={L(g.name_ar, g.name_en)} amount={sumGroup(g.id)} bold indent={1} />,
                     ...leaves.map(a => <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={bal(a.id)} indent={2} />),
@@ -1109,7 +1127,7 @@ export default function FinancePage() {
                 <div className="h-5" />
 
                 <ReportHeader title={L('الخصوم', 'LIABILITIES')} />
-                {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-2000' && !a.is_group).map(a => (
+                {chartOfAccounts.filter(a => a.parent_id === 'acc-2000' && !a.is_group).map(a => (
                   <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={-bal(a.id)} indent={1} />
                 ))}
                 <ReportLine separator />
@@ -1118,7 +1136,7 @@ export default function FinancePage() {
                 <div className="h-5" />
 
                 <ReportHeader title={L('حقوق الملكية', 'EQUITY')} />
-                {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-3000' && !a.is_group).map(a => (
+                {chartOfAccounts.filter(a => a.parent_id === 'acc-3000' && !a.is_group).map(a => (
                   <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={-bal(a.id)} indent={1} />
                 ))}
                 <ReportLine label={L('صافي الدخل', 'Net Income')} amount={netIncomeCalc} indent={1} />
@@ -1588,12 +1606,12 @@ export default function FinancePage() {
         {/* Actions */}
         <ModalFooter className="justify-end">
           {inv.status === 'sent' && (
-            <Button variant="primary" size="sm" onClick={() => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'paid', paid: i.total } : i)); setViewInvoice(null); }}>
+            <Button variant="primary" size="sm" onClick={async () => { const updated = await svcUpdateInvoiceStatus(inv.id, 'paid'); setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, ...updated, status: 'paid', paid: i.total } : i)); setViewInvoice(null); }}>
               {L('تسجيل دفع كامل', 'Record Full Payment')}
             </Button>
           )}
           {inv.status === 'overdue' && (
-            <Button variant="danger" size="sm" onClick={() => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'paid', paid: i.total } : i)); setViewInvoice(null); }}>
+            <Button variant="danger" size="sm" onClick={async () => { const updated = await svcUpdateInvoiceStatus(inv.id, 'paid'); setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, ...updated, status: 'paid', paid: i.total } : i)); setViewInvoice(null); }}>
               {L('تسجيل دفع كامل', 'Record Full Payment')}
             </Button>
           )}
@@ -1656,8 +1674,8 @@ export default function FinancePage() {
       {/* Modals */}
       {renderJournalModal()}
       {renderInvoiceModal()}
-      {showJournalModal && <AddJournalModal L={L} onClose={() => setShowJournalModal(false)} onSave={(entry) => { setJournalEntries(prev => [entry, ...prev]); setShowJournalModal(false); }} entryCount={journalEntries.length} />}
-      {showExpenseModal && <AddExpenseModal L={L} onClose={() => setShowExpenseModal(false)} onSave={(exp) => { setExpenses(prev => [exp, ...prev]); setShowExpenseModal(false); }} expCount={expenses.length} />}
+      {showJournalModal && <AddJournalModal L={L} onClose={() => setShowJournalModal(false)} onSave={async (entry) => { const saved = await svcCreateJournalEntry(entry); setJournalEntries(prev => [saved, ...prev]); setShowJournalModal(false); }} entryCount={journalEntries.length} chartOfAccounts={chartOfAccounts} />}
+      {showExpenseModal && <AddExpenseModal L={L} onClose={() => setShowExpenseModal(false)} onSave={async (exp) => { const saved = await svcCreateExpense(exp); setExpenses(prev => [saved, ...prev]); setShowExpenseModal(false); }} expCount={expenses.length} />}
     </div>
   );
 }

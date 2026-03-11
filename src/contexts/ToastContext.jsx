@@ -28,7 +28,7 @@ function ToastItem({ toast, onRemove }) {
   return (
     <div
       className="flex items-start gap-3 px-4 py-3 bg-surface-card dark:bg-surface-card-dark rounded-[10px] min-w-[280px] max-w-[380px] shadow-lg dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
-      style={{ border: `1px solid ${colors.border}`, borderLeft: `3px solid ${colors.icon}`, direction: 'rtl' }}
+      style={{ border: `1px solid ${colors.border}`, borderInlineStart: `3px solid ${colors.icon}` }}
     >
       <div
         className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
@@ -78,7 +78,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ show, dismiss, success, error, warning, info, loading }}>
       {children}
-      <div className="fixed bottom-6 left-6 z-[9999] flex flex-col-reverse gap-2.5 pointer-events-none">
+      <div className="fixed bottom-6 start-6 z-[9999] flex flex-col-reverse gap-2.5 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className="pointer-events-auto">
             <ToastItem toast={t} onRemove={remove} />

@@ -225,14 +225,14 @@ export default function ActivitiesPage() {
         <div className="relative flex-1 min-w-[160px]">
           <Search
             size={13}
-            className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-2.5' : 'left-2.5'}`}
+            className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-2.5"
           />
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
             size="sm"
-            className={isRTL ? 'pr-[30px] pl-2.5' : 'pl-[30px] pr-2.5'}
+            className="ps-[30px] pe-2.5"
           />
         </div>
         {/* Dept filter */}
@@ -317,7 +317,7 @@ export default function ActivitiesPage() {
                     <span className="text-[11px] text-content-muted dark:text-content-muted-dark">
                       {act.user_name_ar && lang === 'ar' ? act.user_name_ar : act.user_name_en || ''}
                     </span>
-                    <span className={`text-[11px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'mr-auto' : 'ml-auto'}`}>
+                    <span className={`text-[11px] text-content-muted dark:text-content-muted-dark ms-auto`}>
                       {timeAgo(act.created_at, lang)}
                     </span>
                   </div>

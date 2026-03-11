@@ -12,7 +12,7 @@ export default function MainLayout() {
   return (
     <div className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark" dir={isRTL ? 'rtl' : 'ltr'}>
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
-      <div className="transition-[margin] duration-300" style={{ [isRTL ? 'marginRight' : 'marginLeft']: collapsed ? 72 : 260 }}>
+      <div className="transition-[margin] duration-300" style={{ marginInlineStart: collapsed ? 72 : 260 }}>
         <Header />
         <main>
           <Outlet />

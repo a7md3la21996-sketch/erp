@@ -553,13 +553,13 @@ export default function OpportunitiesPage() {
         <div className="relative flex-[1_1_200px]">
           <Search
             size={14}
-            className={`absolute top-1/2 -translate-y-1/2 pointer-events-none text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-2.5' : 'left-2.5'}`}
+            className="absolute top-1/2 -translate-y-1/2 pointer-events-none text-content-muted dark:text-content-muted-dark start-2.5"
           />
           <Input
             placeholder={isRTL ? 'بحث...' : 'Search...'}
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className={isRTL ? 'pr-8' : 'pl-8'}
+            className="ps-8"
           />
         </div>
         <Select className="w-auto flex-none" value={filterAgent} onChange={e => setFilterAgent(e.target.value)}>
