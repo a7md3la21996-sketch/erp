@@ -8,6 +8,7 @@ import { getAttendanceForMonth } from '../../data/attendanceStore';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fetchTodayReminders } from '../../services/remindersService';
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2 , Bell , Phone , MessageCircle , MapPin , Mail , CheckCircle } from 'lucide-react';
 
 const YEAR = new Date().getFullYear();
@@ -55,12 +56,12 @@ const REMINDER_TYPES = {
   email:    { ar: 'بريد',     en: 'Email',       color: '#F59E0B', Icon: Mail },
 };
 
-function TodayReminders({ lang, isRTL, c, isDark }) {
+function TodayReminders({ lang, isRTL, c, isDark, userId }) {
   const [reminders, setReminders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchTodayReminders().then(data => {
+    fetchTodayReminders(userId).then(data => {
       setReminders(data || []);
       setLoading(false);
     }).catch(() => setLoading(false));
@@ -139,9 +140,12 @@ export default function DashboardPage() {
   const sections = getSections(role);
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const hr = useMemo(() => buildHRStats(attendance), [attendance]);
-  const c = { bg: isDark ? '#152232' : '#F0F4F8', cardBg: isDark ? '#1a2234' : '#ffffff', border: isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0', text: isDark ? '#E2EAF4' : '#1A2B3C', textMuted: isDark ? '#8BA8C8' : '#64748B', thBg: isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC', accent: '#4A7AAB', primary: '#2B4C6F' };
+  const c = { bg: isDark ? '#152232' : '#F0F4F8', card: isDark ? '#1a2234' : '#ffffff', cardBg: isDark ? '#1a2234' : '#ffffff', border: isDark ? 'rgba(74,122,171,0.2)' : '#E2E8F0', text: isDark ? '#E2EAF4' : '#1A2B3C', textMuted: isDark ? '#8BA8C8' : '#64748B', thBg: isDark ? 'rgba(74,122,171,0.08)' : '#F8FAFC', accent: '#4A7AAB', primary: '#2B4C6F' };
   const dateStr = new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const greeting = lang === 'ar' ? 'صباح الخير' : 'Good morning';
+  const hour = new Date().getHours();
+  const greeting = lang === 'ar'
+    ? (hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء الخير' : 'مساء الخير')
+    : (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening');
   const targetPct = Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
   const chartData = REVENUE_TREND.map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en }));
   const pipeData = PIPELINE_DATA.map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en }));
@@ -216,7 +220,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           </Box>
           <Box>
-            <CardTitle icon={Wallet} title={lang === 'ar' ? 'توزيع المصروفات' : 'Expenses'} sub={lang === 'ar' ? 'مارس 2026' : 'March 2026'} />
+            <CardTitle icon={Wallet} title={lang === 'ar' ? 'توزيع المصروفات' : 'Expenses'} sub={new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })} />
             <ResponsiveContainer width="100%" height={120}>
               <PieChart><Pie data={EXPENSE_CATS} cx="50%" cy="50%" innerRadius={34} outerRadius={52} paddingAngle={3} dataKey="value">{EXPENSE_CATS.map((_, i) => <Cell key={i} fill={BRAND[i + 1]} />)}</Pie><Tooltip formatter={v => [(v / 1000).toFixed(0) + 'K EGP']} /></PieChart>
             </ResponsiveContainer>
@@ -306,12 +310,12 @@ export default function DashboardPage() {
 
 
       {/* ===== متابعات اليوم ===== */}
-      <TodayReminders lang={lang} isRTL={isRTL} c={c} isDark={isDark} />
+      <TodayReminders lang={lang} isRTL={isRTL} c={c} isDark={isDark} userId={profile?.id} />
 
       <Box>
         <CardTitle icon={BarChart2} title={lang === 'ar' ? 'روابط سريعة' : 'Quick Links'} />
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          {[{ l_ar: 'الموظفين', l_en: 'Employees', path: '/hr/employees', show: sections.showHR, icon: Users }, { l_ar: 'الحضور', l_en: 'Attendance', path: '/hr/attendance', show: sections.showHR, icon: CalendarCheck }, { l_ar: 'الرواتب', l_en: 'Payroll', path: '/hr/payroll', show: sections.showHR, icon: DollarSign }, { l_ar: 'التوظيف', l_en: 'Recruitment', path: '/hr/recruitment', show: sections.showHR, icon: Briefcase }, { l_ar: 'الفرص', l_en: 'Opportunities', path: '/crm/opportunities', show: sections.showCRM, icon: Star }, { l_ar: 'ليد بول', l_en: 'Lead Pool', path: '/crm/lead-pool', show: sections.showCRM, icon: Users }, { l_ar: 'الأداء', l_en: 'Performance', path: '/performance', show: true, icon: TrendingUp }, { l_ar: 'بوابة الموظف', l_en: 'Self-Service', path: '/hr/self-service', show: true, icon: UserCheck }, { l_ar: 'المالية', l_en: 'Finance', path: '/finance', show: sections.showFinance, icon: Wallet }, { l_ar: 'التارجت', l_en: 'Targets', path: '/sales/targets', show: sections.showSales, icon: Target }].filter(l => l.show).map((l, i) => { const LI = l.icon; return <a key={i} href={l.path} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 8, border: '1px solid ' + c.border, background: c.thBg, textDecoration: 'none', color: c.textMuted, fontSize: 12, fontWeight: 500, flexDirection: isRTL ? 'row-reverse' : 'row', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = c.accent; e.currentTarget.style.color = c.accent; e.currentTarget.style.background = 'rgba(74,122,171,0.08)'; }} onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted; e.currentTarget.style.background = c.thBg; }}><LI size={13} /><span>{lang === 'ar' ? l.l_ar : l.l_en}</span></a>; })}
+          {[{ l_ar: 'الموظفين', l_en: 'Employees', path: '/hr/employees', show: sections.showHR, icon: Users }, { l_ar: 'الحضور', l_en: 'Attendance', path: '/hr/attendance', show: sections.showHR, icon: CalendarCheck }, { l_ar: 'الرواتب', l_en: 'Payroll', path: '/hr/payroll', show: sections.showHR, icon: DollarSign }, { l_ar: 'التوظيف', l_en: 'Recruitment', path: '/hr/recruitment', show: sections.showHR, icon: Briefcase }, { l_ar: 'الفرص', l_en: 'Opportunities', path: '/crm/opportunities', show: sections.showCRM, icon: Star }, { l_ar: 'ليد بول', l_en: 'Lead Pool', path: '/crm/lead-pool', show: sections.showCRM, icon: Users }, { l_ar: 'الأداء', l_en: 'Performance', path: '/performance', show: true, icon: TrendingUp }, { l_ar: 'بوابة الموظف', l_en: 'Self-Service', path: '/hr/self-service', show: true, icon: UserCheck }, { l_ar: 'المالية', l_en: 'Finance', path: '/finance', show: sections.showFinance, icon: Wallet }, { l_ar: 'التارجت', l_en: 'Targets', path: '/sales/targets', show: sections.showSales, icon: Target }].filter(l => l.show).map((l, i) => { const LI = l.icon; return <Link key={i} to={l.path} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '8px 14px', borderRadius: 8, border: '1px solid ' + c.border, background: c.thBg, textDecoration: 'none', color: c.textMuted, fontSize: 12, fontWeight: 500, flexDirection: isRTL ? 'row-reverse' : 'row', transition: 'all 0.15s' }} onMouseEnter={e => { e.currentTarget.style.borderColor = c.accent; e.currentTarget.style.color = c.accent; e.currentTarget.style.background = 'rgba(74,122,171,0.08)'; }} onMouseLeave={e => { e.currentTarget.style.borderColor = c.border; e.currentTarget.style.color = c.textMuted; e.currentTarget.style.background = c.thBg; }}><LI size={13} /><span>{lang === 'ar' ? l.l_ar : l.l_en}</span></Link>; })}
         </div>
       </Box>
     </div>
