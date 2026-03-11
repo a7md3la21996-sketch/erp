@@ -34,82 +34,73 @@ export default function LoginPage() {
     if (e.key === 'Enter' && email && password) handleLogin();
   };
 
+  const disabled = loading || !email || !password;
+
   return (
-    <div style={{ minHeight: '100vh', display: 'flex' }} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Left panel */}
-      <div style={{
-        flex: '0 0 50%',
-        background: 'linear-gradient(135deg, #1B3347, #2B4C6F, #345A80)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        position: 'relative', overflow: 'hidden',
-      }} className="hidden-mobile">
-        <div style={{ position: 'absolute', top: 80, left: -80, width: 300, height: 300, background: 'rgba(255,255,255,0.05)', borderRadius: '50%', filter: 'blur(60px)' }} />
-        <div style={{ textAlign: 'center', zIndex: 1 }}>
-          <div style={{ width: 80, height: 80, borderRadius: 20, background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 36, fontWeight: 'bold', color: '#fff' }}>P</div>
-          <h1 style={{ color: '#fff', fontSize: 28, fontWeight: 700, margin: '0 0 8px' }}>{t('app.fullName')}</h1>
-          <p style={{ color: '#8BA8C8', fontSize: 16 }}>{t('app.tagline')}</p>
+      <div className="hidden md:flex flex-[0_0_50%] bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 items-center justify-center relative overflow-hidden">
+        <div className="absolute top-20 -left-20 w-[300px] h-[300px] bg-white/5 rounded-full blur-[60px]" />
+        <div className="text-center z-[1]">
+          <div className="w-20 h-20 rounded-[20px] bg-white/15 flex items-center justify-center mx-auto mb-6 text-4xl font-bold text-white">P</div>
+          <h1 className="text-white text-[28px] font-bold m-0 mb-2">{t('app.fullName')}</h1>
+          <p className="text-brand-300 text-base">{t('app.tagline')}</p>
         </div>
       </div>
 
       {/* Right panel */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: '#fff', position: 'relative' }}>
-        <div style={{ position: 'absolute', top: 24, right: 24, display: 'flex', gap: 8 }}>
+      <div className="flex-1 flex items-center justify-center p-6 bg-white dark:bg-surface-bg-dark relative">
+        <div className="absolute top-6 right-6 flex gap-2">
           <button onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
-            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f3f4f6', color: '#6b7280', fontSize: 13 }}>
+            className="flex items-center gap-1 py-2 px-3 rounded-lg border-none cursor-pointer bg-gray-100 dark:bg-brand-900/30 text-gray-500 dark:text-content-muted-dark text-[13px]">
             <Globe size={16} /> {i18n.language === 'ar' ? 'EN' : 'عربي'}
           </button>
           <button onClick={toggleTheme}
-            style={{ padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: '#f3f4f6', color: '#6b7280' }}>
+            className="p-2 rounded-lg border-none cursor-pointer bg-gray-100 dark:bg-brand-900/30 text-gray-500 dark:text-content-muted-dark">
             {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
           </button>
         </div>
 
-        <div style={{ width: '100%', maxWidth: 400 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 700, color: '#111827', margin: '0 0 8px' }}>{t('auth.welcomeBack')}</h2>
-          <p style={{ color: '#6b7280', margin: '0 0 32px' }}>{t('auth.loginSubtitle')}</p>
+        <div className="w-full max-w-[400px]">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-content-dark m-0 mb-2">{t('auth.welcomeBack')}</h2>
+          <p className="text-gray-500 dark:text-content-muted-dark m-0 mb-8">{t('auth.loginSubtitle')}</p>
 
           {error && (
-            <div style={{ padding: 12, borderRadius: 8, background: theme === 'dark' ? 'rgba(239,68,68,0.1)' : '#fef2f2', border: `1px solid ${theme === 'dark' ? 'rgba(239,68,68,0.3)' : '#fecaca'}`, color: '#dc2626', fontSize: 14, marginBottom: 24 }}>
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-600 text-sm mb-6">
               {error}
             </div>
           )}
 
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 500, color: '#374151', marginBottom: 6 }}>{t('auth.email')}</label>
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-content-dark mb-1.5">{t('auth.email')}</label>
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown}
               placeholder="admin@platform.com" dir="ltr"
-              style={{ width: '100%', height: 44, padding: '0 16px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+              className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-edge-dark bg-white dark:bg-surface-input-dark text-gray-900 dark:text-content-dark text-sm outline-none box-border" />
           </div>
 
-          <div style={{ marginBottom: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <label style={{ fontSize: 14, fontWeight: 500, color: '#374151' }}>{t('auth.password')}</label>
+          <div className="mb-6">
+            <div className="flex justify-between mb-1.5">
+              <label className="text-sm font-medium text-gray-700 dark:text-content-dark">{t('auth.password')}</label>
             </div>
-            <div style={{ position: 'relative' }}>
+            <div className="relative">
               <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown}
                 placeholder="••••••••" dir="ltr"
-                style={{ width: '100%', height: 44, padding: '0 44px 0 16px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                className="w-full h-11 pr-11 pl-4 rounded-lg border border-gray-300 dark:border-edge-dark bg-white dark:bg-surface-input-dark text-gray-900 dark:text-content-dark text-sm outline-none box-border" />
               <button onClick={() => setShowPw(!showPw)}
-                style={{ position: 'absolute', top: 10, [isRTL ? 'left' : 'right']: 12, background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af' }}>
+                className={`absolute top-2.5 ${isRTL ? 'left-3' : 'right-3'} bg-transparent border-none cursor-pointer text-gray-400 dark:text-content-muted-dark`}>
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
-          <button onClick={handleLogin} disabled={loading || !email || !password} style={{
-            width: '100%', height: 44, borderRadius: 8, border: 'none',
-            cursor: loading || !email || !password ? 'not-allowed' : 'pointer',
-            background: loading || !email || !password ? '#93B8D4' : '#2B4C6F',
-            color: '#fff', fontSize: 14, fontWeight: 600,
-          }}>
+          <button onClick={handleLogin} disabled={disabled}
+            className={`w-full h-11 rounded-lg border-none text-white text-sm font-semibold ${disabled ? 'bg-brand-300 cursor-not-allowed' : 'bg-brand-800 cursor-pointer hover:bg-brand-900'}`}>
             {loading ? '...' : t('auth.login')}
           </button>
 
-          <p style={{ textAlign: 'center', fontSize: 12, color: '#9ca3af', marginTop: 32 }}>© 2026 Platform Real Estate</p>
+          <p className="text-center text-xs text-gray-400 dark:text-content-muted-dark mt-8">&copy; 2026 Platform Real Estate</p>
         </div>
       </div>
-
-      <style>{`.hidden-mobile { display: flex; } @media (max-width: 768px) { .hidden-mobile { display: none !important; } }`}</style>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 // LoadingAndEmpty.jsx — Skeleton + Empty State components
 
-export function SkeletonBox({ width = '100%', height = 16, radius = 6, style = {} }) {
+export function SkeletonBox({ width = '100%', height = 16, radius = 6, className = '' }) {
   return (
-    <div style={{ width, height, borderRadius: radius, background: 'rgba(74,122,171,0.15)', opacity: 0.6, ...style }} />
+    <div className={`rounded-md bg-brand-500/15 opacity-60 ${className}`} style={{ width, height, borderRadius: radius }} />
   );
 }
 
@@ -10,8 +10,8 @@ export function SkeletonRow({ cols = 5 }) {
   return (
     <tr>
       {Array.from({ length: cols }).map((_, i) => (
-        <td key={i} style={{ padding: '12px 16px' }}>
-          <div style={{ height: 12, borderRadius: 6, background: 'rgba(74,122,171,0.15)', opacity: 0.6, width: i === 0 ? '60%' : '80%' }} />
+        <td key={i} className="py-3 px-4">
+          <div className={`h-3 rounded-md bg-brand-500/15 opacity-60 ${i === 0 ? 'w-3/5' : 'w-4/5'}`} />
         </td>
       ))}
     </tr>
@@ -30,21 +30,21 @@ export function SkeletonTable({ rows = 5, cols = 5 }) {
 
 export function SkeletonCard() {
   return (
-    <div style={{ borderRadius: 12, border: '1px solid rgba(74,122,171,0.15)', padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ height: 14, borderRadius: 6, background: 'rgba(74,122,171,0.15)', width: '60%' }} />
-      <div style={{ height: 10, borderRadius: 6, background: 'rgba(74,122,171,0.15)', width: '80%', opacity: 0.7 }} />
-      <div style={{ height: 10, borderRadius: 6, background: 'rgba(74,122,171,0.15)', width: '40%', opacity: 0.5 }} />
+    <div className="rounded-xl border border-brand-500/15 p-4 flex flex-col gap-2.5">
+      <div className="h-3.5 rounded-md bg-brand-500/15 w-3/5" />
+      <div className="h-2.5 rounded-md bg-brand-500/15 w-4/5 opacity-70" />
+      <div className="h-2.5 rounded-md bg-brand-500/15 w-2/5 opacity-50" />
     </div>
   );
 }
 
 export function SkeletonKpiGrid({ count = 4 }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${count}, 1fr)`, gap: 16 }}>
+    <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${count}, 1fr)` }}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} style={{ borderRadius: 12, border: '1px solid rgba(74,122,171,0.15)', padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ height: 12, borderRadius: 6, background: 'rgba(74,122,171,0.15)', width: '50%' }} />
-          <div style={{ height: 28, borderRadius: 6, background: 'rgba(74,122,171,0.15)', width: '70%' }} />
+        <div key={i} className="rounded-xl border border-brand-500/15 p-5 flex flex-col gap-2.5">
+          <div className="h-3 rounded-md bg-brand-500/15 w-1/2" />
+          <div className="h-7 rounded-md bg-brand-500/15 w-[70%]" />
         </div>
       ))}
     </div>
@@ -53,15 +53,15 @@ export function SkeletonKpiGrid({ count = 4 }) {
 
 export function SkeletonPage({ rows = 5 }) {
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="p-6 flex flex-col gap-4">
       <SkeletonKpiGrid count={4} />
-      <div style={{ borderRadius: 12, border: '1px solid rgba(74,122,171,0.15)', overflow: 'hidden' }}>
+      <div className="rounded-xl border border-brand-500/15 overflow-hidden">
         {Array.from({ length: rows }).map((_, i) => (
-          <div key={i} style={{ padding: '14px 16px', borderBottom: '1px solid rgba(74,122,171,0.1)', display: 'flex', gap: 12, alignItems: 'center' }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(74,122,171,0.15)', flexShrink: 0 }} />
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ height: 12, borderRadius: 6, background: 'rgba(74,122,171,0.15)', width: '40%' }} />
-              <div style={{ height: 10, borderRadius: 6, background: 'rgba(74,122,171,0.15)', width: '60%', opacity: 0.7 }} />
+          <div key={i} className="py-3.5 px-4 border-b border-brand-500/10 flex gap-3 items-center">
+            <div className="w-9 h-9 rounded-lg bg-brand-500/15 shrink-0" />
+            <div className="flex-1 flex flex-col gap-2">
+              <div className="h-3 rounded-md bg-brand-500/15 w-2/5" />
+              <div className="h-2.5 rounded-md bg-brand-500/15 w-3/5 opacity-70" />
             </div>
           </div>
         ))}
@@ -72,12 +72,12 @@ export function SkeletonPage({ rows = 5 }) {
 
 export function SmartEmpty({ icon, titleAr, titleEn, subAr, subEn, lang = 'ar', action, isDark }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
-      <div style={{ width: 64, height: 64, borderRadius: 18, background: 'linear-gradient(135deg, rgba(27,51,71,0.08), rgba(74,122,171,0.12))', border: '1.5px dashed rgba(74,122,171,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="w-16 h-16 rounded-[18px] bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border-[1.5px] border-dashed border-brand-500/30 flex items-center justify-center mb-4">
         {icon}
       </div>
-      <p style={{ margin: '0 0 6px', fontWeight: 700, fontSize: 15, color: isDark ? '#E2EAF4' : '#1A2B3C' }}>{lang === 'ar' ? titleAr : titleEn}</p>
-      {(subAr || subEn) && <p style={{ margin: '0 0 16px', fontSize: 13, color: isDark ? '#8BA8C8' : '#64748B' }}>{lang === 'ar' ? subAr : subEn}</p>}
+      <p className="m-0 mb-1.5 font-bold text-[15px] text-content dark:text-content-dark">{lang === 'ar' ? titleAr : titleEn}</p>
+      {(subAr || subEn) && <p className="m-0 mb-4 text-[13px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? subAr : subEn}</p>}
       {action}
     </div>
   );
@@ -86,7 +86,7 @@ export function SmartEmpty({ icon, titleAr, titleEn, subAr, subEn, lang = 'ar', 
 export function SmartEmptyTable({ colSpan = 6, icon, titleAr, titleEn, subAr, subEn, lang = 'ar' }) {
   return (
     <tr>
-      <td colSpan={colSpan} style={{ padding: 0, border: 'none' }}>
+      <td colSpan={colSpan} className="p-0 border-none">
         <SmartEmpty icon={icon} titleAr={titleAr} titleEn={titleEn} subAr={subAr} subEn={subEn} lang={lang} />
       </td>
     </tr>

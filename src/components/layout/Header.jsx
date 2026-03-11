@@ -15,7 +15,6 @@ export default function Header() {
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const ref = useRef(null);
-  const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
 
   useEffect(() => {
@@ -41,61 +40,51 @@ export default function Header() {
     const newLang = i18n.language === 'ar' ? 'en' : 'ar';
     i18n.changeLanguage(newLang).then(() => { window.location.reload(); });
   };
-  const iconBtn = { padding: 8, borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent', color: isDark ? '#8BA8C8' : '#6b7280' };
 
   return (
     <>
-    <header style={{ height: 64, background: isDark ? '#1a2234' : '#ffffff', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', position: 'sticky', top: 0, zIndex: 50 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, maxWidth: 420 }}>
-        <button onClick={() => setShowSearch(true)} style={{
-          width: '100%', height: 40, borderRadius: 10, display: 'flex', alignItems: 'center', gap: 10,
-          padding: isRTL ? '0 14px 0 10px' : '0 10px 0 14px',
-          border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`,
-          background: isDark ? '#0F1E2D' : '#F8FAFC', cursor: 'pointer',
-          color: isDark ? '#6B8DB5' : '#9ca3af', fontSize: 14, fontFamily: 'inherit',
-        }}>
-          <Search size={16} style={{ flexShrink: 0 }} />
-          <span style={{ flex: 1, textAlign: isRTL ? 'right' : 'left' }}>{isRTL ? 'بحث...' : 'Search...'}</span>
-          <kbd style={{
-            padding: '2px 6px', borderRadius: 5, fontSize: 11, fontFamily: 'monospace',
-            background: isDark ? 'rgba(74,122,171,0.1)' : '#f0f0f0',
-            border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e0e0e0'}`,
-            color: isDark ? '#6B8DB5' : '#b0b0b0', display: 'flex', alignItems: 'center', gap: 2,
-          }}>
+    <header className="h-16 bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark flex items-center justify-between px-6 sticky top-0 z-50">
+      <div className="flex items-center gap-3 flex-1 max-w-[420px]">
+        <button onClick={() => setShowSearch(true)} className={`w-full h-10 rounded-[10px] flex items-center gap-2.5 border border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-input-dark cursor-pointer text-content-muted dark:text-brand-400 text-sm font-[inherit] ${isRTL ? 'pr-3.5 pl-2.5' : 'pl-3.5 pr-2.5'}`}>
+          <Search size={16} className="shrink-0" />
+          <span className={`flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? 'بحث...' : 'Search...'}</span>
+          <kbd className="px-1.5 py-0.5 rounded-[5px] text-[11px] font-mono bg-brand-50 dark:bg-brand-500/10 border border-edge dark:border-brand-500/15 text-content-muted dark:text-brand-400 flex items-center gap-0.5">
             <Command size={10} />K
           </kbd>
         </button>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <button onClick={handleLangToggle} style={{ ...iconBtn, display: 'flex', alignItems: 'center', gap: 4, padding: '8px 12px', fontSize: 13, fontWeight: 600 }}>
+      <div className="flex items-center gap-1">
+        <button onClick={handleLangToggle} className="p-2 px-3 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark flex items-center gap-1 text-[13px] font-semibold">
           <Globe size={18} />{i18n.language === 'ar' ? 'EN' : 'عربي'}
         </button>
-        <button onClick={toggleTheme} style={iconBtn}>{isDark ? <Sun size={18} /> : <Moon size={18} />}</button>
-        <div style={{ position: 'relative' }}>
-          <button onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} style={{ ...iconBtn, position: 'relative' }}>
+        <button onClick={toggleTheme} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark">
+          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
+        <div className="relative">
+          <button onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative">
             <Bell size={18} />
-            <span style={{ position: 'absolute', top: 6, [isRTL ? 'left' : 'right']: 6, width: 7, height: 7, background: '#EF4444', borderRadius: '50%' }} />
+            <span className={`absolute top-1.5 ${isRTL ? 'left-1.5' : 'right-1.5'} w-[7px] h-[7px] bg-red-500 rounded-full`} />
           </button>
           <NotificationsDropdown show={showNotifications} onClose={() => setShowNotifications(false)} />
         </div>
-        <div style={{ width: 1, height: 24, margin: '0 4px', background: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb' }} />
-        <div ref={ref} style={{ position: 'relative' }}>
-          <button onClick={() => setShowProfile(!showProfile)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 8, border: 'none', cursor: 'pointer', background: 'transparent' }}>
-            <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'linear-gradient(135deg,#1B3347,#4A7AAB)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <div className="w-px h-6 mx-1 bg-edge dark:bg-edge-dark" />
+        <div ref={ref} className="relative">
+          <button onClick={() => setShowProfile(!showProfile)} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg border-none cursor-pointer bg-transparent">
+            <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0">
               <User size={16} color="#fff" />
             </div>
-            <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#E2EAF4' : '#1f2937' }}>{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
-              <div style={{ fontSize: 11, color: isDark ? '#8BA8C8' : '#9ca3af' }}>{roleLabel}</div>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
+              <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{roleLabel}</div>
             </div>
           </button>
           {showProfile && (
-            <div style={{ position: 'absolute', top: '100%', marginTop: 8, [isRTL ? 'left' : 'right']: 0, width: 220, borderRadius: 12, background: isDark ? '#1a2234' : '#ffffff', border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`, boxShadow: isDark ? '0 10px 25px rgba(0,0,0,0.4)' : '0 10px 25px rgba(0,0,0,0.1)', padding: '8px 0', zIndex: 100 }}>
-              <div style={{ padding: '10px 16px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#f3f4f6'}` }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: isDark ? '#E2EAF4' : '#1f2937' }}>{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
-                <div style={{ fontSize: 12, color: isDark ? '#8BA8C8' : '#9ca3af', marginTop: 2 }}>{profile?.email}</div>
+            <div className={`absolute top-full mt-2 ${isRTL ? 'left-0' : 'right-0'} w-[220px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-2xl py-2 z-[100]`}>
+              <div className="px-4 py-2.5 border-b border-edge dark:border-edge-dark/75">
+                <div className="text-sm font-semibold text-content dark:text-content-dark">{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
+                <div className="text-xs text-content-muted dark:text-content-muted-dark mt-0.5">{profile?.email}</div>
               </div>
-              <button onClick={logout} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', border: 'none', cursor: 'pointer', background: 'transparent', color: '#EF4444', fontSize: 14 }}>
+              <button onClick={logout} className="w-full flex items-center gap-2 px-4 py-2.5 border-none cursor-pointer bg-transparent text-red-500 text-sm">
                 <LogOut size={16} />{t('auth.logout')}
               </button>
             </div>

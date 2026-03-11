@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../contexts/ThemeContext';
 import * as XLSX from 'xlsx';
 
 const COLUMN_MAP = {
@@ -48,8 +47,6 @@ const validatePhone = (p) => {
 
 export default function ImportModal({ onClose, existingContacts, onImportDone }) {
   const { t, i18n } = useTranslation();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
   const [step, setStep] = useState(1);
   const [rows, setRows] = useState([]);
@@ -157,56 +154,59 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   const over = (e) => { e.preventDefault(); setDragging(true); };
   const leave = () => setDragging(false);
 
-  const th = { color: isDark ? '#6B8DB5' : '#6b7280', padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, fontSize: 11, fontWeight: 600 };
-  const td = { color: isDark ? '#E2EAF4' : '#1f2937', padding: '8px 10px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.06)' : '#f3f4f6'}`, fontSize: 12 };
-  const muted = isDark ? '#8BA8C8' : '#6b7280';
-  const textPrimary = isDark ? '#E2EAF4' : '#1f2937';
-  const textSecondary = isDark ? '#6B8DB5' : '#9ca3af';
-  const borderColor = isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb';
-  const borderAccent = isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db';
+  const SummaryCards = ({ items }) => (
+    <div className="grid grid-cols-3 gap-2.5 mb-5">
+      {items.map(s => (
+        <div key={s.label} className="rounded-[10px] p-3 text-center" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
+          <div className="text-2xl font-bold" style={{ color: s.color }}>{s.num}</div>
+          <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-1">{s.icon ? `${s.icon} ` : ''}{s.label}</div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', direction: isRTL ? 'rtl' : 'ltr' }}>
-      <div style={{ background: isDark ? '#1A2B3C' : '#ffffff', border: `1px solid ${borderAccent}`, borderRadius: 16, width: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="bg-surface-card dark:bg-surface-card-dark border border-gray-300 dark:border-brand-500/30 rounded-2xl w-[640px] max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ color: textPrimary, fontSize: 16, fontWeight: 700 }}>📤 {isRTL ? 'استيراد جهات الاتصال' : 'Import Contacts'}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: textSecondary, fontSize: 22, cursor: 'pointer' }}>×</button>
+        <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark flex justify-between items-center">
+          <h2 className="text-content dark:text-content-dark text-base font-bold">{'\u{1F4E4}'} {isRTL ? 'استيراد جهات الاتصال' : 'Import Contacts'}</h2>
+          <button onClick={onClose} className="bg-transparent border-none text-brand-400 dark:text-brand-400 text-[22px] cursor-pointer">&times;</button>
         </div>
 
         {/* Steps */}
-        <div style={{ display: 'flex', borderBottom: `1px solid ${borderColor}` }}>
+        <div className="flex border-b border-edge dark:border-edge-dark">
           {[isRTL ? 'رفع الملف' : 'Upload', isRTL ? 'مراجعة' : 'Preview', isRTL ? 'النتيجة' : 'Result'].map((s, i) => (
-            <div key={i} style={{ flex: 1, padding: '10px', textAlign: 'center', fontSize: 12, color: step === i+1 ? '#4A7AAB' : step > i+1 ? '#10B981' : textSecondary, borderBottom: `2px solid ${step === i+1 ? '#4A7AAB' : step > i+1 ? '#10B981' : 'transparent'}` }}>
-              {step > i+1 ? '✓ ' : `${i+1}. `}{s}
+            <div key={i} className={`flex-1 p-2.5 text-center text-xs border-b-2 ${step === i+1 ? 'text-brand-500 border-brand-500' : step > i+1 ? 'text-emerald-500 border-emerald-500' : 'text-brand-400 dark:text-brand-400 border-transparent'}`}>
+              {step > i+1 ? '\u2713 ' : `${i+1}. `}{s}
             </div>
           ))}
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+        <div className="flex-1 overflow-auto p-6">
 
           {/* Step 1 - Upload */}
           {step === 1 && (
             <div>
               <div onDrop={handleDrop} onDragOver={over} onDragLeave={leave}
-                style={{ border: `2px dashed ${dragging ? '#4A7AAB' : borderAccent}`, borderRadius: 12, padding: 40, textAlign: 'center', cursor: 'pointer', background: dragging ? (isDark ? 'rgba(74,122,171,0.05)' : 'rgba(74,122,171,0.03)') : 'none', transition: 'all 0.2s' }}
+                className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all ${dragging ? 'border-brand-500 bg-brand-500/[0.03] dark:bg-brand-500/5' : 'border-gray-300 dark:border-brand-500/30'}`}
                 onClick={() => document.getElementById('fileInput').click()}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-                <div style={{ color: muted, fontSize: 14, marginBottom: 8 }}>{isRTL ? 'اسحب الملف هنا أو اضغط للاختيار' : 'Drag file here or click to browse'}</div>
-                <div style={{ color: isDark ? '#4A5568' : '#9ca3af', fontSize: 12 }}>Excel (.xlsx) {isRTL ? 'أو' : 'or'} CSV</div>
-                <input id="fileInput" type="file" accept=".xlsx,.csv" style={{ display: 'none' }} onChange={handleFile} />
+                <div className="text-[40px] mb-3">{'\u{1F4C2}'}</div>
+                <div className="text-content-muted dark:text-content-muted-dark text-sm mb-2">{isRTL ? 'اسحب الملف هنا أو اضغط للاختيار' : 'Drag file here or click to browse'}</div>
+                <div className="text-gray-400 dark:text-gray-600 text-xs">Excel (.xlsx) {isRTL ? 'أو' : 'or'} CSV</div>
+                <input id="fileInput" type="file" accept=".xlsx,.csv" className="hidden" onChange={handleFile} />
               </div>
-              <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <div className="text-center mt-4">
                 <button onClick={() => {
                   const headers = Object.keys(COLUMN_MAP);
                   const ws = XLSX.utils.aoa_to_sheet([headers]);
                   const wb = XLSX.utils.book_new();
                   XLSX.utils.book_append_sheet(wb, ws, 'Contacts');
                   XLSX.writeFile(wb, 'import_template.xlsx');
-                }} style={{ padding: '8px 16px', background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, color: isDark ? '#6B8DB5' : '#4A7AAB', fontSize: 12, cursor: 'pointer' }}>
-                  ⬇️ {isRTL ? 'تحميل نموذج الاستيراد' : 'Download Template'}
+                }} className="py-2 px-4 bg-brand-500/10 dark:bg-brand-500/10 border border-gray-300 dark:border-brand-500/25 rounded-lg text-brand-400 dark:text-brand-400 text-xs cursor-pointer">
+                  {'\u2B07\uFE0F'} {isRTL ? 'تحميل نموذج الاستيراد' : 'Download Template'}
                 </button>
               </div>
             </div>
@@ -215,45 +215,38 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
           {/* Step 2 - Preview */}
           {step === 2 && (
             <div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
-                {[
-                  { num: newRows.length, label: isRTL ? 'عميل جديد' : 'New Contacts', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)', icon: '✅' },
-                  { num: oppRows.length, label: isRTL ? 'فرصة جديدة' : 'New Opportunity', color: '#4A7AAB', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)', icon: '🔄' },
-                  { num: errRows.length, label: isRTL ? 'مرفوض' : 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)', icon: '❌' },
-                ].map(s => (
-                  <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.num}</div>
-                    <div style={{ fontSize: 11, color: muted, marginTop: 4 }}>{s.icon} {s.label}</div>
-                  </div>
-                ))}
-              </div>
+              <SummaryCards items={[
+                { num: newRows.length, label: isRTL ? 'عميل جديد' : 'New Contacts', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)', icon: '\u2705' },
+                { num: oppRows.length, label: isRTL ? 'فرصة جديدة' : 'New Opportunity', color: '#4A7AAB', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)', icon: '\u{1F504}' },
+                { num: errRows.length, label: isRTL ? 'مرفوض' : 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)', icon: '\u274C' },
+              ]} />
 
-              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+              <div className="flex gap-1.5 mb-3">
                 {[['all', `${isRTL ? 'الكل' : 'All'} (${rows.length})`], ['new', `${isRTL ? 'جديد' : 'New'} (${newRows.length})`], ['opp', `${isRTL ? 'فرص' : 'Opps'} (${oppRows.length})`], ['err', `${isRTL ? 'أخطاء' : 'Errors'} (${errRows.length})`]].map(([v, l]) => (
-                  <button key={v} onClick={() => setTab(v)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, cursor: 'pointer', border: `1px solid ${tab===v ? (isDark ? 'rgba(74,122,171,0.4)' : '#4A7AAB') : borderColor}`, background: tab===v ? (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)') : 'none', color: tab===v ? '#4A7AAB' : textSecondary }}>{l}</button>
+                  <button key={v} onClick={() => setTab(v)}
+                    className={`py-[5px] px-3 rounded-full text-[11px] cursor-pointer border ${tab===v ? 'border-brand-500/40 dark:border-brand-500/40 bg-brand-500/[0.08] dark:bg-brand-500/15 text-brand-500' : 'border-edge dark:border-edge-dark bg-transparent text-brand-400 dark:text-brand-400'}`}>{l}</button>
                 ))}
               </div>
 
-              <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div className="max-h-[220px] overflow-y-auto">
+                <table className="w-full border-collapse">
                   <thead><tr>
-                    <th style={th}>{isRTL ? 'الاسم' : 'Name'}</th>
-                    <th style={th}>{isRTL ? 'الرقم' : 'Phone'}</th>
-                    <th style={th}>{isRTL ? 'الحالة' : 'Status'}</th>
-                    <th style={th}>{isRTL ? 'السبب' : 'Note'}</th>
+                    {[isRTL ? 'الاسم' : 'Name', isRTL ? 'الرقم' : 'Phone', isRTL ? 'الحالة' : 'Status', isRTL ? 'السبب' : 'Note'].map((h, i) => (
+                      <th key={i} className={`text-content-muted dark:text-content-muted-dark py-2 px-2.5 ${isRTL ? 'text-right' : 'text-left'} border-b border-edge dark:border-edge-dark text-[11px] font-semibold`}>{h}</th>
+                    ))}
                   </tr></thead>
                   <tbody>
                     {displayRows.map((r, i) => (
                       <tr key={i}>
-                        <td style={td}>{r.full_name || '—'}</td>
-                        <td style={{ ...td, fontFamily: 'monospace', fontSize: 11 }}>{r.phone || '—'}</td>
-                        <td style={td}>
-                          {r._status === 'new' && <span style={{ padding: '3px 8px', borderRadius: 20, background: 'rgba(16,185,129,0.15)', color: '#10B981', fontSize: 11 }}>✅ {isRTL ? 'جديد' : 'New'}</span>}
-                          {r._status === 'opportunity' && <span style={{ padding: '3px 8px', borderRadius: 20, background: 'rgba(74,122,171,0.15)', color: '#4A7AAB', fontSize: 11 }}>🔄 {isRTL ? 'فرصة' : 'Opp'}</span>}
-                          {r._status === 'error' && <span style={{ padding: '3px 8px', borderRadius: 20, background: 'rgba(239,68,68,0.15)', color: '#EF4444', fontSize: 11 }}>❌ {isRTL ? 'خطأ' : 'Error'}</span>}
+                        <td className="text-content dark:text-content-dark py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-xs">{r.full_name || '\u2014'}</td>
+                        <td className="text-content dark:text-content-dark py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-[11px] font-mono">{r.phone || '\u2014'}</td>
+                        <td className="text-content dark:text-content-dark py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-xs">
+                          {r._status === 'new' && <span className="px-2 py-[3px] rounded-full bg-emerald-500/15 text-emerald-500 text-[11px]">{'\u2705'} {isRTL ? 'جديد' : 'New'}</span>}
+                          {r._status === 'opportunity' && <span className="px-2 py-[3px] rounded-full bg-brand-500/15 text-brand-500 text-[11px]">{'\u{1F504}'} {isRTL ? 'فرصة' : 'Opp'}</span>}
+                          {r._status === 'error' && <span className="px-2 py-[3px] rounded-full bg-red-500/15 text-red-500 text-[11px]">{'\u274C'} {isRTL ? 'خطأ' : 'Error'}</span>}
                         </td>
-                        <td style={{ ...td, fontSize: 11, color: muted }}>
-                          {r._status === 'opportunity' ? (isRTL ? `موجود: ${r._existingName}` : `Exists: ${r._existingName}`) : r._reason || '—'}
+                        <td className="py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-[11px] text-content-muted dark:text-content-muted-dark">
+                          {r._status === 'opportunity' ? (isRTL ? `موجود: ${r._existingName}` : `Exists: ${r._existingName}`) : r._reason || '\u2014'}
                         </td>
                       </tr>
                     ))}
@@ -265,25 +258,18 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
 
           {/* Step 3 - Result */}
           {step === 3 && (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-              <div style={{ color: textPrimary, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{isRTL ? 'تم الاستيراد بنجاح' : 'Import Complete!'}</div>
-              <div style={{ color: muted, fontSize: 13, marginBottom: 24 }}>{isRTL ? `تمت معالجة ${rows.length} صف` : `Processed ${rows.length} rows`}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
-                {[
-                  { num: newRows.length, label: isRTL ? 'أضيفوا' : 'Added', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
-                  { num: oppRows.length, label: isRTL ? 'فرص جديدة' : 'Opportunities', color: '#4A7AAB', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)' },
-                  { num: errRows.length, label: isRTL ? 'مرفوضين' : 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
-                ].map(s => (
-                  <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.num}</div>
-                    <div style={{ fontSize: 11, color: muted, marginTop: 4 }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
+            <div className="text-center">
+              <div className="text-[48px] mb-4">{'\u{1F389}'}</div>
+              <div className="text-content dark:text-content-dark text-lg font-bold mb-2">{isRTL ? 'تم الاستيراد بنجاح' : 'Import Complete!'}</div>
+              <div className="text-content-muted dark:text-content-muted-dark text-[13px] mb-6">{isRTL ? `تمت معالجة ${rows.length} صف` : `Processed ${rows.length} rows`}</div>
+              <SummaryCards items={[
+                { num: newRows.length, label: isRTL ? 'أضيفوا' : 'Added', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
+                { num: oppRows.length, label: isRTL ? 'فرص جديدة' : 'Opportunities', color: '#4A7AAB', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)' },
+                { num: errRows.length, label: isRTL ? 'مرفوضين' : 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
+              ]} />
               {errRows.length > 0 && (
-                <button onClick={downloadErrors} style={{ width: '100%', padding: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 10, color: '#EF4444', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                  ⬇️ {isRTL ? `تحميل تقرير الأخطاء (${errRows.length} صف)` : `Download Error Report (${errRows.length} rows)`}
+                <button onClick={downloadErrors} className="w-full p-3 bg-red-500/10 border border-red-500/30 rounded-[10px] text-red-500 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-2">
+                  {'\u2B07\uFE0F'} {isRTL ? `تحميل تقرير الأخطاء (${errRows.length} صف)` : `Download Error Report (${errRows.length} rows)`}
                 </button>
               )}
             </div>
@@ -291,17 +277,20 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between' }}>
-          <button onClick={step === 1 ? onClose : () => setStep(s => s-1)} style={{ padding: '9px 18px', background: isDark ? 'rgba(74,122,171,0.1)' : '#f3f4f6', border: `1px solid ${borderColor}`, borderRadius: 8, color: muted, fontSize: 13, cursor: 'pointer' }}>
-            {step === 1 ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '← رجوع' : '← Back')}
+        <div className="px-6 py-4 border-t border-edge dark:border-edge-dark flex justify-between">
+          <button onClick={step === 1 ? onClose : () => setStep(s => s-1)}
+            className="py-2.5 px-[18px] bg-gray-100 dark:bg-brand-500/10 border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-[13px] cursor-pointer">
+            {step === 1 ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '\u2190 رجوع' : '\u2190 Back')}
           </button>
           {step === 2 && (
-            <button onClick={handleImport} disabled={importing || newRows.length === 0 && oppRows.length === 0} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
-              {importing ? (isRTL ? 'جاري الاستيراد...' : 'Importing...') : (isRTL ? 'تأكيد الرفع ✓' : 'Confirm Import ✓')}
+            <button onClick={handleImport} disabled={importing || newRows.length === 0 && oppRows.length === 0}
+              className="py-2.5 px-[22px] bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer">
+              {importing ? (isRTL ? 'جاري الاستيراد...' : 'Importing...') : (isRTL ? 'تأكيد الرفع \u2713' : 'Confirm Import \u2713')}
             </button>
           )}
           {step === 3 && (
-            <button onClick={onClose} style={{ padding: '9px 22px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            <button onClick={onClose}
+              className="py-2.5 px-[22px] bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer">
               {isRTL ? 'إغلاق' : 'Close'}
             </button>
           )}

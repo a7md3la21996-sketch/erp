@@ -211,96 +211,76 @@ export default function GlobalSearch({ onClose }) {
   };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '12vh' }}>
-      <div onClick={e => e.stopPropagation()} dir={isRTL ? 'rtl' : 'ltr'} style={{
-        width: '100%', maxWidth: 580, background: isDark ? '#1a2234' : '#ffffff',
-        borderRadius: 16, border: `1px solid ${isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db'}`,
-        boxShadow: isDark ? '0 24px 80px rgba(0,0,0,0.6)' : '0 24px 80px rgba(0,0,0,0.15)',
-        overflow: 'hidden',
-      }}>
+    <div onClick={onClose} className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-[12vh]">
+      <div onClick={e => e.stopPropagation()} dir={isRTL ? 'rtl' : 'ltr'} className="w-full max-w-[580px] bg-surface-card dark:bg-surface-card-dark rounded-2xl border border-gray-300 dark:border-brand-500/30 shadow-2xl overflow-hidden">
         {/* Search Input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}` }}>
-          <Search size={20} color={isDark ? '#6B8DB5' : '#9ca3af'} style={{ flexShrink: 0 }} />
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-edge dark:border-brand-500/15">
+          <Search size={20} className="shrink-0 text-content-muted dark:text-brand-400" />
           <input
             ref={inputRef}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isRTL ? 'ابحث عن صفحات، جهات اتصال، مهام...' : 'Search pages, contacts, tasks...'}
-            style={{
-              flex: 1, border: 'none', outline: 'none', fontSize: 15, fontFamily: 'inherit',
-              background: 'transparent', color: isDark ? '#E2EAF4' : '#1A2B3C',
-            }}
+            className="flex-1 border-none outline-none text-[15px] font-[inherit] bg-transparent text-content dark:text-content-dark placeholder:text-content-muted dark:placeholder:text-brand-400"
           />
           {query && (
-            <button onClick={() => setQuery('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#6B8DB5' : '#9ca3af', padding: 2 }}>
+            <button onClick={() => setQuery('')} className="bg-transparent border-none cursor-pointer text-content-muted dark:text-brand-400 p-0.5">
               <X size={16} />
             </button>
           )}
-          <kbd style={{
-            padding: '3px 8px', borderRadius: 6, fontSize: 11, fontFamily: 'monospace',
-            background: isDark ? 'rgba(74,122,171,0.1)' : '#f3f4f6',
-            border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb'}`,
-            color: isDark ? '#6B8DB5' : '#9ca3af',
-          }}>ESC</kbd>
+          <kbd className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-gray-100 dark:bg-brand-500/10 border border-edge dark:border-edge-dark text-content-muted dark:text-brand-400">ESC</kbd>
         </div>
 
         {/* Results */}
-        <div ref={listRef} style={{ maxHeight: 400, overflowY: 'auto', padding: '8px' }}>
+        <div ref={listRef} className="max-h-[400px] overflow-y-auto p-2">
           {results.length === 0 && query.trim() && !searchingContacts ? (
-            <div style={{ textAlign: 'center', padding: '32px 20px', color: isDark ? '#6B8DB5' : '#9ca3af' }}>
-              <Search size={28} style={{ opacity: 0.3, marginBottom: 8 }} />
-              <p style={{ margin: 0, fontSize: 14 }}>{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
+            <div className="text-center py-8 px-5 text-content-muted dark:text-brand-400">
+              <Search size={28} className="opacity-30 mb-2 mx-auto" />
+              <p className="m-0 text-sm">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
             </div>
           ) : results.length === 0 && searchingContacts ? (
-            <div style={{ textAlign: 'center', padding: '32px 20px', color: isDark ? '#6B8DB5' : '#9ca3af' }}>
-              <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: 8 }} />
-              <p style={{ margin: 0, fontSize: 14 }}>{isRTL ? 'جاري البحث...' : 'Searching...'}</p>
-              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+            <div className="text-center py-8 px-5 text-content-muted dark:text-brand-400">
+              <Loader2 size={24} className="animate-spin mb-2 mx-auto" />
+              <p className="m-0 text-sm">{isRTL ? 'جاري البحث...' : 'Searching...'}</p>
             </div>
           ) : (
             <>
               {!query.trim() && (
-                <div style={{ padding: '6px 12px 10px', fontSize: 11, fontWeight: 600, color: isDark ? '#6B8DB5' : '#9ca3af', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <div className="px-3 pt-1.5 pb-2.5 text-[11px] font-semibold text-content-muted dark:text-brand-400 uppercase tracking-wide">
                   {isRTL ? 'تنقل سريع' : 'Quick Navigation'}
                 </div>
               )}
               {results.map((item, i) => {
                 const Icon = item.icon;
-                const isActive = i === activeIndex;
+                const isActiveItem = i === activeIndex;
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleSelect(item)}
                     onMouseEnter={() => setActiveIndex(i)}
-                    style={{
-                      width: '100%', display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '10px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                      background: isActive ? (isDark ? 'rgba(74,122,171,0.15)' : '#EDF2F7') : 'transparent',
-                      color: isDark ? '#E2EAF4' : '#1A2B3C', fontFamily: 'inherit',
-                      textAlign: isRTL ? 'right' : 'left',
-                      transition: 'background 0.1s',
-                    }}
+                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-[10px] border-none cursor-pointer font-[inherit] transition-colors duration-100 ${isRTL ? 'text-right' : 'text-left'} ${isActiveItem ? 'bg-brand-50 dark:bg-brand-500/15' : 'bg-transparent'} text-content dark:text-content-dark`}
                   >
                     {/* Icon */}
-                    <div style={{
-                      width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                      background: item.type === 'page'
-                        ? (isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)')
-                        : (typeColor(item.type) + '15'),
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: item.type === 'page' ? '#4A7AAB' : typeColor(item.type),
-                    }}>
+                    <div
+                      className="w-9 h-9 rounded-[10px] shrink-0 flex items-center justify-center"
+                      style={{
+                        background: item.type === 'page'
+                          ? (isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)')
+                          : (typeColor(item.type) + '15'),
+                        color: item.type === 'page' ? '#4A7AAB' : typeColor(item.type),
+                      }}
+                    >
                       {item.type === 'page' && Icon ? <Icon size={16} /> : typeIcon(item.type)}
                     </div>
 
                     {/* Text */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">
                         {item.title}
                       </div>
                       {item.subtitle && (
-                        <div style={{ fontSize: 11, color: isDark ? '#6B8DB5' : '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>
+                        <div className="text-[11px] text-content-muted dark:text-brand-400 whitespace-nowrap overflow-hidden text-ellipsis mt-px">
                           {item.subtitle}
                         </div>
                       )}
@@ -308,18 +288,20 @@ export default function GlobalSearch({ onClose }) {
 
                     {/* Type badge for non-page items */}
                     {item.type !== 'page' && (
-                      <span style={{
-                        fontSize: 10, padding: '2px 8px', borderRadius: 6, fontWeight: 600, flexShrink: 0,
-                        background: typeColor(item.type) + '15',
-                        color: typeColor(item.type),
-                      }}>
+                      <span
+                        className="text-[10px] px-2 py-0.5 rounded-md font-semibold shrink-0"
+                        style={{
+                          background: typeColor(item.type) + '15',
+                          color: typeColor(item.type),
+                        }}
+                      >
                         {typeLabel(item.type)}
                       </span>
                     )}
 
                     {/* Enter hint on active */}
-                    {isActive && (
-                      <ArrowRight size={14} color={isDark ? '#6B8DB5' : '#9ca3af'} style={{ flexShrink: 0 }} />
+                    {isActiveItem && (
+                      <ArrowRight size={14} className="shrink-0 text-content-muted dark:text-brand-400" />
                     )}
                   </button>
                 );
@@ -329,22 +311,18 @@ export default function GlobalSearch({ onClose }) {
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '10px 20px', borderTop: `1px solid ${isDark ? 'rgba(74,122,171,0.1)' : '#f3f4f6'}`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          fontSize: 11, color: isDark ? '#6B8DB5' : '#9ca3af',
-        }}>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <kbd style={{ padding: '1px 5px', borderRadius: 4, background: isDark ? 'rgba(74,122,171,0.1)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, fontSize: 10 }}>↑↓</kbd>
+        <div className="px-5 py-2.5 border-t border-edge dark:border-brand-500/10 flex items-center justify-between text-[11px] text-content-muted dark:text-brand-400">
+          <div className="flex gap-3 items-center">
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 py-px rounded bg-gray-100 dark:bg-brand-500/10 border border-edge dark:border-brand-500/15 text-[10px]">↑↓</kbd>
               {isRTL ? 'تنقل' : 'Navigate'}
             </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <kbd style={{ padding: '1px 5px', borderRadius: 4, background: isDark ? 'rgba(74,122,171,0.1)' : '#f3f4f6', border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, fontSize: 10 }}>↵</kbd>
+            <span className="flex items-center gap-1">
+              <kbd className="px-1 py-px rounded bg-gray-100 dark:bg-brand-500/10 border border-edge dark:border-brand-500/15 text-[10px]">↵</kbd>
               {isRTL ? 'فتح' : 'Open'}
             </span>
           </div>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span className="flex items-center gap-1">
             <Command size={11} />K {isRTL ? 'للفتح' : 'to open'}
           </span>
         </div>
