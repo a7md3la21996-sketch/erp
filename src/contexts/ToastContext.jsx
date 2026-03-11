@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X, Loader2 } from 'lucide-react';
-import { useTheme } from './ThemeContext';
 
 const ToastContext = createContext(null);
 
@@ -15,59 +14,46 @@ const ICONS = {
 };
 
 const COLORS = {
-  success: { bg: 'rgba(74,122,171,0.12)', border: 'rgba(74,122,171,0.4)', icon: '#4A7AAB' },
-  error:   { bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.4)',  icon: '#EF4444' },
-  warning: { bg: 'rgba(107,141,181,0.12)',border: 'rgba(107,141,181,0.4)',icon: '#6B8DB5' },
-  info:    { bg: 'rgba(74,122,171,0.10)', border: 'rgba(74,122,171,0.35)',icon: '#8BA8C8' },
-  loading: { bg: 'rgba(74,122,171,0.10)', border: 'rgba(74,122,171,0.35)',icon: '#4A7AAB' },
+  success: { border: 'rgba(74,122,171,0.4)', icon: '#4A7AAB' },
+  error:   { border: 'rgba(239,68,68,0.4)',  icon: '#EF4444' },
+  warning: { border: 'rgba(107,141,181,0.4)',icon: '#6B8DB5' },
+  info:    { border: 'rgba(74,122,171,0.35)',icon: '#8BA8C8' },
+  loading: { border: 'rgba(74,122,171,0.35)',icon: '#4A7AAB' },
 };
 
-function ToastItem({ toast, onRemove, isDark }) {
+function ToastItem({ toast, onRemove }) {
   const Icon = ICONS[toast.type] || Info;
   const colors = COLORS[toast.type] || COLORS.info;
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 12,
-      padding: '12px 16px',
-      background: isDark ? '#1a2234' : '#ffffff',
-      border: `1px solid ${colors.border}`,
-      borderLeft: `3px solid ${colors.icon}`,
-      borderRadius: 10,
-      boxShadow: isDark ? '0 4px 24px rgba(0,0,0,0.4)' : '0 4px 24px rgba(0,0,0,0.10)',
-      minWidth: 280, maxWidth: 380,
-      direction: 'rtl',
-    }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: '50%',
-        background: colors.bg,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
+    <div
+      className="flex items-start gap-3 px-4 py-3 bg-surface-card dark:bg-surface-card-dark rounded-[10px] min-w-[280px] max-w-[380px] shadow-lg dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)]"
+      style={{ border: `1px solid ${colors.border}`, borderLeft: `3px solid ${colors.icon}`, direction: 'rtl' }}
+    >
+      <div
+        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+        style={{ background: `${colors.icon}18` }}
+      >
         <Icon size={16} color={colors.icon}
-          style={toast.type === 'loading' ? { animation: 'toastSpin 0.8s linear infinite' } : {}} />
+          className={toast.type === 'loading' ? 'animate-spin' : ''} />
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex-1 min-w-0">
         {toast.title && (
-          <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 600, color: isDark ? '#E2EAF4' : '#111827' }}>{toast.title}</p>
+          <p className="m-0 mb-0.5 text-[13px] font-semibold text-content dark:text-content-dark">{toast.title}</p>
         )}
-        <p style={{ margin: 0, fontSize: 13, color: isDark ? '#8BA8C8' : '#6b7280', lineHeight: 1.4 }}>{toast.message}</p>
+        <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark leading-snug">{toast.message}</p>
       </div>
       {toast.type !== 'loading' && (
-        <button onClick={() => onRemove(toast.id)} style={{
-          background: 'none', border: 'none', cursor: 'pointer', padding: 4,
-          borderRadius: 4, color: isDark ? '#6b7280' : '#9ca3af', flexShrink: 0, display: 'flex',
-        }}>
+        <button onClick={() => onRemove(toast.id)}
+          className="bg-transparent border-none cursor-pointer p-1 rounded text-gray-400 dark:text-gray-500 shrink-0 flex">
           <X size={14} />
         </button>
       )}
-      <style>{`@keyframes toastSpin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
 export function ToastProvider({ children }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const [toasts, setToasts] = useState([]);
 
   const remove = useCallback((id) => {
@@ -92,14 +78,10 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={{ show, dismiss, success, error, warning, info, loading }}>
       {children}
-      <div style={{
-        position: 'fixed', bottom: 24, left: 24, zIndex: 9999,
-        display: 'flex', flexDirection: 'column-reverse', gap: 10,
-        pointerEvents: 'none',
-      }}>
+      <div className="fixed bottom-6 left-6 z-[9999] flex flex-col-reverse gap-2.5 pointer-events-none">
         {toasts.map(t => (
-          <div key={t.id} style={{ pointerEvents: 'all' }}>
-            <ToastItem toast={t} onRemove={remove} isDark={isDark} />
+          <div key={t.id} className="pointer-events-auto">
+            <ToastItem toast={t} onRemove={remove} />
           </div>
         ))}
       </div>

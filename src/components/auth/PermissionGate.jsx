@@ -13,18 +13,9 @@ export function ProtectedRoute({ permission, children }) {
 
   if (loading) {
     return (
-      <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        height: '100vh', flexDirection: 'column', gap: 16,
-        background: '#0F1E2D',
-      }}>
-        <div style={{
-          width: 40, height: 40, border: '3px solid rgba(74,122,171,0.3)',
-          borderTop: '3px solid #4A7AAB', borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-        <p style={{ color: '#8BA8C8', fontSize: 14, margin: 0 }}>جاري التحميل...</p>
+      <div className="flex items-center justify-center h-screen flex-col gap-4 bg-surface-bg-dark">
+        <div className="w-10 h-10 border-[3px] border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
+        <p className="text-content-muted-dark text-sm m-0">جاري التحميل...</p>
       </div>
     );
   }

@@ -1,7 +1,7 @@
 import { Component, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute } from './components/auth/PermissionGate';
 import MainLayout from './components/layout/MainLayout';
@@ -37,9 +37,8 @@ const AuditLogPage = lazy(() => import('./pages/settings/AuditLogPage'));
 
 function PageLoader() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 12 }}>
-      <div style={{ width: 32, height: 32, border: '3px solid rgba(74,122,171,0.2)', borderTop: '3px solid #4A7AAB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div className="flex items-center justify-center h-[60vh] flex-col gap-3">
+      <div className="w-8 h-8 border-[3px] border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
     </div>
   );
 }
@@ -49,14 +48,13 @@ class ErrorBoundary extends Component {
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
   render() {
     if (this.state.hasError) {
-      const dk = document.documentElement.classList.contains('dark') || document.body.getAttribute('data-theme') === 'dark';
       return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: dk ? '#0F1E2D' : '#f9fafb', flexDirection: 'column', gap: 16, padding: 24 }}>
-          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>!</div>
-          <h2 style={{ color: dk ? '#E2EAF4' : '#111827', margin: 0, fontSize: 18 }}>Something went wrong</h2>
-          <p style={{ color: dk ? '#8BA8C8' : '#6b7280', margin: 0, fontSize: 13, textAlign: 'center', maxWidth: 400 }}>{this.state.error?.message}</p>
+        <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-surface-bg-dark flex-col gap-4 p-6">
+          <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-2xl">!</div>
+          <h2 className="text-content dark:text-content-dark m-0 text-lg">Something went wrong</h2>
+          <p className="text-content-muted dark:text-content-muted-dark m-0 text-[13px] text-center max-w-[400px]">{this.state.error?.message}</p>
           <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/dashboard'; }}
-            style={{ padding: '10px 24px', background: 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginTop: 8 }}>
+            className="px-6 py-2.5 bg-gradient-to-br from-brand-900 to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer mt-2">
             Back to Dashboard
           </button>
         </div>
@@ -67,13 +65,11 @@ class ErrorBoundary extends Component {
 }
 
 function ComingSoon({ title }) {
-  const { theme } = useTheme();
-  const dk = theme === 'dark';
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
-      <div style={{ textAlign: 'center' }}>
-        <h2 style={{ color: dk ? '#E2EAF4' : '#374151', margin: '0 0 8px' }}>{title}</h2>
-        <p style={{ color: dk ? '#8BA8C8' : '#9ca3af' }}>Coming soon — Next phase</p>
+    <div className="flex items-center justify-center h-[50vh]">
+      <div className="text-center">
+        <h2 className="text-content dark:text-content-dark m-0 mb-2">{title}</h2>
+        <p className="text-content-muted dark:text-content-muted-dark">Coming soon — Next phase</p>
       </div>
     </div>
   );
@@ -82,10 +78,9 @@ function ComingSoon({ title }) {
 function AuthRedirect() {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0F1E2D', flexDirection: 'column', gap: 16 }}>
-      <div style={{ width: 40, height: 40, border: '3px solid rgba(74,122,171,0.3)', borderTop: '3px solid #4A7AAB', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <p style={{ color: '#8BA8C8', fontSize: 14, margin: 0 }}>Loading...</p>
+    <div className="flex items-center justify-center h-screen bg-surface-bg-dark flex-col gap-4">
+      <div className="w-10 h-10 border-[3px] border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
+      <p className="text-content-muted-dark text-sm m-0">Loading...</p>
     </div>
   );
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
