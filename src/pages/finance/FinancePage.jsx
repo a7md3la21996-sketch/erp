@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDS } from '../../hooks/useDesignSystem';
+import { useTheme } from '../../contexts/ThemeContext';
 import {
   BarChart2, DollarSign, Receipt, FileText, BookOpen, Wallet,
   Plus, Search, X, ChevronDown, ChevronRight,
@@ -17,135 +17,91 @@ import {
   MOCK_EXPENSES as MOCK_EXPENSES_DATA, MONTHLY_REVENUE, MOCK_BUDGET,
   fmtMoney, fmtShort, calcAccountBalance,
 } from '../../data/finance_mock_data';
+import Button from '../../components/ui/Button';
+import Card, { CardHeader, CardBody } from '../../components/ui/Card';
+import Input, { Select } from '../../components/ui/Input';
+import Badge from '../../components/ui/Badge';
+import Modal, { ModalFooter } from '../../components/ui/Modal';
+import { Table, Th, Td, Tr } from '../../components/ui/Table';
+import KpiCard from '../../components/ui/KpiCard';
 
 
 /* ── Shared sub-components ──────────────────────────────────────────────── */
 
-function TR({ children, onClick, style = {} }) {
-  const ds = useDS();
-  const [hov, setHov] = useState(false);
+function StatusBadge({ label, color }) {
   return (
-    <tr
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      onClick={onClick}
-      style={{ borderBottom: `1px solid ${ds.border}`, background: hov ? ds.rowHover : 'transparent', transition: 'background 0.15s', cursor: onClick ? 'pointer' : 'default', ...style }}
-    >{children}</tr>
-  );
-}
-
-function KpiCard({ icon: Icon, label, value, sub, color = '#4A7AAB' }) {
-  const ds = useDS();
-  const [hov, setHov] = useState(false);
-  return (
-    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{
-      background: ds.card, borderRadius: 14, border: `1px solid ${hov ? color + '60' : ds.border}`,
-      padding: '18px 20px', position: 'relative', overflow: 'hidden',
-      transform: hov ? 'translateY(-2px)' : 'translateY(0)',
-      boxShadow: hov ? `0 8px 24px ${color}22` : '0 1px 3px rgba(0,0,0,0.06)',
-      transition: 'all 0.2s ease',
-    }}>
-      <div style={{ position: 'absolute', top: 0, right: 0, width: 4, height: '100%', background: `linear-gradient(180deg, ${color}, transparent)`, borderRadius: '14px 0 0 14px', opacity: hov ? 1 : 0.6, transition: 'opacity 0.2s' }} />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <p style={{ margin: '0 0 6px', fontSize: 12, color: ds.muted, fontWeight: 500 }}>{label}</p>
-          <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: ds.text, lineHeight: 1 }}>{value}</p>
-          {sub && <p style={{ margin: '3px 0 0', fontSize: 11, color: ds.muted }}>{sub}</p>}
-        </div>
-        <div style={{ width: 42, height: 42, borderRadius: 11, background: color + (hov ? '25' : '15'), display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>
-          <Icon size={20} color={color} />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Badge({ label, color }) {
-  return (
-    <span style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, background: color + '18', color, border: `1px solid ${color}35`, fontWeight: 600, whiteSpace: 'nowrap' }}>
+    <span
+      className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold whitespace-nowrap"
+      style={{ background: color + '18', color, border: `1px solid ${color}35` }}
+    >
       {label}
     </span>
   );
 }
 
 function AddBtn({ label, onClick }) {
-  const [hov, setHov] = useState(false);
   return (
-    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{
-      display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8,
-      border: 'none', background: hov ? '#2B4C6F' : '#1B3347', color: '#fff',
-      fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'background 0.15s',
-    }}>
+    <Button variant="primary" size="sm" onClick={onClick}>
       <Plus size={14} />{label}
-    </button>
+    </Button>
   );
 }
 
 function FilterPill({ label, active, onClick }) {
-  const ds = useDS();
   return (
-    <button onClick={onClick} style={{
-      padding: '5px 12px', borderRadius: 6, border: `1px solid ${active ? ds.accent : ds.border}`,
-      background: active ? ds.accent + '15' : 'transparent', color: active ? ds.accent : ds.muted,
-      fontSize: 12, cursor: 'pointer', fontWeight: active ? 600 : 400, transition: 'all 0.15s',
-    }}>{label}</button>
+    <button
+      onClick={onClick}
+      className={`px-3 py-1 rounded-md text-xs cursor-pointer transition-all duration-150 border
+        ${active
+          ? 'border-brand-500 bg-brand-500/15 text-brand-500 font-semibold'
+          : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'
+        }`}
+    >
+      {label}
+    </button>
   );
 }
 
 function SearchBox({ value, onChange, placeholder }) {
-  const ds = useDS();
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 8, border: `1px solid ${ds.border}`, background: ds.input }}>
-      <Search size={13} color={ds.muted} />
-      <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-        style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 12, color: ds.text, width: 140 }} />
+    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark">
+      <Search size={13} className="text-content-muted dark:text-content-muted-dark" />
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="border-none outline-none bg-transparent text-xs text-content dark:text-content-dark w-[140px]"
+      />
     </div>
-  );
-}
-
-function TH({ children }) {
-  const ds = useDS();
-  return (
-    <th style={{ padding: '10px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: ds.muted, textAlign: 'inherit', borderBottom: `2px solid ${ds.border}`, background: ds.thBg }}>
-      {children}
-    </th>
-  );
-}
-
-function TD({ children, bold, color, style = {} }) {
-  const ds = useDS();
-  return (
-    <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: bold ? 700 : 400, color: color || ds.text, ...style }}>
-      {children}
-    </td>
   );
 }
 
 function Empty({ icon: Icon, title, sub }) {
-  const ds = useDS();
   return (
-    <tr><td colSpan={99} style={{ textAlign: 'center', padding: '60px 20px' }}>
-      <div style={{ width: 64, height: 64, borderRadius: 16, background: 'rgba(74,122,171,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-        <Icon size={24} color="#4A7AAB" />
-      </div>
-      <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: ds.text }}>{title}</p>
-      <p style={{ margin: 0, fontSize: 13, color: ds.muted }}>{sub}</p>
-    </td></tr>
+    <tr>
+      <td colSpan={99} className="text-center py-16 px-5">
+        <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
+          <Icon size={24} className="text-brand-500" />
+        </div>
+        <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{title}</p>
+        <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{sub}</p>
+      </td>
+    </tr>
   );
 }
 
 function CardWrap({ title, icon: Icon, headerRight, children }) {
-  const ds = useDS();
   return (
-    <div style={{ background: ds.card, borderRadius: 14, border: `1px solid ${ds.border}`, overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: `1px solid ${ds.border}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {Icon && <Icon size={16} color={ds.accent} />}
-          <span style={{ fontSize: 14, fontWeight: 700, color: ds.text }}>{title}</span>
+    <Card className="overflow-hidden">
+      <div className="flex justify-between items-center px-[18px] py-3.5 border-b border-edge dark:border-edge-dark">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon size={16} className="text-brand-500" />}
+          <span className="text-sm font-bold text-content dark:text-content-dark">{title}</span>
         </div>
         {headerRight}
       </div>
-      <div style={{ padding: 0 }}>{children}</div>
-    </div>
+      <div>{children}</div>
+    </Card>
   );
 }
 
@@ -153,7 +109,7 @@ function CardWrap({ title, icon: Icon, headerRight, children }) {
    ADD JOURNAL ENTRY MODAL (proper component — hooks safe)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function AddJournalModal({ ds, L, onClose, onSave, entryCount }) {
+function AddJournalModal({ L, onClose, onSave, entryCount }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [desc, setDesc] = useState('');
   const [ref, setRef] = useState('');
@@ -185,80 +141,80 @@ function AddJournalModal({ ds, L, onClose, onSave, entryCount }) {
     });
   };
 
-  const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${ds.border}`, background: ds.input, color: ds.text, fontSize: 13, outline: 'none' };
-
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: ds.card, borderRadius: 16, border: `1px solid ${ds.border}`, width: '100%', maxWidth: 700, maxHeight: '85vh', overflow: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${ds.border}` }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: ds.text }}>{L('قيد يومية جديد', 'New Journal Entry')}</span>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${ds.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color={ds.muted} /></button>
+    <Modal open={true} onClose={onClose} title={L('قيد يومية جديد', 'New Journal Entry')} width="max-w-2xl">
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('التاريخ', 'Date')}</label>
+          <Input type="date" size="sm" value={date} onChange={e => setDate(e.target.value)} />
         </div>
-        <div style={{ padding: 20 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('التاريخ', 'Date')}</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('المرجع', 'Reference')}</label>
-              <input value={ref} onChange={e => setRef(e.target.value)} placeholder={L('اختياري', 'Optional')} style={inputStyle} />
-            </div>
-            <div style={{ gridColumn: '1/-1' }}>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('الوصف', 'Description')} *</label>
-              <input value={desc} onChange={e => setDesc(e.target.value)} placeholder={L('وصف القيد...', 'Entry description...')} style={inputStyle} />
-            </div>
-          </div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: ds.text, marginBottom: 8 }}>{L('بنود القيد', 'Entry Lines')}</div>
-          <div style={{ border: `1px solid ${ds.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr style={{ background: ds.thBg }}>
-                <TH>{L('الحساب', 'Account')}</TH>
-                <TH>{L('مدين', 'Debit')}</TH>
-                <TH>{L('دائن', 'Credit')}</TH>
-                <th style={{ width: 36 }} />
-              </tr></thead>
-              <tbody>
-                {lines.map((l, i) => (
-                  <tr key={i} style={{ borderBottom: `1px solid ${ds.border}` }}>
-                    <td style={{ padding: '6px 8px' }}>
-                      <select value={l.account_id} onChange={e => updateLine(i, 'account_id', e.target.value)} style={{ ...inputStyle, padding: '6px 8px' }}>
-                        <option value="">{L('اختر حساب...', 'Select account...')}</option>
-                        {leafAccounts.map(a => <option key={a.id} value={a.id}>{a.code} — {L(a.name_ar, a.name_en)}</option>)}
-                      </select>
-                    </td>
-                    <td style={{ padding: '6px 8px' }}><input type="number" value={l.debit} onChange={e => updateLine(i, 'debit', e.target.value)} placeholder="0" style={{ ...inputStyle, padding: '6px 8px', width: 100 }} /></td>
-                    <td style={{ padding: '6px 8px' }}><input type="number" value={l.credit} onChange={e => updateLine(i, 'credit', e.target.value)} placeholder="0" style={{ ...inputStyle, padding: '6px 8px', width: 100 }} /></td>
-                    <td style={{ padding: '6px 4px' }}>
-                      {lines.length > 2 && <button onClick={() => removeLine(i)} style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: 'rgba(239,68,68,0.1)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} color="#EF4444" /></button>}
-                    </td>
-                  </tr>
-                ))}
-                <tr style={{ background: ds.thBg }}>
-                  <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 700, color: ds.text }}>{L('الإجمالي', 'Total')}</td>
-                  <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 700, color: '#2B4C6F' }}>{fmtMoney(totalDebit)}</td>
-                  <td style={{ padding: '8px 12px', fontSize: 13, fontWeight: 700, color: '#EF4444' }}>{fmtMoney(totalCredit)}</td>
-                  <td />
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <button onClick={addLine} style={{ padding: '6px 14px', borderRadius: 6, border: `1px dashed ${ds.border}`, background: 'transparent', color: ds.accent, fontSize: 12, cursor: 'pointer', fontWeight: 600, marginBottom: 12 }}>
-            + {L('إضافة سطر', 'Add Line')}
-          </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, background: balanced ? 'rgba(43,76,111,0.08)' : totalDebit > 0 ? 'rgba(239,68,68,0.08)' : 'transparent', marginBottom: 16 }}>
-            {totalDebit > 0 && (balanced
-              ? <><CheckCircle size={14} color="#2B4C6F" /><span style={{ fontSize: 12, fontWeight: 600, color: '#2B4C6F' }}>{L('القيد متوازن ✓', 'Balanced ✓')}</span></>
-              : <><AlertTriangle size={14} color="#EF4444" /><span style={{ fontSize: 12, fontWeight: 600, color: '#EF4444' }}>{L('الفرق: ', 'Diff: ')}{fmtMoney(Math.abs(totalDebit - totalCredit))}</span></>
-            )}
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${ds.border}`, background: 'transparent', color: ds.muted, fontSize: 13, cursor: 'pointer' }}>{L('إلغاء', 'Cancel')}</button>
-            <button onClick={handleSave} disabled={!balanced || !desc} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: balanced && desc ? '#1B3347' : ds.border, color: balanced && desc ? '#fff' : ds.muted, fontSize: 13, fontWeight: 600, cursor: balanced && desc ? 'pointer' : 'not-allowed' }}>{L('حفظ كمسودة', 'Save as Draft')}</button>
-          </div>
+        <div>
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('المرجع', 'Reference')}</label>
+          <Input size="sm" value={ref} onChange={e => setRef(e.target.value)} placeholder={L('اختياري', 'Optional')} />
+        </div>
+        <div className="col-span-full">
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('الوصف', 'Description')} *</label>
+          <Input size="sm" value={desc} onChange={e => setDesc(e.target.value)} placeholder={L('وصف القيد...', 'Entry description...')} />
         </div>
       </div>
-    </div>
+      <div className="text-[13px] font-bold text-content dark:text-content-dark mb-2">{L('بنود القيد', 'Entry Lines')}</div>
+      <div className="border border-edge dark:border-edge-dark rounded-[10px] overflow-hidden mb-3">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
+              <Th>{L('الحساب', 'Account')}</Th>
+              <Th>{L('مدين', 'Debit')}</Th>
+              <Th>{L('دائن', 'Credit')}</Th>
+              <th className="w-9" />
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((l, i) => (
+              <tr key={i} className="border-b border-edge dark:border-edge-dark">
+                <td className="p-1.5 px-2">
+                  <Select size="sm" value={l.account_id} onChange={e => updateLine(i, 'account_id', e.target.value)}>
+                    <option value="">{L('اختر حساب...', 'Select account...')}</option>
+                    {leafAccounts.map(a => <option key={a.id} value={a.id}>{a.code} — {L(a.name_ar, a.name_en)}</option>)}
+                  </Select>
+                </td>
+                <td className="p-1.5 px-2">
+                  <Input type="number" size="sm" value={l.debit} onChange={e => updateLine(i, 'debit', e.target.value)} placeholder="0" className="w-[100px]" />
+                </td>
+                <td className="p-1.5 px-2">
+                  <Input type="number" size="sm" value={l.credit} onChange={e => updateLine(i, 'credit', e.target.value)} placeholder="0" className="w-[100px]" />
+                </td>
+                <td className="p-1.5 px-1">
+                  {lines.length > 2 && (
+                    <button onClick={() => removeLine(i)} className="w-7 h-7 rounded-md border-none bg-red-500/10 cursor-pointer flex items-center justify-center">
+                      <X size={12} className="text-red-500" />
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
+              <td className="px-3 py-2 text-[13px] font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
+              <td className="px-3 py-2 text-[13px] font-bold text-brand-800">{fmtMoney(totalDebit)}</td>
+              <td className="px-3 py-2 text-[13px] font-bold text-red-500">{fmtMoney(totalCredit)}</td>
+              <td />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button onClick={addLine} className="px-3.5 py-1.5 rounded-md border border-dashed border-edge dark:border-edge-dark bg-transparent text-brand-500 text-xs cursor-pointer font-semibold mb-3">
+        + {L('إضافة سطر', 'Add Line')}
+      </button>
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg mb-4 ${balanced ? 'bg-brand-800/[0.08]' : totalDebit > 0 ? 'bg-red-500/[0.08]' : 'bg-transparent'}`}>
+        {totalDebit > 0 && (balanced
+          ? <><CheckCircle size={14} className="text-brand-800" /><span className="text-xs font-semibold text-brand-800">{L('القيد متوازن ✓', 'Balanced ✓')}</span></>
+          : <><AlertTriangle size={14} className="text-red-500" /><span className="text-xs font-semibold text-red-500">{L('الفرق: ', 'Diff: ')}{fmtMoney(Math.abs(totalDebit - totalCredit))}</span></>
+        )}
+      </div>
+      <ModalFooter className="justify-end">
+        <Button variant="secondary" size="sm" onClick={onClose}>{L('إلغاء', 'Cancel')}</Button>
+        <Button variant="primary" size="sm" onClick={handleSave} disabled={!balanced || !desc}>{L('حفظ كمسودة', 'Save as Draft')}</Button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -266,7 +222,7 @@ function AddJournalModal({ ds, L, onClose, onSave, entryCount }) {
    ADD EXPENSE MODAL (proper component — hooks safe)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function AddExpenseModal({ ds, L, onClose, onSave, expCount }) {
+function AddExpenseModal({ L, onClose, onSave, expCount }) {
   const [cat, setCat] = useState('');
   const [vendor, setVendor] = useState('');
   const [amount, setAmount] = useState('');
@@ -287,54 +243,44 @@ function AddExpenseModal({ ds, L, onClose, onSave, expCount }) {
     });
   };
 
-  const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${ds.border}`, background: ds.input, color: ds.text, fontSize: 13, outline: 'none' };
-
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: ds.card, borderRadius: 16, border: `1px solid ${ds.border}`, width: '100%', maxWidth: 520, maxHeight: '85vh', overflow: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${ds.border}` }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: ds.text }}>{L('مصروف جديد', 'New Expense')}</span>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${ds.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={16} color={ds.muted} /></button>
+    <Modal open={true} onClose={onClose} title={L('مصروف جديد', 'New Expense')} width="max-w-lg">
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div>
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('الفئة', 'Category')} *</label>
+          <Select size="sm" value={cat} onChange={e => setCat(e.target.value)}>
+            <option value="">{L('اختر...', 'Select...')}</option>
+            {Object.entries(EXPENSE_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{L(v.ar, v.en)}</option>)}
+          </Select>
         </div>
-        <div style={{ padding: 20 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('الفئة', 'Category')} *</label>
-              <select value={cat} onChange={e => setCat(e.target.value)} style={inputStyle}>
-                <option value="">{L('اختر...', 'Select...')}</option>
-                {Object.entries(EXPENSE_CATEGORIES).map(([k, v]) => <option key={k} value={k}>{L(v.ar, v.en)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('طريقة الدفع', 'Payment Method')}</label>
-              <select value={method} onChange={e => setMethod(e.target.value)} style={inputStyle}>
-                {Object.entries(PAYMENT_METHODS).map(([k, v]) => <option key={k} value={k}>{L(v.ar, v.en)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('المورد', 'Vendor')} *</label>
-              <input value={vendor} onChange={e => setVendor(e.target.value)} placeholder={L('اسم المورد...', 'Vendor name...')} style={inputStyle} />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('المبلغ', 'Amount')} *</label>
-              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" style={inputStyle} />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('التاريخ', 'Date')}</label>
-              <input type="date" value={date} onChange={e => setDate(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={{ fontSize: 11, color: ds.muted, marginBottom: 4, display: 'block' }}>{L('الوصف', 'Description')}</label>
-              <input value={descVal} onChange={e => setDescVal(e.target.value)} placeholder={L('تفاصيل...', 'Details...')} style={inputStyle} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${ds.border}`, background: 'transparent', color: ds.muted, fontSize: 13, cursor: 'pointer' }}>{L('إلغاء', 'Cancel')}</button>
-            <button onClick={handleSave} disabled={!valid} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: valid ? '#1B3347' : ds.border, color: valid ? '#fff' : ds.muted, fontSize: 13, fontWeight: 600, cursor: valid ? 'pointer' : 'not-allowed' }}>{L('حفظ', 'Save')}</button>
-          </div>
+        <div>
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('طريقة الدفع', 'Payment Method')}</label>
+          <Select size="sm" value={method} onChange={e => setMethod(e.target.value)}>
+            {Object.entries(PAYMENT_METHODS).map(([k, v]) => <option key={k} value={k}>{L(v.ar, v.en)}</option>)}
+          </Select>
+        </div>
+        <div>
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('المورد', 'Vendor')} *</label>
+          <Input size="sm" value={vendor} onChange={e => setVendor(e.target.value)} placeholder={L('اسم المورد...', 'Vendor name...')} />
+        </div>
+        <div>
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('المبلغ', 'Amount')} *</label>
+          <Input type="number" size="sm" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0" />
+        </div>
+        <div>
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('التاريخ', 'Date')}</label>
+          <Input type="date" size="sm" value={date} onChange={e => setDate(e.target.value)} />
+        </div>
+        <div>
+          <label className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1 block">{L('الوصف', 'Description')}</label>
+          <Input size="sm" value={descVal} onChange={e => setDescVal(e.target.value)} placeholder={L('تفاصيل...', 'Details...')} />
         </div>
       </div>
-    </div>
+      <ModalFooter className="justify-end">
+        <Button variant="secondary" size="sm" onClick={onClose}>{L('إلغاء', 'Cancel')}</Button>
+        <Button variant="primary" size="sm" onClick={handleSave} disabled={!valid}>{L('حفظ', 'Save')}</Button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -358,7 +304,8 @@ const TABS = [
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export default function FinancePage() {
-  const ds = useDS();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const L = (ar, en) => isRTL ? ar : en;
@@ -421,9 +368,9 @@ export default function FinancePage() {
      ═══════════════════════════════════════════════════════════════════════ */
 
   const renderOverview = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="flex flex-col gap-4">
       {/* KPI Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      <div className="grid grid-cols-4 gap-3.5">
         <KpiCard icon={TrendingUp} label={L('إيرادات الشهر', 'Monthly Revenue')} value={fmtShort(totalRevenue)} sub="EGP" color="#4A7AAB" />
         <KpiCard icon={TrendingDown} label={L('إجمالي المصروفات', 'Total Expenses')} value={fmtShort(totalExpenseAmt)} sub="EGP" color="#EF4444" />
         <KpiCard icon={DollarSign} label={L('ذمم مدينة (مطورين)', 'Receivable (Devs)')} value={fmtShort(receivable)} sub="EGP" color="#2B4C6F" />
@@ -431,34 +378,42 @@ export default function FinancePage() {
       </div>
 
       {/* Revenue Chart + Expense Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16 }}>
+      <div className="grid grid-cols-[1.6fr_1fr] gap-4">
         {/* Bar Chart */}
         <CardWrap title={L('الإيرادات مقابل المصروفات', 'Revenue vs Expenses')} icon={BarChart2}>
-          <div style={{ padding: '16px 18px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 140, paddingBottom: 8 }}>
+          <div className="px-[18px] py-4">
+            <div className="flex items-end gap-2.5 h-[140px] pb-2">
               {MONTHLY_REVENUE.map((m, i) => {
                 const revH = Math.round((m.revenue / maxRevenue) * 120);
                 const expH = Math.round((m.expenses / maxRevenue) * 120);
                 const isLast = i === MONTHLY_REVENUE.length - 1;
                 return (
-                  <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 120 }}>
-                      <div style={{ width: '40%', height: revH, background: isLast ? '#4A7AAB' : '#4A7AAB60', borderRadius: '3px 3px 0 0', transition: 'height 0.4s' }} title={fmtMoney(m.revenue)} />
-                      <div style={{ width: '40%', height: expH, background: isLast ? '#EF4444' : '#EF444440', borderRadius: '3px 3px 0 0', transition: 'height 0.4s' }} title={fmtMoney(m.expenses)} />
+                  <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
+                    <div className="flex items-end gap-0.5 h-[120px]">
+                      <div
+                        className="w-[40%] rounded-t-sm transition-[height] duration-[400ms]"
+                        style={{ height: revH, background: isLast ? '#4A7AAB' : '#4A7AAB60' }}
+                        title={fmtMoney(m.revenue)}
+                      />
+                      <div
+                        className="w-[40%] rounded-t-sm transition-[height] duration-[400ms]"
+                        style={{ height: expH, background: isLast ? '#EF4444' : '#EF444440' }}
+                        title={fmtMoney(m.expenses)}
+                      />
                     </div>
-                    <span style={{ fontSize: 10, color: ds.muted }}>{L(m.month_ar, m.month_en)}</span>
+                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{L(m.month_ar, m.month_en)}</span>
                   </div>
                 );
               })}
             </div>
-            <div style={{ display: 'flex', gap: 16, marginTop: 8, justifyContent: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: '#4A7AAB' }} />
-                <span style={{ fontSize: 11, color: ds.muted }}>{L('الإيرادات', 'Revenue')}</span>
+            <div className="flex gap-4 mt-2 justify-center">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-brand-500" />
+                <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{L('الإيرادات', 'Revenue')}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <div style={{ width: 10, height: 10, borderRadius: 2, background: '#EF4444' }} />
-                <span style={{ fontSize: 11, color: ds.muted }}>{L('المصروفات', 'Expenses')}</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-red-500" />
+                <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{L('المصروفات', 'Expenses')}</span>
               </div>
             </div>
           </div>
@@ -466,18 +421,21 @@ export default function FinancePage() {
 
         {/* Budget vs Actual */}
         <CardWrap title={L('الموازنة مقابل الفعلي', 'Budget vs Actual')} icon={PieChart}>
-          <div style={{ padding: '12px 18px' }}>
+          <div className="px-[18px] py-3">
             {MOCK_BUDGET.slice(0, 5).map((b, i) => {
               const pct = b.budget_ytd ? Math.round((b.actual_ytd / b.budget_ytd) * 100) : 0;
               const over = pct > 100;
               return (
-                <div key={b.id} style={{ marginBottom: 10 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <span style={{ fontSize: 12, color: ds.text }}>{L(b.cat_ar, b.cat_en)}</span>
-                    <span style={{ fontSize: 11, color: over ? '#EF4444' : ds.muted, fontWeight: 600 }}>{pct}%</span>
+                <div key={b.id} className="mb-2.5">
+                  <div className="flex justify-between mb-0.5">
+                    <span className="text-xs text-content dark:text-content-dark">{L(b.cat_ar, b.cat_en)}</span>
+                    <span className={`text-[11px] font-semibold ${over ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>{pct}%</span>
                   </div>
-                  <div style={{ height: 5, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                    <div style={{ height: '100%', width: Math.min(pct, 100) + '%', borderRadius: 3, background: over ? '#EF4444' : '#4A7AAB', transition: 'width 0.4s' }} />
+                  <div className="h-[5px] rounded-sm bg-gray-200 dark:bg-white/[0.08]">
+                    <div
+                      className="h-full rounded-sm transition-[width] duration-[400ms]"
+                      style={{ width: Math.min(pct, 100) + '%', background: over ? '#EF4444' : '#4A7AAB' }}
+                    />
                   </div>
                 </div>
               );
@@ -487,21 +445,21 @@ export default function FinancePage() {
       </div>
 
       {/* Commission + Invoice Quick Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid grid-cols-2 gap-4">
         {/* Company Commissions Summary */}
         <CardWrap title={L('ملخص عمولات المطورين', 'Developer Commission Summary')} icon={Building2}>
-          <div style={{ padding: '12px 18px' }}>
+          <div className="px-[18px] py-3">
             {[
               { label: L('معلق', 'Pending'), val: companyComm.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0), color: '#6B8DB5' },
               { label: L('معتمد', 'Approved'), val: companyComm.filter(c => c.status === 'approved').reduce((s, c) => s + c.amount, 0), color: '#4A7AAB' },
               { label: L('محصّل', 'Collected'), val: companyComm.filter(c => c.status === 'paid').reduce((s, c) => s + c.amount, 0), color: '#2B4C6F' },
             ].map((row, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < 2 ? `1px solid ${ds.border}` : 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: row.color }} />
-                  <span style={{ fontSize: 13, color: ds.muted }}>{row.label}</span>
+              <div key={i} className={`flex justify-between items-center py-2 ${i < 2 ? 'border-b border-edge dark:border-edge-dark' : ''}`}>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ background: row.color }} />
+                  <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{row.label}</span>
                 </div>
-                <span style={{ fontSize: 14, fontWeight: 700, color: row.color }}>{fmtMoney(row.val)}</span>
+                <span className="text-sm font-bold" style={{ color: row.color }}>{fmtMoney(row.val)}</span>
               </div>
             ))}
           </div>
@@ -509,16 +467,16 @@ export default function FinancePage() {
 
         {/* Overdue Invoices */}
         <CardWrap title={L('فواتير تحتاج متابعة', 'Invoices Needing Attention')} icon={AlertTriangle}>
-          <div style={{ padding: '12px 18px' }}>
+          <div className="px-[18px] py-3">
             {invoices.filter(inv => inv.status === 'overdue' || inv.status === 'sent').slice(0, 4).map((inv, i) => (
-              <div key={inv.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < 3 ? `1px solid ${ds.border}` : 'none' }}>
+              <div key={inv.id} className={`flex justify-between items-center py-2 ${i < 3 ? 'border-b border-edge dark:border-edge-dark' : ''}`}>
                 <div>
-                  <div style={{ fontSize: 13, color: ds.text, fontWeight: 500 }}>{L(inv.counterparty_ar, inv.counterparty_en)}</div>
-                  <div style={{ fontSize: 11, color: ds.muted }}>{inv.number}</div>
+                  <div className="text-[13px] text-content dark:text-content-dark font-medium">{L(inv.counterparty_ar, inv.counterparty_en)}</div>
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{inv.number}</div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: ds.text }}>{fmtMoney(inv.total - inv.paid)}</div>
-                  <Badge label={L(INVOICE_STATUS[inv.status].ar, INVOICE_STATUS[inv.status].en)} color={INVOICE_STATUS[inv.status].color} />
+                <div className="text-right">
+                  <div className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoney(inv.total - inv.paid)}</div>
+                  <StatusBadge label={L(INVOICE_STATUS[inv.status].ar, INVOICE_STATUS[inv.status].en)} color={INVOICE_STATUS[inv.status].color} />
                 </div>
               </div>
             ))}
@@ -543,24 +501,24 @@ export default function FinancePage() {
       const balance = !acc.is_group ? calcAccountBalance(journalEntries, acc.id) : null;
 
       return [
-        <TR key={acc.id} onClick={hasChildren ? () => toggleExpand(acc.id) : undefined}>
-          <TD style={{ paddingLeft: 12 + level * 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Tr key={acc.id} onClick={hasChildren ? () => toggleExpand(acc.id) : undefined} className={hasChildren ? 'cursor-pointer' : ''}>
+          <Td style={{ paddingLeft: 12 + level * 24 }}>
+            <div className="flex items-center gap-1.5">
               {hasChildren ? (
-                expanded ? <ChevronDown size={14} color={ds.muted} /> : <ChevronRight size={14} color={ds.muted} />
-              ) : <div style={{ width: 14 }} />}
-              <span style={{ fontWeight: acc.is_group ? 700 : 400, color: acc.is_group ? ds.text : ds.text }}>
+                expanded ? <ChevronDown size={14} className="text-content-muted dark:text-content-muted-dark" /> : <ChevronRight size={14} className="text-content-muted dark:text-content-muted-dark" />
+              ) : <div className="w-3.5" />}
+              <span className={acc.is_group ? 'font-bold' : ''}>
                 {L(acc.name_ar, acc.name_en)}
               </span>
             </div>
-          </TD>
-          <TD bold color={ds.muted}>{acc.code}</TD>
-          <TD><Badge label={L(typeInfo.ar, typeInfo.en)} color={typeInfo.color} /></TD>
-          <TD bold color={balance !== null && balance !== 0 ? (balance > 0 ? '#2B4C6F' : '#EF4444') : ds.muted}>
+          </Td>
+          <Td className="font-bold text-content-muted dark:text-content-muted-dark">{acc.code}</Td>
+          <Td><StatusBadge label={L(typeInfo.ar, typeInfo.en)} color={typeInfo.color} /></Td>
+          <Td className={`font-bold ${balance !== null && balance !== 0 ? (balance > 0 ? 'text-brand-800' : 'text-red-500') : 'text-content-muted dark:text-content-muted-dark'}`}>
             {balance !== null ? fmtMoney(Math.abs(balance)) : '—'}
-          </TD>
-          <TD color={ds.muted}>{balance !== null ? L(typeInfo.normal === 'debit' ? (balance >= 0 ? 'مدين' : 'دائن') : (balance <= 0 ? 'دائن' : 'مدين'), typeInfo.normal === 'debit' ? (balance >= 0 ? 'Dr' : 'Cr') : (balance <= 0 ? 'Cr' : 'Dr')) : '—'}</TD>
-        </TR>,
+          </Td>
+          <Td className="text-content-muted dark:text-content-muted-dark">{balance !== null ? L(typeInfo.normal === 'debit' ? (balance >= 0 ? 'مدين' : 'دائن') : (balance <= 0 ? 'دائن' : 'مدين'), typeInfo.normal === 'debit' ? (balance >= 0 ? 'Dr' : 'Cr') : (balance <= 0 ? 'Cr' : 'Dr')) : '—'}</Td>
+        </Tr>,
         ...(hasChildren && expanded ? children.flatMap(child => renderRow(child, level + 1)) : []),
       ];
     };
@@ -568,9 +526,9 @@ export default function FinancePage() {
     const rootAccounts = CHART_OF_ACCOUNTS.filter(a => a.parent_id === null);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="flex flex-col gap-4">
         {/* KPIs per account type */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 12 }}>
+        <div className="grid grid-cols-5 gap-3">
           {Object.entries(ACCOUNT_TYPES).map(([key, info]) => {
             const count = CHART_OF_ACCOUNTS.filter(a => a.type === key && !a.is_group).length;
             return <KpiCard key={key} icon={FolderTree} label={L(info.ar, info.en)} value={count} sub={L('حساب', 'accounts')} color={info.color} />;
@@ -579,15 +537,15 @@ export default function FinancePage() {
 
         <CardWrap title={L('شجرة الحسابات', 'Chart of Accounts')} icon={FolderTree}
           headerRight={<AddBtn label={L('حساب جديد', 'New Account')} />}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <TH>{L('الحساب', 'Account')}</TH>
-                  <TH>{L('الكود', 'Code')}</TH>
-                  <TH>{L('النوع', 'Type')}</TH>
-                  <TH>{L('الرصيد', 'Balance')}</TH>
-                  <TH>{L('الطبيعة', 'Side')}</TH>
+                  <Th>{L('الحساب', 'Account')}</Th>
+                  <Th>{L('الكود', 'Code')}</Th>
+                  <Th>{L('النوع', 'Type')}</Th>
+                  <Th>{L('الرصيد', 'Balance')}</Th>
+                  <Th>{L('الطبيعة', 'Side')}</Th>
                 </tr>
               </thead>
               <tbody>
@@ -619,8 +577,8 @@ export default function FinancePage() {
     const draftCount = journalEntries.filter(e => e.status === 'draft').length;
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-4 gap-3.5">
           <KpiCard icon={BookOpen} label={L('إجمالي القيود', 'Total Entries')} value={journalEntries.length} color="#4A7AAB" />
           <KpiCard icon={CheckCircle} label={L('مرحّلة', 'Posted')} value={postedEntries.length} color="#2B4C6F" />
           <KpiCard icon={Clock} label={L('مسودات', 'Drafts')} value={draftCount} color="#6B8DB5" />
@@ -629,13 +587,13 @@ export default function FinancePage() {
 
         <CardWrap title={L('القيود اليومية', 'Journal Entries')} icon={BookOpen}
           headerRight={
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="flex gap-2 items-center">
               <SearchBox value={journalSearch} onChange={setJournalSearch} placeholder={L('بحث...', 'Search...')} />
               <AddBtn label={L('قيد جديد', 'New Entry')} onClick={() => setShowJournalModal(true)} />
             </div>
           }>
           {/* Filter pills */}
-          <div style={{ display: 'flex', gap: 6, padding: '12px 18px', borderBottom: `1px solid ${ds.border}` }}>
+          <div className="flex gap-1.5 px-[18px] py-3 border-b border-edge dark:border-edge-dark">
             {[
               { id: 'all', label: L('الكل', 'All') },
               { id: 'posted', label: L('مرحّل', 'Posted') },
@@ -644,16 +602,16 @@ export default function FinancePage() {
             ].map(f => <FilterPill key={f.id} label={f.label} active={journalFilter === f.id} onClick={() => setJournalFilter(f.id)} />)}
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead><tr>
-                <TH>{L('رقم القيد', 'Entry #')}</TH>
-                <TH>{L('التاريخ', 'Date')}</TH>
-                <TH>{L('الوصف', 'Description')}</TH>
-                <TH>{L('المرجع', 'Reference')}</TH>
-                <TH>{L('المبلغ', 'Amount')}</TH>
-                <TH>{L('الحالة', 'Status')}</TH>
-                <TH>{L('إجراء', 'Action')}</TH>
+                <Th>{L('رقم القيد', 'Entry #')}</Th>
+                <Th>{L('التاريخ', 'Date')}</Th>
+                <Th>{L('الوصف', 'Description')}</Th>
+                <Th>{L('المرجع', 'Reference')}</Th>
+                <Th>{L('المبلغ', 'Amount')}</Th>
+                <Th>{L('الحالة', 'Status')}</Th>
+                <Th>{L('إجراء', 'Action')}</Th>
               </tr></thead>
               <tbody>
                 {filtered.length === 0
@@ -661,24 +619,24 @@ export default function FinancePage() {
                   : filtered.map(entry => {
                     const st = JOURNAL_STATUS[entry.status];
                     return (
-                      <TR key={entry.id} onClick={() => setViewJournal(entry)}>
-                        <TD bold color={ds.accent}>{entry.entry_number}</TD>
-                        <TD color={ds.muted}>{entry.date}</TD>
-                        <TD>{L(entry.description_ar, entry.description_en)}</TD>
-                        <TD color={ds.muted}>{entry.reference || '—'}</TD>
-                        <TD bold>{fmtMoney(entry.total)}</TD>
-                        <TD><Badge label={L(st.ar, st.en)} color={st.color} /></TD>
-                        <TD>
+                      <Tr key={entry.id} onClick={() => setViewJournal(entry)} className="cursor-pointer">
+                        <Td className="font-bold text-brand-500">{entry.entry_number}</Td>
+                        <Td className="text-content-muted dark:text-content-muted-dark">{entry.date}</Td>
+                        <Td>{L(entry.description_ar, entry.description_en)}</Td>
+                        <Td className="text-content-muted dark:text-content-muted-dark">{entry.reference || '—'}</Td>
+                        <Td className="font-bold">{fmtMoney(entry.total)}</Td>
+                        <Td><StatusBadge label={L(st.ar, st.en)} color={st.color} /></Td>
+                        <Td>
                           {entry.status === 'draft' && (
-                            <div style={{ display: 'flex', gap: 6 }}>
+                            <div className="flex gap-1.5">
                               <button onClick={e => { e.stopPropagation(); setJournalEntries(prev => prev.map(je => je.id === entry.id ? { ...je, status: 'posted' } : je)); }}
-                                style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: '#2B4C6F', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                className="px-2.5 py-0.5 rounded-md border-none bg-brand-800 text-white text-[11px] font-semibold cursor-pointer">
                                 {L('ترحيل', 'Post')}
                               </button>
                             </div>
                           )}
-                        </TD>
-                      </TR>
+                        </Td>
+                      </Tr>
                     );
                   })}
               </tbody>
@@ -704,8 +662,8 @@ export default function FinancePage() {
     const taxTotal = invoices.reduce((s, i) => s + i.tax, 0);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-4 gap-3.5">
           <KpiCard icon={TrendingUp} label={L('فواتير بيع', 'Sales Invoices')} value={fmtShort(salesTotal)} sub="EGP" color="#4A7AAB" />
           <KpiCard icon={TrendingDown} label={L('فواتير شراء', 'Purchase Bills')} value={fmtShort(purchaseTotal)} sub="EGP" color="#EF4444" />
           <KpiCard icon={AlertTriangle} label={L('متأخرات', 'Overdue')} value={fmtShort(overdueTotal)} sub="EGP" color="#EF4444" />
@@ -714,14 +672,14 @@ export default function FinancePage() {
 
         <CardWrap title={L('الفواتير', 'Invoices')} icon={FileText}
           headerRight={<AddBtn label={L('فاتورة جديدة', 'New Invoice')} onClick={() => setShowInvoiceModal(true)} />}>
-          <div style={{ display: 'flex', gap: 6, padding: '12px 18px', borderBottom: `1px solid ${ds.border}`, flexWrap: 'wrap' }}>
+          <div className="flex gap-1.5 px-[18px] py-3 border-b border-edge dark:border-edge-dark flex-wrap">
             {/* Type filters */}
             {[
               { id: 'all', label: L('الكل', 'All') },
               { id: 'sales', label: L('بيع', 'Sales') },
               { id: 'purchase', label: L('شراء', 'Purchase') },
             ].map(f => <FilterPill key={f.id} label={f.label} active={invoiceType === f.id} onClick={() => setInvoiceType(f.id)} />)}
-            <div style={{ width: 1, height: 24, background: ds.border, margin: '0 4px' }} />
+            <div className="w-px h-6 bg-edge dark:bg-edge-dark mx-1" />
             {/* Status filters */}
             {[
               { id: 'all', label: L('كل الحالات', 'All Status') },
@@ -731,17 +689,17 @@ export default function FinancePage() {
             ].map(f => <FilterPill key={'s-' + f.id} label={f.label} active={invoiceFilter === f.id} onClick={() => setInvoiceFilter(f.id)} />)}
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead><tr>
-                <TH>{L('رقم الفاتورة', 'Invoice #')}</TH>
-                <TH>{L('النوع', 'Type')}</TH>
-                <TH>{L('الطرف', 'Counterparty')}</TH>
-                <TH>{L('التاريخ', 'Date')}</TH>
-                <TH>{L('الاستحقاق', 'Due Date')}</TH>
-                <TH>{L('المبلغ', 'Total')}</TH>
-                <TH>{L('المدفوع', 'Paid')}</TH>
-                <TH>{L('الحالة', 'Status')}</TH>
+                <Th>{L('رقم الفاتورة', 'Invoice #')}</Th>
+                <Th>{L('النوع', 'Type')}</Th>
+                <Th>{L('الطرف', 'Counterparty')}</Th>
+                <Th>{L('التاريخ', 'Date')}</Th>
+                <Th>{L('الاستحقاق', 'Due Date')}</Th>
+                <Th>{L('المبلغ', 'Total')}</Th>
+                <Th>{L('المدفوع', 'Paid')}</Th>
+                <Th>{L('الحالة', 'Status')}</Th>
               </tr></thead>
               <tbody>
                 {filtered.length === 0
@@ -749,16 +707,16 @@ export default function FinancePage() {
                   : filtered.map(inv => {
                     const st = INVOICE_STATUS[inv.status];
                     return (
-                      <TR key={inv.id} onClick={() => setViewInvoice(inv)}>
-                        <TD bold color={ds.accent}>{inv.number}</TD>
-                        <TD><Badge label={inv.type === 'sales' ? L('بيع', 'Sales') : L('شراء', 'Purchase')} color={inv.type === 'sales' ? '#4A7AAB' : '#6B8DB5'} /></TD>
-                        <TD>{L(inv.counterparty_ar, inv.counterparty_en)}</TD>
-                        <TD color={ds.muted}>{inv.date}</TD>
-                        <TD color={inv.status === 'overdue' ? '#EF4444' : ds.muted} bold={inv.status === 'overdue'}>{inv.due_date}</TD>
-                        <TD bold>{fmtMoney(inv.total)}</TD>
-                        <TD color={inv.paid > 0 ? '#2B4C6F' : ds.muted}>{fmtMoney(inv.paid)}</TD>
-                        <TD><Badge label={L(st.ar, st.en)} color={st.color} /></TD>
-                      </TR>
+                      <Tr key={inv.id} onClick={() => setViewInvoice(inv)} className="cursor-pointer">
+                        <Td className="font-bold text-brand-500">{inv.number}</Td>
+                        <Td><StatusBadge label={inv.type === 'sales' ? L('بيع', 'Sales') : L('شراء', 'Purchase')} color={inv.type === 'sales' ? '#4A7AAB' : '#6B8DB5'} /></Td>
+                        <Td>{L(inv.counterparty_ar, inv.counterparty_en)}</Td>
+                        <Td className="text-content-muted dark:text-content-muted-dark">{inv.date}</Td>
+                        <Td className={`${inv.status === 'overdue' ? 'text-red-500 font-bold' : 'text-content-muted dark:text-content-muted-dark'}`}>{inv.due_date}</Td>
+                        <Td className="font-bold">{fmtMoney(inv.total)}</Td>
+                        <Td className={inv.paid > 0 ? 'text-brand-800' : 'text-content-muted dark:text-content-muted-dark'}>{fmtMoney(inv.paid)}</Td>
+                        <Td><StatusBadge label={L(st.ar, st.en)} color={st.color} /></Td>
+                      </Tr>
                     );
                   })}
               </tbody>
@@ -789,8 +747,8 @@ export default function FinancePage() {
     };
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-3 gap-3.5">
           <KpiCard icon={Clock} label={L('معلق', 'Pending')} value={fmtShort(pendingAmt)} sub="EGP" color="#6B8DB5" />
           <KpiCard icon={CheckCircle} label={L('معتمد', 'Approved')} value={fmtShort(approvedAmt)} sub="EGP" color="#4A7AAB" />
           <KpiCard icon={DollarSign} label={L('مصروف', 'Paid')} value={fmtShort(paidAmt)} sub="EGP" color="#2B4C6F" />
@@ -800,27 +758,24 @@ export default function FinancePage() {
           title={L('العمولات', 'Commissions')}
           icon={DollarSign}
           headerRight={
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div className="flex gap-2 items-center">
               {/* Company / Agent toggle */}
-              <div style={{ display: 'flex', background: ds.dark ? 'rgba(74,122,171,0.1)' : '#F1F5F9', borderRadius: 8, padding: 3 }}>
+              <div className="flex bg-gray-100 dark:bg-brand-500/10 rounded-lg p-0.5">
                 {[
                   { id: 'company', label: L('عمولات المطورين', 'Developer Comm.') },
                   { id: 'agent', label: L('عمولات السيلز', 'Agent Comm.') },
                 ].map(t => (
                   <button key={t.id} onClick={() => { setCommTab(t.id); setCommFilter('all'); }}
-                    style={{
-                      padding: '5px 14px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                      background: commTab === t.id ? ds.accent : 'transparent',
-                      color: commTab === t.id ? '#fff' : ds.muted,
-                      transition: 'all 0.15s',
-                    }}>{t.label}</button>
+                    className={`px-3.5 py-1 rounded-md border-none text-xs font-semibold cursor-pointer transition-all duration-150
+                      ${commTab === t.id ? 'bg-brand-500 text-white' : 'bg-transparent text-content-muted dark:text-content-muted-dark'}`}
+                  >{t.label}</button>
                 ))}
               </div>
             </div>
           }
         >
           {/* Filters */}
-          <div style={{ display: 'flex', gap: 6, padding: '12px 18px', borderBottom: `1px solid ${ds.border}` }}>
+          <div className="flex gap-1.5 px-[18px] py-3 border-b border-edge dark:border-edge-dark">
             {[
               { id: 'all', label: L('الكل', 'All') },
               { id: 'pending', label: L('معلق', 'Pending') },
@@ -829,17 +784,17 @@ export default function FinancePage() {
             ].map(f => <FilterPill key={f.id} label={f.label} active={commFilter === f.id} onClick={() => setCommFilter(f.id)} />)}
           </div>
 
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead><tr>
-                <TH>{isCompany ? L('المطوّر', 'Developer') : L('السيلز', 'Agent')}</TH>
-                {isCompany && <TH>{L('المشروع', 'Project')}</TH>}
-                <TH>{L('رقم الصفقة', 'Deal Ref')}</TH>
-                <TH>{L('قيمة الصفقة', 'Deal Value')}</TH>
-                <TH>{L('النسبة / الطريقة', 'Rate / Method')}</TH>
-                <TH>{L('العمولة', 'Commission')}</TH>
-                <TH>{L('الحالة', 'Status')}</TH>
-                <TH>{L('إجراء', 'Action')}</TH>
+                <Th>{isCompany ? L('المطوّر', 'Developer') : L('السيلز', 'Agent')}</Th>
+                {isCompany && <Th>{L('المشروع', 'Project')}</Th>}
+                <Th>{L('رقم الصفقة', 'Deal Ref')}</Th>
+                <Th>{L('قيمة الصفقة', 'Deal Value')}</Th>
+                <Th>{L('النسبة / الطريقة', 'Rate / Method')}</Th>
+                <Th>{L('العمولة', 'Commission')}</Th>
+                <Th>{L('الحالة', 'Status')}</Th>
+                <Th>{L('إجراء', 'Action')}</Th>
               </tr></thead>
               <tbody>
                 {filtered.length === 0
@@ -847,45 +802,45 @@ export default function FinancePage() {
                   : filtered.map(row => {
                     const st = COMMISSION_STATUS[row.status];
                     return (
-                      <TR key={row.id}>
-                        <TD bold>{isCompany ? L(row.developer_ar, row.developer_en) : L(row.agent_ar, row.agent_en)}</TD>
-                        {isCompany && <TD color={ds.muted}>{L(row.project_ar, row.project_en)}</TD>}
-                        <TD color={ds.muted}>{row.deal_ref}</TD>
-                        <TD>{fmtMoney(row.deal_value)}</TD>
-                        <TD color={ds.muted}>
+                      <Tr key={row.id}>
+                        <Td className="font-bold">{isCompany ? L(row.developer_ar, row.developer_en) : L(row.agent_ar, row.agent_en)}</Td>
+                        {isCompany && <Td className="text-content-muted dark:text-content-muted-dark">{L(row.project_ar, row.project_en)}</Td>}
+                        <Td className="text-content-muted dark:text-content-muted-dark">{row.deal_ref}</Td>
+                        <Td>{fmtMoney(row.deal_value)}</Td>
+                        <Td className="text-content-muted dark:text-content-muted-dark">
                           {isCompany
                             ? (row.rate * 100).toFixed(1) + '%'
                             : row.calc_method === 'per_million'
                               ? fmtMoney(row.rate) + L(' / مليون', ' / M')
                               : (row.rate * 100).toFixed(1) + '%'
                           }
-                        </TD>
-                        <TD bold color={ds.accent}>{fmtMoney(row.amount)}</TD>
-                        <TD><Badge label={L(st.ar, st.en)} color={st.color} /></TD>
-                        <TD>
+                        </Td>
+                        <Td className="font-bold text-brand-500">{fmtMoney(row.amount)}</Td>
+                        <Td><StatusBadge label={L(st.ar, st.en)} color={st.color} /></Td>
+                        <Td>
                           {row.status === 'pending' && (
-                            <div style={{ display: 'flex', gap: 6 }}>
+                            <div className="flex gap-1.5">
                               <button onClick={() => handleAction(row.id, 'approved')}
-                                style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: '#2B4C6F', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                className="px-2.5 py-0.5 rounded-md border-none bg-brand-800 text-white text-[11px] font-semibold cursor-pointer">
                                 {L('اعتماد', 'Approve')}
                               </button>
                               <button onClick={() => handleAction(row.id, 'rejected')}
-                                style={{ padding: '3px 10px', borderRadius: 6, border: `1px solid #EF4444`, background: 'transparent', color: '#EF4444', fontSize: 11, cursor: 'pointer' }}>
+                                className="px-2.5 py-0.5 rounded-md border border-red-500 bg-transparent text-red-500 text-[11px] cursor-pointer">
                                 {L('رفض', 'Reject')}
                               </button>
                             </div>
                           )}
                           {row.status === 'approved' && (
                             <button onClick={() => handleAction(row.id, 'paid')}
-                              style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: '#1B3347', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                              className="px-2.5 py-0.5 rounded-md border-none bg-brand-900 text-white text-[11px] font-semibold cursor-pointer">
                               {isCompany ? L('تم التحصيل', 'Collected') : L('صرف', 'Pay')}
                             </button>
                           )}
                           {(row.status === 'paid' || row.status === 'rejected') && (
-                            <span style={{ fontSize: 11, color: ds.muted }}>{row.status === 'paid' ? L('مكتمل', 'Done') : L('مرفوض', 'Rejected')}</span>
+                            <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{row.status === 'paid' ? L('مكتمل', 'Done') : L('مرفوض', 'Rejected')}</span>
                           )}
-                        </TD>
-                      </TR>
+                        </Td>
+                      </Tr>
                     );
                   })}
               </tbody>
@@ -925,24 +880,24 @@ export default function FinancePage() {
     const sortedCats = Object.entries(byCat).sort((a, b) => b[1] - a[1]);
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-4 gap-3.5">
           <KpiCard icon={Receipt} label={L('إجمالي المصروفات', 'Total Expenses')} value={fmtShort(totalExpenseAmt)} sub="EGP" color="#EF4444" />
           <KpiCard icon={CheckCircle} label={L('معتمد + مدفوع', 'Approved + Paid')} value={fmtShort(approvedAmt)} sub="EGP" color="#4A7AAB" />
           <KpiCard icon={Clock} label={L('في الانتظار', 'Pending')} value={pendingExpenses.length} sub={fmtMoney(pendingAmt)} color="#6B8DB5" />
           <KpiCard icon={PieChart} label={L('أكبر بند', 'Largest Category')} value={sortedCats[0]?.[0] || '—'} sub={sortedCats[0] ? fmtMoney(sortedCats[0][1]) : ''} color="#2B4C6F" />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16 }}>
+        <div className="grid grid-cols-[1fr_280px] gap-4">
           {/* Main table */}
           <CardWrap title={L('سجل المصروفات', 'Expense Log')} icon={Receipt}
             headerRight={
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className="flex gap-2 items-center">
                 <SearchBox value={expSearch} onChange={setExpSearch} placeholder={L('بحث...', 'Search...')} />
                 <AddBtn label={L('إضافة مصروف', 'Add Expense')} onClick={() => setShowExpenseModal(true)} />
               </div>
             }>
-            <div style={{ display: 'flex', gap: 6, padding: '12px 18px', borderBottom: `1px solid ${ds.border}` }}>
+            <div className="flex gap-1.5 px-[18px] py-3 border-b border-edge dark:border-edge-dark">
               {[
                 { id: 'all', label: L('الكل', 'All') },
                 { id: 'pending', label: L('معلق', 'Pending') },
@@ -951,17 +906,17 @@ export default function FinancePage() {
               ].map(f => <FilterPill key={f.id} label={f.label} active={expFilter === f.id} onClick={() => setExpFilter(f.id)} />)}
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
                 <thead><tr>
-                  <TH>{L('الرقم', '#')}</TH>
-                  <TH>{L('الفئة', 'Category')}</TH>
-                  <TH>{L('المورد', 'Vendor')}</TH>
-                  <TH>{L('الوصف', 'Description')}</TH>
-                  <TH>{L('المبلغ', 'Amount')}</TH>
-                  <TH>{L('الطريقة', 'Method')}</TH>
-                  <TH>{L('الحالة', 'Status')}</TH>
-                  <TH>{L('إجراء', 'Action')}</TH>
+                  <Th>{L('الرقم', '#')}</Th>
+                  <Th>{L('الفئة', 'Category')}</Th>
+                  <Th>{L('المورد', 'Vendor')}</Th>
+                  <Th>{L('الوصف', 'Description')}</Th>
+                  <Th>{L('المبلغ', 'Amount')}</Th>
+                  <Th>{L('الطريقة', 'Method')}</Th>
+                  <Th>{L('الحالة', 'Status')}</Th>
+                  <Th>{L('إجراء', 'Action')}</Th>
                 </tr></thead>
                 <tbody>
                   {filtered.length === 0
@@ -971,35 +926,35 @@ export default function FinancePage() {
                       const cat = EXPENSE_CATEGORIES[exp.category];
                       const method = PAYMENT_METHODS[exp.method];
                       return (
-                        <TR key={exp.id}>
-                          <TD bold color={ds.accent}>{exp.number}</TD>
-                          <TD>{cat ? L(cat.ar, cat.en) : exp.category}</TD>
-                          <TD>{L(exp.vendor_ar, exp.vendor_en)}</TD>
-                          <TD color={ds.muted}>{L(exp.desc_ar, exp.desc_en)}</TD>
-                          <TD bold color="#EF4444">{fmtMoney(exp.amount)}</TD>
-                          <TD color={ds.muted}>{method ? L(method.ar, method.en) : exp.method}</TD>
-                          <TD><Badge label={L(st.ar, st.en)} color={st.color} /></TD>
-                          <TD>
+                        <Tr key={exp.id}>
+                          <Td className="font-bold text-brand-500">{exp.number}</Td>
+                          <Td>{cat ? L(cat.ar, cat.en) : exp.category}</Td>
+                          <Td>{L(exp.vendor_ar, exp.vendor_en)}</Td>
+                          <Td className="text-content-muted dark:text-content-muted-dark">{L(exp.desc_ar, exp.desc_en)}</Td>
+                          <Td className="font-bold text-red-500">{fmtMoney(exp.amount)}</Td>
+                          <Td className="text-content-muted dark:text-content-muted-dark">{method ? L(method.ar, method.en) : exp.method}</Td>
+                          <Td><StatusBadge label={L(st.ar, st.en)} color={st.color} /></Td>
+                          <Td>
                             {exp.status === 'pending' && (
-                              <div style={{ display: 'flex', gap: 6 }}>
+                              <div className="flex gap-1.5">
                                 <button onClick={() => setExpenses(prev => prev.map(e => e.id === exp.id ? { ...e, status: 'approved', approved_by_ar: 'المدير', approved_by_en: 'Manager' } : e))}
-                                  style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: '#2B4C6F', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                  className="px-2.5 py-0.5 rounded-md border-none bg-brand-800 text-white text-[11px] font-semibold cursor-pointer">
                                   {L('اعتماد', 'Approve')}
                                 </button>
                                 <button onClick={() => setExpenses(prev => prev.map(e => e.id === exp.id ? { ...e, status: 'rejected' } : e))}
-                                  style={{ padding: '3px 10px', borderRadius: 6, border: '1px solid #EF4444', background: 'transparent', color: '#EF4444', fontSize: 11, cursor: 'pointer' }}>
+                                  className="px-2.5 py-0.5 rounded-md border border-red-500 bg-transparent text-red-500 text-[11px] cursor-pointer">
                                   {L('رفض', 'Reject')}
                                 </button>
                               </div>
                             )}
                             {exp.status === 'approved' && (
                               <button onClick={() => setExpenses(prev => prev.map(e => e.id === exp.id ? { ...e, status: 'paid' } : e))}
-                                style={{ padding: '3px 10px', borderRadius: 6, border: 'none', background: '#1B3347', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                                className="px-2.5 py-0.5 rounded-md border-none bg-brand-900 text-white text-[11px] font-semibold cursor-pointer">
                                 {L('صرف', 'Pay')}
                               </button>
                             )}
-                          </TD>
-                        </TR>
+                          </Td>
+                        </Tr>
                       );
                     })}
                 </tbody>
@@ -1009,18 +964,18 @@ export default function FinancePage() {
 
           {/* Sidebar - Category breakdown */}
           <CardWrap title={L('توزيع المصروفات', 'By Category')} icon={PieChart}>
-            <div style={{ padding: '12px 18px' }}>
+            <div className="px-[18px] py-3">
               {sortedCats.map(([cat, amt], i) => {
                 const pct = Math.round((amt / totalExpenseAmt) * 100);
                 const barColors = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#EF4444'];
                 return (
-                  <div key={cat} style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <span style={{ fontSize: 11, color: ds.text }}>{cat}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: ds.text }}>{fmtShort(amt)}</span>
+                  <div key={cat} className="mb-2.5">
+                    <div className="flex justify-between mb-0.5">
+                      <span className="text-[11px] text-content dark:text-content-dark">{cat}</span>
+                      <span className="text-[11px] font-bold text-content dark:text-content-dark">{fmtShort(amt)}</span>
                     </div>
-                    <div style={{ height: 5, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                      <div style={{ height: '100%', width: pct + '%', borderRadius: 3, background: barColors[i % barColors.length] }} />
+                    <div className="h-[5px] rounded-sm bg-gray-200 dark:bg-white/[0.08]">
+                      <div className="h-full rounded-sm" style={{ width: pct + '%', background: barColors[i % barColors.length] }} />
                     </div>
                   </div>
                 );
@@ -1053,7 +1008,7 @@ export default function FinancePage() {
 
     // ── Balance Sheet data ──
     const totalAssets = sumGroup('acc-1000');
-    const totalLiabilities = -sumGroup('acc-2000'); // liabilities have credit-normal, so negate
+    const totalLiabilities = -sumGroup('acc-2000');
     const totalEquity = -sumGroup('acc-3000');
     const netIncome = totalRevenue - postedEntries.reduce((s, e) => {
       let expTotal = 0;
@@ -1065,7 +1020,6 @@ export default function FinancePage() {
       return s + expTotal;
     }, 0);
 
-    // Actually compute properly
     const totalExpPosted = (() => {
       let t = 0;
       postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id.startsWith('acc-5')) t += l.debit - l.credit; }));
@@ -1083,7 +1037,6 @@ export default function FinancePage() {
     const bankNBE = bal('acc-1130');
     const totalCash = cashBal + bankCIB + bankNBE;
 
-    // Cash inflows from revenue collections
     const cashInflows = (() => {
       let t = 0;
       postedEntries.forEach(e => e.lines.forEach(l => {
@@ -1101,12 +1054,12 @@ export default function FinancePage() {
 
     const ReportLine = ({ label, amount, bold, indent = 0, negative, separator }) => {
       if (separator) return (
-        <div style={{ borderTop: `2px solid ${ds.border}`, margin: '8px 0' }} />
+        <div className="border-t-2 border-edge dark:border-edge-dark my-2" />
       );
       return (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `6px 0 6px ${indent * 20}px`, borderBottom: `1px solid ${ds.border}20` }}>
-          <span style={{ fontSize: 13, fontWeight: bold ? 700 : 400, color: bold ? ds.text : ds.muted }}>{label}</span>
-          <span style={{ fontSize: 13, fontWeight: bold ? 800 : 600, color: negative ? '#EF4444' : amount === 0 ? ds.muted : bold ? ds.accent : ds.text }}>
+        <div className="flex justify-between items-center py-1.5 border-b border-edge/20 dark:border-edge-dark/20" style={{ paddingLeft: indent * 20 }}>
+          <span className={`text-[13px] ${bold ? 'font-bold text-content dark:text-content-dark' : 'font-normal text-content-muted dark:text-content-muted-dark'}`}>{label}</span>
+          <span className={`text-[13px] ${bold ? 'font-extrabold' : 'font-semibold'} ${negative ? 'text-red-500' : amount === 0 ? 'text-content-muted dark:text-content-muted-dark' : bold ? 'text-brand-500' : 'text-content dark:text-content-dark'}`}>
             {fmtMoney(Math.abs(amount))}
           </span>
         </div>
@@ -1114,15 +1067,15 @@ export default function FinancePage() {
     };
 
     const ReportHeader = ({ title }) => (
-      <div style={{ padding: '10px 0 6px', borderBottom: `2px solid ${ds.accent}40`, marginBottom: 4 }}>
-        <span style={{ fontSize: 14, fontWeight: 800, color: ds.text, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{title}</span>
+      <div className="pt-2.5 pb-1.5 border-b-2 border-brand-500/40 mb-1">
+        <span className="text-sm font-extrabold text-content dark:text-content-dark uppercase tracking-wider">{title}</span>
       </div>
     );
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="flex flex-col gap-4">
         {/* Report selector */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="flex gap-2">
           {[
             { id: 'balance_sheet', label: L('الميزانية العمومية', 'Balance Sheet') },
             { id: 'income_statement', label: L('قائمة الدخل', 'Income Statement') },
@@ -1132,17 +1085,16 @@ export default function FinancePage() {
 
         {/* ── BALANCE SHEET ── */}
         {reportView === 'balance_sheet' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid grid-cols-2 gap-4">
             {/* Left — Assets */}
             <CardWrap title={L('الميزانية العمومية', 'Balance Sheet')} icon={Layers}>
-              <div style={{ padding: '16px 18px' }}>
-                <div style={{ fontSize: 11, color: ds.muted, marginBottom: 12 }}>{L('كما في مارس 2026', 'As of March 2026')}</div>
+              <div className="px-[18px] py-4">
+                <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('كما في مارس 2026', 'As of March 2026')}</div>
 
                 <ReportHeader title={L('الأصول', 'ASSETS')} />
                 {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-1000' && !a.is_group).map(a => (
                   <ReportLine key={a.id} label={L(a.name_ar, a.name_en)} amount={bal(a.id)} indent={1} />
                 ))}
-                {/* Sub-groups */}
                 {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-1000' && a.is_group).map(g => {
                   const leaves = CHART_OF_ACCOUNTS.filter(a => a.parent_id === g.id && !a.is_group);
                   return [
@@ -1153,7 +1105,7 @@ export default function FinancePage() {
                 <ReportLine separator />
                 <ReportLine label={L('إجمالي الأصول', 'Total Assets')} amount={totalAssets} bold />
 
-                <div style={{ height: 20 }} />
+                <div className="h-5" />
 
                 <ReportHeader title={L('الخصوم', 'LIABILITIES')} />
                 {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-2000' && !a.is_group).map(a => (
@@ -1162,7 +1114,7 @@ export default function FinancePage() {
                 <ReportLine separator />
                 <ReportLine label={L('إجمالي الخصوم', 'Total Liabilities')} amount={totalLiabilities} bold />
 
-                <div style={{ height: 20 }} />
+                <div className="h-5" />
 
                 <ReportHeader title={L('حقوق الملكية', 'EQUITY')} />
                 {CHART_OF_ACCOUNTS.filter(a => a.parent_id === 'acc-3000' && !a.is_group).map(a => (
@@ -1172,36 +1124,36 @@ export default function FinancePage() {
                 <ReportLine separator />
                 <ReportLine label={L('إجمالي حقوق الملكية', 'Total Equity')} amount={totalEquity + netIncomeCalc} bold />
 
-                <div style={{ height: 12 }} />
-                <div style={{ padding: '10px 14px', borderRadius: 10, background: (totalAssets === totalLiabilities + totalEquity + netIncomeCalc) ? 'rgba(43,76,111,0.08)' : 'rgba(239,68,68,0.08)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="h-3" />
+                <div className={`px-3.5 py-2.5 rounded-[10px] flex items-center gap-2 ${(Math.abs(totalAssets - (totalLiabilities + totalEquity + netIncomeCalc)) < 1) ? 'bg-brand-800/[0.08]' : 'bg-red-500/[0.08]'}`}>
                   {(Math.abs(totalAssets - (totalLiabilities + totalEquity + netIncomeCalc)) < 1)
-                    ? <><CheckCircle size={14} color="#2B4C6F" /><span style={{ fontSize: 12, fontWeight: 600, color: '#2B4C6F' }}>{L('الميزانية متوازنة ✓', 'Balance Sheet is balanced ✓')}</span></>
-                    : <><AlertTriangle size={14} color="#EF4444" /><span style={{ fontSize: 12, fontWeight: 600, color: '#EF4444' }}>{L('الميزانية غير متوازنة', 'Balance Sheet NOT balanced')}</span></>
+                    ? <><CheckCircle size={14} className="text-brand-800" /><span className="text-xs font-semibold text-brand-800">{L('الميزانية متوازنة ✓', 'Balance Sheet is balanced ✓')}</span></>
+                    : <><AlertTriangle size={14} className="text-red-500" /><span className="text-xs font-semibold text-red-500">{L('الميزانية غير متوازنة', 'Balance Sheet NOT balanced')}</span></>
                   }
                 </div>
               </div>
             </CardWrap>
 
             {/* Right — KPIs */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="flex flex-col gap-3.5">
               <KpiCard icon={Layers} label={L('إجمالي الأصول', 'Total Assets')} value={fmtShort(totalAssets)} sub="EGP" color="#4A7AAB" />
               <KpiCard icon={AlertTriangle} label={L('إجمالي الخصوم', 'Total Liabilities')} value={fmtShort(totalLiabilities)} sub="EGP" color="#EF4444" />
               <KpiCard icon={Wallet} label={L('حقوق الملكية', 'Equity')} value={fmtShort(totalEquity + netIncomeCalc)} sub="EGP" color="#2B4C6F" />
               <KpiCard icon={TrendingUp} label={L('صافي الدخل', 'Net Income')} value={fmtShort(netIncomeCalc)} sub="EGP" color="#1B3347" />
 
               <CardWrap title={L('ملخص', 'Summary')} icon={BarChart2}>
-                <div style={{ padding: '14px 18px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: ds.muted }}>{L('نسبة السيولة', 'Current Ratio')}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: ds.text }}>{totalLiabilities > 0 ? (totalAssets / totalLiabilities).toFixed(2) : '∞'}</span>
+                <div className="px-[18px] py-3.5">
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">{L('نسبة السيولة', 'Current Ratio')}</span>
+                    <span className="text-[13px] font-bold text-content dark:text-content-dark">{totalLiabilities > 0 ? (totalAssets / totalLiabilities).toFixed(2) : '∞'}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: ds.muted }}>{L('هامش الربح', 'Profit Margin')}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: netIncomeCalc >= 0 ? '#2B4C6F' : '#EF4444' }}>{totalRevenue > 0 ? ((netIncomeCalc / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">{L('هامش الربح', 'Profit Margin')}</span>
+                    <span className={`text-[13px] font-bold ${netIncomeCalc >= 0 ? 'text-brand-800' : 'text-red-500'}`}>{totalRevenue > 0 ? ((netIncomeCalc / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 12, color: ds.muted }}>{L('نسبة المصروفات', 'Expense Ratio')}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: ds.text }}>{totalRevenue > 0 ? ((totalExpPosted / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
+                  <div className="flex justify-between">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">{L('نسبة المصروفات', 'Expense Ratio')}</span>
+                    <span className="text-[13px] font-bold text-content dark:text-content-dark">{totalRevenue > 0 ? ((totalExpPosted / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
                   </div>
                 </div>
               </CardWrap>
@@ -1211,10 +1163,10 @@ export default function FinancePage() {
 
         {/* ── INCOME STATEMENT ── */}
         {reportView === 'income_statement' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
+          <div className="grid grid-cols-[1fr_320px] gap-4">
             <CardWrap title={L('قائمة الدخل', 'Income Statement')} icon={TrendingUp}>
-              <div style={{ padding: '16px 18px' }}>
-                <div style={{ fontSize: 11, color: ds.muted, marginBottom: 12 }}>{L('مارس 2026', 'March 2026')}</div>
+              <div className="px-[18px] py-4">
+                <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('مارس 2026', 'March 2026')}</div>
 
                 <ReportHeader title={L('الإيرادات', 'REVENUE')} />
                 {revAccounts.map(a => {
@@ -1225,7 +1177,7 @@ export default function FinancePage() {
                 <ReportLine separator />
                 <ReportLine label={L('إجمالي الإيرادات', 'Total Revenue')} amount={totalRevenue} bold />
 
-                <div style={{ height: 16 }} />
+                <div className="h-4" />
 
                 <ReportHeader title={L('المصروفات', 'EXPENSES')} />
                 {expAccounts.map(a => {
@@ -1237,25 +1189,25 @@ export default function FinancePage() {
                 <ReportLine separator />
                 <ReportLine label={L('إجمالي المصروفات', 'Total Expenses')} amount={totalExpPosted} bold negative />
 
-                <div style={{ height: 16 }} />
-                <div style={{ padding: '12px 14px', borderRadius: 10, background: netIncomeCalc >= 0 ? 'rgba(43,76,111,0.08)' : 'rgba(239,68,68,0.08)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: ds.text }}>{L('صافي الدخل', 'Net Income')}</span>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: netIncomeCalc >= 0 ? '#2B4C6F' : '#EF4444' }}>{fmtMoney(netIncomeCalc)}</span>
+                <div className="h-4" />
+                <div className={`px-3.5 py-3 rounded-[10px] ${netIncomeCalc >= 0 ? 'bg-brand-800/[0.08]' : 'bg-red-500/[0.08]'}`}>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[15px] font-extrabold text-content dark:text-content-dark">{L('صافي الدخل', 'Net Income')}</span>
+                    <span className={`text-lg font-extrabold ${netIncomeCalc >= 0 ? 'text-brand-800' : 'text-red-500'}`}>{fmtMoney(netIncomeCalc)}</span>
                   </div>
                 </div>
               </div>
             </CardWrap>
 
             {/* Right — Chart */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="flex flex-col gap-3.5">
               <KpiCard icon={TrendingUp} label={L('الإيرادات', 'Revenue')} value={fmtShort(totalRevenue)} sub="EGP" color="#4A7AAB" />
               <KpiCard icon={TrendingDown} label={L('المصروفات', 'Expenses')} value={fmtShort(totalExpPosted)} sub="EGP" color="#EF4444" />
               <KpiCard icon={DollarSign} label={L('صافي الدخل', 'Net Income')} value={fmtShort(netIncomeCalc)} sub="EGP" color={netIncomeCalc >= 0 ? '#2B4C6F' : '#EF4444'} />
 
               {/* Expense breakdown mini */}
               <CardWrap title={L('توزيع المصروفات', 'Expense Breakdown')} icon={PieChart}>
-                <div style={{ padding: '12px 18px' }}>
+                <div className="px-[18px] py-3">
                   {expAccounts.filter(a => {
                     let amt = 0;
                     postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id === a.id) amt += l.debit - l.credit; }));
@@ -1270,13 +1222,13 @@ export default function FinancePage() {
                     const pct = totalExpPosted > 0 ? Math.round((amt / totalExpPosted) * 100) : 0;
                     const colors = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#EF4444'];
                     return (
-                      <div key={a.id} style={{ marginBottom: 8 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                          <span style={{ fontSize: 11, color: ds.text }}>{L(a.name_ar, a.name_en)}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: ds.muted }}>{pct}%</span>
+                      <div key={a.id} className="mb-2">
+                        <div className="flex justify-between mb-0.5">
+                          <span className="text-[11px] text-content dark:text-content-dark">{L(a.name_ar, a.name_en)}</span>
+                          <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark">{pct}%</span>
                         </div>
-                        <div style={{ height: 4, borderRadius: 2, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                          <div style={{ height: '100%', width: pct + '%', borderRadius: 2, background: colors[i % colors.length] }} />
+                        <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08]">
+                          <div className="h-full rounded-sm" style={{ width: pct + '%', background: colors[i % colors.length] }} />
                         </div>
                       </div>
                     );
@@ -1289,10 +1241,10 @@ export default function FinancePage() {
 
         {/* ── CASH FLOW STATEMENT ── */}
         {reportView === 'cash_flow' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 16 }}>
+          <div className="grid grid-cols-[1fr_320px] gap-4">
             <CardWrap title={L('قائمة التدفقات النقدية', 'Cash Flow Statement')} icon={Wallet}>
-              <div style={{ padding: '16px 18px' }}>
-                <div style={{ fontSize: 11, color: ds.muted, marginBottom: 12 }}>{L('مارس 2026', 'March 2026')}</div>
+              <div className="px-[18px] py-4">
+                <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('مارس 2026', 'March 2026')}</div>
 
                 <ReportHeader title={L('تدفقات من الأنشطة التشغيلية', 'OPERATING ACTIVITIES')} />
                 <ReportLine label={L('صافي الدخل', 'Net Income')} amount={netIncomeCalc} indent={1} />
@@ -1301,14 +1253,14 @@ export default function FinancePage() {
                 <ReportLine separator />
                 <ReportLine label={L('صافي التدفقات التشغيلية', 'Net Operating Cash Flow')} amount={netIncomeCalc - receivable + payable} bold />
 
-                <div style={{ height: 16 }} />
+                <div className="h-4" />
                 <ReportHeader title={L('ملخص الحركة النقدية', 'CASH MOVEMENT SUMMARY')} />
                 <ReportLine label={L('إجمالي التحصيلات', 'Total Cash Inflows')} amount={cashInflows} indent={1} />
                 <ReportLine label={L('إجمالي المدفوعات', 'Total Cash Outflows')} amount={cashOutflows} indent={1} negative />
                 <ReportLine separator />
                 <ReportLine label={L('صافي الحركة', 'Net Movement')} amount={cashInflows - cashOutflows} bold />
 
-                <div style={{ height: 16 }} />
+                <div className="h-4" />
                 <ReportHeader title={L('الأرصدة النقدية', 'CASH BALANCES')} />
                 <ReportLine label={L('الصندوق (كاش)', 'Cash on Hand')} amount={cashBal} indent={1} />
                 <ReportLine label={L('بنك CIB', 'CIB Bank')} amount={bankCIB} indent={1} />
@@ -1318,14 +1270,14 @@ export default function FinancePage() {
               </div>
             </CardWrap>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="flex flex-col gap-3.5">
               <KpiCard icon={ArrowUpRight} label={L('إجمالي التحصيلات', 'Total Inflows')} value={fmtShort(cashInflows)} sub="EGP" color="#4A7AAB" />
               <KpiCard icon={ArrowDownRight} label={L('إجمالي المدفوعات', 'Total Outflows')} value={fmtShort(cashOutflows)} sub="EGP" color="#EF4444" />
               <KpiCard icon={Wallet} label={L('إجمالي النقدية', 'Total Cash')} value={fmtShort(totalCash)} sub="EGP" color="#2B4C6F" />
 
               {/* Cash breakdown */}
               <CardWrap title={L('توزيع النقدية', 'Cash Distribution')} icon={PieChart}>
-                <div style={{ padding: '14px 18px' }}>
+                <div className="px-[18px] py-3.5">
                   {[
                     { label: L('الصندوق', 'Cash on Hand'), amount: cashBal, color: '#1B3347' },
                     { label: L('بنك CIB', 'CIB Bank'), amount: bankCIB, color: '#4A7AAB' },
@@ -1333,13 +1285,13 @@ export default function FinancePage() {
                   ].map((item, i) => {
                     const pct = totalCash !== 0 ? Math.round((Math.abs(item.amount) / Math.abs(totalCash)) * 100) : 0;
                     return (
-                      <div key={i} style={{ marginBottom: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-                          <span style={{ fontSize: 12, color: ds.text }}>{item.label}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: item.color }}>{fmtMoney(item.amount)}</span>
+                      <div key={i} className="mb-2.5">
+                        <div className="flex justify-between mb-0.5">
+                          <span className="text-xs text-content dark:text-content-dark">{item.label}</span>
+                          <span className="text-xs font-bold" style={{ color: item.color }}>{fmtMoney(item.amount)}</span>
                         </div>
-                        <div style={{ height: 5, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                          <div style={{ height: '100%', width: pct + '%', borderRadius: 3, background: item.color }} />
+                        <div className="h-[5px] rounded-sm bg-gray-200 dark:bg-white/[0.08]">
+                          <div className="h-full rounded-sm" style={{ width: pct + '%', background: item.color }} />
                         </div>
                       </div>
                     );
@@ -1371,8 +1323,8 @@ export default function FinancePage() {
     };
 
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14 }}>
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-4 gap-3.5">
           <KpiCard icon={Target} label={L('الموازنة الشهرية', 'Monthly Budget')} value={fmtShort(totalMonthly)} sub="EGP" color="#4A7AAB" />
           <KpiCard icon={BarChart2} label={L('الفعلي YTD', 'Actual YTD')} value={fmtShort(totalActualYtd)} sub="EGP" color="#2B4C6F" />
           <KpiCard icon={PieChart} label={L('نسبة الاستهلاك', 'Usage Rate')} value={overallPct + '%'} sub={L('من الموازنة', 'of budget')} color={overallPct > 100 ? '#EF4444' : '#4A7AAB'} />
@@ -1381,34 +1333,37 @@ export default function FinancePage() {
 
         {/* Overall progress */}
         <CardWrap title={L('استهلاك الموازنة الكلي', 'Overall Budget Consumption')} icon={Target}>
-          <div style={{ padding: '16px 18px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: ds.text, fontWeight: 600 }}>{L('الفعلي', 'Actual')}: {fmtMoney(totalActualYtd)}</span>
-              <span style={{ fontSize: 13, color: ds.muted }}>{L('الموازنة', 'Budget')}: {fmtMoney(totalBudgetYtd)}</span>
+          <div className="px-[18px] py-4">
+            <div className="flex justify-between mb-2">
+              <span className="text-[13px] text-content dark:text-content-dark font-semibold">{L('الفعلي', 'Actual')}: {fmtMoney(totalActualYtd)}</span>
+              <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{L('الموازنة', 'Budget')}: {fmtMoney(totalBudgetYtd)}</span>
             </div>
-            <div style={{ height: 10, borderRadius: 5, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: Math.min(overallPct, 100) + '%', borderRadius: 5, background: overallPct > 100 ? '#EF4444' : overallPct > 85 ? '#f59e0b' : '#4A7AAB', transition: 'width 0.4s' }} />
+            <div className="h-2.5 rounded-[5px] bg-gray-200 dark:bg-white/[0.08] overflow-hidden">
+              <div
+                className="h-full rounded-[5px] transition-[width] duration-[400ms]"
+                style={{ width: Math.min(overallPct, 100) + '%', background: overallPct > 100 ? '#EF4444' : overallPct > 85 ? '#f59e0b' : '#4A7AAB' }}
+              />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-              <span style={{ fontSize: 11, color: ds.muted }}>0%</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: overallPct > 100 ? '#EF4444' : ds.accent }}>{overallPct}%</span>
-              <span style={{ fontSize: 11, color: ds.muted }}>100%</span>
+            <div className="flex justify-between mt-1">
+              <span className="text-[11px] text-content-muted dark:text-content-muted-dark">0%</span>
+              <span className={`text-[11px] font-bold ${overallPct > 100 ? 'text-red-500' : 'text-brand-500'}`}>{overallPct}%</span>
+              <span className="text-[11px] text-content-muted dark:text-content-muted-dark">100%</span>
             </div>
           </div>
         </CardWrap>
 
         {/* Detailed table */}
         <CardWrap title={L('تفاصيل الموازنة', 'Budget Details')} icon={ClipboardList}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead><tr>
-                <TH>{L('البند', 'Category')}</TH>
-                <TH>{L('شهري', 'Monthly')}</TH>
-                <TH>{L('الموازنة YTD', 'Budget YTD')}</TH>
-                <TH>{L('الفعلي YTD', 'Actual YTD')}</TH>
-                <TH>{L('الفرق', 'Variance')}</TH>
-                <TH>{L('النسبة', '%')}</TH>
-                <TH>{L('التقدم', 'Progress')}</TH>
+                <Th>{L('البند', 'Category')}</Th>
+                <Th>{L('شهري', 'Monthly')}</Th>
+                <Th>{L('الموازنة YTD', 'Budget YTD')}</Th>
+                <Th>{L('الفعلي YTD', 'Actual YTD')}</Th>
+                <Th>{L('الفرق', 'Variance')}</Th>
+                <Th>{L('النسبة', '%')}</Th>
+                <Th>{L('التقدم', 'Progress')}</Th>
               </tr></thead>
               <tbody>
                 {budgetData.map(b => {
@@ -1416,43 +1371,47 @@ export default function FinancePage() {
                   const variance = b.budget_ytd - b.actual_ytd;
                   const over = variance < 0;
                   return (
-                    <TR key={b.id}>
-                      <TD bold>{L(b.cat_ar, b.cat_en)}</TD>
-                      <TD>
-                        <input
+                    <Tr key={b.id}>
+                      <Td className="font-bold">{L(b.cat_ar, b.cat_en)}</Td>
+                      <Td>
+                        <Input
                           type="number"
+                          size="sm"
                           value={b.monthly}
                           onChange={e => handleUpdateMonthly(b.id, e.target.value)}
-                          style={{ width: 80, padding: '4px 6px', borderRadius: 6, border: `1px solid ${ds.border}`, background: ds.input, color: ds.text, fontSize: 12, outline: 'none', textAlign: 'center' }}
+                          className="w-20 text-center"
                         />
-                      </TD>
-                      <TD color={ds.muted}>{fmtMoney(b.budget_ytd)}</TD>
-                      <TD bold>{fmtMoney(b.actual_ytd)}</TD>
-                      <TD bold color={over ? '#EF4444' : '#2B4C6F'}>
+                      </Td>
+                      <Td className="text-content-muted dark:text-content-muted-dark">{fmtMoney(b.budget_ytd)}</Td>
+                      <Td className="font-bold">{fmtMoney(b.actual_ytd)}</Td>
+                      <Td className={`font-bold ${over ? 'text-red-500' : 'text-brand-800'}`}>
                         {over ? '(' : ''}{fmtMoney(Math.abs(variance))}{over ? ')' : ''}
-                      </TD>
-                      <TD bold color={over ? '#EF4444' : pct > 85 ? '#f59e0b' : '#2B4C6F'}>{pct}%</TD>
-                      <TD style={{ minWidth: 100 }}>
-                        <div style={{ height: 6, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                          <div style={{ height: '100%', width: Math.min(pct, 100) + '%', borderRadius: 3, background: over ? '#EF4444' : pct > 85 ? '#f59e0b' : '#4A7AAB', transition: 'width 0.3s' }} />
+                      </Td>
+                      <Td className={`font-bold ${over ? 'text-red-500' : pct > 85 ? 'text-amber-500' : 'text-brand-800'}`}>{pct}%</Td>
+                      <Td className="min-w-[100px]">
+                        <div className="h-1.5 rounded-sm bg-gray-200 dark:bg-white/[0.08]">
+                          <div
+                            className="h-full rounded-sm transition-[width] duration-300"
+                            style={{ width: Math.min(pct, 100) + '%', background: over ? '#EF4444' : pct > 85 ? '#f59e0b' : '#4A7AAB' }}
+                          />
                         </div>
-                      </TD>
-                    </TR>
+                      </Td>
+                    </Tr>
                   );
                 })}
                 {/* Totals row */}
-                <tr style={{ background: ds.thBg, borderTop: `2px solid ${ds.border}` }}>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 800, color: ds.text }}>{L('الإجمالي', 'Total')}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: ds.text }}>{fmtMoney(totalMonthly)}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: ds.muted }}>{fmtMoney(totalBudgetYtd)}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: ds.text }}>{fmtMoney(totalActualYtd)}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: totalActualYtd > totalBudgetYtd ? '#EF4444' : '#2B4C6F' }}>
+                <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-t-2 border-edge dark:border-edge-dark">
+                  <td className="px-3 py-2.5 text-[13px] font-extrabold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
+                  <td className="px-3 py-2.5 text-[13px] font-bold text-content dark:text-content-dark">{fmtMoney(totalMonthly)}</td>
+                  <td className="px-3 py-2.5 text-[13px] font-bold text-content-muted dark:text-content-muted-dark">{fmtMoney(totalBudgetYtd)}</td>
+                  <td className="px-3 py-2.5 text-[13px] font-bold text-content dark:text-content-dark">{fmtMoney(totalActualYtd)}</td>
+                  <td className={`px-3 py-2.5 text-[13px] font-bold ${totalActualYtd > totalBudgetYtd ? 'text-red-500' : 'text-brand-800'}`}>
                     {totalActualYtd > totalBudgetYtd ? '(' : ''}{fmtMoney(Math.abs(totalBudgetYtd - totalActualYtd))}{totalActualYtd > totalBudgetYtd ? ')' : ''}
                   </td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 800, color: overallPct > 100 ? '#EF4444' : '#2B4C6F' }}>{overallPct}%</td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <div style={{ height: 6, borderRadius: 3, background: ds.dark ? 'rgba(255,255,255,0.08)' : '#E5E7EB' }}>
-                      <div style={{ height: '100%', width: Math.min(overallPct, 100) + '%', borderRadius: 3, background: overallPct > 100 ? '#EF4444' : '#4A7AAB' }} />
+                  <td className={`px-3 py-2.5 text-[13px] font-extrabold ${overallPct > 100 ? 'text-red-500' : 'text-brand-800'}`}>{overallPct}%</td>
+                  <td className="px-3 py-2.5">
+                    <div className="h-1.5 rounded-sm bg-gray-200 dark:bg-white/[0.08]">
+                      <div className="h-full rounded-sm" style={{ width: Math.min(overallPct, 100) + '%', background: overallPct > 100 ? '#EF4444' : '#4A7AAB' }} />
                     </div>
                   </td>
                 </tr>
@@ -1468,23 +1427,6 @@ export default function FinancePage() {
      MODALS
      ═══════════════════════════════════════════════════════════════════════ */
 
-  const Overlay = ({ children, onClose }) => (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: ds.card, borderRadius: 16, border: `1px solid ${ds.border}`, width: '100%', maxWidth: 700, maxHeight: '85vh', overflow: 'auto' }}>
-        {children}
-      </div>
-    </div>
-  );
-
-  const ModalHeader = ({ title, onClose }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: `1px solid ${ds.border}` }}>
-      <span style={{ fontSize: 16, fontWeight: 700, color: ds.text }}>{title}</span>
-      <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${ds.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <X size={16} color={ds.muted} />
-      </button>
-    </div>
-  );
-
   // ── Journal Entry Detail Modal ──────────────────────────────────────────
   const renderJournalModal = () => {
     if (!viewJournal) return null;
@@ -1495,71 +1437,70 @@ export default function FinancePage() {
     const balanced = totalDebit === totalCredit;
 
     return (
-      <Overlay onClose={() => setViewJournal(null)}>
-        <ModalHeader title={je.entry_number} onClose={() => setViewJournal(null)} />
-        <div style={{ padding: 20 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+      <Modal open={true} onClose={() => setViewJournal(null)} title={je.entry_number} width="max-w-2xl">
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('التاريخ', 'Date')}</div>
+            <div className="text-sm font-semibold text-content dark:text-content-dark">{je.date}</div>
+          </div>
+          <div>
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('الحالة', 'Status')}</div>
+            <StatusBadge label={L(st.ar, st.en)} color={st.color} />
+          </div>
+          <div className="col-span-full">
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('الوصف', 'Description')}</div>
+            <div className="text-sm text-content dark:text-content-dark">{L(je.description_ar, je.description_en)}</div>
+          </div>
+          {je.reference && (
             <div>
-              <div style={{ fontSize: 11, color: ds.muted, marginBottom: 2 }}>{L('التاريخ', 'Date')}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: ds.text }}>{je.date}</div>
+              <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('المرجع', 'Reference')}</div>
+              <div className="text-sm text-brand-500 font-semibold">{je.reference}</div>
             </div>
-            <div>
-              <div style={{ fontSize: 11, color: ds.muted, marginBottom: 2 }}>{L('الحالة', 'Status')}</div>
-              <Badge label={L(st.ar, st.en)} color={st.color} />
-            </div>
-            <div style={{ gridColumn: '1/-1' }}>
-              <div style={{ fontSize: 11, color: ds.muted, marginBottom: 2 }}>{L('الوصف', 'Description')}</div>
-              <div style={{ fontSize: 14, color: ds.text }}>{L(je.description_ar, je.description_en)}</div>
-            </div>
-            {je.reference && (
-              <div>
-                <div style={{ fontSize: 11, color: ds.muted, marginBottom: 2 }}>{L('المرجع', 'Reference')}</div>
-                <div style={{ fontSize: 14, color: ds.accent, fontWeight: 600 }}>{je.reference}</div>
-              </div>
-            )}
-          </div>
-
-          {/* Lines table */}
-          <div style={{ border: `1px solid ${ds.border}`, borderRadius: 10, overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr style={{ background: ds.thBg }}>
-                <TH>{L('الحساب', 'Account')}</TH>
-                <TH>{L('الكود', 'Code')}</TH>
-                <TH>{L('مدين', 'Debit')}</TH>
-                <TH>{L('دائن', 'Credit')}</TH>
-              </tr></thead>
-              <tbody>
-                {je.lines.map((l, i) => (
-                  <TR key={i}>
-                    <TD>{L(l.name_ar, l.name_en)}</TD>
-                    <TD color={ds.muted}>{l.code}</TD>
-                    <TD bold color={l.debit > 0 ? '#2B4C6F' : ds.muted}>{l.debit > 0 ? fmtMoney(l.debit) : '—'}</TD>
-                    <TD bold color={l.credit > 0 ? '#EF4444' : ds.muted}>{l.credit > 0 ? fmtMoney(l.credit) : '—'}</TD>
-                  </TR>
-                ))}
-                {/* Totals row */}
-                <tr style={{ background: ds.thBg, borderTop: `2px solid ${ds.border}` }}>
-                  <td colSpan={2} style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: ds.text }}>{L('الإجمالي', 'Total')}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#2B4C6F' }}>{fmtMoney(totalDebit)}</td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 700, color: '#EF4444' }}>{fmtMoney(totalCredit)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          {/* Balance indicator */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, padding: '8px 12px', borderRadius: 8, background: balanced ? 'rgba(43,76,111,0.08)' : 'rgba(239,68,68,0.08)' }}>
-            {balanced ? <CheckCircle size={16} color="#2B4C6F" /> : <AlertTriangle size={16} color="#EF4444" />}
-            <span style={{ fontSize: 12, fontWeight: 600, color: balanced ? '#2B4C6F' : '#EF4444' }}>
-              {balanced ? L('القيد متوازن ✓', 'Entry is balanced ✓') : L('القيد غير متوازن!', 'Entry is NOT balanced!')}
-            </span>
-          </div>
-
-          <div style={{ fontSize: 11, color: ds.muted, marginTop: 12 }}>
-            {L('بواسطة: ', 'By: ')}{L(je.created_by_ar, je.created_by_en)}
-          </div>
+          )}
         </div>
-      </Overlay>
+
+        {/* Lines table */}
+        <div className="border border-edge dark:border-edge-dark rounded-[10px] overflow-hidden">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
+                <Th>{L('الحساب', 'Account')}</Th>
+                <Th>{L('الكود', 'Code')}</Th>
+                <Th>{L('مدين', 'Debit')}</Th>
+                <Th>{L('دائن', 'Credit')}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {je.lines.map((l, i) => (
+                <Tr key={i}>
+                  <Td>{L(l.name_ar, l.name_en)}</Td>
+                  <Td className="text-content-muted dark:text-content-muted-dark">{l.code}</Td>
+                  <Td className={`font-bold ${l.debit > 0 ? 'text-brand-800' : 'text-content-muted dark:text-content-muted-dark'}`}>{l.debit > 0 ? fmtMoney(l.debit) : '—'}</Td>
+                  <Td className={`font-bold ${l.credit > 0 ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>{l.credit > 0 ? fmtMoney(l.credit) : '—'}</Td>
+                </Tr>
+              ))}
+              {/* Totals row */}
+              <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-t-2 border-edge dark:border-edge-dark">
+                <td colSpan={2} className="px-3 py-2.5 text-[13px] font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
+                <td className="px-3 py-2.5 text-[13px] font-bold text-brand-800">{fmtMoney(totalDebit)}</td>
+                <td className="px-3 py-2.5 text-[13px] font-bold text-red-500">{fmtMoney(totalCredit)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Balance indicator */}
+        <div className={`flex items-center gap-2 mt-3 px-3 py-2 rounded-lg ${balanced ? 'bg-brand-800/[0.08]' : 'bg-red-500/[0.08]'}`}>
+          {balanced ? <CheckCircle size={16} className="text-brand-800" /> : <AlertTriangle size={16} className="text-red-500" />}
+          <span className={`text-xs font-semibold ${balanced ? 'text-brand-800' : 'text-red-500'}`}>
+            {balanced ? L('القيد متوازن ✓', 'Entry is balanced ✓') : L('القيد غير متوازن!', 'Entry is NOT balanced!')}
+          </span>
+        </div>
+
+        <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-3">
+          {L('بواسطة: ', 'By: ')}{L(je.created_by_ar, je.created_by_en)}
+        </div>
+      </Modal>
     );
   };
 
@@ -1570,137 +1511,124 @@ export default function FinancePage() {
     const st = INVOICE_STATUS[inv.status];
 
     return (
-      <Overlay onClose={() => setViewInvoice(null)}>
-        <ModalHeader title={inv.number} onClose={() => setViewInvoice(null)} />
-        <div style={{ padding: 20 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 16 }}>
-            <div>
-              <div style={{ fontSize: 11, color: ds.muted, marginBottom: 2 }}>{L('النوع', 'Type')}</div>
-              <Badge label={inv.type === 'sales' ? L('فاتورة بيع', 'Sales Invoice') : L('فاتورة شراء', 'Purchase Bill')} color={inv.type === 'sales' ? '#4A7AAB' : '#6B8DB5'} />
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: ds.muted, marginBottom: 2 }}>{L('التاريخ', 'Date')}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: ds.text }}>{inv.date}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: ds.muted, marginBottom: 2 }}>{L('الاستحقاق', 'Due')}</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: inv.status === 'overdue' ? '#EF4444' : ds.text }}>{inv.due_date}</div>
-            </div>
-            <div style={{ gridColumn: '1/-1' }}>
-              <div style={{ fontSize: 11, color: ds.muted, marginBottom: 2 }}>{L('الطرف', 'Counterparty')}</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: ds.text }}>{L(inv.counterparty_ar, inv.counterparty_en)}</div>
-            </div>
+      <Modal open={true} onClose={() => setViewInvoice(null)} title={inv.number} width="max-w-2xl">
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div>
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('النوع', 'Type')}</div>
+            <StatusBadge label={inv.type === 'sales' ? L('فاتورة بيع', 'Sales Invoice') : L('فاتورة شراء', 'Purchase Bill')} color={inv.type === 'sales' ? '#4A7AAB' : '#6B8DB5'} />
           </div>
-
-          {/* Items table */}
-          <div style={{ border: `1px solid ${ds.border}`, borderRadius: 10, overflow: 'hidden', marginBottom: 16 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead><tr style={{ background: ds.thBg }}>
-                <TH>{L('البند', 'Item')}</TH>
-                <TH>{L('الكمية', 'Qty')}</TH>
-                <TH>{L('السعر', 'Price')}</TH>
-                <TH>{L('الضريبة', 'Tax')}</TH>
-                <TH>{L('الإجمالي', 'Total')}</TH>
-              </tr></thead>
-              <tbody>
-                {inv.items.map((item, i) => (
-                  <TR key={i}>
-                    <TD>{L(item.desc_ar, item.desc_en)}</TD>
-                    <TD>{item.qty}</TD>
-                    <TD>{fmtMoney(item.price)}</TD>
-                    <TD color={ds.muted}>{item.tax_rate ? (item.tax_rate * 100) + '%' : '—'}</TD>
-                    <TD bold>{fmtMoney(item.qty * item.price * (1 + item.tax_rate))}</TD>
-                  </TR>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('التاريخ', 'Date')}</div>
+            <div className="text-sm font-semibold text-content dark:text-content-dark">{inv.date}</div>
           </div>
-
-          {/* Totals */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-            <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
-              <span style={{ color: ds.muted }}>{L('المبلغ الفرعي', 'Subtotal')}</span>
-              <span style={{ fontWeight: 600, color: ds.text }}>{fmtMoney(inv.subtotal)}</span>
-            </div>
-            {inv.tax > 0 && (
-              <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
-                <span style={{ color: ds.muted }}>{L('الضريبة', 'Tax')}</span>
-                <span style={{ fontWeight: 600, color: ds.text }}>{fmtMoney(inv.tax)}</span>
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: 24, fontSize: 15, borderTop: `2px solid ${ds.border}`, paddingTop: 8, marginTop: 4 }}>
-              <span style={{ fontWeight: 700, color: ds.text }}>{L('الإجمالي', 'Total')}</span>
-              <span style={{ fontWeight: 800, color: ds.accent }}>{fmtMoney(inv.total)}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 24, fontSize: 13 }}>
-              <span style={{ color: ds.muted }}>{L('المدفوع', 'Paid')}</span>
-              <span style={{ fontWeight: 600, color: '#2B4C6F' }}>{fmtMoney(inv.paid)}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 24, fontSize: 14 }}>
-              <span style={{ fontWeight: 600, color: inv.total - inv.paid > 0 ? '#EF4444' : '#2B4C6F' }}>
-                {L('المتبقي', 'Balance')}: {fmtMoney(inv.total - inv.paid)}
-              </span>
-            </div>
+          <div>
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('الاستحقاق', 'Due')}</div>
+            <div className={`text-sm font-semibold ${inv.status === 'overdue' ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>{inv.due_date}</div>
           </div>
-
-          {/* Actions */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 16, justifyContent: 'flex-end' }}>
-            {inv.status === 'sent' && (
-              <button onClick={() => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'paid', paid: i.total } : i)); setViewInvoice(null); }}
-                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#2B4C6F', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                {L('تسجيل دفع كامل', 'Record Full Payment')}
-              </button>
-            )}
-            {inv.status === 'overdue' && (
-              <button onClick={() => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'paid', paid: i.total } : i)); setViewInvoice(null); }}
-                style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#EF4444', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                {L('تسجيل دفع كامل', 'Record Full Payment')}
-              </button>
-            )}
+          <div className="col-span-full">
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-0.5">{L('الطرف', 'Counterparty')}</div>
+            <div className="text-[15px] font-bold text-content dark:text-content-dark">{L(inv.counterparty_ar, inv.counterparty_en)}</div>
           </div>
         </div>
-      </Overlay>
+
+        {/* Items table */}
+        <div className="border border-edge dark:border-edge-dark rounded-[10px] overflow-hidden mb-4">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
+                <Th>{L('البند', 'Item')}</Th>
+                <Th>{L('الكمية', 'Qty')}</Th>
+                <Th>{L('السعر', 'Price')}</Th>
+                <Th>{L('الضريبة', 'Tax')}</Th>
+                <Th>{L('الإجمالي', 'Total')}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {inv.items.map((item, i) => (
+                <Tr key={i}>
+                  <Td>{L(item.desc_ar, item.desc_en)}</Td>
+                  <Td>{item.qty}</Td>
+                  <Td>{fmtMoney(item.price)}</Td>
+                  <Td className="text-content-muted dark:text-content-muted-dark">{item.tax_rate ? (item.tax_rate * 100) + '%' : '—'}</Td>
+                  <Td className="font-bold">{fmtMoney(item.qty * item.price * (1 + item.tax_rate))}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Totals */}
+        <div className="flex flex-col gap-1.5 items-end">
+          <div className="flex gap-6 text-[13px]">
+            <span className="text-content-muted dark:text-content-muted-dark">{L('المبلغ الفرعي', 'Subtotal')}</span>
+            <span className="font-semibold text-content dark:text-content-dark">{fmtMoney(inv.subtotal)}</span>
+          </div>
+          {inv.tax > 0 && (
+            <div className="flex gap-6 text-[13px]">
+              <span className="text-content-muted dark:text-content-muted-dark">{L('الضريبة', 'Tax')}</span>
+              <span className="font-semibold text-content dark:text-content-dark">{fmtMoney(inv.tax)}</span>
+            </div>
+          )}
+          <div className="flex gap-6 text-[15px] border-t-2 border-edge dark:border-edge-dark pt-2 mt-1">
+            <span className="font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</span>
+            <span className="font-extrabold text-brand-500">{fmtMoney(inv.total)}</span>
+          </div>
+          <div className="flex gap-6 text-[13px]">
+            <span className="text-content-muted dark:text-content-muted-dark">{L('المدفوع', 'Paid')}</span>
+            <span className="font-semibold text-brand-800">{fmtMoney(inv.paid)}</span>
+          </div>
+          <div className="flex gap-6 text-sm">
+            <span className={`font-semibold ${inv.total - inv.paid > 0 ? 'text-red-500' : 'text-brand-800'}`}>
+              {L('المتبقي', 'Balance')}: {fmtMoney(inv.total - inv.paid)}
+            </span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <ModalFooter className="justify-end">
+          {inv.status === 'sent' && (
+            <Button variant="primary" size="sm" onClick={() => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'paid', paid: i.total } : i)); setViewInvoice(null); }}>
+              {L('تسجيل دفع كامل', 'Record Full Payment')}
+            </Button>
+          )}
+          {inv.status === 'overdue' && (
+            <Button variant="danger" size="sm" onClick={() => { setInvoices(prev => prev.map(i => i.id === inv.id ? { ...i, status: 'paid', paid: i.total } : i)); setViewInvoice(null); }}>
+              {L('تسجيل دفع كامل', 'Record Full Payment')}
+            </Button>
+          )}
+        </ModalFooter>
+      </Modal>
     );
   };
-
-  /* ═══════════════════════════════════════════════════════════════════════
-     ADD JOURNAL ENTRY MODAL
-     ═══════════════════════════════════════════════════════════════════════ */
-
-
-  /* ═══════════════════════════════════════════════════════════════════════
-     ADD EXPENSE MODAL
-     ═══════════════════════════════════════════════════════════════════════ */
-
 
   /* ═══════════════════════════════════════════════════════════════════════
      MAIN RENDER
      ═══════════════════════════════════════════════════════════════════════ */
 
   return (
-    <div style={{ padding: 24, background: ds.bg, minHeight: '100vh', direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="flex justify-between items-center mb-5">
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: ds.text, margin: 0 }}>{L('المالية', 'Finance')}</h1>
-          <p style={{ fontSize: 12, color: ds.muted, margin: '4px 0 0' }}>{L('النظام المحاسبي الشامل', 'Comprehensive Accounting System')}</p>
+          <h1 className="text-xl font-extrabold text-content dark:text-content-dark m-0">{L('المالية', 'Finance')}</h1>
+          <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{L('النظام المحاسبي الشامل', 'Comprehensive Accounting System')}</p>
         </div>
-        <button
-          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, border: `1px solid ${ds.border}`, background: ds.card, color: ds.muted, fontSize: 12, cursor: 'pointer' }}>
+        <Button variant="secondary" size="sm">
           <Download size={14} />
           {L('تصدير التقرير', 'Export Report')}
-        </button>
+        </Button>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 20, background: ds.card, borderRadius: 10, padding: 4, border: `1px solid ${ds.border}`, width: 'fit-content', overflowX: 'auto' }}>
+      <div className="flex gap-1 mb-5 bg-surface-card dark:bg-surface-card-dark rounded-[10px] p-1 border border-edge dark:border-edge-dark w-fit overflow-x-auto">
         {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
-            display: 'flex', alignItems: 'center', gap: 7, padding: '7px 16px', borderRadius: 7,
-            border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500, transition: 'all 0.15s',
-            background: activeTab === tab.id ? ds.accent : 'transparent',
-            color: activeTab === tab.id ? '#fff' : ds.muted, whiteSpace: 'nowrap',
-          }}>
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-[7px] px-4 py-[7px] rounded-[7px] border-none cursor-pointer text-[13px] font-medium transition-all duration-150 whitespace-nowrap
+              ${activeTab === tab.id
+                ? 'bg-brand-500 text-white'
+                : 'bg-transparent text-content-muted dark:text-content-muted-dark'
+              }`}
+          >
             <tab.Icon size={14} />
             {L(tab.ar, tab.en)}
           </button>
@@ -1720,15 +1648,8 @@ export default function FinancePage() {
       {/* Modals */}
       {renderJournalModal()}
       {renderInvoiceModal()}
-      {showJournalModal && <AddJournalModal ds={ds} L={L} onClose={() => setShowJournalModal(false)} onSave={(entry) => { setJournalEntries(prev => [entry, ...prev]); setShowJournalModal(false); }} entryCount={journalEntries.length} />}
-      {showExpenseModal && <AddExpenseModal ds={ds} L={L} onClose={() => setShowExpenseModal(false)} onSave={(exp) => { setExpenses(prev => [exp, ...prev]); setShowExpenseModal(false); }} expCount={expenses.length} />}
-
-      {/* Responsive grid fix */}
-      <style>{`
-        @media (max-width: 900px) {
-          .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
-        }
-      `}</style>
+      {showJournalModal && <AddJournalModal L={L} onClose={() => setShowJournalModal(false)} onSave={(entry) => { setJournalEntries(prev => [entry, ...prev]); setShowJournalModal(false); }} entryCount={journalEntries.length} />}
+      {showExpenseModal && <AddExpenseModal L={L} onClose={() => setShowExpenseModal(false)} onSave={(exp) => { setExpenses(prev => [exp, ...prev]); setShowExpenseModal(false); }} expCount={expenses.length} />}
     </div>
   );
 }

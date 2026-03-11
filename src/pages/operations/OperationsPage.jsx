@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { useDS } from '../../hooks/useDesignSystem';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart2, FileCheck, Banknote, KeyRound, Headphones,
@@ -16,6 +15,14 @@ import {
   MOCK_OPS_ACTIVITY, fmtMoney, fmtMoneyShort, daysSince, daysUntil,
 } from '../../data/operations_mock_data';
 import { getWonDeals } from '../../services/dealsService';
+import { useTheme } from '../../contexts/ThemeContext';
+import KpiCard from '../../components/ui/KpiCard';
+import Button from '../../components/ui/Button';
+import Card, { CardHeader, CardBody } from '../../components/ui/Card';
+import Input, { Select } from '../../components/ui/Input';
+import Badge from '../../components/ui/Badge';
+import Modal, { ModalFooter } from '../../components/ui/Modal';
+import { Table, Th, Td, Tr } from '../../components/ui/Table';
 
 // ── Tabs ────────────────────────────────────────────────────────────────
 const TABS = [
@@ -44,17 +51,25 @@ const initials = (n) => (n || '').trim().split(' ').map(w => w[0]).slice(0, 2).j
 const ACOLORS = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8'];
 
 
-function HandoverCard({ ho, c, isRTL, isDark }) {
+function HandoverCard({ ho, isRTL, isDark }) {
   const [cardHov, setCardHov] = useState(false);
   const hCfg = HANDOVER_STATUS_CONFIG[ho.status] || {};
   const dLeft = daysUntil(ho.expected_handover);
   return (
-    <div onMouseEnter={() => setCardHov(true)} onMouseLeave={() => setCardHov(false)}
-      style={{ background: c.card, borderRadius: 14, border: `1px solid ${cardHov ? hCfg.color + '60' : c.border}`, padding: 20, transition: 'all 0.2s', transform: cardHov ? 'translateY(-2px)' : 'none', boxShadow: cardHov ? '0 8px 24px rgba(0,0,0,0.08)' : 'none' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-          <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: c.text }}>{isRTL ? ho.client_ar : ho.client_en}</h4>
-          <p style={{ margin: '2px 0 0', fontSize: 12, color: c.muted }}>{ho.deal_number} — {ho.unit_code}</p>
+    <div
+      onMouseEnter={() => setCardHov(true)}
+      onMouseLeave={() => setCardHov(false)}
+      className="rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark p-5 transition-all duration-200"
+      style={{
+        borderColor: cardHov ? `${hCfg.color}60` : undefined,
+        transform: cardHov ? 'translateY(-2px)' : 'none',
+        boxShadow: cardHov ? '0 8px 24px rgba(0,0,0,0.08)' : 'none',
+      }}
+    >
+      <div className={`flex justify-between items-start mb-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h4 className="m-0 text-[15px] font-bold text-content dark:text-content-dark">{isRTL ? ho.client_ar : ho.client_en}</h4>
+          <p className="m-0 mt-0.5 text-xs text-content-muted dark:text-content-muted-dark">{ho.deal_number} — {ho.unit_code}</p>
         </div>
         <StatusBadgeStatic status={ho.status} config={HANDOVER_STATUS_CONFIG} isRTL={isRTL} />
       </div>
@@ -64,29 +79,37 @@ function HandoverCard({ ho, c, isRTL, isDark }) {
         [isRTL ? 'تاريخ الحجز' : 'Reserved', ho.reserved_date],
         [isRTL ? 'التسليم المتوقع' : 'Expected', ho.expected_handover],
       ].map(([label, val], i) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <span style={{ color: c.muted }}>{label}</span>
-          <span style={{ fontWeight: 600, color: c.text }}>{val}</span>
+        <div key={i} className={`flex justify-between py-1.5 text-xs ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <span className="text-content-muted dark:text-content-muted-dark">{label}</span>
+          <span className="font-semibold text-content dark:text-content-dark">{val}</span>
         </div>
       ))}
       {dLeft !== null && ho.status !== 'handed_over' && (
-        <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 8, background: dLeft < 0 ? 'rgba(239,68,68,0.08)' : dLeft < 30 ? 'rgba(249,115,22,0.08)' : 'rgba(74,122,171,0.08)', textAlign: 'center' }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: dLeft < 0 ? '#EF4444' : dLeft < 30 ? '#F97316' : '#4A7AAB' }}>
+        <div
+          className="mt-2.5 px-3 py-2 rounded-lg text-center"
+          style={{
+            background: dLeft < 0 ? 'rgba(239,68,68,0.08)' : dLeft < 30 ? 'rgba(249,115,22,0.08)' : 'rgba(74,122,171,0.08)',
+          }}
+        >
+          <span
+            className="text-xs font-bold"
+            style={{ color: dLeft < 0 ? '#EF4444' : dLeft < 30 ? '#F97316' : '#4A7AAB' }}
+          >
             {dLeft < 0 ? (isRTL ? `متأخر ${Math.abs(dLeft)} يوم` : `${Math.abs(dLeft)}d overdue`) : (isRTL ? `متبقي ${dLeft} يوم` : `${dLeft} days left`)}
           </span>
         </div>
       )}
       {ho.dev_phone && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <a href={`tel:${ho.dev_phone}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px', borderRadius: 8, background: c.accent + '15', color: c.accent, fontSize: 12, fontWeight: 600, textDecoration: 'none', transition: 'background 0.2s' }}>
+        <div className="flex gap-2 mt-3">
+          <a href={`tel:${ho.dev_phone}`} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-brand-500/[0.15] text-brand-500 text-xs font-semibold no-underline transition-colors duration-200 hover:bg-brand-500/25">
             <Phone size={14} /> {isRTL ? 'اتصل بالمطور' : 'Call Developer'}
           </a>
-          <a href={`https://wa.me/2${ho.dev_phone}`} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px', borderRadius: 8, background: '#25D36615', color: '#25D366', fontSize: 12, fontWeight: 600, textDecoration: 'none', transition: 'background 0.2s' }}>
+          <a href={`https://wa.me/2${ho.dev_phone}`} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold no-underline transition-colors duration-200" style={{ background: '#25D36615', color: '#25D366' }}>
             <MessageSquare size={14} /> {isRTL ? 'واتساب' : 'WhatsApp'}
           </a>
         </div>
       )}
-      {ho.notes_ar && <p style={{ margin: '10px 0 0', fontSize: 11, color: c.muted, textAlign: isRTL ? 'right' : 'left' }}>{ho.notes_ar}</p>}
+      {ho.notes_ar && <p className={`m-0 mt-2.5 text-[11px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>{ho.notes_ar}</p>}
     </div>
   );
 }
@@ -95,7 +118,10 @@ function StatusBadgeStatic({ status, config, isRTL }) {
   const cfg = config[status];
   if (!cfg) return null;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, color: cfg.color, background: cfg.color + '18', border: `1px solid ${cfg.color}35`, whiteSpace: 'nowrap' }}>
+    <span
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+      style={{ color: cfg.color, background: cfg.color + '18', border: `1px solid ${cfg.color}35` }}
+    >
       {isRTL ? cfg.ar : cfg.en}
     </span>
   );
@@ -103,10 +129,9 @@ function StatusBadgeStatic({ status, config, isRTL }) {
 
 export default function OperationsPage() {
   const { i18n } = useTranslation();
-  const ds = useDS();
+  const { theme } = useTheme();
   const isRTL = i18n.language === 'ar';
-  const lang  = i18n.language;
-  const isDark = ds.dark;
+  const isDark = theme === 'dark';
 
   const [activeTab, setActiveTab] = useState('overview');
   const [dealFilter, setDealFilter] = useState('all');
@@ -126,8 +151,6 @@ export default function OperationsPage() {
   });
   const [tickets, setTickets] = useState(MOCK_TICKETS);
   const [installments, setInstallments] = useState(MOCK_INSTALLMENTS);
-
-  const c = ds;
 
   // ── Derived KPIs ────────────────────────────────────────────────────
   const activeDeals      = deals.filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
@@ -224,31 +247,14 @@ export default function OperationsPage() {
   }, [ticketFilter, tickets]);
 
   // ── Shared Components ───────────────────────────────────────────────
-  function KpiCard({ icon: Icon, label, value, sub, color = '#4A7AAB' }) {
-    const [hov, setHov] = useState(false);
-    return (
-      <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-        style={{ background: c.card, borderRadius: 14, border: `1px solid ${hov ? color + '60' : c.border}`, padding: '18px 20px', position: 'relative', overflow: 'hidden', transform: hov ? 'translateY(-2px)' : 'none', boxShadow: hov ? `0 8px 24px ${color}22` : '0 1px 3px rgba(0,0,0,0.06)', transition: 'all 0.2s ease' }}>
-        <div style={{ position: 'absolute', top: 0, right: 0, width: 4, height: '100%', background: `linear-gradient(180deg, ${color}, transparent)`, borderRadius: '14px 0 0 14px', opacity: hov ? 1 : 0.6, transition: 'opacity 0.2s' }} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <p style={{ margin: '0 0 6px', fontSize: 12, color: c.muted, fontWeight: 500 }}>{label}</p>
-            <p style={{ margin: 0, fontSize: 26, fontWeight: 800, color: c.text, lineHeight: 1 }}>{value}</p>
-            {sub && <p style={{ margin: '3px 0 0', fontSize: 11, color: c.muted }}>{sub}</p>}
-          </div>
-          <div style={{ width: 42, height: 42, borderRadius: 11, background: color + (hov ? '25' : '15'), display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }}>
-            <Icon size={20} color={color} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   function StatusBadge({ status, config }) {
     const cfg = config[status];
     if (!cfg) return null;
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600, color: cfg.color, background: cfg.color + '18', border: `1px solid ${cfg.color}35`, whiteSpace: 'nowrap' }}>
+      <span
+        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
+        style={{ color: cfg.color, background: cfg.color + '18', border: `1px solid ${cfg.color}35` }}
+      >
         {isRTL ? cfg.ar : cfg.en}
       </span>
     );
@@ -256,12 +262,29 @@ export default function OperationsPage() {
 
   function FilterPills({ items, active, onChange }) {
     return (
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        <button onClick={() => onChange('all')} style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${active === 'all' ? c.accent : c.border}`, background: active === 'all' ? c.accent + '15' : 'transparent', color: active === 'all' ? c.accent : c.muted, fontSize: 12, fontWeight: active === 'all' ? 600 : 400, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' }}>
+      <div className="flex gap-1.5 flex-wrap">
+        <button
+          onClick={() => onChange('all')}
+          className={`px-3 py-1 rounded-md border text-xs cursor-pointer transition-all duration-150 font-cairo ${
+            active === 'all'
+              ? 'border-brand-500/60 bg-brand-500/[0.15] text-brand-500 font-semibold'
+              : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'
+          }`}
+        >
           {isRTL ? 'الكل' : 'All'}
         </button>
         {items.map(([key, cfg]) => (
-          <button key={key} onClick={() => onChange(key)} style={{ padding: '5px 12px', borderRadius: 6, border: `1px solid ${active === key ? cfg.color + '60' : c.border}`, background: active === key ? cfg.color + '15' : 'transparent', color: active === key ? cfg.color : c.muted, fontSize: 12, fontWeight: active === key ? 600 : 400, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' }}>
+          <button
+            key={key}
+            onClick={() => onChange(key)}
+            className="px-3 py-1 rounded-md border text-xs cursor-pointer transition-all duration-150 font-cairo"
+            style={{
+              borderColor: active === key ? cfg.color + '60' : undefined,
+              background: active === key ? cfg.color + '15' : 'transparent',
+              color: active === key ? cfg.color : undefined,
+              fontWeight: active === key ? 600 : 400,
+            }}
+          >
             {isRTL ? cfg.ar : cfg.en}
           </button>
         ))}
@@ -270,17 +293,24 @@ export default function OperationsPage() {
   }
 
   function AddBtn({ label, onClick }) {
-    const [hov, setHov] = useState(false);
-    return <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 10, background: hov ? '#2B4C6F' : '#1B3347', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700, transform: hov ? 'translateY(-1px)' : 'none', boxShadow: hov ? '0 6px 16px rgba(27,51,71,0.35)' : '0 2px 6px rgba(27,51,71,0.2)', transition: 'all 0.2s ease', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>{label}</button>;
+    return (
+      <Button variant="primary" size="md" onClick={onClick} className="whitespace-nowrap">
+        {label}
+      </Button>
+    );
   }
 
   function SearchBar({ placeholder }) {
     return (
-      <div style={{ position: 'relative', flex: '0 1 280px' }}>
-        <Search size={16} style={{ position: 'absolute', [isRTL ? 'right' : 'left']: 12, top: '50%', transform: 'translateY(-50%)', color: c.muted }} />
-        <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder={placeholder}
-          style={{ width: '100%', padding: `8px 12px 8px ${isRTL ? '12px' : '36px'}`, paddingRight: isRTL ? 36 : 12, borderRadius: 10, border: `1px solid ${c.border}`, background: c.input, color: c.text, fontSize: 13, fontFamily: 'inherit', direction: isRTL ? 'rtl' : 'ltr', outline: 'none', transition: 'border-color 0.2s' }}
-          onFocus={e => e.target.style.borderColor = c.accent} onBlur={e => e.target.style.borderColor = c.border} />
+      <div className="relative flex-[0_1_280px]">
+        <Search size={16} className={`absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark ${isRTL ? 'right-3' : 'left-3'}`} />
+        <Input
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          placeholder={placeholder}
+          size="md"
+          className={isRTL ? 'pr-9 pl-3' : 'pl-9 pr-3'}
+        />
       </div>
     );
   }
@@ -293,19 +323,22 @@ export default function OperationsPage() {
     const totalDocs = DOCUMENT_CHECKLIST.filter(d => d.required).length;
     const doneDocs = DOCUMENT_CHECKLIST.filter(d => d.required && deal.documents[d.key]).length;
     return (
-      <div style={{ position: 'fixed', top: 0, [isRTL ? 'left' : 'right']: 0, bottom: 0, width: '100%', maxWidth: 520, background: c.card, zIndex: 200, boxShadow: '-8px 0 40px rgba(0,0,0,0.2)', overflowY: 'auto', direction: isRTL ? 'rtl' : 'ltr' }}>
-        <div style={{ position: 'sticky', top: 0, background: c.card, zIndex: 1, padding: '20px 24px', borderBottom: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        className={`fixed top-0 bottom-0 w-full max-w-[520px] bg-surface-card dark:bg-surface-card-dark z-[200] shadow-[-8px_0_40px_rgba(0,0,0,0.2)] overflow-y-auto ${isRTL ? 'left-0' : 'right-0'}`}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        <div className="sticky top-0 bg-surface-card dark:bg-surface-card-dark z-[1] px-6 py-5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: c.text }}>{deal.deal_number}</h2>
-            <p style={{ margin: '2px 0 0', fontSize: 12, color: c.muted }}>{isRTL ? deal.client_ar : deal.client_en}</p>
+            <h2 className="m-0 text-lg font-extrabold text-content dark:text-content-dark">{deal.deal_number}</h2>
+            <p className="m-0 mt-0.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? deal.client_ar : deal.client_en}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.muted, padding: 4 }}><X size={20} /></button>
+          <button onClick={onClose} className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1"><X size={20} /></button>
         </div>
-        <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="p-6 flex flex-col gap-5">
           {/* Status */}
-          <div style={{ background: sCfg.bg, borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: sCfg.color }} />
-            <span style={{ fontSize: 14, fontWeight: 700, color: sCfg.color }}>{isRTL ? sCfg.ar : sCfg.en}</span>
+          <div className="rounded-xl px-4 py-3.5 flex items-center gap-2.5" style={{ background: sCfg.bg }}>
+            <div className="w-2 h-2 rounded-full" style={{ background: sCfg.color }} />
+            <span className="text-sm font-bold" style={{ color: sCfg.color }}>{isRTL ? sCfg.ar : sCfg.en}</span>
           </div>
           {/* Info grid */}
           {[
@@ -318,24 +351,35 @@ export default function OperationsPage() {
             [isRTL ? 'عدد الأقساط' : 'Installments', deal.installments_count],
             [isRTL ? 'قيمة القسط' : 'Per Installment', fmtMoney(Math.round((deal.deal_value - deal.down_payment) / deal.installments_count))],
           ].map(([label, val], i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${c.border}` }}>
-              <span style={{ fontSize: 13, color: c.muted }}>{label}</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{val}</span>
+            <div key={i} className="flex justify-between py-2 border-b border-edge dark:border-edge-dark">
+              <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{label}</span>
+              <span className="text-[13px] font-semibold text-content dark:text-content-dark">{val}</span>
             </div>
           ))}
           {/* Documents checklist */}
           <div>
-            <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: c.text }}>{isRTL ? `المستندات (${doneDocs}/${totalDocs})` : `Documents (${doneDocs}/${totalDocs})`}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <h3 className="m-0 mb-3 text-sm font-bold text-content dark:text-content-dark">{isRTL ? `المستندات (${doneDocs}/${totalDocs})` : `Documents (${doneDocs}/${totalDocs})`}</h3>
+            <div className="flex flex-col gap-2">
               {DOCUMENT_CHECKLIST.map(doc => {
                 const done = deal.documents[doc.key];
                 return (
-                  <div key={doc.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, background: done ? (isDark ? 'rgba(74,122,171,0.1)' : '#F0F7FF') : (isDark ? 'rgba(239,68,68,0.05)' : '#FFF5F5'), border: `1px solid ${done ? c.accent + '30' : '#EF444430'}` }}>
-                    <div style={{ width: 20, height: 20, borderRadius: 6, background: done ? '#4A7AAB' : 'transparent', border: done ? 'none' : `2px solid ${c.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div
+                    key={doc.key}
+                    className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border ${
+                      done
+                        ? 'bg-brand-500/10 dark:bg-brand-500/10 border-brand-500/30'
+                        : 'bg-red-500/[0.05] dark:bg-red-500/[0.05] border-red-500/[0.19]'
+                    }`}
+                  >
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${
+                      done ? 'bg-brand-500' : 'bg-transparent border-2 border-edge dark:border-edge-dark'
+                    }`}>
                       {done && <CheckCircle size={14} color="#fff" />}
                     </div>
-                    <span style={{ fontSize: 13, color: done ? c.text : c.muted, flex: 1 }}>{isRTL ? doc.ar : doc.en}</span>
-                    {doc.required && !done && <span style={{ fontSize: 10, color: '#EF4444', fontWeight: 600 }}>{isRTL ? 'مطلوب' : 'Required'}</span>}
+                    <span className={`text-[13px] flex-1 ${done ? 'text-content dark:text-content-dark' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                      {isRTL ? doc.ar : doc.en}
+                    </span>
+                    {doc.required && !done && <span className="text-[10px] text-red-500 font-semibold">{isRTL ? 'مطلوب' : 'Required'}</span>}
                   </div>
                 );
               })}
@@ -344,17 +388,17 @@ export default function OperationsPage() {
           {/* Installments in drawer */}
           {dealInstallments.length > 0 && (
             <div>
-              <h3 style={{ margin: '0 0 12px', fontSize: 14, fontWeight: 700, color: c.text }}>{isRTL ? 'الأقساط' : 'Installments'}</h3>
+              <h3 className="m-0 mb-3 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'الأقساط' : 'Installments'}</h3>
               {dealInstallments.map(inst => {
                 const pCfg = PAYMENT_STATUS_CONFIG[inst.status] || {};
                 return (
-                  <div key={inst.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: 8, marginBottom: 6, background: isDark ? 'rgba(74,122,171,0.05)' : '#F8FAFC', border: `1px solid ${c.border}` }}>
+                  <div key={inst.id} className="flex justify-between items-center px-3 py-2.5 rounded-lg mb-1.5 bg-[#F8FAFC] dark:bg-brand-500/[0.05] border border-edge dark:border-edge-dark">
                     <div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{isRTL ? `قسط ${inst.num}` : `Inst. ${inst.num}`}</span>
-                      <span style={{ fontSize: 12, color: c.muted, marginRight: isRTL ? 0 : 8, marginLeft: isRTL ? 8 : 0 }}> — {inst.due_date}</span>
+                      <span className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? `قسط ${inst.num}` : `Inst. ${inst.num}`}</span>
+                      <span className={`text-xs text-content-muted dark:text-content-muted-dark ${isRTL ? 'ml-2' : 'mr-2'}`}> — {inst.due_date}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{fmtMoneyShort(inst.amount)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</span>
                       <StatusBadge status={inst.status} config={PAYMENT_STATUS_CONFIG} />
                     </div>
                   </div>
@@ -364,27 +408,29 @@ export default function OperationsPage() {
           )}
           {/* Action buttons */}
           {deal.status !== 'completed' && deal.status !== 'cancelled' && (
-            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-              <button onClick={() => advanceDeal(deal.id)}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', borderRadius: 10, border: 'none', background: '#1B3347', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s', boxShadow: '0 2px 6px rgba(27,51,71,0.2)' }}>
+            <div className="flex gap-2.5 mt-2">
+              <Button variant="primary" size="md" onClick={() => advanceDeal(deal.id)} className="flex-1 justify-center">
                 <ArrowRight size={16} /> {isRTL ? 'نقل للمرحلة التالية' : 'Advance Status'}
-              </button>
-              <button onClick={() => { if (window.confirm(isRTL ? 'هل أنت متأكد من إلغاء الصفقة؟' : 'Cancel this deal?')) cancelDeal(deal.id); }}
-                style={{ padding: '12px 20px', borderRadius: 10, border: `1px solid #EF4444`, background: 'rgba(239,68,68,0.08)', color: '#EF4444', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}>
+              </Button>
+              <Button
+                variant="danger"
+                size="md"
+                onClick={() => { if (window.confirm(isRTL ? 'هل أنت متأكد من إلغاء الصفقة؟' : 'Cancel this deal?')) cancelDeal(deal.id); }}
+              >
                 {isRTL ? 'إلغاء' : 'Cancel'}
-              </button>
+              </Button>
             </div>
           )}
           {deal.status === 'completed' && (
-            <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(74,122,171,0.08)', textAlign: 'center' }}>
-              <CheckCircle size={20} color="#4A7AAB" style={{ marginBottom: 4 }} />
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#4A7AAB' }}>{isRTL ? 'الصفقة مكتملة' : 'Deal Completed'}</p>
+            <div className="px-4 py-3.5 rounded-[10px] bg-brand-500/[0.08] text-center">
+              <CheckCircle size={20} color="#4A7AAB" className="mb-1" />
+              <p className="m-0 text-[13px] font-bold text-brand-500">{isRTL ? 'الصفقة مكتملة' : 'Deal Completed'}</p>
             </div>
           )}
           {deal.status === 'cancelled' && (
-            <div style={{ padding: '14px 16px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', textAlign: 'center' }}>
-              <X size={20} color="#EF4444" style={{ marginBottom: 4 }} />
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#EF4444' }}>{isRTL ? 'الصفقة ملغية' : 'Deal Cancelled'}</p>
+            <div className="px-4 py-3.5 rounded-[10px] bg-red-500/[0.08] text-center">
+              <X size={20} color="#EF4444" className="mb-1" />
+              <p className="m-0 text-[13px] font-bold text-red-500">{isRTL ? 'الصفقة ملغية' : 'Deal Cancelled'}</p>
             </div>
           )}
         </div>
@@ -402,54 +448,54 @@ export default function OperationsPage() {
     return (
       <>
         {/* KPIs */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+        <div className="grid grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={FileCheck} label={isRTL ? 'صفقات نشطة' : 'Active Deals'} value={activeDeals} sub={isRTL ? `${newDeals} جديدة` : `${newDeals} new`} color="#4A7AAB" />
           <KpiCard icon={AlertTriangle} label={isRTL ? 'أقساط متأخرة' : 'Overdue Payments'} value={overduePayments.length} sub={fmtMoney(overdueSum)} color="#EF4444" />
           <KpiCard icon={KeyRound} label={isRTL ? 'تسليمات قريبة' : 'Upcoming Handovers'} value={handoverThisMonth} color="#2B4C6F" />
           <KpiCard icon={Headphones} label={isRTL ? 'تذاكر مفتوحة' : 'Open Tickets'} value={openTickets} sub={isRTL ? `${complaints} شكوى` : `${complaints} complaints`} color="#F97316" />
         </div>
         {/* Pipeline bar */}
-        <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, padding: 20, marginBottom: 24 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: c.text, textAlign: isRTL ? 'right' : 'left' }}>{isRTL ? 'خط سير الصفقات' : 'Deal Pipeline'}</h3>
-          <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', height: 28 }}>
+        <Card className="p-5 mb-6">
+          <h3 className={`m-0 mb-4 text-sm font-bold text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? 'خط سير الصفقات' : 'Deal Pipeline'}</h3>
+          <div className="flex rounded-lg overflow-hidden h-7">
             {pipelineCounts.filter(p => p.count > 0).map(p => (
-              <div key={p.key} title={`${p.label}: ${p.count}`} style={{ flex: p.count, background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'flex 0.3s', minWidth: p.count > 0 ? 32 : 0 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#fff' }}>{p.count}</span>
+              <div key={p.key} title={`${p.label}: ${p.count}`} className="flex items-center justify-center transition-all duration-300" style={{ flex: p.count, background: p.color, minWidth: p.count > 0 ? 32 : 0 }}>
+                <span className="text-[11px] font-bold text-white">{p.count}</span>
               </div>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 12 }}>
+          <div className="flex gap-4 flex-wrap mt-3">
             {pipelineCounts.filter(p => p.count > 0).map(p => (
-              <div key={p.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color }} />
-                <span style={{ fontSize: 11, color: c.muted }}>{p.label} ({p.count})</span>
+              <div key={p.key} className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
+                <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{p.label} ({p.count})</span>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
         {/* Activity timeline */}
-        <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, padding: 20 }}>
-          <h3 style={{ margin: '0 0 16px', fontSize: 14, fontWeight: 700, color: c.text, textAlign: isRTL ? 'right' : 'left' }}>{isRTL ? 'آخر الأنشطة' : 'Recent Activity'}</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+        <Card className="p-5">
+          <h3 className={`m-0 mb-4 text-sm font-bold text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? 'آخر الأنشطة' : 'Recent Activity'}</h3>
+          <div className="flex flex-col">
             {sortedActivity.map((act, idx) => {
               const actCfg = ACT_TYPE[act.type] || { icon: Clock, color: '#8BA8C8' };
               const ActIcon = actCfg.icon;
               const time = new Date(act.timestamp);
               const timeStr = `${time.getDate()}/${time.getMonth() + 1} ${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
               return (
-                <div key={act.id} style={{ display: 'flex', gap: 14, padding: '12px 0', borderBottom: idx < sortedActivity.length - 1 ? `1px solid ${c.border}` : 'none', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 10, background: actCfg.color + '18', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div key={act.id} className={`flex gap-3.5 py-3 ${idx < sortedActivity.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: actCfg.color + '18' }}>
                     <ActIcon size={16} color={actCfg.color} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0, textAlign: isRTL ? 'right' : 'left' }}>
-                    <p style={{ margin: 0, fontSize: 13, color: c.text, lineHeight: 1.5 }}>{isRTL ? act.description_ar : act.description_en}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: 11, color: c.muted }}>{isRTL ? act.user_ar : act.user_en} — {timeStr}</p>
+                  <div className={`flex-1 min-w-0 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    <p className="m-0 text-[13px] text-content dark:text-content-dark leading-normal">{isRTL ? act.description_ar : act.description_en}</p>
+                    <p className="m-0 mt-0.5 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? act.user_ar : act.user_en} — {timeStr}</p>
                   </div>
                 </div>
               );
             })}
           </div>
-        </div>
+        </Card>
       </>
     );
   }
@@ -458,28 +504,28 @@ export default function OperationsPage() {
   function renderDeals() {
     return (
       <>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+        <div className="grid grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={Plus} label={isRTL ? 'صفقات جديدة' : 'New Deals'} value={newDeals} color="#4A7AAB" />
           <KpiCard icon={Clock} label={isRTL ? 'قيد المراجعة' : 'Under Review'} value={underReview} color="#6B8DB5" />
           <KpiCard icon={FileText} label={isRTL ? 'بانتظار التوقيع' : 'Awaiting Signature'} value={awaitingSign} color="#2B4C6F" />
           <KpiCard icon={CheckCircle} label={isRTL ? 'مكتملة' : 'Completed'} value={completedDeals} color="#1B3347" />
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div className={`flex gap-3 items-center flex-wrap mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <FilterPills items={Object.entries(DEAL_STATUS_CONFIG)} active={dealFilter} onChange={setDealFilter} />
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           <SearchBar placeholder={isRTL ? 'بحث بالاسم أو رقم الصفقة...' : 'Search by name or deal #...'} />
           <AddBtn label={isRTL ? '+ صفقة جديدة' : '+ New Deal'} onClick={() => setShowDealModal(true)} />
         </div>
-        <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}` }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>{isRTL ? 'قائمة الصفقات' : 'Deals List'}</p>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, direction: isRTL ? 'rtl' : 'ltr' }}>
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'قائمة الصفقات' : 'Deals List'}</p>
+          </CardHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13px]" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead>
-                <tr style={{ background: c.thBg, borderBottom: `2px solid ${c.border}` }}>
+                <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'الوحدة':'Unit', isRTL?'القيمة':'Value', isRTL?'المستندات':'Docs', isRTL?'الحالة':'Status', isRTL?'':''].map((h, i) => (
-                    <th key={i} style={{ padding: '10px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -488,48 +534,51 @@ export default function OperationsPage() {
                   const reqDocs = DOCUMENT_CHECKLIST.filter(d => d.required);
                   const doneDocs = reqDocs.filter(d => deal.documents[d.key]).length;
                   return (
-                    <tr key={deal.id}
-                      onMouseEnter={() => setHoverRow(deal.id)} onMouseLeave={() => setHoverRow(null)}
+                    <tr
+                      key={deal.id}
+                      onMouseEnter={() => setHoverRow(deal.id)}
+                      onMouseLeave={() => setHoverRow(null)}
                       onClick={() => setSelectedDeal(deal)}
-                      style={{ background: hoverRow === deal.id ? c.rowHover : 'transparent', cursor: 'pointer', transition: 'background 0.15s' }}>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted, fontWeight: 600 }}>
+                      className="cursor-pointer transition-colors duration-150 hover:bg-[#F8FAFC] dark:hover:bg-brand-500/[0.07]"
+                    >
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-semibold">
                         {deal.deal_number}
-                        {deal.opportunity_id && <span style={{ marginInlineStart: 6, fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4, background: 'rgba(16,185,129,0.12)', color: '#10B981' }}>CRM</span>}
+                        {deal.opportunity_id && <span className="ms-1.5 text-[9px] font-bold px-1 py-0.5 rounded bg-emerald-500/[0.12] text-emerald-500">CRM</span>}
                       </td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                          <div style={{ width: 32, height: 32, borderRadius: '50%', background: ACOLORS[deal.id.charCodeAt(5) % ACOLORS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials(isRTL ? deal.client_ar : deal.client_en)}</div>
-                          <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                            <div style={{ fontWeight: 600, color: c.text }}>{isRTL ? deal.client_ar : deal.client_en}</div>
-                            <div style={{ fontSize: 11, color: c.muted }}>{isRTL ? deal.agent_ar : deal.agent_en}</div>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark">
+                        <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: ACOLORS[deal.id.charCodeAt(5) % ACOLORS.length] }}>{initials(isRTL ? deal.client_ar : deal.client_en)}</div>
+                          <div className={isRTL ? 'text-right' : 'text-left'}>
+                            <div className="font-semibold text-content dark:text-content-dark">{isRTL ? deal.client_ar : deal.client_en}</div>
+                            <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? deal.agent_ar : deal.agent_en}</div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.text }}>{isRTL ? deal.project_ar : deal.project_en}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted }}>{deal.unit_code}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, fontWeight: 700, color: c.text, whiteSpace: 'nowrap' }}>{fmtMoneyShort(deal.deal_value)}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: doneDocs === reqDocs.length ? '#4A7AAB' : '#EF4444' }}>{doneDocs}/{reqDocs.length}</span>
-                          <div style={{ width: 40, height: 4, borderRadius: 2, background: c.border }}>
-                            <div style={{ width: `${(doneDocs / reqDocs.length) * 100}%`, height: '100%', borderRadius: 2, background: doneDocs === reqDocs.length ? '#4A7AAB' : '#F97316', transition: 'width 0.3s' }} />
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content dark:text-content-dark">{isRTL ? deal.project_ar : deal.project_en}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark">{deal.unit_code}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark font-bold text-content dark:text-content-dark whitespace-nowrap">{fmtMoneyShort(deal.deal_value)}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark">
+                        <div className="flex items-center gap-1">
+                          <span className={`text-xs font-semibold ${doneDocs === reqDocs.length ? 'text-brand-500' : 'text-red-500'}`}>{doneDocs}/{reqDocs.length}</span>
+                          <div className="w-10 h-1 rounded-sm bg-edge dark:bg-edge-dark">
+                            <div className="h-full rounded-sm transition-all duration-300" style={{ width: `${(doneDocs / reqDocs.length) * 100}%`, background: doneDocs === reqDocs.length ? '#4A7AAB' : '#F97316' }} />
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}><StatusBadge status={deal.status} config={DEAL_STATUS_CONFIG} /></td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}>
-                        <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.accent, padding: 4 }}><Eye size={16} /></button>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark"><StatusBadge status={deal.status} config={DEAL_STATUS_CONFIG} /></td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark">
+                        <button className="bg-transparent border-none cursor-pointer text-brand-500 p-1"><Eye size={16} /></button>
                       </td>
                     </tr>
                   );
                 })}
                 {filteredDeals.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: c.muted }}>{isRTL ? 'لا توجد صفقات' : 'No deals found'}</td></tr>
+                  <tr><td colSpan={8} className="p-10 text-center text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد صفقات' : 'No deals found'}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       </>
     );
   }
@@ -538,28 +587,28 @@ export default function OperationsPage() {
   function renderPayments() {
     return (
       <>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+        <div className="grid grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المستحق' : 'Total Due'} value={fmtMoneyShort(totalDue)} color="#4A7AAB" />
           <KpiCard icon={AlertTriangle} label={isRTL ? 'متأخر السداد' : 'Overdue'} value={overduePayments.length} sub={fmtMoney(overdueSum)} color="#EF4444" />
           <KpiCard icon={TrendingUp} label={isRTL ? 'محصّل هذا الشهر' : 'Collected This Month'} value={fmtMoneyShort(paidSum)} color="#2B4C6F" />
           <KpiCard icon={PieChart} label={isRTL ? 'نسبة التحصيل' : 'Collection Rate'} value={`${collectionRate}%`} color="#1B3347" />
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div className={`flex gap-3 items-center flex-wrap mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <FilterPills items={Object.entries(PAYMENT_STATUS_CONFIG)} active={payFilter} onChange={setPayFilter} />
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           <SearchBar placeholder={isRTL ? 'بحث...' : 'Search...'} />
           <AddBtn label={isRTL ? '+ تسجيل دفعة' : '+ Record Payment'} onClick={() => setShowPaymentModal(true)} />
         </div>
-        <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}` }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>{isRTL ? 'جدول المدفوعات' : 'Payments Schedule'}</p>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, direction: isRTL ? 'rtl' : 'ltr' }}>
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'جدول المدفوعات' : 'Payments Schedule'}</p>
+          </CardHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13px]" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead>
-                <tr style={{ background: c.thBg, borderBottom: `2px solid ${c.border}` }}>
+                <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'الصفقة':'Deal', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'القسط':'Inst.', isRTL?'المبلغ':'Amount', isRTL?'تاريخ الاستحقاق':'Due Date', isRTL?'الحالة':'Status', isRTL?'إيصال':'Receipt'].map((h, i) => (
-                    <th key={i} style={{ padding: '10px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -568,23 +617,28 @@ export default function OperationsPage() {
                   const isOverdue = inst.status === 'overdue';
                   const overdueDays = isOverdue ? daysSince(inst.due_date) : 0;
                   return (
-                    <tr key={inst.id}
-                      onMouseEnter={() => setHoverRow(inst.id)} onMouseLeave={() => setHoverRow(null)}
-                      style={{ background: hoverRow === inst.id ? c.rowHover : (isOverdue ? (isDark ? 'rgba(239,68,68,0.05)' : '#FFF5F5') : 'transparent'), transition: 'background 0.15s' }}>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted, fontWeight: 600 }}>{inst.deal_number}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, fontWeight: 600, color: c.text }}>{isRTL ? inst.client_ar : inst.client_en}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted }}>{isRTL ? inst.project_ar : inst.project_en}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.text, textAlign: 'center' }}>{inst.num}/{inst.total}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, fontWeight: 700, color: c.text, whiteSpace: 'nowrap' }}>{fmtMoney(inst.amount)}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: isOverdue ? '#EF4444' : c.muted, whiteSpace: 'nowrap' }}>
+                    <tr
+                      key={inst.id}
+                      onMouseEnter={() => setHoverRow(inst.id)}
+                      onMouseLeave={() => setHoverRow(null)}
+                      className={`transition-colors duration-150 ${isOverdue ? 'bg-red-500/[0.05] dark:bg-red-500/[0.05]' : ''} hover:bg-[#F8FAFC] dark:hover:bg-brand-500/[0.07]`}
+                    >
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-semibold">{inst.deal_number}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark font-semibold text-content dark:text-content-dark">{isRTL ? inst.client_ar : inst.client_en}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark">{isRTL ? inst.project_ar : inst.project_en}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content dark:text-content-dark text-center">{inst.num}/{inst.total}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark font-bold text-content dark:text-content-dark whitespace-nowrap">{fmtMoney(inst.amount)}</td>
+                      <td className={`px-3.5 py-3 border-b border-edge dark:border-edge-dark whitespace-nowrap ${isOverdue ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
                         {inst.due_date}
-                        {isOverdue && <span style={{ fontSize: 10, fontWeight: 700, color: '#EF4444', display: 'block' }}>{isRTL ? `متأخر ${overdueDays} يوم` : `${overdueDays}d overdue`}</span>}
+                        {isOverdue && <span className="text-[10px] font-bold text-red-500 block">{isRTL ? `متأخر ${overdueDays} يوم` : `${overdueDays}d overdue`}</span>}
                       </td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}><StatusBadge status={inst.status} config={PAYMENT_STATUS_CONFIG} /></td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted }}>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark"><StatusBadge status={inst.status} config={PAYMENT_STATUS_CONFIG} /></td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark">
                         {inst.receipt ? inst.receipt : ['due','overdue'].includes(inst.status) ? (
-                          <button onClick={(e) => { e.stopPropagation(); recordPayment(inst.id); }}
-                            style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#2B4C6F', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); recordPayment(inst.id); }}
+                            className="px-2.5 py-1 rounded-md border-none bg-brand-800 text-white text-[11px] font-semibold cursor-pointer font-cairo whitespace-nowrap"
+                          >
                             {isRTL ? 'تأكيد الدفع' : 'Confirm'}
                           </button>
                         ) : '—'}
@@ -593,12 +647,12 @@ export default function OperationsPage() {
                   );
                 })}
                 {filteredPayments.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: c.muted }}>{isRTL ? 'لا توجد مدفوعات' : 'No payments found'}</td></tr>
+                  <tr><td colSpan={8} className="p-10 text-center text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد مدفوعات' : 'No payments found'}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       </>
     );
   }
@@ -610,21 +664,21 @@ export default function OperationsPage() {
     const handedCount = MOCK_HANDOVERS.filter(h => h.status === 'handed_over').length;
     return (
       <>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+        <div className="grid grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={Building2} label={isRTL ? 'وحدات محجوزة' : 'Reserved Units'} value={reservedCount} color="#4A7AAB" />
           <KpiCard icon={Clock} label={isRTL ? 'تحت الإنشاء' : 'Under Construction'} value={constructionCount} color="#6B8DB5" />
           <KpiCard icon={KeyRound} label={isRTL ? 'جاهز للتسليم' : 'Ready'} value={MOCK_HANDOVERS.filter(h => h.status === 'ready').length} color="#2B4C6F" />
           <KpiCard icon={CheckCircle} label={isRTL ? 'تم التسليم' : 'Handed Over'} value={handedCount} color="#1B3347" />
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div className={`flex gap-3 items-center flex-wrap mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <FilterPills items={Object.entries(HANDOVER_STATUS_CONFIG)} active={handoverFilter} onChange={setHandoverFilter} />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4">
           {filteredHandovers.map(ho => (
-            <HandoverCard key={ho.id} ho={ho} c={c} isRTL={isRTL} isDark={isDark} />
+            <HandoverCard key={ho.id} ho={ho} isRTL={isRTL} isDark={isDark} />
           ))}
           {filteredHandovers.length === 0 && (
-            <div style={{ padding: 40, textAlign: 'center', color: c.muted, gridColumn: '1 / -1' }}>{isRTL ? 'لا توجد تسليمات' : 'No handovers found'}</div>
+            <div className="p-10 text-center text-content-muted dark:text-content-muted-dark col-span-full">{isRTL ? 'لا توجد تسليمات' : 'No handovers found'}</div>
           )}
         </div>
       </>
@@ -635,27 +689,27 @@ export default function OperationsPage() {
   function renderAfterSales() {
     return (
       <>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+        <div className="grid grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={AlertCircle} label={isRTL ? 'تذاكر مفتوحة' : 'Open Tickets'} value={openTickets} color="#EF4444" />
           <KpiCard icon={Clock} label={isRTL ? 'متوسط وقت الحل' : 'Avg Resolution'} value={resolvedTickets.length > 0 ? `${Math.round(resolvedTickets.reduce((s, t) => s + daysSince(t.created_at) - (daysSince(t.resolved_at) || 0), 0) / resolvedTickets.length)}d` : '-'} color="#4A7AAB" />
           <KpiCard icon={AlertTriangle} label={isRTL ? 'شكاوى مفتوحة' : 'Open Complaints'} value={complaints} color="#F97316" />
           <KpiCard icon={Star} label={isRTL ? 'رضا العملاء' : 'Satisfaction'} value={`${avgRating}/5`} color="#2B4C6F" />
         </div>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+        <div className={`flex gap-3 items-center flex-wrap mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <FilterPills items={Object.entries(TICKET_STATUS_CONFIG)} active={ticketFilter} onChange={setTicketFilter} />
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           <AddBtn label={isRTL ? '+ تذكرة جديدة' : '+ New Ticket'} onClick={() => setShowTicketModal(true)} />
         </div>
-        <div style={{ background: c.card, borderRadius: 14, border: `1px solid ${c.border}`, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 18px', borderBottom: `1px solid ${c.border}` }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: c.text }}>{isRTL ? 'قائمة التذاكر' : 'Tickets List'}</p>
-          </div>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, direction: isRTL ? 'rtl' : 'ltr' }}>
+        <Card className="overflow-hidden">
+          <CardHeader>
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'قائمة التذاكر' : 'Tickets List'}</p>
+          </CardHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[13px]" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead>
-                <tr style={{ background: c.thBg, borderBottom: `2px solid ${c.border}` }}>
+                <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'النوع':'Type', isRTL?'الموضوع':'Subject', isRTL?'الأولوية':'Priority', isRTL?'مسؤول':'Assigned', isRTL?'التاريخ':'Date', isRTL?'الحالة':'Status', isRTL?'التقييم':'Rating'].map((h, i) => (
-                    <th key={i} style={{ padding: '10px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, color: c.muted, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap ${isRTL ? 'text-right' : 'text-left'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -665,41 +719,44 @@ export default function OperationsPage() {
                   const prioCfg = PRIORITY_CONFIG[tk.priority] || {};
                   const TypeIcon = TICKET_TYPE_ICONS[tk.type] || HelpCircle;
                   return (
-                    <tr key={tk.id}
-                      onMouseEnter={() => setHoverRow(tk.id)} onMouseLeave={() => setHoverRow(null)}
-                      style={{ background: hoverRow === tk.id ? c.rowHover : 'transparent', transition: 'background 0.15s' }}>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted, fontWeight: 600 }}>{tk.ticket_number}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, fontWeight: 600, color: c.text }}>{isRTL ? tk.client_ar : tk.client_en}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 8px', borderRadius: 6, background: typeCfg.color + '15', color: typeCfg.color, fontSize: 11, fontWeight: 600 }}>
+                    <tr
+                      key={tk.id}
+                      onMouseEnter={() => setHoverRow(tk.id)}
+                      onMouseLeave={() => setHoverRow(null)}
+                      className="transition-colors duration-150 hover:bg-[#F8FAFC] dark:hover:bg-brand-500/[0.07]"
+                    >
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-semibold">{tk.ticket_number}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark font-semibold text-content dark:text-content-dark">{isRTL ? tk.client_ar : tk.client_en}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark">
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold" style={{ background: typeCfg.color + '15', color: typeCfg.color }}>
                           <TypeIcon size={12} /> {isRTL ? typeCfg.ar : typeCfg.en}
                         </div>
                       </td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.text, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isRTL ? tk.subject_ar : tk.subject_en}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: prioCfg.color }}>{isRTL ? prioCfg.ar : prioCfg.en}</span>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content dark:text-content-dark max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">{isRTL ? tk.subject_ar : tk.subject_en}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark">
+                        <span className="text-[11px] font-semibold" style={{ color: prioCfg.color }}>{isRTL ? prioCfg.ar : prioCfg.en}</span>
                       </td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted }}>{isRTL ? tk.assigned_ar : tk.assigned_en}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted, whiteSpace: 'nowrap' }}>{tk.created_at}</td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}><StatusBadge status={tk.status} config={TICKET_STATUS_CONFIG} /></td>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, textAlign: 'center' }}>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark">{isRTL ? tk.assigned_ar : tk.assigned_en}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark whitespace-nowrap">{tk.created_at}</td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark"><StatusBadge status={tk.status} config={TICKET_STATUS_CONFIG} /></td>
+                      <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-center">
                         {tk.rating ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center' }}>
+                          <div className="flex items-center gap-0.5 justify-center">
                             <Star size={13} color="#F59E0B" fill="#F59E0B" />
-                            <span style={{ fontSize: 12, fontWeight: 700, color: c.text }}>{tk.rating}</span>
+                            <span className="text-xs font-bold text-content dark:text-content-dark">{tk.rating}</span>
                           </div>
-                        ) : <span style={{ color: c.muted }}>—</span>}
+                        ) : <span className="text-content-muted dark:text-content-muted-dark">—</span>}
                       </td>
                     </tr>
                   );
                 })}
                 {filteredTickets.length === 0 && (
-                  <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color: c.muted }}>{isRTL ? 'لا توجد تذاكر' : 'No tickets found'}</td></tr>
+                  <tr><td colSpan={9} className="p-10 text-center text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد تذاكر' : 'No tickets found'}</td></tr>
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       </>
     );
   }
@@ -708,36 +765,8 @@ export default function OperationsPage() {
   const AGENTS = ['أحمد محمد','سارة علي','محمود حسن','نورا احمد','خالد عمر'];
   const PROJECTS = [{ar:'سيليا العاصمة الادارية',en:'Celia New Capital',dev_ar:'طلعت مصطفى',dev_en:'Talaat Moustafa'},{ar:'ريفان الشيخ زايد',en:'Rivan Sheikh Zayed',dev_ar:'ريبورتاج',dev_en:'Reportage'},{ar:'بلو تري المرج',en:'Blue Tree El Marg',dev_ar:'سيتي إيدج',dev_en:'City Edge'},{ar:'تاون جيت 6 اكتوبر',en:'Town Gate October',dev_ar:'اورا',dev_en:'ORA'}];
 
-  function ModalOverlay({ title, onClose, children }) {
-    return (
-      <>
-        <div onClick={onClose} style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', zIndex:1100 }} />
-        <div style={{ position:'fixed', top:'50%', left:'50%', transform:'translate(-50%,-50%)', width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto', background:c.card, borderRadius:16, boxShadow:'0 20px 60px rgba(0,0,0,0.3)', zIndex:1101, direction:isRTL?'rtl':'ltr' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'20px 24px', borderBottom:`1px solid ${c.border}` }}>
-            <h2 style={{ margin:0, fontSize:17, fontWeight:800, color:c.text }}>{title}</h2>
-            <button onClick={onClose} style={{ background:'none', border:'none', cursor:'pointer', color:c.muted, padding:4 }}><X size={20} /></button>
-          </div>
-          <div style={{ padding:24 }}>{children}</div>
-        </div>
-      </>
-    );
-  }
-
   function FieldLabel({ children }) {
-    return <label style={{ display:'block', fontSize:12, fontWeight:600, color:c.muted, marginBottom:6 }}>{children}</label>;
-  }
-
-  function FieldInput(props) {
-    return <input {...props} style={{ width:'100%', padding:'10px 14px', borderRadius:10, border:`1px solid ${c.border}`, background:c.input, color:c.text, fontSize:13, fontFamily:'inherit', outline:'none', boxSizing:'border-box', ...(props.style||{}) }} />;
-  }
-
-  function FieldSelect({ children, ...props }) {
-    return <select {...props} style={{ width:'100%', padding:'10px 14px', borderRadius:10, border:`1px solid ${c.border}`, background:c.input, color:c.text, fontSize:13, fontFamily:'inherit', outline:'none', boxSizing:'border-box', ...(props.style||{}) }}>{children}</select>;
-  }
-
-  function PrimaryBtn({ children, onClick, color='#1B3347' }) {
-    const [h, setH] = useState(false);
-    return <button onClick={onClick} onMouseEnter={()=>setH(true)} onMouseLeave={()=>setH(false)} style={{ width:'100%', padding:'12px', borderRadius:10, border:'none', background:h?'#2B4C6F':color, color:'#fff', fontSize:14, fontWeight:700, cursor:'pointer', fontFamily:'inherit', transform:h?'translateY(-1px)':'none', boxShadow:h?'0 6px 16px rgba(27,51,71,0.35)':'0 2px 6px rgba(27,51,71,0.2)', transition:'all 0.2s' }}>{children}</button>;
+    return <label className="block text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{children}</label>;
   }
 
   function AddDealModal() {
@@ -759,23 +788,23 @@ export default function OperationsPage() {
       });
     };
     return (
-      <ModalOverlay title={isRTL?'صفقة جديدة':'New Deal'} onClose={()=>setShowDealModal(false)}>
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <div><FieldLabel>{isRTL?'اسم العميل (عربي)':'Client Name (Arabic)'}</FieldLabel><FieldInput value={form.client_ar} onChange={e=>set('client_ar',e.target.value)} placeholder={isRTL?'محمد أحمد':'Mohamed Ahmed'} /></div>
-          <div><FieldLabel>{isRTL?'رقم الموبايل':'Phone'}</FieldLabel><FieldInput value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="01xxxxxxxxx" /></div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div><FieldLabel>{isRTL?'المشروع':'Project'}</FieldLabel><FieldSelect value={form.project} onChange={e=>set('project',Number(e.target.value))}>{PROJECTS.map((p,i)=><option key={i} value={i}>{isRTL?p.ar:p.en}</option>)}</FieldSelect></div>
-            <div><FieldLabel>{isRTL?'كود الوحدة':'Unit Code'}</FieldLabel><FieldInput value={form.unit_code} onChange={e=>set('unit_code',e.target.value)} placeholder="A-101" /></div>
+      <Modal open={true} title={isRTL?'صفقة جديدة':'New Deal'} onClose={()=>setShowDealModal(false)} width="max-w-md">
+        <div className="flex flex-col gap-4">
+          <div><FieldLabel>{isRTL?'اسم العميل (عربي)':'Client Name (Arabic)'}</FieldLabel><Input value={form.client_ar} onChange={e=>set('client_ar',e.target.value)} placeholder={isRTL?'محمد أحمد':'Mohamed Ahmed'} /></div>
+          <div><FieldLabel>{isRTL?'رقم الموبايل':'Phone'}</FieldLabel><Input value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="01xxxxxxxxx" /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><FieldLabel>{isRTL?'المشروع':'Project'}</FieldLabel><Select value={form.project} onChange={e=>set('project',Number(e.target.value))}>{PROJECTS.map((p,i)=><option key={i} value={i}>{isRTL?p.ar:p.en}</option>)}</Select></div>
+            <div><FieldLabel>{isRTL?'كود الوحدة':'Unit Code'}</FieldLabel><Input value={form.unit_code} onChange={e=>set('unit_code',e.target.value)} placeholder="A-101" /></div>
           </div>
-          <div><FieldLabel>{isRTL?'السيلز':'Agent'}</FieldLabel><FieldSelect value={form.agent} onChange={e=>set('agent',e.target.value)}><option value="">{isRTL?'اختر':'Select'}</option>{AGENTS.map(a=><option key={a} value={a}>{a}</option>)}</FieldSelect></div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div><FieldLabel>{isRTL?'قيمة الصفقة':'Deal Value'}</FieldLabel><FieldInput type="number" value={form.deal_value} onChange={e=>set('deal_value',e.target.value)} placeholder="2,500,000" /></div>
-            <div><FieldLabel>{isRTL?'المقدم':'Down Payment'}</FieldLabel><FieldInput type="number" value={form.down_payment} onChange={e=>set('down_payment',e.target.value)} placeholder="500,000" /></div>
+          <div><FieldLabel>{isRTL?'السيلز':'Agent'}</FieldLabel><Select value={form.agent} onChange={e=>set('agent',e.target.value)}><option value="">{isRTL?'اختر':'Select'}</option>{AGENTS.map(a=><option key={a} value={a}>{a}</option>)}</Select></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><FieldLabel>{isRTL?'قيمة الصفقة':'Deal Value'}</FieldLabel><Input type="number" value={form.deal_value} onChange={e=>set('deal_value',e.target.value)} placeholder="2,500,000" /></div>
+            <div><FieldLabel>{isRTL?'المقدم':'Down Payment'}</FieldLabel><Input type="number" value={form.down_payment} onChange={e=>set('down_payment',e.target.value)} placeholder="500,000" /></div>
           </div>
-          <div><FieldLabel>{isRTL?'عدد الأقساط':'Installments'}</FieldLabel><FieldInput type="number" value={form.installments_count} onChange={e=>set('installments_count',e.target.value)} /></div>
-          <PrimaryBtn onClick={submit}>{isRTL?'إضافة الصفقة':'Add Deal'}</PrimaryBtn>
+          <div><FieldLabel>{isRTL?'عدد الأقساط':'Installments'}</FieldLabel><Input type="number" value={form.installments_count} onChange={e=>set('installments_count',e.target.value)} /></div>
+          <Button variant="primary" size="lg" onClick={submit} className="w-full justify-center">{isRTL?'إضافة الصفقة':'Add Deal'}</Button>
         </div>
-      </ModalOverlay>
+      </Modal>
     );
   }
 
@@ -795,18 +824,18 @@ export default function OperationsPage() {
       });
     };
     return (
-      <ModalOverlay title={isRTL?'تذكرة جديدة':'New Ticket'} onClose={()=>setShowTicketModal(false)}>
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <div><FieldLabel>{isRTL?'اسم العميل':'Client Name'}</FieldLabel><FieldInput value={form.client_ar} onChange={e=>set('client_ar',e.target.value)} /></div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-            <div><FieldLabel>{isRTL?'النوع':'Type'}</FieldLabel><FieldSelect value={form.type} onChange={e=>set('type',e.target.value)}>{Object.entries(TICKET_TYPE_CONFIG).map(([k,v])=><option key={k} value={k}>{isRTL?v.ar:v.en}</option>)}</FieldSelect></div>
-            <div><FieldLabel>{isRTL?'الأولوية':'Priority'}</FieldLabel><FieldSelect value={form.priority} onChange={e=>set('priority',e.target.value)}>{Object.entries(PRIORITY_CONFIG).map(([k,v])=><option key={k} value={k}>{isRTL?v.ar:v.en}</option>)}</FieldSelect></div>
+      <Modal open={true} title={isRTL?'تذكرة جديدة':'New Ticket'} onClose={()=>setShowTicketModal(false)} width="max-w-md">
+        <div className="flex flex-col gap-4">
+          <div><FieldLabel>{isRTL?'اسم العميل':'Client Name'}</FieldLabel><Input value={form.client_ar} onChange={e=>set('client_ar',e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div><FieldLabel>{isRTL?'النوع':'Type'}</FieldLabel><Select value={form.type} onChange={e=>set('type',e.target.value)}>{Object.entries(TICKET_TYPE_CONFIG).map(([k,v])=><option key={k} value={k}>{isRTL?v.ar:v.en}</option>)}</Select></div>
+            <div><FieldLabel>{isRTL?'الأولوية':'Priority'}</FieldLabel><Select value={form.priority} onChange={e=>set('priority',e.target.value)}>{Object.entries(PRIORITY_CONFIG).map(([k,v])=><option key={k} value={k}>{isRTL?v.ar:v.en}</option>)}</Select></div>
           </div>
-          <div><FieldLabel>{isRTL?'الموضوع':'Subject'}</FieldLabel><FieldInput value={form.subject_ar} onChange={e=>set('subject_ar',e.target.value)} /></div>
-          <div><FieldLabel>{isRTL?'المسؤول':'Assigned To'}</FieldLabel><FieldSelect value={form.assigned} onChange={e=>set('assigned',e.target.value)}><option value="">{isRTL?'اختر':'Select'}</option>{AGENTS.map(a=><option key={a} value={a}>{a}</option>)}</FieldSelect></div>
-          <PrimaryBtn onClick={submit}>{isRTL?'فتح التذكرة':'Open Ticket'}</PrimaryBtn>
+          <div><FieldLabel>{isRTL?'الموضوع':'Subject'}</FieldLabel><Input value={form.subject_ar} onChange={e=>set('subject_ar',e.target.value)} /></div>
+          <div><FieldLabel>{isRTL?'المسؤول':'Assigned To'}</FieldLabel><Select value={form.assigned} onChange={e=>set('assigned',e.target.value)}><option value="">{isRTL?'اختر':'Select'}</option>{AGENTS.map(a=><option key={a} value={a}>{a}</option>)}</Select></div>
+          <Button variant="primary" size="lg" onClick={submit} className="w-full justify-center">{isRTL?'فتح التذكرة':'Open Ticket'}</Button>
         </div>
-      </ModalOverlay>
+      </Modal>
     );
   }
 
@@ -814,62 +843,78 @@ export default function OperationsPage() {
     const unpaid = installments.filter(i => ['due','overdue','upcoming'].includes(i.status));
     const [selected, setSelected] = useState('');
     return (
-      <ModalOverlay title={isRTL?'تسجيل دفعة':'Record Payment'} onClose={()=>setShowPaymentModal(false)}>
-        <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+      <Modal open={true} title={isRTL?'تسجيل دفعة':'Record Payment'} onClose={()=>setShowPaymentModal(false)} width="max-w-md">
+        <div className="flex flex-col gap-4">
           <div><FieldLabel>{isRTL?'اختر القسط':'Select Installment'}</FieldLabel>
-            <div style={{ display:'flex', flexDirection:'column', gap:8, maxHeight:300, overflowY:'auto' }}>
+            <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto">
               {unpaid.map(inst => {
                 const isOv = inst.status === 'overdue';
                 const active = selected === inst.id;
                 return (
-                  <div key={inst.id} onClick={()=>setSelected(inst.id)}
-                    style={{ padding:'12px 14px', borderRadius:10, border:`2px solid ${active ? c.accent : c.border}`, background: active ? c.accent+'10' : (isOv ? 'rgba(239,68,68,0.04)' : 'transparent'), cursor:'pointer', transition:'all 0.2s' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div
+                    key={inst.id}
+                    onClick={()=>setSelected(inst.id)}
+                    className={`px-3.5 py-3 rounded-[10px] border-2 cursor-pointer transition-all duration-200 ${
+                      active
+                        ? 'border-brand-500 bg-brand-500/10'
+                        : isOv
+                          ? 'border-edge dark:border-edge-dark bg-red-500/[0.04]'
+                          : 'border-edge dark:border-edge-dark bg-transparent'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
                       <div>
-                        <div style={{ fontSize:13, fontWeight:600, color:c.text }}>{isRTL?inst.client_ar:inst.client_en}</div>
-                        <div style={{ fontSize:11, color:c.muted }}>{inst.deal_number} — {isRTL?`قسط ${inst.num}/${inst.total}`:`Inst. ${inst.num}/${inst.total}`}</div>
+                        <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL?inst.client_ar:inst.client_en}</div>
+                        <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{inst.deal_number} — {isRTL?`قسط ${inst.num}/${inst.total}`:`Inst. ${inst.num}/${inst.total}`}</div>
                       </div>
-                      <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:13, fontWeight:700, color:c.text }}>{fmtMoneyShort(inst.amount)}</div>
-                        <div style={{ fontSize:11, color:isOv?'#EF4444':c.muted }}>{inst.due_date}</div>
+                      <div className="text-right">
+                        <div className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</div>
+                        <div className={`text-[11px] ${isOv ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>{inst.due_date}</div>
                       </div>
                     </div>
                   </div>
                 );
               })}
-              {unpaid.length === 0 && <p style={{ textAlign:'center', color:c.muted, padding:20 }}>{isRTL?'لا توجد أقساط مستحقة':'No pending installments'}</p>}
+              {unpaid.length === 0 && <p className="text-center text-content-muted dark:text-content-muted-dark p-5">{isRTL?'لا توجد أقساط مستحقة':'No pending installments'}</p>}
             </div>
           </div>
-          {selected && <PrimaryBtn onClick={()=>recordPayment(selected)} color="#2B4C6F">{isRTL?'تأكيد الدفع':'Confirm Payment'}</PrimaryBtn>}
+          {selected && <Button variant="primary" size="lg" onClick={()=>recordPayment(selected)} className="w-full justify-center">{isRTL?'تأكيد الدفع':'Confirm Payment'}</Button>}
         </div>
-      </ModalOverlay>
+      </Modal>
     );
   }
 
   // ── Main Render ─────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '24px 28px', minHeight: '100vh', background: c.bg, direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 min-h-screen bg-surface-bg dark:bg-surface-bg-dark">
       {/* Page Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <div style={{ width: 46, height: 46, borderRadius: 13, background: 'linear-gradient(135deg,#1B3347,#4A7AAB)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(74,122,171,0.3)' }}>
+      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-[0_4px_12px_rgba(74,122,171,0.3)]">
             <ClipboardCheck size={22} color="#fff" />
           </div>
-          <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: c.text }}>{isRTL ? 'العمليات' : 'Operations'}</h1>
-            <p style={{ margin: 0, fontSize: 12, color: c.muted }}>{isRTL ? 'إدارة الصفقات والمدفوعات والتسليمات' : 'Manage deals, payments & handovers'}</p>
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{isRTL ? 'العمليات' : 'Operations'}</h1>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'إدارة الصفقات والمدفوعات والتسليمات' : 'Manage deals, payments & handovers'}</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: isDark ? 'rgba(74,122,171,0.08)' : '#F1F5F9', padding: 4, borderRadius: 12, flexWrap: 'wrap' }}>
+      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-brand-500/[0.08] p-1 rounded-xl flex-wrap">
         {TABS.map(tab => {
           const active = activeTab === tab.id;
           const TabIcon = tab.Icon;
           return (
-            <button key={tab.id} onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }}
-              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: active ? 700 : 500, background: active ? c.card : 'transparent', color: active ? c.accent : c.muted, boxShadow: active ? '0 2px 8px rgba(0,0,0,0.06)' : 'none', transition: 'all 0.2s', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+            <button
+              key={tab.id}
+              onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }}
+              className={`flex items-center gap-2 px-[18px] py-2.5 rounded-[10px] border-none cursor-pointer text-[13px] font-cairo whitespace-nowrap transition-all duration-200 ${
+                active
+                  ? 'font-bold bg-surface-card dark:bg-surface-card-dark text-brand-500 shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
+                  : 'font-medium bg-transparent text-content-muted dark:text-content-muted-dark'
+              }`}
+            >
               <TabIcon size={16} />
               {isRTL ? tab.ar : tab.en}
             </button>
@@ -887,7 +932,7 @@ export default function OperationsPage() {
       {/* Drawer overlay */}
       {selectedDeal && (
         <>
-          <div onClick={() => setSelectedDeal(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200 }} />
+          <div onClick={() => setSelectedDeal(null)} className="fixed inset-0 bg-black/50 z-[200]" />
           <DealDrawer deal={selectedDeal} onClose={() => setSelectedDeal(null)} />
         </>
       )}
