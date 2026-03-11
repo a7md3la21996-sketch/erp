@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-
+import { useTheme } from '../../contexts/ThemeContext';
 import * as XLSX from 'xlsx';
 
 const COLUMN_MAP = {
@@ -48,6 +48,8 @@ const validatePhone = (p) => {
 
 export default function ImportModal({ onClose, existingContacts, onImportDone }) {
   const { t, i18n } = useTranslation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
   const [step, setStep] = useState(1);
   const [rows, setRows] = useState([]);
@@ -155,23 +157,28 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   const over = (e) => { e.preventDefault(); setDragging(true); };
   const leave = () => setDragging(false);
 
-  const th = { color: '#6B8DB5', padding: '8px 10px', textAlign: 'right', borderBottom: '1px solid rgba(74,122,171,0.15)', fontSize: 11, fontWeight: 600 };
-  const td = { color: '#E2EAF4', padding: '8px 10px', borderBottom: '1px solid rgba(74,122,171,0.06)', fontSize: 12 };
+  const th = { color: isDark ? '#6B8DB5' : '#6b7280', padding: '8px 10px', textAlign: isRTL ? 'right' : 'left', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb'}`, fontSize: 11, fontWeight: 600 };
+  const td = { color: isDark ? '#E2EAF4' : '#1f2937', padding: '8px 10px', borderBottom: `1px solid ${isDark ? 'rgba(74,122,171,0.06)' : '#f3f4f6'}`, fontSize: 12 };
+  const muted = isDark ? '#8BA8C8' : '#6b7280';
+  const textPrimary = isDark ? '#E2EAF4' : '#1f2937';
+  const textSecondary = isDark ? '#6B8DB5' : '#9ca3af';
+  const borderColor = isDark ? 'rgba(74,122,171,0.15)' : '#e5e7eb';
+  const borderAccent = isDark ? 'rgba(74,122,171,0.3)' : '#d1d5db';
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', direction: isRTL ? 'rtl' : 'ltr' }}>
-      <div style={{ background: '#1A2B3C', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 16, width: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        
+      <div style={{ background: isDark ? '#1A2B3C' : '#ffffff', border: `1px solid ${borderAccent}`, borderRadius: 16, width: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
         {/* Header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ color: '#E2EAF4', fontSize: 16, fontWeight: 700 }}>📤 {isRTL ? 'استيراد جهات الاتصال' : 'Import Contacts'}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#6B8DB5', fontSize: 22, cursor: 'pointer' }}>×</button>
+        <div style={{ padding: '20px 24px 16px', borderBottom: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 style={{ color: textPrimary, fontSize: 16, fontWeight: 700 }}>📤 {isRTL ? 'استيراد جهات الاتصال' : 'Import Contacts'}</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: textSecondary, fontSize: 22, cursor: 'pointer' }}>×</button>
         </div>
 
         {/* Steps */}
-        <div style={{ display: 'flex', borderBottom: '1px solid rgba(74,122,171,0.15)' }}>
+        <div style={{ display: 'flex', borderBottom: `1px solid ${borderColor}` }}>
           {[isRTL ? 'رفع الملف' : 'Upload', isRTL ? 'مراجعة' : 'Preview', isRTL ? 'النتيجة' : 'Result'].map((s, i) => (
-            <div key={i} style={{ flex: 1, padding: '10px', textAlign: 'center', fontSize: 12, color: step === i+1 ? '#4A7AAB' : step > i+1 ? '#10B981' : '#6B8DB5', borderBottom: `2px solid ${step === i+1 ? '#4A7AAB' : step > i+1 ? '#10B981' : 'transparent'}` }}>
+            <div key={i} style={{ flex: 1, padding: '10px', textAlign: 'center', fontSize: 12, color: step === i+1 ? '#4A7AAB' : step > i+1 ? '#10B981' : textSecondary, borderBottom: `2px solid ${step === i+1 ? '#4A7AAB' : step > i+1 ? '#10B981' : 'transparent'}` }}>
               {step > i+1 ? '✓ ' : `${i+1}. `}{s}
             </div>
           ))}
@@ -184,11 +191,11 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
           {step === 1 && (
             <div>
               <div onDrop={handleDrop} onDragOver={over} onDragLeave={leave}
-                style={{ border: `2px dashed ${dragging ? '#4A7AAB' : 'rgba(74,122,171,0.3)'}`, borderRadius: 12, padding: 40, textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(74,122,171,0.05)' : 'none', transition: 'all 0.2s' }}
+                style={{ border: `2px dashed ${dragging ? '#4A7AAB' : borderAccent}`, borderRadius: 12, padding: 40, textAlign: 'center', cursor: 'pointer', background: dragging ? (isDark ? 'rgba(74,122,171,0.05)' : 'rgba(74,122,171,0.03)') : 'none', transition: 'all 0.2s' }}
                 onClick={() => document.getElementById('fileInput').click()}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>📂</div>
-                <div style={{ color: '#8BA8C8', fontSize: 14, marginBottom: 8 }}>{isRTL ? 'اسحب الملف هنا أو اضغط للاختيار' : 'Drag file here or click to browse'}</div>
-                <div style={{ color: '#4A5568', fontSize: 12 }}>Excel (.xlsx) {isRTL ? 'أو' : 'or'} CSV</div>
+                <div style={{ color: muted, fontSize: 14, marginBottom: 8 }}>{isRTL ? 'اسحب الملف هنا أو اضغط للاختيار' : 'Drag file here or click to browse'}</div>
+                <div style={{ color: isDark ? '#4A5568' : '#9ca3af', fontSize: 12 }}>Excel (.xlsx) {isRTL ? 'أو' : 'or'} CSV</div>
                 <input id="fileInput" type="file" accept=".xlsx,.csv" style={{ display: 'none' }} onChange={handleFile} />
               </div>
               <div style={{ textAlign: 'center', marginTop: 16 }}>
@@ -198,7 +205,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                   const wb = XLSX.utils.book_new();
                   XLSX.utils.book_append_sheet(wb, ws, 'Contacts');
                   XLSX.writeFile(wb, 'import_template.xlsx');
-                }} style={{ padding: '8px 16px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.25)', borderRadius: 8, color: '#6B8DB5', fontSize: 12, cursor: 'pointer' }}>
+                }} style={{ padding: '8px 16px', background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)', border: `1px solid ${isDark ? 'rgba(74,122,171,0.25)' : '#d1d5db'}`, borderRadius: 8, color: isDark ? '#6B8DB5' : '#4A7AAB', fontSize: 12, cursor: 'pointer' }}>
                   ⬇️ {isRTL ? 'تحميل نموذج الاستيراد' : 'Download Template'}
                 </button>
               </div>
@@ -216,14 +223,14 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 ].map(s => (
                   <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
                     <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.num}</div>
-                    <div style={{ fontSize: 11, color: '#8BA8C8', marginTop: 4 }}>{s.icon} {s.label}</div>
+                    <div style={{ fontSize: 11, color: muted, marginTop: 4 }}>{s.icon} {s.label}</div>
                   </div>
                 ))}
               </div>
 
               <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
                 {[['all', `${isRTL ? 'الكل' : 'All'} (${rows.length})`], ['new', `${isRTL ? 'جديد' : 'New'} (${newRows.length})`], ['opp', `${isRTL ? 'فرص' : 'Opps'} (${oppRows.length})`], ['err', `${isRTL ? 'أخطاء' : 'Errors'} (${errRows.length})`]].map(([v, l]) => (
-                  <button key={v} onClick={() => setTab(v)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, cursor: 'pointer', border: `1px solid ${tab===v ? 'rgba(74,122,171,0.4)' : 'rgba(74,122,171,0.15)'}`, background: tab===v ? 'rgba(74,122,171,0.15)' : 'none', color: tab===v ? '#4A7AAB' : '#6B8DB5' }}>{l}</button>
+                  <button key={v} onClick={() => setTab(v)} style={{ padding: '5px 12px', borderRadius: 20, fontSize: 11, cursor: 'pointer', border: `1px solid ${tab===v ? (isDark ? 'rgba(74,122,171,0.4)' : '#4A7AAB') : borderColor}`, background: tab===v ? (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)') : 'none', color: tab===v ? '#4A7AAB' : textSecondary }}>{l}</button>
                 ))}
               </div>
 
@@ -245,7 +252,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                           {r._status === 'opportunity' && <span style={{ padding: '3px 8px', borderRadius: 20, background: 'rgba(74,122,171,0.15)', color: '#4A7AAB', fontSize: 11 }}>🔄 {isRTL ? 'فرصة' : 'Opp'}</span>}
                           {r._status === 'error' && <span style={{ padding: '3px 8px', borderRadius: 20, background: 'rgba(239,68,68,0.15)', color: '#EF4444', fontSize: 11 }}>❌ {isRTL ? 'خطأ' : 'Error'}</span>}
                         </td>
-                        <td style={{ ...td, fontSize: 11, color: '#8BA8C8' }}>
+                        <td style={{ ...td, fontSize: 11, color: muted }}>
                           {r._status === 'opportunity' ? (isRTL ? `موجود: ${r._existingName}` : `Exists: ${r._existingName}`) : r._reason || '—'}
                         </td>
                       </tr>
@@ -260,8 +267,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
           {step === 3 && (
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-              <div style={{ color: '#E2EAF4', fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{isRTL ? 'تم الاستيراد بنجاح' : 'Import Complete!'}</div>
-              <div style={{ color: '#8BA8C8', fontSize: 13, marginBottom: 24 }}>{isRTL ? `تمت معالجة ${rows.length} صف` : `Processed ${rows.length} rows`}</div>
+              <div style={{ color: textPrimary, fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{isRTL ? 'تم الاستيراد بنجاح' : 'Import Complete!'}</div>
+              <div style={{ color: muted, fontSize: 13, marginBottom: 24 }}>{isRTL ? `تمت معالجة ${rows.length} صف` : `Processed ${rows.length} rows`}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
                 {[
                   { num: newRows.length, label: isRTL ? 'أضيفوا' : 'Added', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
@@ -270,7 +277,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 ].map(s => (
                   <div key={s.label} style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
                     <div style={{ fontSize: 24, fontWeight: 700, color: s.color }}>{s.num}</div>
-                    <div style={{ fontSize: 11, color: '#8BA8C8', marginTop: 4 }}>{s.label}</div>
+                    <div style={{ fontSize: 11, color: muted, marginTop: 4 }}>{s.label}</div>
                   </div>
                 ))}
               </div>
@@ -284,8 +291,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(74,122,171,0.15)', display: 'flex', justifyContent: 'space-between' }}>
-          <button onClick={step === 1 ? onClose : () => setStep(s => s-1)} style={{ padding: '9px 18px', background: 'rgba(74,122,171,0.1)', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 8, color: '#8BA8C8', fontSize: 13, cursor: 'pointer' }}>
+        <div style={{ padding: '16px 24px', borderTop: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between' }}>
+          <button onClick={step === 1 ? onClose : () => setStep(s => s-1)} style={{ padding: '9px 18px', background: isDark ? 'rgba(74,122,171,0.1)' : '#f3f4f6', border: `1px solid ${borderColor}`, borderRadius: 8, color: muted, fontSize: 13, cursor: 'pointer' }}>
             {step === 1 ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '← رجوع' : '← Back')}
           </button>
           {step === 2 && (
