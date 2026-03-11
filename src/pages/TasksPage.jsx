@@ -7,7 +7,7 @@ import {
   AlertCircle, Calendar, User, ChevronDown
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
-import { Button, Card, Input, Select, Textarea, Badge, KpiCard } from '../components/ui';
+import { Button, Card, Input, Select, Textarea, Badge, KpiCard, PageSkeleton } from '../components/ui';
 import ExportButton from '../components/ui/ExportButton';
 
 const ICONS = { Phone, PhoneCall, Users, Mail, MessageCircle, CheckSquare };
@@ -82,6 +82,8 @@ export default function TasksPage() {
     await deleteTask(id);
     setTasks(prev => prev.filter(t => t.id !== id));
   };
+
+  if (loading) return <PageSkeleton hasKpis={false} tableRows={6} tableCols={5} variant="list" />;
 
   return (
     <div className={`px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>

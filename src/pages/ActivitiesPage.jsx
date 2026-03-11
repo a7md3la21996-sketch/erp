@@ -8,7 +8,7 @@ import {
   Clock, Activity, TrendingUp
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
-import { Button, Card, Input, Select, Textarea, Badge, KpiCard } from '../components/ui';
+import { Button, Card, Input, Select, Textarea, Badge, KpiCard, PageSkeleton } from '../components/ui';
 import ExportButton from '../components/ui/ExportButton';
 
 const ICONS = {
@@ -95,6 +95,8 @@ export default function ActivitiesPage() {
   const availableTypes = Object.entries(ACTIVITY_TYPES).filter(([, v]) =>
     form.dept === 'all' || v.dept.includes(form.dept)
   );
+
+  if (loading) return <PageSkeleton hasKpis={false} tableRows={6} tableCols={5} variant="list" />;
 
   return (
     <div className={`px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>

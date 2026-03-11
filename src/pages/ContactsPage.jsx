@@ -8,6 +8,7 @@ import {
   blacklistContact, createActivity,
 } from '../services/contactsService';
 import ImportModal from './crm/ImportModal';
+import { PageSkeleton } from '../components/ui/PageSkeletons';
 
 // ── Split modules ──────────────────────────────────────────────────────────
 import {
@@ -287,6 +288,8 @@ export default function ContactsPage() {
   const selCls = 'bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg px-3 py-2 text-content dark:text-content-dark text-xs outline-none cursor-pointer';
   const thCls = `text-[11px] text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap text-start`;
   const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-[13px] text-content dark:text-content-dark text-start`;
+
+  if (loading) return <PageSkeleton hasKpis={false} tableRows={8} tableCols={7} />;
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6">

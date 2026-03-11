@@ -11,6 +11,7 @@ import Card from '../../components/ui/Card';
 import Input, { Select, Textarea } from '../../components/ui/Input';
 import Modal, { ModalFooter } from '../../components/ui/Modal';
 import KpiCard from '../../components/ui/KpiCard';
+import { PageSkeleton } from '../../components/ui/PageSkeletons';
 
 const STAGE_CONFIG = [
   { id: "all",                  label_ar: "الكل",            label_en: "All",             color: "#4A7AAB" },
@@ -484,6 +485,8 @@ export default function OpportunitiesPage() {
     setOpps(p => [opp, ...p]);
     setShowModal(false);
   };
+
+  if (loading) return <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={5} />;
 
   return (<>
     <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark font-cairo px-4 py-4 md:p-5 pb-10">

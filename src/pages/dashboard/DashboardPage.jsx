@@ -14,6 +14,7 @@ import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck,
 import Card from '../../components/ui/Card';
 import KpiCard from '../../components/ui/KpiCard';
 import Badge from '../../components/ui/Badge';
+import { DashboardSkeleton } from '../../components/ui/PageSkeletons';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -227,6 +228,8 @@ export default function DashboardPage() {
   );
 
   const Box = ({ children, className: cn = '' }) => <Card className={`p-5 ${cn}`}>{children}</Card>;
+
+  if (dashLoading) return <DashboardSkeleton />;
 
   return (
     <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>

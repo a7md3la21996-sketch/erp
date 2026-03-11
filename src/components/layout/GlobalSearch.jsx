@@ -4,7 +4,17 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { NAV_ITEMS } from '../../config/navigation';
 import supabase from '../../lib/supabase';
-import { Search, X, Users, ClipboardList, Target, FileText, ArrowRight, Command, Loader2 } from 'lucide-react';
+import { fetchTasks } from '../../services/tasksService';
+import { fetchActivities, ACTIVITY_TYPES } from '../../services/activitiesService';
+import { fetchEmployees } from '../../services/employeesService';
+import { fetchOpportunities } from '../../services/opportunitiesService';
+import {
+  Search, X, Users, ClipboardList, Target, FileText, ArrowRight, Command,
+  Loader2, Briefcase, Activity, Clock, CheckSquare, UserCheck
+} from 'lucide-react';
+
+const RECENT_KEY = 'platform_global_search_recent';
+const MAX_RECENT = 5;
 
 // Flatten nav items into searchable pages
 const flattenNav = (items, parent = null) => {
@@ -26,6 +36,45 @@ const flattenNav = (items, parent = null) => {
 
 const ALL_PAGES = flattenNav(NAV_ITEMS);
 
+// ── Entity config ──────────────────────────────────────────────────────────
+const ENTITY_CONFIG = {
+  contact: {
+    icon: Users,
+    color: '#4A7AAB',
+    label: { ar: 'جهات الاتصال', en: 'Contacts' },
+    labelSingle: { ar: 'جهة اتصال', en: 'Contact' },
+    path: '/contacts',
+  },
+  opportunity: {
+    icon: Target,
+    color: '#2B4C6F',
+    label: { ar: 'الفرص', en: 'Opportunities' },
+    labelSingle: { ar: 'فرصة', en: 'Opportunity' },
+    path: '/crm/opportunities',
+  },
+  task: {
+    icon: CheckSquare,
+    color: '#F59E0B',
+    label: { ar: 'المهام', en: 'Tasks' },
+    labelSingle: { ar: 'مهمة', en: 'Task' },
+    path: '/tasks',
+  },
+  employee: {
+    icon: UserCheck,
+    color: '#6B8DB5',
+    label: { ar: 'الموظفين', en: 'Employees' },
+    labelSingle: { ar: 'موظف', en: 'Employee' },
+    path: '/hr/employees',
+  },
+  activity: {
+    icon: Activity,
+    color: '#8BA8C8',
+    label: { ar: 'الأنشطة', en: 'Activities' },
+    labelSingle: { ar: 'نشاط', en: 'Activity' },
+    path: '/activities',
+  },
+};
+
 export default function GlobalSearch({ onClose }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -35,57 +84,77 @@ export default function GlobalSearch({ onClose }) {
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const listRef = useRef(null);
-  const [query, setQuery] = useState('');
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [contacts, setContacts] = useState([]);
-  const [searchingContacts, setSearchingContacts] = useState(false);
-  const [tasks, setTasks] = useState([]);
   const debounceRef = useRef(null);
 
-  // Load tasks from localStorage on mount
+  const [query, setQuery] = useState('');
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Cached entity data
+  const [contacts, setContacts] = useState([]);
+  const [opportunities, setOpportunities] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [activities, setActivities] = useState([]);
+
+  // Recent searches
+  const [recentSearches, setRecentSearches] = useState([]);
+
+  // Load recent searches from localStorage
   useEffect(() => {
     try {
-      const t = localStorage.getItem('platform_tasks');
-      if (t) setTasks(JSON.parse(t));
+      const r = localStorage.getItem(RECENT_KEY);
+      if (r) setRecentSearches(JSON.parse(r));
     } catch { /* ignore */ }
     inputRef.current?.focus();
   }, []);
 
-  // Search contacts from Supabase with debounce
-  const searchContacts = useCallback(async (q) => {
-    if (!q.trim()) { setContacts([]); return; }
-    setSearchingContacts(true);
-    try {
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('id, full_name, phone, email, company, contact_type, source')
-        .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%`)
-        .limit(6);
-      if (!error && data) { setContacts(data); setSearchingContacts(false); return; }
-    } catch { /* fall through to localStorage */ }
-    // Fallback: localStorage
-    try {
-      const cached = localStorage.getItem('platform_contacts');
-      if (cached) {
-        const all = JSON.parse(cached);
-        const ql = q.toLowerCase();
-        setContacts(all.filter(c =>
-          c.full_name?.toLowerCase().includes(ql) ||
-          c.phone?.includes(ql) ||
-          c.email?.toLowerCase().includes(ql) ||
-          c.company?.toLowerCase().includes(ql)
-        ).slice(0, 6));
-      }
-    } catch { /* ignore */ }
-    setSearchingContacts(false);
-  }, []);
-
-  // Debounced search trigger
+  // Load all entity data on mount for client-side filtering
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => searchContacts(query), 300);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query, searchContacts]);
+    let cancelled = false;
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const [contactsRes, oppsRes, tasksRes, employeesRes, activitiesRes] = await Promise.allSettled([
+          // Contacts
+          (async () => {
+            try {
+              const { data, error } = await supabase
+                .from('contacts')
+                .select('id, full_name, phone, email, company, contact_type, source')
+                .order('last_activity_at', { ascending: false })
+                .limit(200);
+              if (error) throw error;
+              return data || [];
+            } catch {
+              const cached = localStorage.getItem('platform_contacts');
+              return cached ? JSON.parse(cached) : [];
+            }
+          })(),
+          // Opportunities
+          fetchOpportunities(),
+          // Tasks
+          fetchTasks(),
+          // Employees
+          fetchEmployees(),
+          // Activities
+          fetchActivities({ limit: 100 }),
+        ]);
+
+        if (cancelled) return;
+        if (contactsRes.status === 'fulfilled') setContacts(contactsRes.value);
+        if (oppsRes.status === 'fulfilled') setOpportunities(oppsRes.value);
+        if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value);
+        if (employeesRes.status === 'fulfilled') setEmployees(employeesRes.value);
+        if (activitiesRes.status === 'fulfilled') setActivities(activitiesRes.value);
+        setDataLoaded(true);
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    };
+    loadData();
+    return () => { cancelled = true; };
+  }, []);
 
   // ESC to close
   useEffect(() => {
@@ -96,28 +165,65 @@ export default function GlobalSearch({ onClose }) {
     return () => document.removeEventListener('keydown', handler, true);
   }, [onClose]);
 
-  const results = useMemo(() => {
-    if (!query.trim()) {
-      // Show recent/quick access pages
-      return ALL_PAGES.slice(0, 8).map(p => ({
-        type: 'page',
-        id: 'page-' + p.id,
-        title: p.label[lang] || p.label.en,
-        subtitle: p.parent ? (p.parent[lang] || p.parent.en) : '',
-        path: p.path,
-        icon: p.icon,
-      }));
+  // Debounced query for filtering
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(query), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query]);
+
+  // Build grouped results
+  const { groupedResults, flatResults } = useMemo(() => {
+    const q = debouncedQuery.toLowerCase().trim();
+
+    // No query: show recent searches + quick nav
+    if (!q) {
+      const items = [];
+      // Recent searches
+      recentSearches.forEach(r => {
+        items.push({
+          ...r,
+          section: 'recent',
+        });
+      });
+      // Quick nav pages
+      ALL_PAGES.slice(0, 6).forEach(p => {
+        items.push({
+          type: 'page',
+          id: 'page-' + p.id,
+          title: p.label[lang] || p.label.en,
+          subtitle: p.parent ? (p.parent[lang] || p.parent.en) : '',
+          path: p.path,
+          icon: p.icon,
+          section: 'pages',
+        });
+      });
+
+      // Group them
+      const grouped = {};
+      items.forEach(item => {
+        const sec = item.section || 'other';
+        if (!grouped[sec]) grouped[sec] = [];
+        grouped[sec].push(item);
+      });
+
+      return { groupedResults: grouped, flatResults: items };
     }
 
-    const q = query.toLowerCase().trim();
-    const items = [];
+    // Search across all entities
+    const sections = {};
+    const addToSection = (key, item) => {
+      if (!sections[key]) sections[key] = [];
+      sections[key].push(item);
+    };
 
-    // Search pages
+    // 1. Pages
     ALL_PAGES.forEach(p => {
       const nameAr = p.label.ar?.toLowerCase() || '';
       const nameEn = p.label.en?.toLowerCase() || '';
       if (nameAr.includes(q) || nameEn.includes(q) || p.id.includes(q)) {
-        items.push({
+        addToSection('page', {
           type: 'page',
           id: 'page-' + p.id,
           title: p.label[lang] || p.label.en,
@@ -128,23 +234,53 @@ export default function GlobalSearch({ onClose }) {
       }
     });
 
-    // Contacts from Supabase (already filtered by debounced search)
+    // 2. Contacts
     contacts.forEach(c => {
-      items.push({
-        type: 'contact',
-        id: 'contact-' + c.id,
-        title: c.full_name || (isRTL ? 'بدون اسم' : 'No Name'),
-        subtitle: [c.phone, c.contact_type, c.company].filter(Boolean).join(' · '),
-        data: c,
-      });
+      const match =
+        c.full_name?.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.company?.toLowerCase().includes(q);
+      if (match) {
+        addToSection('contact', {
+          type: 'contact',
+          id: 'contact-' + c.id,
+          title: c.full_name || (isRTL ? 'بدون اسم' : 'No Name'),
+          subtitle: [c.phone, c.contact_type, c.company].filter(Boolean).join(' · '),
+          data: c,
+        });
+      }
     });
 
-    // Search tasks
-    tasks.forEach(t => {
-      const match = t.title?.toLowerCase().includes(q) ||
-        t.contact_name?.toLowerCase().includes(q);
+    // 3. Opportunities
+    opportunities.forEach(o => {
+      const contactName = o.contacts?.full_name || o.contact_name || '';
+      const projectName = isRTL
+        ? (o.projects?.name_ar || o.project_name || '')
+        : (o.projects?.name_en || o.project_name || '');
+      const match =
+        contactName.toLowerCase().includes(q) ||
+        projectName.toLowerCase().includes(q) ||
+        o.notes?.toLowerCase().includes(q);
       if (match) {
-        items.push({
+        addToSection('opportunity', {
+          type: 'opportunity',
+          id: 'opp-' + o.id,
+          title: contactName || (isRTL ? 'فرصة' : 'Opportunity'),
+          subtitle: [projectName, o.stage, o.priority].filter(Boolean).join(' · '),
+          data: o,
+        });
+      }
+    });
+
+    // 4. Tasks
+    tasks.forEach(t => {
+      const match =
+        t.title?.toLowerCase().includes(q) ||
+        t.contact_name?.toLowerCase().includes(q) ||
+        t.notes?.toLowerCase().includes(q);
+      if (match) {
+        addToSection('task', {
           type: 'task',
           id: 'task-' + t.id,
           title: t.title,
@@ -154,27 +290,98 @@ export default function GlobalSearch({ onClose }) {
       }
     });
 
-    return items.slice(0, 12);
-  }, [query, contacts, tasks, lang, isRTL]);
+    // 5. Employees
+    employees.forEach(e => {
+      const nameAr = e.full_name_ar?.toLowerCase() || '';
+      const nameEn = e.full_name_en?.toLowerCase() || '';
+      const match =
+        nameAr.includes(q) ||
+        nameEn.includes(q) ||
+        e.email?.toLowerCase().includes(q) ||
+        e.phone?.includes(q) ||
+        e.job_title?.toLowerCase().includes(q);
+      if (match) {
+        addToSection('employee', {
+          type: 'employee',
+          id: 'emp-' + e.id,
+          title: isRTL ? (e.full_name_ar || e.full_name_en) : (e.full_name_en || e.full_name_ar),
+          subtitle: [e.job_title, e.departments?.name_ar || e.department, e.status].filter(Boolean).join(' · '),
+          data: e,
+        });
+      }
+    });
+
+    // 6. Activities
+    activities.forEach(a => {
+      const match = a.notes?.toLowerCase().includes(q);
+      if (match) {
+        const typeInfo = ACTIVITY_TYPES[a.type] || {};
+        addToSection('activity', {
+          type: 'activity',
+          id: 'act-' + a.id,
+          title: a.notes?.length > 60 ? a.notes.substring(0, 60) + '...' : (a.notes || ''),
+          subtitle: [
+            isRTL ? typeInfo.ar : typeInfo.en,
+            isRTL ? a.user_name_ar : a.user_name_en,
+            a.dept
+          ].filter(Boolean).join(' · '),
+          data: a,
+        });
+      }
+    });
+
+    // Limit each section
+    const limited = {};
+    Object.entries(sections).forEach(([key, items]) => {
+      limited[key] = items.slice(0, 5);
+    });
+
+    // Flatten for keyboard nav
+    const flat = [];
+    ['page', 'contact', 'opportunity', 'task', 'employee', 'activity'].forEach(key => {
+      if (limited[key]) flat.push(...limited[key]);
+    });
+
+    return { groupedResults: limited, flatResults: flat };
+  }, [debouncedQuery, contacts, opportunities, tasks, employees, activities, lang, isRTL, recentSearches]);
 
   // Reset active index when results change
-  useEffect(() => { setActiveIndex(0); }, [results]);
+  useEffect(() => { setActiveIndex(0); }, [flatResults]);
 
   // Scroll active item into view
   useEffect(() => {
     if (listRef.current) {
-      const active = listRef.current.children[activeIndex];
+      const items = listRef.current.querySelectorAll('[data-search-item]');
+      const active = items[activeIndex];
       if (active) active.scrollIntoView({ block: 'nearest' });
     }
   }, [activeIndex]);
 
+  const saveRecent = (item) => {
+    if (item.type === 'page' && !debouncedQuery.trim()) return; // Don't save quick nav clicks
+    try {
+      const recent = [...recentSearches.filter(r => r.id !== item.id), {
+        type: item.type,
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        path: item.path,
+        data: item.data ? { id: item.data.id } : undefined,
+      }].slice(0, MAX_RECENT);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(recent));
+      setRecentSearches(recent);
+    } catch { /* ignore */ }
+  };
+
   const handleSelect = (item) => {
+    saveRecent(item);
+    const cfg = ENTITY_CONFIG[item.type];
     if (item.type === 'page') {
       navigate(item.path);
     } else if (item.type === 'contact') {
-      navigate('/contacts', { state: { selectedContactId: item.data.id } });
-    } else if (item.type === 'task') {
-      navigate('/tasks');
+      navigate('/contacts', { state: { selectedContactId: item.data?.id } });
+    } else if (cfg) {
+      navigate(cfg.path);
     }
     onClose();
   };
@@ -182,33 +389,60 @@ export default function GlobalSearch({ onClose }) {
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex(i => Math.min(i + 1, results.length - 1));
+      setActiveIndex(i => Math.min(i + 1, flatResults.length - 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && results[activeIndex]) {
+    } else if (e.key === 'Enter' && flatResults[activeIndex]) {
       e.preventDefault();
-      handleSelect(results[activeIndex]);
+      handleSelect(flatResults[activeIndex]);
     }
   };
 
-  const typeIcon = (type) => {
-    if (type === 'contact') return <Users size={15} />;
-    if (type === 'task') return <ClipboardList size={15} />;
+  const getTypeIcon = (type) => {
+    const cfg = ENTITY_CONFIG[type];
+    if (cfg) {
+      const Icon = cfg.icon;
+      return <Icon size={15} />;
+    }
     return null;
   };
 
-  const typeColor = (type) => {
-    if (type === 'contact') return '#4A7AAB';
-    if (type === 'task') return '#F59E0B';
-    return '#6B8DB5';
+  const getTypeColor = (type) => {
+    return ENTITY_CONFIG[type]?.color || '#6B8DB5';
   };
 
-  const typeLabel = (type) => {
-    if (type === 'contact') return isRTL ? 'جهة اتصال' : 'Contact';
-    if (type === 'task') return isRTL ? 'مهمة' : 'Task';
-    return '';
+  const getTypeLabel = (type) => {
+    const cfg = ENTITY_CONFIG[type];
+    if (!cfg) return '';
+    return isRTL ? cfg.labelSingle.ar : cfg.labelSingle.en;
   };
+
+  const getSectionLabel = (section) => {
+    if (section === 'recent') return isRTL ? 'عمليات بحث حديثة' : 'Recent Searches';
+    if (section === 'pages') return isRTL ? 'تنقل سريع' : 'Quick Navigation';
+    if (section === 'page') return isRTL ? 'الصفحات' : 'Pages';
+    const cfg = ENTITY_CONFIG[section];
+    if (cfg) return isRTL ? cfg.label.ar : cfg.label.en;
+    return section;
+  };
+
+  const clearRecent = () => {
+    localStorage.removeItem(RECENT_KEY);
+    setRecentSearches([]);
+  };
+
+  // Track flat index for rendering
+  let flatIndex = -1;
+
+  // Determine section order
+  const q = debouncedQuery.toLowerCase().trim();
+  const sectionOrder = q
+    ? ['page', 'contact', 'opportunity', 'task', 'employee', 'activity']
+    : ['recent', 'pages'];
+
+  const hasResults = flatResults.length > 0;
+  const isSearching = loading && !dataLoaded;
 
   return (
     <div onClick={onClose} className="fixed inset-0 z-[9999] bg-black/50 flex items-start justify-center pt-[12vh]">
@@ -221,9 +455,12 @@ export default function GlobalSearch({ onClose }) {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={isRTL ? 'ابحث عن صفحات، جهات اتصال، مهام...' : 'Search pages, contacts, tasks...'}
+            placeholder={isRTL ? 'ابحث عن صفحات، جهات اتصال، فرص، مهام، موظفين...' : 'Search pages, contacts, opportunities, tasks, employees...'}
             className="flex-1 border-none outline-none text-[15px] font-[inherit] bg-transparent text-content dark:text-content-dark placeholder:text-content-muted dark:placeholder:text-brand-400"
           />
+          {loading && !dataLoaded && (
+            <Loader2 size={16} className="animate-spin shrink-0 text-content-muted dark:text-brand-400" />
+          )}
           {query && (
             <button onClick={() => setQuery('')} className="bg-transparent border-none cursor-pointer text-content-muted dark:text-brand-400 p-0.5">
               <X size={16} />
@@ -233,79 +470,141 @@ export default function GlobalSearch({ onClose }) {
         </div>
 
         {/* Results */}
-        <div ref={listRef} className="max-h-[400px] overflow-y-auto p-2">
-          {results.length === 0 && query.trim() && !searchingContacts ? (
+        <div ref={listRef} className="max-h-[420px] overflow-y-auto p-2">
+          {!hasResults && q && !isSearching ? (
             <div className="text-center py-8 px-5 text-content-muted dark:text-brand-400">
               <Search size={28} className="opacity-30 mb-2 mx-auto" />
               <p className="m-0 text-sm">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
+              <p className="m-0 text-[11px] mt-1 opacity-60">{isRTL ? 'جرب كلمات بحث مختلفة' : 'Try different search terms'}</p>
             </div>
-          ) : results.length === 0 && searchingContacts ? (
+          ) : !hasResults && isSearching ? (
             <div className="text-center py-8 px-5 text-content-muted dark:text-brand-400">
               <Loader2 size={24} className="animate-spin mb-2 mx-auto" />
-              <p className="m-0 text-sm">{isRTL ? 'جاري البحث...' : 'Searching...'}</p>
+              <p className="m-0 text-sm">{isRTL ? 'جاري تحميل البيانات...' : 'Loading data...'}</p>
             </div>
           ) : (
             <>
-              {!query.trim() && (
-                <div className="px-3 pt-1.5 pb-2.5 text-[11px] font-semibold text-content-muted dark:text-brand-400 uppercase tracking-wide">
-                  {isRTL ? 'تنقل سريع' : 'Quick Navigation'}
-                </div>
-              )}
-              {results.map((item, i) => {
-                const Icon = item.icon;
-                const isActiveItem = i === activeIndex;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSelect(item)}
-                    onMouseEnter={() => setActiveIndex(i)}
-                    className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-[10px] border-none cursor-pointer font-[inherit] transition-colors duration-100 text-start ${isActiveItem ? 'bg-brand-50 dark:bg-brand-500/15' : 'bg-transparent'} text-content dark:text-content-dark`}
-                  >
-                    {/* Icon */}
-                    <div
-                      className="w-9 h-9 rounded-[10px] shrink-0 flex items-center justify-center"
-                      style={{
-                        background: item.type === 'page'
-                          ? (isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)')
-                          : (typeColor(item.type) + '15'),
-                        color: item.type === 'page' ? '#4A7AAB' : typeColor(item.type),
-                      }}
-                    >
-                      {item.type === 'page' && Icon ? <Icon size={16} /> : typeIcon(item.type)}
-                    </div>
+              {sectionOrder.map(section => {
+                const items = groupedResults[section];
+                if (!items || items.length === 0) return null;
 
-                    {/* Text */}
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">
-                        {item.title}
+                return (
+                  <div key={section} className="mb-1">
+                    {/* Section header */}
+                    <div className="flex items-center justify-between px-3 pt-2.5 pb-1.5">
+                      <div className="flex items-center gap-2">
+                        {ENTITY_CONFIG[section] && (
+                          <span style={{ color: ENTITY_CONFIG[section].color, opacity: 0.7 }}>
+                            {(() => { const Icon = ENTITY_CONFIG[section].icon; return <Icon size={12} />; })()}
+                          </span>
+                        )}
+                        {section === 'recent' && (
+                          <span style={{ color: '#8BA8C8', opacity: 0.7 }}>
+                            <Clock size={12} />
+                          </span>
+                        )}
+                        <span className="text-[11px] font-semibold text-content-muted dark:text-brand-400 uppercase tracking-wide">
+                          {getSectionLabel(section)}
+                        </span>
                       </div>
-                      {item.subtitle && (
-                        <div className="text-[11px] text-content-muted dark:text-brand-400 whitespace-nowrap overflow-hidden text-ellipsis mt-px">
-                          {item.subtitle}
-                        </div>
+                      {section === 'recent' && recentSearches.length > 0 && (
+                        <button
+                          onClick={clearRecent}
+                          className="text-[10px] text-content-muted dark:text-brand-400 hover:text-red-400 bg-transparent border-none cursor-pointer px-1"
+                        >
+                          {isRTL ? 'مسح' : 'Clear'}
+                        </button>
                       )}
                     </div>
 
-                    {/* Type badge for non-page items */}
-                    {item.type !== 'page' && (
-                      <span
-                        className="text-[10px] px-2 py-0.5 rounded-md font-semibold shrink-0"
-                        style={{
-                          background: typeColor(item.type) + '15',
-                          color: typeColor(item.type),
-                        }}
-                      >
-                        {typeLabel(item.type)}
-                      </span>
-                    )}
+                    {/* Section items */}
+                    {items.map((item) => {
+                      flatIndex++;
+                      const currentFlatIndex = flatIndex;
+                      const isActiveItem = currentFlatIndex === activeIndex;
+                      const Icon = item.icon;
+                      const itemType = item.type;
+                      const color = getTypeColor(itemType);
 
-                    {/* Enter hint on active */}
-                    {isActiveItem && (
-                      <ArrowRight size={14} className="shrink-0 text-content-muted dark:text-brand-400" />
-                    )}
-                  </button>
+                      return (
+                        <button
+                          key={item.id}
+                          data-search-item
+                          onClick={() => handleSelect(item)}
+                          onMouseEnter={() => setActiveIndex(currentFlatIndex)}
+                          className={`w-full flex items-center gap-3 py-2.5 px-3.5 rounded-[10px] border-none cursor-pointer font-[inherit] transition-colors duration-100 text-start ${isActiveItem ? 'bg-brand-50 dark:bg-brand-500/15' : 'bg-transparent'} text-content dark:text-content-dark`}
+                        >
+                          {/* Icon */}
+                          <div
+                            className="w-9 h-9 rounded-[10px] shrink-0 flex items-center justify-center"
+                            style={{
+                              background: itemType === 'page'
+                                ? (isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)')
+                                : (color + '15'),
+                              color: itemType === 'page' ? '#4A7AAB' : color,
+                            }}
+                          >
+                            {itemType === 'page' && Icon ? <Icon size={16} /> : getTypeIcon(itemType)}
+                          </div>
+
+                          {/* Text */}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+                              {item.title}
+                            </div>
+                            {item.subtitle && (
+                              <div className="text-[11px] text-content-muted dark:text-brand-400 whitespace-nowrap overflow-hidden text-ellipsis mt-px">
+                                {item.subtitle}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Type badge for non-page items */}
+                          {itemType !== 'page' && section !== 'recent' && section !== 'pages' && (
+                            <span
+                              className="text-[10px] px-2 py-0.5 rounded-md font-semibold shrink-0"
+                              style={{
+                                background: color + '15',
+                                color: color,
+                              }}
+                            >
+                              {getTypeLabel(itemType)}
+                            </span>
+                          )}
+
+                          {/* Recent badge */}
+                          {section === 'recent' && itemType !== 'page' && (
+                            <span
+                              className="text-[10px] px-2 py-0.5 rounded-md font-semibold shrink-0"
+                              style={{
+                                background: getTypeColor(itemType) + '15',
+                                color: getTypeColor(itemType),
+                              }}
+                            >
+                              {getTypeLabel(itemType)}
+                            </span>
+                          )}
+
+                          {/* Enter hint on active */}
+                          {isActiveItem && (
+                            <ArrowRight size={14} className="shrink-0 text-content-muted dark:text-brand-400" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 );
               })}
+
+              {/* Result count footer when searching */}
+              {q && hasResults && (
+                <div className="text-center py-2 text-[11px] text-content-muted dark:text-brand-400 opacity-60">
+                  {isRTL
+                    ? `${flatResults.length} نتيجة`
+                    : `${flatResults.length} result${flatResults.length !== 1 ? 's' : ''}`
+                  }
+                </div>
+              )}
             </>
           )}
         </div>
