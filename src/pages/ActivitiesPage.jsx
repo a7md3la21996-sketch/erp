@@ -5,7 +5,7 @@ import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
   UserCheck, AlertTriangle, Star, Receipt, Banknote,
   RefreshCw, CheckSquare, Plus, X, Search, Filter,
-  Clock, Activity, TrendingUp
+  Clock, Activity, TrendingUp, CloudOff
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Card, Input, Select, Textarea, Badge, KpiCard, PageSkeleton } from '../components/ui';
@@ -314,6 +314,11 @@ export default function ActivitiesPage() {
                     {deptDef && (
                       <Badge variant="default" size="sm">
                         {lang === 'ar' ? deptDef.ar : deptDef.en}
+                      </Badge>
+                    )}
+                    {act._offline && (
+                      <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
+                        <CloudOff size={9} /> {lang === 'ar' ? 'غير متزامن' : 'Offline'}
                       </Badge>
                     )}
                     <span className="text-[11px] text-content-muted dark:text-content-muted-dark">

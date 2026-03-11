@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';
+import { enqueue } from '../lib/offlineQueue';
 
 // ── Activity Types ─────────────────────────────────────────────────────────
 export const ACTIVITY_TYPES = {
@@ -85,6 +86,12 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
     }
     return data;
   } catch {
+    if (!navigator.onLine) {
+      const tempId = 'temp_' + Date.now();
+      const tempActivity = { ...payload, id: tempId, user_name_ar: 'أنت', user_name_en: 'You', _offline: true };
+      enqueue('activity', 'create', tempActivity);
+      return tempActivity;
+    }
     // Mock fallback
     const mock = { ...payload, id: Date.now().toString(), user_name_ar: 'أنت', user_name_en: 'You' };
     MOCK_ACTIVITIES.unshift(mock);
@@ -99,6 +106,10 @@ export async function deleteActivity(id) {
     if (error) throw error;
     logDelete('activity', id, oldData);
   } catch {
+    if (!navigator.onLine) {
+      enqueue('activity', 'delete', { id });
+      return;
+    }
     const idx = MOCK_ACTIVITIES.findIndex(a => a.id === id);
     if (idx > -1) MOCK_ACTIVITIES.splice(idx, 1);
   }

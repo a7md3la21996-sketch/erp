@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
+import { enqueue } from '../lib/offlineQueue';
 
 export const TASK_PRIORITIES = {
   high:   { ar: 'عالية',   en: 'High',   color: '#EF4444' },
@@ -57,6 +58,12 @@ export async function createTask(data) {
     logCreate('task', d.id, d);
     return d;
   } catch {
+    if (!navigator.onLine) {
+      const tempId = 'temp_' + Date.now();
+      const tempTask = { ...data, id: tempId, created_at: new Date().toISOString(), _offline: true };
+      enqueue('task', 'create', tempTask);
+      return tempTask;
+    }
     const mock = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
     MOCK_TASKS.unshift(mock);
     return mock;
@@ -71,6 +78,10 @@ export async function updateTask(id, updates) {
     logUpdate('task', id, oldData, data);
     return data;
   } catch {
+    if (!navigator.onLine) {
+      enqueue('task', 'update', { _id: id, ...updates });
+      return { id, ...updates, _offline: true };
+    }
     const idx = MOCK_TASKS.findIndex(t => t.id === id);
     if (idx > -1) Object.assign(MOCK_TASKS[idx], updates);
     return MOCK_TASKS[idx];
@@ -82,5 +93,11 @@ export async function deleteTask(id) {
     const { data: oldData } = await supabase.from('tasks').select('*').eq('id', id).single();
     await supabase.from('tasks').delete().eq('id', id);
     logDelete('task', id, oldData);
-  } catch { const idx = MOCK_TASKS.findIndex(t => t.id === id); if (idx > -1) MOCK_TASKS.splice(idx, 1); }
+  } catch {
+    if (!navigator.onLine) {
+      enqueue('task', 'delete', { id });
+      return;
+    }
+    const idx = MOCK_TASKS.findIndex(t => t.id === id); if (idx > -1) MOCK_TASKS.splice(idx, 1);
+  }
 }

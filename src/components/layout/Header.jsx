@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 
 export default function Header({ onMenuClick }) {
   const { t, i18n } = useTranslation();
@@ -16,6 +17,7 @@ export default function Header({ onMenuClick }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const ref = useRef(null);
   const isRTL = i18n.language === 'ar';
+  const { isOnline, pendingCount, isSyncing, syncResult } = useOfflineSync();
 
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setShowProfile(false); };
@@ -68,6 +70,32 @@ export default function Header({ onMenuClick }) {
         </button>
       </div>
       <div className="flex items-center gap-1">
+        {/* Offline / Syncing / Synced indicator */}
+        {!isOnline && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[11px] font-semibold me-1">
+            <WifiOff size={13} />
+            <span className="hidden sm:inline">{isRTL ? 'غير متصل' : 'Offline'}</span>
+            {pendingCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] rounded-full px-1.5 py-0 min-w-[18px] text-center leading-[18px]">
+                {pendingCount}
+              </span>
+            )}
+          </div>
+        )}
+        {isOnline && isSyncing && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-500 text-[11px] font-semibold me-1">
+            <RefreshCw size={13} className="animate-spin" />
+            <span className="hidden sm:inline">
+              {isRTL ? `مزامنة ${pendingCount}...` : `Syncing ${pendingCount}...`}
+            </span>
+          </div>
+        )}
+        {isOnline && !isSyncing && syncResult && syncResult.success > 0 && (
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold me-1">
+            <CheckCircle2 size={13} />
+            <span className="hidden sm:inline">{isRTL ? 'تمت المزامنة' : 'Synced'}</span>
+          </div>
+        )}
         <button onClick={handleLangToggle} className="p-2 px-3 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark flex items-center gap-1 text-[13px] font-semibold">
           <Globe size={18} /><span className="hidden sm:inline">{i18n.language === 'ar' ? 'EN' : 'عربي'}</span>
         </button>

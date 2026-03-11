@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   CheckSquare, Plus, X, Search, Clock, Phone, PhoneCall,
   Users, Mail, MessageCircle, Filter, Trash2, Check,
-  AlertCircle, Calendar, User, ChevronDown
+  AlertCircle, Calendar, User, ChevronDown, CloudOff
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
 import { Button, Card, Input, Select, Textarea, Badge, KpiCard, PageSkeleton } from '../components/ui';
@@ -261,6 +261,11 @@ export default function TasksPage() {
                     <span className="text-[11px] text-brand-500 flex items-center gap-[3px]">
                       <User size={10} /> {task.contact_name}
                     </span>
+                  )}
+                  {task._offline && (
+                    <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
+                      <CloudOff size={9} /> {lang === 'ar' ? 'غير متزامن' : 'Offline'}
+                    </Badge>
                   )}
                 </div>
                 <div className={`flex items-center gap-2.5 mt-[3px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
