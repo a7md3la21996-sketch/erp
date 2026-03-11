@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { NAV_ITEMS } from '../../config/navigation';
-import { Search, X, Users, ClipboardList, Target, FileText, ArrowRight, Command } from 'lucide-react';
+import supabase from '../../lib/supabase';
+import { Search, X, Users, ClipboardList, Target, FileText, ArrowRight, Command, Loader2 } from 'lucide-react';
 
 // Flatten nav items into searchable pages
 const flattenNav = (items, parent = null) => {
@@ -37,20 +38,54 @@ export default function GlobalSearch({ onClose }) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [contacts, setContacts] = useState([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
   const [tasks, setTasks] = useState([]);
+  const debounceRef = useRef(null);
 
-  // Load data from localStorage
+  // Load tasks from localStorage on mount
   useEffect(() => {
-    try {
-      const c = localStorage.getItem('platform_contacts');
-      if (c) setContacts(JSON.parse(c));
-    } catch { /* ignore */ }
     try {
       const t = localStorage.getItem('platform_tasks');
       if (t) setTasks(JSON.parse(t));
     } catch { /* ignore */ }
     inputRef.current?.focus();
   }, []);
+
+  // Search contacts from Supabase with debounce
+  const searchContacts = useCallback(async (q) => {
+    if (!q.trim()) { setContacts([]); return; }
+    setSearchingContacts(true);
+    try {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, full_name, phone, email, company, contact_type, source')
+        .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%`)
+        .limit(6);
+      if (!error && data) { setContacts(data); setSearchingContacts(false); return; }
+    } catch { /* fall through to localStorage */ }
+    // Fallback: localStorage
+    try {
+      const cached = localStorage.getItem('platform_contacts');
+      if (cached) {
+        const all = JSON.parse(cached);
+        const ql = q.toLowerCase();
+        setContacts(all.filter(c =>
+          c.full_name?.toLowerCase().includes(ql) ||
+          c.phone?.includes(ql) ||
+          c.email?.toLowerCase().includes(ql) ||
+          c.company?.toLowerCase().includes(ql)
+        ).slice(0, 6));
+      }
+    } catch { /* ignore */ }
+    setSearchingContacts(false);
+  }, []);
+
+  // Debounced search trigger
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => searchContacts(query), 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query, searchContacts]);
 
   // ESC to close
   useEffect(() => {
@@ -93,21 +128,15 @@ export default function GlobalSearch({ onClose }) {
       }
     });
 
-    // Search contacts
+    // Contacts from Supabase (already filtered by debounced search)
     contacts.forEach(c => {
-      const match = c.full_name?.toLowerCase().includes(q) ||
-        c.phone?.includes(q) ||
-        c.email?.toLowerCase().includes(q) ||
-        c.company?.toLowerCase().includes(q);
-      if (match) {
-        items.push({
-          type: 'contact',
-          id: 'contact-' + c.id,
-          title: c.full_name || (isRTL ? 'بدون اسم' : 'No Name'),
-          subtitle: [c.phone, c.contact_type, c.company].filter(Boolean).join(' · '),
-          data: c,
-        });
-      }
+      items.push({
+        type: 'contact',
+        id: 'contact-' + c.id,
+        title: c.full_name || (isRTL ? 'بدون اسم' : 'No Name'),
+        subtitle: [c.phone, c.contact_type, c.company].filter(Boolean).join(' · '),
+        data: c,
+      });
     });
 
     // Search tasks
@@ -218,10 +247,16 @@ export default function GlobalSearch({ onClose }) {
 
         {/* Results */}
         <div ref={listRef} style={{ maxHeight: 400, overflowY: 'auto', padding: '8px' }}>
-          {results.length === 0 && query.trim() ? (
+          {results.length === 0 && query.trim() && !searchingContacts ? (
             <div style={{ textAlign: 'center', padding: '32px 20px', color: isDark ? '#6B8DB5' : '#9ca3af' }}>
               <Search size={28} style={{ opacity: 0.3, marginBottom: 8 }} />
               <p style={{ margin: 0, fontSize: 14 }}>{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
+            </div>
+          ) : results.length === 0 && searchingContacts ? (
+            <div style={{ textAlign: 'center', padding: '32px 20px', color: isDark ? '#6B8DB5' : '#9ca3af' }}>
+              <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: 8 }} />
+              <p style={{ margin: 0, fontSize: 14 }}>{isRTL ? 'جاري البحث...' : 'Searching...'}</p>
+              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
             </div>
           ) : (
             <>
