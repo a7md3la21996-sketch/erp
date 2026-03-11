@@ -15,6 +15,7 @@ import {
   MOCK_OPS_DEALS, MOCK_INSTALLMENTS, MOCK_HANDOVERS, MOCK_TICKETS,
   MOCK_OPS_ACTIVITY, fmtMoney, fmtMoneyShort, daysSince, daysUntil,
 } from '../../data/operations_mock_data';
+import { getWonDeals } from '../../services/dealsService';
 
 // ── Tabs ────────────────────────────────────────────────────────────────
 const TABS = [
@@ -123,7 +124,10 @@ export default function OperationsPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showDealModal, setShowDealModal] = useState(false);
   // Local state for interactive data
-  const [deals, setDeals] = useState(MOCK_OPS_DEALS);
+  const [deals, setDeals] = useState(() => {
+    const wonDeals = getWonDeals();
+    return [...wonDeals, ...MOCK_OPS_DEALS];
+  });
   const [tickets, setTickets] = useState(MOCK_TICKETS);
   const [installments, setInstallments] = useState(MOCK_INSTALLMENTS);
 
@@ -492,7 +496,10 @@ export default function OperationsPage() {
                       onMouseEnter={() => setHoverRow(deal.id)} onMouseLeave={() => setHoverRow(null)}
                       onClick={() => setSelectedDeal(deal)}
                       style={{ background: hoverRow === deal.id ? c.rowHover : 'transparent', cursor: 'pointer', transition: 'background 0.15s' }}>
-                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted, fontWeight: 600 }}>{deal.deal_number}</td>
+                      <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}`, color: c.muted, fontWeight: 600 }}>
+                        {deal.deal_number}
+                        {deal.opportunity_id && <span style={{ marginInlineStart: 6, fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4, background: 'rgba(16,185,129,0.12)', color: '#10B981' }}>CRM</span>}
+                      </td>
                       <td style={{ padding: '12px 14px', borderBottom: `1px solid ${c.border}` }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
                           <div style={{ width: 32, height: 32, borderRadius: '50%', background: ACOLORS[deal.id.charCodeAt(5) % ACOLORS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{initials(isRTL ? deal.client_ar : deal.client_en)}</div>

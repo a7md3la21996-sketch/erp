@@ -4,6 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
+import { createDealFromOpportunity } from '../../services/dealsService';
 import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2 } from 'lucide-react';
 
 const STAGE_CONFIG = [
@@ -329,6 +330,7 @@ export default function OpportunitiesPage() {
   const [filterTemp, setFilterTemp] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
+  const [dealCreatedToast, setDealCreatedToast] = useState(null);
 
   const c = { bg: isDark ? '#152232' : '#f9fafb', cardBg: isDark ? '#1a2234' : '#fff', border: isDark ? 'rgba(74,122,171,0.2)' : '#e5e7eb', text: isDark ? '#E2EAF4' : '#111827', textMuted: isDark ? '#8BA8C8' : '#6b7280', inputBg: isDark ? '#0F1E2D' : '#fff' };
 
@@ -370,6 +372,16 @@ export default function OpportunitiesPage() {
     setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage } : o));
     if (selectedOpp?.id === id) setSelectedOpp(p => ({ ...p, stage: toStage }));
     await updateOpportunity(id, { stage: toStage }).catch(() => {});
+
+    // Auto-create deal in Operations when closed_won
+    if (toStage === 'closed_won') {
+      const opp = opps.find(o => o.id === id);
+      if (opp) {
+        const deal = createDealFromOpportunity({ ...opp, stage: toStage });
+        setDealCreatedToast(deal.deal_number);
+        setTimeout(() => setDealCreatedToast(null), 4000);
+      }
+    }
   };
 
   const handleDelete = async (id) => {
@@ -482,6 +494,25 @@ export default function OpportunitiesPage() {
 
       {showModal && <AddModal isDark={isDark} isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} />}
     </div>
+
+    {/* Deal Created Toast */}
+    {dealCreatedToast && (
+      <div style={{
+        position: 'fixed', bottom: 24, [isRTL ? 'left' : 'right']: 24, zIndex: 300,
+        background: 'linear-gradient(135deg,#10B981,#059669)', color: '#fff',
+        padding: '14px 20px', borderRadius: 12, boxShadow: '0 8px 24px rgba(16,185,129,0.3)',
+        display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 600,
+        animation: 'slideUp 0.3s ease-out',
+      }}>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>🎉</div>
+        <div>
+          <div>{isRTL ? 'تم إنشاء صفقة جديدة!' : 'Deal created!'}</div>
+          <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>{dealCreatedToast} → {isRTL ? 'العمليات' : 'Operations'}</div>
+        </div>
+        <button onClick={() => setDealCreatedToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.7, padding: 2, marginInlineStart: 8 }}>✕</button>
+      </div>
+    )}
+    <style>{`@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
 
     {/* Drawer */}
     {selectedOpp && (
