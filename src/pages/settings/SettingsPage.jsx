@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useDS } from '../../hooks/useDesignSystem';
-import { Plus, Trash2, Save, Settings, Palette, Bell, Shield, Globe, User } from 'lucide-react';
+import { Plus, Trash2, Save, Settings, Palette, Globe, User } from 'lucide-react';
+import Button from '../../components/ui/Button';
+import Card from '../../components/ui/Card';
+import Input from '../../components/ui/Input';
 
 const DEFAULT_ACTIVITY_TYPES = [
   { key: 'call',          label: 'Call',          labelAr: 'مكالمة',      icon: '📞' },
@@ -15,7 +17,7 @@ const DEFAULT_ACTIVITY_TYPES = [
   { key: 'status_change', label: 'Status Change', labelAr: 'تغيير حالة',  icon: '🔄' },
 ];
 
-function ActivityTypesSettings({ c, inp }) {
+function ActivityTypesSettings() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
@@ -44,137 +46,121 @@ function ActivityTypesSettings({ c, inp }) {
   };
 
   return (
-    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 14, padding: 20, marginBottom: 20 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h3 style={{ margin: 0, color: c.text, fontSize: 15, fontWeight: 700 }}>
+    <Card className="p-5 mb-5">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="m-0 text-[15px] font-bold text-content dark:text-content-dark">
           {isRTL ? 'أنواع الأنشطة' : 'Activity Types'}
         </h3>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={() => setTypes(DEFAULT_ACTIVITY_TYPES)} style={{ padding: '6px 14px', background: c.input, border: `1px solid ${c.border}`, borderRadius: 8, color: c.muted, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setTypes(DEFAULT_ACTIVITY_TYPES)}>
             {isRTL ? 'إعادة تعيين' : 'Reset'}
-          </button>
-          <button onClick={handleSave} style={{ padding: '6px 14px', background: saved ? 'rgba(16,185,129,0.2)' : 'linear-gradient(135deg,#2B4C6F,#4A7AAB)', border: saved ? '1px solid #10B981' : 'none', borderRadius: 8, color: saved ? '#10B981' : '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontFamily: 'inherit' }}>
+          </Button>
+          <Button variant={saved ? 'success' : 'primary'} size="sm" onClick={handleSave}>
             <Save size={13} /> {saved ? (isRTL ? 'تم الحفظ ✓' : 'Saved ✓') : (isRTL ? 'حفظ' : 'Save')}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div style={{ marginBottom: 16 }}>
+      <div className="mb-4">
         {types.map((type, idx) => (
-          <div key={type.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: c.input, border: `1px solid ${c.border}`, borderRadius: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 18, minWidth: 28 }}>{type.icon}</span>
-            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr 60px', gap: 8 }}>
-              <input style={inp} value={type.label} onChange={e => setTypes(prev => prev.map((t, i) => i === idx ? { ...t, label: e.target.value } : t))} placeholder="English name" />
-              <input style={inp} value={type.labelAr} onChange={e => setTypes(prev => prev.map((t, i) => i === idx ? { ...t, labelAr: e.target.value } : t))} placeholder="الاسم بالعربي" dir="rtl" />
-              <input style={{ ...inp, textAlign: 'center', fontSize: 18, padding: '4px' }} value={type.icon} onChange={e => setTypes(prev => prev.map((t, i) => i === idx ? { ...t, icon: e.target.value } : t))} maxLength={2} />
+          <div key={type.key} className="flex items-center gap-2.5 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg mb-2">
+            <span className="text-lg min-w-[28px]">{type.icon}</span>
+            <div className="flex-1 grid grid-cols-[1fr_1fr_60px] gap-2">
+              <Input value={type.label} onChange={e => setTypes(prev => prev.map((t, i) => i === idx ? { ...t, label: e.target.value } : t))} placeholder="English name" size="sm" />
+              <Input value={type.labelAr} onChange={e => setTypes(prev => prev.map((t, i) => i === idx ? { ...t, labelAr: e.target.value } : t))} placeholder="الاسم بالعربي" dir="rtl" size="sm" />
+              <Input value={type.icon} onChange={e => setTypes(prev => prev.map((t, i) => i === idx ? { ...t, icon: e.target.value } : t))} maxLength={2} size="sm" className="text-center !text-lg !px-1" />
             </div>
-            <button onClick={() => handleDelete(type.key)} style={{ padding: 6, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, color: '#EF4444', cursor: 'pointer', border: 'none' }}>
+            <Button variant="danger" size="sm" onClick={() => handleDelete(type.key)} className="!p-1.5">
               <Trash2 size={14} />
-            </button>
+            </Button>
           </div>
         ))}
       </div>
 
-      <div style={{ padding: 12, background: c.input, border: `1px dashed ${c.border}`, borderRadius: 8 }}>
-        <p style={{ margin: '0 0 10px', color: c.muted, fontSize: 12, fontWeight: 600 }}>
+      <div className="p-3 bg-surface-input dark:bg-surface-input-dark border border-dashed border-edge dark:border-edge-dark rounded-lg">
+        <p className="m-0 mb-2.5 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
           {isRTL ? '+ إضافة نوع جديد' : '+ Add New Type'}
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 60px auto', gap: 8, alignItems: 'center' }}>
-          <input style={inp} value={newType.label} onChange={e => setNewType(p => ({ ...p, label: e.target.value }))} placeholder="English name" />
-          <input style={inp} value={newType.labelAr} onChange={e => setNewType(p => ({ ...p, labelAr: e.target.value }))} placeholder="الاسم بالعربي" dir="rtl" />
-          <input style={{ ...inp, textAlign: 'center', fontSize: 18, padding: '4px' }} value={newType.icon} onChange={e => setNewType(p => ({ ...p, icon: e.target.value }))} maxLength={2} />
-          <button onClick={handleAdd} disabled={!newType.label.trim()} style={{ padding: '8px 14px', background: newType.label.trim() ? 'linear-gradient(135deg,#2B4C6F,#4A7AAB)' : (c.input), border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: newType.label.trim() ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', fontFamily: 'inherit' }}>
+        <div className="grid grid-cols-[1fr_1fr_60px_auto] gap-2 items-center">
+          <Input value={newType.label} onChange={e => setNewType(p => ({ ...p, label: e.target.value }))} placeholder="English name" size="sm" />
+          <Input value={newType.labelAr} onChange={e => setNewType(p => ({ ...p, labelAr: e.target.value }))} placeholder="الاسم بالعربي" dir="rtl" size="sm" />
+          <Input value={newType.icon} onChange={e => setNewType(p => ({ ...p, icon: e.target.value }))} maxLength={2} size="sm" className="text-center !text-lg !px-1" />
+          <Button variant="primary" size="sm" onClick={handleAdd} disabled={!newType.label.trim()} className="whitespace-nowrap">
             <Plus size={13} /> {isRTL ? 'إضافة' : 'Add'}
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
-function ProfileSection({ c, inp, profile, isRTL }) {
+function ProfileSection({ profile, isRTL }) {
   return (
-    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 14, padding: 20, marginBottom: 20 }}>
-      <h3 style={{ margin: '0 0 16px', color: c.text, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <User size={16} color="#4A7AAB" />{isRTL ? 'الملف الشخصي' : 'Profile'}
+    <Card className="p-5 mb-5">
+      <h3 className="m-0 mb-4 text-[15px] font-bold text-content dark:text-content-dark flex items-center gap-2">
+        <User size={16} className="text-brand-500" />{isRTL ? 'الملف الشخصي' : 'Profile'}
       </h3>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label style={{ fontSize: 12, color: c.muted, marginBottom: 4, display: 'block' }}>{isRTL ? 'الاسم بالعربي' : 'Arabic Name'}</label>
-          <input style={inp} value={profile?.full_name_ar || ''} readOnly />
+          <label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الاسم بالعربي' : 'Arabic Name'}</label>
+          <Input value={profile?.full_name_ar || ''} readOnly />
         </div>
         <div>
-          <label style={{ fontSize: 12, color: c.muted, marginBottom: 4, display: 'block' }}>{isRTL ? 'الاسم بالإنجليزي' : 'English Name'}</label>
-          <input style={inp} value={profile?.full_name_en || ''} readOnly />
+          <label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الاسم بالإنجليزي' : 'English Name'}</label>
+          <Input value={profile?.full_name_en || ''} readOnly />
         </div>
         <div>
-          <label style={{ fontSize: 12, color: c.muted, marginBottom: 4, display: 'block' }}>{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
-          <input style={inp} value={profile?.email || ''} readOnly />
+          <label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
+          <Input value={profile?.email || ''} readOnly />
         </div>
         <div>
-          <label style={{ fontSize: 12, color: c.muted, marginBottom: 4, display: 'block' }}>{isRTL ? 'الدور' : 'Role'}</label>
-          <input style={inp} value={profile?.role || ''} readOnly />
+          <label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الدور' : 'Role'}</label>
+          <Input value={profile?.role || ''} readOnly />
         </div>
       </div>
-      <p style={{ margin: '12px 0 0', fontSize: 11, color: c.muted }}>{isRTL ? 'لتعديل البيانات تواصل مع المدير' : 'Contact admin to update profile'}</p>
-    </div>
+      <p className="mt-3 mb-0 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'لتعديل البيانات تواصل مع المدير' : 'Contact admin to update profile'}</p>
+    </Card>
   );
 }
 
-function AppearanceSection({ c, isRTL, isDark, toggleTheme, handleLangToggle, lang }) {
+function AppearanceSection({ isRTL, isDark, toggleTheme, handleLangToggle, lang }) {
   return (
-    <div style={{ background: c.card, border: `1px solid ${c.border}`, borderRadius: 14, padding: 20, marginBottom: 20 }}>
-      <h3 style={{ margin: '0 0 16px', color: c.text, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <Palette size={16} color="#4A7AAB" />{isRTL ? 'المظهر' : 'Appearance'}
+    <Card className="p-5 mb-5">
+      <h3 className="m-0 mb-4 text-[15px] font-bold text-content dark:text-content-dark flex items-center gap-2">
+        <Palette size={16} className="text-brand-500" />{isRTL ? 'المظهر' : 'Appearance'}
       </h3>
-      <div style={{ display: 'flex', gap: 12 }}>
-        <button onClick={toggleTheme} style={{
-          flex: 1, padding: 16, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
-          border: `2px solid ${isDark ? '#4A7AAB' : c.border}`, background: isDark ? 'rgba(74,122,171,0.08)' : 'transparent',
-          textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 24, marginBottom: 6 }}>🌙</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{isRTL ? 'داكن' : 'Dark'}</div>
-          {isDark && <div style={{ fontSize: 10, color: '#4A7AAB', marginTop: 4 }}>{isRTL ? 'مفعّل' : 'Active'}</div>}
+      <div className="flex gap-3">
+        <button onClick={toggleTheme} className={`flex-1 p-4 rounded-xl cursor-pointer font-cairo text-center border-2 transition-all ${isDark ? 'border-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark bg-transparent'}`}>
+          <div className="text-2xl mb-1.5">🌙</div>
+          <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? 'داكن' : 'Dark'}</div>
+          {isDark && <div className="text-[10px] text-brand-500 mt-1">{isRTL ? 'مفعّل' : 'Active'}</div>}
         </button>
-        <button onClick={toggleTheme} style={{
-          flex: 1, padding: 16, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
-          border: `2px solid ${!isDark ? '#4A7AAB' : c.border}`, background: !isDark ? 'rgba(74,122,171,0.08)' : 'transparent',
-          textAlign: 'center',
-        }}>
-          <div style={{ fontSize: 24, marginBottom: 6 }}>☀️</div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{isRTL ? 'فاتح' : 'Light'}</div>
-          {!isDark && <div style={{ fontSize: 10, color: '#4A7AAB', marginTop: 4 }}>{isRTL ? 'مفعّل' : 'Active'}</div>}
+        <button onClick={toggleTheme} className={`flex-1 p-4 rounded-xl cursor-pointer font-cairo text-center border-2 transition-all ${!isDark ? 'border-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark bg-transparent'}`}>
+          <div className="text-2xl mb-1.5">☀️</div>
+          <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? 'فاتح' : 'Light'}</div>
+          {!isDark && <div className="text-[10px] text-brand-500 mt-1">{isRTL ? 'مفعّل' : 'Active'}</div>}
         </button>
       </div>
-      <div style={{ marginTop: 16, padding: '12px 16px', borderRadius: 10, background: c.input, border: `1px solid ${c.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Globe size={16} color="#4A7AAB" />
-          <span style={{ fontSize: 13, color: c.text }}>{isRTL ? 'اللغة' : 'Language'}</span>
+      <div className="mt-4 px-4 py-3 rounded-[10px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark flex justify-between items-center">
+        <div className="flex items-center gap-2">
+          <Globe size={16} className="text-brand-500" />
+          <span className="text-[13px] text-content dark:text-content-dark">{isRTL ? 'اللغة' : 'Language'}</span>
         </div>
-        <button onClick={handleLangToggle} style={{ padding: '5px 16px', borderRadius: 8, border: `1px solid ${c.border}`, background: c.card, color: '#4A7AAB', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+        <Button variant="secondary" size="sm" onClick={handleLangToggle}>
           {lang === 'ar' ? 'English' : 'عربي'}
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
 export default function SettingsPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
-  const { toggleTheme } = useTheme();
-  const c = useDS();
-  const isDark = c.dark;
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
-
-  const inp = {
-    background: c.input, border: `1px solid ${c.border}`,
-    borderRadius: 8, padding: '8px 12px', color: c.text,
-    fontSize: 13, outline: 'none', width: '100%', boxSizing: 'border-box',
-    fontFamily: 'inherit',
-  };
 
   const handleLangToggle = () => {
     const newLang = lang === 'ar' ? 'en' : 'ar';
@@ -183,35 +169,35 @@ export default function SettingsPage() {
 
   if (profile?.role !== 'admin') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '50vh' }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: 16 }}>🔒</div>
-          <h2 style={{ color: c.text, margin: '0 0 8px' }}>{isRTL ? 'غير مصرح' : 'Unauthorized'}</h2>
-          <p style={{ color: c.muted }}>{isRTL ? 'هذه الصفحة للمديرين فقط' : 'This page is for admins only'}</p>
+      <div className="flex items-center justify-center h-[50vh]">
+        <div className="text-center">
+          <div className="text-5xl mb-4">🔒</div>
+          <h2 className="text-content dark:text-content-dark m-0 mb-2">{isRTL ? 'غير مصرح' : 'Unauthorized'}</h2>
+          <p className="text-content-muted dark:text-content-muted-dark">{isRTL ? 'هذه الصفحة للمديرين فقط' : 'This page is for admins only'}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px 28px', background: c.bg, minHeight: '100vh' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 12, background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Settings size={20} color="#4A7AAB" />
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-7 py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+          <Settings size={20} className="text-brand-500" />
         </div>
         <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: c.text }}>{isRTL ? 'الإعدادات' : 'Settings'}</h1>
-          <p style={{ margin: 0, fontSize: 12, color: c.muted }}>{isRTL ? 'إدارة إعدادات النظام' : 'Manage system settings'}</p>
+          <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'الإعدادات' : 'Settings'}</h1>
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'إدارة إعدادات النظام' : 'Manage system settings'}</p>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, maxWidth: 900 }}>
+      <div className="grid grid-cols-2 gap-5 max-w-[900px]">
         <div>
-          <ProfileSection c={c} inp={inp} profile={profile} isRTL={isRTL} />
-          <AppearanceSection c={c} isRTL={isRTL} isDark={isDark} toggleTheme={toggleTheme} handleLangToggle={handleLangToggle} lang={lang} />
+          <ProfileSection profile={profile} isRTL={isRTL} />
+          <AppearanceSection isRTL={isRTL} isDark={isDark} toggleTheme={toggleTheme} handleLangToggle={handleLangToggle} lang={lang} />
         </div>
         <div>
-          <ActivityTypesSettings c={c} inp={inp} />
+          <ActivityTypesSettings />
         </div>
       </div>
     </div>
