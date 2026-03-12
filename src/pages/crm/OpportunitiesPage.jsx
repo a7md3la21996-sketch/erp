@@ -680,6 +680,8 @@ export default function OpportunitiesPage() {
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterSource, setFilterSource] = useState('all');
   const [bulkToast, setBulkToast] = useState(null);
+  const [gridPage, setGridPage] = useState(1);
+  const GRID_PAGE_SIZE = 30;
   const savedFilterRef = useRef(null);
 
   // Click-outside for saved filters dropdown
@@ -842,6 +844,12 @@ export default function OpportunitiesPage() {
       default: return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     }
   });
+
+  // Grid pagination
+  const gridTotalPages = Math.max(1, Math.ceil(filtered.length / GRID_PAGE_SIZE));
+  const gridSafePage = Math.min(gridPage, gridTotalPages);
+  const gridPaged = viewMode === 'grid' ? filtered.slice((gridSafePage - 1) * GRID_PAGE_SIZE, gridSafePage * GRID_PAGE_SIZE) : filtered;
+  useEffect(() => { setGridPage(1); }, [search, filterAgent, filterTemp, filterPriority, filterDept, filterDate, filterScore, filterSource, activeStage, sortBy]);
 
   // Export data
   const exportData = filtered.map(o => ({
@@ -1188,7 +1196,7 @@ export default function OpportunitiesPage() {
       )}
 
       {/* Stage Tabs */}
-      <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 flex-wrap">
+      <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 overflow-x-auto scrollbar-hide">
         {stageConfigWithAll.map(s => {
           const count = s.id === 'all' ? stageCounts._total : (stageCounts[s.id] || 0);
           const active = activeStage === s.id;
@@ -1447,6 +1455,9 @@ export default function OpportunitiesPage() {
                 }`}>
                   {stageOpps.length === 0 ? (
                     <div className="text-center py-8">
+                      <div className="w-10 h-10 rounded-xl bg-brand-500/[0.08] flex items-center justify-center mx-auto mb-2">
+                        <Grid3X3 size={16} className="text-brand-500 opacity-40" />
+                      </div>
                       <p className="text-xs text-content-muted dark:text-content-muted-dark opacity-50 mb-2">{isRTL ? 'اسحب فرصة هنا' : 'Drop here'}</p>
                       <button onClick={() => setShowModal(true)} className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo">
                         <Plus size={10} className="inline -mt-px" /> {isRTL ? 'إضافة' : 'Add'}
@@ -1478,9 +1489,9 @@ export default function OpportunitiesPage() {
             );
           })}
         </div>
-      </>) : (
+      </>) : (<>
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-          {filtered.map(opp => (
+          {gridPaged.map(opp => (
             <div key={opp.id} className="relative">
               {bulkMode && (
                 <button
@@ -1503,7 +1514,23 @@ export default function OpportunitiesPage() {
             </div>
           ))}
         </div>
-      )}
+        {/* Grid Pagination */}
+        {gridTotalPages > 1 && (
+          <div className="flex justify-center items-center gap-3 mt-5">
+            <button disabled={gridPage === 1} onClick={() => setGridPage(p => p - 1)}
+              className={`px-3.5 py-1.5 rounded-lg border border-edge dark:border-edge-dark text-xs font-semibold font-cairo ${gridPage === 1 ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-brand-500/10'} bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark`}>
+              {isRTL ? '← السابق' : '← Prev'}
+            </button>
+            <span className="text-xs text-content-muted dark:text-content-muted-dark">
+              {isRTL ? `${gridSafePage} من ${gridTotalPages}` : `${gridSafePage} of ${gridTotalPages}`}
+            </span>
+            <button disabled={gridPage >= gridTotalPages} onClick={() => setGridPage(p => p + 1)}
+              className={`px-3.5 py-1.5 rounded-lg border border-edge dark:border-edge-dark text-xs font-semibold font-cairo ${gridPage >= gridTotalPages ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-brand-500/10'} bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark`}>
+              {isRTL ? 'التالي →' : 'Next →'}
+            </button>
+          </div>
+        )}
+      </>)}
 
       {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} existingOpps={opps} />}
 
@@ -1612,7 +1639,7 @@ export default function OpportunitiesPage() {
         className={`fixed inset-0 z-[200] bg-black/40 flex ${isRTL ? 'flex-row' : 'flex-row-reverse'}`}
         onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}
       >
-        <div className="w-full max-w-[460px] h-full bg-surface-card dark:bg-surface-card-dark shadow-[-8px_0_40px_rgba(0,0,0,0.2)] flex flex-col overflow-y-auto">
+        <div className="w-full max-w-[100vw] sm:max-w-[460px] h-full bg-surface-card dark:bg-surface-card-dark shadow-[-8px_0_40px_rgba(0,0,0,0.2)] flex flex-col overflow-y-auto">
           {/* Drawer Header */}
           <div className="px-6 py-5 border-b border-edge dark:border-edge-dark flex items-center justify-between bg-[#F8FAFC] dark:bg-surface-bg-dark">
             <div className="flex items-center gap-3">

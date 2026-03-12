@@ -28,6 +28,8 @@ html.dark body, body.dark { background: #030712; color: #f3f4f6; }
 
 .scrollbar-thin::-webkit-scrollbar { width: 4px; }
 .scrollbar-thin::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 2px; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
 
 /* Global scrollbar styling */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
