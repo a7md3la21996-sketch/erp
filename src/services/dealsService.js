@@ -1,11 +1,37 @@
 // ── Deals Service — bridge between CRM Opportunities and Operations ──
+import supabase from '../lib/supabase';
+import { logCreate } from './auditService';
 
 const STORAGE_KEY = 'platform_won_deals';
 
 /**
  * Get all deals created from won opportunities
  */
-export function getWonDeals() {
+export async function getWonDeals() {
+  try {
+    const { data, error } = await supabase
+      .from('deals')
+      .select('*')
+      .not('opportunity_id', 'is', null)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (data?.length) {
+      // Sync to localStorage
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+      return data;
+    }
+  } catch { /* fallback */ }
+  // Fallback to localStorage
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Sync version for non-async callers (localStorage only)
+export function getWonDealsSync() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
@@ -30,19 +56,23 @@ function nextDealNumber(existingDeals) {
 
 /**
  * Create a deal from a won opportunity
- * @param {Object} opp — full opportunity object (with contacts, users, projects relations)
- * @param {Array} existingDeals — all existing deals (mock + won) to generate unique deal_number
- * @returns {Object} the new deal
+ * Saves to Supabase first, falls back to localStorage
  */
-export function createDealFromOpportunity(opp, existingDeals = []) {
+export async function createDealFromOpportunity(opp, existingDeals = []) {
   const contact = opp.contacts || {};
   const agent = opp.users || {};
   const project = opp.projects || {};
 
-  const deal = {
-    id: `deal-opp-${opp.id}`,
-    deal_number: nextDealNumber(existingDeals),
+  // Check if already exists
+  const localDeals = getWonDealsSync();
+  const existing = localDeals.find(d => d.opportunity_id === opp.id);
+  if (existing) return existing;
+
+  const dealData = {
+    deal_number: nextDealNumber([...existingDeals, ...localDeals]),
     opportunity_id: opp.id,
+    contact_id: opp.contact_id || null,
+    project_id: opp.project_id || null,
     client_ar: contact.full_name || opp.contact_name || '—',
     client_en: contact.full_name || opp.contact_name || '—',
     phone: contact.phone || '',
@@ -59,7 +89,6 @@ export function createDealFromOpportunity(opp, existingDeals = []) {
     down_payment: 0,
     installments_count: 0,
     status: 'new_deal',
-    created_at: new Date().toISOString().split('T')[0],
     documents: {
       national_id: false,
       reservation_form: false,
@@ -69,15 +98,29 @@ export function createDealFromOpportunity(opp, existingDeals = []) {
     },
   };
 
-  // Persist
-  const existing = getWonDeals();
-  // Don't duplicate if already created for this opportunity
-  if (existing.some(d => d.opportunity_id === opp.id)) {
-    return existing.find(d => d.opportunity_id === opp.id);
-  }
-  existing.unshift(deal);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+  // Try Supabase first
+  try {
+    const { data, error } = await supabase
+      .from('deals')
+      .insert([{ ...dealData, created_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    // Sync to localStorage
+    localDeals.unshift(data);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(localDeals)); } catch {}
+    logCreate('deal', data.id, data);
+    return data;
+  } catch { /* fallback to localStorage */ }
 
+  // localStorage fallback
+  const deal = {
+    ...dealData,
+    id: `deal-opp-${opp.id}`,
+    created_at: new Date().toISOString().split('T')[0],
+  };
+  localDeals.unshift(deal);
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(localDeals)); } catch {}
   return deal;
 }
 
@@ -85,5 +128,5 @@ export function createDealFromOpportunity(opp, existingDeals = []) {
  * Check if a deal already exists for an opportunity
  */
 export function dealExistsForOpportunity(oppId) {
-  return getWonDeals().some(d => d.opportunity_id === oppId);
+  return getWonDealsSync().some(d => d.opportunity_id === oppId);
 }

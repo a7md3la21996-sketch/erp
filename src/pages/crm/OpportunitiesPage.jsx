@@ -740,7 +740,7 @@ export default function OpportunitiesPage() {
     if (toStage === 'closed_won') {
       const opp = opps.find(o => o.id === id);
       if (opp && (opp.contacts?.department || 'sales') === 'sales') {
-        const deal = createDealFromOpportunity({ ...opp, stage: toStage });
+        const deal = await createDealFromOpportunity({ ...opp, stage: toStage });
         setDealCreatedToast(deal.deal_number);
         setTimeout(() => setDealCreatedToast(null), 4000);
       }

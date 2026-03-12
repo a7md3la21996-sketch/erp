@@ -152,14 +152,17 @@ export default function OperationsPage() {
   // Fetch data on mount via service layer (falls back to mock inside services)
   useEffect(() => {
     async function loadData() {
-      const wonDeals = getWonDeals();
-      const [svcDeals, svcInstallments, svcHandovers, svcTickets] = await Promise.all([
+      const [wonDeals, svcDeals, svcInstallments, svcHandovers, svcTickets] = await Promise.all([
+        getWonDeals(),
         svcFetchDeals(),
         svcFetchInstallments(),
         svcFetchHandovers(),
         svcFetchTickets(),
       ]);
-      setDeals([...wonDeals, ...svcDeals]);
+      // Merge won deals with service deals, avoid duplicates
+      const svcIds = new Set(svcDeals.map(d => d.opportunity_id).filter(Boolean));
+      const uniqueWon = wonDeals.filter(d => !svcIds.has(d.opportunity_id));
+      setDeals([...uniqueWon, ...svcDeals]);
       setInstallments(svcInstallments);
       setHandovers(svcHandovers);
       setTickets(svcTickets);
