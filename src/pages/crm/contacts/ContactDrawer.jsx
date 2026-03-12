@@ -36,14 +36,60 @@ function ActivityForm({ contactId, onSave, onCancel }) {
     } catch { return defaultTypes; }
   });
 
-  const [form, setForm] = useState({ type: activityTypes[0]?.key || 'call', description: '', next_action: '', next_action_date: '', call_result: '' });
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const ACTIVITY_RESULTS = {
+    call: [
+      { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
+      { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
+      { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#EF4444' },
+      { value: 'switched_off', label: isRTL ? 'مغلق' : 'Switched Off', color: '#6b7280' },
+      { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong Number', color: '#9333EA' },
+    ],
+    whatsapp: [
+      { value: 'replied', label: isRTL ? 'رد' : 'Replied', color: '#10B981' },
+      { value: 'seen', label: isRTL ? 'شاف' : 'Seen', color: '#3B82F6' },
+      { value: 'delivered', label: isRTL ? 'وصلت' : 'Delivered', color: '#F59E0B' },
+      { value: 'not_delivered', label: isRTL ? 'لم تصل' : 'Not Delivered', color: '#EF4444' },
+      { value: 'blocked', label: isRTL ? 'محظور' : 'Blocked', color: '#6b7280' },
+    ],
+    email: [
+      { value: 'replied', label: isRTL ? 'رد' : 'Replied', color: '#10B981' },
+      { value: 'opened', label: isRTL ? 'فتح' : 'Opened', color: '#3B82F6' },
+      { value: 'sent', label: isRTL ? 'تم الإرسال' : 'Sent', color: '#F59E0B' },
+      { value: 'bounced', label: isRTL ? 'ارتد' : 'Bounced', color: '#EF4444' },
+    ],
+    meeting: [
+      { value: 'attended', label: isRTL ? 'حضر' : 'Attended', color: '#10B981' },
+      { value: 'cancelled', label: isRTL ? 'ألغى' : 'Cancelled', color: '#EF4444' },
+      { value: 'rescheduled', label: isRTL ? 'أُجّل' : 'Rescheduled', color: '#F59E0B' },
+      { value: 'no_show', label: isRTL ? 'لم يحضر' : 'No Show', color: '#6b7280' },
+    ],
+    site_visit: [
+      { value: 'visited', label: isRTL ? 'زار' : 'Visited', color: '#10B981' },
+      { value: 'cancelled', label: isRTL ? 'ألغى' : 'Cancelled', color: '#EF4444' },
+      { value: 'rescheduled', label: isRTL ? 'أُجّل' : 'Rescheduled', color: '#F59E0B' },
+      { value: 'no_show', label: isRTL ? 'لم يحضر' : 'No Show', color: '#6b7280' },
+    ],
+  };
+
+  const RESULT_TITLES = {
+    call: isRTL ? 'نتيجة المكالمة' : 'Call Result',
+    whatsapp: isRTL ? 'نتيجة الرسالة' : 'Message Result',
+    email: isRTL ? 'نتيجة الإيميل' : 'Email Result',
+    meeting: isRTL ? 'نتيجة الاجتماع' : 'Meeting Result',
+    site_visit: isRTL ? 'نتيجة الزيارة' : 'Visit Result',
+  };
+
+  const [form, setForm] = useState({ type: activityTypes[0]?.key || 'call', description: '', next_action: '', next_action_date: '', result: '' });
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '' } : {}) }));
+
+  const currentResults = ACTIVITY_RESULTS[form.type] || [];
 
   const handleSave = () => {
     const data = { ...form, created_at: new Date().toISOString() };
-    if (form.type === 'call' && form.call_result) {
-      const resultLabels = { answered: isRTL?'رد':'Answered', no_answer: isRTL?'لم يرد':'No Answer', busy: isRTL?'مشغول':'Busy', interested: isRTL?'مهتم':'Interested', not_interested: isRTL?'غير مهتم':'Not Interested' };
-      data.description = `${resultLabels[form.call_result] || form.call_result}${form.description ? ' — ' + form.description : ''}`;
+    if (form.result && currentResults.length > 0) {
+      const found = currentResults.find(r => r.value === form.result);
+      const resultLabel = found ? found.label : form.result;
+      data.description = `${resultLabel}${form.description ? ' — ' + form.description : ''}`;
     }
     onSave(data);
   };
@@ -59,20 +105,14 @@ function ActivityForm({ contactId, onSave, onCancel }) {
         <Input size="sm" type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)}
           placeholder={isRTL ? 'تاريخ المتابعة' : 'Follow-up date'} />
       </div>
-      {form.type === 'call' && (
+      {currentResults.length > 0 && (
         <div className="mb-2.5">
-          <div className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نتيجة المكالمة' : 'Call Result'}</div>
+          <div className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{RESULT_TITLES[form.type]}</div>
           <div className="flex gap-1.5 flex-wrap">
-            {[
-              { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
-              { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
-              { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#EF4444' },
-              { value: 'interested', label: isRTL ? 'مهتم' : 'Interested', color: '#4A7AAB' },
-              { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not Interested', color: '#6b7280' },
-            ].map(r => (
-              <button key={r.value} onClick={() => set('call_result', r.value)}
-                className={`px-3 py-1.5 rounded-2xl text-xs cursor-pointer border ${form.call_result === r.value ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-                style={form.call_result === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>
+            {currentResults.map(r => (
+              <button key={r.value} onClick={() => setForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
+                className={`px-3 py-1.5 rounded-2xl text-xs cursor-pointer border ${form.result === r.value ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                style={form.result === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>
                 {r.label}
               </button>
             ))}

@@ -266,7 +266,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
             </div>
           ) : (
             <div className="modal-grid grid grid-cols-2 gap-3.5">
-              {!['lead', 'cold'].includes(form.contact_type) && (
+              {form.department !== 'sales' && (
                 <>
                 <div>
                   <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنس' : 'Gender'}</label>
