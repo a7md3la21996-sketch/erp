@@ -18,26 +18,40 @@ async function enrichOpps(opps) {
   const userIds = [...new Set(opps.map(o => o.assigned_to).filter(Boolean))];
   const projectIds = [...new Set(opps.map(o => o.project_id).filter(Boolean))];
 
-  // Fetch in parallel
-  const [contactsRes, usersRes, projectsRes] = await Promise.all([
-    contactIds.length
-      ? supabase.from('contacts').select('id, full_name, phone, email, company, contact_type, department').in('id', contactIds)
-      : { data: [] },
-    userIds.length
-      ? supabase.from('users').select('id, full_name_ar, full_name_en').in('id', userIds)
-      : { data: [] },
-    projectIds.length
-      ? supabase.from('projects').select('id, name_ar, name_en').in('id', projectIds)
-      : { data: [] },
-  ]);
+  // Try Supabase first, fallback to localStorage
+  let contacts = [], users = [], projects = [];
+  try {
+    const [contactsRes, usersRes, projectsRes] = await Promise.all([
+      contactIds.length
+        ? supabase.from('contacts').select('id, full_name, phone, email, company, contact_type, department').in('id', contactIds)
+        : { data: [] },
+      userIds.length
+        ? supabase.from('users').select('id, full_name_ar, full_name_en').in('id', userIds)
+        : { data: [] },
+      projectIds.length
+        ? supabase.from('projects').select('id, name_ar, name_en').in('id', projectIds)
+        : { data: [] },
+    ]);
+    contacts = contactsRes.data || [];
+    users = usersRes.data || [];
+    projects = projectsRes.data || [];
+  } catch { /* ignore */ }
+
+  // Fallback: if Supabase returned nothing, try localStorage
+  if (!contacts.length && contactIds.length) {
+    try {
+      const allContacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      contacts = allContacts.filter(c => contactIds.includes(c.id));
+    } catch { /* ignore */ }
+  }
 
   // Build lookup maps
   const contactMap = {};
-  (contactsRes.data || []).forEach(c => { contactMap[c.id] = c; });
+  contacts.forEach(c => { contactMap[c.id] = c; });
   const userMap = {};
-  (usersRes.data || []).forEach(u => { userMap[u.id] = u; });
+  users.forEach(u => { userMap[u.id] = u; });
   const projectMap = {};
-  (projectsRes.data || []).forEach(p => { projectMap[p.id] = p; });
+  projects.forEach(p => { projectMap[p.id] = p; });
 
   // Attach to each opp
   return opps.map(o => ({

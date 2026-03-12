@@ -512,7 +512,24 @@ export default function OpportunitiesPage() {
         fetchSalesAgents(),
         fetchProjects(),
       ]);
-      setOpps(oppsData);
+      // Client-side enrich: attach agent/project names from fetched lists if missing
+      const agentMap = {};
+      agentsData.forEach(a => { agentMap[a.id] = a; });
+      const projMap = {};
+      projectsData.forEach(p => { projMap[p.id] = p; });
+      // Also try localStorage contacts
+      let localContacts = [];
+      try { localContacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch {}
+      const contactMap = {};
+      localContacts.forEach(c => { contactMap[c.id] = c; });
+
+      const enriched = oppsData.map(o => ({
+        ...o,
+        contacts: o.contacts || contactMap[o.contact_id] || null,
+        users: o.users || agentMap[o.assigned_to] || null,
+        projects: o.projects || projMap[o.project_id] || null,
+      }));
+      setOpps(enriched);
       setAgents(agentsData);
       setProjects(projectsData);
       setLoading(false);
