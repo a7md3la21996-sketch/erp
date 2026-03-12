@@ -7,7 +7,7 @@ import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportu
 import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, ArrowUpDown, CheckSquare, AlertTriangle, Timer, ChevronUp, ChevronDown as ChevronDownIcon, Bookmark, GripVertical, StickyNote, Zap, RefreshCw, Filter, Thermometer } from 'lucide-react';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, Filter } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 
@@ -680,6 +680,15 @@ export default function OpportunitiesPage() {
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterSource, setFilterSource] = useState('all');
   const [bulkToast, setBulkToast] = useState(null);
+  const savedFilterRef = useRef(null);
+
+  // Click-outside for saved filters dropdown
+  useEffect(() => {
+    if (!showSaveFilter) return;
+    const h = (e) => { if (savedFilterRef.current && !savedFilterRef.current.contains(e.target)) setShowSaveFilter(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [showSaveFilter]);
 
   // Debounce search input
   useEffect(() => {
@@ -797,7 +806,8 @@ export default function OpportunitiesPage() {
       const name = getContactName(o).toLowerCase();
       const project = getProjectName(o, lang).toLowerCase();
       const phone = (o.contacts?.phone || '').toLowerCase();
-      if (!name.includes(q) && !project.includes(q) && !phone.includes(q)) return false;
+      const email = (o.contacts?.email || '').toLowerCase();
+      if (!name.includes(q) && !project.includes(q) && !phone.includes(q) && !email.includes(q)) return false;
     }
     if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return false;
     if (filterTemp !== 'all' && o.temperature !== filterTemp) return false;
@@ -843,7 +853,7 @@ export default function OpportunitiesPage() {
     [isRTL ? 'الحرارة' : 'Temp']: isRTL ? (TEMP_CONFIG[o.temperature]?.label_ar || '') : (TEMP_CONFIG[o.temperature]?.label_en || ''),
     [isRTL ? 'المسؤول' : 'Agent']: getAgentName(o, lang),
     [isRTL ? 'الأولوية' : 'Priority']: isRTL ? (PRIORITY_CONFIG[o.priority]?.label_ar || '') : (PRIORITY_CONFIG[o.priority]?.label_en || ''),
-    [isRTL ? 'درجة العميل' : 'Lead Score']: calcLeadScore(o),
+    [isRTL ? 'درجة العميل' : 'Lead Score']: scoreMap[o.id] ?? calcLeadScore(o),
     [isRTL ? 'المصدر' : 'Source']: (() => { const src = o.contacts?.source || o.source; return src ? (isRTL ? (SOURCE_LABELS[src]?.ar || src) : (SOURCE_LABELS[src]?.en || src)) : ''; })(),
     [isRTL ? 'سبب الخسارة' : 'Lost Reason']: o.lost_reason ? (LOST_REASONS[o.lost_reason] ? (isRTL ? LOST_REASONS[o.lost_reason].ar : LOST_REASONS[o.lost_reason].en) : o.lost_reason) : '',
     [isRTL ? 'الإغلاق المتوقع' : 'Expected Close']: o.expected_close_date || '',
@@ -930,7 +940,6 @@ export default function OpportunitiesPage() {
 
     // If triggered from edit form, complete the full edit save with lost_reason
     if (lostReasonModal.fromEdit) {
-      const stageChanged = true;
       addStageHistory(selectedOpp.id, selectedOpp.stage, 'closed_lost');
       const updates = {
         budget: Number(editForm.budget) || 0,
@@ -1088,15 +1097,20 @@ export default function OpportunitiesPage() {
 
   const showBulkToast = (msg) => { setBulkToast(msg); setTimeout(() => setBulkToast(null), 3000); };
 
-  // Duplicate detection
-  const isDuplicate = (contactId) => opps.filter(o => o.contact_id === contactId).length > 1;
+  // Duplicate detection (memoized Set)
+  const duplicateContactIds = useMemo(() => {
+    const counts = {};
+    opps.forEach(o => { if (o.contact_id) counts[o.contact_id] = (counts[o.contact_id] || 0) + 1; });
+    return new Set(Object.keys(counts).filter(k => counts[k] > 1));
+  }, [opps]);
+  const isDuplicate = (contactId) => duplicateContactIds.has(String(contactId));
 
   // Memoize stage tab counts
   const stageCounts = useMemo(() => {
     const counts = { _total: 0 };
     opps.forEach(o => {
       if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return;
-      if (search) { const q = search.toLowerCase(); const n = getContactName(o).toLowerCase(); const p = getProjectName(o, lang).toLowerCase(); const ph = (o.contacts?.phone || '').toLowerCase(); if (!n.includes(q) && !p.includes(q) && !ph.includes(q)) return; }
+      if (search) { const q = search.toLowerCase(); const n = getContactName(o).toLowerCase(); const p = getProjectName(o, lang).toLowerCase(); const ph = (o.contacts?.phone || '').toLowerCase(); const em = (o.contacts?.email || '').toLowerCase(); if (!n.includes(q) && !p.includes(q) && !ph.includes(q) && !em.includes(q)) return; }
       if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return;
       if (filterTemp !== 'all' && o.temperature !== filterTemp) return;
       if (filterPriority !== 'all' && o.priority !== filterPriority) return;
@@ -1221,9 +1235,12 @@ export default function OpportunitiesPage() {
         >
           <Filter size={13} />
           {isRTL ? 'فلاتر' : 'Filters'}
-          {(filterAgent !== 'all' || filterTemp !== 'all' || filterPriority !== 'all' || filterDept !== 'all' || filterDate !== 'all' || filterScore !== 'all' || filterSource !== 'all') && (
-            <span className="w-2 h-2 rounded-full bg-brand-500" />
-          )}
+          {(() => {
+            const count = [filterAgent, filterTemp, filterPriority, filterDept, filterDate, filterScore, filterSource].filter(f => f !== 'all').length;
+            return count > 0 ? (
+              <span className="min-w-[16px] h-4 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center px-1">{count}</span>
+            ) : null;
+          })()}
         </button>
         <div className={`flex gap-2.5 flex-wrap items-center ${mobileFiltersOpen ? '' : 'hidden md:flex'}`}>
         <Select className="!w-auto flex-none min-w-[120px]" value={filterDept} onChange={e => { setFilterDept(e.target.value); setActiveStage('all'); }}>
@@ -1268,7 +1285,7 @@ export default function OpportunitiesPage() {
         )}
         </div>{/* end mobile filter wrapper */}
         {/* Save / Load Filters */}
-        <div className="relative">
+        <div className="relative" ref={savedFilterRef}>
           <Button variant="ghost" size="sm" onClick={() => setShowSaveFilter(s => !s)} title={isRTL ? 'حفظ / تحميل فلتر' : 'Save / Load Filter'}>
             <Bookmark size={14} />
           </Button>
@@ -1652,6 +1669,13 @@ export default function OpportunitiesPage() {
                 <Pencil size={16} />
               </button>
               <button
+                onClick={() => { setConfirmDelete(selectedOpp.id); }}
+                className="bg-transparent border-none cursor-pointer text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-colors"
+                title={isRTL ? 'حذف' : 'Delete'}
+              >
+                <Trash2 size={15} />
+              </button>
+              <button
                 onClick={closeDrawer}
                 className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xl leading-none p-1 hover:text-content dark:hover:text-content-dark transition-colors"
               >
@@ -1866,7 +1890,8 @@ export default function OpportunitiesPage() {
                 const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
                 const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
                 const progressPct = stages.length > 1 ? Math.round((Math.max(0, currentIdx) / (stages.length - 1)) * 100) : 0;
-                return (
+                const isLost = selectedOpp.stage === 'closed_lost';
+                return (<>
                   <div className="flex items-center justify-between mb-3">
                     <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
                       {isRTL ? 'مراحل التقدم' : 'Pipeline Progress'}
@@ -1875,13 +1900,6 @@ export default function OpportunitiesPage() {
                       {progressPct}%
                     </span>
                   </div>
-                );
-              })()}
-              {(() => {
-                const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
-                const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
-                const isLost = selectedOpp.stage === 'closed_lost';
-                return (
                   <div className="flex items-start">
                     {stages.map((s, i) => {
                       const isPast = i < currentIdx;
@@ -1915,7 +1933,7 @@ export default function OpportunitiesPage() {
                       );
                     })}
                   </div>
-                );
+                </>);
               })()}
             </div>
 
@@ -2084,7 +2102,7 @@ export default function OpportunitiesPage() {
               <div className="bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
                 <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'درجة العميل' : 'Lead Score'}</p>
                 {(() => {
-                  const score = calcLeadScore(selectedOpp);
+                  const score = scoreMap[selectedOpp.id] ?? calcLeadScore(selectedOpp);
                   return (
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
