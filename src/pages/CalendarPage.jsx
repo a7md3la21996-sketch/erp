@@ -73,8 +73,8 @@ export default function CalendarPage() {
       setTasks(t || []);
       setReminders(r || []);
       setActivities(a || []);
-    } catch {
-      // fallback already handled in services
+    } catch (err) {
+      console.warn('CalendarPage: failed to load data', err);
     } finally {
       setLoading(false);
     }

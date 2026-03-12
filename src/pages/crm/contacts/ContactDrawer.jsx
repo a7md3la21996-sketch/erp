@@ -16,6 +16,8 @@ import {
   Chip, ScorePill, getDeptStages, deptStageLabel,
 } from './constants';
 
+const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock, site_visit: Star };
+
 // ── Activity Form ─────────────────────────────────────────────────────────
 function ActivityForm({ contactId, onSave, onCancel }) {
   const { i18n } = useTranslation();
@@ -360,8 +362,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </div>
               )}
               {contact.contact_type === 'supplier' && (
-                <Button variant="secondary" size="sm" className="w-full mt-3">
-                  <span>+</span> {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
+                <Button variant="secondary" size="sm" className="w-full mt-3" onClick={() => { setTab('invoices'); }}>
+                  <span>+</span> {isRTL ? 'عرض الفواتير' : 'View Invoices'}
                 </Button>
               )}
             </div>
@@ -399,8 +401,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   <p className="m-0 text-xs">{isRTL ? 'لا توجد أنشطة بعد' : 'No activities yet'}</p>
                 </div>
               ) : activities.map(act => {
-                const actIcon = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock, site_visit: Star }[act.type];
-                const ActIcon = actIcon || Clock;
+                const ActIcon = ACT_ICON_MAP[act.type] || Clock;
                 return (
                 <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2.5">
                   <div className="flex justify-between mb-1.5 items-start gap-2">

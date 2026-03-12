@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Megaphone, Plus, TrendingUp, Users, DollarSign,
-  BarChart3, Calendar, Filter, Search, Eye
+  BarChart3, Calendar, Filter, Search
 } from 'lucide-react';
 import { Card, Button, Badge, Modal, ModalFooter, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr } from '../components/ui';
 

@@ -146,8 +146,8 @@ export default function DashboardPage() {
   const dateStr = new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const hour = new Date().getHours();
   const greeting = lang === 'ar'
-    ? (hour < 12 ? 'صباح الخير' : hour < 18 ? 'مساء الخير' : 'مساء الخير')
-    : (hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening');
+    ? (hour < 12 ? 'صباح الخير' : 'مساء الخير')
+    : (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening');
 
   // ── Real Supabase data ──────────────────────────────────────────────────
   const [dashData, setDashData] = useState(null);

@@ -47,6 +47,7 @@ export default function ActivitiesPage() {
   const [adding, setAdding]         = useState(false);
   const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'crm' });
   const [saving, setSaving]         = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const load = async () => {
     setLoading(true);
@@ -335,12 +336,21 @@ export default function ActivitiesPage() {
                 </div>
 
                 {/* Delete */}
-                <button
-                  onClick={() => { deleteActivity(act.id); setActivities(prev => prev.filter(a => a.id !== act.id)); }}
-                  className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
-                >
-                  <X size={13} />
-                </button>
+                {confirmDeleteId === act.id ? (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => { deleteActivity(act.id); setActivities(prev => prev.filter(a => a.id !== act.id)); setConfirmDeleteId(null); }}
+                      className="bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 text-[10px] text-red-500 cursor-pointer font-semibold">{isRTL ? 'تأكيد' : 'Confirm'}</button>
+                    <button onClick={() => setConfirmDeleteId(null)}
+                      className="bg-transparent border border-edge dark:border-edge-dark rounded px-1.5 py-0.5 text-[10px] text-content-muted dark:text-content-muted-dark cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDeleteId(act.id)}
+                    className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
               </div>
             );
           })

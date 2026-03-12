@@ -19,7 +19,7 @@ const SOURCES = {
 };
 
 const LEVELS = {
-  top_senior: { ar: 'Top Performer Senior', en: 'Top Performer Senior', weight: 10, dailyCap: 10 },
+  top_senior: { ar: 'توب سينيور', en: 'Top Performer Senior', weight: 10, dailyCap: 10 },
   senior:     { ar: 'سينيور',    en: 'Senior',     weight: 8,  dailyCap: 8  },
   mid_senior: { ar: 'ميد سينيور',en: 'Mid Senior',  weight: 6,  dailyCap: 6  },
   junior:     { ar: 'جونيور',    en: 'Junior',      weight: 4,  dailyCap: 4  },
@@ -161,7 +161,7 @@ export default function LeadPoolPage() {
       score: 25,
       created_at: new Date().toISOString(),
       assigned_to: null,
-      team: 'team1',
+      team: user?.team_id || 'team1',
       reserved_by: null,
       reserved_until: null,
     };
@@ -355,7 +355,7 @@ export default function LeadPoolPage() {
                   <div className="flex justify-between mb-0.5">
                     <span className="text-[10px] text-content-muted dark:text-content-muted-dark">SLA</span>
                     <span className={`text-[10px] ${sla.breached ? 'text-red-500 font-bold' : 'text-content-muted dark:text-content-muted-dark font-normal'}`}>
-                      {sla.breached ? (lang === 'ar' ? 'تعدى الوقت' : 'Breached') : `${sla.remaining}د`}
+                      {sla.breached ? (lang === 'ar' ? 'تعدى الوقت' : 'Breached') : sla.remaining >= 1440 ? `${Math.floor(sla.remaining / 1440)}${lang === 'ar' ? 'ي' : 'd'}` : sla.remaining >= 60 ? `${Math.floor(sla.remaining / 60)}${lang === 'ar' ? 'س' : 'h'}` : `${sla.remaining}${lang === 'ar' ? 'د' : 'm'}`}
                     </span>
                   </div>
                   <div className="h-[3px] rounded-sm bg-edge dark:bg-edge-dark overflow-hidden">
