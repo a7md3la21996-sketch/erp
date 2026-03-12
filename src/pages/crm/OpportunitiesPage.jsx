@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import FollowUpReminder from '../../components/ui/FollowUpReminder';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
 import { fetchContactActivities, createActivity } from '../../services/contactsService';
-import { createDealFromOpportunity } from '../../services/dealsService';
+import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, ArrowUpDown, CheckSquare, AlertTriangle, Timer, ChevronUp, ChevronDown as ChevronDownIcon, Bookmark, GripVertical, StickyNote, Zap, RefreshCw, Filter, Thermometer } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton } from '../../components/ui';
@@ -641,13 +641,37 @@ export default function OpportunitiesPage() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filterPriority, setFilterPriority] = useState('all');
 
-  // ESC to close drawer
+  // Check if edit form has unsaved changes
+  const isEditDirty = editingOpp && selectedOpp && (
+    String(editForm.budget) !== String(selectedOpp.budget || '') ||
+    editForm.temperature !== (selectedOpp.temperature || 'cold') ||
+    editForm.priority !== (selectedOpp.priority || 'medium') ||
+    editForm.assigned_to !== (selectedOpp.assigned_to || '') ||
+    editForm.project_id !== (selectedOpp.project_id || '') ||
+    editForm.notes !== (selectedOpp.notes || '') ||
+    editForm.stage !== (selectedOpp.stage || 'new') ||
+    editForm.expected_close_date !== (selectedOpp.expected_close_date || '')
+  );
+
+  const closeDrawer = useCallback(() => {
+    if (isEditDirty) {
+      if (!window.confirm(isRTL ? 'يوجد تغييرات لم يتم حفظها. هل تريد الإغلاق؟' : 'You have unsaved changes. Close anyway?')) return;
+    }
+    setSelectedOpp(null);
+    setEditingOpp(false);
+  }, [isEditDirty, isRTL]);
+
+  // ESC to close modals/drawer (priority: lost reason > confirm delete > drawer)
   useEffect(() => {
-    if (!selectedOpp) return;
-    const handler = (e) => { if (e.key === 'Escape') { setSelectedOpp(null); setEditingOpp(false); } };
+    const handler = (e) => {
+      if (e.key !== 'Escape') return;
+      if (lostReasonModal) { setLostReasonModal(null); return; }
+      if (confirmDelete) { setConfirmDelete(null); return; }
+      if (selectedOpp) closeDrawer();
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [selectedOpp]);
+  }, [selectedOpp, lostReasonModal, confirmDelete, closeDrawer]);
 
   // Fetch activities for drawer
   useEffect(() => {
@@ -704,6 +728,13 @@ export default function OpportunitiesPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  // Pre-compute lead scores (memoized)
+  const scoreMap = useMemo(() => {
+    const m = {};
+    opps.forEach(o => { m[o.id] = calcLeadScore(o); });
+    return m;
+  }, [opps]);
+
   const filtered = opps.filter(o => {
     if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return false;
     if (activeStage !== 'all' && o.stage !== activeStage) return false;
@@ -718,7 +749,7 @@ export default function OpportunitiesPage() {
     if (filterTemp !== 'all' && o.temperature !== filterTemp) return false;
     if (filterPriority !== 'all' && o.priority !== filterPriority) return false;
     if (filterScore !== 'all') {
-      const s = calcLeadScore(o);
+      const s = scoreMap[o.id] || 0;
       if (filterScore === 'hot' && s < 70) return false;
       if (filterScore === 'warm' && (s < 40 || s >= 70)) return false;
       if (filterScore === 'cold' && s >= 40) return false;
@@ -741,7 +772,7 @@ export default function OpportunitiesPage() {
       case 'budget_high': return (b.budget || 0) - (a.budget || 0);
       case 'budget_low': return (a.budget || 0) - (b.budget || 0);
       case 'temp_hot': return (TEMP_ORDER[a.temperature] ?? 4) - (TEMP_ORDER[b.temperature] ?? 4);
-      case 'lead_score': return calcLeadScore(b) - calcLeadScore(a);
+      case 'lead_score': return (scoreMap[b.id] || 0) - (scoreMap[a.id] || 0);
       case 'stale': return daysSince(b.contacts?.last_activity_at || b.updated_at) - daysSince(a.contacts?.last_activity_at || a.updated_at);
       default: return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     }
@@ -789,7 +820,7 @@ export default function OpportunitiesPage() {
     // Auto-create deal in Operations when closed_won (sales only)
     if (toStage === 'closed_won') {
       const opp = opps.find(o => o.id === id);
-      if (opp && (opp.contacts?.department || 'sales') === 'sales') {
+      if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
         const deal = await createDealFromOpportunity({ ...opp, stage: toStage });
         setDealCreatedToast(deal.deal_number);
         setTimeout(() => setDealCreatedToast(null), 4000);
@@ -810,6 +841,33 @@ export default function OpportunitiesPage() {
       setBulkSelected(new Set()); setBulkMode(false);
       setLostReasonModal(null);
       await Promise.all(ids.map(id => updateOpportunity(id, { stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() }).catch(() => {})));
+      return;
+    }
+
+    // If triggered from edit form, complete the full edit save with lost_reason
+    if (lostReasonModal.fromEdit) {
+      const stageChanged = true;
+      addStageHistory(selectedOpp.id, selectedOpp.stage, 'closed_lost');
+      const updates = {
+        budget: Number(editForm.budget) || 0,
+        temperature: editForm.temperature,
+        priority: editForm.priority,
+        assigned_to: editForm.assigned_to || null,
+        project_id: editForm.project_id || null,
+        notes: editForm.notes,
+        expected_close_date: editForm.expected_close_date || null,
+        stage: 'closed_lost',
+        stage_changed_at: new Date().toISOString(),
+        lost_reason: reason,
+      };
+      setLostReasonModal(null);
+      setEditSaving(true);
+      const result = await updateOpportunity(selectedOpp.id, updates);
+      setOpps(p => p.map(o => o.id === selectedOpp.id ? { ...o, ...result } : o));
+      setSelectedOpp(prev => ({ ...prev, ...result }));
+      setStageHistory(getStageHistory(selectedOpp.id));
+      setEditingOpp(false);
+      setEditSaving(false);
       return;
     }
 
@@ -882,7 +940,7 @@ export default function OpportunitiesPage() {
     // Auto-create deal if moved to closed_won
     if (stageChanged && editForm.stage === 'closed_won') {
       const opp = opps.find(o => o.id === selectedOpp.id);
-      if (opp && (opp.contacts?.department || 'sales') === 'sales') {
+      if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
         const deal = await createDealFromOpportunity({ ...opp, ...result });
         setDealCreatedToast(deal.deal_number);
         setTimeout(() => setDealCreatedToast(null), 4000);
@@ -928,6 +986,22 @@ export default function OpportunitiesPage() {
 
   // Duplicate detection
   const isDuplicate = (contactId) => opps.filter(o => o.contact_id === contactId).length > 1;
+
+  // Memoize stage tab counts
+  const stageCounts = useMemo(() => {
+    const counts = { _total: 0 };
+    opps.forEach(o => {
+      if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return;
+      if (search) { const q = search.toLowerCase(); const n = getContactName(o).toLowerCase(); const p = getProjectName(o, lang).toLowerCase(); const ph = (o.contacts?.phone || '').toLowerCase(); if (!n.includes(q) && !p.includes(q) && !ph.includes(q)) return; }
+      if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return;
+      if (filterTemp !== 'all' && o.temperature !== filterTemp) return;
+      if (filterPriority !== 'all' && o.priority !== filterPriority) return;
+      if (filterScore !== 'all') { const sc = scoreMap[o.id] || 0; if (filterScore === 'hot' && sc < 70) return; if (filterScore === 'warm' && (sc < 40 || sc >= 70)) return; if (filterScore === 'cold' && sc >= 40) return; }
+      counts._total = (counts._total || 0) + 1;
+      counts[o.stage] = (counts[o.stage] || 0) + 1;
+    });
+    return counts;
+  }, [opps, filterDept, search, filterAgent, filterTemp, filterPriority, filterScore, scoreMap, lang]);
 
   if (loading) return <PageSkeleton hasKpis kpiCount={6} tableRows={6} tableCols={5} />;
 
@@ -978,16 +1052,7 @@ export default function OpportunitiesPage() {
       {/* Stage Tabs */}
       <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 flex-wrap">
         {stageConfigWithAll.map(s => {
-          const preFiltered = opps.filter(o => {
-            if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return false;
-            if (search) { const q = search.toLowerCase(); const n = getContactName(o).toLowerCase(); const p = getProjectName(o, lang).toLowerCase(); const ph = (o.contacts?.phone || '').toLowerCase(); if (!n.includes(q) && !p.includes(q) && !ph.includes(q)) return false; }
-            if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return false;
-            if (filterTemp !== 'all' && o.temperature !== filterTemp) return false;
-            if (filterPriority !== 'all' && o.priority !== filterPriority) return false;
-            if (filterScore !== 'all') { const sc = calcLeadScore(o); if (filterScore === 'hot' && sc < 70) return false; if (filterScore === 'warm' && (sc < 40 || sc >= 70)) return false; if (filterScore === 'cold' && sc >= 40) return false; }
-            return true;
-          });
-          const count = s.id === 'all' ? preFiltered.length : preFiltered.filter(o => o.stage === s.id).length;
+          const count = s.id === 'all' ? stageCounts._total : (stageCounts[s.id] || 0);
           const active = activeStage === s.id;
           return (
             <button
@@ -1173,19 +1238,34 @@ export default function OpportunitiesPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 px-5">
           <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-            <TrendingUp size={24} className="text-brand-500" />
+            {opps.length > 0 ? <Search size={24} className="text-brand-500" /> : <TrendingUp size={24} className="text-brand-500" />}
           </div>
           <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">
-            {isRTL ? 'لا توجد فرص بيع' : 'No Opportunities Found'}
+            {opps.length > 0
+              ? (isRTL ? 'لا توجد نتائج للفلاتر الحالية' : 'No results match your filters')
+              : (isRTL ? 'لا توجد فرص بيع' : 'No Opportunities Found')}
           </p>
           <p className="m-0 mb-4 text-sm text-content-muted dark:text-content-muted-dark">
-            {isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet'}
+            {opps.length > 0
+              ? (isRTL ? 'جرب تعديل البحث أو الفلاتر' : 'Try adjusting your search or filters')
+              : (isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet')}
           </p>
-          <Button size="sm" onClick={() => setShowModal(true)}>
-            <Plus size={14} /> {isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
-          </Button>
+          {opps.length > 0 ? (
+            <Button variant="secondary" size="sm" onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); }}>
+              <X size={14} /> {isRTL ? 'مسح كل الفلاتر' : 'Clear All Filters'}
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => setShowModal(true)}>
+              <Plus size={14} /> {isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
+            </Button>
+          )}
         </div>
-      ) : viewMode === 'kanban' ? (
+      ) : viewMode === 'kanban' ? (<>
+        <div className="flex items-center gap-3 mb-3 px-1 text-xs text-content-muted dark:text-content-muted-dark">
+          <span className="font-semibold">{filtered.length} {isRTL ? 'فرصة' : 'opportunities'}</span>
+          <span>•</span>
+          <span className="font-bold text-brand-500">{fmtBudget(totalBudget)} {isRTL ? 'ج' : 'EGP'}</span>
+        </div>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {currentStages.map(stage => {
             const stageOpps = filtered.filter(o => o.stage === stage.id);
@@ -1247,7 +1327,7 @@ export default function OpportunitiesPage() {
             );
           })}
         </div>
-      ) : (
+      </>) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
           {filtered.map(opp => (
             <div key={opp.id} className="relative">
@@ -1369,7 +1449,7 @@ export default function OpportunitiesPage() {
         role="dialog"
         dir={isRTL ? 'rtl' : 'ltr'}
         className={`fixed inset-0 z-[200] bg-black/40 flex ${isRTL ? 'flex-row' : 'flex-row-reverse'}`}
-        onClick={e => { if (e.target === e.currentTarget) setSelectedOpp(null); }}
+        onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}
       >
         <div className="w-full max-w-[460px] h-full bg-surface-card dark:bg-surface-card-dark shadow-[-8px_0_40px_rgba(0,0,0,0.2)] flex flex-col overflow-y-auto">
           {/* Drawer Header */}
@@ -1428,7 +1508,7 @@ export default function OpportunitiesPage() {
                 <Pencil size={16} />
               </button>
               <button
-                onClick={() => { setSelectedOpp(null); setEditingOpp(false); }}
+                onClick={closeDrawer}
                 className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xl leading-none p-1 hover:text-content dark:hover:text-content-dark transition-colors"
               >
                 ✕
@@ -1850,7 +1930,7 @@ export default function OpportunitiesPage() {
             <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={getContactName(selectedOpp)} />
           </div>
         </div>
-        <div className="flex-1" onClick={() => setSelectedOpp(null)} />
+        <div className="flex-1" onClick={closeDrawer} />
       </div>
     )}
   </>);
