@@ -15,6 +15,9 @@ export function useEscClose(onClose) {
 // ── Constants ──────────────────────────────────────────────────────────────
 export const SOURCE_LABELS = { facebook: 'فيسبوك', instagram: 'إنستجرام', google_ads: 'جوجل أدز', website: 'الموقع', call: 'اتصال وارد', walk_in: 'زيارة مباشرة', referral: 'ترشيح', developer: 'مطور', cold_call: 'كولد كول', other: 'أخرى' };
 export const SOURCE_EN = { facebook: 'Facebook', instagram: 'Instagram', google_ads: 'Google Ads', website: 'Website', call: 'Inbound Call', walk_in: 'Walk-in', referral: 'Referral', developer: 'Developer', cold_call: 'Cold Call', other: 'Other' };
+export const SOURCE_PLATFORM = { facebook: 'meta', instagram: 'meta', google_ads: 'google', website: 'organic', call: 'direct', walk_in: 'direct', referral: 'direct', developer: 'direct', cold_call: 'direct', other: 'other' };
+export const PLATFORM_LABELS = { meta: { ar: 'Meta', en: 'Meta' }, google: { ar: 'Google', en: 'Google' }, organic: { ar: 'أورجانيك', en: 'Organic' }, direct: { ar: 'مباشر', en: 'Direct' }, other: { ar: 'أخرى', en: 'Other' } };
+export const AD_SOURCES = ['facebook', 'instagram', 'google_ads'];
 export const STAGE_LABELS = { new: { ar: 'جديد', en: 'New' }, contacted: { ar: 'تم التواصل', en: 'Contacted' }, interested: { ar: 'مهتم', en: 'Interested' }, site_visit_scheduled: { ar: 'موعد معاينة', en: 'Visit Scheduled' }, site_visited: { ar: 'زار الموقع', en: 'Site Visited' }, negotiation: { ar: 'تفاوض', en: 'Negotiation' }, reserved: { ar: 'محجوز', en: 'Reserved' }, contracted: { ar: 'تعاقد', en: 'Contracted' }, closed_won: { ar: 'فوز ✓', en: 'Won ✓' }, closed_lost: { ar: 'خسارة ✗', en: 'Lost ✗' }, on_hold: { ar: 'معلق', en: 'On Hold' } };
 export const stageLabel = (key, isRTL) => { const s = STAGE_LABELS[key]; return s ? (isRTL ? s.ar : s.en) : key; };
 export const COLD_LABELS = { not_contacted: { ar: 'لم يُتصل به', en: 'Not Contacted' }, no_answer: { ar: 'لا يرد', en: 'No Answer' }, not_interested: { ar: 'غير مهتم', en: 'Not Interested' }, interested: { ar: 'مهتم', en: 'Interested' }, wrong_number: { ar: 'رقم خاطئ', en: 'Wrong Number' }, call_back_later: { ar: 'اتصل لاحقاً', en: 'Call Back Later' } };
@@ -93,16 +96,36 @@ export const getPhoneInfo = (p) => {
 
 // ── Country Codes ─────────────────────────────────────────────────────────
 export const COUNTRY_CODES = [
-  { code: '+20', country: 'EG', flag: '🇪🇬', label: 'Egypt' },
-  { code: '+966', country: 'SA', flag: '🇸🇦', label: 'Saudi Arabia' },
-  { code: '+971', country: 'AE', flag: '🇦🇪', label: 'UAE' },
-  { code: '+965', country: 'KW', flag: '🇰🇼', label: 'Kuwait' },
-  { code: '+974', country: 'QA', flag: '🇶🇦', label: 'Qatar' },
-  { code: '+962', country: 'JO', flag: '🇯🇴', label: 'Jordan' },
-  { code: '+961', country: 'LB', flag: '🇱🇧', label: 'Lebanon' },
-  { code: '+218', country: 'LY', flag: '🇱🇾', label: 'Libya' },
-  { code: '+44', country: 'GB', flag: '🇬🇧', label: 'UK' },
-  { code: '+1', country: 'US', flag: '🇺🇸', label: 'US' },
+  // Arab countries
+  { code: '+20', country: 'EG', flag: '🇪🇬', label: 'Egypt', labelAr: 'مصر' },
+  { code: '+966', country: 'SA', flag: '🇸🇦', label: 'Saudi Arabia', labelAr: 'السعودية' },
+  { code: '+971', country: 'AE', flag: '🇦🇪', label: 'UAE', labelAr: 'الإمارات' },
+  { code: '+965', country: 'KW', flag: '🇰🇼', label: 'Kuwait', labelAr: 'الكويت' },
+  { code: '+974', country: 'QA', flag: '🇶🇦', label: 'Qatar', labelAr: 'قطر' },
+  { code: '+973', country: 'BH', flag: '🇧🇭', label: 'Bahrain', labelAr: 'البحرين' },
+  { code: '+968', country: 'OM', flag: '🇴🇲', label: 'Oman', labelAr: 'عُمان' },
+  { code: '+962', country: 'JO', flag: '🇯🇴', label: 'Jordan', labelAr: 'الأردن' },
+  { code: '+961', country: 'LB', flag: '🇱🇧', label: 'Lebanon', labelAr: 'لبنان' },
+  { code: '+964', country: 'IQ', flag: '🇮🇶', label: 'Iraq', labelAr: 'العراق' },
+  { code: '+963', country: 'SY', flag: '🇸🇾', label: 'Syria', labelAr: 'سوريا' },
+  { code: '+218', country: 'LY', flag: '🇱🇾', label: 'Libya', labelAr: 'ليبيا' },
+  { code: '+216', country: 'TN', flag: '🇹🇳', label: 'Tunisia', labelAr: 'تونس' },
+  { code: '+213', country: 'DZ', flag: '🇩🇿', label: 'Algeria', labelAr: 'الجزائر' },
+  { code: '+212', country: 'MA', flag: '🇲🇦', label: 'Morocco', labelAr: 'المغرب' },
+  { code: '+249', country: 'SD', flag: '🇸🇩', label: 'Sudan', labelAr: 'السودان' },
+  { code: '+967', country: 'YE', flag: '🇾🇪', label: 'Yemen', labelAr: 'اليمن' },
+  { code: '+970', country: 'PS', flag: '🇵🇸', label: 'Palestine', labelAr: 'فلسطين' },
+  // International
+  { code: '+44', country: 'GB', flag: '🇬🇧', label: 'UK', labelAr: 'بريطانيا' },
+  { code: '+1', country: 'US', flag: '🇺🇸', label: 'US/CA', labelAr: 'أمريكا/كندا' },
+  { code: '+49', country: 'DE', flag: '🇩🇪', label: 'Germany', labelAr: 'ألمانيا' },
+  { code: '+33', country: 'FR', flag: '🇫🇷', label: 'France', labelAr: 'فرنسا' },
+  { code: '+39', country: 'IT', flag: '🇮🇹', label: 'Italy', labelAr: 'إيطاليا' },
+  { code: '+34', country: 'ES', flag: '🇪🇸', label: 'Spain', labelAr: 'إسبانيا' },
+  { code: '+90', country: 'TR', flag: '🇹🇷', label: 'Turkey', labelAr: 'تركيا' },
+  { code: '+91', country: 'IN', flag: '🇮🇳', label: 'India', labelAr: 'الهند' },
+  { code: '+86', country: 'CN', flag: '🇨🇳', label: 'China', labelAr: 'الصين' },
+  { code: '+7', country: 'RU', flag: '🇷🇺', label: 'Russia', labelAr: 'روسيا' },
 ];
 
 export const getCountryFromPhone = (phone) => {

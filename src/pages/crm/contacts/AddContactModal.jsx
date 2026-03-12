@@ -7,6 +7,7 @@ import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   validatePhone, getPhoneInfo, normalizePhone,
   COUNTRY_CODES, getCountryFromPhone,
+  SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES,
 } from './constants';
 
 export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
@@ -25,7 +26,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   };
   const [form, setForm] = useState({
     prefix: '', full_name: '', phone: '', phone2: '', email: '',
-    contact_type: '', source: 'facebook', campaign_name: '',
+    contact_type: '', source: 'facebook', platform: 'meta', campaign_name: '',
     budget_min: '', budget_max: '', preferred_location: '',
     interested_in_type: '', notes: '', department: '',
     gender: '', nationality: '', birth_date: '', company: '', job_title: '',
@@ -57,18 +58,27 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     }, 400);
   };
 
+  const getFullPhone = (phone, code) => {
+    if (!phone) return '';
+    if (phone.startsWith('+')) return phone;
+    if (phone.startsWith('0')) return normalizePhone(phone);
+    return code + phone;
+  };
+
   const handleSave = async () => {
     if (!form.department) { toast.error(isRTL ? 'يرجى اختيار القسم' : 'Please select a department'); return; }
     if (!form.contact_type) { toast.error(isRTL ? 'يرجى اختيار نوع جهة الاتصال' : 'Please select contact type'); return; }
     if (!form.full_name.trim()) { toast.error(isRTL ? 'الاسم مطلوب' : 'Name is required'); return; }
-    if (!form.phone || !validatePhone(form.phone)) { toast.error(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
-    const invalidExtra = extraPhones.find(p => p && !validatePhone(p));
+    const fullPhone = getFullPhone(form.phone, form.countryCode);
+    if (!fullPhone || !validatePhone(fullPhone)) { toast.error(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
+    const invalidExtra = extraPhones.find(p => p && !validatePhone(getFullPhone(p, form.countryCode)));
     if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
     setSaving(true);
     try {
-      const validExtras = extraPhones.filter(p => p && validatePhone(p));
+      const validExtras = extraPhones.filter(p => p && validatePhone(getFullPhone(p, form.countryCode))).map(p => getFullPhone(p, form.countryCode));
       await onSave({
         ...form,
+        phone: fullPhone,
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
         extra_phones: validExtras.length > 0 ? validExtras : null,
@@ -147,7 +157,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span className="text-xs text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span> {(() => { const fp = getFullPhone(form.phone, form.countryCode); return (<>{fp && !validatePhone(fp) && <span className="text-xs text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{fp && validatePhone(fp) && (() => { const info = getPhoneInfo(fp); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
                 <div className="flex gap-1.5">
                   <Select className="!w-[100px] shrink-0" value={form.countryCode} onChange={e => set('countryCode', e.target.value)}>
                     {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
@@ -156,20 +166,16 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                     placeholder="10xxxxxxxx" value={form.phone}
                     onChange={e => {
                       const v = e.target.value.replace(/[^0-9+]/g, '');
-                      // If pasted with + prefix, auto-detect country code
+                      set('phone', v);
+                      // Auto-detect country from number
                       if (v.startsWith('+')) {
-                        const detected = getCountryFromPhone(v);
-                        set('countryCode', detected);
-                        set('phone', v);
-                      } else if (v.startsWith('0') && v.length >= 3) {
-                        // Local number - store as-is, normalizePhone will handle it
-                        set('phone', v);
-                      } else {
-                        set('phone', v);
+                        set('countryCode', getCountryFromPhone(v));
+                      } else if (v.startsWith('01') && v.length >= 5) {
+                        set('countryCode', '+20'); // Egyptian local
                       }
                       setDupWarning(null);
-                      const phoneToValidate = v.startsWith('+') || v.startsWith('0') ? v : form.countryCode + v;
-                      if (validatePhone(phoneToValidate)) { checkPhoneNumber(phoneToValidate); }
+                      const full = getFullPhone(v, form.countryCode);
+                      if (validatePhone(full)) { checkPhoneNumber(full); }
                     }} />
                 </div>
                 {checking && <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
@@ -231,15 +237,22 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المصدر' : 'Source'}</label>
-                <Select value={form.source} onChange={e => set('source', e.target.value)}>
+                <Select value={form.source} onChange={e => { const src = e.target.value; set('source', src); set('platform', SOURCE_PLATFORM[src] || 'other'); if (!AD_SOURCES.includes(src)) set('campaign_name', ''); }}>
                   {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
                 </Select>
               </div>
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المنصة' : 'Platform'}</label>
+                <Input readOnly value={(() => { const p = PLATFORM_LABELS[form.platform]; return p ? (isRTL ? p.ar : p.en) : ''; })()} className="!bg-surface-bg dark:!bg-surface-bg-dark !cursor-default" />
+              </div>
+              {AD_SOURCES.includes(form.source) && (
               <div className="col-span-full">
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'اسم الحملة' : 'Campaign'}</label>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'اسم الحملة الإعلانية' : 'Ad Campaign Name'}</label>
                 <Input placeholder={isRTL ? 'مثال: حملة الشيخ زايد Q1' : 'e.g. Sheikh Zayed Q1 Campaign'} value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
               </div>
+              )}
               </>)}
+              {form.department !== 'sales' && (<>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الشركة / جهة العمل' : 'Company'}</label>
                 <Input placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} value={form.company} onChange={e => set('company', e.target.value)} />
@@ -248,6 +261,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
                 <Input placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} value={form.job_title} onChange={e => set('job_title', e.target.value)} />
               </div>
+              </>)}
 
             </div>
           ) : (
@@ -318,7 +332,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
           <div className="flex gap-2.5">
             {step === 2 && <Button variant="secondary" onClick={() => setStep(1)}>{isRTL ? 'السابق →' : '← Back'}</Button>}
             {step === 1
-              ? (() => { const canNext = form.department && form.contact_type && form.full_name.trim() && validatePhone(form.phone) && !dupWarning; return <Button onClick={() => setStep(2)} disabled={!canNext}>{isRTL ? '← التالي' : 'Next →'}</Button>; })()
+              ? (() => { const canNext = form.department && form.contact_type && form.full_name.trim() && validatePhone(getFullPhone(form.phone, form.countryCode)) && !dupWarning; return <Button onClick={() => setStep(2)} disabled={!canNext}>{isRTL ? '← التالي' : 'Next →'}</Button>; })()
               : <Button onClick={handleSave} disabled={saving}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</Button>
             }
           </div>
