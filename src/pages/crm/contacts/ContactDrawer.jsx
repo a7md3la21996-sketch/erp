@@ -329,18 +329,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </div>
               )}
 
-              {contact.stage && (
-                <div className={rowCls}>
-                  <span className="text-content-muted dark:text-content-muted-dark">{isRTL ? 'المرحلة' : 'Stage'}</span>
-                  <Chip label={stageLabel(contact.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
-                </div>
-              )}
-              {contact.cold_status && (
-                <div className={rowCls}>
-                  <span className="text-content-muted dark:text-content-muted-dark">{isRTL ? 'حالة الكولد' : 'Cold Status'}</span>
-                  <Chip label={coldLabel(contact.cold_status, isRTL)} color="#6B8DB5" bg="rgba(107,141,181,0.1)" />
-                </div>
-              )}
               {contact.is_blacklisted && contact.blacklist_reason && (
                 <div className="mt-3.5 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl text-xs text-red-500 flex gap-1.5 items-start">
                   <Ban size={13} className="shrink-0 mt-0.5" /> <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
