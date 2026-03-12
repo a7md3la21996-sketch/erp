@@ -36,21 +36,20 @@ function ActivityForm({ contactId, onSave, onCancel }) {
     } catch { return defaultTypes; }
   });
 
-  const [form, setForm] = useState({ type: activityTypes[0]?.key || 'call', description: '', next_action: '', next_action_date: '' });
+  const [form, setForm] = useState({ type: activityTypes[0]?.key || 'call', description: '', next_action: '', next_action_date: '', call_result: '' });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const now = new Date().toLocaleString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-
   const handleSave = () => {
-    onSave({ ...form, created_at: new Date().toISOString() });
+    const data = { ...form, created_at: new Date().toISOString() };
+    if (form.type === 'call' && form.call_result) {
+      const resultLabels = { answered: isRTL?'رد':'Answered', no_answer: isRTL?'لم يرد':'No Answer', busy: isRTL?'مشغول':'Busy', interested: isRTL?'مهتم':'Interested', not_interested: isRTL?'غير مهتم':'Not Interested' };
+      data.description = `${resultLabels[form.call_result] || form.call_result}${form.description ? ' — ' + form.description : ''}`;
+    }
+    onSave(data);
   };
 
   return (
     <div className="bg-brand-500/[0.07] border border-brand-500/20 rounded-xl p-3.5 mb-3">
-      <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-[5px] bg-brand-500/[0.08] rounded-md">
-        <Clock size={11} className="text-content-muted dark:text-content-muted-dark" />
-        <span className="text-xs text-content-muted dark:text-content-muted-dark">{now}</span>
-      </div>
       <div className="grid grid-cols-2 gap-2.5 mb-2.5">
         <Select size="sm" value={form.type} onChange={e => set('type', e.target.value)}>
           {activityTypes.map(v => (
@@ -60,6 +59,26 @@ function ActivityForm({ contactId, onSave, onCancel }) {
         <Input size="sm" type="date" value={form.next_action_date} onChange={e => set('next_action_date', e.target.value)}
           placeholder={isRTL ? 'تاريخ المتابعة' : 'Follow-up date'} />
       </div>
+      {form.type === 'call' && (
+        <div className="mb-2.5">
+          <div className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نتيجة المكالمة' : 'Call Result'}</div>
+          <div className="flex gap-1.5 flex-wrap">
+            {[
+              { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
+              { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
+              { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#EF4444' },
+              { value: 'interested', label: isRTL ? 'مهتم' : 'Interested', color: '#4A7AAB' },
+              { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not Interested', color: '#6b7280' },
+            ].map(r => (
+              <button key={r.value} onClick={() => set('call_result', r.value)}
+                className={`px-3 py-1.5 rounded-2xl text-xs cursor-pointer border ${form.call_result === r.value ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                style={form.call_result === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <Textarea size="sm" className="mb-2.5" rows={2}
         placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
         value={form.description} onChange={e => set('description', e.target.value)} />

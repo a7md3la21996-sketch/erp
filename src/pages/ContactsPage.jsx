@@ -447,15 +447,14 @@ export default function ContactsPage() {
                 <th className={thCls}>{t('contacts.type')}</th>
                 <th className={thCls}>{t('contacts.temperature')}</th>
                 <th className={thCls}>{t('contacts.source')}</th>
-                <th className={thCls}>{t('contacts.stage')}</th>
                 <th className={thCls}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+                <tr><td colSpan={8} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="p-0 border-none">
+                <tr><td colSpan={8} className="p-0 border-none">
                   <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                       <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -501,15 +500,6 @@ export default function ContactsPage() {
                     {(() => { const TempIcon = TEMP[c.temperature]?.Icon; return TempIcon ? <TempIcon size={15} color={TEMP[c.temperature]?.color} /> : '—'; })()}
                   </td>
                   <td className={tdCls}><span className="text-xs bg-gray-100 dark:bg-brand-500/[0.12] border border-edge dark:border-edge-dark rounded-md px-2 py-1 text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</span></td>
-                  <td className={tdCls} onClick={e => e.stopPropagation()}>
-                    {isAdmin && c.contact_type === 'lead' ? (
-                      <Select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} className="text-xs bg-transparent border-brand-500/10 text-brand-500 px-1.5 py-1">
-                        {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-                      </Select>
-                    ) : c.stage ? <Chip label={stageLabel(c.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
-                    : c.cold_status ? <span className="text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">{coldLabel(c.cold_status, isRTL)}</span>
-                    : <span className="text-brand-500/30 dark:text-brand-500/30">—</span>}
-                  </td>
                   <td className={tdCls} onClick={e => e.stopPropagation()}>
                     <div className="flex gap-1 items-center">
                       <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} className="w-[26px] h-[26px] flex items-center justify-center bg-emerald-500/[0.06] border border-emerald-500/20 rounded-md text-emerald-500 no-underline">

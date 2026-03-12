@@ -91,6 +91,31 @@ export const getPhoneInfo = (p) => {
   } catch { return null; }
 };
 
+// ── Country Codes ─────────────────────────────────────────────────────────
+export const COUNTRY_CODES = [
+  { code: '+20', country: 'EG', flag: '🇪🇬', label: 'Egypt' },
+  { code: '+966', country: 'SA', flag: '🇸🇦', label: 'Saudi Arabia' },
+  { code: '+971', country: 'AE', flag: '🇦🇪', label: 'UAE' },
+  { code: '+965', country: 'KW', flag: '🇰🇼', label: 'Kuwait' },
+  { code: '+974', country: 'QA', flag: '🇶🇦', label: 'Qatar' },
+  { code: '+962', country: 'JO', flag: '🇯🇴', label: 'Jordan' },
+  { code: '+961', country: 'LB', flag: '🇱🇧', label: 'Lebanon' },
+  { code: '+218', country: 'LY', flag: '🇱🇾', label: 'Libya' },
+  { code: '+44', country: 'GB', flag: '🇬🇧', label: 'UK' },
+  { code: '+1', country: 'US', flag: '🇺🇸', label: 'US' },
+];
+
+export const getCountryFromPhone = (phone) => {
+  if (!phone) return '+20';
+  const normalized = normalizePhone(phone);
+  const info = getPhoneInfo(normalized);
+  if (info) {
+    const found = COUNTRY_CODES.find(c => c.country === info.country);
+    if (found) return found.code;
+  }
+  return '+20';
+};
+
 // ── Sub-components ─────────────────────────────────────────────────────────
 export function Chip({ label, color, bg, size = 'sm' }) {
   return (

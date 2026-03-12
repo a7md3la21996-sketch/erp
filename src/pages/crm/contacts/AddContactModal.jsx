@@ -5,7 +5,8 @@ import { X } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
-  validatePhone, getPhoneInfo,
+  validatePhone, getPhoneInfo, normalizePhone,
+  COUNTRY_CODES, getCountryFromPhone,
 } from './constants';
 
 export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
@@ -26,11 +27,13 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     prefix: '', full_name: '', phone: '', phone2: '', email: '',
     contact_type: '', source: 'facebook', campaign_name: '',
     budget_min: '', budget_max: '', preferred_location: '',
-    interested_in_type: 'residential', notes: '', department: '',
+    interested_in_type: '', notes: '', department: '',
     gender: '', nationality: '', birth_date: '', company: '', job_title: '',
+    countryCode: '+20',
   });
   const [dupWarning, setDupWarning] = useState(null);
   const [extraPhones, setExtraPhones] = useState([]);
+  const [extraCountryCodes, setExtraCountryCodes] = useState([]);
   const [extraDups, setExtraDups] = useState([]);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -145,9 +148,30 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               </div>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span className="text-xs text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
-                <Input className={dupWarning ? '!border-red-500' : ''}
-                  placeholder="010xxxxxxxx" value={form.phone}
-                  onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkPhoneNumber(v); } }} />
+                <div className="flex gap-1.5">
+                  <Select className="!w-[100px] shrink-0" value={form.countryCode} onChange={e => set('countryCode', e.target.value)}>
+                    {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
+                  </Select>
+                  <Input className={`flex-1 ${dupWarning ? '!border-red-500' : ''}`}
+                    placeholder="10xxxxxxxx" value={form.phone}
+                    onChange={e => {
+                      const v = e.target.value.replace(/[^0-9+]/g, '');
+                      // If pasted with + prefix, auto-detect country code
+                      if (v.startsWith('+')) {
+                        const detected = getCountryFromPhone(v);
+                        set('countryCode', detected);
+                        set('phone', v);
+                      } else if (v.startsWith('0') && v.length >= 3) {
+                        // Local number - store as-is, normalizePhone will handle it
+                        set('phone', v);
+                      } else {
+                        set('phone', v);
+                      }
+                      setDupWarning(null);
+                      const phoneToValidate = v.startsWith('+') || v.startsWith('0') ? v : form.countryCode + v;
+                      if (validatePhone(phoneToValidate)) { checkPhoneNumber(phoneToValidate); }
+                    }} />
+                </div>
                 {checking && <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div className="mt-2 p-3 bg-red-500/[0.08] border border-red-500/30 rounded-xl text-xs">
@@ -200,6 +224,9 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               <div className="col-span-full">
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
                 <Input type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
+                {form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) && (
+                  <p className="mt-1 mb-0 text-xs text-orange-500">⚠️ {isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format'}</p>
+                )}
               </div>
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
@@ -225,31 +252,35 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
             </div>
           ) : (
             <div className="modal-grid grid grid-cols-2 gap-3.5">
-              <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنس' : 'Gender'}</label>
-                <Select value={form.gender} onChange={e => set('gender', e.target.value)}>
-                  <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-                  <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
-                  <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنسية' : 'Nationality'}</label>
-                <Select value={form.nationality} onChange={e => set('nationality', e.target.value)}>
-                  <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-                  <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
-                  <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
-                  <option value="emirati">{isRTL ? 'إماراتي' : 'Emirati'}</option>
-                  <option value="kuwaiti">{isRTL ? 'كويتي' : 'Kuwaiti'}</option>
-                  <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
-                  <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
-                  <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
-                </Select>
-              </div>
-              <div className="col-span-full">
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
-                <Input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} />
-              </div>
+              {!['lead', 'cold'].includes(form.contact_type) && (
+                <>
+                <div>
+                  <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنس' : 'Gender'}</label>
+                  <Select value={form.gender} onChange={e => set('gender', e.target.value)}>
+                    <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                    <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
+                    <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الجنسية' : 'Nationality'}</label>
+                  <Select value={form.nationality} onChange={e => set('nationality', e.target.value)}>
+                    <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                    <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
+                    <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
+                    <option value="emirati">{isRTL ? 'إماراتي' : 'Emirati'}</option>
+                    <option value="kuwaiti">{isRTL ? 'كويتي' : 'Kuwaiti'}</option>
+                    <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
+                    <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
+                    <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
+                  </Select>
+                </div>
+                <div className="col-span-full">
+                  <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'تاريخ الميلاد' : 'Birth Date'}</label>
+                  <Input type="date" value={form.birth_date} onChange={e => set('birth_date', e.target.value)} />
+                </div>
+                </>
+              )}
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
@@ -266,6 +297,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نوع العقار' : 'Property Type'}</label>
                 <Select value={form.interested_in_type} onChange={e => set('interested_in_type', e.target.value)}>
+                  <option value="">{isRTL ? 'اختر نوع العقار...' : 'Select property type...'}</option>
                   <option value="residential">{isRTL ? 'سكني' : 'Residential'}</option>
                   <option value="commercial">{isRTL ? 'تجاري' : 'Commercial'}</option>
                   <option value="administrative">{isRTL ? 'إداري' : 'Administrative'}</option>
