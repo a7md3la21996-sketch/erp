@@ -319,6 +319,18 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects }) {
       notes: form.notes,
     };
     const result = await createOpportunity(payload);
+    // Inject joined data so cards render names immediately
+    if (!result.contacts && form.contact) {
+      result.contacts = { id: form.contact.id, full_name: form.contact.full_name, phone: form.contact.phone, email: form.contact.email, company: form.contact.company, contact_type: form.contact.contact_type, department: form.contact.department };
+    }
+    if (!result.projects && form.project_id) {
+      const proj = projects.find(p => p.id === form.project_id);
+      if (proj) result.projects = { id: proj.id, name_ar: proj.name_ar, name_en: proj.name_en };
+    }
+    if (!result.users && form.assigned_to) {
+      const agent = agents.find(a => a.id === form.assigned_to);
+      if (agent) result.users = { id: agent.id, full_name_ar: agent.full_name_ar, full_name_en: agent.full_name_en };
+    }
     onSave(result);
     setSaving(false);
   };
