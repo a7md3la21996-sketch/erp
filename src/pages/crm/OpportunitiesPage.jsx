@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
 import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity } from '../../services/dealsService';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, ArrowUpDown, CheckSquare, AlertTriangle, Timer, ChevronUp, ChevronDown as ChevronDownIcon } from 'lucide-react';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, ArrowUpDown, CheckSquare, AlertTriangle, Timer, ChevronUp, ChevronDown as ChevronDownIcon, Bookmark, GripVertical, StickyNote, Zap } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 
@@ -63,6 +63,71 @@ const SORT_OPTIONS = {
   stale: { ar: 'بدون تواصل', en: 'Stale (No Contact)' },
 };
 const TEMP_ORDER = { hot: 0, warm: 1, cool: 2, cold: 3 };
+
+// ─── Lead Score calculation ───
+const calcLeadScore = (opp) => {
+  let score = 0;
+  // Temperature (0-30)
+  if (opp.temperature === 'hot') score += 30;
+  else if (opp.temperature === 'warm') score += 20;
+  else if (opp.temperature === 'cool') score += 10;
+  // Budget (0-25)
+  const b = opp.budget || 0;
+  if (b >= 1000000) score += 25;
+  else if (b >= 500000) score += 20;
+  else if (b >= 100000) score += 15;
+  else if (b > 0) score += 5;
+  // Stage progression (0-25)
+  const stagePoints = { new: 0, lead: 5, contacted: 10, interested: 15, site_visit: 18, negotiation: 20, proposal: 22, closed_won: 25 };
+  score += stagePoints[opp.stage] || 0;
+  // Recency (0-20)
+  const days = Math.floor((Date.now() - new Date(opp.updated_at || opp.created_at || 0).getTime()) / 86400000);
+  if (days <= 1) score += 20;
+  else if (days <= 3) score += 15;
+  else if (days <= 7) score += 10;
+  else if (days <= 14) score += 5;
+  return Math.min(score, 100);
+};
+const scoreColor = (s) => s >= 70 ? '#10B981' : s >= 40 ? '#F59E0B' : '#EF4444';
+const scoreLabel = (s, isRTL) => s >= 70 ? (isRTL ? 'ساخن' : 'Hot') : s >= 40 ? (isRTL ? 'دافئ' : 'Warm') : (isRTL ? 'بارد' : 'Cold');
+
+// ─── Saved Filters (localStorage) ───
+const SAVED_FILTERS_KEY = 'platform_opp_saved_filters';
+const getSavedFilters = () => { try { return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY) || '[]'); } catch { return []; } };
+const saveSavedFilters = (f) => { try { localStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(f)); } catch {} };
+
+// ─── Stage History (localStorage) ───
+const STAGE_HISTORY_KEY = 'platform_opp_stage_history';
+const getStageHistory = (oppId) => { try { const all = JSON.parse(localStorage.getItem(STAGE_HISTORY_KEY) || '{}'); return all[oppId] || []; } catch { return []; } };
+const addStageHistory = (oppId, fromStage, toStage) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(STAGE_HISTORY_KEY) || '{}');
+    if (!all[oppId]) all[oppId] = [];
+    all[oppId].push({ from: fromStage, to: toStage, at: new Date().toISOString() });
+    localStorage.setItem(STAGE_HISTORY_KEY, JSON.stringify(all));
+  } catch {}
+};
+
+// ─── Notes (localStorage) ───
+const NOTES_KEY = 'platform_opp_notes';
+const getOppNotes = (oppId) => { try { const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); return all[oppId] || []; } catch { return []; } };
+const addOppNote = (oppId, text) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}');
+    if (!all[oppId]) all[oppId] = [];
+    const note = { id: Date.now().toString(), text, at: new Date().toISOString() };
+    all[oppId].unshift(note);
+    localStorage.setItem(NOTES_KEY, JSON.stringify(all));
+    return note;
+  } catch { return { id: Date.now().toString(), text, at: new Date().toISOString() }; }
+};
+const deleteOppNote = (oppId, noteId) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}');
+    if (all[oppId]) all[oppId] = all[oppId].filter(n => n.id !== noteId);
+    localStorage.setItem(NOTES_KEY, JSON.stringify(all));
+  } catch {}
+};
 
 const fmtBudget = (n) => { if (!n) return "-"; if (n >= 1000000) return (n / 1000000).toFixed(1) + "M"; if (n >= 1000) return (n / 1000).toFixed(0) + "K"; return n.toLocaleString(); };
 const daysSince = (date) => date ? Math.floor((Date.now() - new Date(date).getTime()) / 86400000) : 999;
@@ -188,7 +253,7 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig }) 
         </div>
       )}
 
-      {/* Tags: Budget + Temp + Priority */}
+      {/* Tags: Budget + Temp + Priority + Score */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <div className="flex items-center gap-1 bg-brand-500/10 rounded-md px-2.5 py-1 text-xs font-bold text-brand-500">
           <Banknote size={11} />{fmtBudget(opp.budget)} {isRTL ? "ج" : "EGP"}
@@ -205,6 +270,14 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig }) 
         >
           {isRTL ? prio.label_ar : prio.label_en}
         </div>
+        {(() => {
+          const score = calcLeadScore(opp);
+          return (
+            <div className="rounded-md px-2 py-1 text-[10px] font-bold flex items-center gap-0.5" style={{ background: `${scoreColor(score)}18`, color: scoreColor(score) }}>
+              <Zap size={9} />{score}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Footer: Agent + Last Activity + Days in stage */}
@@ -519,6 +592,16 @@ export default function OpportunitiesPage() {
   const [bulkSelected, setBulkSelected] = useState(new Set());
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [activityForm, setActivityForm] = useState({ type: 'call', description: '' });
+  const [savedFilters, setSavedFilters] = useState(() => getSavedFilters());
+  const [showSaveFilter, setShowSaveFilter] = useState(false);
+  const [filterName, setFilterName] = useState('');
+  const [draggingOpp, setDraggingOpp] = useState(null);
+  const [dragOverStage, setDragOverStage] = useState(null);
+  const [drawerNotes, setDrawerNotes] = useState([]);
+  const [newNote, setNewNote] = useState('');
+  const [stageHistory, setStageHistory] = useState([]);
+  const [filterScore, setFilterScore] = useState('all');
+  const [showNotes, setShowNotes] = useState(false);
 
   // ESC to close drawer
   useEffect(() => {
@@ -539,6 +622,13 @@ export default function OpportunitiesPage() {
       .finally(() => { if (!cancelled) setLoadingActivities(false); });
     return () => { cancelled = true; };
   }, [selectedOpp?.contact_id]);
+
+  // Load notes & stage history for drawer
+  useEffect(() => {
+    if (!selectedOpp?.id) { setDrawerNotes([]); setStageHistory([]); return; }
+    setDrawerNotes(getOppNotes(selectedOpp.id));
+    setStageHistory(getStageHistory(selectedOpp.id));
+  }, [selectedOpp?.id]);
 
   // Dynamic stage config based on department filter
   const currentStages = filterDept === 'all' ? getDeptStages('sales') : getDeptStages(filterDept);
@@ -589,6 +679,12 @@ export default function OpportunitiesPage() {
     }
     if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return false;
     if (filterTemp !== 'all' && o.temperature !== filterTemp) return false;
+    if (filterScore !== 'all') {
+      const s = calcLeadScore(o);
+      if (filterScore === 'hot' && s < 70) return false;
+      if (filterScore === 'warm' && (s < 40 || s >= 70)) return false;
+      if (filterScore === 'cold' && s >= 40) return false;
+    }
     if (filterDate !== 'all' && o.created_at) {
       const now = new Date();
       let start;
@@ -631,9 +727,14 @@ export default function OpportunitiesPage() {
   const conversionRate = opps.length > 0 ? Math.round((opps.filter(o => o.stage === 'closed_won').length / opps.length) * 100) : 0;
 
   const handleMove = async (id, toStage) => {
-    setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage } : o));
-    if (selectedOpp?.id === id) setSelectedOpp(p => ({ ...p, stage: toStage }));
-    await updateOpportunity(id, { stage: toStage }).catch(() => {});
+    const fromStage = opps.find(o => o.id === id)?.stage;
+    if (fromStage && fromStage !== toStage) addStageHistory(id, fromStage, toStage);
+    setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString() } : o));
+    if (selectedOpp?.id === id) {
+      setSelectedOpp(p => ({ ...p, stage: toStage, stage_changed_at: new Date().toISOString() }));
+      setStageHistory(getStageHistory(id));
+    }
+    await updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString() }).catch(() => {});
 
     // Auto-create deal in Operations when closed_won (sales only)
     if (toStage === 'closed_won') {
@@ -825,15 +926,57 @@ export default function OpportunitiesPage() {
         <Select className="!w-auto flex-none min-w-[110px]" value={sortBy} onChange={e => setSortBy(e.target.value)}>
           {Object.entries(SORT_OPTIONS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
         </Select>
-        {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all' || filterDate !== 'all' || sortBy !== 'newest') && (
+        <Select className="!w-auto flex-none min-w-[100px]" value={filterScore} onChange={e => setFilterScore(e.target.value)}>
+          <option value="all">{isRTL ? 'كل الدرجات' : 'All Scores'}</option>
+          <option value="hot">{isRTL ? 'ساخن (70+)' : 'Hot (70+)'}</option>
+          <option value="warm">{isRTL ? 'دافئ (40-69)' : 'Warm (40-69)'}</option>
+          <option value="cold">{isRTL ? 'بارد (<40)' : 'Cold (<40)'}</option>
+        </Select>
+        {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all' || filterDate !== 'all' || sortBy !== 'newest' || filterScore !== 'all') && (
           <Button
             variant="danger"
             size="sm"
-            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); }}
+            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); }}
           >
             <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
           </Button>
         )}
+        {/* Save / Load Filters */}
+        <div className="relative">
+          <Button variant="ghost" size="sm" onClick={() => setShowSaveFilter(s => !s)} title={isRTL ? 'حفظ / تحميل فلتر' : 'Save / Load Filter'}>
+            <Bookmark size={14} />
+          </Button>
+          {showSaveFilter && (
+            <div className="absolute top-full mt-1 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg z-50 p-3 w-[220px]" style={{ [isRTL ? 'right' : 'left']: 0 }}>
+              <div className="flex gap-1.5 mb-2">
+                <Input value={filterName} onChange={e => setFilterName(e.target.value)} placeholder={isRTL ? 'اسم الفلتر...' : 'Filter name...'} className="text-xs flex-1" />
+                <Button size="sm" onClick={() => {
+                  if (!filterName.trim()) return;
+                  const f = { name: filterName, search, filterAgent, filterTemp, filterDept, filterDate, sortBy, activeStage, filterScore };
+                  const all = [...savedFilters, f];
+                  saveSavedFilters(all); setSavedFilters(all); setFilterName('');
+                }}>{isRTL ? 'حفظ' : 'Save'}</Button>
+              </div>
+              {savedFilters.length > 0 && (
+                <div className="border-t border-edge dark:border-edge-dark pt-2 max-h-[150px] overflow-y-auto">
+                  {savedFilters.map((f, i) => (
+                    <div key={i} className="flex items-center justify-between py-1.5 hover:bg-gray-50 dark:hover:bg-white/5 px-1.5 rounded-md transition-colors">
+                      <button onClick={() => {
+                        setSearch(f.search || ''); setFilterAgent(f.filterAgent || 'all'); setFilterTemp(f.filterTemp || 'all');
+                        setFilterDept(f.filterDept || 'all'); setFilterDate(f.filterDate || 'all'); setSortBy(f.sortBy || 'newest');
+                        setActiveStage(f.activeStage || 'all'); setFilterScore(f.filterScore || 'all'); setShowSaveFilter(false);
+                      }} className="bg-transparent border-none cursor-pointer text-xs text-content dark:text-content-dark font-semibold font-cairo truncate flex-1 text-start">{f.name}</button>
+                      <button onClick={() => {
+                        const all = savedFilters.filter((_, j) => j !== i);
+                        saveSavedFilters(all); setSavedFilters(all);
+                      }} className="bg-transparent border-none cursor-pointer text-red-400 p-0.5 shrink-0"><X size={11} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="ms-auto flex items-center gap-2.5">
           <Button
             variant={bulkMode ? 'primary' : 'ghost'}
@@ -909,23 +1052,41 @@ export default function OpportunitiesPage() {
         <div className="flex gap-4 overflow-x-auto pb-4">
           {currentStages.map(stage => {
             const stageOpps = filtered.filter(o => o.stage === stage.id);
+            const isOver = dragOverStage === stage.id;
             return (
-              <div key={stage.id} className="flex-shrink-0 w-[300px]">
+              <div key={stage.id} className="flex-shrink-0 w-[300px]"
+                onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
+                onDragLeave={() => setDragOverStage(null)}
+                onDrop={e => {
+                  e.preventDefault();
+                  setDragOverStage(null);
+                  if (draggingOpp && draggingOpp.stage !== stage.id) {
+                    handleMove(draggingOpp.id, stage.id);
+                  }
+                  setDraggingOpp(null);
+                }}
+              >
                 <div className="flex items-center gap-2 mb-3 px-1">
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: stage.color }} />
                   <span className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? stage.label_ar : stage.label_en}</span>
                   <span className="text-xs text-content-muted dark:text-content-muted-dark bg-gray-100 dark:bg-brand-500/15 rounded-full px-1.5 py-px">{stageOpps.length}</span>
                 </div>
-                <div className="flex flex-col gap-3 min-h-[200px] bg-brand-500/[0.03] dark:bg-brand-500/[0.04] rounded-xl p-2.5 border border-dashed border-edge dark:border-edge-dark">
+                <div className={`flex flex-col gap-3 min-h-[200px] rounded-xl p-2.5 border border-dashed transition-colors duration-200 ${
+                  isOver ? 'bg-brand-500/10 border-brand-500' : 'bg-brand-500/[0.03] dark:bg-brand-500/[0.04] border-edge dark:border-edge-dark'
+                }`}>
                   {stageOpps.length === 0 ? (
                     <div className="text-center py-8">
-                      <p className="text-xs text-content-muted dark:text-content-muted-dark opacity-50 mb-2">{isRTL ? 'لا توجد فرص' : 'Empty'}</p>
+                      <p className="text-xs text-content-muted dark:text-content-muted-dark opacity-50 mb-2">{isRTL ? 'اسحب فرصة هنا' : 'Drop here'}</p>
                       <button onClick={() => setShowModal(true)} className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo">
                         <Plus size={10} className="inline -mt-px" /> {isRTL ? 'إضافة' : 'Add'}
                       </button>
                     </div>
                   ) : stageOpps.map(opp => (
-                    <div key={opp.id} className="relative">
+                    <div key={opp.id} className="relative"
+                      draggable
+                      onDragStart={() => setDraggingOpp(opp)}
+                      onDragEnd={() => { setDraggingOpp(null); setDragOverStage(null); }}
+                    >
                       {bulkMode && (
                         <button
                           onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
@@ -1376,6 +1537,93 @@ export default function OpportunitiesPage() {
                 );
               })}
             </div>
+
+            {/* Notes Timeline */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+                  <StickyNote size={12} className="inline -mt-px" /> {isRTL ? 'الملاحظات' : 'Notes'}
+                </p>
+                <button
+                  onClick={() => setShowNotes(n => !n)}
+                  className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2 py-1 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold"
+                >
+                  {showNotes ? (isRTL ? 'إخفاء' : 'Hide') : (isRTL ? 'عرض' : 'Show')} ({drawerNotes.length})
+                </button>
+              </div>
+              {showNotes && (
+                <>
+                  <div className="flex gap-1.5 mb-2">
+                    <Input value={newNote} onChange={e => setNewNote(e.target.value)} placeholder={isRTL ? 'أضف ملاحظة...' : 'Add note...'} className="text-xs flex-1" onKeyDown={e => {
+                      if (e.key === 'Enter' && newNote.trim()) {
+                        e.stopPropagation();
+                        const note = addOppNote(selectedOpp.id, newNote.trim());
+                        setDrawerNotes(prev => [note, ...prev]);
+                        setNewNote('');
+                      }
+                    }} />
+                    <Button size="sm" onClick={() => {
+                      if (!newNote.trim()) return;
+                      const note = addOppNote(selectedOpp.id, newNote.trim());
+                      setDrawerNotes(prev => [note, ...prev]);
+                      setNewNote('');
+                    }}><Plus size={12} /></Button>
+                  </div>
+                  {drawerNotes.map(n => (
+                    <div key={n.id} className="bg-amber-500/[0.06] border border-amber-500/10 rounded-lg p-2.5 mb-1.5 group">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed flex-1">{n.text}</p>
+                        <button onClick={() => { deleteOppNote(selectedOpp.id, n.id); setDrawerNotes(prev => prev.filter(x => x.id !== n.id)); }} className="bg-transparent border-none cursor-pointer text-red-400 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><X size={11} /></button>
+                      </div>
+                      <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">{new Date(n.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+
+            {/* Stage History */}
+            {stageHistory.length > 0 && (
+              <div>
+                <p className="m-0 mb-2 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+                  {isRTL ? 'سجل المراحل' : 'Stage History'}
+                </p>
+                <div className="space-y-1">
+                  {stageHistory.slice(0, 5).map((h, i) => {
+                    const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
+                    const fromLabel = stages.find(s => s.id === h.from);
+                    const toLabel = stages.find(s => s.id === h.to);
+                    return (
+                      <div key={i} className="flex items-center gap-2 text-[10px] text-content-muted dark:text-content-muted-dark bg-gray-50 dark:bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+                        <span className="font-semibold" style={{ color: fromLabel?.color || '#6B8DB5' }}>{isRTL ? (fromLabel?.label_ar || h.from) : (fromLabel?.label_en || h.from)}</span>
+                        <span>→</span>
+                        <span className="font-semibold" style={{ color: toLabel?.color || '#6B8DB5' }}>{isRTL ? (toLabel?.label_ar || h.to) : (toLabel?.label_en || h.to)}</span>
+                        <span className="ms-auto">{new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Lead Score */}
+            {!editingOpp && (
+              <div className="bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
+                <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'درجة العميل' : 'Lead Score'}</p>
+                {(() => {
+                  const score = calcLeadScore(selectedOpp);
+                  return (
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: scoreColor(score) }} />
+                      </div>
+                      <span className="text-sm font-bold" style={{ color: scoreColor(score) }}>{score}</span>
+                      <span className="text-[10px] font-semibold" style={{ color: scoreColor(score) }}>{scoreLabel(score, isRTL)}</span>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Follow Up Reminder */}
             <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={getContactName(selectedOpp)} />
