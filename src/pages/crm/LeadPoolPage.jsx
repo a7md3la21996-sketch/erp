@@ -8,7 +8,7 @@ import {
   RefreshCw, Upload, Plus, Eye, Zap
 } from 'lucide-react';
 import { P } from '../../config/roles';
-import { Button, Card, Input, Select, Badge, KpiCard, Modal, ModalFooter } from '../../components/ui';
+import { Button, Card, Input, Select, Badge, KpiCard, Modal, ModalFooter, FilterPill } from '../../components/ui';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCES = {
@@ -237,14 +237,12 @@ export default function LeadPoolPage() {
 
         {/* Type filter */}
         {canViewFresh && ['all','fresh','cold_call'].map(t => (
-          <button key={t} onClick={() => setTypeFilter(t)} className={`
-            px-3 py-1 rounded-md border text-xs cursor-pointer transition-colors
-            ${typeFilter === t
-              ? 'border-brand-500 bg-brand-500/10 text-brand-500 font-semibold'
-              : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'}
-          `}>
-            {t === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : t === 'fresh' ? (lang === 'ar' ? 'فريش' : 'Fresh') : (lang === 'ar' ? 'كولد كول' : 'Cold Call')}
-          </button>
+          <FilterPill
+            key={t}
+            active={typeFilter === t}
+            onClick={() => setTypeFilter(t)}
+            label={t === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : t === 'fresh' ? (lang === 'ar' ? 'فريش' : 'Fresh') : (lang === 'ar' ? 'كولد كول' : 'Cold Call')}
+          />
         ))}
 
         {/* Source filter */}
@@ -257,14 +255,12 @@ export default function LeadPoolPage() {
 
         {/* Aging filter */}
         {['all','fresh','warn','old'].map(a => (
-          <button key={a} onClick={() => setAgingFilter(a)} className={`
-            px-2.5 py-1 rounded-md border text-xs cursor-pointer transition-colors
-            ${agingFilter === a
-              ? 'border-brand-500 bg-brand-500/10 text-brand-500 font-semibold'
-              : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark'}
-          `}>
-            {a === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : a === 'fresh' ? (lang === 'ar' ? 'جديد' : 'Fresh') : a === 'warn' ? (lang === 'ar' ? 'تحذير' : 'Warn') : (lang === 'ar' ? 'قديم' : 'Old')}
-          </button>
+          <FilterPill
+            key={a}
+            active={agingFilter === a}
+            onClick={() => setAgingFilter(a)}
+            label={a === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : a === 'fresh' ? (lang === 'ar' ? 'جديد' : 'Fresh') : a === 'warn' ? (lang === 'ar' ? 'تحذير' : 'Warn') : (lang === 'ar' ? 'قديم' : 'Old')}
+          />
         ))}
 
         {/* Team / Global Pool Toggle — visible to managers only */}

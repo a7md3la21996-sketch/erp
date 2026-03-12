@@ -3,18 +3,19 @@ import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../services/leaveService';
 import { CalendarOff, Clock, CheckCircle2, XCircle, Plus, Check, X } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr } from '../../components/ui';
-import ExportButton from '../../components/ui/ExportButton';
+import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton } from '../../components/ui';
 
 export default function LeavePage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [leaves, setLeaves] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchLeaveRequests().then(setLeaves);
-    fetchEmployees().then(setEmployees);
+    Promise.all([fetchLeaveRequests(), fetchEmployees()]).then(([l, e]) => {
+      setLeaves(l); setEmployees(e); setLoading(false);
+    });
   }, []);
 
   const pending  = leaves.filter(l=>l.status==='pending').length;
@@ -33,6 +34,12 @@ export default function LeavePage() {
   const statusColor = s => s==='approved'?'#4A7AAB':s==='pending'?'#6B8DB5':'#EF4444';
   const statusLabel = (s,lang) => ({ approved:lang==='ar'?'موافق':'Approved', pending:lang==='ar'?'معلق':'Pending', rejected:lang==='ar'?'مرفوض':'Rejected' }[s]||s);
   const typeLabel   = (t,lang) => ({ annual:lang==='ar'?'سنوية':'Annual', sick:lang==='ar'?'مرضية':'Sick', unpaid:lang==='ar'?'بدون راتب':'Unpaid', emergency:lang==='ar'?'طارئة':'Emergency' }[t]||t);
+
+  if (loading) return (
+    <div className="px-4 py-4 md:px-7 md:py-6">
+      <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={7} />
+    </div>
+  );
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -111,7 +118,7 @@ export default function LeavePage() {
           <thead>
             <tr>
               {[lang==='ar'?'الموظف':'Employee',lang==='ar'?'النوع':'Type',lang==='ar'?'من':'From',lang==='ar'?'إلى':'To',lang==='ar'?'أيام':'Days',lang==='ar'?'الحالة':'Status',''].map((h,i)=>(
-                <Th key={i} className={'text-start'}>{h}</Th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>

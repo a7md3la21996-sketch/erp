@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Users, CheckCircle2, Clock, Plus, GraduationCap } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr } from '../../components/ui';
-import ExportButton from '../../components/ui/ExportButton';
+import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, ExportButton } from '../../components/ui';
 
 const MOCK_PROGRAMS = [
   { id:1, title:'مهارات التفاوض', title_en:'Negotiation Skills', category:'sales', duration:16, enrolled:6, completed:4, status:'active', start:'2026-03-10' },
@@ -104,7 +103,7 @@ export default function TrainingPage() {
           <thead>
             <tr>
               {[lang==='ar'?'البرنامج':'Program', lang==='ar'?'المدة':'Duration', lang==='ar'?'مسجلون':'Enrolled', lang==='ar'?'أتموا':'Completed', lang==='ar'?'الحالة':'Status'].map((h,i)=>(
-                <Th key={i} className={'text-start'}>{h}</Th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>

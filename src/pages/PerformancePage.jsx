@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
+import { Th, Td, Tr } from '../components/ui';
 import Card, { CardHeader, CardBody } from '../components/ui/Card';
 import Input, { Select } from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
@@ -397,38 +398,38 @@ export default function PerformancePage() {
                   <div className="text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? dept.name_ar : dept.name_en}</div>
                   <div className="text-xs text-content-muted dark:text-content-muted-dark">{deptEmps.length} {lang === 'ar' ? 'موظف' : 'employees'}</div>
                 </div>
-                <table className="w-full border-collapse">
+                <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr>
-                      <th className={`px-4 py-2.5 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark text-start`}>{lang === 'ar' ? 'الموظف' : 'Employee'}</th>
+                      <Th>{lang === 'ar' ? 'الموظف' : 'Employee'}</Th>
                       {kpis.map(kpi => (
-                        <th key={kpi.key} className="px-3 py-2.5 text-center text-[11px] font-semibold text-content-muted dark:text-content-muted-dark whitespace-nowrap">
+                        <Th key={kpi.key} className="text-center whitespace-nowrap">
                           <div>{lang === 'ar' ? kpi.ar : kpi.en}</div>
                           <div className="text-[10px] text-brand-500">{lang === 'ar' ? FREQ_CONFIG[kpi.freq]?.ar : FREQ_CONFIG[kpi.freq]?.en}</div>
-                        </th>
+                        </Th>
                       ))}
-                      <th className="px-3 py-2.5 text-center text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'الإجمالي' : 'Total'}</th>
+                      <Th className="text-center">{lang === 'ar' ? 'الإجمالي' : 'Total'}</Th>
                     </tr>
                   </thead>
                   <tbody>
                     {deptEmps.map((d, i) => (
-                      <tr key={d.emp.id} className="border-t border-edge dark:border-edge-dark">
-                        <td className="px-4 py-2.5">
-                          <div className="text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
-                        </td>
+                      <Tr key={d.emp.id}>
+                        <Td>
+                          <div className="text-[13px] font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
+                        </Td>
                         {d.scores.map((kpi, j) => {
                           const kpiColor = kpi.pct >= 90 ? '#4A7AAB' : kpi.pct >= 60 ? '#6B8DB5' : '#EF4444';
                           return (
-                            <td key={j} className="px-3 py-2.5 text-center">
+                            <Td key={j} className="text-center">
                               <div className="text-[13px] font-bold" style={{ color: kpiColor }}>{kpi.actual.toLocaleString()}</div>
                               <div className="text-[10px] text-content-muted dark:text-content-muted-dark">/{kpi.target}</div>
-                            </td>
+                            </Td>
                           );
                         })}
-                        <td className="px-3 py-2.5 text-center">
+                        <Td className="text-center">
                           <span className="text-[13px] font-extrabold" style={{ color: d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444' }}>{d.avgPct}%</span>
-                        </td>
-                      </tr>
+                        </Td>
+                      </Tr>
                     ))}
                   </tbody>
                 </table>
@@ -501,11 +502,11 @@ export default function PerformancePage() {
             <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark text-sm font-bold text-content dark:text-content-dark text-start`}>
               {lang === 'ar' ? 'النشاط مقابل النتائج — Sales' : 'Activity vs Results — Sales'}
             </div>
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="bg-brand-500/[0.06] dark:bg-brand-500/[0.06]">
+                <tr>
                   {[lang === 'ar' ? 'الموظف' : 'Employee', lang === 'ar' ? 'مكالمات' : 'Calls', lang === 'ar' ? 'فرص' : 'Opps', lang === 'ar' ? 'صفقات' : 'Deals', lang === 'ar' ? 'الإيرادات' : 'Revenue', lang === 'ar' ? 'التحليل' : 'Analysis'].map((h, i) => (
-                    <th key={i} className={`px-4 py-2.5 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark text-start`}>{h}</th>
+                    <Th key={i}>{h}</Th>
                   ))}
                 </tr>
               </thead>
@@ -520,18 +521,18 @@ export default function PerformancePage() {
                     ? { ar: 'نشاط منخفض', en: 'Low Activity', color: '#EF4444' }
                     : { ar: 'جيد ', en: 'Good ', color: '#4A7AAB' };
                   return (
-                    <tr key={d.emp.id} className={i > 0 ? 'border-t border-edge dark:border-edge-dark' : ''}>
-                      <td className="px-4 py-3 text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</td>
-                      <td className="px-4 py-3 text-[13px] text-content dark:text-content-dark">{d.crm.calls}</td>
-                      <td className="px-4 py-3 text-[13px] text-content dark:text-content-dark">{d.crm.opportunities}</td>
-                      <td className="px-4 py-3 text-[13px] font-bold text-brand-500">{d.crm.deals_closed}</td>
-                      <td className="px-4 py-3 text-[13px] text-brand-500">{d.crm.revenue > 0 ? (d.crm.revenue / 1000).toFixed(0) + 'K' : '—'}</td>
-                      <td className="px-4 py-3">
+                    <Tr key={d.emp.id}>
+                      <Td className="text-[13px] font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</Td>
+                      <Td className="text-[13px]">{d.crm.calls}</Td>
+                      <Td className="text-[13px]">{d.crm.opportunities}</Td>
+                      <Td className="text-[13px] font-bold text-brand-500">{d.crm.deals_closed}</Td>
+                      <Td className="text-[13px] text-brand-500">{d.crm.revenue > 0 ? (d.crm.revenue / 1000).toFixed(0) + 'K' : '—'}</Td>
+                      <Td>
                         <Badge size="sm" className="rounded-[20px]" style={{ background: analysis.color + '20', color: analysis.color }}>
                           {lang === 'ar' ? analysis.ar : analysis.en}
                         </Badge>
-                      </td>
-                    </tr>
+                      </Td>
+                    </Tr>
                   );
                 })}
               </tbody>

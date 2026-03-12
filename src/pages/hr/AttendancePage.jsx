@@ -2,9 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
-import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Download } from 'lucide-react';
-import { KpiCard, Button, Card, CardHeader, Table, Th, Td, Tr } from '../../components/ui';
-import ExportButton from '../../components/ui/ExportButton';
+import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar } from 'lucide-react';
+import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton } from '../../components/ui';
 
 function AttendanceRow({ emp, attendance, isRTL }) {
   const recs = attendance[emp.employee_id] || [];
@@ -52,9 +51,10 @@ export default function AttendancePage() {
   const [year] = useState(() => new Date().getFullYear());
   const [employees, setEmployees] = useState([]);
   const [allRecords, setAllRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchEmployees().then(setEmployees);
+    fetchEmployees().then(data => { setEmployees(data); setLoading(false); });
   }, []);
 
   useEffect(() => {
@@ -82,6 +82,12 @@ export default function AttendancePage() {
     return { present, absent, late, leave };
   }, [allRecords]);
   const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+  if (loading) return (
+    <div className="px-4 py-4 md:px-7 md:py-6">
+      <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={6} />
+    </div>
+  );
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -132,7 +138,7 @@ export default function AttendancePage() {
           <thead>
             <tr>
               {[lang==='ar'?'الموظف':'Employee', lang==='ar'?'القسم':'Dept', lang==='ar'?'حاضر':'Present', lang==='ar'?'غائب':'Absent', lang==='ar'?'متأخر':'Late', lang==='ar'?'نسبة':'Rate'].map((h,i)=>(
-                <Th key={i} className={'text-start'}>{h}</Th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>

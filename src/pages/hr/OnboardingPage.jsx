@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { UserPlus, CheckCircle2, Clock, AlertCircle, ChevronRight, UserCheck } from 'lucide-react';
-import KpiCard from '../../components/ui/KpiCard';
+import { KpiCard } from '../../components/ui';
 
 const ONBOARDING_STEPS = [
   { id:'docs', label_ar:'المستندات', label_en:'Documents', icon:'📄' },

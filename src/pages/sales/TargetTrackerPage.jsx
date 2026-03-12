@@ -3,11 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { Trophy, TrendingUp, Target, Award, Star, Medal, ChevronUp, ChevronDown, Minus, Calendar, Users, BarChart2, DollarSign, Crown, Zap } from 'lucide-react';
+import { Th, Td, Tr, Badge, KpiCard, FilterPill } from '../../components/ui';
 import Card, { CardHeader } from '../../components/ui/Card';
-import KpiCard from '../../components/ui/KpiCard';
-import Button from '../../components/ui/Button';
-import Badge from '../../components/ui/Badge';
-import { Th, Td, Tr } from '../../components/ui/Table';
 
 const MONTHS = [
   { id: 'jan', ar: 'يناير', en: 'January' },
@@ -98,14 +95,12 @@ export default function TargetTrackerPage() {
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {MONTHS.map(m => (
-            <Button
+            <FilterPill
               key={m.id}
-              variant={selectedMonth === m.id ? 'primary' : 'secondary'}
-              size="sm"
+              active={selectedMonth === m.id}
               onClick={() => setSelectedMonth(m.id)}
-            >
-              {lang === 'ar' ? m.ar : m.en}
-            </Button>
+              label={lang === 'ar' ? m.ar : m.en}
+            />
           ))}
         </div>
       </div>
@@ -121,7 +116,7 @@ export default function TargetTrackerPage() {
       {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
         {/* Team Ranking Table */}
-        <Card className="overflow-x-auto overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm font-semibold text-content dark:text-content-dark flex items-center gap-1.5">
               <BarChart2 size={16} className="text-brand-500" />
@@ -129,19 +124,16 @@ export default function TargetTrackerPage() {
             </span>
             <div className="flex gap-1.5">
               {[{ key: 'pct', ar: 'بالنسبة', en: '% Target' }, { key: 'achieved', ar: 'بالمبلغ', en: 'Amount' }, { key: 'deals', ar: 'بالصفقات', en: 'Deals' }].map(s => (
-                <Button
+                <FilterPill
                   key={s.key}
-                  variant={sortBy === s.key ? 'primary' : 'ghost'}
-                  size="sm"
+                  active={sortBy === s.key}
                   onClick={() => setSortBy(s.key)}
-                  className="!text-[11px] !px-3 !py-1"
-                >
-                  {lang === 'ar' ? s.ar : s.en}
-                </Button>
+                  label={lang === 'ar' ? s.ar : s.en}
+                />
               ))}
             </div>
           </CardHeader>
-          <table className="w-full border-collapse">
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
                 {[{ ar: '#', en: '#', w: 'w-10' }, { ar: 'الموظف', en: 'Agent' }, { ar: 'التارجت', en: 'Target', w: 'w-[100px]' }, { ar: 'المحقق', en: 'Achieved', w: 'w-[100px]' }, { ar: 'النسبة', en: '% Done', w: 'w-[140px]' }, { ar: 'الصفقات', en: 'Deals', w: 'w-[70px]' }, { ar: 'التغيير', en: 'vs Last', w: 'w-[80px]' }].map((h, i) => (

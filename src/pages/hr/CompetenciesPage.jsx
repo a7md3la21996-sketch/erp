@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { COMPETENCIES } from '../../data/hr_mock_data';
 import { Award, TrendingUp, Users, Star, ChevronDown } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, Table, Th, Td, Tr } from '../../components/ui';
+import { KpiCard, Badge, Button, Card, FilterPill, Table, Th, Td, Tr } from '../../components/ui';
 
 export default function CompetenciesPage() {
   const { i18n } = useTranslation();
@@ -41,17 +41,12 @@ export default function CompetenciesPage() {
       {/* Filter Buttons */}
       <div className="flex gap-2 mb-4 flex-wrap">
         {['all', ...categories].map(cat => (
-          <button
+          <FilterPill
             key={cat}
+            label={cat==='all'?(lang==='ar'?'الكل':'All'):cat}
+            active={filter===cat}
             onClick={()=>setFilter(cat)}
-            className={`px-3.5 py-1.5 rounded-lg border text-xs font-semibold cursor-pointer transition-all duration-150
-              ${filter===cat
-                ? 'bg-brand-500 text-white border-brand-500'
-                : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark hover:border-brand-500/40 hover:text-brand-500 hover:bg-brand-500/[0.08]'
-              }`}
-          >
-            {cat==='all'?(lang==='ar'?'الكل':'All'):cat}
-          </button>
+          />
         ))}
       </div>
 
@@ -61,7 +56,7 @@ export default function CompetenciesPage() {
           <thead>
             <tr>
               {[lang==='ar'?'الكفاءة':'Competency', lang==='ar'?'الفئة':'Category', lang==='ar'?'المستوى المطلوب':'Required Level', lang==='ar'?'التقييم':'Rating', ''].map((h,i)=>(
-                <Th key={i} className={'text-start'}>{h}</Th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>

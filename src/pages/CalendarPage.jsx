@@ -7,7 +7,7 @@ import {
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES } from '../services/tasksService';
 import { fetchReminders, createReminder } from '../services/remindersService';
 import { fetchActivities, ACTIVITY_TYPES } from '../services/activitiesService';
-import { Button, Card, Badge, Modal, ModalFooter, Input, Select, Textarea } from '../components/ui';
+import { Button, Card, Badge, Modal, ModalFooter, Input, Select, Textarea, PageSkeleton } from '../components/ui';
 
 const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAYS_AR = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
@@ -277,8 +277,16 @@ export default function CalendarPage() {
 
             {/* Days Grid */}
             {loading ? (
-              <div className="text-center p-12 text-content-muted dark:text-content-muted-dark">
-                {isRTL ? 'جاري التحميل...' : 'Loading...'}
+              <div className="grid grid-cols-7">
+                {Array.from({ length: 35 }).map((_, i) => (
+                  <div key={i} className="min-h-[70px] md:min-h-[90px] p-2 border-b border-r border-edge dark:border-edge-dark">
+                    <div className="w-6 h-6 rounded-full bg-edge dark:bg-edge-dark animate-pulse mb-1.5" />
+                    <div className="hidden md:block space-y-1">
+                      <div className="h-2 w-3/4 rounded bg-edge dark:bg-edge-dark animate-pulse" />
+                      <div className="h-2 w-1/2 rounded bg-edge dark:bg-edge-dark animate-pulse opacity-60" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="grid grid-cols-7">

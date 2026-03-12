@@ -6,7 +6,7 @@ import {
   AlertTriangle, Clock, ChevronDown, Building2,
   UserCheck, Briefcase, Shield, X, Check
 } from 'lucide-react';
-import { Button, Card, Badge, Modal, KpiCard, Table, Th, Td, Tr } from '../../components/ui';
+import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton } from '../../components/ui';
 import { Select as UISelect } from '../../components/ui';
 import ExportButton from '../../components/ui/ExportButton';
 
@@ -68,10 +68,12 @@ export default function EmployeesPage() {
   const [selected, setSelected] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchEmployees().then(setEmployees);
-    fetchDepartments().then(setDepartments);
+    Promise.all([fetchEmployees(), fetchDepartments()])
+      .then(([emps, depts]) => { setEmployees(emps); setDepartments(depts); })
+      .finally(() => setLoading(false));
   }, []);
 
   /* stats */
@@ -98,6 +100,12 @@ export default function EmployeesPage() {
 
   const statusColor = s => s === 'active' ? '#4A7AAB' : s === 'on_leave' ? '#6B8DB5' : '#94a3b8';
   const statusLabel = s => ({ active: lang === 'ar' ? 'نشط' : 'Active', on_leave: lang === 'ar' ? 'إجازة' : 'On Leave', inactive: lang === 'ar' ? 'غير نشط' : 'Inactive' }[s] || s);
+
+  if (loading) return (
+    <div className="px-4 py-4 md:px-7 md:py-6">
+      <PageSkeleton hasKpis tableRows={6} tableCols={5} />
+    </div>
+  );
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -172,10 +180,9 @@ export default function EmployeesPage() {
       </Card>
 
       {/* ── Table ── */}
-      <Card className="!rounded-xl overflow-hidden">
-        <table className="w-full border-collapse">
+      <Table>
           <thead>
-            <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
+            <tr>
               {[
                 lang === 'ar' ? 'الموظف' : 'Employee',
                 lang === 'ar' ? 'القسم'  : 'Department',
@@ -185,7 +192,7 @@ export default function EmployeesPage() {
                 lang === 'ar' ? 'الحالة' : 'Status',
                 '',
               ].map((h, i) => (
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider whitespace-nowrap ${'text-start'}`}>{h}</th>
+                <Th key={i} className="whitespace-nowrap">{h}</Th>
               ))}
             </tr>
           </thead>
@@ -245,25 +252,25 @@ export default function EmployeesPage() {
               );
             })}
           </tbody>
-        </table>
-        {filtered.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border-[1.5px] border-dashed border-brand-500/30 flex items-center justify-center mb-4">
-              <Users size={28} color="#4A7AAB" strokeWidth={1.5} />
-            </div>
-            <p className="text-[15px] font-bold text-content dark:text-content-dark mb-1.5">{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
-            <p className="text-[13px] text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>
+      </Table>
+      {filtered.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border-[1.5px] border-dashed border-brand-500/30 flex items-center justify-center mb-4">
+            <Users size={28} color="#4A7AAB" strokeWidth={1.5} />
           </div>
-        )}
-      </Card>
+          <p className="text-[15px] font-bold text-content dark:text-content-dark mb-1.5">{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
+          <p className="text-[13px] text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>
+        </div>
+      )}
 
       {/* ── Employee Detail Modal ── */}
-      {selected && <EmployeeModal emp={selected} onClose={() => setSelected(null)} isRTL={isRTL} lang={lang} />}
+      <EmployeeModal emp={selected} onClose={() => setSelected(null)} isRTL={isRTL} lang={lang} />
     </div>
   );
 }
 
 function EmployeeModal({ emp, onClose, isRTL, lang }) {
+  if (!emp) return null;
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
   const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
   const rows = [
@@ -277,31 +284,27 @@ function EmployeeModal({ emp, onClose, isRTL, lang }) {
     [lang === 'ar' ? 'رصيد الإجازة' : 'Leave Balance', (emp.leave_balance ?? 21) + (lang === 'ar' ? ' يوم' : ' days')],
   ];
   return (
-    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center" onClick={onClose}>
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[480px] max-h-[85vh] overflow-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-        {/* header */}
-        <div className={`bg-gradient-to-br from-brand-900 to-brand-500 p-6 rounded-t-2xl flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className="w-[52px] h-[52px] rounded-[14px] bg-white/15 flex items-center justify-center shrink-0">
-            <span className="text-lg font-extrabold text-white">{initials}</span>
-          </div>
-          <div className={`flex-1 ${'text-start'}`}>
-            <p className="m-0 text-lg font-extrabold text-white">{name}</p>
-            <p className="m-0 mt-0.5 text-xs text-white/70">{emp.job_title || (lang === 'ar' ? 'موظف' : 'Employee')}</p>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-lg border-none bg-white/15 cursor-pointer flex items-center justify-center">
-            <X size={16} color="#fff" />
-          </button>
+    <Modal open={!!emp} onClose={onClose} title={name} width="max-w-md">
+      {/* Avatar header */}
+      <div className={`flex items-center gap-3.5 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className="w-[52px] h-[52px] rounded-[14px] bg-brand-500/[0.12] flex items-center justify-center shrink-0">
+          <span className="text-lg font-extrabold text-brand-500">{initials}</span>
         </div>
-        {/* body */}
-        <div className="p-5">
-          {rows.map(([label, val], i) => (
-            <div key={i} className={`flex justify-between py-2.5 ${i < rows.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{label}</span>
-              <span className="text-[13px] font-semibold text-content dark:text-content-dark">{val}</span>
-            </div>
-          ))}
+        <div className="text-start">
+          <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{name}</p>
+          <p className="m-0 mt-0.5 text-xs text-content-muted dark:text-content-muted-dark">{emp.job_title || (lang === 'ar' ? 'موظف' : 'Employee')}</p>
         </div>
       </div>
-    </div>
+      {/* Detail rows */}
+      {rows.map(([label, val], i) => (
+        <div key={i} className={`flex justify-between py-2.5 ${i < rows.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{label}</span>
+          <span className="text-[13px] font-semibold text-content dark:text-content-dark">{val}</span>
+        </div>
+      ))}
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إغلاق' : 'Close'}</Button>
+      </ModalFooter>
+    </Modal>
   );
 }

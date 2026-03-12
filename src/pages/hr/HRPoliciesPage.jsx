@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText, BookOpen, Shield, Clock, Plus, Eye, Download } from 'lucide-react';
-import { Button, Card, KpiCard, Tr, Td } from '../../components/ui';
+import { Button, Card, KpiCard, Th, Tr, Td, FilterPill } from '../../components/ui';
 
 
 const MOCK_POLICIES = [
@@ -58,25 +58,15 @@ export default function HRPoliciesPage() {
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'قائمة السياسات':'Policies List'}</p>
           <div className="flex gap-1.5">
             {CATEGORIES.map(c => (
-              <button
-                key={c.key}
-                onClick={()=>setCat(c.key)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-150 border
-                  ${cat===c.key
-                    ? 'border-brand-500/60 bg-brand-500/15 text-brand-500'
-                    : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark hover:border-brand-500/40'
-                  }`}
-              >
-                {lang==='ar'?c.label_ar:c.label_en}
-              </button>
+              <FilterPill key={c.key} label={lang==='ar'?c.label_ar:c.label_en} active={cat===c.key} onClick={()=>setCat(c.key)} />
             ))}
           </div>
         </div>
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
+            <tr>
               {[lang==='ar'?'السياسة':'Policy', lang==='ar'?'التصنيف':'Category', lang==='ar'?'الإصدار':'Version', lang==='ar'?'آخر تحديث':'Updated', lang==='ar'?'الحالة':'Status', lang==='ar'?'المشاهدات':'Views', ''].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${'text-start'}`}>{h}</th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>

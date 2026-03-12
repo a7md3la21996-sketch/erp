@@ -2,8 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download } from 'lucide-react';
-import { Button, Card, CardHeader, KpiCard, Tr, Td, Th } from '../../components/ui';
-import ExportButton from '../../components/ui/ExportButton';
+import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton } from '../../components/ui';
 
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -13,13 +12,20 @@ export default function PayrollPage() {
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchEmployees().then(setEmployees);
+    fetchEmployees().then(data => { setEmployees(data); setLoading(false); });
   }, []);
 
   const totalSalaries = useMemo(() => employees.reduce((s,e)=>s+(e.salary||0),0), [employees]);
   const avgSalary = employees.length ? Math.round(totalSalaries / employees.length) : 0;
+
+  if (loading) return (
+    <div className="px-4 py-4 md:px-7 md:py-6">
+      <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={7} />
+    </div>
+  );
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -76,18 +82,18 @@ export default function PayrollPage() {
             <Download size={13} />{lang==='ar'?'تصدير':'Export'}
           </Button>
         </div>
-        <table className="w-full border-collapse">
+        <Table>
           <thead>
-            <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
+            <tr>
               {[lang==='ar'?'الموظف':'Employee',lang==='ar'?'الراتب الأساسي':'Base Salary',lang==='ar'?'البدلات':'Allowances',lang==='ar'?'الاستقطاعات':'Deductions',lang==='ar'?'الصافي':'Net Pay',lang==='ar'?'الحالة':'Status',''].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider text-start`}>{h}</th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>
           <tbody>{employees.map(emp=>(
             <PayrollRow key={emp.id} emp={emp} isRTL={isRTL} lang={lang} />
           ))}</tbody>
-        </table>
+        </Table>
       </Card>
     </div>
   );

@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Briefcase, Users, Clock, CheckCircle2, Plus, Eye } from 'lucide-react';
-import KpiCard from '../../components/ui/KpiCard';
-import Button from '../../components/ui/Button';
-import { Table, Th, Td, Tr } from '../../components/ui/Table';
-import ExportButton from '../../components/ui/ExportButton';
+import { KpiCard, Button, Th, Td, Tr, ExportButton } from '../../components/ui';
 
 const MOCK_JOBS = [
   { id:1, title_ar:'مدير مبيعات', title_en:'Sales Manager', dept:'المبيعات', type:'full-time', status:'open', applicants:12, posted:'2026-02-15' },
@@ -82,9 +79,9 @@ export default function RecruitmentPage() {
         </div>
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
+            <tr>
               {[lang==='ar'?'الوظيفة':'Position', lang==='ar'?'القسم':'Dept', lang==='ar'?'المتقدمون':'Applicants', lang==='ar'?'تاريخ النشر':'Posted', lang==='ar'?'الحالة':'Status', ''].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wide text-start`}>{h}</th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>
@@ -112,26 +109,22 @@ export default function RecruitmentPage() {
 }
 
 function JobRow({ job, lang, isRTL }) {
-  const [hov, setHov] = useState(false);
   const sc = statusColor(job.status);
   return (
-    <tr
-      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      className={`border-b border-edge dark:border-edge-dark transition-colors duration-150 ${hov ? 'bg-[#F8FAFC] dark:bg-brand-500/[0.07]' : 'bg-transparent'}`}
-    >
-      <td className="text-[13px] text-content dark:text-content-dark px-3.5 py-3 font-bold">{lang==='ar'?job.title_ar:job.title_en}</td>
-      <td className="text-[13px] text-content-muted dark:text-content-muted-dark px-3.5 py-3">{job.dept}</td>
-      <td className="text-[13px] px-3.5 py-3"><span className="font-bold text-brand-500">{job.applicants}</span></td>
-      <td className="text-[13px] text-content-muted dark:text-content-muted-dark px-3.5 py-3">{job.posted}</td>
-      <td className="text-[13px] px-3.5 py-3">
+    <Tr>
+      <Td className="font-bold">{lang==='ar'?job.title_ar:job.title_en}</Td>
+      <Td className="text-content-muted dark:text-content-muted-dark">{job.dept}</Td>
+      <Td><span className="font-bold text-brand-500">{job.applicants}</span></Td>
+      <Td className="text-content-muted dark:text-content-muted-dark">{job.posted}</Td>
+      <Td>
         <span
           className="px-2.5 py-[3px] rounded-full text-[11px] font-semibold"
           style={{ background: `${sc}18`, color: sc, border: `1px solid ${sc}35` }}
         >
           {statusLabel(job.status, lang)}
         </span>
-      </td>
-      <td className="text-[13px] px-3.5 py-3"><ViewBtn /></td>
-    </tr>
+      </Td>
+      <Td><ViewBtn /></Td>
+    </Tr>
   );
 }

@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { Package, CheckCircle2, AlertCircle, Clock, Plus, Edit2, Trash2 } from 'lucide-react';
-import { Button, Card, KpiCard, Tr, Td } from '../../components/ui';
-import ExportButton from '../../components/ui/ExportButton';
+import { Button, Card, KpiCard, Th, Tr, Td, FilterPill, ExportButton } from '../../components/ui';
 
 
 const MOCK_ASSETS = [
@@ -84,17 +83,7 @@ export default function AssetsPage() {
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'قائمة الأصول':'Asset List'}</p>
           <div className="flex gap-1.5">
             {filters.map(f => (
-              <button
-                key={f.key}
-                onClick={()=>setFilter(f.key)}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all duration-150 border
-                  ${filter===f.key
-                    ? 'border-brand-500/60 bg-brand-500/15 text-brand-500'
-                    : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark hover:border-brand-500/40'
-                  }`}
-              >
-                {f.label}
-              </button>
+              <FilterPill key={f.key} label={f.label} active={filter===f.key} onClick={()=>setFilter(f.key)} />
             ))}
           </div>
         </div>
@@ -109,9 +98,9 @@ export default function AssetsPage() {
         ) : (<>
         <table className="w-full border-collapse">
           <thead>
-            <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
+            <tr>
               {[lang==='ar'?'الأصل':'Asset', lang==='ar'?'النوع':'Type', lang==='ar'?'مخصص ل':'Assigned To', lang==='ar'?'الحالة':'Status', lang==='ar'?'القيمة':'Value', ''].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${'text-start'}`}>{h}</th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>

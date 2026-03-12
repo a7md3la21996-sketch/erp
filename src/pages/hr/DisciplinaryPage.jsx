@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
-import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, Eye, ShieldAlert } from 'lucide-react';
-import { Button, Card, KpiCard, Tr, Td } from '../../components/ui';
-import ExportButton from '../../components/ui/ExportButton';
+import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, ShieldAlert } from 'lucide-react';
+import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton } from '../../components/ui';
 
 
 const MOCK_CASES = [
@@ -31,7 +30,8 @@ export default function DisciplinaryPage() {
   const [cases] = useState(MOCK_CASES);
   const [employees, setEmployees] = useState([]);
 
-  useEffect(() => { fetchEmployees().then(data => setEmployees(data)); }, []);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { fetchEmployees().then(data => { setEmployees(data); setLoading(false); }); }, []);
 
   const open   = cases.filter(c=>c.status==='open').length;
   const closed = cases.filter(c=>c.status==='closed').length;
@@ -41,6 +41,12 @@ export default function DisciplinaryPage() {
   const severityLabel = (s,lang) => ({ high:lang==='ar'?'عالي':'High', medium:lang==='ar'?'متوسط':'Medium', low:lang==='ar'?'منخفض':'Low' }[s]||s);
   const typeLabel     = (t,lang) => ({ warning:lang==='ar'?'إنذار':'Warning', suspension:lang==='ar'?'إيقاف':'Suspension', termination:lang==='ar'?'فصل':'Termination' }[t]||t);
   const statusLabel   = (s,lang) => ({ open:lang==='ar'?'مفتوح':'Open', closed:lang==='ar'?'مغلق':'Closed' }[s]||s);
+
+  if (loading) return (
+    <div className="px-4 py-4 md:px-7 md:py-6">
+      <PageSkeleton hasKpis kpiCount={4} tableRows={4} tableCols={6} />
+    </div>
+  );
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -85,11 +91,11 @@ export default function DisciplinaryPage() {
         <div className="px-4 py-3.5 border-b border-edge dark:border-edge-dark">
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'سجل الحالات':'Cases Log'}</p>
         </div>
-        <table className="w-full border-collapse">
+        <Table>
           <thead>
-            <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
+            <tr>
               {[lang==='ar'?'الموظف':'Employee', lang==='ar'?'النوع':'Type', lang==='ar'?'السبب':'Reason', lang==='ar'?'التاريخ':'Date', lang==='ar'?'الخطورة':'Severity', lang==='ar'?'الحالة':'Status'].map((h,i)=>(
-                <th key={i} className={`text-[11px] font-bold text-content-muted dark:text-content-muted-dark px-3.5 py-2.5 uppercase tracking-wider ${'text-start'}`}>{h}</th>
+                <Th key={i}>{h}</Th>
               ))}
             </tr>
           </thead>
@@ -121,7 +127,7 @@ export default function DisciplinaryPage() {
               );
             })}
           </tbody>
-        </table>
+        </Table>
       </Card>
     </div>
   );
