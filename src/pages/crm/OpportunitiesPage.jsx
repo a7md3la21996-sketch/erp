@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
 import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity } from '../../services/dealsService';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, ArrowUpDown, CheckSquare, AlertTriangle, Timer, ChevronUp, ChevronDown as ChevronDownIcon, Bookmark, GripVertical, StickyNote, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, ArrowUpDown, CheckSquare, AlertTriangle, Timer, ChevronUp, ChevronDown as ChevronDownIcon, Bookmark, GripVertical, StickyNote, Zap, RefreshCw, Filter, Thermometer } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 
@@ -60,7 +61,18 @@ const SORT_OPTIONS = {
   budget_high: { ar: 'الميزانية (الأعلى)', en: 'Budget (High)' },
   budget_low: { ar: 'الميزانية (الأقل)', en: 'Budget (Low)' },
   temp_hot: { ar: 'الأسخن', en: 'Hottest' },
+  lead_score: { ar: 'درجة العميل', en: 'Lead Score' },
   stale: { ar: 'بدون تواصل', en: 'Stale (No Contact)' },
+};
+
+const LOST_REASONS = {
+  price: { ar: 'السعر مرتفع', en: 'Price too high' },
+  competitor: { ar: 'اختار منافس', en: 'Chose competitor' },
+  timing: { ar: 'التوقيت غير مناسب', en: 'Bad timing' },
+  no_budget: { ar: 'لا يوجد ميزانية', en: 'No budget' },
+  no_response: { ar: 'لا يوجد رد', en: 'No response' },
+  not_interested: { ar: 'غير مهتم', en: 'Not interested' },
+  other: { ar: 'أخرى', en: 'Other' },
 };
 const TEMP_ORDER = { hot: 0, warm: 1, cool: 2, cold: 3 };
 
@@ -402,7 +414,7 @@ function ContactSearch({ isRTL, value, onSelect }) {
 // AddModal — with real contact search & agent select
 // ═══════════════════════════════════════════════
 function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [] }) {
-  const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'new', project_id: '', notes: '' });
+  const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'new', project_id: '', notes: '', expected_close_date: '' });
   const [saving, setSaving] = useState(false);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const contactDept = form.contact?.department || 'sales';
@@ -420,6 +432,7 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps
       stage: form.stage,
       project_id: form.project_id || null,
       notes: form.notes,
+      expected_close_date: form.expected_close_date || null,
     };
     const result = await createOpportunity(payload);
     // Inject joined data so cards render names immediately
@@ -484,6 +497,12 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps
           <Select value={form.stage} onChange={e => f('stage', e.target.value)}>
             {stageConfig.map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
           </Select>
+        </div>
+        <div>
+          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
+            {isRTL ? 'تاريخ الإغلاق المتوقع' : 'Expected Close'}
+          </label>
+          <Input type="date" value={form.expected_close_date} onChange={e => f('expected_close_date', e.target.value)} />
         </div>
         <div className="col-span-2">
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
@@ -563,6 +582,7 @@ export default function OpportunitiesPage() {
   const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const rawLang = i18n.language || 'ar';
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
@@ -602,6 +622,11 @@ export default function OpportunitiesPage() {
   const [stageHistory, setStageHistory] = useState([]);
   const [filterScore, setFilterScore] = useState('all');
   const [showNotes, setShowNotes] = useState(false);
+  const [lostReasonModal, setLostReasonModal] = useState(null); // { id, toStage }
+  const [lostReason, setLostReason] = useState('');
+  const [lostReasonCustom, setLostReasonCustom] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // ESC to close drawer
   useEffect(() => {
@@ -635,38 +660,36 @@ export default function OpportunitiesPage() {
   const stageConfigWithAll = [{ id: 'all', label_ar: 'الكل', label_en: 'All', color: '#4A7AAB' }, ...currentStages];
 
   // Load data
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const [oppsData, agentsData, projectsData] = await Promise.all([
-        fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-        fetchSalesAgents(),
-        fetchProjects(),
-      ]);
-      // Client-side enrich: attach agent/project names from fetched lists if missing
-      const agentMap = {};
-      agentsData.forEach(a => { agentMap[a.id] = a; });
-      const projMap = {};
-      projectsData.forEach(p => { projMap[p.id] = p; });
-      // Also try localStorage contacts
-      let localContacts = [];
-      try { localContacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch {}
-      const contactMap = {};
-      localContacts.forEach(c => { contactMap[c.id] = c; });
+  const loadData = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    const [oppsData, agentsData, projectsData] = await Promise.all([
+      fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
+      fetchSalesAgents(),
+      fetchProjects(),
+    ]);
+    const agentMap = {};
+    agentsData.forEach(a => { agentMap[a.id] = a; });
+    const projMap = {};
+    projectsData.forEach(p => { projMap[p.id] = p; });
+    let localContacts = [];
+    try { localContacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch {}
+    const contactMap = {};
+    localContacts.forEach(c => { contactMap[c.id] = c; });
 
-      const enriched = oppsData.map(o => ({
-        ...o,
-        contacts: o.contacts || contactMap[o.contact_id] || null,
-        users: o.users || agentMap[o.assigned_to] || null,
-        projects: o.projects || projMap[o.project_id] || null,
-      }));
-      setOpps(enriched);
-      setAgents(agentsData);
-      setProjects(projectsData);
-      setLoading(false);
-    };
-    load();
+    const enriched = oppsData.map(o => ({
+      ...o,
+      contacts: o.contacts || contactMap[o.contact_id] || null,
+      users: o.users || agentMap[o.assigned_to] || null,
+      projects: o.projects || projMap[o.project_id] || null,
+    }));
+    setOpps(enriched);
+    setAgents(agentsData);
+    setProjects(projectsData);
+    setLoading(false);
+    setRefreshing(false);
   }, [profile?.role, profile?.id, profile?.team_id]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   const filtered = opps.filter(o => {
     if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return false;
@@ -703,6 +726,7 @@ export default function OpportunitiesPage() {
       case 'budget_high': return (b.budget || 0) - (a.budget || 0);
       case 'budget_low': return (a.budget || 0) - (b.budget || 0);
       case 'temp_hot': return (TEMP_ORDER[a.temperature] ?? 4) - (TEMP_ORDER[b.temperature] ?? 4);
+      case 'lead_score': return calcLeadScore(b) - calcLeadScore(a);
       case 'stale': return daysSince(a.contacts?.last_activity_at || a.updated_at) - daysSince(b.contacts?.last_activity_at || b.updated_at);
       default: return new Date(b.created_at || 0) - new Date(a.created_at || 0);
     }
@@ -726,15 +750,23 @@ export default function OpportunitiesPage() {
   const newThisWeek = opps.filter(o => { const d = new Date(o.created_at); const w = new Date(); w.setDate(w.getDate() - 7); return d >= w; }).length;
   const conversionRate = opps.length > 0 ? Math.round((opps.filter(o => o.stage === 'closed_won').length / opps.length) * 100) : 0;
 
-  const handleMove = async (id, toStage) => {
+  const handleMove = async (id, toStage, extraUpdates = {}) => {
+    // Intercept closed_lost to ask for reason
+    if (toStage === 'closed_lost' && !extraUpdates.lost_reason) {
+      setLostReasonModal({ id, toStage });
+      setLostReason('');
+      setLostReasonCustom('');
+      return;
+    }
+
     const fromStage = opps.find(o => o.id === id)?.stage;
     if (fromStage && fromStage !== toStage) addStageHistory(id, fromStage, toStage);
-    setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString() } : o));
+    setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates } : o));
     if (selectedOpp?.id === id) {
-      setSelectedOpp(p => ({ ...p, stage: toStage, stage_changed_at: new Date().toISOString() }));
+      setSelectedOpp(p => ({ ...p, stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates }));
       setStageHistory(getStageHistory(id));
     }
-    await updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString() }).catch(() => {});
+    await updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates }).catch(() => {});
 
     // Auto-create deal in Operations when closed_won (sales only)
     if (toStage === 'closed_won') {
@@ -745,6 +777,14 @@ export default function OpportunitiesPage() {
         setTimeout(() => setDealCreatedToast(null), 4000);
       }
     }
+  };
+
+  const confirmLostReason = () => {
+    if (!lostReasonModal) return;
+    const reason = lostReason === 'other' ? lostReasonCustom : lostReason;
+    if (!reason) return;
+    handleMove(lostReasonModal.id, lostReasonModal.toStage, { lost_reason: reason });
+    setLostReasonModal(null);
   };
 
   const handleDelete = (id) => {
@@ -772,12 +812,26 @@ export default function OpportunitiesPage() {
       assigned_to: selectedOpp.assigned_to || '',
       project_id: selectedOpp.project_id || '',
       notes: selectedOpp.notes || '',
+      stage: selectedOpp.stage || 'new',
+      expected_close_date: selectedOpp.expected_close_date || '',
     });
     setEditingOpp(true);
   };
 
   const saveEdit = async () => {
     setEditSaving(true);
+    const stageChanged = editForm.stage !== selectedOpp.stage;
+    if (stageChanged) {
+      // If changing to closed_lost, need reason
+      if (editForm.stage === 'closed_lost') {
+        setLostReasonModal({ id: selectedOpp.id, toStage: 'closed_lost', fromEdit: true });
+        setLostReason('');
+        setLostReasonCustom('');
+        setEditSaving(false);
+        return;
+      }
+      addStageHistory(selectedOpp.id, selectedOpp.stage, editForm.stage);
+    }
     const updates = {
       budget: Number(editForm.budget) || 0,
       temperature: editForm.temperature,
@@ -785,12 +839,25 @@ export default function OpportunitiesPage() {
       assigned_to: editForm.assigned_to || null,
       project_id: editForm.project_id || null,
       notes: editForm.notes,
+      expected_close_date: editForm.expected_close_date || null,
+      ...(stageChanged ? { stage: editForm.stage, stage_changed_at: new Date().toISOString() } : {}),
     };
     const result = await updateOpportunity(selectedOpp.id, updates);
     setOpps(p => p.map(o => o.id === selectedOpp.id ? { ...o, ...result } : o));
     setSelectedOpp(prev => ({ ...prev, ...result }));
+    if (stageChanged) setStageHistory(getStageHistory(selectedOpp.id));
     setEditingOpp(false);
     setEditSaving(false);
+
+    // Auto-create deal if moved to closed_won
+    if (stageChanged && editForm.stage === 'closed_won') {
+      const opp = opps.find(o => o.id === selectedOpp.id);
+      if (opp && (opp.contacts?.department || 'sales') === 'sales') {
+        const deal = await createDealFromOpportunity({ ...opp, ...result });
+        setDealCreatedToast(deal.deal_number);
+        setTimeout(() => setDealCreatedToast(null), 4000);
+      }
+    }
   };
 
   // Bulk operations
@@ -813,6 +880,12 @@ export default function OpportunitiesPage() {
     setOpps(p => p.filter(o => !ids.includes(o.id)));
     setBulkSelected(new Set()); setBulkMode(false);
     await Promise.all(ids.map(id => deleteOpportunity(id).catch(() => {})));
+  };
+  const bulkChangeTemp = async (temp) => {
+    const ids = [...bulkSelected];
+    setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, temperature: temp } : o));
+    setBulkSelected(new Set()); setBulkMode(false);
+    await Promise.all(ids.map(id => updateOpportunity(id, { temperature: temp }).catch(() => {})));
   };
 
   // Duplicate detection
@@ -838,6 +911,9 @@ export default function OpportunitiesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => loadData(true)} disabled={refreshing} title={isRTL ? 'تحديث' : 'Refresh'}>
+            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
+          </Button>
           <ExportButton data={exportData} filename="opportunities" title={isRTL ? 'الفرص' : 'Opportunities'} />
           <Button size="sm" onClick={() => setShowModal(true)}>
             <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
@@ -909,6 +985,18 @@ export default function OpportunitiesPage() {
             className="ps-8"
           />
         </div>
+        {/* Mobile filter toggle */}
+        <button
+          onClick={() => setMobileFiltersOpen(v => !v)}
+          className="md:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs font-semibold text-content-muted dark:text-content-muted-dark cursor-pointer font-cairo"
+        >
+          <Filter size={13} />
+          {isRTL ? 'فلاتر' : 'Filters'}
+          {(filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all' || filterDate !== 'all' || filterScore !== 'all') && (
+            <span className="w-2 h-2 rounded-full bg-brand-500" />
+          )}
+        </button>
+        <div className={`flex gap-2.5 flex-wrap items-center ${mobileFiltersOpen ? '' : 'hidden md:flex'}`}>
         <Select className="!w-auto flex-none min-w-[120px]" value={filterDept} onChange={e => { setFilterDept(e.target.value); setActiveStage('all'); }}>
           {Object.entries(DEPT_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
         </Select>
@@ -941,6 +1029,7 @@ export default function OpportunitiesPage() {
             <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
           </Button>
         )}
+        </div>{/* end mobile filter wrapper */}
         {/* Save / Load Filters */}
         <div className="relative">
           <Button variant="ghost" size="sm" onClick={() => setShowSaveFilter(s => !s)} title={isRTL ? 'حفظ / تحميل فلتر' : 'Save / Load Filter'}>
@@ -1008,6 +1097,10 @@ export default function OpportunitiesPage() {
             <option value="">{isRTL ? 'تعيين لمسؤول...' : 'Assign to agent...'}</option>
             {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
           </Select>
+          <Select className="!w-auto min-w-[120px] text-xs" onChange={e => { if (e.target.value) bulkChangeTemp(e.target.value); e.target.value = ''; }}>
+            <option value="">{isRTL ? 'تغيير الحرارة...' : 'Change temp...'}</option>
+            {Object.entries(TEMP_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
+          </Select>
           <Button variant="danger" size="sm" onClick={bulkDeleteAll}><Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}</Button>
           <Button variant="ghost" size="sm" onClick={() => setBulkSelected(new Set(filtered.map(o => o.id)))}>{isRTL ? 'تحديد الكل' : 'Select All'}</Button>
           <Button variant="ghost" size="sm" onClick={() => { setBulkSelected(new Set()); setBulkMode(false); }}><X size={13} /></Button>
@@ -1070,6 +1163,9 @@ export default function OpportunitiesPage() {
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: stage.color }} />
                   <span className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? stage.label_ar : stage.label_en}</span>
                   <span className="text-xs text-content-muted dark:text-content-muted-dark bg-gray-100 dark:bg-brand-500/15 rounded-full px-1.5 py-px">{stageOpps.length}</span>
+                  {stageOpps.length > 0 && (
+                    <span className="text-[10px] font-bold text-brand-500 ms-auto">{fmtBudget(stageOpps.reduce((s, o) => s + (o.budget || 0), 0))}</span>
+                  )}
                 </div>
                 <div className={`flex flex-col gap-3 min-h-[200px] rounded-xl p-2.5 border border-dashed transition-colors duration-200 ${
                   isOver ? 'bg-brand-500/10 border-brand-500' : 'bg-brand-500/[0.03] dark:bg-brand-500/[0.04] border-edge dark:border-edge-dark'
@@ -1177,6 +1273,52 @@ export default function OpportunitiesPage() {
     )}
     <style>{`@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
 
+    {/* Lost Reason Modal */}
+    {lostReasonModal && (
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => setLostReasonModal(null)}>
+        <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-7 w-full max-w-[420px]" onClick={e => e.stopPropagation()}>
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={20} className="text-red-500" />
+          </div>
+          <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold text-center">
+            {isRTL ? 'سبب الخسارة' : 'Lost Reason'}
+          </h3>
+          <p className="m-0 mb-4 text-content-muted dark:text-content-muted-dark text-xs text-center">
+            {isRTL ? 'لماذا تم خسارة هذه الفرصة؟' : 'Why was this opportunity lost?'}
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {Object.entries(LOST_REASONS).map(([k, v]) => (
+              <button
+                key={k}
+                onClick={() => setLostReason(k)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-cairo cursor-pointer border-2 transition-all ${
+                  lostReason === k
+                    ? 'border-red-500 bg-red-500/10 text-red-500'
+                    : 'border-transparent bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
+                }`}
+              >
+                {isRTL ? v.ar : v.en}
+              </button>
+            ))}
+          </div>
+          {lostReason === 'other' && (
+            <Input
+              value={lostReasonCustom}
+              onChange={e => setLostReasonCustom(e.target.value)}
+              placeholder={isRTL ? 'اكتب السبب...' : 'Enter reason...'}
+              className="mb-3"
+            />
+          )}
+          <div className="flex gap-2.5 justify-center">
+            <Button variant="secondary" size="sm" onClick={() => setLostReasonModal(null)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+            <Button variant="danger" size="sm" onClick={confirmLostReason} disabled={!lostReason || (lostReason === 'other' && !lostReasonCustom.trim())}>
+              {isRTL ? 'تأكيد' : 'Confirm'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Drawer */}
     {selectedOpp && (
       <div
@@ -1225,6 +1367,15 @@ export default function OpportunitiesPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {selectedOpp.contact_id && (
+                <button
+                  onClick={() => navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`)}
+                  className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
+                  title={isRTL ? 'عرض بيانات العميل' : 'View Contact'}
+                >
+                  <ExternalLink size={15} />
+                </button>
+              )}
               <button
                 onClick={() => editingOpp ? setEditingOpp(false) : startEdit()}
                 className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
@@ -1324,6 +1475,18 @@ export default function OpportunitiesPage() {
                   </Select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المرحلة' : 'Stage'}</label>
+                  <Select value={editForm.stage} onChange={e => setEditForm(f => ({ ...f, stage: e.target.value }))}>
+                    {getDeptStages(selectedOpp.contacts?.department || 'sales').map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الإغلاق المتوقع' : 'Expected Close'}</label>
+                  <Input type="date" value={editForm.expected_close_date} onChange={e => setEditForm(f => ({ ...f, expected_close_date: e.target.value }))} />
+                </div>
+              </div>
               <div>
                 <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المشروع' : 'Project'}</label>
                 <Select value={editForm.project_id} onChange={e => setEditForm(f => ({ ...f, project_id: e.target.value }))}>
@@ -1381,6 +1544,7 @@ export default function OpportunitiesPage() {
                   { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
                   { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
                   { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
+                  ...(selectedOpp.expected_close_date ? [{ label: isRTL ? 'الإغلاق المتوقع' : 'Expected Close', value: new Date(selectedOpp.expected_close_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: new Date(selectedOpp.expected_close_date) < new Date() ? '#EF4444' : '#6B8DB5' }] : []),
                   { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: opps.filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
                 ].map((item, i) => (
                   <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
@@ -1395,6 +1559,18 @@ export default function OpportunitiesPage() {
                 <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
                   <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
                   <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{getProjectName(selectedOpp, lang)}</p>
+                </div>
+              )}
+
+              {/* Lost Reason */}
+              {selectedOpp.lost_reason && selectedOpp.stage === 'closed_lost' && (
+                <div className="bg-red-500/[0.08] rounded-xl px-3.5 py-3">
+                  <p className="m-0 mb-1 text-xs text-red-500 font-semibold">{isRTL ? 'سبب الخسارة' : 'Lost Reason'}</p>
+                  <p className="m-0 text-xs text-content dark:text-content-dark">
+                    {LOST_REASONS[selectedOpp.lost_reason]
+                      ? (isRTL ? LOST_REASONS[selectedOpp.lost_reason].ar : LOST_REASONS[selectedOpp.lost_reason].en)
+                      : selectedOpp.lost_reason}
+                  </p>
                 </div>
               )}
 
