@@ -23,7 +23,7 @@ async function enrichOpps(opps) {
   try {
     const [contactsRes, usersRes, projectsRes] = await Promise.all([
       contactIds.length
-        ? supabase.from('contacts').select('id, full_name, phone, email, company, contact_type, department').in('id', contactIds)
+        ? supabase.from('contacts').select('id, prefix, full_name, phone, phone2, email, company, job_title, contact_type, department, source, gender, nationality, birth_date, budget_min, budget_max, preferred_location, interested_in_type, last_activity_at').in('id', contactIds)
         : { data: [] },
       userIds.length
         ? supabase.from('users').select('id, full_name_ar, full_name_en').in('id', userIds)

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
 import { fetchContactActivities } from '../../services/contactsService';
 import { createDealFromOpportunity } from '../../services/dealsService';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns } from 'lucide-react';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, Hash, ExternalLink } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 
@@ -39,6 +39,20 @@ const DATE_FILTERS = {
 };
 
 const ACTIVITY_ICONS = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: UsersIcon, note: Clock, site_visit: Star };
+
+const SOURCE_LABELS = {
+  facebook: { ar: 'فيسبوك', en: 'Facebook' }, google: { ar: 'جوجل', en: 'Google' },
+  referral: { ar: 'توصية', en: 'Referral' }, walk_in: { ar: 'زيارة مباشرة', en: 'Walk-in' },
+  phone: { ar: 'اتصال', en: 'Phone' }, website: { ar: 'الموقع', en: 'Website' },
+  instagram: { ar: 'انستجرام', en: 'Instagram' }, tiktok: { ar: 'تيك توك', en: 'TikTok' },
+  other: { ar: 'أخرى', en: 'Other' },
+};
+const CONTACT_TYPE_LABELS = {
+  lead: { ar: 'عميل محتمل', en: 'Lead' }, cold: { ar: 'بارد', en: 'Cold' },
+  client: { ar: 'عميل', en: 'Client' }, supplier: { ar: 'مورد', en: 'Supplier' },
+  developer: { ar: 'مطور', en: 'Developer' }, applicant: { ar: 'متقدم', en: 'Applicant' },
+  partner: { ar: 'شريك', en: 'Partner' },
+};
 
 const fmtBudget = (n) => { if (!n) return "-"; if (n >= 1000000) return (n / 1000000).toFixed(1) + "M"; if (n >= 1000) return (n / 1000).toFixed(0) + "K"; return n.toLocaleString(); };
 const initials = (n) => (n || "").trim().split(" ").map(w => w[0]).slice(0, 2).join("") || "?";
@@ -882,30 +896,32 @@ export default function OpportunitiesPage() {
                 {initials(getContactName(selectedOpp))}
               </div>
               <div>
-                <p className="m-0 text-base font-bold text-content dark:text-content-dark">{getContactName(selectedOpp)}</p>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {selectedOpp.contacts?.phone && (
-                    <span className="text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">{selectedOpp.contacts.phone}</span>
-                  )}
-                  {selectedOpp.contacts?.email && (
-                    <span className="text-xs text-content-muted dark:text-content-muted-dark">{selectedOpp.contacts.email}</span>
+                <div className="flex items-center gap-2">
+                  <p className="m-0 text-base font-bold text-content dark:text-content-dark">{selectedOpp.contacts?.prefix ? selectedOpp.contacts.prefix + ' ' : ''}{getContactName(selectedOpp)}</p>
+                  {selectedOpp.contacts?.contact_type && (
+                    <span className="text-[10px] px-1.5 py-px rounded-full bg-brand-500/15 text-brand-600 dark:text-brand-400 font-semibold">
+                      {isRTL ? (CONTACT_TYPE_LABELS[selectedOpp.contacts.contact_type]?.ar || selectedOpp.contacts.contact_type) : (CONTACT_TYPE_LABELS[selectedOpp.contacts.contact_type]?.en || selectedOpp.contacts.contact_type)}
+                    </span>
                   )}
                 </div>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   {selectedOpp.contacts?.company && (
-                    <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500">{selectedOpp.contacts.company}</span>
+                    <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500 flex items-center gap-0.5"><Building2 size={9} /> {selectedOpp.contacts.company}</span>
+                  )}
+                  {selectedOpp.contacts?.job_title && (
+                    <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500 flex items-center gap-0.5"><Briefcase size={9} /> {selectedOpp.contacts.job_title}</span>
                   )}
                   {selectedOpp.contacts?.department && (
                     <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500">
                       {isRTL ? (DEPT_LABELS[selectedOpp.contacts.department]?.ar || selectedOpp.contacts.department) : (DEPT_LABELS[selectedOpp.contacts.department]?.en || selectedOpp.contacts.department)}
                     </span>
                   )}
-                  {selectedOpp.created_at && (
-                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark">
-                      {new Date(selectedOpp.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </span>
-                  )}
                 </div>
+                {selectedOpp.created_at && (
+                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark mt-0.5 block">
+                    {new Date(selectedOpp.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </span>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -924,6 +940,72 @@ export default function OpportunitiesPage() {
               </button>
             </div>
           </div>
+
+          {/* Contact Quick Actions */}
+          {!editingOpp && selectedOpp.contacts && (
+            <div className="px-6 py-3 border-b border-edge dark:border-edge-dark">
+              <div className="flex gap-2 flex-wrap">
+                {selectedOpp.contacts.phone && (
+                  <a href={`tel:${selectedOpp.contacts.phone}`} dir="ltr" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline hover:bg-brand-500/20 transition-colors font-semibold">
+                    <Phone size={13} /> {selectedOpp.contacts.phone}
+                  </a>
+                )}
+                {selectedOpp.contacts.phone2 && (
+                  <a href={`tel:${selectedOpp.contacts.phone2}`} dir="ltr" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline hover:bg-brand-500/20 transition-colors font-semibold">
+                    <Phone size={13} /> {selectedOpp.contacts.phone2}
+                  </a>
+                )}
+                {selectedOpp.contacts.phone && (
+                  <a href={`https://wa.me/${(selectedOpp.contacts.phone || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors font-semibold">
+                    <MessageCircle size={13} /> WhatsApp
+                  </a>
+                )}
+                {selectedOpp.contacts.email && (
+                  <a href={`mailto:${selectedOpp.contacts.email}`} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 no-underline hover:bg-blue-500/20 transition-colors font-semibold">
+                    <Mail size={13} /> {selectedOpp.contacts.email}
+                  </a>
+                )}
+              </div>
+              {/* Extra info row */}
+              <div className="flex gap-2 flex-wrap mt-2">
+                {selectedOpp.contacts.source && (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
+                    <ExternalLink size={9} /> {isRTL ? (SOURCE_LABELS[selectedOpp.contacts.source]?.ar || selectedOpp.contacts.source) : (SOURCE_LABELS[selectedOpp.contacts.source]?.en || selectedOpp.contacts.source)}
+                  </span>
+                )}
+                {selectedOpp.contacts.preferred_location && (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
+                    <MapPin size={9} /> {selectedOpp.contacts.preferred_location}
+                  </span>
+                )}
+                {selectedOpp.contacts.nationality && (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
+                    {isRTL ? ({egyptian:'مصري',saudi:'سعودي',emirati:'إماراتي',kuwaiti:'كويتي',qatari:'قطري',libyan:'ليبي',other:'أخرى'}[selectedOpp.contacts.nationality] || selectedOpp.contacts.nationality) : selectedOpp.contacts.nationality}
+                  </span>
+                )}
+                {selectedOpp.contacts.gender && (
+                  <span className="text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
+                    {isRTL ? (selectedOpp.contacts.gender === 'male' ? 'ذكر' : 'أنثى') : selectedOpp.contacts.gender}
+                  </span>
+                )}
+                {selectedOpp.contacts.birth_date && (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
+                    <Calendar size={9} /> {new Date(selectedOpp.contacts.birth_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                  </span>
+                )}
+                {selectedOpp.contacts.budget_min && (
+                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
+                    <Banknote size={9} /> {fmtBudget(selectedOpp.contacts.budget_min)} - {fmtBudget(selectedOpp.contacts.budget_max)}
+                  </span>
+                )}
+                {selectedOpp.contacts.interested_in_type && (
+                  <span className="text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
+                    {isRTL ? ({residential:'سكني',commercial:'تجاري',administrative:'إداري'}[selectedOpp.contacts.interested_in_type] || selectedOpp.contacts.interested_in_type) : selectedOpp.contacts.interested_in_type}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Drawer Details */}
           <div className="px-6 py-5 flex flex-col gap-4">
