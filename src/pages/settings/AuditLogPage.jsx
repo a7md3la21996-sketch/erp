@@ -180,7 +180,7 @@ export default function AuditLogPage() {
                   {isExpanded && log.changes && (
                     <tr>
                       <td colSpan={5} className="px-3.5 pb-3.5 bg-gray-50 dark:bg-brand-500/[0.04]">
-                        <div className="rounded-[10px] border border-edge dark:border-edge-dark overflow-hidden">
+                        <div className="rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
                           <table className="w-full border-collapse">
                             <thead>
                               <tr>

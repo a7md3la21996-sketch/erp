@@ -17,9 +17,9 @@ export default function BlacklistModal({ contact, onClose, onConfirm }) {
             <Ban size={24} color="#EF4444" />
           </div>
           <h3 className="text-content dark:text-content-dark m-0 mb-1.5 text-base">{isRTL ? 'إضافة للقائمة السوداء' : 'Add to Blacklist'}</h3>
-          <p className="text-content-muted dark:text-content-muted-dark text-[13px] m-0">{isRTL ? 'سيتم منع هذا الرقم من الإضافة مستقبلاً' : 'This number will be blocked from future additions'}</p>
+          <p className="text-content-muted dark:text-content-muted-dark text-xs m-0">{isRTL ? 'سيتم منع هذا الرقم من الإضافة مستقبلاً' : 'This number will be blocked from future additions'}</p>
         </div>
-        <div className="bg-red-500/[0.08] border border-red-500/20 rounded-[10px] px-3.5 py-2.5 mb-4 text-[13px] text-content dark:text-content-dark">
+        <div className="bg-red-500/[0.08] border border-red-500/20 rounded-xl px-3.5 py-2.5 mb-4 text-xs text-content dark:text-content-dark">
           {contact?.full_name} — {contact?.phone}
         </div>
         <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-2">{isRTL ? 'سبب الإضافة' : 'Reason'} <span className="text-red-500">*</span></label>

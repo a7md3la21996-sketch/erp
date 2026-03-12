@@ -132,9 +132,9 @@ export function PhoneCell({ phone, small = false }) {
     }).catch(() => {});
   };
   return (
-    <div className="flex items-center gap-1.5 cursor-pointer py-[3px]" style={{ direction: 'ltr' }}
+    <div className="flex items-center gap-1.5 cursor-pointer py-[3px]" dir="ltr"
       onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}>
-      <span className={`font-mono whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] ${small ? 'text-[11px] text-gray-400' : 'text-[13px] text-content dark:text-content-dark'}`}
+      <span className={`font-mono whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] ${small ? 'text-[11px] text-gray-400' : 'text-xs text-content dark:text-content-dark'}`}
         style={{ letterSpacing: revealed ? 0 : 1 }}>
         {revealed ? phone : masked}
       </span>

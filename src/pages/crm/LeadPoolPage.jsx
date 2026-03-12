@@ -213,9 +213,9 @@ export default function LeadPoolPage() {
 
       {/* SLA Warning */}
       {stats.slaBreached > 0 && (
-        <div className={`bg-red-500/[0.08] border border-red-500/30 rounded-[10px] px-3.5 py-2.5 mb-3.5 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={`bg-red-500/[0.08] border border-red-500/30 rounded-xl px-3.5 py-2.5 mb-3.5 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <Bell size={15} color="#EF4444" />
-          <span className="text-[13px] text-red-500 font-semibold">
+          <span className="text-xs text-red-500 font-semibold">
             {lang === 'ar' ? `${stats.slaBreached} ليد تعدى وقت SLA — يحتاج توزيع عاجل` : `${stats.slaBreached} leads breached SLA — urgent assignment needed`}
           </span>
         </div>
@@ -299,7 +299,7 @@ export default function LeadPoolPage() {
               <Users size={24} color='#4A7AAB' />
             </div>
             <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
-            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
           </div>
         ) : visible.map((lead, idx) => {
           const aging   = getAging(lead.created_at);
@@ -408,7 +408,7 @@ export default function LeadPoolPage() {
                   ${isRTL ? 'flex-row-reverse' : ''}
                 `}>
                 <div className="text-start">
-                  <div className="text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? agent.name_ar : agent.name_en}</div>
+                  <div className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? agent.name_ar : agent.name_en}</div>
                   <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? level.ar : level.en} · وزن {level.weight}</div>
                 </div>
                 <div className="text-center">

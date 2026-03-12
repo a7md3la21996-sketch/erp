@@ -211,7 +211,7 @@ export default function MarketingPage() {
                       {campaign.cpl > 0 ? campaign.cpl + ' EGP' : '—'}
                     </span>
                   </Td>
-                  <Td className="text-content-muted dark:text-content-muted-dark text-[13px]">{campaign.start_date}</Td>
+                  <Td className="text-content-muted dark:text-content-muted-dark text-xs">{campaign.start_date}</Td>
                 </Tr>
               );
             })

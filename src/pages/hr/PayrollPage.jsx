@@ -42,7 +42,7 @@ export default function PayrollPage() {
         <div className="flex gap-2 items-center">
           <div className="relative inline-flex items-center">
             <select value={month} onChange={e=>setMonth(+e.target.value)}
-              className="appearance-none px-3.5 py-2 pe-8 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[13px] cursor-pointer outline-none focus:border-brand-500"
+              className="appearance-none px-3.5 py-2 pe-8 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs cursor-pointer outline-none focus:border-brand-500"
             >
               {MONTHS_AR.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
             </select>
@@ -114,7 +114,7 @@ function PayrollRow({ emp, isRTL, lang }) {
             <span className="text-[11px] font-bold text-white">{initials}</span>
           </div>
           <div className="text-start">
-            <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{name}</p>
+            <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{name}</p>
             <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id}</p>
           </div>
         </div>
@@ -122,7 +122,7 @@ function PayrollRow({ emp, isRTL, lang }) {
       <Td>{base.toLocaleString()} ج.م</Td>
       <Td className="text-brand-500 font-semibold">+{allow.toLocaleString()}</Td>
       <Td className="text-red-500 font-semibold">-{ded.toLocaleString()}</Td>
-      <Td className="font-extrabold">{net.toLocaleString()} ج.م</Td>
+      <Td className="font-bold">{net.toLocaleString()} ج.م</Td>
       <Td>
         <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/15 text-brand-500 border border-brand-500/30">
           {lang === 'ar' ? 'تم الصرف' : 'Paid'}

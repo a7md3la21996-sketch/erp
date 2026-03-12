@@ -271,7 +271,7 @@ export default function ActivitiesPage() {
           <div className="p-6">
             {[1,2,3,4,5].map(i => (
               <div key={i} className="flex gap-3 px-4 py-3.5 border-b border-edge dark:border-edge-dark items-start">
-                <div className="w-[38px] h-[38px] rounded-[10px] bg-edge dark:bg-edge-dark flex-shrink-0 animate-pulse opacity-60" />
+                <div className="w-[38px] h-[38px] rounded-xl bg-edge dark:bg-edge-dark flex-shrink-0 animate-pulse opacity-60" />
                 <div className="flex-1 flex flex-col gap-2">
                   <div className="w-[40%] h-3 rounded-md bg-edge dark:bg-edge-dark animate-pulse" />
                   <div className="w-[70%] h-2.5 rounded-md bg-edge dark:bg-edge-dark animate-pulse opacity-70" />
@@ -285,7 +285,7 @@ export default function ActivitiesPage() {
               <Activity size={28} className="text-brand-500" strokeWidth={1.5} />
             </div>
             <p className="m-0 mb-1.5 font-bold text-[15px] text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}</p>
-            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started'}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started'}</p>
           </div>
         ) : (
           filtered.map((act, idx) => {
@@ -308,7 +308,7 @@ export default function ActivitiesPage() {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className={`flex items-center gap-2 flex-wrap mb-[3px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <span className="text-[13px] font-semibold" style={{ color: typeDef.color }}>
+                    <span className="text-xs font-semibold" style={{ color: typeDef.color }}>
                       {lang === 'ar' ? typeDef.ar : typeDef.en}
                     </span>
                     {deptDef && (
@@ -329,7 +329,7 @@ export default function ActivitiesPage() {
                     </span>
                   </div>
                   {act.notes && (
-                    <div className="text-[13px] text-content dark:text-content-dark leading-relaxed" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <div className="text-xs text-content dark:text-content-dark leading-relaxed" dir={isRTL ? 'rtl' : 'ltr'}>
                       {act.notes}
                     </div>
                   )}

@@ -67,7 +67,7 @@ export default function CompetenciesPage() {
                   <Star size={24} color='#4A7AAB' />
                 </div>
                 <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد كفاءات مسجلة':'No Competencies Found'}</p>
-                <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي كفاءات بعد':'No competencies added yet'}</p>
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي كفاءات بعد':'No competencies added yet'}</p>
               </td></tr>
             ) : filtered.map((comp, idx) => {
               const isExp = expanded===idx;
@@ -98,7 +98,7 @@ export default function CompetenciesPage() {
                   {isExp && (
                     <tr className="bg-[#F8FAFC] dark:bg-brand-500/[0.04] border-b border-edge dark:border-edge-dark">
                       <td colSpan={5} className="px-5 py-3.5">
-                        <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?comp.description_ar:comp.description_en}</p>
+                        <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?comp.description_ar:comp.description_en}</p>
                       </td>
                     </tr>
                   )}

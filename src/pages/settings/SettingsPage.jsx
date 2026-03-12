@@ -132,19 +132,19 @@ function AppearanceSection({ isRTL, isDark, toggleTheme, handleLangToggle, lang 
       <div className="flex gap-3">
         <button onClick={toggleTheme} className={`flex-1 p-4 rounded-xl cursor-pointer font-cairo text-center border-2 transition-all ${isDark ? 'border-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark bg-transparent'}`}>
           <div className="text-2xl mb-1.5">🌙</div>
-          <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? 'داكن' : 'Dark'}</div>
+          <div className="text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'داكن' : 'Dark'}</div>
           {isDark && <div className="text-[10px] text-brand-500 mt-1">{isRTL ? 'مفعّل' : 'Active'}</div>}
         </button>
         <button onClick={toggleTheme} className={`flex-1 p-4 rounded-xl cursor-pointer font-cairo text-center border-2 transition-all ${!isDark ? 'border-brand-500 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark bg-transparent'}`}>
           <div className="text-2xl mb-1.5">☀️</div>
-          <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? 'فاتح' : 'Light'}</div>
+          <div className="text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'فاتح' : 'Light'}</div>
           {!isDark && <div className="text-[10px] text-brand-500 mt-1">{isRTL ? 'مفعّل' : 'Active'}</div>}
         </button>
       </div>
-      <div className="mt-4 px-4 py-3 rounded-[10px] bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark flex justify-between items-center">
+      <div className="mt-4 px-4 py-3 rounded-xl bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Globe size={16} className="text-brand-500" />
-          <span className="text-[13px] text-content dark:text-content-dark">{isRTL ? 'اللغة' : 'Language'}</span>
+          <span className="text-xs text-content dark:text-content-dark">{isRTL ? 'اللغة' : 'Language'}</span>
         </div>
         <Button variant="secondary" size="sm" onClick={handleLangToggle}>
           {lang === 'ar' ? 'English' : 'عربي'}

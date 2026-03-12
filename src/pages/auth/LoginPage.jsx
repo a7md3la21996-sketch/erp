@@ -52,7 +52,7 @@ export default function LoginPage() {
       <div className="flex-1 flex items-center justify-center p-6 bg-white dark:bg-surface-bg-dark relative">
         <div className="absolute top-6 end-6 flex gap-2">
           <button onClick={() => i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')}
-            className="flex items-center gap-1 py-2 px-3 rounded-lg border-none cursor-pointer bg-gray-100 dark:bg-brand-900/30 text-gray-500 dark:text-content-muted-dark text-[13px]">
+            className="flex items-center gap-1 py-2 px-3 rounded-lg border-none cursor-pointer bg-gray-100 dark:bg-brand-900/30 text-gray-500 dark:text-content-muted-dark text-xs">
             <Globe size={16} /> {i18n.language === 'ar' ? 'EN' : 'عربي'}
           </button>
           <button onClick={toggleTheme}

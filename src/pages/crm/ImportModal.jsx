@@ -157,7 +157,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   const SummaryCards = ({ items }) => (
     <div className="grid grid-cols-3 gap-2.5 mb-5">
       {items.map(s => (
-        <div key={s.label} className="rounded-[10px] p-3 text-center" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
+        <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
           <div className="text-2xl font-bold" style={{ color: s.color }}>{s.num}</div>
           <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-1">{s.icon ? `${s.icon} ` : ''}{s.label}</div>
         </div>
@@ -261,14 +261,14 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
             <div className="text-center">
               <div className="text-[48px] mb-4">{'\u{1F389}'}</div>
               <div className="text-content dark:text-content-dark text-lg font-bold mb-2">{isRTL ? 'تم الاستيراد بنجاح' : 'Import Complete!'}</div>
-              <div className="text-content-muted dark:text-content-muted-dark text-[13px] mb-6">{isRTL ? `تمت معالجة ${rows.length} صف` : `Processed ${rows.length} rows`}</div>
+              <div className="text-content-muted dark:text-content-muted-dark text-xs mb-6">{isRTL ? `تمت معالجة ${rows.length} صف` : `Processed ${rows.length} rows`}</div>
               <SummaryCards items={[
                 { num: newRows.length, label: isRTL ? 'أضيفوا' : 'Added', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)' },
                 { num: oppRows.length, label: isRTL ? 'فرص جديدة' : 'Opportunities', color: '#4A7AAB', bg: 'rgba(74,122,171,0.1)', border: 'rgba(74,122,171,0.2)' },
                 { num: errRows.length, label: isRTL ? 'مرفوضين' : 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
               ]} />
               {errRows.length > 0 && (
-                <button onClick={downloadErrors} className="w-full p-3 bg-red-500/10 border border-red-500/30 rounded-[10px] text-red-500 text-[13px] font-bold cursor-pointer flex items-center justify-center gap-2">
+                <button onClick={downloadErrors} className="w-full p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs font-bold cursor-pointer flex items-center justify-center gap-2">
                   {'\u2B07\uFE0F'} {isRTL ? `تحميل تقرير الأخطاء (${errRows.length} صف)` : `Download Error Report (${errRows.length} rows)`}
                 </button>
               )}
@@ -279,18 +279,18 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
         {/* Footer */}
         <div className="px-6 py-4 border-t border-edge dark:border-edge-dark flex justify-between">
           <button onClick={step === 1 ? onClose : () => setStep(s => s-1)}
-            className="py-2.5 px-[18px] bg-gray-100 dark:bg-brand-500/10 border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-[13px] cursor-pointer">
+            className="py-2.5 px-5 bg-gray-100 dark:bg-brand-500/10 border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
             {step === 1 ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '\u2190 رجوع' : '\u2190 Back')}
           </button>
           {step === 2 && (
             <button onClick={handleImport} disabled={importing || newRows.length === 0 && oppRows.length === 0}
-              className="py-2.5 px-[22px] bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer">
+              className="py-2.5 px-[22px] bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">
               {importing ? (isRTL ? 'جاري الاستيراد...' : 'Importing...') : (isRTL ? 'تأكيد الرفع \u2713' : 'Confirm Import \u2713')}
             </button>
           )}
           {step === 3 && (
             <button onClick={onClose}
-              className="py-2.5 px-[22px] bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer">
+              className="py-2.5 px-[22px] bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">
               {isRTL ? 'إغلاق' : 'Close'}
             </button>
           )}

@@ -69,7 +69,7 @@ export default function TrainingPage() {
               <GraduationCap size={24} color='#4A7AAB' />
             </div>
             <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد برامج تدريبية':'No Training Programs'}</p>
-            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي برامج تدريبية بعد':'No training programs added yet'}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي برامج تدريبية بعد':'No training programs added yet'}</p>
           </div>
         ) : programs.map(prog => {
           const pct = prog.enrolled ? Math.round(prog.completed/prog.enrolled*100) : 0;

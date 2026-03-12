@@ -108,7 +108,7 @@ export default function DisciplinaryPage() {
                       <ShieldAlert size={24} color="#4A7AAB" />
                     </div>
                     <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مخالفات تأديبية':'No Disciplinary Records'}</p>
-                    <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي مخالفات':'No disciplinary records found'}</p>
+                    <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي مخالفات':'No disciplinary records found'}</p>
                   </div>
                 </td>
               </tr>

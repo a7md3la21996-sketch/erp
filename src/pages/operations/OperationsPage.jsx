@@ -355,7 +355,7 @@ export default function OperationsPage() {
       >
         <div className="sticky top-0 bg-surface-card dark:bg-surface-card-dark z-[1] px-6 py-5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <div>
-            <h2 className="m-0 text-lg font-extrabold text-content dark:text-content-dark">{deal.deal_number}</h2>
+            <h2 className="m-0 text-lg font-bold text-content dark:text-content-dark">{deal.deal_number}</h2>
             <p className="m-0 mt-0.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? deal.client_ar : deal.client_en}</p>
           </div>
           <button onClick={onClose} className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1"><X size={20} /></button>
@@ -378,8 +378,8 @@ export default function OperationsPage() {
             [isRTL ? 'قيمة القسط' : 'Per Installment', fmtMoney(Math.round((deal.deal_value - deal.down_payment) / deal.installments_count))],
           ].map(([label, val], i) => (
             <div key={i} className="flex justify-between py-2 border-b border-edge dark:border-edge-dark">
-              <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{label}</span>
-              <span className="text-[13px] font-semibold text-content dark:text-content-dark">{val}</span>
+              <span className="text-xs text-content-muted dark:text-content-muted-dark">{label}</span>
+              <span className="text-xs font-semibold text-content dark:text-content-dark">{val}</span>
             </div>
           ))}
           {/* Documents checklist */}
@@ -402,7 +402,7 @@ export default function OperationsPage() {
                     }`}>
                       {done && <CheckCircle size={14} color="#fff" />}
                     </div>
-                    <span className={`text-[13px] flex-1 ${done ? 'text-content dark:text-content-dark' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                    <span className={`text-xs flex-1 ${done ? 'text-content dark:text-content-dark' : 'text-content-muted dark:text-content-muted-dark'}`}>
                       {isRTL ? doc.ar : doc.en}
                     </span>
                     {doc.required && !done && <span className="text-[10px] text-red-500 font-semibold">{isRTL ? 'مطلوب' : 'Required'}</span>}
@@ -420,11 +420,11 @@ export default function OperationsPage() {
                 return (
                   <div key={inst.id} className="flex justify-between items-center px-3 py-2.5 rounded-lg mb-1.5 bg-[#F8FAFC] dark:bg-brand-500/[0.05] border border-edge dark:border-edge-dark">
                     <div>
-                      <span className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL ? `قسط ${inst.num}` : `Inst. ${inst.num}`}</span>
+                      <span className="text-xs font-semibold text-content dark:text-content-dark">{isRTL ? `قسط ${inst.num}` : `Inst. ${inst.num}`}</span>
                       <span className={`text-xs text-content-muted dark:text-content-muted-dark me-2`}> — {inst.due_date}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</span>
+                      <span className="text-xs font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</span>
                       <StatusBadge status={inst.status} config={PAYMENT_STATUS_CONFIG} />
                     </div>
                   </div>
@@ -448,15 +448,15 @@ export default function OperationsPage() {
             </div>
           )}
           {deal.status === 'completed' && (
-            <div className="px-4 py-3.5 rounded-[10px] bg-brand-500/[0.08] text-center">
+            <div className="px-4 py-3.5 rounded-xl bg-brand-500/[0.08] text-center">
               <CheckCircle size={20} color="#4A7AAB" className="mb-1" />
-              <p className="m-0 text-[13px] font-bold text-brand-500">{isRTL ? 'الصفقة مكتملة' : 'Deal Completed'}</p>
+              <p className="m-0 text-xs font-bold text-brand-500">{isRTL ? 'الصفقة مكتملة' : 'Deal Completed'}</p>
             </div>
           )}
           {deal.status === 'cancelled' && (
-            <div className="px-4 py-3.5 rounded-[10px] bg-red-500/[0.08] text-center">
+            <div className="px-4 py-3.5 rounded-xl bg-red-500/[0.08] text-center">
               <X size={20} color="#EF4444" className="mb-1" />
-              <p className="m-0 text-[13px] font-bold text-red-500">{isRTL ? 'الصفقة ملغية' : 'Deal Cancelled'}</p>
+              <p className="m-0 text-xs font-bold text-red-500">{isRTL ? 'الصفقة ملغية' : 'Deal Cancelled'}</p>
             </div>
           )}
         </div>
@@ -510,11 +510,11 @@ export default function OperationsPage() {
               const timeStr = `${time.getDate()}/${time.getMonth() + 1} ${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
               return (
                 <div key={act.id} className={`flex gap-3.5 py-3 ${idx < sortedActivity.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: actCfg.color + '18' }}>
+                  <div className="w-[34px] h-[34px] rounded-xl flex items-center justify-center shrink-0" style={{ background: actCfg.color + '18' }}>
                     <ActIcon size={16} color={actCfg.color} />
                   </div>
                   <div className={`flex-1 min-w-0 text-start`}>
-                    <p className="m-0 text-[13px] text-content dark:text-content-dark leading-normal">{isRTL ? act.description_ar : act.description_en}</p>
+                    <p className="m-0 text-xs text-content dark:text-content-dark leading-normal">{isRTL ? act.description_ar : act.description_en}</p>
                     <p className="m-0 mt-0.5 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? act.user_ar : act.user_en} — {timeStr}</p>
                   </div>
                 </div>
@@ -547,7 +547,7 @@ export default function OperationsPage() {
             <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'قائمة الصفقات' : 'Deals List'}</p>
           </CardHeader>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px]" dir={isRTL ? 'rtl' : 'ltr'}>
+            <table className="w-full border-collapse text-xs" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'الوحدة':'Unit', isRTL?'القيمة':'Value', isRTL?'المستندات':'Docs', isRTL?'الحالة':'Status', isRTL?'':''].map((h, i) => (
@@ -630,7 +630,7 @@ export default function OperationsPage() {
             <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'جدول المدفوعات' : 'Payments Schedule'}</p>
           </CardHeader>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px]" dir={isRTL ? 'rtl' : 'ltr'}>
+            <table className="w-full border-collapse text-xs" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'الصفقة':'Deal', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'القسط':'Inst.', isRTL?'المبلغ':'Amount', isRTL?'تاريخ الاستحقاق':'Due Date', isRTL?'الحالة':'Status', isRTL?'إيصال':'Receipt'].map((h, i) => (
@@ -731,7 +731,7 @@ export default function OperationsPage() {
             <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'قائمة التذاكر' : 'Tickets List'}</p>
           </CardHeader>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-[13px]" dir={isRTL ? 'rtl' : 'ltr'}>
+            <table className="w-full border-collapse text-xs" dir={isRTL ? 'rtl' : 'ltr'}>
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'النوع':'Type', isRTL?'الموضوع':'Subject', isRTL?'الأولوية':'Priority', isRTL?'مسؤول':'Assigned', isRTL?'التاريخ':'Date', isRTL?'الحالة':'Status', isRTL?'التقييم':'Rating'].map((h, i) => (
@@ -880,7 +880,7 @@ export default function OperationsPage() {
                   <div
                     key={inst.id}
                     onClick={()=>setSelected(inst.id)}
-                    className={`px-3.5 py-3 rounded-[10px] border-2 cursor-pointer transition-all duration-200 ${
+                    className={`px-3.5 py-3 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                       active
                         ? 'border-brand-500 bg-brand-500/10'
                         : isOv
@@ -890,11 +890,11 @@ export default function OperationsPage() {
                   >
                     <div className="flex justify-between items-center">
                       <div>
-                        <div className="text-[13px] font-semibold text-content dark:text-content-dark">{isRTL?inst.client_ar:inst.client_en}</div>
+                        <div className="text-xs font-semibold text-content dark:text-content-dark">{isRTL?inst.client_ar:inst.client_en}</div>
                         <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{inst.deal_number} — {isRTL?`قسط ${inst.num}/${inst.total}`:`Inst. ${inst.num}/${inst.total}`}</div>
                       </div>
                       <div className="text-end">
-                        <div className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</div>
+                        <div className="text-xs font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</div>
                         <div className={`text-[11px] ${isOv ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>{inst.due_date}</div>
                       </div>
                     </div>
@@ -947,7 +947,7 @@ export default function OperationsPage() {
             <button
               key={tab.id}
               onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }}
-              className={`flex items-center gap-2 px-[18px] py-2.5 rounded-[10px] border-none cursor-pointer text-[13px] font-cairo whitespace-nowrap transition-all duration-200 ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border-none cursor-pointer text-xs font-cairo whitespace-nowrap transition-all duration-200 ${
                 active
                   ? 'font-bold bg-surface-card dark:bg-surface-card-dark text-brand-500 shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
                   : 'font-medium bg-transparent text-content-muted dark:text-content-muted-dark'

@@ -93,7 +93,7 @@ export default function AssetsPage() {
               <Package size={24} color="#4A7AAB" />
             </div>
             <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد أصول مسجلة':'No Assets Found'}</p>
-            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي أصول بعد':'No assets registered yet'}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي أصول بعد':'No assets registered yet'}</p>
           </div>
         ) : (<>
         <table className="w-full border-collapse">
@@ -126,7 +126,7 @@ function AssetRow({ asset, isRTL, lang, statusColor, statusLabel, employees }) {
   return (
     <Tr>
       <Td>
-        <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{asset.name}</p>
+        <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{asset.name}</p>
         <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{asset.serial}</p>
       </Td>
       <Td>

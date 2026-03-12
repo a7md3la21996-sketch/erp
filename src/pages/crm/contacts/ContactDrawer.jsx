@@ -46,7 +46,7 @@ function ActivityForm({ contactId, onSave, onCancel }) {
   };
 
   return (
-    <div className="bg-brand-500/[0.07] border border-brand-500/20 rounded-[10px] p-3.5 mb-3">
+    <div className="bg-brand-500/[0.07] border border-brand-500/20 rounded-xl p-3.5 mb-3">
       <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-[5px] bg-brand-500/[0.08] rounded-md">
         <Clock size={11} className="text-content-muted dark:text-content-muted-dark" />
         <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{now}</span>
@@ -159,7 +159,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const baseTabs = [['info', isRTL ? 'البيانات' : 'Info'], ['activities', isRTL ? 'الأنشطة' : 'Activities'], ['opportunities', isRTL ? 'الفرص' : 'Opportunities'], ['tasks', isRTL ? 'المهام' : 'Tasks']];
   const tabs = contact.contact_type === 'supplier' ? [...baseTabs, ['invoices', isRTL ? 'الفواتير' : 'Invoices']] : baseTabs;
 
-  const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.08] text-[13px]';
+  const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.08] text-xs';
 
   return (
     <>
@@ -172,7 +172,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         <div className="px-5 pt-5 bg-gradient-to-b from-surface-bg to-surface-card dark:from-[#1B3347] dark:to-surface-card-dark">
           <div className="flex justify-between items-start mb-3.5">
             <div className="flex gap-3 items-center">
-              <div className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-lg font-extrabold ${contact.is_blacklisted ? 'bg-red-500/20 text-red-500' : 'bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white'}`}>
+              <div className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-lg font-bold ${contact.is_blacklisted ? 'bg-red-500/20 text-red-500' : 'bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white'}`}>
                 {contact.is_blacklisted ? <Ban size={18} /> : initials(contact.full_name)}
               </div>
               <div>
@@ -229,11 +229,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {tab === 'info' && (
             <div>
               <div className="grid grid-cols-2 gap-2.5 mb-4">
-                <div className="bg-brand-500/[0.07] rounded-[10px] p-3 border border-brand-500/[0.12]">
+                <div className="bg-brand-500/[0.07] rounded-xl p-3 border border-brand-500/[0.12]">
                   <div className="text-content-muted dark:text-content-muted-dark text-[11px] mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
                   <ScorePill score={contact.lead_score} />
                 </div>
-                <div className="rounded-[10px] p-3" style={{ background: tempInfo?.bg, border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
+                <div className="rounded-xl p-3" style={{ background: tempInfo?.bg, border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
                   <div className="text-content-muted dark:text-content-muted-dark text-[11px] mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
                   {tempInfo?.Icon && <div className="flex items-center gap-1.5"><tempInfo.Icon size={14} color={tempInfo.color} /><span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div>}
                 </div>
@@ -264,7 +264,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </div>
               ))}
               {contact.notes && (
-                <div className="mt-3 px-3.5 py-2.5 bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] text-xs text-content-muted dark:text-content-muted-dark">
+                <div className="mt-3 px-3.5 py-2.5 bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl text-xs text-content-muted dark:text-content-muted-dark">
                   <div className="font-semibold mb-1 text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'ملاحظات' : 'Notes'}</div>
                   {contact.notes}
                 </div>
@@ -283,12 +283,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </div>
               )}
               {contact.is_blacklisted && contact.blacklist_reason && (
-                <div className="mt-3.5 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-[10px] text-xs text-red-500 flex gap-1.5 items-start">
+                <div className="mt-3.5 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl text-xs text-red-500 flex gap-1.5 items-start">
                   <Ban size={13} className="shrink-0 mt-0.5" /> <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
                 </div>
               )}
               {contact.contact_type === 'supplier' && (
-                <button className="w-full mt-3 p-2.5 bg-brand-500/10 border border-brand-500/25 rounded-lg text-brand-500 text-[13px] font-semibold cursor-pointer flex items-center justify-center gap-1.5">
+                <button className="w-full mt-3 p-2.5 bg-brand-500/10 border border-brand-500/25 rounded-lg text-brand-500 text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5">
                   <span>+</span> {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
                 </button>
               )}
@@ -302,7 +302,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 <FileDown size={32} className="mb-3 opacity-40 text-content-muted dark:text-content-muted-dark" />
                 <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
                 <p className="mt-1.5 mb-4 text-xs">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
-                <button className="px-5 py-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-[13px] font-semibold cursor-pointer">
+                <button className="px-5 py-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-semibold cursor-pointer">
                   + {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
                 </button>
               </div>
@@ -313,30 +313,30 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {tab === 'activities' && (
             <div>
               {!showActivityForm && (
-                <button onClick={() => setShowActivityForm(true)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer mb-3.5">
+                <button onClick={() => setShowActivityForm(true)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer mb-3.5">
                   {isRTL ? '+ إضافة نشاط' : '+ Add Activity'}
                 </button>
               )}
               {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
 
               {loadingActs ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-[13px]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
               ) : activities.length === 0 ? (
                 <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
                   <Clock size={32} className="opacity-30 mb-2" />
-                  <p className="m-0 text-[13px]">{isRTL ? 'لا توجد أنشطة بعد' : 'No activities yet'}</p>
+                  <p className="m-0 text-xs">{isRTL ? 'لا توجد أنشطة بعد' : 'No activities yet'}</p>
                 </div>
               ) : activities.map(act => {
                 const actIcon = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock, site_visit: Star }[act.type];
                 const ActIcon = actIcon || Clock;
                 return (
-                <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] p-3 mb-2.5">
+                <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2.5">
                   <div className="flex justify-between mb-1.5 items-start gap-2">
                     <div className="flex items-start gap-2 flex-1">
                       <div className="w-[26px] h-[26px] rounded-[7px] bg-brand-500/10 flex items-center justify-center shrink-0 mt-px">
                         <ActIcon size={13} color="#4A7AAB" />
                       </div>
-                      <span className="text-content dark:text-content-dark text-[13px] font-semibold">{act.description}</span>
+                      <span className="text-content dark:text-content-dark text-xs font-semibold">{act.description}</span>
                     </div>
                   </div>
                   <div className="flex justify-between text-[11px] text-content-muted dark:text-content-muted-dark">
@@ -357,12 +357,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* TASKS TAB */}
           {tab === 'tasks' && (
             <div>
-              <button onClick={() => setAddTaskForm(f => !f)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer mb-3.5">
+              <button onClick={() => setAddTaskForm(f => !f)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer mb-3.5">
                 {addTaskForm ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '+ مهمة جديدة' : '+ New Task')}
               </button>
 
               {addTaskForm && (
-                <div className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] p-3 mb-3.5">
+                <div className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-3.5">
                   <div className="flex flex-col gap-2">
                     <input value={newTask.title} onChange={e => setNewTask(f => ({...f, title: e.target.value}))}
                       placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
@@ -399,11 +399,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               )}
 
               {loadingTasks ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-[13px]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
               ) : tasks.length === 0 ? (
                 <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
                   <CheckSquare size={32} className="opacity-30 mb-2" />
-                  <p className="m-0 text-[13px]">{isRTL ? 'لا توجد مهام مرتبطة' : 'No tasks linked'}</p>
+                  <p className="m-0 text-xs">{isRTL ? 'لا توجد مهام مرتبطة' : 'No tasks linked'}</p>
                 </div>
               ) : tasks.map(task => {
                 const pri = TASK_PRIORITIES[task.priority];
@@ -412,10 +412,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 const due = new Date(task.due_date);
                 const overdue = due < new Date() && task.status !== 'done';
                 return (
-                  <div key={task.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] px-3 py-2.5 mb-2">
+                  <div key={task.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl px-3 py-2.5 mb-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1">
-                        <div className={`text-[13px] font-semibold text-content dark:text-content-dark mb-1 ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
+                        <div className={`text-xs font-semibold text-content dark:text-content-dark mb-1 ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
                           {task.title}
                         </div>
                         <div className="flex gap-1.5 flex-wrap">
@@ -441,7 +441,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* OPPORTUNITIES TAB */}
           {tab === 'opportunities' && (
             <div>
-              <button onClick={()=>setShowOppModal(true)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer mb-3.5 font-inherit">
+              <button onClick={()=>setShowOppModal(true)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer mb-3.5 font-inherit">
                 {isRTL ? '+ فتح فرصة جديدة' : '+ New Opportunity'}
               </button>
               {showOppModal && (
@@ -460,7 +460,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         <div key={f.key}>
                           <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start`}>{isRTL?f.label_ar:f.label_en}</label>
                           <input type={f.type} value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[13px] outline-none box-border font-inherit"
+                            className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs outline-none box-border font-inherit"
                             style={{ textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr' }} />
                         </div>
                       ))}
@@ -472,7 +472,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         <div key={f.key}>
                           <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start`}>{isRTL?f.label_ar:f.label_en}</label>
                           <select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[13px] outline-none cursor-pointer box-border font-inherit">
+                            className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs outline-none cursor-pointer box-border font-inherit">
                             {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.en}</option>)}
                           </select>
                         </div>
@@ -480,10 +480,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     </div>
                     <div className="flex gap-2.5 mt-5">
                       <button onClick={()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const opp = {...newOpp, contactName:contact.full_name, contactId:contact.id, contact_id:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:String(Date.now()), created_at:new Date().toISOString(), projects:{name_ar:newOpp.project,name_en:newOpp.project}}; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}
-                        className="flex-1 py-2.5 rounded-lg bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white border-none text-[13px] font-bold cursor-pointer font-inherit">
+                        className="flex-1 py-2.5 rounded-lg bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white border-none text-xs font-bold cursor-pointer font-inherit">
                         {isRTL?'حفظ':'Save'}
                       </button>
-                      <button onClick={()=>setShowOppModal(false)} className="px-4 py-2.5 rounded-lg bg-transparent text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark text-[13px] cursor-pointer font-inherit">
+                      <button onClick={()=>setShowOppModal(false)} className="px-4 py-2.5 rounded-lg bg-transparent text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark text-xs cursor-pointer font-inherit">
                         {isRTL?'إلغاء':'Cancel'}
                       </button>
                     </div>
@@ -491,16 +491,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </div>
               )}
               {loadingOpps ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-[13px]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
               ) : opportunities.length === 0 ? (
                 <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
                   <Star size={32} className="opacity-30 mb-2" />
-                  <p className="m-0 text-[13px]">{isRTL ? 'لا توجد فرص مرتبطة' : 'No opportunities linked'}</p>
+                  <p className="m-0 text-xs">{isRTL ? 'لا توجد فرص مرتبطة' : 'No opportunities linked'}</p>
                 </div>
               ) : opportunities.map(opp => (
-                <div key={opp.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-[10px] p-3 mb-2.5">
+                <div key={opp.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2.5">
                   <div className="flex justify-between mb-2">
-                    <span className="text-content dark:text-content-dark text-[13px] font-semibold">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
+                    <span className="text-content dark:text-content-dark text-xs font-semibold">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
                     <Chip label={stageLabel(opp.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                   </div>
                   <div className="text-[11px] text-content-muted dark:text-content-muted-dark flex flex-col gap-1">

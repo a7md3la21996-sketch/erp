@@ -135,14 +135,14 @@ export default function TasksPage() {
         ].map((s,i) => (
           <Card key={i} className="px-4 py-3">
             <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{s.label}</div>
-            <div className="text-[26px] font-bold" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
           </Card>
         ))}
       </div>
 
       {/* Add Form */}
       {showAdd && (
-        <Card className="p-[18px] mb-3.5">
+        <Card className="p-5 mb-3.5">
           <div className="grid grid-cols-2 gap-2.5 mb-2.5">
             <div className="col-span-2">
               <Input value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))}
@@ -213,7 +213,7 @@ export default function TasksPage() {
                   <CheckSquare size={24} className="text-brand-500" />
                 </div>
                 <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
-                <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي مهام بعد أو جرّب تغيير الفلتر':'No tasks found, try changing the filter'}</p>
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي مهام بعد أو جرّب تغيير الفلتر':'No tasks found, try changing the filter'}</p>
               </div>
             ) : filtered.map((task, idx) => {
           const typeDef = TASK_TYPES[task.type] || TASK_TYPES.general;

@@ -78,7 +78,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
       <div className={`flex items-center justify-between mb-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <Clock size={15} className="text-brand-500" />
-          <span className="text-[13px] font-semibold text-content dark:text-content-dark">
+          <span className="text-xs font-semibold text-content dark:text-content-dark">
             {lang === 'ar' ? 'سجل الأنشطة' : 'Activity Log'}
           </span>
           {activities.length > 0 && (
@@ -102,7 +102,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
 
       {/* Add Form */}
       {adding && (
-        <div className="bg-blue-50/60 dark:bg-brand-500/[0.08] rounded-[10px] p-3.5 mb-3.5 border border-edge dark:border-edge-dark">
+        <div className="bg-blue-50/60 dark:bg-brand-500/[0.08] rounded-xl p-3.5 mb-3.5 border border-edge dark:border-edge-dark">
           {/* Type selector */}
           <div className={`flex gap-1.5 flex-wrap mb-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
             {availableTypes.map(([key, val]) => {

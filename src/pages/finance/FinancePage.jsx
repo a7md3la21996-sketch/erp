@@ -87,7 +87,7 @@ function Empty({ icon: Icon, title, sub }) {
           <Icon size={24} className="text-brand-500" />
         </div>
         <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{title}</p>
-        <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{sub}</p>
+        <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{sub}</p>
       </td>
     </tr>
   );
@@ -96,7 +96,7 @@ function Empty({ icon: Icon, title, sub }) {
 function CardWrap({ title, icon: Icon, headerRight, children }) {
   return (
     <Card className="overflow-hidden">
-      <div className="flex justify-between items-center px-[18px] py-3.5 border-b border-edge dark:border-edge-dark">
+      <div className="flex justify-between items-center px-5 py-3.5 border-b border-edge dark:border-edge-dark">
         <div className="flex items-center gap-2">
           {Icon && <Icon size={16} className="text-brand-500" />}
           <span className="text-sm font-bold text-content dark:text-content-dark">{title}</span>
@@ -160,8 +160,8 @@ function AddJournalModal({ L, onClose, onSave, entryCount, chartOfAccounts }) {
           <Input size="sm" value={desc} onChange={e => setDesc(e.target.value)} placeholder={L('وصف القيد...', 'Entry description...')} />
         </div>
       </div>
-      <div className="text-[13px] font-bold text-content dark:text-content-dark mb-2">{L('بنود القيد', 'Entry Lines')}</div>
-      <div className="border border-edge dark:border-edge-dark rounded-[10px] overflow-hidden mb-3">
+      <div className="text-xs font-bold text-content dark:text-content-dark mb-2">{L('بنود القيد', 'Entry Lines')}</div>
+      <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden mb-3">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
@@ -196,9 +196,9 @@ function AddJournalModal({ L, onClose, onSave, entryCount, chartOfAccounts }) {
               </tr>
             ))}
             <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
-              <td className="px-3 py-2 text-[13px] font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
-              <td className="px-3 py-2 text-[13px] font-bold text-brand-800">{fmtMoney(totalDebit)}</td>
-              <td className="px-3 py-2 text-[13px] font-bold text-red-500">{fmtMoney(totalCredit)}</td>
+              <td className="px-3 py-2 text-xs font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
+              <td className="px-3 py-2 text-xs font-bold text-brand-800">{fmtMoney(totalDebit)}</td>
+              <td className="px-3 py-2 text-xs font-bold text-red-500">{fmtMoney(totalCredit)}</td>
               <td />
             </tr>
           </tbody>
@@ -393,7 +393,7 @@ export default function FinancePage() {
       <div className="grid grid-cols-1 md:grid-cols-[1.6fr_1fr] gap-4">
         {/* Bar Chart */}
         <CardWrap title={L('الإيرادات مقابل المصروفات', 'Revenue vs Expenses')} icon={BarChart2}>
-          <div className="px-[18px] py-4">
+          <div className="px-5 py-4">
             <div className="flex items-end gap-2.5 h-[140px] pb-2">
               {MONTHLY_REVENUE.map((m, i) => {
                 const revH = Math.round((m.revenue / maxRevenue) * 120);
@@ -433,7 +433,7 @@ export default function FinancePage() {
 
         {/* Budget vs Actual */}
         <CardWrap title={L('الموازنة مقابل الفعلي', 'Budget vs Actual')} icon={PieChart}>
-          <div className="px-[18px] py-3">
+          <div className="px-5 py-3">
             {MOCK_BUDGET.slice(0, 5).map((b, i) => {
               const pct = b.budget_ytd ? Math.round((b.actual_ytd / b.budget_ytd) * 100) : 0;
               const over = pct > 100;
@@ -460,7 +460,7 @@ export default function FinancePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Company Commissions Summary */}
         <CardWrap title={L('ملخص عمولات المطورين', 'Developer Commission Summary')} icon={Building2}>
-          <div className="px-[18px] py-3">
+          <div className="px-5 py-3">
             {[
               { label: L('معلق', 'Pending'), val: companyComm.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0), color: '#6B8DB5' },
               { label: L('معتمد', 'Approved'), val: companyComm.filter(c => c.status === 'approved').reduce((s, c) => s + c.amount, 0), color: '#4A7AAB' },
@@ -469,7 +469,7 @@ export default function FinancePage() {
               <div key={i} className={`flex justify-between items-center py-2 ${i < 2 ? 'border-b border-edge dark:border-edge-dark' : ''}`}>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ background: row.color }} />
-                  <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{row.label}</span>
+                  <span className="text-xs text-content-muted dark:text-content-muted-dark">{row.label}</span>
                 </div>
                 <span className="text-sm font-bold" style={{ color: row.color }}>{fmtMoney(row.val)}</span>
               </div>
@@ -479,15 +479,15 @@ export default function FinancePage() {
 
         {/* Overdue Invoices */}
         <CardWrap title={L('فواتير تحتاج متابعة', 'Invoices Needing Attention')} icon={AlertTriangle}>
-          <div className="px-[18px] py-3">
+          <div className="px-5 py-3">
             {invoices.filter(inv => inv.status === 'overdue' || inv.status === 'sent').slice(0, 4).map((inv, i) => (
               <div key={inv.id} className={`flex justify-between items-center py-2 ${i < 3 ? 'border-b border-edge dark:border-edge-dark' : ''}`}>
                 <div>
-                  <div className="text-[13px] text-content dark:text-content-dark font-medium">{L(inv.counterparty_ar, inv.counterparty_en)}</div>
+                  <div className="text-xs text-content dark:text-content-dark font-medium">{L(inv.counterparty_ar, inv.counterparty_en)}</div>
                   <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{inv.number}</div>
                 </div>
                 <div className="text-end">
-                  <div className="text-[13px] font-bold text-content dark:text-content-dark">{fmtMoney(inv.total - inv.paid)}</div>
+                  <div className="text-xs font-bold text-content dark:text-content-dark">{fmtMoney(inv.total - inv.paid)}</div>
                   <StatusBadge label={L(INVOICE_STATUS[inv.status].ar, INVOICE_STATUS[inv.status].en)} color={INVOICE_STATUS[inv.status].color} />
                 </div>
               </div>
@@ -605,7 +605,7 @@ export default function FinancePage() {
             </div>
           }>
           {/* Filter pills */}
-          <div className="flex gap-1.5 px-[18px] py-3 border-b border-edge dark:border-edge-dark">
+          <div className="flex gap-1.5 px-5 py-3 border-b border-edge dark:border-edge-dark">
             {[
               { id: 'all', label: L('الكل', 'All') },
               { id: 'posted', label: L('مرحّل', 'Posted') },
@@ -684,7 +684,7 @@ export default function FinancePage() {
 
         <CardWrap title={L('الفواتير', 'Invoices')} icon={FileText}
           headerRight={<AddBtn label={L('فاتورة جديدة', 'New Invoice')} onClick={() => setShowInvoiceModal(true)} />}>
-          <div className="flex gap-1.5 px-[18px] py-3 border-b border-edge dark:border-edge-dark flex-wrap">
+          <div className="flex gap-1.5 px-5 py-3 border-b border-edge dark:border-edge-dark flex-wrap">
             {/* Type filters */}
             {[
               { id: 'all', label: L('الكل', 'All') },
@@ -787,7 +787,7 @@ export default function FinancePage() {
           }
         >
           {/* Filters */}
-          <div className="flex gap-1.5 px-[18px] py-3 border-b border-edge dark:border-edge-dark">
+          <div className="flex gap-1.5 px-5 py-3 border-b border-edge dark:border-edge-dark">
             {[
               { id: 'all', label: L('الكل', 'All') },
               { id: 'pending', label: L('معلق', 'Pending') },
@@ -909,7 +909,7 @@ export default function FinancePage() {
                 <AddBtn label={L('إضافة مصروف', 'Add Expense')} onClick={() => setShowExpenseModal(true)} />
               </div>
             }>
-            <div className="flex gap-1.5 px-[18px] py-3 border-b border-edge dark:border-edge-dark">
+            <div className="flex gap-1.5 px-5 py-3 border-b border-edge dark:border-edge-dark">
               {[
                 { id: 'all', label: L('الكل', 'All') },
                 { id: 'pending', label: L('معلق', 'Pending') },
@@ -976,7 +976,7 @@ export default function FinancePage() {
 
           {/* Sidebar - Category breakdown */}
           <CardWrap title={L('توزيع المصروفات', 'By Category')} icon={PieChart}>
-            <div className="px-[18px] py-3">
+            <div className="px-5 py-3">
               {sortedCats.map(([cat, amt], i) => {
                 const pct = Math.round((amt / totalExpenseAmt) * 100);
                 const barColors = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#EF4444'];
@@ -1070,8 +1070,8 @@ export default function FinancePage() {
       );
       return (
         <div className="flex justify-between items-center py-1.5 border-b border-edge/20 dark:border-edge-dark/20" style={{ paddingInlineStart: indent * 20 }}>
-          <span className={`text-[13px] ${bold ? 'font-bold text-content dark:text-content-dark' : 'font-normal text-content-muted dark:text-content-muted-dark'}`}>{label}</span>
-          <span className={`text-[13px] ${bold ? 'font-extrabold' : 'font-semibold'} ${negative ? 'text-red-500' : amount === 0 ? 'text-content-muted dark:text-content-muted-dark' : bold ? 'text-brand-500' : 'text-content dark:text-content-dark'}`}>
+          <span className={`text-xs ${bold ? 'font-bold text-content dark:text-content-dark' : 'font-normal text-content-muted dark:text-content-muted-dark'}`}>{label}</span>
+          <span className={`text-xs ${bold ? 'font-bold' : 'font-semibold'} ${negative ? 'text-red-500' : amount === 0 ? 'text-content-muted dark:text-content-muted-dark' : bold ? 'text-brand-500' : 'text-content dark:text-content-dark'}`}>
             {fmtMoney(Math.abs(amount))}
           </span>
         </div>
@@ -1080,7 +1080,7 @@ export default function FinancePage() {
 
     const ReportHeader = ({ title }) => (
       <div className="pt-2.5 pb-1.5 border-b-2 border-brand-500/40 mb-1">
-        <span className="text-sm font-extrabold text-content dark:text-content-dark uppercase tracking-wider">{title}</span>
+        <span className="text-sm font-bold text-content dark:text-content-dark uppercase tracking-wider">{title}</span>
       </div>
     );
 
@@ -1100,7 +1100,7 @@ export default function FinancePage() {
           <div className="grid grid-cols-2 gap-4">
             {/* Left — Assets */}
             <CardWrap title={L('الميزانية العمومية', 'Balance Sheet')} icon={Layers}>
-              <div className="px-[18px] py-4">
+              <div className="px-5 py-4">
                 <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('كما في مارس 2026', 'As of March 2026')}</div>
 
                 <ReportHeader title={L('الأصول', 'ASSETS')} />
@@ -1137,7 +1137,7 @@ export default function FinancePage() {
                 <ReportLine label={L('إجمالي حقوق الملكية', 'Total Equity')} amount={totalEquity + netIncomeCalc} bold />
 
                 <div className="h-3" />
-                <div className={`px-3.5 py-2.5 rounded-[10px] flex items-center gap-2 ${(Math.abs(totalAssets - (totalLiabilities + totalEquity + netIncomeCalc)) < 1) ? 'bg-brand-800/[0.08]' : 'bg-red-500/[0.08]'}`}>
+                <div className={`px-3.5 py-2.5 rounded-xl flex items-center gap-2 ${(Math.abs(totalAssets - (totalLiabilities + totalEquity + netIncomeCalc)) < 1) ? 'bg-brand-800/[0.08]' : 'bg-red-500/[0.08]'}`}>
                   {(Math.abs(totalAssets - (totalLiabilities + totalEquity + netIncomeCalc)) < 1)
                     ? <><CheckCircle size={14} className="text-brand-800" /><span className="text-xs font-semibold text-brand-800">{L('الميزانية متوازنة ✓', 'Balance Sheet is balanced ✓')}</span></>
                     : <><AlertTriangle size={14} className="text-red-500" /><span className="text-xs font-semibold text-red-500">{L('الميزانية غير متوازنة', 'Balance Sheet NOT balanced')}</span></>
@@ -1154,18 +1154,18 @@ export default function FinancePage() {
               <KpiCard icon={TrendingUp} label={L('صافي الدخل', 'Net Income')} value={fmtShort(netIncomeCalc)} sub="EGP" color="#1B3347" />
 
               <CardWrap title={L('ملخص', 'Summary')} icon={BarChart2}>
-                <div className="px-[18px] py-3.5">
+                <div className="px-5 py-3.5">
                   <div className="flex justify-between mb-1.5">
                     <span className="text-xs text-content-muted dark:text-content-muted-dark">{L('نسبة السيولة', 'Current Ratio')}</span>
-                    <span className="text-[13px] font-bold text-content dark:text-content-dark">{totalLiabilities > 0 ? (totalAssets / totalLiabilities).toFixed(2) : '∞'}</span>
+                    <span className="text-xs font-bold text-content dark:text-content-dark">{totalLiabilities > 0 ? (totalAssets / totalLiabilities).toFixed(2) : '∞'}</span>
                   </div>
                   <div className="flex justify-between mb-1.5">
                     <span className="text-xs text-content-muted dark:text-content-muted-dark">{L('هامش الربح', 'Profit Margin')}</span>
-                    <span className={`text-[13px] font-bold ${netIncomeCalc >= 0 ? 'text-brand-800' : 'text-red-500'}`}>{totalRevenue > 0 ? ((netIncomeCalc / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
+                    <span className={`text-xs font-bold ${netIncomeCalc >= 0 ? 'text-brand-800' : 'text-red-500'}`}>{totalRevenue > 0 ? ((netIncomeCalc / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-xs text-content-muted dark:text-content-muted-dark">{L('نسبة المصروفات', 'Expense Ratio')}</span>
-                    <span className="text-[13px] font-bold text-content dark:text-content-dark">{totalRevenue > 0 ? ((totalExpPosted / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
+                    <span className="text-xs font-bold text-content dark:text-content-dark">{totalRevenue > 0 ? ((totalExpPosted / totalRevenue) * 100).toFixed(1) + '%' : '—'}</span>
                   </div>
                 </div>
               </CardWrap>
@@ -1177,7 +1177,7 @@ export default function FinancePage() {
         {reportView === 'income_statement' && (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
             <CardWrap title={L('قائمة الدخل', 'Income Statement')} icon={TrendingUp}>
-              <div className="px-[18px] py-4">
+              <div className="px-5 py-4">
                 <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('مارس 2026', 'March 2026')}</div>
 
                 <ReportHeader title={L('الإيرادات', 'REVENUE')} />
@@ -1202,10 +1202,10 @@ export default function FinancePage() {
                 <ReportLine label={L('إجمالي المصروفات', 'Total Expenses')} amount={totalExpPosted} bold negative />
 
                 <div className="h-4" />
-                <div className={`px-3.5 py-3 rounded-[10px] ${netIncomeCalc >= 0 ? 'bg-brand-800/[0.08]' : 'bg-red-500/[0.08]'}`}>
+                <div className={`px-3.5 py-3 rounded-xl ${netIncomeCalc >= 0 ? 'bg-brand-800/[0.08]' : 'bg-red-500/[0.08]'}`}>
                   <div className="flex justify-between items-center">
-                    <span className="text-[15px] font-extrabold text-content dark:text-content-dark">{L('صافي الدخل', 'Net Income')}</span>
-                    <span className={`text-lg font-extrabold ${netIncomeCalc >= 0 ? 'text-brand-800' : 'text-red-500'}`}>{fmtMoney(netIncomeCalc)}</span>
+                    <span className="text-[15px] font-bold text-content dark:text-content-dark">{L('صافي الدخل', 'Net Income')}</span>
+                    <span className={`text-lg font-bold ${netIncomeCalc >= 0 ? 'text-brand-800' : 'text-red-500'}`}>{fmtMoney(netIncomeCalc)}</span>
                   </div>
                 </div>
               </div>
@@ -1219,7 +1219,7 @@ export default function FinancePage() {
 
               {/* Expense breakdown mini */}
               <CardWrap title={L('توزيع المصروفات', 'Expense Breakdown')} icon={PieChart}>
-                <div className="px-[18px] py-3">
+                <div className="px-5 py-3">
                   {expAccounts.filter(a => {
                     let amt = 0;
                     postedEntries.forEach(e => e.lines.forEach(l => { if (l.account_id === a.id) amt += l.debit - l.credit; }));
@@ -1255,7 +1255,7 @@ export default function FinancePage() {
         {reportView === 'cash_flow' && (
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-4">
             <CardWrap title={L('قائمة التدفقات النقدية', 'Cash Flow Statement')} icon={Wallet}>
-              <div className="px-[18px] py-4">
+              <div className="px-5 py-4">
                 <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-3">{L('مارس 2026', 'March 2026')}</div>
 
                 <ReportHeader title={L('تدفقات من الأنشطة التشغيلية', 'OPERATING ACTIVITIES')} />
@@ -1289,7 +1289,7 @@ export default function FinancePage() {
 
               {/* Cash breakdown */}
               <CardWrap title={L('توزيع النقدية', 'Cash Distribution')} icon={PieChart}>
-                <div className="px-[18px] py-3.5">
+                <div className="px-5 py-3.5">
                   {[
                     { label: L('الصندوق', 'Cash on Hand'), amount: cashBal, color: '#1B3347' },
                     { label: L('بنك CIB', 'CIB Bank'), amount: bankCIB, color: '#4A7AAB' },
@@ -1345,10 +1345,10 @@ export default function FinancePage() {
 
         {/* Overall progress */}
         <CardWrap title={L('استهلاك الموازنة الكلي', 'Overall Budget Consumption')} icon={Target}>
-          <div className="px-[18px] py-4">
+          <div className="px-5 py-4">
             <div className="flex justify-between mb-2">
-              <span className="text-[13px] text-content dark:text-content-dark font-semibold">{L('الفعلي', 'Actual')}: {fmtMoney(totalActualYtd)}</span>
-              <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{L('الموازنة', 'Budget')}: {fmtMoney(totalBudgetYtd)}</span>
+              <span className="text-xs text-content dark:text-content-dark font-semibold">{L('الفعلي', 'Actual')}: {fmtMoney(totalActualYtd)}</span>
+              <span className="text-xs text-content-muted dark:text-content-muted-dark">{L('الموازنة', 'Budget')}: {fmtMoney(totalBudgetYtd)}</span>
             </div>
             <div className="h-2.5 rounded-[5px] bg-gray-200 dark:bg-white/[0.08] overflow-hidden">
               <div
@@ -1413,14 +1413,14 @@ export default function FinancePage() {
                 })}
                 {/* Totals row */}
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-t-2 border-edge dark:border-edge-dark">
-                  <td className="px-3 py-2.5 text-[13px] font-extrabold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
-                  <td className="px-3 py-2.5 text-[13px] font-bold text-content dark:text-content-dark">{fmtMoney(totalMonthly)}</td>
-                  <td className="px-3 py-2.5 text-[13px] font-bold text-content-muted dark:text-content-muted-dark">{fmtMoney(totalBudgetYtd)}</td>
-                  <td className="px-3 py-2.5 text-[13px] font-bold text-content dark:text-content-dark">{fmtMoney(totalActualYtd)}</td>
-                  <td className={`px-3 py-2.5 text-[13px] font-bold ${totalActualYtd > totalBudgetYtd ? 'text-red-500' : 'text-brand-800'}`}>
+                  <td className="px-3 py-2.5 text-xs font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
+                  <td className="px-3 py-2.5 text-xs font-bold text-content dark:text-content-dark">{fmtMoney(totalMonthly)}</td>
+                  <td className="px-3 py-2.5 text-xs font-bold text-content-muted dark:text-content-muted-dark">{fmtMoney(totalBudgetYtd)}</td>
+                  <td className="px-3 py-2.5 text-xs font-bold text-content dark:text-content-dark">{fmtMoney(totalActualYtd)}</td>
+                  <td className={`px-3 py-2.5 text-xs font-bold ${totalActualYtd > totalBudgetYtd ? 'text-red-500' : 'text-brand-800'}`}>
                     {totalActualYtd > totalBudgetYtd ? '(' : ''}{fmtMoney(Math.abs(totalBudgetYtd - totalActualYtd))}{totalActualYtd > totalBudgetYtd ? ')' : ''}
                   </td>
-                  <td className={`px-3 py-2.5 text-[13px] font-extrabold ${overallPct > 100 ? 'text-red-500' : 'text-brand-800'}`}>{overallPct}%</td>
+                  <td className={`px-3 py-2.5 text-xs font-bold ${overallPct > 100 ? 'text-red-500' : 'text-brand-800'}`}>{overallPct}%</td>
                   <td className="px-3 py-2.5">
                     <div className="h-1.5 rounded-sm bg-gray-200 dark:bg-white/[0.08]">
                       <div className="h-full rounded-sm" style={{ width: Math.min(overallPct, 100) + '%', background: overallPct > 100 ? '#EF4444' : '#4A7AAB' }} />
@@ -1472,7 +1472,7 @@ export default function FinancePage() {
         </div>
 
         {/* Lines table */}
-        <div className="border border-edge dark:border-edge-dark rounded-[10px] overflow-hidden">
+        <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
@@ -1493,9 +1493,9 @@ export default function FinancePage() {
               ))}
               {/* Totals row */}
               <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-t-2 border-edge dark:border-edge-dark">
-                <td colSpan={2} className="px-3 py-2.5 text-[13px] font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
-                <td className="px-3 py-2.5 text-[13px] font-bold text-brand-800">{fmtMoney(totalDebit)}</td>
-                <td className="px-3 py-2.5 text-[13px] font-bold text-red-500">{fmtMoney(totalCredit)}</td>
+                <td colSpan={2} className="px-3 py-2.5 text-xs font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</td>
+                <td className="px-3 py-2.5 text-xs font-bold text-brand-800">{fmtMoney(totalDebit)}</td>
+                <td className="px-3 py-2.5 text-xs font-bold text-red-500">{fmtMoney(totalCredit)}</td>
               </tr>
             </tbody>
           </table>
@@ -1544,7 +1544,7 @@ export default function FinancePage() {
         </div>
 
         {/* Items table */}
-        <div className="border border-edge dark:border-edge-dark rounded-[10px] overflow-hidden mb-4">
+        <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden mb-4">
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
@@ -1571,21 +1571,21 @@ export default function FinancePage() {
 
         {/* Totals */}
         <div className="flex flex-col gap-1.5 items-end">
-          <div className="flex gap-6 text-[13px]">
+          <div className="flex gap-6 text-xs">
             <span className="text-content-muted dark:text-content-muted-dark">{L('المبلغ الفرعي', 'Subtotal')}</span>
             <span className="font-semibold text-content dark:text-content-dark">{fmtMoney(inv.subtotal)}</span>
           </div>
           {inv.tax > 0 && (
-            <div className="flex gap-6 text-[13px]">
+            <div className="flex gap-6 text-xs">
               <span className="text-content-muted dark:text-content-muted-dark">{L('الضريبة', 'Tax')}</span>
               <span className="font-semibold text-content dark:text-content-dark">{fmtMoney(inv.tax)}</span>
             </div>
           )}
           <div className="flex gap-6 text-[15px] border-t-2 border-edge dark:border-edge-dark pt-2 mt-1">
             <span className="font-bold text-content dark:text-content-dark">{L('الإجمالي', 'Total')}</span>
-            <span className="font-extrabold text-brand-500">{fmtMoney(inv.total)}</span>
+            <span className="font-bold text-brand-500">{fmtMoney(inv.total)}</span>
           </div>
-          <div className="flex gap-6 text-[13px]">
+          <div className="flex gap-6 text-xs">
             <span className="text-content-muted dark:text-content-muted-dark">{L('المدفوع', 'Paid')}</span>
             <span className="font-semibold text-brand-800">{fmtMoney(inv.paid)}</span>
           </div>
@@ -1644,10 +1644,10 @@ export default function FinancePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-surface-card dark:bg-surface-card-dark rounded-[10px] p-1 border border-edge dark:border-edge-dark w-full md:w-fit overflow-x-auto">
+      <div className="flex gap-1 mb-5 bg-surface-card dark:bg-surface-card-dark rounded-xl p-1 border border-edge dark:border-edge-dark w-full md:w-fit overflow-x-auto">
         {TABS.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-[7px] px-4 py-[7px] rounded-[7px] border-none cursor-pointer text-[13px] font-medium transition-all duration-150 whitespace-nowrap
+            className={`flex items-center gap-[7px] px-4 py-[7px] rounded-[7px] border-none cursor-pointer text-xs font-medium transition-all duration-150 whitespace-nowrap
               ${activeTab === tab.id
                 ? 'bg-brand-500 text-white'
                 : 'bg-transparent text-content-muted dark:text-content-muted-dark'

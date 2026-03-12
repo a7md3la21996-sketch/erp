@@ -74,7 +74,7 @@ export default function RecruitmentPage() {
       </div>
 
       <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
-        <div className="px-[18px] py-3.5 border-b border-edge dark:border-edge-dark">
+        <div className="px-5 py-3.5 border-b border-edge dark:border-edge-dark">
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'الوظائف المتاحة':'Job Openings'}</p>
         </div>
         <table className="w-full border-collapse">
@@ -94,7 +94,7 @@ export default function RecruitmentPage() {
                       <Briefcase size={24} color='#4A7AAB' />
                     </div>
                     <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات توظيف':'No Recruitment Requests'}</p>
-                    <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي طلبات توظيف بعد':'No recruitment requests added yet'}</p>
+                    <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي طلبات توظيف بعد':'No recruitment requests added yet'}</p>
                   </div>
                 </td>
               </tr>

@@ -150,7 +150,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                   onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkPhoneNumber(v); } }} />
                 {checking && <p className="text-[11px] text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
-                  <div className="mt-2 p-3 bg-red-500/[0.08] border border-red-500/30 rounded-[10px] text-xs">
+                  <div className="mt-2 p-3 bg-red-500/[0.08] border border-red-500/30 rounded-xl text-xs">
                     <div className="text-red-500 font-bold mb-2">⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-mono">— ID: {dupWarning.id}</span></div>
                     <div className="flex gap-2">
                       <Button size="sm" onClick={() => { onOpenOpportunity(dupWarning); onClose(); }} className="flex-1">

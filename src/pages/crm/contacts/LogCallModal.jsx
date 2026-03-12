@@ -145,8 +145,8 @@ export default function LogCallModal({ contact, onClose }) {
           <Textarea rows={2} value={callNotes} onChange={e => setCallNotes(e.target.value)} className="!resize-none mb-4" placeholder={isRTL ? 'ملاحظات المكالمة...' : 'Call notes...'} />
 
           {/* Follow-up Section */}
-          <div className={`bg-brand-500/[0.06] dark:bg-brand-500/[0.06] rounded-[10px] p-3.5 transition-colors ${addFollowup ? 'border border-brand-500/25' : 'border border-edge dark:border-edge-dark'}`}>
-            <label className={`flex items-center gap-2 cursor-pointer text-[13px] font-semibold ${addFollowup ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+          <div className={`bg-brand-500/[0.06] dark:bg-brand-500/[0.06] rounded-xl p-3.5 transition-colors ${addFollowup ? 'border border-brand-500/25' : 'border border-edge dark:border-edge-dark'}`}>
+            <label className={`flex items-center gap-2 cursor-pointer text-xs font-semibold ${addFollowup ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
               <input type="checkbox" checked={addFollowup} onChange={e => setAddFollowup(e.target.checked)} className="accent-brand-500 cursor-pointer" />
               <Clock size={14} /> {isRTL ? 'إنشاء مهمة متابعة' : 'Create follow-up task'}
             </label>

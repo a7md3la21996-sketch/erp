@@ -345,7 +345,7 @@ export default function ReportsPage() {
                   <Card key={report.key} hover className="px-5 py-4">
                     <div className={`flex items-start gap-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                       <div
-                        className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0"
+                        className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
                         style={{ background: category.color + '15' }}
                       >
                         <RIcon size={18} style={{ color: category.color }} />

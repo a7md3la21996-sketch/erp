@@ -6,12 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
 import { createDealFromOpportunity } from '../../services/dealsService';
 import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2 } from 'lucide-react';
-import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
-import Input, { Select, Textarea } from '../../components/ui/Input';
-import Modal, { ModalFooter } from '../../components/ui/Modal';
-import KpiCard from '../../components/ui/KpiCard';
-import { PageSkeleton } from '../../components/ui/PageSkeletons';
+import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton } from '../../components/ui';
 
 const STAGE_CONFIG = [
   { id: "all",                  label_ar: "الكل",            label_en: "All",             color: "#4A7AAB" },
@@ -101,7 +96,7 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect }) {
       <div className="flex items-start justify-between gap-2 mt-1">
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div
-            className="w-[38px] h-[38px] rounded-full shrink-0 flex items-center justify-center text-[13px] font-bold text-white"
+            className="w-[38px] h-[38px] rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-white"
             style={{ background: avatarColor(opp.contact_id || opp.id) }}
           >
             {initials(contactName)}
@@ -711,7 +706,7 @@ export default function OpportunitiesPage() {
             {selectedOpp.notes && (
               <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
                 <p className="m-0 mb-1 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
-                <p className="m-0 text-[13px] text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
+                <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
               </div>
             )}
 

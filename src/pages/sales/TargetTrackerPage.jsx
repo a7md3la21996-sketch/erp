@@ -39,7 +39,7 @@ const getRankIcon = (rank) => {
   if (rank === 1) return <Crown size={18} style={{ color: '#FFD700' }} />;
   if (rank === 2) return <Medal size={18} style={{ color: '#C0C0C0' }} />;
   if (rank === 3) return <Award size={18} style={{ color: '#CD7F32' }} />;
-  return <span className="inline-block w-[18px] text-center text-[13px] font-bold text-content-muted dark:text-content-muted-dark">{rank}</span>;
+  return <span className="inline-block w-[18px] text-center text-xs font-bold text-content-muted dark:text-content-muted-dark">{rank}</span>;
 };
 
 export default function TargetTrackerPage() {
@@ -153,19 +153,19 @@ export default function TargetTrackerPage() {
                     <Td>
                       <div className="flex items-center gap-2.5">
                         <div
-                          className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-[13px] font-bold text-white shrink-0"
+                          className="w-[34px] h-[34px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
                           style={{ background: emp.avatar_color || '#4A7AAB' }}
                         >
                           {(lang === 'ar' ? emp.full_name_ar : emp.full_name_en).charAt(0)}
                         </div>
                         <div>
-                          <div className="text-[13px] font-semibold text-content dark:text-content-dark">{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
+                          <div className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
                           <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-px">{emp.role === 'sales_director' ? (lang === 'ar' ? 'مدير مبيعات' : 'Sales Director') : emp.role === 'sales_manager' ? (lang === 'ar' ? 'مدير فريق' : 'Sales Manager') : emp.role === 'team_leader' ? (lang === 'ar' ? 'قائد فريق' : 'Team Leader') : (lang === 'ar' ? 'موظف مبيعات' : 'Sales Agent')}</div>
                         </div>
                       </div>
                     </Td>
-                    <Td className="text-[13px] text-content-muted dark:text-content-muted-dark font-medium">{fmt(emp.target)}</Td>
-                    <Td className="text-[13px] font-bold text-content dark:text-content-dark">{fmt(emp.achieved)}</Td>
+                    <Td className="text-xs text-content-muted dark:text-content-muted-dark font-medium">{fmt(emp.target)}</Td>
+                    <Td className="text-xs font-bold text-content dark:text-content-dark">{fmt(emp.achieved)}</Td>
                     <Td>
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 rounded bg-gray-200 dark:bg-brand-500/[0.12] min-w-[60px]">
@@ -174,7 +174,7 @@ export default function TargetTrackerPage() {
                         <span className="text-xs font-bold min-w-[36px] text-center" style={{ color: pctColor }}>{emp.pct}%</span>
                       </div>
                     </Td>
-                    <Td className="text-center text-[13px] font-semibold text-content dark:text-content-dark">{emp.deals}</Td>
+                    <Td className="text-center text-xs font-semibold text-content dark:text-content-dark">{emp.deals}</Td>
                     <Td className="text-center">
                       {trend > 0 ? (
                         <span className="inline-flex items-center gap-0.5 text-brand-500 text-xs font-bold"><ChevronUp size={14} />+{trend}%</span>
@@ -195,7 +195,7 @@ export default function TargetTrackerPage() {
         <div className="flex flex-col gap-4">
           {/* Podium Card */}
           <Card className="p-5">
-            <div className="text-[13px] font-semibold text-content dark:text-content-dark mb-4 flex items-center gap-1.5">
+            <div className="text-xs font-semibold text-content dark:text-content-dark mb-4 flex items-center gap-1.5">
               <Trophy size={15} style={{ color: '#FFD700' }} />
               {lang === 'ar' ? 'البودييم' : 'Podium'}
             </div>
@@ -217,7 +217,7 @@ export default function TargetTrackerPage() {
                       {lang === 'ar' ? emp.full_name_ar.split(' ')[0] : emp.full_name_en.split(' ')[0]}
                     </div>
                     <div
-                      className="w-[72px] rounded-t-md flex items-center justify-center text-[13px] font-extrabold"
+                      className="w-[72px] rounded-t-md flex items-center justify-center text-xs font-bold"
                       style={{ height: heights[idx], background: `${podiumColors[idx]}22`, border: `1px solid ${podiumColors[idx]}`, color: podiumColors[idx] }}
                     >
                       {idx + 1}
@@ -246,7 +246,7 @@ export default function TargetTrackerPage() {
 
           {/* Team Trend Card */}
           <Card className="p-5">
-            <div className="text-[13px] font-semibold text-content dark:text-content-dark mb-3.5 flex items-center gap-1.5">
+            <div className="text-xs font-semibold text-content dark:text-content-dark mb-3.5 flex items-center gap-1.5">
               <TrendingUp size={15} className="text-brand-500" />
               {lang === 'ar' ? 'اتجاه الفريق (آخر 3 أشهر)' : 'Team Trend (Last 3M)'}
             </div>

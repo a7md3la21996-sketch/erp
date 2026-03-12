@@ -17,7 +17,7 @@ function ActionCard({ icon: Icon, label, color }) {
   return (
     <div
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-      className="relative overflow-hidden bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark px-[18px] py-5 cursor-pointer flex flex-col items-center gap-3 transition-all duration-200"
+      className="relative overflow-hidden bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark px-5 py-5 cursor-pointer flex flex-col items-center gap-3 transition-all duration-200"
       style={{
         borderColor: hov ? `${color}60` : undefined,
         transform: hov ? 'translateY(-3px)' : 'none',
@@ -34,7 +34,7 @@ function ActionCard({ icon: Icon, label, color }) {
       >
         <Icon size={22} color={color} />
       </div>
-      <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark text-center">{label}</p>
+      <p className="m-0 text-xs font-bold text-content dark:text-content-dark text-center">{label}</p>
     </div>
   );
 }
@@ -49,13 +49,13 @@ function RequestRow({ req, i, isRTL, lang }) {
       <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className="w-2 h-2 rounded-full shrink-0" style={{ background: req.color }} />
         <div className="text-start">
-          <p className="m-0 text-[13px] font-semibold text-content dark:text-content-dark">{req.label}</p>
+          <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{req.label}</p>
           <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{req.date}</p>
         </div>
       </div>
       <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <span
-          className="text-[11px] font-semibold px-2 py-0.5 rounded-[10px]"
+          className="text-[11px] font-semibold px-2 py-0.5 rounded-xl"
           style={{ background: `${req.color}18`, color: req.color }}
         >
           {req.status==='pending'?(lang==='ar'?'معلق':'Pending'):(lang==='ar'?'مكتمل':'Done')}
@@ -108,16 +108,16 @@ export default function SelfServicePage() {
       {/* Profile Card */}
       <div className={`bg-surface-card dark:bg-surface-card-dark rounded-2xl border border-edge dark:border-edge-dark p-6 mb-5 flex items-center gap-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className="w-[72px] h-[72px] rounded-2xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0 shadow-md">
-          <span className="text-2xl font-extrabold text-white">{initials}</span>
+          <span className="text-2xl font-bold text-white">{initials}</span>
         </div>
         <div className={`flex-1 text-start`}>
-          <p className="m-0 mb-1 text-xl font-extrabold text-content dark:text-content-dark">{name}</p>
-          <p className="m-0 mb-3 text-[13px] text-content-muted dark:text-content-muted-dark">{emp?.employee_id || 'EMP-001'} • {emp?.department || (lang==='ar'?'المبيعات':'Sales')}</p>
+          <p className="m-0 mb-1 text-xl font-bold text-content dark:text-content-dark">{name}</p>
+          <p className="m-0 mb-3 text-xs text-content-muted dark:text-content-muted-dark">{emp?.employee_id || 'EMP-001'} • {emp?.department || (lang==='ar'?'المبيعات':'Sales')}</p>
           <div className={`flex gap-4 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
             {infoItems.map((item,i) => (
               <div key={i} className="text-start">
                 <p className="m-0 mb-0.5 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide font-semibold">{item.label}</p>
-                <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{item.value}</p>
+                <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{item.value}</p>
               </div>
             ))}
           </div>
@@ -134,10 +134,10 @@ export default function SelfServicePage() {
 
       {/* Recent Requests */}
       <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
-        <div className="px-[18px] py-3.5 border-b border-edge dark:border-edge-dark">
+        <div className="px-5 py-3.5 border-b border-edge dark:border-edge-dark">
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'طلباتي الأخيرة':'Recent Requests'}</p>
         </div>
-        <div className="px-[18px] py-3">
+        <div className="px-5 py-3">
           {recentRequests.map((req, i) => (
             <RequestRow key={i} req={req} i={i} isRTL={isRTL} lang={lang} />
           ))}

@@ -89,7 +89,7 @@ function PolicyRow({ policy, isRTL, lang }) {
           <div className="w-[34px] h-[34px] rounded-lg bg-brand-500/[0.12] flex items-center justify-center shrink-0">
             <FileText size={15} color="#4A7AAB" />
           </div>
-          <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{lang==='ar'?policy.title_ar:policy.title_en}</p>
+          <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{lang==='ar'?policy.title_ar:policy.title_en}</p>
         </div>
       </Td>
       <Td>

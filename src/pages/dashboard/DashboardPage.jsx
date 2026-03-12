@@ -11,10 +11,7 @@ import { fetchAllDashboardData, buildPipelineData } from '../../services/dashboa
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle } from 'lucide-react';
-import Card from '../../components/ui/Card';
-import KpiCard from '../../components/ui/KpiCard';
-import Badge from '../../components/ui/Badge';
-import { DashboardSkeleton } from '../../components/ui/PageSkeletons';
+import { Card, KpiCard, Badge, DashboardSkeleton } from '../../components/ui';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -82,7 +79,7 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
     <Card className="p-5 mb-5">
       <div className={`flex items-center justify-between mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          <div className="w-9 h-9 rounded-[10px] bg-brand-500/[0.12] flex items-center justify-center">
+          <div className="w-9 h-9 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
             <Bell size={18} className="text-brand-500" />
           </div>
           <div className="text-start">
@@ -97,12 +94,12 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
 
       {loading ? (
         <div className="flex gap-2.5">
-          {[1,2,3].map(i => <div key={i} className="flex-1 h-16 rounded-[10px] bg-surface-bg dark:bg-white/5 animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="flex-1 h-16 rounded-xl bg-surface-bg dark:bg-white/5 animate-pulse" />)}
         </div>
       ) : reminders.length === 0 ? (
         <div className="text-center py-6">
           <CheckCircle size={32} className="text-brand-500 opacity-40 mb-2 mx-auto" />
-          <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'أنجزت كل متابعاتك اليوم!' : 'All caught up for today!'}</p>
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'أنجزت كل متابعاتك اليوم!' : 'All caught up for today!'}</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -110,12 +107,12 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
             const t = REMINDER_TYPES[r.type] || REMINDER_TYPES.call;
             const TIcon = t.Icon;
             return (
-              <div key={i} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-[10px] bg-surface-bg dark:bg-white/[0.04] border border-edge dark:border-edge-dark ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div key={i} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-surface-bg dark:bg-white/[0.04] border border-edge dark:border-edge-dark ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: t.color + '18' }}>
                   <TIcon size={15} color={t.color} />
                 </div>
                 <div className={`flex-1 text-start`}>
-                  <p className="m-0 text-[13px] font-semibold text-content dark:text-content-dark">{r.entity_name || (lang === 'ar' ? 'جهة اتصال' : 'Contact')}</p>
+                  <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{r.entity_name || (lang === 'ar' ? 'جهة اتصال' : 'Contact')}</p>
                   <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? t.ar : t.en}{r.notes ? ' · ' + r.notes : ''}</p>
                 </div>
                 <span className="text-[11px] text-content-muted dark:text-content-muted-dark shrink-0">{formatTime(r.due_at)}</span>
@@ -208,11 +205,11 @@ export default function DashboardPage() {
       <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="text-start">
           <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark font-medium">{label}</p>
-          <p className="m-0 text-[26px] font-extrabold text-content dark:text-content-dark leading-none">{value}</p>
+          <p className="m-0 text-2xl font-bold text-content dark:text-content-dark leading-none">{value}</p>
           {sub && <p className="m-0 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">{sub}</p>}
           {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-[11px] font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{trend}</span></div>}
         </div>
-        <div className="w-[42px] h-[42px] rounded-[11px] flex items-center justify-center shrink-0" style={{ background: color + '18' }}><Icon size={20} color={color} /></div>
+        <div className="w-[42px] h-[42px] rounded-xl flex items-center justify-center shrink-0" style={{ background: color + '18' }}><Icon size={20} color={color} /></div>
       </div>
     </Card>
   );
@@ -234,16 +231,16 @@ export default function DashboardPage() {
   return (
     <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Hero banner */}
-      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-4 py-4 md:px-7 md:py-[22px] mb-6 flex flex-wrap md:flex-nowrap justify-between items-center gap-4 relative overflow-hidden ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-4 py-4 md:px-7 md:py-6 mb-5 flex flex-wrap md:flex-nowrap justify-between items-center gap-4 relative overflow-hidden ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`absolute w-40 h-40 rounded-full bg-white/[0.04] pointer-events-none ${isRTL ? '-left-5 top-[-40px]' : '-right-5 top-[-40px]'}`} />
         <div className="relative">
           <p className="m-0 mb-1 text-xl font-bold text-white">{greeting}، {name}</p>
-          <p className="m-0 text-[13px] text-white/65">{roleLabel} · {dateStr}</p>
+          <p className="m-0 text-xs text-white/65">{roleLabel} · {dateStr}</p>
         </div>
         <div className={`flex gap-3 relative ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: crm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
-            <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-[10px]">
-              <p className="m-0 text-[22px] font-extrabold text-white">{s.v}</p>
+            <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-xl">
+              <p className="m-0 text-xl font-bold text-white">{s.v}</p>
               <p className="m-0 text-[11px] text-white/65">{s.l}</p>
             </div>
           ))}
@@ -356,7 +353,7 @@ export default function DashboardPage() {
               <CardTitle icon={ShieldAlert} title={lang === 'ar' ? 'تنبيهات HR' : 'HR Alerts'} sub={lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention'} />
               <div className="flex flex-col gap-2">
                 {[{ I: AlertTriangle, color: '#EF4444', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.contractAlerts + ' عقد ينتهي قريباً' : hr.contractAlerts + ' contracts expiring', show: hr.contractAlerts > 0 }, { I: Clock, color: '#6B8DB5', bgClass: 'bg-brand-400/10', label: lang === 'ar' ? hr.probationCount + ' موظف في فترة تجربة' : hr.probationCount + ' on probation', show: hr.probationCount > 0 }, { I: UserCheck, color: '#EF4444', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.absentCount + ' غائب اليوم' : hr.absentCount + ' absent today', show: hr.absentCount > 0 }, { I: Clock, color: '#4A7AAB', bgClass: 'bg-brand-500/[0.08]', label: lang === 'ar' ? hr.lateCount + ' متأخر اليوم' : hr.lateCount + ' late today', show: hr.lateCount > 0 }].filter(a => a.show).map((a, i) => { const AI = a.I; return <div key={i} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${a.bgClass} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><AI size={14} color={a.color} /><span className="text-xs font-medium" style={{ color: a.color }}>{a.label}</span></div>; })}
-                {hr.contractAlerts === 0 && hr.absentCount === 0 && hr.lateCount === 0 && <div className="text-center py-4"><p className="text-[13px] text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'لا تنبيهات اليوم' : 'No alerts today'}</p></div>}
+                {hr.contractAlerts === 0 && hr.absentCount === 0 && hr.lateCount === 0 && <div className="text-center py-4"><p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'لا تنبيهات اليوم' : 'No alerts today'}</p></div>}
               </div>
             </Box>
           </div>

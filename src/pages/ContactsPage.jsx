@@ -8,7 +8,7 @@ import {
   blacklistContact, createActivity,
 } from '../services/contactsService';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton } from '../components/ui/PageSkeletons';
+import { PageSkeleton } from '../components/ui';
 
 // ── Split modules ──────────────────────────────────────────────────────────
 import {
@@ -287,7 +287,7 @@ export default function ContactsPage() {
 
   const selCls = 'bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg px-3 py-2 text-content dark:text-content-dark text-xs outline-none cursor-pointer';
   const thCls = `text-[11px] text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap text-start`;
-  const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-[13px] text-content dark:text-content-dark text-start`;
+  const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-xs text-content dark:text-content-dark text-start`;
 
   if (loading) return <PageSkeleton hasKpis={false} tableRows={8} tableCols={7} />;
 
@@ -325,18 +325,18 @@ export default function ContactsPage() {
                 {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
               </button>
               {showBulkMenu && (
-                <div className={`absolute top-[110%] start-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] min-w-[190px] z-[200] shadow-[0_8px_24px_rgba(0,0,0,0.35)] overflow-hidden`}>
+                <div className={`absolute top-[110%] start-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[200] shadow-[0_8px_24px_rgba(0,0,0,0.35)] overflow-hidden`}>
                   {[
                     { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
                     { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => setBulkReassignModal(true) },
                     { label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => setBulkStageModal(true) },
                   ].map(item => (
-                    <button key={item.label} onClick={item.action} className={`w-full px-4 py-2.5 bg-transparent border-none text-content dark:text-content-dark text-[13px] cursor-pointer text-start flex items-center gap-2 hover:bg-brand-500/[0.15]`}>
+                    <button key={item.label} onClick={item.action} className={`w-full px-4 py-2.5 bg-transparent border-none text-content dark:text-content-dark text-xs cursor-pointer text-start flex items-center gap-2 hover:bg-brand-500/[0.15]`}>
                       {item.label}
                     </button>
                   ))}
                   <div className="h-px bg-red-500/20 my-1" />
-                  <button onClick={handleDeleteSelected} className={`w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-[13px] cursor-pointer text-start flex items-center gap-2 hover:bg-red-500/10`}>
+                  <button onClick={handleDeleteSelected} className={`w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-xs cursor-pointer text-start flex items-center gap-2 hover:bg-red-500/10`}>
                     {isRTL ? "حذف المحددين" : "Delete Selected"}
                   </button>
                 </div>
@@ -360,16 +360,16 @@ export default function ContactsPage() {
             className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
             style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
             {s.label} <span
-              className={`rounded-[10px] px-[7px] py-px text-[10px] mis-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+              className={`rounded-xl px-[7px] py-px text-[10px] mis-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
               style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
           </button>
           );
         })}
         <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-[10px] px-[7px] py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
+          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-[7px] py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
         </button>
         <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${filterTemp === 'hot' ? 'border border-red-500 bg-red-500/[0.08] text-red-500' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
-          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span className={`rounded-[10px] px-[7px] py-px text-[10px] mis-1 ${filterTemp === 'hot' ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.hot}</span>
+          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span className={`rounded-xl px-[7px] py-px text-[10px] mis-1 ${filterTemp === 'hot' ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.hot}</span>
         </button>
       </div>
 
@@ -420,7 +420,7 @@ export default function ContactsPage() {
       <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
         {mergeMode && (
           <div className="px-4 py-2.5 bg-blue-800/[0.06] dark:bg-blue-800/[0.12] border-b border-edge dark:border-edge-dark flex items-center gap-2.5 justify-between">
-            <span className="text-[13px] font-semibold text-blue-800">
+            <span className="text-xs font-semibold text-blue-800">
               <Merge size={14} className="align-middle me-1.5 inline" />
               {isRTL ? `اختر جهتي اتصال للدمج (${mergeTargets.length}/2)` : `Select 2 contacts to merge (${mergeTargets.length}/2)`}
             </span>
@@ -457,11 +457,11 @@ export default function ContactsPage() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={9} className="p-0 border-none">
                   <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-                    <div className="w-16 h-16 rounded-[18px] bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border-[1.5px] border-dashed border-brand-500/30 flex items-center justify-center mb-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                       <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
                     </div>
                     <p className="m-0 mb-1.5 font-bold text-[15px] text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
-                    <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
+                    <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
                   </div>
                 </td></tr>
               ) : paged.map((c) => {
@@ -481,7 +481,7 @@ export default function ContactsPage() {
                   </td>
                   <td className={tdCls}>
                     <div className="flex items-center gap-2.5">
-                      <div className="w-[34px] h-[34px] rounded-[10px] shrink-0 flex items-center justify-center text-[13px] font-bold"
+                      <div className="w-[34px] h-[34px] rounded-xl shrink-0 flex items-center justify-center text-xs font-bold"
                         style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
                         {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                       </div>
@@ -533,7 +533,7 @@ export default function ContactsPage() {
                           <MoreVertical size={12} />
                         </button>
                         {openMenuId === c.id && (
-                          <div className={`absolute top-[30px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] min-w-[180px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.12)] overflow-hidden`}>
+                          <div className={`absolute top-[30px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[180px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.12)] overflow-hidden`}>
                             <div className="p-1">
                               <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                                 <FileDown size={13} /> {isRTL ? 'تصدير' : 'Export'}
@@ -614,7 +614,7 @@ export default function ContactsPage() {
                   </div>
                   <div className="flex-1">
                     <div className="font-bold text-base text-content dark:text-content-dark">{current.full_name}</div>
-                    <div className={`text-[13px] text-content-muted dark:text-content-muted-dark text-start`} style={{ direction: 'ltr' }}>{current.phone}</div>
+                    <div className={`text-xs text-content-muted dark:text-content-muted-dark text-start`} dir="ltr">{current.phone}</div>
                     {current.company && <div className="text-xs text-content-muted dark:text-content-muted-dark">{current.company}</div>}
                   </div>
                   <div className="text-center">
@@ -622,7 +622,7 @@ export default function ContactsPage() {
                     {current.stage && <div className="text-[10px] mt-1 text-brand-500">{stageLabel(current.stage, isRTL)}</div>}
                   </div>
                 </div>
-                <a href={"tel:" + current.phone} className="flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#065F46] to-emerald-500 rounded-[10px] text-white font-bold text-sm no-underline mb-4">
+                <a href={"tel:" + current.phone} className="flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#065F46] to-emerald-500 rounded-xl text-white font-bold text-sm no-underline mb-4">
                   <Phone size={16} /> {isRTL ? 'اتصل الآن' : 'Call Now'}
                 </a>
                 <div className="mb-3">
@@ -713,7 +713,7 @@ export default function ContactsPage() {
                 </tbody>
               </table>
               <div className="flex gap-2.5 mt-5 justify-end">
-                <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-[13px] cursor-pointer">
+                <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
                   {isRTL ? 'إلغاء' : 'Cancel'}
                 </button>
                 <button onClick={() => {
@@ -722,7 +722,7 @@ export default function ContactsPage() {
                   localStorage.setItem('platform_contacts', JSON.stringify(updatedContacts));
                   toast.success(isRTL ? 'تم دمج جهتي الاتصال بنجاح' : 'Contacts merged successfully');
                   setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
-                }} className="px-5 py-2.5 bg-gradient-to-br from-blue-800 to-blue-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer">
+                }} className="px-5 py-2.5 bg-gradient-to-br from-blue-800 to-blue-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">
                   {isRTL ? 'تأكيد الدمج' : 'Confirm Merge'}
                 </button>
               </div>
@@ -735,12 +735,12 @@ export default function ContactsPage() {
       {confirmAction && (
         <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
           <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-red-500/30 dark:border-red-500/30 rounded-2xl p-7 w-full max-w-[400px] text-center">
-            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4 text-[22px]">⚠️</div>
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4 text-xl">⚠️</div>
             <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">{confirmAction.title}</h3>
-            <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-[13px]">{confirmAction.message}</p>
+            <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-xs">{confirmAction.message}</p>
             <div className="flex gap-2.5 justify-center">
-              <button onClick={() => setConfirmAction(null)} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-[13px] cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
-              <button onClick={confirmAction.onConfirm} className="px-5 py-2.5 bg-gradient-to-br from-red-900 to-red-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer">{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</button>
+              <button onClick={() => setConfirmAction(null)} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
+              <button onClick={confirmAction.onConfirm} className="px-5 py-2.5 bg-gradient-to-br from-red-900 to-red-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</button>
             </div>
           </div>
         </div>
@@ -757,7 +757,7 @@ export default function ContactsPage() {
             <div className="flex flex-col gap-1.5">
               {Object.entries(STAGE_LABELS).map(([key, val]) => (
                 <button key={key} onClick={() => handleBulkStage(key)}
-                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-[13px] cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
+                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-xs cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
                   {isRTL ? val.ar : val.en}
                 </button>
               ))}
@@ -777,7 +777,7 @@ export default function ContactsPage() {
             <div className="flex flex-col gap-1.5">
               {[...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].map(agent => (
                 <button key={agent} onClick={() => handleBulkReassign(agent)}
-                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-[13px] cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
+                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-xs cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
                   {agent}
                 </button>
               ))}

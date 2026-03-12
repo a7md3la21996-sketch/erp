@@ -23,7 +23,7 @@ function AttendanceRow({ emp, attendance, isRTL }) {
             <span className="text-[11px] font-bold text-white">{ini}</span>
           </div>
           <div className={'text-start'}>
-            <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{name}</p>
+            <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{name}</p>
             <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id}</p>
           </div>
         </div>
@@ -103,7 +103,7 @@ export default function AttendancePage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <select value={month} onChange={e=>setMonth(+e.target.value)} className="px-3.5 py-2 rounded-[9px] border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[13px] cursor-pointer outline-none">
+          <select value={month} onChange={e=>setMonth(+e.target.value)} className="px-3.5 py-2 rounded-[9px] border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs cursor-pointer outline-none">
             {MONTHS_AR.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
           </select>
           <ExportButton
@@ -149,7 +149,7 @@ export default function AttendancePage() {
                   <Clock size={24} color='#4A7AAB' />
                 </div>
                 <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد بيانات حضور':'No Attendance Data'}</p>
-                <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي بيانات حضور بعد':'No attendance records yet'}</p>
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي بيانات حضور بعد':'No attendance records yet'}</p>
               </td></tr>
             ) : employees.map(emp => (
               <AttendanceRow key={emp.id} emp={emp} attendance={attendance} isRTL={isRTL} />

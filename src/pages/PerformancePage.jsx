@@ -7,12 +7,7 @@ import {
 } from 'lucide-react';
 import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
-import { Th, Td, Tr } from '../components/ui';
-import Card, { CardHeader, CardBody } from '../components/ui/Card';
-import Input, { Select } from '../components/ui/Input';
-import Badge from '../components/ui/Badge';
-import KpiCard from '../components/ui/KpiCard';
-import ExportButton from '../components/ui/ExportButton';
+import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr } from '../components/ui';
 
 // ── Mock CRM Activity Data ─────────────────────────────────────
 const MOCK_CRM_ACTIVITY = {
@@ -246,7 +241,7 @@ export default function PerformancePage() {
           { label: lang === 'ar' ? 'يحتاجون متابعة' : 'Need Attention', value: atRisk,         icon: '', color: '#EF4444' },
           { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: MOCK_EMPLOYEES.length, icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
-          <Card key={i} className="px-[18px] py-4">
+          <Card key={i} className="px-5 py-4">
             <div className="text-xl mb-1.5">{s.icon}</div>
             <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
             <div className="text-xs text-content-muted dark:text-content-muted-dark">{s.label}</div>
@@ -295,7 +290,7 @@ export default function PerformancePage() {
                 role="button" tabIndex={0}
                 onClick={() => setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d)}
                 onKeyDown={e => { if(e.key==='Enter'||e.key===' ') setSelectedEmp(selectedEmp?.emp.id === d.emp.id ? null : d); }}
-                className="px-[18px] py-3.5"
+                className="px-5 py-3.5"
               >
                 <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                   {/* Rank */}
@@ -359,7 +354,7 @@ export default function PerformancePage() {
                           <div key={i} className="px-3 py-2.5 rounded-lg bg-brand-500/[0.06] dark:bg-brand-500/[0.06] border border-edge dark:border-edge-dark">
                             <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                               <span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? kpi.ar : kpi.en}</span>
-                              <Badge size="sm" className="rounded-[10px]" style={{ background: freq.color + '20', color: freq.color }}>{lang === 'ar' ? freq.ar : freq.en}</Badge>
+                              <Badge size="sm" className="rounded-xl" style={{ background: freq.color + '20', color: freq.color }}>{lang === 'ar' ? freq.ar : freq.en}</Badge>
                             </div>
                             <div className={`text-lg font-bold text-start`} style={{ color: kpiColor }}>
                               {kpi.actual.toLocaleString()}{kpi.unit === 'EGP' ? '' : ''}
@@ -489,7 +484,7 @@ export default function PerformancePage() {
               { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.opportunities, 0), icon: '', color: '#4A7AAB' },
               { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.deals_closed, 0), icon: '', color: '#4A7AAB' },
             ].map((s, i) => (
-              <Card key={i} className="px-[18px] py-4">
+              <Card key={i} className="px-5 py-4">
                 <div className="text-xl mb-1.5">{s.icon}</div>
                 <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
                 <div className="text-xs text-content-muted dark:text-content-muted-dark">{s.label}</div>
@@ -540,7 +535,7 @@ export default function PerformancePage() {
           </Card>
 
           {/* Golden Rule */}
-          <div className="px-5 py-3.5 rounded-[10px] bg-brand-500/[0.08] dark:bg-indigo-500/10 border border-brand-300 dark:border-indigo-500/20">
+          <div className="px-5 py-3.5 rounded-xl bg-brand-500/[0.08] dark:bg-indigo-500/10 border border-brand-300 dark:border-indigo-500/20">
             <div className={`text-xs font-bold text-brand-800 dark:text-brand-300 mb-2 text-start`}>
               {lang === 'ar' ? ' القاعدة الذهبية' : 'Golden Rule'}
             </div>
@@ -566,7 +561,7 @@ export default function PerformancePage() {
             {BSC_PERSPECTIVES.map(p => {
               const avg = Math.round(p.objectives.reduce((s,o) => s + Math.min((o.actual / o.target) * 100, 100), 0) / p.objectives.length);
               return (
-                <Card key={p.key} className={`px-[18px] py-4 text-start`} style={{ borderWidth: 2, borderColor: p.color + '30' }}>
+                <Card key={p.key} className={`px-5 py-4 text-start`} style={{ borderWidth: 2, borderColor: p.color + '30' }}>
                   <div className="text-2xl mb-1.5">{p.icon}</div>
                   <div className="text-xs font-bold text-content dark:text-content-dark mb-1">{lang === 'ar' ? p.ar : p.en}</div>
                   <div className="text-[28px] font-black" style={{ color: p.color }}>{avg}%</div>
@@ -579,11 +574,11 @@ export default function PerformancePage() {
           </div>
           {BSC_PERSPECTIVES.map(p => (
             <Card key={p.key} className="overflow-hidden">
-              <div className={`px-[18px] py-3 border-b border-edge dark:border-edge-dark flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`} style={{ background: p.color + '10' }}>
+              <div className={`px-5 py-3 border-b border-edge dark:border-edge-dark flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`} style={{ background: p.color + '10' }}>
                 <span className="text-base">{p.icon}</span>
                 <span className="text-sm font-bold" style={{ color: p.color }}>{lang === 'ar' ? p.ar : p.en}</span>
               </div>
-              <div className="px-[18px] py-3.5 flex flex-col gap-3.5">
+              <div className="px-5 py-3.5 flex flex-col gap-3.5">
                 {p.objectives.map((o, i) => {
                   const pct  = Math.min(Math.round((o.actual / o.target) * 100), 150);
                   const disp = Math.min(pct, 100);
@@ -596,7 +591,7 @@ export default function PerformancePage() {
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-bold" style={{ color: col }}>{fmt(o.actual)}{o.unit}</span>
                           <span className="text-[11px] text-content-muted dark:text-content-muted-dark">/ {fmt(o.target)}{o.unit}</span>
-                          {pct > 100 && <Badge size="sm" className="rounded-[10px] bg-brand-500/[0.12] text-brand-500 font-semibold">+{pct - 100}%</Badge>}
+                          {pct > 100 && <Badge size="sm" className="rounded-xl bg-brand-500/[0.12] text-brand-500 font-semibold">+{pct - 100}%</Badge>}
                         </div>
                       </div>
                       <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08]">
@@ -609,7 +604,7 @@ export default function PerformancePage() {
               </div>
             </Card>
           ))}
-          <div className={`px-[18px] py-3.5 rounded-[10px] bg-brand-500/[0.06] dark:bg-purple-500/[0.08] border border-brand-500/[0.15] dark:border-purple-500/20 text-xs text-brand-800 dark:text-brand-300 text-start`}>
+          <div className={`px-5 py-3.5 rounded-xl bg-brand-500/[0.06] dark:bg-purple-500/[0.08] border border-brand-500/[0.15] dark:border-purple-500/20 text-xs text-brand-800 dark:text-brand-300 text-start`}>
              {lang === 'ar' ? 'البيانات ستكون حقيقية بعد ربط الـ modules — Finance + CRM + Sales' : 'Data will be live once Finance, CRM & Sales modules are connected.'}
           </div>
         </div>

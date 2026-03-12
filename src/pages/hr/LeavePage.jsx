@@ -89,7 +89,7 @@ export default function LeavePage() {
             const name = (isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar;
             const initials = name?.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase()||'??';
             return (
-              <div key={emp.id} className="p-3 rounded-[10px] border border-edge dark:border-edge-dark bg-[#F8FAFC] dark:bg-brand-500/[0.04]">
+              <div key={emp.id} className="p-3 rounded-xl border border-edge dark:border-edge-dark bg-[#F8FAFC] dark:bg-brand-500/[0.04]">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-7 h-7 rounded-lg bg-[#2B4C6F] flex items-center justify-center">
                     <span className="text-[10px] font-bold text-white">{initials}</span>
@@ -128,7 +128,7 @@ export default function LeavePage() {
                   <CalendarOff size={24} color='#4A7AAB' />
                 </div>
                 <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات إجازة':'No Leave Requests'}</p>
-                <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تقديم أي طلبات إجازة بعد':'No leave requests submitted yet'}</p>
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تقديم أي طلبات إجازة بعد':'No leave requests submitted yet'}</p>
               </td></tr>
             ) : leaves.map(lv => {
             const emp = employees.find(e=>e.id===lv.employee_id||e.employee_id===lv.emp_id);

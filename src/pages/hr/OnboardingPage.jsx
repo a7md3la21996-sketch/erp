@@ -58,7 +58,7 @@ export default function OnboardingPage() {
               <UserCheck size={24} color='#4A7AAB' />
             </div>
             <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا يوجد موظفون في التهيئة':'No Onboarding Employees'}</p>
-            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي موظفين في مرحلة التهيئة':'No employees in onboarding'}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي موظفين في مرحلة التهيئة':'No employees in onboarding'}</p>
           </div>
         ) : MOCK_ONBOARDING.map(ob => {
           const emp = employees.find(e=>e.employee_id===ob.emp_id||e.id===ob.emp_id);
@@ -90,7 +90,7 @@ function OnboardingRow({ ob, name, initials, done, total, pct, isExpanded, isRTL
         className={`px-5 py-4 cursor-pointer flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}
       >
         <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className="w-[38px] h-[38px] rounded-[10px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0">
+          <div className="w-[38px] h-[38px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0">
             <span className="text-xs font-bold text-white">{initials}</span>
           </div>
           <div className={'text-start'}>
@@ -100,7 +100,7 @@ function OnboardingRow({ ob, name, initials, done, total, pct, isExpanded, isRTL
         </div>
         <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="text-center">
-            <p className="m-0 text-xl font-extrabold text-brand-500">{pct}%</p>
+            <p className="m-0 text-xl font-bold text-brand-500">{pct}%</p>
             <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark">{done}/{total}</p>
           </div>
           <div className="w-20 h-1.5 rounded-full bg-gray-200 dark:bg-white/[0.08]">
@@ -118,7 +118,7 @@ function OnboardingRow({ ob, name, initials, done, total, pct, isExpanded, isRTL
             return (
               <div
                 key={step.id}
-                className={`px-3 py-2.5 rounded-[10px] border text-center ${stepDone ? 'border-brand-500/25 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark bg-transparent'}`}
+                className={`px-3 py-2.5 rounded-xl border text-center ${stepDone ? 'border-brand-500/25 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark bg-transparent'}`}
               >
                 <div className="text-xl mb-1">{step.icon}</div>
                 <p className="m-0 mb-1.5 text-[11px] font-semibold text-content dark:text-content-dark">{lang==='ar'?step.label_ar:step.label_en}</p>

@@ -43,7 +43,7 @@ function FilterSelect({ value, onChange, options, isRTL }) {
     <div className="relative inline-flex items-center">
       <select
         value={value} onChange={e => onChange(e.target.value)}
-        className="appearance-none px-3 py-2 pe-8 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[13px] cursor-pointer outline-none transition-colors duration-150 focus:border-brand-500"
+        className="appearance-none px-3 py-2 pe-8 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs cursor-pointer outline-none transition-colors duration-150 focus:border-brand-500"
         style={{ direction: isRTL ? 'rtl' : 'ltr' }}
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -153,7 +153,7 @@ export default function EmployeesPage() {
       {expiring.length > 0 && (
         <div className={`bg-red-500/[0.07] border border-red-500/25 rounded-xl px-4 py-3 mb-4 flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <AlertTriangle size={16} color="#EF4444" />
-          <span className="text-[13px] text-red-500 font-medium">
+          <span className="text-xs text-red-500 font-medium">
             {lang === 'ar' ? `${expiring.length} عقد ينتهي خلال 30 يوم` : `${expiring.length} contract(s) expiring within 30 days`}
             {expiring.map(e => (isRTL ? e.full_name_ar : e.full_name_en) || e.full_name_ar).join('، ')}
           </span>
@@ -168,7 +168,7 @@ export default function EmployeesPage() {
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employees...'}
-            className="w-full rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[13px] outline-none box-border transition-colors focus:border-brand-500"
+            className="w-full rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none box-border transition-colors focus:border-brand-500"
             style={{ padding: isRTL ? '8px 36px 8px 12px' : '8px 12px 8px 36px', direction: isRTL ? 'rtl' : 'ltr' }}
           />
         </div>
@@ -209,11 +209,11 @@ export default function EmployeesPage() {
                 <Tr key={emp.id} onClick={() => setSelected(emp)} className="cursor-pointer">
                   <Td>
                     <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                      <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: avatarBg }}>
-                        <span className="text-[13px] font-bold text-white">{initials}</span>
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: avatarBg }}>
+                        <span className="text-xs font-bold text-white">{initials}</span>
                       </div>
                       <div className={'text-start'}>
-                        <p className="m-0 text-[13px] font-bold text-content dark:text-content-dark">{name}</p>
+                        <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{name}</p>
                         <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id || emp.id?.toString().slice(0,6)}</p>
                       </div>
                     </div>
@@ -221,7 +221,7 @@ export default function EmployeesPage() {
                   <Td>
                     <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <Building2 size={13} className="text-content-muted dark:text-content-muted-dark" />
-                      <span className="text-content-muted dark:text-content-muted-dark text-[13px]">{deptName}</span>
+                      <span className="text-content-muted dark:text-content-muted-dark text-xs">{deptName}</span>
                     </div>
                   </Td>
                   <Td>
@@ -255,11 +255,11 @@ export default function EmployeesPage() {
       </Table>
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border-[1.5px] border-dashed border-brand-500/30 flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
             <Users size={28} color="#4A7AAB" strokeWidth={1.5} />
           </div>
           <p className="text-[15px] font-bold text-content dark:text-content-dark mb-1.5">{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
-          <p className="text-[13px] text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>
+          <p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>
         </div>
       )}
 
@@ -288,7 +288,7 @@ function EmployeeModal({ emp, onClose, isRTL, lang }) {
       {/* Avatar header */}
       <div className={`flex items-center gap-3.5 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className="w-[52px] h-[52px] rounded-[14px] bg-brand-500/[0.12] flex items-center justify-center shrink-0">
-          <span className="text-lg font-extrabold text-brand-500">{initials}</span>
+          <span className="text-lg font-bold text-brand-500">{initials}</span>
         </div>
         <div className="text-start">
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{name}</p>
@@ -298,8 +298,8 @@ function EmployeeModal({ emp, onClose, isRTL, lang }) {
       {/* Detail rows */}
       {rows.map(([label, val], i) => (
         <div key={i} className={`flex justify-between py-2.5 ${i < rows.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <span className="text-[13px] text-content-muted dark:text-content-muted-dark">{label}</span>
-          <span className="text-[13px] font-semibold text-content dark:text-content-dark">{val}</span>
+          <span className="text-xs text-content-muted dark:text-content-muted-dark">{label}</span>
+          <span className="text-xs font-semibold text-content dark:text-content-dark">{val}</span>
         </div>
       ))}
       <ModalFooter>
