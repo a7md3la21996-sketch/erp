@@ -292,12 +292,12 @@ export default function ContactsPage() {
   if (loading) return <PageSkeleton hasKpis={false} tableRows={8} tableCols={7} />;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>
-          <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
-          <p className="mt-1 mb-0 text-[13px] text-content-muted dark:text-content-muted-dark">
+          <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
+          <p className="mt-1 mb-0 text-xs text-content-muted dark:text-content-muted-dark">
             {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${filtered.length} ${isRTL ? 'نتيجة' : 'results'}`}
           </p>
         </div>

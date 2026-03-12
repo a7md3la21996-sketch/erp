@@ -13,11 +13,15 @@ const sizes = {
   lg: 'text-sm px-3 py-1.5',
 };
 
-export default function Badge({ variant = 'default', size = 'md', className = '', style, children }) {
+export default function Badge({ variant = 'default', size = 'md', color, className = '', style, children }) {
+  const colorStyle = color
+    ? { backgroundColor: color + '18', color, ...style }
+    : style;
+
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-md font-semibold whitespace-nowrap ${variants[variant] || ''} ${sizes[size]} ${className}`}
-      style={style}
+      className={`inline-flex items-center gap-1 rounded-md font-semibold whitespace-nowrap ${color ? '' : variants[variant] || ''} ${sizes[size]} ${className}`}
+      style={colorStyle}
     >
       {children}
     </span>

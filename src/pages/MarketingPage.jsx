@@ -104,19 +104,19 @@ export default function MarketingPage() {
   }));
 
   return (
-    <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
-      <div className={`flex items-center justify-between mb-6 flex-wrap gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex items-center justify-between mb-5 flex-wrap gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          <div className="w-10 h-10 rounded-[10px] bg-brand-800 flex items-center justify-center">
-            <Megaphone size={20} color="#fff" />
+          <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+            <Megaphone size={20} className="text-brand-500" />
           </div>
           <div>
-            <h1 className="m-0 text-[22px] font-bold text-content dark:text-content-dark">
+            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">
               {lang === 'ar' ? 'إدارة الحملات التسويقية' : 'Marketing Campaigns'}
             </h1>
-            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
               {lang === 'ar' ? 'إدارة ومتابعة أداء الحملات الإعلانية' : 'Manage and track advertising campaign performance'}
             </p>
           </div>
@@ -144,7 +144,7 @@ export default function MarketingPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={BarChart3} label={lang === 'ar' ? 'إجمالي الحملات' : 'Total Campaigns'} value={totalCampaigns} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={lang === 'ar' ? 'حملات نشطة' : 'Active Campaigns'} value={activeCampaigns} color="#22C55E" />
         <KpiCard icon={Users} label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads Generated'} value={totalLeads.toLocaleString()} color="#4A7AAB" />

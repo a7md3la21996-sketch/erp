@@ -489,19 +489,19 @@ export default function OpportunitiesPage() {
   if (loading) return <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={5} />;
 
   return (<>
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark font-cairo px-4 py-4 md:p-5 pb-10">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark font-cairo px-4 py-4 md:px-7 md:py-6 pb-10">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <div className="flex items-center gap-2.5 mb-1">
-            <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center">
-              <Grid3X3 size={18} color="#fff" />
+            <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+              <Grid3X3 size={20} className="text-brand-500" />
             </div>
-            <h1 className="m-0 text-xl font-extrabold text-content dark:text-content-dark">
+            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">
               {isRTL ? 'الفرص البيعية' : 'Opportunities'}
             </h1>
           </div>
-          <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark">
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
             {isRTL ? 'إدارة وتتبع فرص المبيعات' : 'Manage and track sales opportunities'}
           </p>
         </div>

@@ -283,19 +283,19 @@ export default function ReportsPage() {
   const exportColumns = reportTable ? reportTable.headers.map(h => ({ header: h, key: h })) : [];
 
   return (
-    <div className={`p-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
 
       {/* Header */}
-      <div className={`flex items-center justify-between mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex items-center justify-between mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          <div className="w-10 h-10 rounded-[10px] bg-brand-800 flex items-center justify-center">
-            <FileText size={20} color="#fff" />
+          <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+            <FileText size={20} className="text-brand-500" />
           </div>
           <div>
-            <h1 className="m-0 text-[22px] font-bold text-content dark:text-content-dark">
+            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">
               {lang === 'ar' ? 'مركز التقارير' : 'Reports Hub'}
             </h1>
-            <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark">
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
               {lang === 'ar' ? 'تقارير جاهزة للتحليل والتصدير' : 'Pre-built reports ready to generate & export'}
             </p>
           </div>
@@ -303,7 +303,7 @@ export default function ReportsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={FileText} label={lang === 'ar' ? 'إجمالي التقارير' : 'Total Reports'} value={totalReports} color="#4A7AAB" />
         <KpiCard icon={Users} label={lang === 'ar' ? 'تقارير CRM' : 'CRM Reports'} value={4} color="#4A7AAB" />
         <KpiCard icon={DollarSign} label={lang === 'ar' ? 'تقارير مالية' : 'Finance Reports'} value={4} color="#2B4C6F" />
@@ -311,7 +311,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Filter bar */}
-      <div className={`flex flex-wrap gap-3 mb-6 items-end ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap gap-3 mb-4 items-end ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div>
           <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'من تاريخ' : 'From'}</label>
           <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[160px]" />

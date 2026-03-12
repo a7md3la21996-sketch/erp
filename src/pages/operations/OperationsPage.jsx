@@ -920,13 +920,13 @@ export default function OperationsPage() {
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 min-h-screen bg-surface-bg dark:bg-surface-bg-dark">
       {/* Page Header */}
-      <div className={`flex flex-wrap justify-between items-center gap-3 mb-6 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          <div className="w-[46px] h-[46px] rounded-[13px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-[0_4px_12px_rgba(74,122,171,0.3)]">
-            <ClipboardCheck size={22} color="#fff" />
+          <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+            <ClipboardCheck size={20} className="text-brand-500" />
           </div>
           <div className="text-start">
-            <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{isRTL ? 'العمليات' : 'Operations'}</h1>
+            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'العمليات' : 'Operations'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'إدارة الصفقات والمدفوعات والتسليمات' : 'Manage deals, payments & handovers'}</p>
           </div>
         </div>
