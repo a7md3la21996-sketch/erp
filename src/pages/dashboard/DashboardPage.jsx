@@ -83,7 +83,7 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
             <Bell size={18} className="text-brand-500" />
           </div>
           <div className="text-start">
-            <p className="m-0 text-[15px] font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups"}</p>
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups"}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{reminders.length > 0 ? (lang === 'ar' ? reminders.length + ' متابعة مجدولة' : reminders.length + ' scheduled') : (lang === 'ar' ? 'لا متابعات اليوم' : 'No follow-ups today')}</p>
           </div>
         </div>
@@ -113,9 +113,9 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
                 </div>
                 <div className={`flex-1 text-start`}>
                   <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{r.entity_name || (lang === 'ar' ? 'جهة اتصال' : 'Contact')}</p>
-                  <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? t.ar : t.en}{r.notes ? ' · ' + r.notes : ''}</p>
+                  <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? t.ar : t.en}{r.notes ? ' · ' + r.notes : ''}</p>
                 </div>
-                <span className="text-[11px] text-content-muted dark:text-content-muted-dark shrink-0">{formatTime(r.due_at)}</span>
+                <span className="text-xs text-content-muted dark:text-content-muted-dark shrink-0">{formatTime(r.due_at)}</span>
               </div>
             );
           })}
@@ -206,8 +206,8 @@ export default function DashboardPage() {
         <div className="text-start">
           <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark font-medium">{label}</p>
           <p className="m-0 text-2xl font-bold text-content dark:text-content-dark leading-none">{value}</p>
-          {sub && <p className="m-0 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">{sub}</p>}
-          {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-[11px] font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{trend}</span></div>}
+          {sub && <p className="m-0 mt-1 text-xs text-content-muted dark:text-content-muted-dark">{sub}</p>}
+          {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-xs font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{trend}</span></div>}
         </div>
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: color + '18' }}><Icon size={20} color={color} /></div>
       </div>
@@ -219,7 +219,7 @@ export default function DashboardPage() {
       <div className="w-[34px] h-[34px] rounded-[9px] bg-brand-500/[0.12] flex items-center justify-center"><Icon size={16} className="text-brand-500" /></div>
       <div className="text-start">
         <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{title}</p>
-        {sub && <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{sub}</p>}
+        {sub && <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{sub}</p>}
       </div>
     </div>
   );
@@ -241,7 +241,7 @@ export default function DashboardPage() {
           {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: crm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
             <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-xl">
               <p className="m-0 text-xl font-bold text-white">{s.v}</p>
-              <p className="m-0 text-[11px] text-white/65">{s.l}</p>
+              <p className="m-0 text-xs text-white/65">{s.l}</p>
             </div>
           ))}
         </div>
@@ -279,8 +279,8 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-1.5 mt-1.5">
               {EXPENSE_CATS.map((cat, i) => (
                 <div key={i} className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><div className="w-[7px] h-[7px] rounded-full" style={{ background: BRAND[i + 1] }} /><span className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? cat.name_ar : cat.name_en}</span></div>
-                  <span className="text-[11px] font-bold text-content dark:text-content-dark">{cat.pct}%</span>
+                  <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><div className="w-[7px] h-[7px] rounded-full" style={{ background: BRAND[i + 1] }} /><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? cat.name_ar : cat.name_en}</span></div>
+                  <span className="text-xs font-bold text-content dark:text-content-dark">{cat.pct}%</span>
                 </div>
               ))}
             </div>
@@ -307,11 +307,11 @@ export default function DashboardPage() {
             <div className="flex flex-col gap-2.5">
               {MOCK_SALES.topSales.map((s, i) => (
                 <div key={i} className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#1B3347' : i === 1 ? '#2B4C6F' : 'rgba(74,122,171,0.15)' }}><span className={`text-[11px] font-bold ${i < 2 ? 'text-white' : 'text-brand-500'}`}>{i + 1}</span></div>
+                  <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#1B3347' : i === 1 ? '#2B4C6F' : 'rgba(74,122,171,0.15)' }}><span className={`text-xs font-bold ${i < 2 ? 'text-white' : 'text-brand-500'}`}>{i + 1}</span></div>
                   <div className="flex-1 min-w-0">
                     <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                       <span className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? s.name_ar : s.name_en}</span>
-                      <span className="text-[11px] text-brand-500 font-bold">{(s.revenue / 1000).toFixed(0)}K</span>
+                      <span className="text-xs text-brand-500 font-bold">{(s.revenue / 1000).toFixed(0)}K</span>
                     </div>
                     <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08]"><div className="h-full rounded-sm" style={{ width: s.pct + '%', background: i === 0 ? '#4A7AAB' : i === 1 ? '#6B8DB5' : '#8BA8C8' }} /></div>
                   </div>

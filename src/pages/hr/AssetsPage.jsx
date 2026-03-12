@@ -92,7 +92,7 @@ export default function AssetsPage() {
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
               <Package size={24} color="#4A7AAB" />
             </div>
-            <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد أصول مسجلة':'No Assets Found'}</p>
+            <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد أصول مسجلة':'No Assets Found'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي أصول بعد':'No assets registered yet'}</p>
           </div>
         ) : (<>
@@ -127,17 +127,17 @@ function AssetRow({ asset, isRTL, lang, statusColor, statusLabel, employees }) {
     <Tr>
       <Td>
         <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{asset.name}</p>
-        <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{asset.serial}</p>
+        <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{asset.serial}</p>
       </Td>
       <Td>
-        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/[0.12] text-brand-500 border border-brand-500/25">
+        <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-500/[0.12] text-brand-500 border border-brand-500/25">
           {asset.type}
         </span>
       </Td>
       <Td className="text-content-muted dark:text-content-muted-dark">{empName}</Td>
       <Td>
         <span
-          className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+          className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold"
           style={{ background: statusColor(asset.status)+'18', color: statusColor(asset.status), border: `1px solid ${statusColor(asset.status)}35` }}
         >
           {statusLabel(asset.status,lang)}

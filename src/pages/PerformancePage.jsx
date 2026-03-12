@@ -305,23 +305,23 @@ export default function PerformancePage() {
                   {/* Info */}
                   <div className={`flex-1 text-start`}>
                     <div className="text-sm font-semibold text-content dark:text-content-dark">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
-                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? d.emp.job_title_ar : d.emp.job_title_en} · {dept ? (lang === 'ar' ? dept.name_ar : dept.name_en) : ''}</div>
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? d.emp.job_title_ar : d.emp.job_title_en} · {dept ? (lang === 'ar' ? dept.name_ar : dept.name_en) : ''}</div>
                   </div>
                   {/* Quick Stats */}
                   <div className={`flex gap-4 items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className="text-center min-w-[50px]">
-                      <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'حضور' : 'Attend'}</div>
+                      <div className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'حضور' : 'Attend'}</div>
                       <div className="text-xs font-bold text-content dark:text-content-dark">{d.presentDays}d</div>
                     </div>
                     {d.crm.calls > 0 && (
                       <div className="text-center min-w-[50px]">
-                        <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مكالمات' : 'Calls'}</div>
+                        <div className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مكالمات' : 'Calls'}</div>
                         <div className="text-xs font-bold text-content dark:text-content-dark">{d.crm.calls}</div>
                       </div>
                     )}
                     {d.crm.deals_closed > 0 && (
                       <div className="text-center min-w-[50px]">
-                        <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'صفقات' : 'Deals'}</div>
+                        <div className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'صفقات' : 'Deals'}</div>
                         <div className="text-xs font-bold text-brand-500">{d.crm.deals_closed}</div>
                       </div>
                     )}
@@ -350,7 +350,7 @@ export default function PerformancePage() {
                             </div>
                             <div className={`text-lg font-bold text-start`} style={{ color: kpiColor }}>
                               {kpi.actual.toLocaleString()}{kpi.unit === 'EGP' ? '' : ''}
-                              <span className="text-[11px] font-normal text-content-muted dark:text-content-muted-dark"> / {kpi.target.toLocaleString()}</span>
+                              <span className="text-xs font-normal text-content-muted dark:text-content-muted-dark"> / {kpi.target.toLocaleString()}</span>
                             </div>
                             <div className="h-[3px] rounded-sm bg-gray-200 dark:bg-white/[0.08] mt-1.5">
                               <div className="h-full rounded-sm" style={{ width: Math.min(kpi.pct, 100) + '%', background: kpiColor }} />
@@ -360,7 +360,7 @@ export default function PerformancePage() {
                       })}
                     </div>
                     {/* Source note */}
-                    <div className={`mt-2.5 text-[11px] text-content-muted dark:text-content-muted-dark text-start`}>
+                    <div className={`mt-2.5 text-xs text-content-muted dark:text-content-muted-dark text-start`}>
                        {lang === 'ar' ? 'البيانات من: CRM + الحضور' : 'Data from: CRM + Attendance'}
                     </div>
                   </div>
@@ -445,12 +445,12 @@ export default function PerformancePage() {
                   <Card key={`${potential}-${perf}`} className="p-3.5 min-h-[100px]" style={{ borderWidth: 2, borderColor: color + '30' }}>
                     <div className={`text-xs font-bold mb-2 text-start`} style={{ color }}>{label}</div>
                     {boxEmps.length === 0 ? (
-                      <div className="text-[11px] text-content-muted dark:text-content-muted-dark text-center py-2.5">—</div>
+                      <div className="text-xs text-content-muted dark:text-content-muted-dark text-center py-2.5">—</div>
                     ) : (
                       <div className="flex flex-wrap gap-1.5">
                         {boxEmps.map(d => (
                           <div key={d.emp.id} title={lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}
-                            className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-[11px] font-bold text-white cursor-pointer"
+                            className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-xs font-bold text-white cursor-pointer"
                             style={{ background: `hsl(${d.emp.id.charCodeAt(1) * 40},60%,50%)` }}
                           >
                             {(lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en).charAt(0)}
@@ -527,7 +527,7 @@ export default function PerformancePage() {
           </Card>
 
           {/* Golden Rule */}
-          <div className="px-5 py-3.5 rounded-xl bg-brand-500/[0.08] dark:bg-indigo-500/10 border border-brand-300 dark:border-indigo-500/20">
+          <div className="px-5 py-3.5 rounded-xl bg-brand-500/[0.08] dark:bg-brand-500/10 border border-brand-300 dark:border-brand-500/20">
             <div className={`text-xs font-bold text-brand-800 dark:text-brand-300 mb-2 text-start`}>
               {lang === 'ar' ? ' القاعدة الذهبية' : 'Golden Rule'}
             </div>
@@ -582,14 +582,14 @@ export default function PerformancePage() {
                         <span className="text-xs text-content dark:text-content-dark font-medium">{lang === 'ar' ? o.ar : o.en}</span>
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-bold" style={{ color: col }}>{fmt(o.actual)}{o.unit}</span>
-                          <span className="text-[11px] text-content-muted dark:text-content-muted-dark">/ {fmt(o.target)}{o.unit}</span>
+                          <span className="text-xs text-content-muted dark:text-content-muted-dark">/ {fmt(o.target)}{o.unit}</span>
                           {pct > 100 && <Badge size="sm" className="rounded-xl bg-brand-500/[0.12] text-brand-500 font-semibold">+{pct - 100}%</Badge>}
                         </div>
                       </div>
                       <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08]">
                         <div className="h-full rounded" style={{ width: disp + '%', background: `linear-gradient(90deg,${col}99,${col})` }} />
                       </div>
-                      <div className={`text-[11px] text-content-muted dark:text-content-muted-dark mt-[3px] text-start`}>{pct}%</div>
+                      <div className={`text-xs text-content-muted dark:text-content-muted-dark mt-[3px] text-start`}>{pct}%</div>
                     </div>
                   );
                 })}

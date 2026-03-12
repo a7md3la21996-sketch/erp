@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
 import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar } from 'lucide-react';
-import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton } from '../../components/ui';
+import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Select } from '../../components/ui';
 
 function AttendanceRow({ emp, attendance, isRTL }) {
   const recs = attendance[emp.employee_id] || [];
@@ -20,11 +20,11 @@ function AttendanceRow({ emp, attendance, isRTL }) {
       <Td>
         <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-8 h-8 rounded-[9px] bg-[#2B4C6F] flex items-center justify-center shrink-0">
-            <span className="text-[11px] font-bold text-white">{ini}</span>
+            <span className="text-xs font-bold text-white">{ini}</span>
           </div>
           <div className={'text-start'}>
             <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{name}</p>
-            <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{emp.employee_id}</p>
           </div>
         </div>
       </Td>
@@ -103,9 +103,9 @@ export default function AttendancePage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <select value={month} onChange={e=>setMonth(+e.target.value)} className="px-3.5 py-2 rounded-[9px] border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs cursor-pointer outline-none">
+          <Select value={month} onChange={e=>setMonth(+e.target.value)}>
             {MONTHS_AR.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
-          </select>
+          </Select>
           <ExportButton
             data={allRecords}
             filename={isRTL ? 'الحضور' : 'attendance'}
@@ -148,7 +148,7 @@ export default function AttendancePage() {
                 <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                   <Clock size={24} color='#4A7AAB' />
                 </div>
-                <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد بيانات حضور':'No Attendance Data'}</p>
+                <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد بيانات حضور':'No Attendance Data'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي بيانات حضور بعد':'No attendance records yet'}</p>
               </td></tr>
             ) : employees.map(emp => (

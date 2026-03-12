@@ -93,7 +93,7 @@ export default function RecruitmentPage() {
                     <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                       <Briefcase size={24} color='#4A7AAB' />
                     </div>
-                    <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات توظيف':'No Recruitment Requests'}</p>
+                    <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات توظيف':'No Recruitment Requests'}</p>
                     <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي طلبات توظيف بعد':'No recruitment requests added yet'}</p>
                   </div>
                 </td>
@@ -118,7 +118,7 @@ function JobRow({ job, lang, isRTL }) {
       <Td className="text-content-muted dark:text-content-muted-dark">{job.posted}</Td>
       <Td>
         <span
-          className="px-2.5 py-[3px] rounded-full text-[11px] font-semibold"
+          className="px-2.5 py-[3px] rounded-full text-xs font-semibold"
           style={{ background: `${sc}18`, color: sc, border: `1px solid ${sc}35` }}
         >
           {statusLabel(job.status, lang)}

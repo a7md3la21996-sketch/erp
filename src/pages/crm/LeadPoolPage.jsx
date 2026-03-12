@@ -298,7 +298,7 @@ export default function LeadPoolPage() {
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
               <Users size={24} color='#4A7AAB' />
             </div>
-            <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
+            <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
           </div>
         ) : visible.map((lead, idx) => {
@@ -341,7 +341,7 @@ export default function LeadPoolPage() {
                 </div>
                 <div className={`flex items-center gap-2.5 mt-0.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <span className="text-xs text-content-muted dark:text-content-muted-dark">{lead.phone}</span>
-                  <span className="text-[11px] font-medium" style={{ color: aging.color }}>
+                  <span className="text-xs font-medium" style={{ color: aging.color }}>
                     <Clock size={10} className="inline ms-0.5" />
                     {aging.label} {lang === 'ar' ? 'في الانتظار' : 'waiting'}
                   </span>
@@ -409,7 +409,7 @@ export default function LeadPoolPage() {
                 `}>
                 <div className="text-start">
                   <div className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? agent.name_ar : agent.name_en}</div>
-                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? level.ar : level.en} · وزن {level.weight}</div>
+                  <div className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? level.ar : level.en} · وزن {level.weight}</div>
                 </div>
                 <div className="text-center">
                   <div className={`text-xs font-semibold ${atCap ? 'text-red-500' : 'text-brand-500'}`}>

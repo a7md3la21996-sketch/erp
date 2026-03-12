@@ -159,7 +159,7 @@ export default function TargetTrackerPage() {
                         </div>
                         <div>
                           <div className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
-                          <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-px">{emp.role === 'sales_director' ? (lang === 'ar' ? 'مدير مبيعات' : 'Sales Director') : emp.role === 'sales_manager' ? (lang === 'ar' ? 'مدير فريق' : 'Sales Manager') : emp.role === 'team_leader' ? (lang === 'ar' ? 'قائد فريق' : 'Team Leader') : (lang === 'ar' ? 'موظف مبيعات' : 'Sales Agent')}</div>
+                          <div className="text-xs text-content-muted dark:text-content-muted-dark mt-px">{emp.role === 'sales_director' ? (lang === 'ar' ? 'مدير مبيعات' : 'Sales Director') : emp.role === 'sales_manager' ? (lang === 'ar' ? 'مدير فريق' : 'Sales Manager') : emp.role === 'team_leader' ? (lang === 'ar' ? 'قائد فريق' : 'Team Leader') : (lang === 'ar' ? 'موظف مبيعات' : 'Sales Agent')}</div>
                         </div>
                       </div>
                     </Td>
@@ -230,7 +230,7 @@ export default function TargetTrackerPage() {
                 <div className="w-5 text-center">{getRankIcon(idx + 1)}</div>
                 <div className="flex-1">
                   <div className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? emp.full_name_ar : emp.full_name_en}</div>
-                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{fmt(emp.achieved)} EGP</div>
+                  <div className="text-xs text-content-muted dark:text-content-muted-dark">{fmt(emp.achieved)} EGP</div>
                 </div>
                 <Badge
                   size="sm"

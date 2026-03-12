@@ -124,7 +124,7 @@ export default function LogCallModal({ contact, onClose }) {
       <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[420px] max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-5 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
-          <h3 className="text-[15px] font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
+          <h3 className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
           <button onClick={onClose} className="bg-transparent border-none text-xl text-content-muted dark:text-content-muted-dark cursor-pointer">×</button>
         </div>
         <div className="px-5 py-[18px]">
@@ -152,10 +152,10 @@ export default function LogCallModal({ contact, onClose }) {
             </label>
             {addFollowup && (
               <div className="mt-3">
-                <div className="text-[11px] text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'متى؟' : 'When?'}</div>
+                <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1.5">{isRTL ? 'متى؟' : 'When?'}</div>
                 <div className="flex gap-[5px] flex-wrap mb-2.5">
                   {FOLLOWUP_PRESETS.map(p => (
-                    <button key={p.key} onClick={() => handlePreset(p)} className="px-3 py-1 rounded-2xl text-[11px] cursor-pointer font-inherit transition-colors" style={{
+                    <button key={p.key} onClick={() => handlePreset(p)} className="px-3 py-1 rounded-2xl text-xs cursor-pointer font-inherit transition-colors" style={{
                       border: `1.5px solid ${followupPreset === p.key ? '#4A7AAB' : 'var(--border-edge, #E2E8F0)'}`,
                       background: followupPreset === p.key ? 'rgba(74,122,171,0.12)' : 'none',
                       color: followupPreset === p.key ? '#4A7AAB' : undefined,
@@ -168,13 +168,13 @@ export default function LogCallModal({ contact, onClose }) {
                 )}
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark font-semibold mb-1">{isRTL ? 'نوع المتابعة' : 'Follow-up type'}</div>
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1">{isRTL ? 'نوع المتابعة' : 'Follow-up type'}</div>
                     <Select size="sm" value={followupType} onChange={e => setFollowupType(e.target.value)}>
                       {FOLLOWUP_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
                     </Select>
                   </div>
                   <div className="flex-1">
-                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark font-semibold mb-1">{isRTL ? 'الأولوية' : 'Priority'}</div>
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark font-semibold mb-1">{isRTL ? 'الأولوية' : 'Priority'}</div>
                     <div className="flex gap-[3px]">
                       {priorities.map(p => (
                         <button key={p.value} onClick={() => setFollowupPriority(p.value)} className="flex-1 py-[5px] rounded-[5px] text-[10px] cursor-pointer font-inherit" style={{

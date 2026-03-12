@@ -8,7 +8,7 @@ import {
   blacklistContact, createActivity,
 } from '../services/contactsService';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton } from '../components/ui';
+import { PageSkeleton, Select } from '../components/ui';
 
 // ── Split modules ──────────────────────────────────────────────────────────
 import {
@@ -286,7 +286,7 @@ export default function ContactsPage() {
   };
 
   const selCls = 'bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg px-3 py-2 text-content dark:text-content-dark text-xs outline-none cursor-pointer';
-  const thCls = `text-[11px] text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap text-start`;
+  const thCls = `text-xs text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap text-start`;
   const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-xs text-content dark:text-content-dark text-start`;
 
   if (loading) return <PageSkeleton hasKpis={false} tableRows={8} tableCols={7} />;
@@ -308,7 +308,7 @@ export default function ContactsPage() {
           <button onClick={() => setShowImportModal(true)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
-          <button onClick={() => setMergeMode(m => !m)} className={`px-3.5 py-2.5 rounded-lg text-xs cursor-pointer flex items-center gap-1.5 ${mergeMode ? 'bg-blue-800/10 border border-blue-800 text-blue-800' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
+          <button onClick={() => setMergeMode(m => !m)} className={`px-3.5 py-2.5 rounded-lg text-xs cursor-pointer flex items-center gap-1.5 ${mergeMode ? 'bg-brand-800/10 border border-brand-800 text-brand-800' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
             <Merge size={14} /> {isRTL ? 'دمج' : 'Merge'}
           </button>
           {selectedIds.length > 0 && (
@@ -360,16 +360,16 @@ export default function ContactsPage() {
             className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
             style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
             {s.label} <span
-              className={`rounded-xl px-[7px] py-px text-[10px] mis-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+              className={`rounded-xl px-2 py-px text-[10px] mis-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
               style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
           </button>
           );
         })}
         <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-[7px] py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
+          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
         </button>
         <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${filterTemp === 'hot' ? 'border border-red-500 bg-red-500/[0.08] text-red-500' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
-          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span className={`rounded-xl px-[7px] py-px text-[10px] mis-1 ${filterTemp === 'hot' ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.hot}</span>
+          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${filterTemp === 'hot' ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.hot}</span>
         </button>
       </div>
 
@@ -380,11 +380,11 @@ export default function ContactsPage() {
           <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={searchInput} onChange={e => setSearchInput(e.target.value)}
             className={`${selCls} w-full box-border pe-8`} />
         </div>
-        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} className={selCls}>
+        <Select value={filterSource} onChange={e => setFilterSource(e.target.value)}>
           <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
           {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
-        </select>
-        <select value={filterType} onChange={e => setFilterType(e.target.value)} className={selCls}>
+        </Select>
+        <Select value={filterType} onChange={e => setFilterType(e.target.value)}>
           <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
           <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
           <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
@@ -393,40 +393,40 @@ export default function ContactsPage() {
           <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
           <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
           <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
-        </select>
-        <select value={filterDept} onChange={e => setFilterDept(e.target.value)} className={selCls}>
+        </Select>
+        <Select value={filterDept} onChange={e => setFilterDept(e.target.value)}>
           <option value="all">{isRTL ? 'كل الأقسام' : 'All Depts'}</option>
           <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
           <option value="hr">{isRTL ? 'HR' : 'HR'}</option>
           <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
           <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
           <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
-        </select>
-        <select value={filterTemp} onChange={e => setFilterTemp(e.target.value)} className={selCls}>
+        </Select>
+        <Select value={filterTemp} onChange={e => setFilterTemp(e.target.value)}>
           <option value="all">{isRTL ? 'كل الدرجات' : 'All Temps'}</option>
           {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.labelAr : v.label}</option>)}
-        </select>
-        <select value={sortBy} onChange={e => setSortBy(e.target.value)} className={selCls}>
+        </Select>
+        <Select value={sortBy} onChange={e => setSortBy(e.target.value)}>
           <option value="last_activity">{isRTL ? 'ترتيب: آخر نشاط' : 'Sort: Last Activity'}</option>
           <option value="score">{isRTL ? 'ترتيب: Lead Score' : 'Sort: Lead Score'}</option>
           <option value="name">{isRTL ? 'ترتيب: الاسم' : 'Sort: Name'}</option>
           <option value="created">{isRTL ? 'ترتيب: تاريخ الإنشاء' : 'Sort: Created Date'}</option>
           <option value="temperature">{isRTL ? 'ترتيب: الحرارة' : 'Sort: Temperature'}</option>
           <option value="stale">{isRTL ? 'ترتيب: يحتاج متابعة' : 'Sort: Needs Follow-up'}</option>
-        </select>
+        </Select>
       </div>
 
       {/* Table */}
       <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
         {mergeMode && (
-          <div className="px-4 py-2.5 bg-blue-800/[0.06] dark:bg-blue-800/[0.12] border-b border-edge dark:border-edge-dark flex items-center gap-2.5 justify-between">
-            <span className="text-xs font-semibold text-blue-800">
+          <div className="px-4 py-2.5 bg-brand-800/[0.06] dark:bg-brand-800/[0.12] border-b border-edge dark:border-edge-dark flex items-center gap-2.5 justify-between">
+            <span className="text-xs font-semibold text-brand-800">
               <Merge size={14} className="align-middle me-1.5 inline" />
               {isRTL ? `اختر جهتي اتصال للدمج (${mergeTargets.length}/2)` : `Select 2 contacts to merge (${mergeTargets.length}/2)`}
             </span>
             <div className="flex gap-2">
               {mergeTargets.length === 2 && (
-                <button onClick={() => setMergePreview(mergeTargets)} className="px-3.5 py-1.5 bg-gradient-to-br from-blue-800 to-blue-500 border-none rounded-md text-white text-xs font-semibold cursor-pointer">
+                <button onClick={() => setMergePreview(mergeTargets)} className="px-3.5 py-1.5 bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-md text-white text-xs font-semibold cursor-pointer">
                   {isRTL ? 'معاينة الدمج' : 'Preview Merge'}
                 </button>
               )}
@@ -460,7 +460,7 @@ export default function ContactsPage() {
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                       <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
                     </div>
-                    <p className="m-0 mb-1.5 font-bold text-[15px] text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
+                    <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
                     <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
                   </div>
                 </td></tr>
@@ -470,7 +470,7 @@ export default function ContactsPage() {
                 return (
                 <tr key={c.id}
                   onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < 2 ? [...prev, c.id] : prev) : setSelected(c)}
-                  className={`cursor-pointer transition-colors ${isMergeSelected ? 'bg-blue-800/[0.08]' : selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.06]'}`}
+                  className={`cursor-pointer transition-colors ${isMergeSelected ? 'bg-brand-800/[0.08]' : selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.06]'}`}
                 >
                   <td className={`${tdCls} !px-2 !py-3`} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} className="cursor-pointer" /></td>
                   <td className={`${tdCls} text-[10px] text-[#6B8DB5] dark:text-[#6B8DB5] font-mono`}>
@@ -487,7 +487,7 @@ export default function ContactsPage() {
                       </div>
                       <div>
                         <div className={`font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</div>
-                        {c.email && <div className="text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5] whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">{c.email}</div>}
+                        {c.email && <div className="text-xs text-[#6B8DB5] dark:text-[#6B8DB5] whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">{c.email}</div>}
                         {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <div className={`text-[10px] mt-0.5 font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</div>; })()}
                       </div>
                     </div>
@@ -500,14 +500,14 @@ export default function ContactsPage() {
                   <td className={tdCls}>
                     {(() => { const TempIcon = TEMP[c.temperature]?.Icon; return TempIcon ? <TempIcon size={15} color={TEMP[c.temperature]?.color} /> : '—'; })()}
                   </td>
-                  <td className={tdCls}><span className="text-[11px] bg-gray-100 dark:bg-brand-500/[0.12] border border-edge dark:border-edge-dark rounded-md px-2 py-1 text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</span></td>
+                  <td className={tdCls}><span className="text-xs bg-gray-100 dark:bg-brand-500/[0.12] border border-edge dark:border-edge-dark rounded-md px-2 py-1 text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</span></td>
                   <td className={tdCls} onClick={e => e.stopPropagation()}>
                     {isAdmin && c.contact_type === 'lead' ? (
-                      <select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} className="text-[11px] bg-transparent border border-brand-500/10 rounded-md text-brand-500 px-1.5 py-1 cursor-pointer outline-none">
+                      <Select value={c.stage || ''} onChange={e => handleStageChange(c.id, e.target.value)} className="text-xs bg-transparent border-brand-500/10 text-brand-500 px-1.5 py-1">
                         {Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-                      </select>
+                      </Select>
                     ) : c.stage ? <Chip label={stageLabel(c.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
-                    : c.cold_status ? <span className="text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">{coldLabel(c.cold_status, isRTL)}</span>
+                    : c.cold_status ? <span className="text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">{coldLabel(c.cold_status, isRTL)}</span>
                     : <span className="text-brand-500/30 dark:text-brand-500/30">—</span>}
                   </td>
                   <td className={tdCls} onClick={e => e.stopPropagation()}>
@@ -597,7 +597,7 @@ export default function ContactsPage() {
               <div className="bg-gradient-to-br from-[#065F46] to-emerald-500 px-6 py-4 flex justify-between items-center">
                 <div className="flex items-center gap-2.5">
                   <PhoneCall size={18} color="#fff" />
-                  <span className="text-white font-bold text-[15px]">{isRTL ? 'وضع الاتصال' : 'Call Mode'}</span>
+                  <span className="text-white font-bold text-sm">{isRTL ? 'وضع الاتصال' : 'Call Mode'}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-white/80 text-xs">{progress}/{total}</span>
@@ -609,7 +609,7 @@ export default function ContactsPage() {
               </div>
               <div className="p-6">
                 <div className="flex items-center gap-3.5 mb-5">
-                  <div className="w-[50px] h-[50px] rounded-[14px] flex items-center justify-center text-lg font-bold text-white" style={{ background: avatarColor(current.id) }}>
+                  <div className="w-[50px] h-[50px] rounded-xl flex items-center justify-center text-lg font-bold text-white" style={{ background: avatarColor(current.id) }}>
                     {initials(current.full_name)}
                   </div>
                   <div className="flex-1">
@@ -636,7 +636,7 @@ export default function ContactsPage() {
                       { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not Interested', color: '#6b7280' },
                     ].map(r => (
                       <button key={r.value} onClick={() => setBatchCallResult(r.value)}
-                        className={`px-3 py-1.5 rounded-2xl text-[11px] cursor-pointer ${batchCallResult === r.value ? 'font-bold' : 'font-normal bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                        className={`px-3 py-1.5 rounded-2xl text-xs cursor-pointer ${batchCallResult === r.value ? 'font-bold' : 'font-normal bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
                         style={batchCallResult === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>{r.label}</button>
                     ))}
                   </div>
@@ -722,7 +722,7 @@ export default function ContactsPage() {
                   localStorage.setItem('platform_contacts', JSON.stringify(updatedContacts));
                   toast.success(isRTL ? 'تم دمج جهتي الاتصال بنجاح' : 'Contacts merged successfully');
                   setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
-                }} className="px-5 py-2.5 bg-gradient-to-br from-blue-800 to-blue-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">
+                }} className="px-5 py-2.5 bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">
                   {isRTL ? 'تأكيد الدمج' : 'Confirm Merge'}
                 </button>
               </div>
@@ -751,7 +751,7 @@ export default function ContactsPage() {
         <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
           <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[380px]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="m-0 text-content dark:text-content-dark text-[15px] font-bold">{isRTL ? `تغيير المرحلة (${selectedIds.length})` : `Change Stage (${selectedIds.length})`}</h3>
+              <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL ? `تغيير المرحلة (${selectedIds.length})` : `Change Stage (${selectedIds.length})`}</h3>
               <button onClick={() => setBulkStageModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={16} /></button>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -771,7 +771,7 @@ export default function ContactsPage() {
         <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
           <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[380px]">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="m-0 text-content dark:text-content-dark text-[15px] font-bold">{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
+              <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
               <button onClick={() => setBulkReassignModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={16} /></button>
             </div>
             <div className="flex flex-col gap-1.5">

@@ -50,12 +50,12 @@ function RequestRow({ req, i, isRTL, lang }) {
         <div className="w-2 h-2 rounded-full shrink-0" style={{ background: req.color }} />
         <div className="text-start">
           <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{req.label}</p>
-          <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{req.date}</p>
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{req.date}</p>
         </div>
       </div>
       <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <span
-          className="text-[11px] font-semibold px-2 py-0.5 rounded-xl"
+          className="text-xs font-semibold px-2 py-0.5 rounded-xl"
           style={{ background: `${req.color}18`, color: req.color }}
         >
           {req.status==='pending'?(lang==='ar'?'معلق':'Pending'):(lang==='ar'?'مكتمل':'Done')}

@@ -46,7 +46,7 @@ function ActivityTypesSettings() {
   return (
     <Card className="p-5 mb-5">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="m-0 text-[15px] font-bold text-content dark:text-content-dark">
+        <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">
           {isRTL ? 'أنواع الأنشطة' : 'Activity Types'}
         </h3>
         <div className="flex gap-2">
@@ -95,7 +95,7 @@ function ActivityTypesSettings() {
 function ProfileSection({ profile, isRTL }) {
   return (
     <Card className="p-5 mb-5">
-      <h3 className="m-0 mb-4 text-[15px] font-bold text-content dark:text-content-dark flex items-center gap-2">
+      <h3 className="m-0 mb-4 text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
         <User size={16} className="text-brand-500" />{isRTL ? 'الملف الشخصي' : 'Profile'}
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -116,7 +116,7 @@ function ProfileSection({ profile, isRTL }) {
           <Input value={profile?.role || ''} readOnly />
         </div>
       </div>
-      <p className="mt-3 mb-0 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'لتعديل البيانات تواصل مع المدير' : 'Contact admin to update profile'}</p>
+      <p className="mt-3 mb-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'لتعديل البيانات تواصل مع المدير' : 'Contact admin to update profile'}</p>
     </Card>
   );
 }
@@ -124,7 +124,7 @@ function ProfileSection({ profile, isRTL }) {
 function AppearanceSection({ isRTL, isDark, toggleTheme, handleLangToggle, lang }) {
   return (
     <Card className="p-5 mb-5">
-      <h3 className="m-0 mb-4 text-[15px] font-bold text-content dark:text-content-dark flex items-center gap-2">
+      <h3 className="m-0 mb-4 text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
         <Palette size={16} className="text-brand-500" />{isRTL ? 'المظهر' : 'Appearance'}
       </h3>
       <div className="flex gap-3">

@@ -74,7 +74,7 @@ function HandoverCard({ ho, isRTL, isDark }) {
     >
       <div className={`flex justify-between items-start mb-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="text-start">
-          <h4 className="m-0 text-[15px] font-bold text-content dark:text-content-dark">{isRTL ? ho.client_ar : ho.client_en}</h4>
+          <h4 className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? ho.client_ar : ho.client_en}</h4>
           <p className="m-0 mt-0.5 text-xs text-content-muted dark:text-content-muted-dark">{ho.deal_number} — {ho.unit_code}</p>
         </div>
         <StatusBadgeStatic status={ho.status} config={HANDOVER_STATUS_CONFIG} isRTL={isRTL} />
@@ -115,7 +115,7 @@ function HandoverCard({ ho, isRTL, isDark }) {
           </a>
         </div>
       )}
-      {ho.notes_ar && <p className={`m-0 mt-2.5 text-[11px] text-content-muted dark:text-content-muted-dark text-start`}>{ho.notes_ar}</p>}
+      {ho.notes_ar && <p className={`m-0 mt-2.5 text-xs text-content-muted dark:text-content-muted-dark text-start`}>{ho.notes_ar}</p>}
     </div>
   );
 }
@@ -450,7 +450,7 @@ export default function OperationsPage() {
           <div className="flex rounded-lg overflow-hidden h-7">
             {pipelineCounts.filter(p => p.count > 0).map(p => (
               <div key={p.key} title={`${p.label}: ${p.count}`} className="flex items-center justify-center transition-all duration-300" style={{ flex: p.count, background: p.color, minWidth: p.count > 0 ? 32 : 0 }}>
-                <span className="text-[11px] font-bold text-white">{p.count}</span>
+                <span className="text-xs font-bold text-white">{p.count}</span>
               </div>
             ))}
           </div>
@@ -458,7 +458,7 @@ export default function OperationsPage() {
             {pipelineCounts.filter(p => p.count > 0).map(p => (
               <div key={p.key} className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{p.label} ({p.count})</span>
+                <span className="text-xs text-content-muted dark:text-content-muted-dark">{p.label} ({p.count})</span>
               </div>
             ))}
           </div>
@@ -479,7 +479,7 @@ export default function OperationsPage() {
                   </div>
                   <div className={`flex-1 min-w-0 text-start`}>
                     <p className="m-0 text-xs text-content dark:text-content-dark leading-normal">{isRTL ? act.description_ar : act.description_en}</p>
-                    <p className="m-0 mt-0.5 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? act.user_ar : act.user_en} — {timeStr}</p>
+                    <p className="m-0 mt-0.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? act.user_ar : act.user_en} — {timeStr}</p>
                   </div>
                 </div>
               );
@@ -515,7 +515,7 @@ export default function OperationsPage() {
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'الوحدة':'Unit', isRTL?'القيمة':'Value', isRTL?'المستندات':'Docs', isRTL?'الحالة':'Status', isRTL?'':''].map((h, i) => (
-                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-xs uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -540,7 +540,7 @@ export default function OperationsPage() {
                           <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: ACOLORS[deal.id.charCodeAt(5) % ACOLORS.length] }}>{initials(isRTL ? deal.client_ar : deal.client_en)}</div>
                           <div className="text-start">
                             <div className="font-semibold text-content dark:text-content-dark">{isRTL ? deal.client_ar : deal.client_en}</div>
-                            <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? deal.agent_ar : deal.agent_en}</div>
+                            <div className="text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? deal.agent_ar : deal.agent_en}</div>
                           </div>
                         </div>
                       </td>
@@ -598,7 +598,7 @@ export default function OperationsPage() {
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'الصفقة':'Deal', isRTL?'العميل':'Client', isRTL?'المشروع':'Project', isRTL?'القسط':'Inst.', isRTL?'المبلغ':'Amount', isRTL?'تاريخ الاستحقاق':'Due Date', isRTL?'الحالة':'Status', isRTL?'إيصال':'Receipt'].map((h, i) => (
-                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-xs uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -627,7 +627,7 @@ export default function OperationsPage() {
                         {inst.receipt ? inst.receipt : ['due','overdue'].includes(inst.status) ? (
                           <button
                             onClick={(e) => { e.stopPropagation(); recordPayment(inst.id); }}
-                            className="px-2.5 py-1 rounded-md border-none bg-brand-800 text-white text-[11px] font-semibold cursor-pointer font-cairo whitespace-nowrap"
+                            className="px-2.5 py-1 rounded-md border-none bg-brand-800 text-white text-xs font-semibold cursor-pointer font-cairo whitespace-nowrap"
                           >
                             {isRTL ? 'تأكيد الدفع' : 'Confirm'}
                           </button>
@@ -699,7 +699,7 @@ export default function OperationsPage() {
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08] border-b-2 border-edge dark:border-edge-dark">
                   {[isRTL?'#':'#', isRTL?'العميل':'Client', isRTL?'النوع':'Type', isRTL?'الموضوع':'Subject', isRTL?'الأولوية':'Priority', isRTL?'مسؤول':'Assigned', isRTL?'التاريخ':'Date', isRTL?'الحالة':'Status', isRTL?'التقييم':'Rating'].map((h, i) => (
-                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-[11px] uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
+                    <th key={i} className={`px-3.5 py-2.5 font-bold text-content-muted dark:text-content-muted-dark text-xs uppercase tracking-wider whitespace-nowrap text-start`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -718,13 +718,13 @@ export default function OperationsPage() {
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-semibold">{tk.ticket_number}</td>
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark font-semibold text-content dark:text-content-dark">{isRTL ? tk.client_ar : tk.client_en}</td>
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark">
-                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold" style={{ background: typeCfg.color + '15', color: typeCfg.color }}>
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold" style={{ background: typeCfg.color + '15', color: typeCfg.color }}>
                           <TypeIcon size={12} /> {isRTL ? typeCfg.ar : typeCfg.en}
                         </div>
                       </td>
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content dark:text-content-dark max-w-[200px] overflow-hidden text-ellipsis whitespace-nowrap">{isRTL ? tk.subject_ar : tk.subject_en}</td>
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark">
-                        <span className="text-[11px] font-semibold" style={{ color: prioCfg.color }}>{isRTL ? prioCfg.ar : prioCfg.en}</span>
+                        <span className="text-xs font-semibold" style={{ color: prioCfg.color }}>{isRTL ? prioCfg.ar : prioCfg.en}</span>
                       </td>
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark">{isRTL ? tk.assigned_ar : tk.assigned_en}</td>
                       <td className="px-3.5 py-3 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark whitespace-nowrap">{tk.created_at}</td>
@@ -855,11 +855,11 @@ export default function OperationsPage() {
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="text-xs font-semibold text-content dark:text-content-dark">{isRTL?inst.client_ar:inst.client_en}</div>
-                        <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{inst.deal_number} — {isRTL?`قسط ${inst.num}/${inst.total}`:`Inst. ${inst.num}/${inst.total}`}</div>
+                        <div className="text-xs text-content-muted dark:text-content-muted-dark">{inst.deal_number} — {isRTL?`قسط ${inst.num}/${inst.total}`:`Inst. ${inst.num}/${inst.total}`}</div>
                       </div>
                       <div className="text-end">
                         <div className="text-xs font-bold text-content dark:text-content-dark">{fmtMoneyShort(inst.amount)}</div>
-                        <div className={`text-[11px] ${isOv ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>{inst.due_date}</div>
+                        <div className={`text-xs ${isOv ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>{inst.due_date}</div>
                       </div>
                     </div>
                   </div>

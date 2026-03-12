@@ -160,7 +160,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
       {items.map(s => (
         <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: s.bg, border: `1px solid ${s.border}` }}>
           <div className="text-2xl font-bold" style={{ color: s.color }}>{s.num}</div>
-          <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-1">{s.icon ? `${s.icon} ` : ''}{s.label}</div>
+          <div className="text-xs text-content-muted dark:text-content-muted-dark mt-1">{s.icon ? `${s.icon} ` : ''}{s.label}</div>
         </div>
       ))}
     </div>
@@ -232,20 +232,20 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 <table className="w-full border-collapse">
                   <thead><tr>
                     {[isRTL ? 'الاسم' : 'Name', isRTL ? 'الرقم' : 'Phone', isRTL ? 'الحالة' : 'Status', isRTL ? 'السبب' : 'Note'].map((h, i) => (
-                      <th key={i} className={`text-content-muted dark:text-content-muted-dark py-2 px-2.5 text-start border-b border-edge dark:border-edge-dark text-[11px] font-semibold`}>{h}</th>
+                      <th key={i} className={`text-content-muted dark:text-content-muted-dark py-2 px-2.5 text-start border-b border-edge dark:border-edge-dark text-xs font-semibold`}>{h}</th>
                     ))}
                   </tr></thead>
                   <tbody>
                     {displayRows.map((r, i) => (
                       <tr key={i}>
                         <td className="text-content dark:text-content-dark py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-xs">{r.full_name || '\u2014'}</td>
-                        <td className="text-content dark:text-content-dark py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-[11px] font-mono">{r.phone || '\u2014'}</td>
+                        <td className="text-content dark:text-content-dark py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-xs font-mono">{r.phone || '\u2014'}</td>
                         <td className="text-content dark:text-content-dark py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-xs">
-                          {r._status === 'new' && <span className="px-2 py-[3px] rounded-full bg-emerald-500/15 text-emerald-500 text-[11px]">{'\u2705'} {isRTL ? 'جديد' : 'New'}</span>}
-                          {r._status === 'opportunity' && <span className="px-2 py-[3px] rounded-full bg-brand-500/15 text-brand-500 text-[11px]">{'\u{1F504}'} {isRTL ? 'فرصة' : 'Opp'}</span>}
-                          {r._status === 'error' && <span className="px-2 py-[3px] rounded-full bg-red-500/15 text-red-500 text-[11px]">{'\u274C'} {isRTL ? 'خطأ' : 'Error'}</span>}
+                          {r._status === 'new' && <span className="px-2 py-[3px] rounded-full bg-emerald-500/15 text-emerald-500 text-xs">{'\u2705'} {isRTL ? 'جديد' : 'New'}</span>}
+                          {r._status === 'opportunity' && <span className="px-2 py-[3px] rounded-full bg-brand-500/15 text-brand-500 text-xs">{'\u{1F504}'} {isRTL ? 'فرصة' : 'Opp'}</span>}
+                          {r._status === 'error' && <span className="px-2 py-[3px] rounded-full bg-red-500/15 text-red-500 text-xs">{'\u274C'} {isRTL ? 'خطأ' : 'Error'}</span>}
                         </td>
-                        <td className="py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-[11px] text-content-muted dark:text-content-muted-dark">
+                        <td className="py-2 px-2.5 border-b border-gray-100 dark:border-brand-500/[0.06] text-xs text-content-muted dark:text-content-muted-dark">
                           {r._status === 'opportunity' ? (isRTL ? `موجود: ${r._existingName}` : `Exists: ${r._existingName}`) : r._reason || '\u2014'}
                         </td>
                       </tr>

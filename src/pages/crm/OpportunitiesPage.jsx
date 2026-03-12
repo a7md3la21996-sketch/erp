@@ -104,7 +104,7 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect }) {
           <div className="min-w-0">
             <div className="text-sm font-bold text-content dark:text-content-dark truncate">{contactName}</div>
             {opp.contacts?.phone && (
-              <div className="text-[11px] text-content-muted dark:text-content-muted-dark" dir="ltr">{opp.contacts.phone}</div>
+              <div className="text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">{opp.contacts.phone}</div>
             )}
           </div>
         </div>
@@ -161,13 +161,13 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect }) {
           <Banknote size={11} />{fmtBudget(opp.budget)} {isRTL ? "ج" : "EGP"}
         </div>
         <div
-          className="rounded-md px-2.5 py-1 text-[11px] font-semibold"
+          className="rounded-md px-2.5 py-1 text-xs font-semibold"
           style={{ background: temp.bg, color: temp.color }}
         >
           {isRTL ? temp.label_ar : temp.label_en}
         </div>
         <div
-          className="rounded-md px-2.5 py-1 text-[11px] font-semibold"
+          className="rounded-md px-2.5 py-1 text-xs font-semibold"
           style={{ background: `${prio.color}18`, color: prio.color }}
         >
           {isRTL ? prio.label_ar : prio.label_en}
@@ -176,15 +176,15 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect }) {
 
       {/* Footer: Agent + Last Activity */}
       <div className="flex items-center justify-between pt-2 border-t border-edge dark:border-edge-dark">
-        <div className="flex items-center gap-1.5 text-[11px] text-content-muted dark:text-content-muted-dark">
+        <div className="flex items-center gap-1.5 text-xs text-content-muted dark:text-content-muted-dark">
           <User size={11} />{agentName}
         </div>
-        <div className="text-[11px] font-bold" style={{ color: act.color }}>{act.text}</div>
+        <div className="text-xs font-bold" style={{ color: act.color }}>{act.text}</div>
       </div>
 
       {/* Notes */}
       {opp.notes && (
-        <div className="text-[11px] text-content-muted dark:text-content-muted-dark truncate -mt-1">{opp.notes}</div>
+        <div className="text-xs text-content-muted dark:text-content-muted-dark truncate -mt-1">{opp.notes}</div>
       )}
     </div>
   );
@@ -262,14 +262,14 @@ function ContactSearch({ isRTL, value, onSelect }) {
                 style={{ textAlign: isRTL ? 'right' : 'left' }}
               >
                 <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
                   style={{ background: avatarColor(c.id) }}
                 >
                   {initials(c.full_name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold truncate">{c.full_name}</div>
-                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark" dir="ltr">
+                  <div className="text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">
                     {c.phone || c.email || ''}
                   </div>
                 </div>
@@ -605,7 +605,7 @@ export default function OpportunitiesPage() {
           <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
             <TrendingUp size={24} className="text-brand-500" />
           </div>
-          <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">
+          <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">
             {isRTL ? 'لا توجد فرص بيع' : 'No Opportunities Found'}
           </p>
           <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark">
@@ -632,7 +632,7 @@ export default function OpportunitiesPage() {
         <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center text-sm">🎉</div>
         <div>
           <div>{isRTL ? 'تم إنشاء صفقة جديدة!' : 'Deal created!'}</div>
-          <div className="text-[11px] opacity-85 mt-0.5">{dealCreatedToast} → {isRTL ? 'العمليات' : 'Operations'}</div>
+          <div className="text-xs opacity-85 mt-0.5">{dealCreatedToast} → {isRTL ? 'العمليات' : 'Operations'}</div>
         </div>
         <button
           onClick={() => setDealCreatedToast(null)}
@@ -657,7 +657,7 @@ export default function OpportunitiesPage() {
           <div className="px-6 py-5 border-b border-edge dark:border-edge-dark flex items-center justify-between bg-[#F8FAFC] dark:bg-surface-bg-dark">
             <div className="flex items-center gap-3">
               <div
-                className="w-11 h-11 rounded-full flex items-center justify-center text-[15px] font-bold text-white"
+                className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold text-white"
                 style={{ background: avatarColor(selectedOpp.contact_id || selectedOpp.id) }}
               >
                 {initials(getContactName(selectedOpp))}
@@ -688,7 +688,7 @@ export default function OpportunitiesPage() {
                 { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
               ].map((item, i) => (
                 <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                  <p className="m-0 mb-1 text-[11px] text-content-muted dark:text-content-muted-dark">{item.label}</p>
+                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{item.label}</p>
                   <p className="m-0 text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
                 </div>
               ))}
@@ -697,7 +697,7 @@ export default function OpportunitiesPage() {
             {/* Project */}
             {getProjectName(selectedOpp, lang) && (
               <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                <p className="m-0 mb-1 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
+                <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
                 <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{getProjectName(selectedOpp, lang)}</p>
               </div>
             )}
@@ -705,7 +705,7 @@ export default function OpportunitiesPage() {
             {/* Notes */}
             {selectedOpp.notes && (
               <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                <p className="m-0 mb-1 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
+                <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
                 <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
               </div>
             )}
@@ -722,7 +722,7 @@ export default function OpportunitiesPage() {
                     <button
                       key={s.id}
                       onClick={() => handleMove(selectedOpp.id, s.id)}
-                      className={`px-3 py-1.5 rounded-lg text-[11px] cursor-pointer font-cairo transition-all duration-150 border ${
+                      className={`px-3 py-1.5 rounded-lg text-xs cursor-pointer font-cairo transition-all duration-150 border ${
                         isActive ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:bg-gray-50 dark:hover:bg-brand-500/10'
                       }`}
                       style={isActive ? { borderColor: s.color, background: `${s.color}18`, color: s.color } : {}}

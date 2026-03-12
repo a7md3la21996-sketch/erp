@@ -16,7 +16,7 @@ const MOCK_CASES = [
 function DynBadge({ label, color = '#4A7AAB' }) {
   return (
     <span
-      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
       style={{ background: color + '18', color, border: `1px solid ${color}35` }}
     >
       {label}
@@ -107,7 +107,7 @@ export default function DisciplinaryPage() {
                     <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                       <ShieldAlert size={24} color="#4A7AAB" />
                     </div>
-                    <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مخالفات تأديبية':'No Disciplinary Records'}</p>
+                    <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مخالفات تأديبية':'No Disciplinary Records'}</p>
                     <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي مخالفات':'No disciplinary records found'}</p>
                   </div>
                 </td>

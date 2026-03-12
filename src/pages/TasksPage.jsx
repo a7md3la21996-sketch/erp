@@ -133,7 +133,7 @@ export default function TasksPage() {
           { label: lang==='ar'?'مكتملة':'Done',   value: stats.done,    color: '#4A7AAB' },
         ].map((s,i) => (
           <Card key={i} className="px-4 py-3">
-            <div className="text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{s.label}</div>
+            <div className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{s.label}</div>
             <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
           </Card>
         ))}
@@ -211,7 +211,7 @@ export default function TasksPage() {
                 <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                   <CheckSquare size={24} className="text-brand-500" />
                 </div>
-                <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
+                <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي مهام بعد أو جرّب تغيير الفلتر':'No tasks found, try changing the filter'}</p>
               </div>
             ) : filtered.map((task, idx) => {
@@ -257,7 +257,7 @@ export default function TasksPage() {
                     {lang==='ar'?stDef?.ar:stDef?.en}
                   </Badge>
                   {task.contact_name && (
-                    <span className="text-[11px] text-brand-500 flex items-center gap-[3px]">
+                    <span className="text-xs text-brand-500 flex items-center gap-[3px]">
                       <User size={10} /> {task.contact_name}
                     </span>
                   )}
@@ -268,7 +268,7 @@ export default function TasksPage() {
                   )}
                 </div>
                 <div className={`flex items-center gap-2.5 mt-[3px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <span className={`text-[11px] flex items-center gap-[3px] ${
+                  <span className={`text-xs flex items-center gap-[3px] ${
                     due.overdue && !isDone
                       ? 'text-red-500 font-semibold'
                       : 'text-content-muted dark:text-content-muted-dark font-normal'
@@ -276,7 +276,7 @@ export default function TasksPage() {
                     <Clock size={10} /> {due.label}
                   </span>
                   {task.assigned_to_name_ar && (
-                    <span className="text-[11px] text-content-muted dark:text-content-muted-dark">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">
                       {lang==='ar'?task.assigned_to_name_ar:task.assigned_to_name_en}
                     </span>
                   )}
@@ -292,7 +292,7 @@ export default function TasksPage() {
               {/* Actions */}
               <div className="flex gap-1 shrink-0">
                 {task.status !== 'in_progress' && task.status !== 'done' && (
-                  <Button variant="secondary" size="sm" onClick={() => handleStatus(task, 'in_progress')} className="!text-[11px] !px-[9px] !py-1">
+                  <Button variant="secondary" size="sm" onClick={() => handleStatus(task, 'in_progress')} className="!text-xs !px-[9px] !py-1">
                     {lang==='ar'?'جارية':'Start'}
                   </Button>
                 )}

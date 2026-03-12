@@ -49,7 +49,7 @@ function ActivityForm({ contactId, onSave, onCancel }) {
     <div className="bg-brand-500/[0.07] border border-brand-500/20 rounded-xl p-3.5 mb-3">
       <div className="flex items-center gap-1.5 mb-2.5 px-2.5 py-[5px] bg-brand-500/[0.08] rounded-md">
         <Clock size={11} className="text-content-muted dark:text-content-muted-dark" />
-        <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{now}</span>
+        <span className="text-xs text-content-muted dark:text-content-muted-dark">{now}</span>
       </div>
       <div className="grid grid-cols-2 gap-2.5 mb-2.5">
         <Select size="sm" value={form.type} onChange={e => set('type', e.target.value)}>
@@ -187,7 +187,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </div>
             </div>
             <div className="flex gap-2 items-center">
-              <Button variant="secondary" size="sm" onClick={() => setShowEdit(true)} className="!text-[11px] !px-2.5 !py-1">
+              <Button variant="secondary" size="sm" onClick={() => setShowEdit(true)} className="!text-xs !px-2.5 !py-1">
                 <Pencil size={12} /> {isRTL ? 'تعديل' : 'Edit'}
               </Button>
               <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1"><X size={18} /></button>
@@ -230,11 +230,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             <div>
               <div className="grid grid-cols-2 gap-2.5 mb-4">
                 <div className="bg-brand-500/[0.07] rounded-xl p-3 border border-brand-500/[0.12]">
-                  <div className="text-content-muted dark:text-content-muted-dark text-[11px] mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
+                  <div className="text-content-muted dark:text-content-muted-dark text-xs mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
                   <ScorePill score={contact.lead_score} />
                 </div>
                 <div className="rounded-xl p-3" style={{ background: tempInfo?.bg, border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
-                  <div className="text-content-muted dark:text-content-muted-dark text-[11px] mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
+                  <div className="text-content-muted dark:text-content-muted-dark text-xs mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
                   {tempInfo?.Icon && <div className="flex items-center gap-1.5"><tempInfo.Icon size={14} color={tempInfo.color} /><span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div>}
                 </div>
               </div>
@@ -265,7 +265,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               ))}
               {contact.notes && (
                 <div className="mt-3 px-3.5 py-2.5 bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl text-xs text-content-muted dark:text-content-muted-dark">
-                  <div className="font-semibold mb-1 text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'ملاحظات' : 'Notes'}</div>
+                  <div className="font-semibold mb-1 text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'ملاحظات' : 'Notes'}</div>
                   {contact.notes}
                 </div>
               )}
@@ -339,12 +339,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       <span className="text-content dark:text-content-dark text-xs font-semibold">{act.description}</span>
                     </div>
                   </div>
-                  <div className="flex justify-between text-[11px] text-content-muted dark:text-content-muted-dark">
+                  <div className="flex justify-between text-xs text-content-muted dark:text-content-muted-dark">
                     <span>{isRTL ? (act.users?.full_name_ar || 'مجهول') : (act.users?.full_name_en || act.users?.full_name_ar || 'Unknown')}</span>
                     <span>{act.created_at?.slice(0, 10)}</span>
                   </div>
                   {act.next_action && (
-                    <div className="mt-2 px-2.5 py-1.5 bg-brand-500/[0.08] rounded-md text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">
+                    <div className="mt-2 px-2.5 py-1.5 bg-brand-500/[0.08] rounded-md text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">
                       › {act.next_action}{act.next_action_date ? ` — ${act.next_action_date}` : ''}
                     </div>
                   )}
@@ -369,17 +369,17 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       className="px-2.5 py-[7px] rounded-[7px] border border-brand-500/20 bg-[#f8fafc] dark:bg-[rgba(15,30,45,0.6)] text-content dark:text-content-dark text-xs outline-none"
                       dir={isRTL ? 'rtl' : 'ltr'} />
                     <div className="flex gap-1.5">
-                      <select value={newTask.type} onChange={e => setNewTask(f => ({...f, type: e.target.value}))}
-                        className="flex-1 px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[11px] outline-none">
+                      <Select value={newTask.type} onChange={e => setNewTask(f => ({...f, type: e.target.value}))}
+                        className="flex-1">
                         {Object.entries(TASK_TYPES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-                      </select>
-                      <select value={newTask.priority} onChange={e => setNewTask(f => ({...f, priority: e.target.value}))}
-                        className="flex-1 px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[11px] outline-none">
+                      </Select>
+                      <Select value={newTask.priority} onChange={e => setNewTask(f => ({...f, priority: e.target.value}))}
+                        className="flex-1">
                         {Object.entries(TASK_PRIORITIES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-                      </select>
+                      </Select>
                     </div>
                     <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
-                      className="px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[11px] outline-none" />
+                      className="px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
                     <Button size="sm" onClick={async () => {
                       if (!newTask.title.trim() || !newTask.due_date) return;
                       setSavingTask(true);
@@ -444,9 +444,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </Button>
               {showOppModal && (
                 <div onClick={()=>setShowOppModal(false)} className="fixed inset-0 z-[1100] flex items-center justify-center p-5 bg-black/50">
-                  <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e=>e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[14px] p-6 w-full max-w-[420px] border border-edge dark:border-edge-dark">
+                  <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e=>e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-xl p-6 w-full max-w-[420px] border border-edge dark:border-edge-dark">
                     <div className="flex justify-between items-center mb-5">
-                      <h3 className="m-0 text-content dark:text-content-dark text-[15px] font-bold">{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
+                      <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
                       <button onClick={()=>setShowOppModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer text-lg">✕</button>
                     </div>
                     <div className="flex flex-col gap-3">
@@ -469,10 +469,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       ].map(f => (
                         <div key={f.key}>
                           <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start`}>{isRTL?f.label_ar:f.label_en}</label>
-                          <select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs outline-none cursor-pointer box-border font-inherit">
+                          <Select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
+                            className="w-full">
                             {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.en}</option>)}
-                          </select>
+                          </Select>
                         </div>
                       ))}
                     </div>
@@ -500,7 +500,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <span className="text-content dark:text-content-dark text-xs font-semibold">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
                     <Chip label={stageLabel(opp.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                   </div>
-                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark flex flex-col gap-1">
+                  <div className="text-xs text-content-muted dark:text-content-muted-dark flex flex-col gap-1">
                     {opp.projects?.name_ar && <span>{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</span>}
                     <span>{isRTL ? (opp.users?.full_name_ar || '—') : (opp.users?.full_name_en || opp.users?.full_name_ar || '—')}</span>
                     {opp.next_follow_up && <span>{isRTL ? 'متابعة' : 'Follow-up'}: {opp.next_follow_up}</span>}

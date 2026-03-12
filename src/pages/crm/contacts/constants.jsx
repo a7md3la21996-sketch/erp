@@ -95,7 +95,7 @@ export const getPhoneInfo = (p) => {
 export function Chip({ label, color, bg, size = 'sm' }) {
   return (
     <span
-      className={`inline-block rounded-full font-bold whitespace-nowrap ${size === 'sm' ? 'text-[11px] px-2.5 py-0.5' : 'text-xs px-3 py-[3px]'}`}
+      className={`inline-block rounded-full font-bold whitespace-nowrap ${size === 'sm' ? 'text-xs px-2.5 py-0.5' : 'text-xs px-3 py-[3px]'}`}
       style={{ color, background: bg }}
     >{label}</span>
   );
@@ -109,7 +109,7 @@ export function ScorePill({ score }) {
       <div className="flex-1 h-1 bg-brand-500/15 rounded-sm overflow-hidden">
         <div className="h-full rounded-sm" style={{ width: `${s}%`, background: color }} />
       </div>
-      <span className="text-[11px] font-bold min-w-[20px]" style={{ color }}>{s}</span>
+      <span className="text-xs font-bold min-w-[20px]" style={{ color }}>{s}</span>
     </div>
   );
 }
@@ -134,13 +134,13 @@ export function PhoneCell({ phone, small = false }) {
   return (
     <div className="flex items-center gap-1.5 cursor-pointer py-[3px]" dir="ltr"
       onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}>
-      <span className={`font-mono whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] ${small ? 'text-[11px] text-gray-400' : 'text-xs text-content dark:text-content-dark'}`}
+      <span className={`font-mono whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] ${small ? 'text-xs text-gray-400 dark:text-gray-500' : 'text-xs text-content dark:text-content-dark'}`}
         style={{ letterSpacing: revealed ? 0 : 1 }}>
         {revealed ? phone : masked}
       </span>
       {revealed && (
         <button onClick={handleCopy}
-          className={`px-2 py-0.5 rounded text-[11px] cursor-pointer font-semibold border ${copied ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500' : 'bg-brand-500/15 border-brand-500/30 text-brand-400'}`}>
+          className={`px-2 py-0.5 rounded text-xs cursor-pointer font-semibold border ${copied ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500' : 'bg-brand-500/15 border-brand-500/30 text-brand-400'}`}>
           {copied ? (isRTL ? '✓ تم' : '✓ copied') : (isRTL ? 'نسخ' : 'copy')}
         </button>
       )}

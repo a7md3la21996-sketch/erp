@@ -68,7 +68,7 @@ export default function TrainingPage() {
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
               <GraduationCap size={24} color='#4A7AAB' />
             </div>
-            <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد برامج تدريبية':'No Training Programs'}</p>
+            <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد برامج تدريبية':'No Training Programs'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي برامج تدريبية بعد':'No training programs added yet'}</p>
           </div>
         ) : programs.map(prog => {
@@ -77,8 +77,8 @@ export default function TrainingPage() {
             <Card key={prog.id} hover className="p-5">
               <div className={`flex justify-between items-start mb-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div className={'text-start'}>
-                  <p className="m-0 mb-1 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?prog.title:prog.title_en}</p>
-                  <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{prog.duration} {lang==='ar'?'ساعة':'hrs'} • {prog.start}</p>
+                  <p className="m-0 mb-1 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?prog.title:prog.title_en}</p>
+                  <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{prog.duration} {lang==='ar'?'ساعة':'hrs'} • {prog.start}</p>
                 </div>
                 <Badge className="shrink-0" style={{ background:statusColor(prog.status)+'18', color:statusColor(prog.status), border:`1px solid ${statusColor(prog.status)}35` }}>{statusLabel(prog.status,lang)}</Badge>
               </div>

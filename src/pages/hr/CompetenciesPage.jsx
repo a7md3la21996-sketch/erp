@@ -66,7 +66,7 @@ export default function CompetenciesPage() {
                 <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                   <Star size={24} color='#4A7AAB' />
                 </div>
-                <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد كفاءات مسجلة':'No Competencies Found'}</p>
+                <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد كفاءات مسجلة':'No Competencies Found'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي كفاءات بعد':'No competencies added yet'}</p>
               </td></tr>
             ) : filtered.map((comp, idx) => {
@@ -90,7 +90,7 @@ export default function CompetenciesPage() {
                         ))}
                       </div>
                     </Td>
-                    <Td className="text-content-muted dark:text-content-muted-dark text-[11px]">{comp.description_ar||comp.description_en||'-'}</Td>
+                    <Td className="text-content-muted dark:text-content-muted-dark text-xs">{comp.description_ar||comp.description_en||'-'}</Td>
                     <Td>
                       <ChevronDown size={14} className={`text-content-muted dark:text-content-muted-dark transition-transform duration-200 ${isExp ? 'rotate-180' : ''}`} />
                     </Td>

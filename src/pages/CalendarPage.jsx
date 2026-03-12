@@ -269,7 +269,7 @@ export default function CalendarPage() {
             {/* Day Headers */}
             <div className="grid grid-cols-7">
               {dayNames.map(d => (
-                <div key={d} className="px-1 py-2 text-center text-[11px] font-semibold text-content-muted dark:text-content-muted-dark border-b border-edge dark:border-edge-dark">
+                <div key={d} className="px-1 py-2 text-center text-xs font-semibold text-content-muted dark:text-content-muted-dark border-b border-edge dark:border-edge-dark">
                   {d}
                 </div>
               ))}
@@ -369,7 +369,7 @@ export default function CalendarPage() {
                     <div className="text-sm font-bold text-content dark:text-content-dark">
                       {selectedDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
                     </div>
-                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark mt-0.5">
                       {(selectedEvents?.tasks?.length || 0) + (selectedEvents?.reminders?.length || 0) + (selectedEvents?.activities?.length || 0)} {isRTL ? 'أحداث' : 'events'}
                     </div>
                   </div>
@@ -390,7 +390,7 @@ export default function CalendarPage() {
                     <div className="px-4 pt-3 pb-1">
                       <div className={`flex items-center gap-1.5 mb-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                         <CheckSquare size={12} style={{ color: EVENT_COLORS.task }} />
-                        <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: EVENT_COLORS.task }}>
+                        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: EVENT_COLORS.task }}>
                           {isRTL ? 'مهام' : 'Tasks'}
                         </span>
                       </div>
@@ -410,7 +410,7 @@ export default function CalendarPage() {
                                   {isRTL ? priDef?.ar : priDef?.en}
                                 </Badge>
                                 {t.contact_name && (
-                                  <span className="text-[10px] text-brand-500 flex items-center gap-[2px]">
+                                  <span className="text-[10px] text-brand-500 flex items-center gap-0.5">
                                     <User size={9} /> {t.contact_name}
                                   </span>
                                 )}
@@ -433,7 +433,7 @@ export default function CalendarPage() {
                     <div className="px-4 pt-3 pb-1">
                       <div className={`flex items-center gap-1.5 mb-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                         <Bell size={12} style={{ color: EVENT_COLORS.reminder }} />
-                        <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: EVENT_COLORS.reminder }}>
+                        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: EVENT_COLORS.reminder }}>
                           {isRTL ? 'تذكيرات' : 'Reminders'}
                         </span>
                       </div>
@@ -464,7 +464,7 @@ export default function CalendarPage() {
                     <div className="px-4 pt-3 pb-3">
                       <div className={`flex items-center gap-1.5 mb-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                         <Activity size={12} style={{ color: EVENT_COLORS.activity }} />
-                        <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: EVENT_COLORS.activity }}>
+                        <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: EVENT_COLORS.activity }}>
                           {isRTL ? 'أنشطة' : 'Activities'}
                         </span>
                       </div>

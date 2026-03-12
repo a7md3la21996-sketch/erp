@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download } from 'lucide-react';
-import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton } from '../../components/ui';
+import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select } from '../../components/ui';
 
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -41,11 +41,11 @@ export default function PayrollPage() {
         </div>
         <div className="flex gap-2 items-center">
           <div className="relative inline-flex items-center">
-            <select value={month} onChange={e=>setMonth(+e.target.value)}
-              className="appearance-none px-3.5 py-2 pe-8 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs cursor-pointer outline-none focus:border-brand-500"
+            <Select value={month} onChange={e=>setMonth(+e.target.value)}
+              className="appearance-none pe-8"
             >
               {MONTHS_AR.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
-            </select>
+            </Select>
             <ChevronDown size={14} className="absolute end-2.5 pointer-events-none text-content-muted dark:text-content-muted-dark" />
           </div>
           <ExportButton
@@ -111,11 +111,11 @@ function PayrollRow({ emp, isRTL, lang }) {
       <Td>
         <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-8 h-8 rounded-lg bg-brand-800 flex items-center justify-center shrink-0">
-            <span className="text-[11px] font-bold text-white">{initials}</span>
+            <span className="text-xs font-bold text-white">{initials}</span>
           </div>
           <div className="text-start">
             <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{name}</p>
-            <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{emp.employee_id}</p>
           </div>
         </div>
       </Td>
@@ -124,7 +124,7 @@ function PayrollRow({ emp, isRTL, lang }) {
       <Td className="text-red-500 font-semibold">-{ded.toLocaleString()}</Td>
       <Td className="font-bold">{net.toLocaleString()} ج.م</Td>
       <Td>
-        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/15 text-brand-500 border border-brand-500/30">
+        <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-500/15 text-brand-500 border border-brand-500/30">
           {lang === 'ar' ? 'تم الصرف' : 'Paid'}
         </span>
       </Td>

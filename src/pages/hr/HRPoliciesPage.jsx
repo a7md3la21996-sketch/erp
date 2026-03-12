@@ -93,14 +93,14 @@ function PolicyRow({ policy, isRTL, lang }) {
         </div>
       </Td>
       <Td>
-        <span className="inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-brand-500/[0.12] text-brand-500 border border-brand-500/25">
+        <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold bg-brand-500/[0.12] text-brand-500 border border-brand-500/25">
           {policy.category}
         </span>
       </Td>
       <Td className="text-content-muted dark:text-content-muted-dark">v{policy.version}</Td>
       <Td className="text-content-muted dark:text-content-muted-dark">{policy.updated}</Td>
       <Td>
-        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${
+        <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
           policy.status==='active'
             ? 'bg-brand-500/15 text-brand-500 border-brand-500/30'
             : 'bg-brand-300/15 text-brand-300 border-brand-300/30'

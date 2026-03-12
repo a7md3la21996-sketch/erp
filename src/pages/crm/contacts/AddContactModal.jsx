@@ -144,14 +144,14 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span className="text-[11px] text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span> {(() => { const v = form.phone; return (<>{v && !validatePhone(v) && <span className="text-xs text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{v && validatePhone(v) && (() => { const info = getPhoneInfo(v); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
                 <Input className={dupWarning ? '!border-red-500' : ''}
                   placeholder="010xxxxxxxx" value={form.phone}
                   onChange={e => { const v = e.target.value.replace(/[^0-9+]/g, ''); set('phone', v); setDupWarning(null); if (validatePhone(v)) { checkPhoneNumber(v); } }} />
-                {checking && <p className="text-[11px] text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
+                {checking && <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div className="mt-2 p-3 bg-red-500/[0.08] border border-red-500/30 rounded-xl text-xs">
-                    <div className="text-red-500 font-bold mb-2">⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-mono">— ID: {dupWarning.id}</span></div>
+                    <div className="text-red-500 font-bold mb-2">⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span className="text-xs text-content-muted dark:text-content-muted-dark font-mono">— ID: {dupWarning.id}</span></div>
                     <div className="flex gap-2">
                       <Button size="sm" onClick={() => { onOpenOpportunity(dupWarning); onClose(); }} className="flex-1">
                         ✨ {isRTL ? 'فتح فرصة جديدة لـ ' + dupWarning.full_name : 'New opportunity for ' + dupWarning.full_name}
@@ -180,12 +180,12 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                         className="px-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-lg leading-none">×</button>
                     </div>
                     {ph && (<div className="mt-1">
-                      {!validatePhone(ph) && <span className="text-[11px] text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}
+                      {!validatePhone(ph) && <span className="text-xs text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}
                       {validatePhone(ph) && (() => { const info = getPhoneInfo(ph); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}
                     </div>)}
                     {extraDups[i] && (
                       <div className="mt-1.5 p-2 bg-red-500/[0.08] border border-red-500/30 rounded-lg text-xs">
-                        <div className="text-red-500 font-bold mb-1">⚠️ {isRTL ? 'مسجل باسم' : 'Registered to'}: <strong>{extraDups[i].full_name}</strong> <span className="text-content-muted dark:text-content-muted-dark font-mono text-[11px]">ID: {extraDups[i].id}</span></div>
+                        <div className="text-red-500 font-bold mb-1">⚠️ {isRTL ? 'مسجل باسم' : 'Registered to'}: <strong>{extraDups[i].full_name}</strong> <span className="text-content-muted dark:text-content-muted-dark font-mono text-xs">ID: {extraDups[i].id}</span></div>
                         <Button size="sm" onClick={() => { onOpenOpportunity(extraDups[i]); onClose(); }} className="w-full">
                           ✨ {isRTL ? 'فتح فرصة جديدة' : 'New Opportunity'}
                         </Button>

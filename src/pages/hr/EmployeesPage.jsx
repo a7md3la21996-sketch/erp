@@ -27,7 +27,7 @@ function IconBtn({ icon: Icon, onClick, color = '#4A7AAB', title }) {
 function DynBadge({ label, color = '#4A7AAB' }) {
   return (
     <span
-      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
+      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
       style={{ background: color + '18', color, border: `1px solid ${color}35` }}
     >
       {label}
@@ -212,7 +212,7 @@ export default function EmployeesPage() {
                       </div>
                       <div className={'text-start'}>
                         <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{name}</p>
-                        <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{emp.employee_id || emp.id?.toString().slice(0,6)}</p>
+                        <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{emp.employee_id || emp.id?.toString().slice(0,6)}</p>
                       </div>
                     </div>
                   </Td>
@@ -256,7 +256,7 @@ export default function EmployeesPage() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
             <Users size={28} color="#4A7AAB" strokeWidth={1.5} />
           </div>
-          <p className="text-[15px] font-bold text-content dark:text-content-dark mb-1.5">{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
+          <p className="text-sm font-bold text-content dark:text-content-dark mb-1.5">{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
           <p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>
         </div>
       )}
@@ -285,7 +285,7 @@ function EmployeeModal({ emp, onClose, isRTL, lang }) {
     <Modal open={!!emp} onClose={onClose} title={name} width="max-w-md">
       {/* Avatar header */}
       <div className={`flex items-center gap-3.5 mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-        <div className="w-[52px] h-[52px] rounded-[14px] bg-brand-500/[0.12] flex items-center justify-center shrink-0">
+        <div className="w-[52px] h-[52px] rounded-xl bg-brand-500/[0.12] flex items-center justify-center shrink-0">
           <span className="text-lg font-bold text-brand-500">{initials}</span>
         </div>
         <div className="text-start">

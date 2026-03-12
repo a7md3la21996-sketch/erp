@@ -97,7 +97,7 @@ export default function LeavePage() {
                   <span className="text-xs font-semibold text-content dark:text-content-dark">{name}</span>
                 </div>
                 <div className="flex justify-between mb-1.5">
-                  <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'الرصيد':'Balance'}</span>
+                  <span className="text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'الرصيد':'Balance'}</span>
                   <span className="text-xs font-bold text-brand-500">{bal} {lang==='ar'?'يوم':'days'}</span>
                 </div>
                 <div className="h-1 rounded-sm bg-slate-200 dark:bg-white/[0.08]">
@@ -127,7 +127,7 @@ export default function LeavePage() {
                 <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                   <CalendarOff size={24} color='#4A7AAB' />
                 </div>
-                <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات إجازة':'No Leave Requests'}</p>
+                <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات إجازة':'No Leave Requests'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تقديم أي طلبات إجازة بعد':'No leave requests submitted yet'}</p>
               </td></tr>
             ) : leaves.map(lv => {

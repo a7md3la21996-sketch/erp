@@ -167,7 +167,7 @@ export default function ActivitiesPage() {
           <div className="grid grid-cols-2 gap-2.5 mb-3">
             {/* Dept */}
             <div>
-              <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1">
+              <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1">
                 {lang === 'ar' ? 'القسم' : 'Department'}
               </label>
               <Select
@@ -182,7 +182,7 @@ export default function ActivitiesPage() {
             </div>
             {/* Type */}
             <div>
-              <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1">
+              <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1">
                 {lang === 'ar' ? 'النوع' : 'Type'}
               </label>
               <Select
@@ -283,7 +283,7 @@ export default function ActivitiesPage() {
             <div className="w-16 h-16 rounded-2xl bg-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
               <Activity size={28} className="text-brand-500" strokeWidth={1.5} />
             </div>
-            <p className="m-0 mb-1.5 font-bold text-[15px] text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}</p>
+            <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started'}</p>
           </div>
         ) : (
@@ -320,10 +320,10 @@ export default function ActivitiesPage() {
                         <CloudOff size={9} /> {lang === 'ar' ? 'غير متزامن' : 'Offline'}
                       </Badge>
                     )}
-                    <span className="text-[11px] text-content-muted dark:text-content-muted-dark">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">
                       {act.user_name_ar && lang === 'ar' ? act.user_name_ar : act.user_name_en || ''}
                     </span>
-                    <span className={`text-[11px] text-content-muted dark:text-content-muted-dark ms-auto`}>
+                    <span className={`text-xs text-content-muted dark:text-content-muted-dark ms-auto`}>
                       {timeAgo(act.created_at, lang)}
                     </span>
                   </div>

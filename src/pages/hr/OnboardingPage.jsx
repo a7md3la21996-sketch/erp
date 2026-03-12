@@ -57,7 +57,7 @@ export default function OnboardingPage() {
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
               <UserCheck size={24} color='#4A7AAB' />
             </div>
-            <p className="m-0 mb-1.5 text-[15px] font-bold text-content dark:text-content-dark">{lang==='ar'?'لا يوجد موظفون في التهيئة':'No Onboarding Employees'}</p>
+            <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا يوجد موظفون في التهيئة':'No Onboarding Employees'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي موظفين في مرحلة التهيئة':'No employees in onboarding'}</p>
           </div>
         ) : MOCK_ONBOARDING.map(ob => {
@@ -95,7 +95,7 @@ function OnboardingRow({ ob, name, initials, done, total, pct, isExpanded, isRTL
           </div>
           <div className={'text-start'}>
             <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{name}</p>
-            <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark">{lang==='ar'?'بدأ:':' Started:'} {ob.start}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'بدأ:':' Started:'} {ob.start}</p>
           </div>
         </div>
         <div className={`flex items-center gap-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -121,7 +121,7 @@ function OnboardingRow({ ob, name, initials, done, total, pct, isExpanded, isRTL
                 className={`px-3 py-2.5 rounded-xl border text-center ${stepDone ? 'border-brand-500/25 bg-brand-500/[0.08]' : 'border-edge dark:border-edge-dark bg-transparent'}`}
               >
                 <div className="text-xl mb-1">{step.icon}</div>
-                <p className="m-0 mb-1.5 text-[11px] font-semibold text-content dark:text-content-dark">{lang==='ar'?step.label_ar:step.label_en}</p>
+                <p className="m-0 mb-1.5 text-xs font-semibold text-content dark:text-content-dark">{lang==='ar'?step.label_ar:step.label_en}</p>
                 {stepDone ? <CheckCircle2 size={16} color="#4A7AAB" /> : <Clock size={16} className="text-content-muted dark:text-content-muted-dark" />}
               </div>
             );

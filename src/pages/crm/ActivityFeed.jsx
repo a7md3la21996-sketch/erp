@@ -111,7 +111,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
                 <button
                   key={key}
                   onClick={() => setForm(f => ({ ...f, type: key }))}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] cursor-pointer transition-colors duration-150 border ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${sel ? 'font-semibold' : 'font-normal'}`}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs cursor-pointer transition-colors duration-150 border ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${sel ? 'font-semibold' : 'font-normal'}`}
                   style={{
                     borderColor: sel ? val.color : undefined,
                     background: sel ? val.color + '18' : 'transparent',
@@ -179,10 +179,10 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
                     <span className="text-xs font-semibold" style={{ color: typeDef.color }}>
                       {lang === 'ar' ? typeDef.ar : typeDef.en}
                     </span>
-                    <span className="text-[11px] text-content-muted dark:text-content-muted-dark">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">
                       {act.user_name_ar && lang === 'ar' ? act.user_name_ar : act.user_name_en || ''}
                     </span>
-                    <span className="text-[11px] text-content-muted dark:text-content-muted-dark mr-auto">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark mr-auto">
                       {timeAgo(act.created_at, lang)}
                     </span>
                   </div>
