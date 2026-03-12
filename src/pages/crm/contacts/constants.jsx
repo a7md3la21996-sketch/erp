@@ -18,17 +18,16 @@ export const SOURCE_EN = { facebook: 'Facebook', instagram: 'Instagram', google_
 export const SOURCE_PLATFORM = { facebook: 'meta', instagram: 'meta', google_ads: 'google', website: 'organic', call: 'direct', walk_in: 'direct', referral: 'direct', developer: 'direct', cold_call: 'direct', other: 'other' };
 export const PLATFORM_LABELS = { meta: { ar: 'Meta', en: 'Meta' }, google: { ar: 'Google', en: 'Google' }, organic: { ar: 'أورجانيك', en: 'Organic' }, direct: { ar: 'مباشر', en: 'Direct' }, other: { ar: 'أخرى', en: 'Other' } };
 export const AD_SOURCES = ['facebook', 'instagram', 'google_ads'];
-export const STAGE_LABELS = { new: { ar: 'جديد', en: 'New' }, contacted: { ar: 'تم التواصل', en: 'Contacted' }, interested: { ar: 'مهتم', en: 'Interested' }, site_visit_scheduled: { ar: 'موعد معاينة', en: 'Visit Scheduled' }, site_visited: { ar: 'زار الموقع', en: 'Site Visited' }, negotiation: { ar: 'تفاوض', en: 'Negotiation' }, reserved: { ar: 'محجوز', en: 'Reserved' }, contracted: { ar: 'تعاقد', en: 'Contracted' }, closed_won: { ar: 'فوز ✓', en: 'Won ✓' }, closed_lost: { ar: 'خسارة ✗', en: 'Lost ✗' }, on_hold: { ar: 'معلق', en: 'On Hold' } };
+export const STAGE_LABELS = { qualification: { ar: 'تأهيل', en: 'Qualification' }, site_visit_scheduled: { ar: 'موعد معاينة', en: 'Visit Scheduled' }, site_visited: { ar: 'زار الموقع', en: 'Site Visited' }, proposal: { ar: 'عرض سعر', en: 'Proposal' }, negotiation: { ar: 'تفاوض', en: 'Negotiation' }, reserved: { ar: 'محجوز', en: 'Reserved' }, contracted: { ar: 'تعاقد', en: 'Contracted' }, closed_won: { ar: 'فوز ✓', en: 'Won ✓' }, closed_lost: { ar: 'خسارة ✗', en: 'Lost ✗' }, on_hold: { ar: 'معلق', en: 'On Hold' } };
 export const stageLabel = (key, isRTL) => { const s = STAGE_LABELS[key]; return s ? (isRTL ? s.ar : s.en) : key; };
 
 // ── Department-specific Stages ────────────────────────────────────────────
 export const DEPT_STAGES = {
   sales: [
-    { id: 'new',                  label_ar: 'جديد',           label_en: 'New',              color: '#4A7AAB' },
-    { id: 'contacted',            label_ar: 'تم التواصل',     label_en: 'Contacted',        color: '#4A7AAB' },
-    { id: 'interested',           label_ar: 'مهتم',           label_en: 'Interested',       color: '#4A7AAB' },
-    { id: 'site_visit_scheduled', label_ar: 'موعد معاينة',    label_en: 'Visit Scheduled',  color: '#2B4C6F' },
+    { id: 'qualification',        label_ar: 'تأهيل',          label_en: 'Qualification',    color: '#4A7AAB' },
+    { id: 'site_visit_scheduled', label_ar: 'موعد معاينة',    label_en: 'Visit Scheduled',  color: '#4A7AAB' },
     { id: 'site_visited',         label_ar: 'تمت المعاينة',   label_en: 'Site Visited',     color: '#2B4C6F' },
+    { id: 'proposal',             label_ar: 'عرض سعر',        label_en: 'Proposal',         color: '#2B4C6F' },
     { id: 'negotiation',          label_ar: 'تفاوض',          label_en: 'Negotiation',      color: '#1B3347' },
     { id: 'reserved',             label_ar: 'محجوز',          label_en: 'Reserved',         color: '#1B3347' },
     { id: 'contracted',           label_ar: 'تعاقد',          label_en: 'Contracted',       color: '#10B981' },

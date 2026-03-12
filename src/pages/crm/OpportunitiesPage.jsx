@@ -100,7 +100,7 @@ const calcLeadScore = (opp) => {
   else if (b >= 100000) score += 15;
   else if (b > 0) score += 5;
   // Stage progression (0-25)
-  const stagePoints = { new: 0, lead: 5, contacted: 10, interested: 15, site_visit: 18, negotiation: 20, proposal: 22, closed_won: 25 };
+  const stagePoints = { qualification: 5, site_visit_scheduled: 10, site_visited: 13, proposal: 16, negotiation: 19, reserved: 21, contracted: 23, closed_won: 25 };
   score += stagePoints[opp.stage] || 0;
   // Recency (0-20)
   const days = Math.floor((Date.now() - new Date(opp.updated_at || opp.created_at || 0).getTime()) / 86400000);
@@ -463,7 +463,7 @@ function ContactSearch({ isRTL, value, onSelect }) {
 // AddModal — with real contact search & agent select
 // ═══════════════════════════════════════════════
 function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [] }) {
-  const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'new', project_id: '', notes: '', expected_close_date: '' });
+  const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'qualification', project_id: '', notes: '', expected_close_date: '' });
   const [saving, setSaving] = useState(false);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
   const contactDept = form.contact?.department || 'sales';
@@ -507,7 +507,7 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
             {isRTL ? 'جهة الاتصال *' : 'Contact *'}
           </label>
-          <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => { f('contact', c); if (c) { const stages = getDeptStages(c.department || 'sales'); f('stage', stages[0]?.id || 'new'); } }} />
+          <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => { f('contact', c); if (c) { const stages = getDeptStages(c.department || 'sales'); f('stage', stages[0]?.id || 'qualification'); } }} />
           {form.contact && existingOpps.some(o => o.contact_id === form.contact.id) && (
             <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-semibold">
               <AlertTriangle size={12} />
@@ -706,7 +706,7 @@ export default function OpportunitiesPage() {
     editForm.assigned_to !== (selectedOpp.assigned_to || '') ||
     editForm.project_id !== (selectedOpp.project_id || '') ||
     editForm.notes !== (selectedOpp.notes || '') ||
-    editForm.stage !== (selectedOpp.stage || 'new') ||
+    editForm.stage !== (selectedOpp.stage || 'qualification') ||
     editForm.expected_close_date !== (selectedOpp.expected_close_date || '')
   );
 
@@ -1001,7 +1001,7 @@ export default function OpportunitiesPage() {
       assigned_to: selectedOpp.assigned_to || '',
       project_id: selectedOpp.project_id || '',
       notes: selectedOpp.notes || '',
-      stage: selectedOpp.stage || 'new',
+      stage: selectedOpp.stage || 'qualification',
       expected_close_date: selectedOpp.expected_close_date || '',
     });
     setEditingOpp(true);
