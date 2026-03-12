@@ -13,8 +13,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const [openMenus, setOpenMenus] = useState({});
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const isRTL = i18n.language === 'ar';
-  const lang = i18n.language;
+  const rawLang = i18n.language || 'ar';
+  const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
+  const isRTL = lang === 'ar';
 
   const toggleMenu = (id) => setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
   const isActive = (path) => location.pathname === path;

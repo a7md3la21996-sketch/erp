@@ -183,6 +183,12 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig }) 
       {opp.notes && (
         <div className="text-xs text-content-muted dark:text-content-muted-dark truncate -mt-1">{opp.notes}</div>
       )}
+      {/* Created date */}
+      {opp.created_at && (
+        <div className="text-[10px] text-content-muted dark:text-content-muted-dark -mt-1">
+          {new Date(opp.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+        </div>
+      )}
     </div>
   );
 }
@@ -426,8 +432,9 @@ export default function OpportunitiesPage() {
   const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const { profile } = useAuth();
-  const isRTL = i18n.language === 'ar';
-  const lang = i18n.language;
+  const rawLang = i18n.language || 'ar';
+  const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
+  const isRTL = lang === 'ar';
 
   const [opps, setOpps] = useState([]);
   const [agents, setAgents] = useState([]);
@@ -444,6 +451,15 @@ export default function OpportunitiesPage() {
   const [editForm, setEditForm] = useState({});
   const [editSaving, setEditSaving] = useState(false);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+
+  // ESC to close drawer
+  useEffect(() => {
+    if (!selectedOpp) return;
+    const handler = (e) => { if (e.key === 'Escape') { setSelectedOpp(null); setEditingOpp(false); } };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [selectedOpp]);
 
   // Dynamic stage config based on department filter
   const currentStages = filterDept === 'all' ? getDeptStages('sales') : getDeptStages(filterDept);
@@ -500,10 +516,16 @@ export default function OpportunitiesPage() {
     }
   };
 
-  const handleDelete = async (id) => {
-    setOpps(p => p.filter(o => o.id !== id));
-    if (selectedOpp?.id === id) setSelectedOpp(null);
-    await deleteOpportunity(id).catch(() => {});
+  const handleDelete = (id) => {
+    setConfirmDelete(id);
+  };
+
+  const confirmDeleteOpp = async () => {
+    if (!confirmDelete) return;
+    setOpps(p => p.filter(o => o.id !== confirmDelete));
+    if (selectedOpp?.id === confirmDelete) setSelectedOpp(null);
+    await deleteOpportunity(confirmDelete).catch(() => {});
+    setConfirmDelete(null);
   };
 
   const handleSave = (opp) => {
@@ -581,8 +603,14 @@ export default function OpportunitiesPage() {
       {/* Stage Tabs */}
       <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 flex-wrap">
         {stageConfigWithAll.map(s => {
-          const deptFiltered = filterDept === 'all' ? opps : opps.filter(o => (o.contacts?.department || 'sales') === filterDept);
-          const count = s.id === 'all' ? deptFiltered.length : deptFiltered.filter(o => o.stage === s.id).length;
+          const preFiltered = opps.filter(o => {
+            if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return false;
+            if (search) { const q = search.toLowerCase(); const n = getContactName(o).toLowerCase(); const p = getProjectName(o, lang).toLowerCase(); if (!n.includes(q) && !p.includes(q)) return false; }
+            if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return false;
+            if (filterTemp !== 'all' && o.temperature !== filterTemp) return false;
+            return true;
+          });
+          const count = s.id === 'all' ? preFiltered.length : preFiltered.filter(o => o.stage === s.id).length;
           const active = activeStage === s.id;
           return (
             <button
@@ -608,7 +636,7 @@ export default function OpportunitiesPage() {
 
       {/* Filters */}
       <div className="flex gap-2.5 mb-5 flex-wrap items-center">
-        <div className="relative flex-[1_1_200px]">
+        <div className="relative flex-[1_1_180px] max-w-[320px]">
           <Search
             size={14}
             className="absolute top-1/2 -translate-y-1/2 pointer-events-none text-content-muted dark:text-content-muted-dark start-2.5"
@@ -620,24 +648,25 @@ export default function OpportunitiesPage() {
             className="ps-8"
           />
         </div>
-        <Select className="w-auto flex-none" value={filterDept} onChange={e => { setFilterDept(e.target.value); setActiveStage('all'); }}>
+        <Select className="!w-auto flex-none min-w-[120px]" value={filterDept} onChange={e => { setFilterDept(e.target.value); setActiveStage('all'); }}>
           {Object.entries(DEPT_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
         </Select>
-        <Select className="w-auto flex-none" value={filterAgent} onChange={e => setFilterAgent(e.target.value)}>
+        <Select className="!w-auto flex-none min-w-[120px]" value={filterAgent} onChange={e => setFilterAgent(e.target.value)}>
           <option value="all">{isRTL ? 'كل المسؤولين' : 'All Agents'}</option>
           {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
         </Select>
-        <Select className="w-auto flex-none" value={filterTemp} onChange={e => setFilterTemp(e.target.value)}>
+        <Select className="!w-auto flex-none min-w-[100px]" value={filterTemp} onChange={e => setFilterTemp(e.target.value)}>
           <option value="all">{isRTL ? 'كل الحرارة' : 'All Temps'}</option>
           {Object.entries(TEMP_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
         </Select>
         {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all') && (
-          <button
+          <Button
+            variant="danger"
+            size="sm"
             onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterDept('all'); setActiveStage('all'); }}
-            className="p-2 rounded-lg border-none cursor-pointer bg-red-500/10 text-red-500 flex hover:bg-red-500/20 transition-colors"
           >
-            <X size={14} />
-          </button>
+            <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
+          </Button>
         )}
         <div className="ms-auto text-xs text-content-muted dark:text-content-muted-dark">
           {filtered.length} {isRTL ? 'فرصة' : 'opportunities'}
@@ -671,9 +700,12 @@ export default function OpportunitiesPage() {
           <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">
             {isRTL ? 'لا توجد فرص بيع' : 'No Opportunities Found'}
           </p>
-          <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark">
+          <p className="m-0 mb-4 text-sm text-content-muted dark:text-content-muted-dark">
             {isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet'}
           </p>
+          <Button size="sm" onClick={() => setShowModal(true)}>
+            <Plus size={14} /> {isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
@@ -684,6 +716,23 @@ export default function OpportunitiesPage() {
       )}
 
       {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} />}
+
+      {/* Delete Confirmation */}
+      {confirmDelete && (
+        <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => setConfirmDelete(null)}>
+          <div className="bg-surface-card dark:bg-surface-card-dark border border-red-500/30 rounded-2xl p-7 w-full max-w-[400px] text-center" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={20} className="text-red-500" />
+            </div>
+            <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">{isRTL ? 'حذف الفرصة؟' : 'Delete Opportunity?'}</h3>
+            <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'هل أنت متأكد من حذف هذه الفرصة؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this opportunity? This action cannot be undone.'}</p>
+            <div className="flex gap-2.5 justify-center">
+              <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+              <Button variant="danger" size="sm" onClick={confirmDeleteOpp}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
 
     {/* Deal Created Toast */}
