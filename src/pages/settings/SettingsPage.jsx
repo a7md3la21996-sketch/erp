@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Plus, Trash2, Save, Settings, Palette, Globe, User } from 'lucide-react';
-import Button from '../../components/ui/Button';
-import Card from '../../components/ui/Card';
-import Input from '../../components/ui/Input';
+import { Button, Card, Input } from '../../components/ui';
 
 const DEFAULT_ACTIVITY_TYPES = [
   { key: 'call',          label: 'Call',          labelAr: 'مكالمة',      icon: '📞' },

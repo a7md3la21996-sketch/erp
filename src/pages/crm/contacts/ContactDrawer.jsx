@@ -164,7 +164,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   return (
     <>
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); setShowEdit(false); }} />}
-    <div className="fixed inset-0 z-[900] flex" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
       <div onClick={onClose} className="flex-1 bg-black/45" />
       <div className={`contact-drawer w-[430px] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
 
@@ -367,7 +367,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <input value={newTask.title} onChange={e => setNewTask(f => ({...f, title: e.target.value}))}
                       placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
                       className="px-2.5 py-[7px] rounded-[7px] border border-brand-500/20 bg-[#f8fafc] dark:bg-[rgba(15,30,45,0.6)] text-content dark:text-content-dark text-xs outline-none"
-                      style={{ direction: isRTL ? 'rtl' : 'ltr' }} />
+                      dir={isRTL ? 'rtl' : 'ltr'} />
                     <div className="flex gap-1.5">
                       <select value={newTask.type} onChange={e => setNewTask(f => ({...f, type: e.target.value}))}
                         className="flex-1 px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[11px] outline-none">

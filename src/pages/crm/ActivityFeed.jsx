@@ -7,8 +7,7 @@ import {
   RefreshCw, CheckSquare, Plus, X, Clock, Trash2
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../../services/activitiesService';
-import { Button, Badge } from '../../components/ui';
-import { Textarea } from '../../components/ui/Input';
+import { Button, Badge, Textarea } from '../../components/ui';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -133,7 +132,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
             rows={2}
             size="md"
             className={isRTL ? 'direction-rtl' : ''}
-            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+            dir={isRTL ? 'rtl' : 'ltr'}
           />
           <div className={`flex mt-2 ${isRTL ? 'justify-start' : 'justify-end'}`}>
             <Button
@@ -190,7 +189,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
                   {act.notes && (
                     <div
                       className="text-xs text-content dark:text-content-dark mt-0.5 leading-relaxed"
-                      style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     >
                       {act.notes}
                     </div>

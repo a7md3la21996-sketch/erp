@@ -43,7 +43,7 @@ function getSections(role) {
 function ChartTooltip({ active, payload, label, isDark, isRTL }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className={`rounded-lg px-3 py-2 shadow-lg text-xs border border-brand-500/30 ${isDark ? 'bg-surface-card-dark' : 'bg-white'}`} style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className={`rounded-lg px-3 py-2 shadow-lg text-xs border border-brand-500/30 ${isDark ? 'bg-surface-card-dark' : 'bg-white'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="mb-0.5 text-content-muted dark:text-content-muted-dark">{label}</div>
       {payload.map((p, i) => <div key={i} className="text-brand-500 font-bold">{typeof p.value === 'number' && p.value >= 10000 ? (p.value / 1000).toFixed(0) + 'K EGP' : p.value}</div>)}
     </div>
@@ -209,7 +209,7 @@ export default function DashboardPage() {
           {sub && <p className="m-0 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">{sub}</p>}
           {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-[11px] font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{trend}</span></div>}
         </div>
-        <div className="w-[42px] h-[42px] rounded-xl flex items-center justify-center shrink-0" style={{ background: color + '18' }}><Icon size={20} color={color} /></div>
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: color + '18' }}><Icon size={20} color={color} /></div>
       </div>
     </Card>
   );

@@ -6,9 +6,7 @@ import {
   AlertTriangle, Clock, ChevronDown, Building2,
   UserCheck, Briefcase, Shield, X, Check
 } from 'lucide-react';
-import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton } from '../../components/ui';
-import { Select as UISelect } from '../../components/ui';
-import ExportButton from '../../components/ui/ExportButton';
+import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, Select as UISelect, ExportButton } from '../../components/ui';
 
 
 /* ─── Icon Button ─── */
@@ -44,7 +42,7 @@ function FilterSelect({ value, onChange, options, isRTL }) {
       <select
         value={value} onChange={e => onChange(e.target.value)}
         className="appearance-none px-3 py-2 pe-8 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs cursor-pointer outline-none transition-colors duration-150 focus:border-brand-500"
-        style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+        dir={isRTL ? 'rtl' : 'ltr'}
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

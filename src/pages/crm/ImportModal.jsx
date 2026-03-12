@@ -173,7 +173,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <h2 className="text-content dark:text-content-dark text-base font-bold">{'\u{1F4E4}'} {isRTL ? 'استيراد جهات الاتصال' : 'Import Contacts'}</h2>
-          <button onClick={onClose} className="bg-transparent border-none text-brand-400 dark:text-brand-400 text-[22px] cursor-pointer">&times;</button>
+          <button onClick={onClose} className="bg-transparent border-none text-brand-400 dark:text-brand-400 text-xl cursor-pointer">&times;</button>
         </div>
 
         {/* Steps */}

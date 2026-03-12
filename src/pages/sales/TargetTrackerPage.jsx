@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { MOCK_EMPLOYEES } from '../../data/hr_mock_data';
 import { Trophy, TrendingUp, Target, Award, Star, Medal, ChevronUp, ChevronDown, Minus, Calendar, Users, BarChart2, DollarSign, Crown, Zap } from 'lucide-react';
-import { Th, Td, Tr, Badge, KpiCard, FilterPill } from '../../components/ui';
-import Card, { CardHeader } from '../../components/ui/Card';
+import { Th, Td, Tr, Badge, KpiCard, FilterPill, Card, CardHeader } from '../../components/ui';
 
 const MONTHS = [
   { id: 'jan', ar: 'يناير', en: 'January' },

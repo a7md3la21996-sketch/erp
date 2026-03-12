@@ -2,11 +2,7 @@ import { useState, useEffect, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import supabase from '../../lib/supabase';
 import { History, Search, ChevronDown, ChevronUp, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
-import Button from '../../components/ui/Button';
-import Input, { Select } from '../../components/ui/Input';
-import Badge from '../../components/ui/Badge';
-import { Table, Th, Td, Tr } from '../../components/ui/Table';
-import ExportButton from '../../components/ui/ExportButton';
+import { Button, Input, Select, Badge, Table, Th, Td, Tr, ExportButton } from '../../components/ui';
 
 const ACTION_CONFIG = {
   create: { variant: 'success', icon: Plus, ar: 'إنشاء', en: 'Create' },

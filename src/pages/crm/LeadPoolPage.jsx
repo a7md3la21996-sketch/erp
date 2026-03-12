@@ -435,7 +435,7 @@ export default function LeadPoolPage() {
             value={newLead.name}
             onChange={e => setNewLead(f => ({...f, name: e.target.value}))}
             placeholder={lang === 'ar' ? 'الاسم' : 'Name'}
-            style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+            dir={isRTL ? 'rtl' : 'ltr'}
           />
           <Input
             value={newLead.phone}
