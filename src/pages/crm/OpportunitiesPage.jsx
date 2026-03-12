@@ -76,6 +76,16 @@ const LOST_REASONS = {
 };
 const TEMP_ORDER = { hot: 0, warm: 1, cool: 2, cold: 3 };
 
+// ─── Stage Win Rates for Weighted Pipeline Forecast ───
+const STAGE_WIN_RATES = {
+  new: 0.05, lead: 0.10, contacted: 0.20, qualified: 0.30, interested: 0.40,
+  site_visit: 0.50, negotiation: 0.60, proposal: 0.70, closed_won: 1.0, closed_lost: 0,
+  screening: 0.15, interview: 0.35, offer: 0.65, hired: 1.0, rejected: 0,
+  awareness: 0.10, engagement: 0.25, conversion: 0.50, retention: 0.75,
+  planning: 0.15, execution: 0.40, review: 0.60, completed: 1.0, cancelled: 0,
+  budgeting: 0.15, approval: 0.40, processing: 0.60, paid: 1.0,
+};
+
 // ─── Lead Score calculation ───
 const calcLeadScore = (opp) => {
   let score = 0;
@@ -291,6 +301,33 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig }) 
           );
         })()}
       </div>
+
+      {/* Source badge */}
+      {(opp.contacts?.source || opp.source) && (() => {
+        const src = opp.contacts?.source || opp.source;
+        const srcLabel = SOURCE_LABELS[src];
+        return srcLabel ? (
+          <div className="flex items-center gap-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+            <ExternalLink size={9} className="shrink-0" />
+            <span>{isRTL ? srcLabel.ar : srcLabel.en}</span>
+          </div>
+        ) : null;
+      })()}
+
+      {/* Stale deal alert */}
+      {(() => {
+        const lastAct = opp.contacts?.last_activity_at || opp.updated_at || opp.created_at;
+        const days = daysSince(lastAct);
+        if (days < 7 || opp.stage === 'closed_won' || opp.stage === 'closed_lost') return null;
+        return (
+          <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md ${days >= 14 ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
+            <AlertTriangle size={9} />
+            {days >= 14
+              ? (isRTL ? `⚠ بدون تواصل ${days} يوم` : `⚠ ${days}d no contact`)
+              : (isRTL ? `${days} يوم بدون نشاط` : `${days}d inactive`)}
+          </div>
+        );
+      })()}
 
       {/* Expected close date warning */}
       {opp.expected_close_date && (() => {
@@ -640,6 +677,7 @@ export default function OpportunitiesPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filterPriority, setFilterPriority] = useState('all');
+  const [filterSource, setFilterSource] = useState('all');
 
   // Check if edit form has unsaved changes
   const isEditDirty = editingOpp && selectedOpp && (
@@ -748,6 +786,7 @@ export default function OpportunitiesPage() {
     if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return false;
     if (filterTemp !== 'all' && o.temperature !== filterTemp) return false;
     if (filterPriority !== 'all' && o.priority !== filterPriority) return false;
+    if (filterSource !== 'all' && (o.contacts?.source || o.source || '') !== filterSource) return false;
     if (filterScore !== 'all') {
       const s = scoreMap[o.id] || 0;
       if (filterScore === 'hot' && s < 70) return false;
@@ -789,6 +828,7 @@ export default function OpportunitiesPage() {
     [isRTL ? 'المسؤول' : 'Agent']: getAgentName(o, lang),
     [isRTL ? 'الأولوية' : 'Priority']: isRTL ? (PRIORITY_CONFIG[o.priority]?.label_ar || '') : (PRIORITY_CONFIG[o.priority]?.label_en || ''),
     [isRTL ? 'درجة العميل' : 'Lead Score']: calcLeadScore(o),
+    [isRTL ? 'المصدر' : 'Source']: (() => { const src = o.contacts?.source || o.source; return src ? (isRTL ? (SOURCE_LABELS[src]?.ar || src) : (SOURCE_LABELS[src]?.en || src)) : ''; })(),
     [isRTL ? 'الإغلاق المتوقع' : 'Expected Close']: o.expected_close_date || '',
     [isRTL ? 'التاريخ' : 'Date']: o.created_at?.slice(0, 10) || '',
   }));
@@ -798,6 +838,32 @@ export default function OpportunitiesPage() {
   const hotCount = filtered.filter(o => o.temperature === 'hot').length;
   const newThisWeek = opps.filter(o => { const d = new Date(o.created_at); const w = new Date(); w.setDate(w.getDate() - 7); return d >= w; }).length;
   const conversionRate = opps.length > 0 ? Math.round((opps.filter(o => o.stage === 'closed_won').length / opps.length) * 100) : 0;
+
+  // Weighted Pipeline Forecast
+  const weightedForecast = useMemo(() => {
+    return filtered.reduce((sum, o) => {
+      if (o.stage === 'closed_won' || o.stage === 'closed_lost') return sum;
+      const rate = STAGE_WIN_RATES[o.stage] || 0.1;
+      return sum + (o.budget || 0) * rate;
+    }, 0);
+  }, [filtered]);
+
+  // Win/Loss Analysis
+  const lostReasonCounts = useMemo(() => {
+    const counts = {};
+    opps.forEach(o => {
+      if (o.stage === 'closed_lost' && o.lost_reason) {
+        counts[o.lost_reason] = (counts[o.lost_reason] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [opps]);
+  const topLostReason = useMemo(() => {
+    const entries = Object.entries(lostReasonCounts);
+    if (!entries.length) return null;
+    entries.sort((a, b) => b[1] - a[1]);
+    return entries[0];
+  }, [lostReasonCounts]);
 
   const handleMove = async (id, toStage, extraUpdates = {}) => {
     // Intercept closed_lost to ask for reason
@@ -983,6 +1049,18 @@ export default function OpportunitiesPage() {
     setBulkSelected(new Set()); setBulkMode(false);
     await Promise.all(ids.map(id => updateOpportunity(id, { temperature: temp }).catch(() => {})));
   };
+  const bulkChangePriority = async (priority) => {
+    const ids = [...bulkSelected];
+    setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, priority } : o));
+    setBulkSelected(new Set()); setBulkMode(false);
+    await Promise.all(ids.map(id => updateOpportunity(id, { priority }).catch(() => {})));
+  };
+  const bulkSetCloseDate = async (date) => {
+    const ids = [...bulkSelected];
+    setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, expected_close_date: date } : o));
+    setBulkSelected(new Set()); setBulkMode(false);
+    await Promise.all(ids.map(id => updateOpportunity(id, { expected_close_date: date || null }).catch(() => {})));
+  };
 
   // Duplicate detection
   const isDuplicate = (contactId) => opps.filter(o => o.contact_id === contactId).length > 1;
@@ -996,12 +1074,13 @@ export default function OpportunitiesPage() {
       if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return;
       if (filterTemp !== 'all' && o.temperature !== filterTemp) return;
       if (filterPriority !== 'all' && o.priority !== filterPriority) return;
+      if (filterSource !== 'all' && (o.contacts?.source || o.source || '') !== filterSource) return;
       if (filterScore !== 'all') { const sc = scoreMap[o.id] || 0; if (filterScore === 'hot' && sc < 70) return; if (filterScore === 'warm' && (sc < 40 || sc >= 70)) return; if (filterScore === 'cold' && sc >= 40) return; }
       counts._total = (counts._total || 0) + 1;
       counts[o.stage] = (counts[o.stage] || 0) + 1;
     });
     return counts;
-  }, [opps, filterDept, search, filterAgent, filterTemp, filterPriority, filterScore, scoreMap, lang]);
+  }, [opps, filterDept, search, filterAgent, filterTemp, filterPriority, filterSource, filterScore, scoreMap, lang]);
 
   if (loading) return <PageSkeleton hasKpis kpiCount={6} tableRows={6} tableCols={5} />;
 
@@ -1040,14 +1119,33 @@ export default function OpportunitiesPage() {
           { label: isRTL ? 'الميزانيات' : 'Budget', value: fmtBudget(totalBudget) + (isRTL ? ' ج' : ' EGP'), color: '#4A7AAB', icon: Banknote },
           { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', icon: Building2, onClick: () => setActiveStage('closed_won') },
           { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame, onClick: () => setFilterTemp('hot') },
-          { label: isRTL ? 'التحويل' : 'Conv.', value: conversionRate + '%', color: '#8B5CF6', icon: TrendingUp },
-          { label: isRTL ? 'جديد هذا الأسبوع' : 'New/Week', value: newThisWeek, color: '#0EA5E9', icon: Plus },
+          { label: isRTL ? 'التوقع المرجح' : 'Forecast', value: fmtBudget(weightedForecast) + (isRTL ? ' ج' : ' EGP'), color: '#8B5CF6', icon: TrendingUp, title: isRTL ? 'الإيراد المتوقع (الميزانية × نسبة الفوز)' : 'Weighted revenue (budget × win rate)' },
+          { label: isRTL ? 'التحويل' : 'Conv.', value: conversionRate + '%', color: '#6B8DB5', icon: Zap },
+          { label: isRTL ? 'جديد/أسبوع' : 'New/Wk', value: newThisWeek, color: '#0EA5E9', icon: Plus },
         ].map((s, i) => (
-          <div key={i} className={`flex-[1_1_120px] ${s.onClick ? 'cursor-pointer' : ''}`} onClick={s.onClick}>
+          <div key={i} className={`flex-[1_1_120px] ${s.onClick ? 'cursor-pointer' : ''}`} onClick={s.onClick} title={s.title || ''}>
             <KpiCard icon={s.icon} label={s.label} value={s.value} color={s.color} />
           </div>
         ))}
       </div>
+
+      {/* Win/Loss Analysis */}
+      {Object.keys(lostReasonCounts).length > 0 && (
+        <div className="mb-4 p-3 px-4 rounded-xl bg-red-500/[0.05] dark:bg-red-500/[0.08] border border-red-500/10 flex items-center gap-4 flex-wrap text-xs">
+          <span className="font-bold text-red-500 flex items-center gap-1.5">
+            <AlertTriangle size={13} />
+            {isRTL ? 'تحليل الخسائر' : 'Loss Analysis'}
+          </span>
+          {Object.entries(lostReasonCounts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([reason, count]) => (
+            <span key={reason} className="px-2 py-1 rounded-md bg-white dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark font-semibold">
+              {LOST_REASONS[reason] ? (isRTL ? LOST_REASONS[reason].ar : LOST_REASONS[reason].en) : reason} <span className="text-red-500">({count})</span>
+            </span>
+          ))}
+          <span className="text-content-muted dark:text-content-muted-dark ms-auto">
+            {isRTL ? `الأكثر: ${topLostReason ? (LOST_REASONS[topLostReason[0]]?.ar || topLostReason[0]) : ''}` : `Top: ${topLostReason ? (LOST_REASONS[topLostReason[0]]?.en || topLostReason[0]) : ''}`}
+          </span>
+        </div>
+      )}
 
       {/* Stage Tabs */}
       <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 flex-wrap">
@@ -1097,7 +1195,7 @@ export default function OpportunitiesPage() {
         >
           <Filter size={13} />
           {isRTL ? 'فلاتر' : 'Filters'}
-          {(filterAgent !== 'all' || filterTemp !== 'all' || filterPriority !== 'all' || filterDept !== 'all' || filterDate !== 'all' || filterScore !== 'all') && (
+          {(filterAgent !== 'all' || filterTemp !== 'all' || filterPriority !== 'all' || filterDept !== 'all' || filterDate !== 'all' || filterScore !== 'all' || filterSource !== 'all') && (
             <span className="w-2 h-2 rounded-full bg-brand-500" />
           )}
         </button>
@@ -1123,6 +1221,10 @@ export default function OpportunitiesPage() {
         <Select className="!w-auto flex-none min-w-[110px]" value={sortBy} onChange={e => setSortBy(e.target.value)}>
           {Object.entries(SORT_OPTIONS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
         </Select>
+        <Select className="!w-auto flex-none min-w-[100px]" value={filterSource} onChange={e => setFilterSource(e.target.value)}>
+          <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
+          {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+        </Select>
         <Select className="!w-auto flex-none min-w-[100px]" value={filterScore} onChange={e => setFilterScore(e.target.value)}>
           <option value="all">{isRTL ? 'كل الدرجات' : 'All Scores'}</option>
           <option value="hot">{isRTL ? 'ساخن (70+)' : 'Hot (70+)'}</option>
@@ -1133,7 +1235,7 @@ export default function OpportunitiesPage() {
           <Button
             variant="danger"
             size="sm"
-            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); }}
+            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); setFilterSource('all'); }}
           >
             <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
           </Button>
@@ -1150,7 +1252,7 @@ export default function OpportunitiesPage() {
                 <Input value={filterName} onChange={e => setFilterName(e.target.value)} placeholder={isRTL ? 'اسم الفلتر...' : 'Filter name...'} className="text-xs flex-1" />
                 <Button size="sm" onClick={() => {
                   if (!filterName.trim()) return;
-                  const f = { name: filterName, search, filterAgent, filterTemp, filterPriority, filterDept, filterDate, sortBy, activeStage, filterScore };
+                  const f = { name: filterName, search, filterAgent, filterTemp, filterPriority, filterDept, filterDate, sortBy, activeStage, filterScore, filterSource };
                   const all = [...savedFilters, f];
                   saveSavedFilters(all); setSavedFilters(all); setFilterName('');
                 }}>{isRTL ? 'حفظ' : 'Save'}</Button>
@@ -1162,7 +1264,7 @@ export default function OpportunitiesPage() {
                       <button onClick={() => {
                         setSearch(f.search || ''); setFilterAgent(f.filterAgent || 'all'); setFilterTemp(f.filterTemp || 'all');
                         setFilterDept(f.filterDept || 'all'); setFilterDate(f.filterDate || 'all'); setSortBy(f.sortBy || 'newest');
-                        setActiveStage(f.activeStage || 'all'); setFilterScore(f.filterScore || 'all'); setFilterPriority(f.filterPriority || 'all'); setShowSaveFilter(false);
+                        setActiveStage(f.activeStage || 'all'); setFilterScore(f.filterScore || 'all'); setFilterPriority(f.filterPriority || 'all'); setFilterSource(f.filterSource || 'all'); setShowSaveFilter(false);
                       }} className="bg-transparent border-none cursor-pointer text-xs text-content dark:text-content-dark font-semibold font-cairo truncate flex-1 text-start">{f.name}</button>
                       <button onClick={() => {
                         const all = savedFilters.filter((_, j) => j !== i);
@@ -1210,6 +1312,11 @@ export default function OpportunitiesPage() {
             <option value="">{isRTL ? 'تغيير الحرارة...' : 'Change temp...'}</option>
             {Object.entries(TEMP_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
           </Select>
+          <Select className="!w-auto min-w-[120px] text-xs" onChange={e => { if (e.target.value) bulkChangePriority(e.target.value); e.target.value = ''; }}>
+            <option value="">{isRTL ? 'تغيير الأولوية...' : 'Change priority...'}</option>
+            {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
+          </Select>
+          <Input type="date" className="!w-auto min-w-[130px] text-xs" onChange={e => { if (e.target.value) bulkSetCloseDate(e.target.value); }} placeholder={isRTL ? 'تاريخ الإغلاق' : 'Close date'} />
           <Button variant="danger" size="sm" onClick={bulkDeleteAll}><Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}</Button>
           <Button variant="ghost" size="sm" onClick={() => setBulkSelected(new Set(filtered.map(o => o.id)))}>{isRTL ? 'تحديد الكل' : 'Select All'}</Button>
           <Button variant="ghost" size="sm" onClick={() => { setBulkSelected(new Set()); setBulkMode(false); }}><X size={13} /></Button>
@@ -1251,7 +1358,7 @@ export default function OpportunitiesPage() {
               : (isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet')}
           </p>
           {opps.length > 0 ? (
-            <Button variant="secondary" size="sm" onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); }}>
+            <Button variant="secondary" size="sm" onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); setFilterSource('all'); }}>
               <X size={14} /> {isRTL ? 'مسح كل الفلاتر' : 'Clear All Filters'}
             </Button>
           ) : (
@@ -1670,6 +1777,7 @@ export default function OpportunitiesPage() {
                   { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
                   { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
                   ...(selectedOpp.expected_close_date ? [{ label: isRTL ? 'الإغلاق المتوقع' : 'Expected Close', value: new Date(selectedOpp.expected_close_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: new Date(selectedOpp.expected_close_date) < new Date() ? '#EF4444' : '#6B8DB5' }] : []),
+                  ...((selectedOpp.contacts?.source || selectedOpp.source) ? [{ label: isRTL ? 'المصدر' : 'Source', value: (() => { const src = selectedOpp.contacts?.source || selectedOpp.source; return isRTL ? (SOURCE_LABELS[src]?.ar || src) : (SOURCE_LABELS[src]?.en || src); })(), color: '#6B8DB5' }] : []),
                   { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: opps.filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
                 ].map((item, i) => (
                   <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
@@ -1837,6 +1945,14 @@ export default function OpportunitiesPage() {
                   </div>
                 );
               })}
+              {drawerActivities.length > 0 && selectedOpp.contact_id && (
+                <button
+                  onClick={() => navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`)}
+                  className="text-[10px] text-brand-500 bg-transparent border-none cursor-pointer hover:underline font-cairo font-semibold mt-1 p-0"
+                >
+                  {isRTL ? 'عرض كل الأنشطة →' : 'View all activities →'}
+                </button>
+              )}
             </div>
 
             {/* Notes Timeline */}

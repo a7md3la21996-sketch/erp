@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { Phone, MessageCircle, Plus, Upload, Download, Search, Ban, X, Flame, Pin, PhoneCall, Merge, SkipForward, MoreVertical, Bell, FileDown, Trash2 } from 'lucide-react';
@@ -29,6 +30,9 @@ export default function ContactsPage() {
   const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const highlightId = searchParams.get('highlight');
+  const highlightRef = useRef(null);
 
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -173,6 +177,18 @@ export default function ContactsPage() {
     if (profile) load();
     else { setContacts(MOCK); setLoading(false); }
   }, [profile]);
+
+  // Handle highlight query param (scroll to & select contact)
+  useEffect(() => {
+    if (!highlightId || loading || !contacts.length) return;
+    const contact = contacts.find(c => String(c.id) === String(highlightId));
+    if (contact) {
+      setSelected(contact);
+      // Clear the query param
+      searchParams.delete('highlight');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [highlightId, loading, contacts]);
 
   // Stats
   const stats = useMemo(() => {
