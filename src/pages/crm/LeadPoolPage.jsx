@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   Users, Phone, Clock, AlertTriangle, CheckSquare, Filter,
-  Search, UserPlus, Flame, Wind, Snowflake, Thermometer,
-  Bell, ChevronDown, X,
-  RefreshCw, Upload, Plus, Eye, Zap
+  Search, UserPlus, Flame, Bell, X, Lock,
+  Plus, Zap
 } from 'lucide-react';
 import { P } from '../../config/roles';
 import { Button, Card, Input, Select, Badge, KpiCard, Modal, ModalFooter, FilterPill } from '../../components/ui';
@@ -108,13 +107,18 @@ export default function LeadPoolPage() {
   const visible = useMemo(() => {
     return leads.filter(l => {
       if (!canViewFresh && l.type === 'fresh') return false;
+      if (canViewAll && poolScope === 'my_team' && l.team !== (user?.team_id || 'team1')) return false;
       if (sourceFilter !== 'all' && l.source !== sourceFilter) return false;
       if (typeFilter !== 'all' && l.type !== typeFilter) return false;
       if (agingFilter !== 'all') {
         const aging = getAging(l.created_at);
         if (agingFilter !== aging.level) return false;
       }
-      if (search && !l.name.includes(search) && !l.phone.includes(search)) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const src = SOURCES[l.source];
+        if (!l.name.toLowerCase().includes(q) && !l.phone.includes(q) && !(src?.ar.includes(q)) && !(src?.en.toLowerCase().includes(q))) return false;
+      }
       return true;
     }).sort((a, b) => {
       // Pool Priority Queue: Score DESC, then Aging ASC
@@ -122,7 +126,7 @@ export default function LeadPoolPage() {
       if (scoreDiff !== 0) return scoreDiff;
       return new Date(a.created_at) - new Date(b.created_at);
     });
-  }, [leads, canViewFresh, canViewAll, poolScope, sourceFilter, typeFilter, agingFilter, search, tick]);
+  }, [leads, canViewFresh, canViewAll, poolScope, sourceFilter, typeFilter, agingFilter, search, tick, user?.team_id]);
 
   // Stats
   const stats = useMemo(() => {
@@ -141,7 +145,6 @@ export default function LeadPoolPage() {
   };
 
   const handleAssign = (leadIds, agentId) => {
-    const agent = MOCK_AGENTS.find(a => a.id === agentId);
     setLeads(prev => prev.filter(l => !leadIds.includes(l.id)));
     setSelected([]);
     setAssignModal(null);
@@ -371,7 +374,7 @@ export default function LeadPoolPage() {
               <div className={`flex gap-1.5 shrink-0 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 {!isReserved && (
                   <Button variant="ghost" size="sm" onClick={() => handleReserve(lead)}>
-                    <Eye size={12} />
+                    <Lock size={12} />
                     {lang === 'ar' ? 'حجز' : 'Reserve'}
                   </Button>
                 )}

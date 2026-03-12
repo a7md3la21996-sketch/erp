@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,7 +16,7 @@ import {
   SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, MOCK,
   daysSince, initials, avatarColor, normalizePhone,
-  Chip, ScorePill, PhoneCell,
+  Chip, PhoneCell,
 } from './crm/contacts/constants';
 import AddContactModal from './crm/contacts/AddContactModal';
 import LogCallModal from './crm/contacts/LogCallModal';
@@ -32,7 +32,6 @@ export default function ContactsPage() {
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
-  const highlightRef = useRef(null);
 
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -80,11 +79,6 @@ export default function ContactsPage() {
     });
   };
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const toggleSelectAll = () => {
-    const pageIds = paged.map(c => c.id);
-    const allSelected = pageIds.every(id => selectedIds.includes(id));
-    setSelectedIds(allSelected ? selectedIds.filter(id => !pageIds.includes(id)) : [...new Set([...selectedIds, ...pageIds])]);
-  };
 
   useEffect(() => {
     const close = () => setOpenMenuId(null);
@@ -125,11 +119,12 @@ export default function ContactsPage() {
       title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
       message: isRTL ? `حذف ${selectedIds.length} جهة اتصال؟ لا يمكن التراجع.` : `Delete ${selectedIds.length} contacts? This cannot be undone.`,
       onConfirm: () => {
+        const count = selectedIds.length;
         const updated = contacts.filter(c => !selectedIds.includes(c.id));
         setContacts(updated);
         localStorage.setItem('platform_contacts', JSON.stringify(updated));
         setSelectedIds([]);
-        toast.success(isRTL ? `تم حذف ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts deleted`);
+        toast.success(isRTL ? `تم حذف ${count} جهة اتصال` : `${count} contacts deleted`);
         setConfirmAction(null);
       }
     });
@@ -242,6 +237,13 @@ export default function ContactsPage() {
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const toggleSelectAll = () => {
+    const pageIds = paged.map(c => c.id);
+    const allSelected = pageIds.every(id => selectedIdSet.has(id));
+    setSelectedIds(allSelected ? selectedIds.filter(id => !pageIds.includes(id)) : [...new Set([...selectedIds, ...pageIds])]);
+  };
 
   const exportCSV = (list) => {
     const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','الحرارة','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Temperature','Platform','Company','Created'];
@@ -438,7 +440,7 @@ export default function ContactsPage() {
           <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[800px]">
             <thead>
               <tr>
-                <th className={`${thCls} w-9 !px-2 !py-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIds.includes(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
+                <th className={`${thCls} w-9 !px-2 !py-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
                 <th className={`${thCls} w-[50px]`}>ID</th>
                 <th className={thCls}>{t('contacts.fullName')}</th>
                 <th className={thCls}>{t('contacts.phone')}</th>
@@ -505,7 +507,7 @@ export default function ContactsPage() {
                   <td className={tdCls}><span className="text-xs bg-gray-100 dark:bg-brand-500/[0.12] border border-edge dark:border-edge-dark rounded-md px-2 py-1 text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</span></td>
                   <td className={tdCls} onClick={e => e.stopPropagation()}>
                     <div className="flex gap-1 items-center">
-                      <a href={"tel:" + c.phone} title={isRTL ? "اتصال" : "Call"} className="w-[26px] h-[26px] flex items-center justify-center bg-emerald-500/[0.06] border border-emerald-500/20 rounded-md text-emerald-500 no-underline">
+                      <a href={`tel:${normalizePhone(c.phone)}`} title={isRTL ? "اتصال" : "Call"} className="w-[26px] h-[26px] flex items-center justify-center bg-emerald-500/[0.06] border border-emerald-500/20 rounded-md text-emerald-500 no-underline">
                         <Phone size={12} />
                       </a>
                       <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-[26px] h-[26px] flex items-center justify-center bg-[#25D366]/[0.06] border border-[#25D366]/20 rounded-md text-[#25D366] no-underline">
@@ -556,14 +558,14 @@ export default function ContactsPage() {
           <div className="flex justify-center items-center gap-2 py-4">
             <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
               className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === 1 ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
-              {isRTL ? 'السابق →' : '← Prev'}
+              {isRTL ? '← السابق' : '← Prev'}
             </button>
             <span className="text-xs text-content-muted dark:text-content-muted-dark">
               {isRTL ? `${page} من ${totalPages}` : `${page} of ${totalPages}`}
             </span>
             <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
               className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === totalPages ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
-              {isRTL ? '← التالي' : 'Next →'}
+              {isRTL ? 'التالي →' : 'Next →'}
             </button>
           </div>
         )}
@@ -611,10 +613,10 @@ export default function ContactsPage() {
                     {current.company && <div className="text-xs text-content-muted dark:text-content-muted-dark">{current.company}</div>}
                   </div>
                   <div className="text-center">
-                    <Chip label={isRTL ? TYPE[current.contact_type]?.label : TYPE[current.contact_type]?.labelEn} color={TYPE[current.contact_type]?.color} bg={TYPE[current.contact_type]?.bg} />
+                    {TYPE[current.contact_type] ? <Chip label={isRTL ? TYPE[current.contact_type].label : TYPE[current.contact_type].labelEn} color={TYPE[current.contact_type].color} bg={TYPE[current.contact_type].bg} /> : <span className="text-xs text-content-muted dark:text-content-muted-dark">—</span>}
                   </div>
                 </div>
-                <a href={"tel:" + current.phone} className="flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#065F46] to-emerald-500 rounded-xl text-white font-bold text-sm no-underline mb-4">
+                <a href={`tel:${normalizePhone(current.phone)}`} className="flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#065F46] to-emerald-500 rounded-xl text-white font-bold text-sm no-underline mb-4">
                   <Phone size={16} /> {isRTL ? 'اتصل الآن' : 'Call Now'}
                 </a>
                 <div className="mb-3">
