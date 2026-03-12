@@ -35,7 +35,7 @@ export async function fetchOpportunityStats() {
   try {
     const { data, error } = await supabase
       .from('opportunities')
-      .select('id, stage, deal_value, created_at');
+      .select('id, stage, budget, created_at');
     if (error) throw error;
 
     const opps = data || [];
@@ -43,7 +43,7 @@ export async function fetchOpportunityStats() {
     const closedDeals = opps.filter(o => o.stage === 'closed_won').length;
     const revenue = opps
       .filter(o => o.stage === 'closed_won')
-      .reduce((sum, o) => sum + (parseFloat(o.deal_value) || 0), 0);
+      .reduce((sum, o) => sum + (parseFloat(o.budget) || 0), 0);
 
     // New closed deals this month
     const monthStart = new Date();

@@ -9,17 +9,51 @@ function saveLocalOpps(opps) {
   try { localStorage.setItem('platform_opportunities', JSON.stringify(opps)); } catch { /* ignore */ }
 }
 
+// ── Helper: enrich opps with contacts/users/projects data ──
+async function enrichOpps(opps) {
+  if (!opps.length) return opps;
+
+  // Collect unique IDs
+  const contactIds = [...new Set(opps.map(o => o.contact_id).filter(Boolean))];
+  const userIds = [...new Set(opps.map(o => o.assigned_to).filter(Boolean))];
+  const projectIds = [...new Set(opps.map(o => o.project_id).filter(Boolean))];
+
+  // Fetch in parallel
+  const [contactsRes, usersRes, projectsRes] = await Promise.all([
+    contactIds.length
+      ? supabase.from('contacts').select('id, full_name, phone, email, company, contact_type, department').in('id', contactIds)
+      : { data: [] },
+    userIds.length
+      ? supabase.from('users').select('id, full_name_ar, full_name_en').in('id', userIds)
+      : { data: [] },
+    projectIds.length
+      ? supabase.from('projects').select('id, name_ar, name_en').in('id', projectIds)
+      : { data: [] },
+  ]);
+
+  // Build lookup maps
+  const contactMap = {};
+  (contactsRes.data || []).forEach(c => { contactMap[c.id] = c; });
+  const userMap = {};
+  (usersRes.data || []).forEach(u => { userMap[u.id] = u; });
+  const projectMap = {};
+  (projectsRes.data || []).forEach(p => { projectMap[p.id] = p; });
+
+  // Attach to each opp
+  return opps.map(o => ({
+    ...o,
+    contacts: contactMap[o.contact_id] || o.contacts || null,
+    users: userMap[o.assigned_to] || o.users || null,
+    projects: projectMap[o.project_id] || o.projects || null,
+  }));
+}
+
 // ─── Fetch all opportunities with related data ───
 export async function fetchOpportunities({ role, userId, teamId } = {}) {
   try {
     let query = supabase
       .from('opportunities')
-      .select(`
-        *,
-        contacts!left (id, full_name, phone, email, company, contact_type, department),
-        users!opportunities_assigned_to_fkey (id, full_name_ar, full_name_en),
-        projects!left (id, name_ar, name_en)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (role === 'sales_agent') {
@@ -35,14 +69,14 @@ export async function fetchOpportunities({ role, userId, teamId } = {}) {
 
     const { data, error } = await query.limit(200);
     if (!error && data?.length) {
-      // Update localStorage with fresh joined data so cards always show names
-      saveLocalOpps(data);
-      // Merge any truly local-only opps (not yet synced)
-      const local = getLocalOpps().filter(o => !data.some(s => String(s.id) === String(o.id)));
-      return [...data, ...local].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200);
+      // Enrich with contacts/users/projects
+      const enriched = await enrichOpps(data);
+      saveLocalOpps(enriched);
+      // Merge any truly local-only opps
+      const local = getLocalOpps().filter(o => !enriched.some(s => String(s.id) === String(o.id)));
+      return [...enriched, ...local].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200);
     }
     if (error) throw error;
-    // Supabase returned empty — use localStorage
     return getLocalOpps().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200);
   } catch {
     return getLocalOpps().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200);
@@ -59,21 +93,23 @@ export async function createOpportunity(oppData) {
   all.unshift(localOpp);
   saveLocalOpps(all);
 
-  // Try Supabase in background
+  // Try Supabase
   try {
     const { data, error } = await supabase
       .from('opportunities')
       .insert([{ ...oppData, created_at: now }])
-      .select('*, contacts!left (id, full_name, phone, email, company, contact_type, department), users!opportunities_assigned_to_fkey (id, full_name_ar, full_name_en), projects!left (id, name_ar, name_en)')
+      .select('*')
       .single();
     if (!error && data) {
-      // Update localStorage with joined data so it has names
+      // Enrich with related data
+      const [enriched] = await enrichOpps([data]);
+      // Update localStorage
       const allOpps = getLocalOpps();
       const idx = allOpps.findIndex(o => String(o.id) === String(localOpp.id));
-      if (idx > -1) allOpps[idx] = data; else allOpps.unshift(data);
+      if (idx > -1) allOpps[idx] = enriched; else allOpps.unshift(enriched);
       saveLocalOpps(allOpps);
-      logCreate('opportunity', data.id, data);
-      return data;
+      logCreate('opportunity', enriched.id, enriched);
+      return enriched;
     }
   } catch { /* ignore */ }
 
@@ -88,11 +124,12 @@ export async function updateOpportunity(id, updates) {
       .from('opportunities')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id)
-      .select('*, contacts!left (id, full_name, phone, email, company, contact_type, department), users!opportunities_assigned_to_fkey (id, full_name_ar, full_name_en), projects!left (id, name_ar, name_en)')
+      .select('*')
       .single();
     if (error) throw error;
-    logUpdate('opportunity', id, oldData, data);
-    return data;
+    const [enriched] = await enrichOpps([data]);
+    logUpdate('opportunity', id, oldData, enriched);
+    return enriched;
   } catch {
     const all = getLocalOpps();
     const idx = all.findIndex(o => String(o.id) === String(id));
