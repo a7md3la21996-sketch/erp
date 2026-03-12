@@ -15,15 +15,15 @@ export default function CompetenciesPage() {
   const avgLevel = Math.round(COMPETENCIES.reduce((s,c)=>s+(c.required_level||3),0)/COMPETENCIES.length);
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Header */}
-      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className="w-[46px] h-[46px] rounded-xl flex items-center justify-center shadow-md" style={{ background:'linear-gradient(135deg,#1B3347,#4A7AAB)' }}>
-            <Award size={22} color="#fff" />
+          <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+            <Award size={22} className="text-brand-500" />
           </div>
           <div className={'text-start'}>
-            <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'الكفاءات':'Competencies'}</h1>
+            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{lang==='ar'?'الكفاءات':'Competencies'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'إدارة كفاءات الموظفين':'Manage employee competencies'}</p>
           </div>
         </div>

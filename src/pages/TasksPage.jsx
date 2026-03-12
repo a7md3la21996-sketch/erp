@@ -126,7 +126,7 @@ export default function TasksPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-5">
         {[
           { label: lang==='ar'?'الكل':'Total',    value: stats.total,   color: '#4A7AAB'  },
           { label: lang==='ar'?'معلقة':'Pending', value: stats.pending, color: '#F97316' },

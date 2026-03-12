@@ -32,13 +32,13 @@ export default function OnboardingPage() {
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
-      <div className={`flex justify-between items-center mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
+      <div className={`flex justify-between items-center mb-5 ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <div className="w-[46px] h-[46px] rounded-xl bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shadow-md">
-            <UserPlus size={22} color="#fff" />
+          <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+            <UserPlus size={22} className="text-brand-500" />
           </div>
           <div className={'text-start'}>
-            <h1 className="m-0 text-[22px] font-extrabold text-content dark:text-content-dark">{lang==='ar'?'استقبال الموظفين':'Employee Onboarding'}</h1>
+            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{lang==='ar'?'استقبال الموظفين':'Employee Onboarding'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'تتبع مسار استقبال الموظفين الجدد':'Track new employee onboarding'}</p>
           </div>
         </div>

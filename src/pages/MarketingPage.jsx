@@ -152,7 +152,7 @@ export default function MarketingPage() {
       </div>
 
       {/* Filters */}
-      <div className={`flex flex-wrap gap-2.5 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap gap-2.5 mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="relative flex-1 max-w-[280px]">
           <Search size={14} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-3" />
           <Input

@@ -80,17 +80,21 @@ export default function TargetTrackerPage() {
   };
 
   return (
-    <div className="px-4 py-4 md:px-6 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-[22px] font-bold text-content dark:text-content-dark m-0 flex items-center gap-2">
-            <Trophy size={22} className="text-brand-500" />
-            {lang === 'ar' ? 'متابعة التارجت والترتيب' : 'Target Tracker & Leaderboard'}
-          </h1>
-          <p className="text-[13px] text-content-muted dark:text-content-muted-dark mt-1 m-0">
-            {lang === 'ar' ? 'أداء فريق المبيعات الشهري' : 'Monthly Sales Team Performance'}
-          </p>
+      <div className="mb-5 flex items-center justify-between flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+            <Trophy size={20} className="text-brand-500" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-content dark:text-content-dark m-0">
+              {lang === 'ar' ? 'متابعة التارجت والترتيب' : 'Target Tracker & Leaderboard'}
+            </h1>
+            <p className="text-xs text-content-muted dark:text-content-muted-dark mt-0 m-0">
+              {lang === 'ar' ? 'أداء فريق المبيعات الشهري' : 'Monthly Sales Team Performance'}
+            </p>
+          </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {MONTHS.map(m => (
@@ -107,7 +111,7 @@ export default function TargetTrackerPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-6">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-5">
         <KpiCard icon={Target} label={lang === 'ar' ? 'إجمالي التارجت' : 'Total Target'} value={fmt(totalTarget) + ' EGP'} sub={monthLabel(selectedMonth)} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={lang === 'ar' ? 'إجمالي المحقق' : 'Total Achieved'} value={fmt(totalAchieved) + ' EGP'} sub={`${totalPct}% ${lang === 'ar' ? 'من التارجت' : 'of target'}`} color={totalPct >= 100 ? '#4A7AAB' : '#EF4444'} />
         <KpiCard icon={Crown} label={lang === 'ar' ? 'الأول هذا الشهر' : 'Top Performer'} value={topPerformer ? (lang === 'ar' ? topPerformer.full_name_ar : topPerformer.full_name_en) : '—'} sub={topPerformer ? `${topPerformer.pct}%` : ''} color="#FFD700" />
