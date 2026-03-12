@@ -8,7 +8,7 @@ import {
   blacklistContact, createActivity,
 } from '../services/contactsService';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton, Select, Input } from '../components/ui';
+import { PageSkeleton, Select, Input, Button } from '../components/ui';
 
 // ── Split modules ──────────────────────────────────────────────────────────
 import {
@@ -295,18 +295,18 @@ export default function ContactsPage() {
             <Merge size={14} /> {isRTL ? 'دمج' : 'Merge'}
           </button>
           {selectedIds.length > 0 && (
-            <button onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }} className="px-3.5 py-2.5 bg-gradient-to-br from-[#065F46] to-emerald-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer flex items-center gap-1.5">
+            <Button variant="call" size="sm" onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }}>
               <PhoneCall size={14} /> {isRTL ? `اتصال جماعي (${selectedIds.length})` : `Batch Call (${selectedIds.length})`}
-            </button>
+            </Button>
           )}
-          <button onClick={() => setShowAddModal(true)} className="px-4.5 py-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer flex items-center gap-1.5">
+          <Button size="sm" onClick={() => setShowAddModal(true)}>
             <Plus size={14} /> {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
-          </button>
+          </Button>
           {isAdmin && selectedIds.length > 0 && (
             <div className="relative">
-              <button onClick={() => setShowBulkMenu(v => !v)} className="px-3.5 py-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer flex items-center gap-1.5">
+              <Button size="sm" onClick={() => setShowBulkMenu(v => !v)}>
                 {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
-              </button>
+              </Button>
               {showBulkMenu && (
                 <div className={`absolute top-[110%] start-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[200] shadow-[0_8px_24px_rgba(0,0,0,0.35)] overflow-hidden`}>
                   {[
@@ -408,9 +408,9 @@ export default function ContactsPage() {
             </span>
             <div className="flex gap-2">
               {mergeTargets.length === 2 && (
-                <button onClick={() => setMergePreview(mergeTargets)} className="px-3.5 py-1.5 bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-md text-white text-xs font-semibold cursor-pointer">
+                <Button size="sm" onClick={() => setMergePreview(mergeTargets)}>
                   {isRTL ? 'معاينة الدمج' : 'Preview Merge'}
-                </button>
+                </Button>
               )}
               <button onClick={() => { setMergeMode(false); setMergeTargets([]); }} className="px-3.5 py-1.5 bg-transparent border border-edge dark:border-edge-dark rounded-md text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
                 {isRTL ? 'إلغاء' : 'Cancel'}
@@ -470,7 +470,10 @@ export default function ContactsPage() {
                       <div>
                         <div className={`font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</div>
                         {c.email && <div className="text-xs text-[#6B8DB5] dark:text-[#6B8DB5] whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">{c.email}</div>}
-                        {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <div className={`text-[10px] mt-0.5 font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</div>; })()}
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</span>; })()}
+                          {c.opportunities?.length > 0 && <span className="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">{c.opportunities.length} {isRTL ? 'فرص' : 'opps'}</span>}
+                        </div>
                       </div>
                     </div>
                   </td>
@@ -621,7 +624,7 @@ export default function ContactsPage() {
                     className={`flex-1 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs ${batchCallIndex === 0 ? 'text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-40' : 'text-content dark:text-content-dark cursor-pointer'}`}>
                     {isRTL ? 'السابق' : 'Previous'}
                   </button>
-                  <button onClick={async () => {
+                  <Button size="sm" className="flex-[2] justify-center" onClick={async () => {
                     if (batchCallResult) {
                       const resultLabel = { answered: isRTL?'رد':'Answered', no_answer: isRTL?'لم يرد':'No Answer', busy: isRTL?'مشغول':'Busy', switched_off: isRTL?'مغلق':'Switched Off', wrong_number: isRTL?'رقم خاطئ':'Wrong Number' }[batchCallResult] || batchCallResult;
                       const activity = { type: 'call', description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, created_at: new Date().toISOString() };
@@ -636,9 +639,9 @@ export default function ContactsPage() {
                       toast.success(isRTL ? `تم الانتهاء من ${finalLog.length} مكالمة` : `Completed ${finalLog.length} calls`);
                       setBatchCallMode(false); setSelectedIds([]);
                     }
-                  }} className="flex-[2] p-2.5 rounded-lg border-none bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white text-xs font-bold cursor-pointer flex items-center justify-center gap-1.5">
+                  }}>
                     {batchCallIndex < batchContacts.length - 1 ? (<>{isRTL ? 'التالي' : 'Next'} <SkipForward size={13} /></>) : (isRTL ? 'إنهاء' : 'Finish')}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -689,15 +692,15 @@ export default function ContactsPage() {
                 <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
                   {isRTL ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button onClick={() => {
+                <Button size="sm" onClick={() => {
                   const updatedContacts = contacts.map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
                   setContacts(updatedContacts);
                   localStorage.setItem('platform_contacts', JSON.stringify(updatedContacts));
                   toast.success(isRTL ? 'تم دمج جهتي الاتصال بنجاح' : 'Contacts merged successfully');
                   setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
-                }} className="px-5 py-2.5 bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">
+                }}>
                   {isRTL ? 'تأكيد الدمج' : 'Confirm Merge'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -713,7 +716,7 @@ export default function ContactsPage() {
             <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-xs">{confirmAction.message}</p>
             <div className="flex gap-2.5 justify-center">
               <button onClick={() => setConfirmAction(null)} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
-              <button onClick={confirmAction.onConfirm} className="px-5 py-2.5 bg-gradient-to-br from-red-900 to-red-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</button>
+              <Button variant="danger" size="sm" onClick={confirmAction.onConfirm}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</Button>
             </div>
           </div>
         </div>

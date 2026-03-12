@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { Phone, MessageCircle, MapPin, Users, Mail, Bell, Plus, X, Check, Trash2, Clock, ChevronDown } from 'lucide-react';
 import { fetchReminders, createReminder, markReminderDone, deleteReminder, REMINDER_TYPES } from '../../services/remindersService';
+import Button from './Button';
 
 const ICONS = { Phone, MessageCircle, MapPin, Users, Mail };
 
@@ -112,10 +113,9 @@ function ReminderModal({ onClose, onSave, entityType, entityId, entityName, lang
           </div>
           <div className="flex gap-2 justify-end">
             <button onClick={onClose} className="py-2.5 px-[18px] rounded-[9px] border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark text-[13px] cursor-pointer">{lang === 'ar' ? 'إلغاء' : 'Cancel'}</button>
-            <button onClick={handleSave} disabled={!date || saving}
-              className={`py-2.5 px-5 rounded-[9px] border-none text-[13px] font-semibold ${!date ? 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark cursor-not-allowed' : 'bg-gradient-to-br from-brand-900 to-brand-500 text-white cursor-pointer'}`}>
+            <Button size="sm" onClick={handleSave} disabled={!date || saving}>
               {saving ? '...' : (lang === 'ar' ? 'حفظ المتابعة' : 'Save Reminder')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

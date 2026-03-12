@@ -7,6 +7,7 @@ import { ProtectedRoute } from './components/auth/PermissionGate';
 import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
 import { P } from './config/roles';
+import { Button } from './components/ui';
 import './i18n';
 
 // Lazy-loaded pages
@@ -56,10 +57,9 @@ class ErrorBoundary extends Component {
           <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center text-2xl">!</div>
           <h2 className="text-content dark:text-content-dark m-0 text-lg">Something went wrong</h2>
           <p className="text-content-muted dark:text-content-muted-dark m-0 text-[13px] text-center max-w-[400px]">{this.state.error?.message}</p>
-          <button onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/dashboard'; }}
-            className="px-6 py-2.5 bg-gradient-to-br from-brand-900 to-brand-500 border-none rounded-lg text-white text-[13px] font-bold cursor-pointer mt-2">
+          <Button size="sm" className="mt-2" onClick={() => { this.setState({ hasError: false, error: null }); window.location.href = '/dashboard'; }}>
             Back to Dashboard
-          </button>
+          </Button>
         </div>
       );
     }

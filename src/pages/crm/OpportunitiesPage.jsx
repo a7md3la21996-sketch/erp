@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
 import { createDealFromOpportunity } from '../../services/dealsService';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2 } from 'lucide-react';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 
@@ -282,10 +282,12 @@ function ContactSearch({ isRTL, value, onSelect }) {
 // ═══════════════════════════════════════════════
 // AddModal — with real contact search & agent select
 // ═══════════════════════════════════════════════
-function AddModal({ isRTL, lang, onClose, onSave, agents, projects, stageConfig }) {
+function AddModal({ isRTL, lang, onClose, onSave, agents, projects }) {
   const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'new', project_id: '', notes: '' });
   const [saving, setSaving] = useState(false);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const contactDept = form.contact?.department || 'sales';
+  const stageConfig = getDeptStages(contactDept);
 
   const handleSave = async () => {
     if (!form.contact) return;
@@ -312,7 +314,7 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects, stageConfig 
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
             {isRTL ? 'جهة الاتصال *' : 'Contact *'}
           </label>
-          <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => f('contact', c)} />
+          <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => { f('contact', c); if (c) { const stages = getDeptStages(c.department || 'sales'); f('stage', stages[0]?.id || 'new'); } }} />
         </div>
         <div>
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
@@ -370,6 +372,28 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects, stageConfig 
         </div>
         <div className="col-span-2">
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
+            {isRTL ? 'الأولوية' : 'Priority'}
+          </label>
+          <div className="flex gap-1.5">
+            {Object.entries(PRIORITY_CONFIG).map(([k, v]) => {
+              const isActive = form.priority === k;
+              return (
+                <button
+                  key={k}
+                  onClick={() => f('priority', k)}
+                  className={`flex-1 py-[7px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${
+                    isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'
+                  }`}
+                  style={isActive ? { borderColor: v.color, background: `${v.color}18`, color: v.color } : {}}
+                >
+                  {isRTL ? v.label_ar : v.label_en}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="col-span-2">
+          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
             {isRTL ? 'ملاحظات' : 'Notes'}
           </label>
           <Textarea value={form.notes} onChange={e => f('notes', e.target.value)} />
@@ -416,6 +440,9 @@ export default function OpportunitiesPage() {
   const [filterDept, setFilterDept] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
+  const [editingOpp, setEditingOpp] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
 
   // Dynamic stage config based on department filter
@@ -439,10 +466,6 @@ export default function OpportunitiesPage() {
     load();
   }, [profile?.role, profile?.id, profile?.team_id]);
 
-  const totalBudget = opps.reduce((s, o) => s + (o.budget || 0), 0);
-  const wonCount = opps.filter(o => o.stage === 'closed_won').length;
-  const hotCount = opps.filter(o => o.temperature === 'hot').length;
-
   const filtered = opps.filter(o => {
     if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return false;
     if (activeStage !== 'all' && o.stage !== activeStage) return false;
@@ -457,15 +480,19 @@ export default function OpportunitiesPage() {
     return true;
   });
 
+  const totalBudget = filtered.reduce((s, o) => s + (o.budget || 0), 0);
+  const wonCount = filtered.filter(o => o.stage === 'closed_won').length;
+  const hotCount = filtered.filter(o => o.temperature === 'hot').length;
+
   const handleMove = async (id, toStage) => {
     setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage } : o));
     if (selectedOpp?.id === id) setSelectedOpp(p => ({ ...p, stage: toStage }));
     await updateOpportunity(id, { stage: toStage }).catch(() => {});
 
-    // Auto-create deal in Operations when closed_won
+    // Auto-create deal in Operations when closed_won (sales only)
     if (toStage === 'closed_won') {
       const opp = opps.find(o => o.id === id);
-      if (opp) {
+      if (opp && (opp.contacts?.department || 'sales') === 'sales') {
         const deal = createDealFromOpportunity({ ...opp, stage: toStage });
         setDealCreatedToast(deal.deal_number);
         setTimeout(() => setDealCreatedToast(null), 4000);
@@ -482,6 +509,35 @@ export default function OpportunitiesPage() {
   const handleSave = (opp) => {
     setOpps(p => [opp, ...p]);
     setShowModal(false);
+  };
+
+  const startEdit = () => {
+    setEditForm({
+      budget: selectedOpp.budget || '',
+      temperature: selectedOpp.temperature || 'cold',
+      priority: selectedOpp.priority || 'medium',
+      assigned_to: selectedOpp.assigned_to || '',
+      project_id: selectedOpp.project_id || '',
+      notes: selectedOpp.notes || '',
+    });
+    setEditingOpp(true);
+  };
+
+  const saveEdit = async () => {
+    setEditSaving(true);
+    const updates = {
+      budget: Number(editForm.budget) || 0,
+      temperature: editForm.temperature,
+      priority: editForm.priority,
+      assigned_to: editForm.assigned_to || null,
+      project_id: editForm.project_id || null,
+      notes: editForm.notes,
+    };
+    const result = await updateOpportunity(selectedOpp.id, updates);
+    setOpps(p => p.map(o => o.id === selectedOpp.id ? { ...o, ...result } : o));
+    setSelectedOpp(prev => ({ ...prev, ...result }));
+    setEditingOpp(false);
+    setEditSaving(false);
   };
 
   if (loading) return <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={5} />;
@@ -503,7 +559,7 @@ export default function OpportunitiesPage() {
             {isRTL ? 'إدارة وتتبع الفرص لكل الأقسام' : 'Manage and track opportunities across departments'}
           </p>
         </div>
-        <Button variant="primary" size="md" onClick={() => setShowModal(true)}>
+        <Button size="sm" onClick={() => setShowModal(true)}>
           <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
         </Button>
       </div>
@@ -511,7 +567,7 @@ export default function OpportunitiesPage() {
       {/* KPIs */}
       <div className="flex gap-3 mb-5 flex-wrap">
         {[
-          { label: isRTL ? 'إجمالي الفرص' : 'Total', value: opps.length, color: '#4A7AAB', icon: Grid3X3 },
+          { label: isRTL ? 'إجمالي الفرص' : 'Total', value: filtered.length, color: '#4A7AAB', icon: Grid3X3 },
           { label: isRTL ? 'إجمالي الميزانيات' : 'Budget', value: fmtBudget(totalBudget) + (isRTL ? ' ج' : ' EGP'), color: '#4A7AAB', icon: Banknote },
           { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', icon: Building2 },
           { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame },
@@ -627,7 +683,7 @@ export default function OpportunitiesPage() {
         </div>
       )}
 
-      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} stageConfig={currentStages} />}
+      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} />}
     </div>
 
     {/* Deal Created Toast */}
@@ -671,51 +727,145 @@ export default function OpportunitiesPage() {
               </div>
               <div>
                 <p className="m-0 text-base font-bold text-content dark:text-content-dark">{getContactName(selectedOpp)}</p>
-                {selectedOpp.contacts?.phone && (
-                  <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">{selectedOpp.contacts.phone}</p>
-                )}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {selectedOpp.contacts?.phone && (
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">{selectedOpp.contacts.phone}</span>
+                  )}
+                  {selectedOpp.contacts?.email && (
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">{selectedOpp.contacts.email}</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  {selectedOpp.contacts?.company && (
+                    <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500">{selectedOpp.contacts.company}</span>
+                  )}
+                  {selectedOpp.contacts?.department && (
+                    <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500">
+                      {isRTL ? (DEPT_LABELS[selectedOpp.contacts.department]?.ar || selectedOpp.contacts.department) : (DEPT_LABELS[selectedOpp.contacts.department]?.en || selectedOpp.contacts.department)}
+                    </span>
+                  )}
+                  {selectedOpp.created_at && (
+                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark">
+                      {new Date(selectedOpp.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => setSelectedOpp(null)}
-              className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xl leading-none p-1 hover:text-content dark:hover:text-content-dark transition-colors"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => editingOpp ? setEditingOpp(false) : startEdit()}
+                className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
+                title={isRTL ? 'تعديل' : 'Edit'}
+              >
+                <Pencil size={16} />
+              </button>
+              <button
+                onClick={() => { setSelectedOpp(null); setEditingOpp(false); }}
+                className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xl leading-none p-1 hover:text-content dark:hover:text-content-dark transition-colors"
+              >
+                ✕
+              </button>
+            </div>
           </div>
 
           {/* Drawer Details */}
           <div className="px-6 py-5 flex flex-col gap-4">
-            {/* KPIs */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { label: isRTL ? 'الميزانية' : 'Budget', value: fmtBudget(selectedOpp.budget) + ' ' + (isRTL ? 'ج' : 'EGP'), color: '#4A7AAB' },
-                { label: isRTL ? 'الحرارة' : 'Temperature', value: isRTL ? (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_en, color: (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).color },
-                { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
-                { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
-              ].map((item, i) => (
-                <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{item.label}</p>
-                  <p className="m-0 text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
+            {editingOpp ? (<>
+              {/* Edit Mode */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الميزانية' : 'Budget'}</label>
+                  <Input type="number" value={editForm.budget} onChange={e => setEditForm(f => ({ ...f, budget: e.target.value }))} />
                 </div>
-              ))}
-            </div>
-
-            {/* Project */}
-            {getProjectName(selectedOpp, lang) && (
-              <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
-                <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{getProjectName(selectedOpp, lang)}</p>
+                <div>
+                  <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المسؤول' : 'Agent'}</label>
+                  <Select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}>
+                    <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                    {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
+                  </Select>
+                </div>
               </div>
-            )}
-
-            {/* Notes */}
-            {selectedOpp.notes && (
-              <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
-                <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
+              <div>
+                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المشروع' : 'Project'}</label>
+                <Select value={editForm.project_id} onChange={e => setEditForm(f => ({ ...f, project_id: e.target.value }))}>
+                  <option value="">{isRTL ? 'بدون مشروع' : 'No Project'}</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.name_ar : (p.name_en || p.name_ar)}</option>)}
+                </Select>
               </div>
-            )}
+              <div>
+                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الحرارة' : 'Temperature'}</label>
+                <div className="flex gap-1.5">
+                  {Object.entries(TEMP_CONFIG).map(([k, v]) => {
+                    const isActive = editForm.temperature === k;
+                    return (
+                      <button key={k} onClick={() => setEditForm(f => ({ ...f, temperature: k }))}
+                        className={`flex-1 py-[6px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'}`}
+                        style={isActive ? { borderColor: v.color, background: v.bg, color: v.color } : {}}
+                      >{isRTL ? v.label_ar : v.label_en}</button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الأولوية' : 'Priority'}</label>
+                <div className="flex gap-1.5">
+                  {Object.entries(PRIORITY_CONFIG).map(([k, v]) => {
+                    const isActive = editForm.priority === k;
+                    return (
+                      <button key={k} onClick={() => setEditForm(f => ({ ...f, priority: k }))}
+                        className={`flex-1 py-[6px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'}`}
+                        style={isActive ? { borderColor: v.color, background: `${v.color}18`, color: v.color } : {}}
+                      >{isRTL ? v.label_ar : v.label_en}</button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'ملاحظات' : 'Notes'}</label>
+                <Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
+              </div>
+              <div className="flex gap-2">
+                <Button variant="primary" size="sm" onClick={saveEdit} disabled={editSaving} className="flex-1 gap-1.5">
+                  {editSaving && <Loader2 size={13} className="animate-spin" />}
+                  {isRTL ? 'حفظ' : 'Save'}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => setEditingOpp(false)} className="flex-1">
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </Button>
+              </div>
+            </>) : (<>
+              {/* View Mode */}
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { label: isRTL ? 'الميزانية' : 'Budget', value: fmtBudget(selectedOpp.budget) + ' ' + (isRTL ? 'ج' : 'EGP'), color: '#4A7AAB' },
+                  { label: isRTL ? 'الحرارة' : 'Temperature', value: isRTL ? (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_en, color: (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).color },
+                  { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
+                  { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
+                ].map((item, i) => (
+                  <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
+                    <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{item.label}</p>
+                    <p className="m-0 text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Project */}
+              {getProjectName(selectedOpp, lang) && (
+                <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
+                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
+                  <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{getProjectName(selectedOpp, lang)}</p>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedOpp.notes && (
+                <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
+                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
+                  <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
+                </div>
+              )}
+            </>)}
 
             {/* Change Stage */}
             <div>

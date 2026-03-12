@@ -14,6 +14,7 @@ const variants = {
   danger:    'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20',
   ghost:     'text-content-muted dark:text-content-muted-dark hover:bg-gray-100 dark:hover:bg-brand-500/10',
   success:   'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/20',
+  call:      'bg-gradient-to-br from-[#065F46] to-emerald-500 text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0',
 };
 
 const Button = forwardRef(({ variant = 'primary', size = 'md', className = '', children, ...props }, ref) => (
