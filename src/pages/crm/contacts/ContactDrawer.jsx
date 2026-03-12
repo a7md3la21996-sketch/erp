@@ -215,8 +215,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   };
 
   if (!contact) return null;
-  const tempInfo = TEMP[contact.temperature];
-  const tp = TYPE[contact.contact_type];
+  const tempInfo = contact.temperature ? TEMP[contact.temperature] : null;
+  const tp = contact.contact_type ? TYPE[contact.contact_type] : null;
 
   const actCount = activities.length;
   const oppCount = opportunities.length;

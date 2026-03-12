@@ -15,6 +15,8 @@ import {
 
 const RECENT_KEY = 'platform_global_search_recent';
 const MAX_RECENT = 5;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+let _searchCache = { data: null, ts: 0 };
 
 // Flatten nav items into searchable pages
 const flattenNav = (items, parent = null) => {
@@ -111,14 +113,23 @@ export default function GlobalSearch({ onClose }) {
     inputRef.current?.focus();
   }, []);
 
-  // Load all entity data on mount for client-side filtering
+  // Load all entity data on mount — use module-level cache to avoid refetching on every open
   useEffect(() => {
     let cancelled = false;
+
+    // Return cached data if fresh enough
+    if (_searchCache.data && (Date.now() - _searchCache.ts) < CACHE_TTL) {
+      const d = _searchCache.data;
+      setContacts(d.contacts); setOpportunities(d.opportunities);
+      setTasks(d.tasks); setEmployees(d.employees); setActivities(d.activities);
+      setDataLoaded(true);
+      return;
+    }
+
     const loadData = async () => {
       setLoading(true);
       try {
         const [contactsRes, oppsRes, tasksRes, employeesRes, activitiesRes] = await Promise.allSettled([
-          // Contacts
           (async () => {
             try {
               const { data, error } = await supabase
@@ -133,24 +144,22 @@ export default function GlobalSearch({ onClose }) {
               return cached ? JSON.parse(cached) : [];
             }
           })(),
-          // Opportunities
           fetchOpportunities(),
-          // Tasks
           fetchTasks(),
-          // Employees
           fetchEmployees(),
-          // Activities
           fetchActivities({ limit: 100 }),
         ]);
 
         if (cancelled) return;
-        if (contactsRes.status === 'fulfilled') setContacts(contactsRes.value);
-        if (oppsRes.status === 'fulfilled') setOpportunities(oppsRes.value);
-        if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value);
-        if (employeesRes.status === 'fulfilled') setEmployees(employeesRes.value);
-        if (activitiesRes.status === 'fulfilled') setActivities(activitiesRes.value);
+        const c = contactsRes.status === 'fulfilled' ? contactsRes.value : [];
+        const o = oppsRes.status === 'fulfilled' ? oppsRes.value : [];
+        const t = tasksRes.status === 'fulfilled' ? tasksRes.value : [];
+        const e = employeesRes.status === 'fulfilled' ? employeesRes.value : [];
+        const a = activitiesRes.status === 'fulfilled' ? activitiesRes.value : [];
+        setContacts(c); setOpportunities(o); setTasks(t); setEmployees(e); setActivities(a);
         const allFailed = [contactsRes, oppsRes, tasksRes, employeesRes, activitiesRes].every(r => r.status === 'rejected');
         if (allFailed) setLoadError(true);
+        else _searchCache = { data: { contacts: c, opportunities: o, tasks: t, employees: e, activities: a }, ts: Date.now() };
         setDataLoaded(true);
       } catch { /* ignore */ }
       if (!cancelled) setLoading(false);
