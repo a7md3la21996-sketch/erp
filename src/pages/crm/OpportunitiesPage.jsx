@@ -7,19 +7,16 @@ import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportu
 import { createDealFromOpportunity } from '../../services/dealsService';
 import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2 } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton } from '../../components/ui';
+import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 
-const STAGE_CONFIG = [
-  { id: "all",                  label_ar: "الكل",            label_en: "All",             color: "#4A7AAB" },
-  { id: "new",                  label_ar: "جديد",            label_en: "New",             color: "#4A7AAB" },
-  { id: "contacted",            label_ar: "تم التواصل",      label_en: "Contacted",       color: "#4A7AAB" },
-  { id: "interested",           label_ar: "مهتم",            label_en: "Interested",      color: "#4A7AAB" },
-  { id: "site_visit_scheduled", label_ar: "موعد معاينة",     label_en: "Visit Scheduled", color: "#2B4C6F" },
-  { id: "site_visited",         label_ar: "تمت المعاينة",    label_en: "Site Visited",    color: "#2B4C6F" },
-  { id: "negotiation",          label_ar: "تفاوض",           label_en: "Negotiation",     color: "#1B3347" },
-  { id: "reserved",             label_ar: "محجوز",           label_en: "Reserved",        color: "#1B3347" },
-  { id: "closed_won",           label_ar: "تم الإغلاق",      label_en: "Closed Won",      color: "#10B981" },
-  { id: "closed_lost",          label_ar: "خسارة",           label_en: "Closed Lost",     color: "#EF4444" },
-];
+const DEPT_LABELS = {
+  all:        { ar: 'كل الأقسام', en: 'All Departments' },
+  sales:      { ar: 'المبيعات',   en: 'Sales' },
+  hr:         { ar: 'الموارد البشرية', en: 'HR' },
+  marketing:  { ar: 'التسويق',    en: 'Marketing' },
+  operations: { ar: 'العمليات',    en: 'Operations' },
+  finance:    { ar: 'المالية',     en: 'Finance' },
+};
 const TEMP_CONFIG = {
   hot:  { label_ar: "ساخن", label_en: "Hot",  color: "#EF4444", bg: "rgba(239,68,68,0.10)" },
   warm: { label_ar: "دافئ", label_en: "Warm", color: "#F97316", bg: "rgba(249,115,22,0.10)" },
@@ -61,12 +58,12 @@ const getProjectName = (opp, lang) => {
 // ═══════════════════════════════════════════════
 // OppCard — cleaned up, no duplicate stage display
 // ═══════════════════════════════════════════════
-function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect }) {
+function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const temp = TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold;
   const prio = PRIORITY_CONFIG[opp.priority] || PRIORITY_CONFIG.medium;
-  const stage = STAGE_CONFIG.find(s => s.id === opp.stage) || STAGE_CONFIG[1];
+  const stage = stageConfig.find(s => s.id === opp.stage) || stageConfig[0] || { id: opp.stage, label_ar: opp.stage, label_en: opp.stage, color: '#4A7AAB' };
   const act = actLabel(opp.updated_at || opp.created_at, isRTL);
   const contactName = getContactName(opp);
   const agentName = getAgentName(opp, lang);
@@ -124,7 +121,7 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect }) {
                 <div className="px-3 py-1 text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">
                   {isRTL ? "نقل الى" : "Move to"}
                 </div>
-                {STAGE_CONFIG.filter(s => s.id !== "all" && s.id !== opp.stage).slice(0, 5).map(s => (
+                {stageConfig.filter(s => s.id !== opp.stage).slice(0, 5).map(s => (
                   <button
                     key={s.id}
                     onClick={e => { e.stopPropagation(); onMove(opp.id, s.id); setMenuOpen(false); }}
@@ -285,7 +282,7 @@ function ContactSearch({ isRTL, value, onSelect }) {
 // ═══════════════════════════════════════════════
 // AddModal — with real contact search & agent select
 // ═══════════════════════════════════════════════
-function AddModal({ isRTL, lang, onClose, onSave, agents, projects }) {
+function AddModal({ isRTL, lang, onClose, onSave, agents, projects, stageConfig }) {
   const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'new', project_id: '', notes: '' });
   const [saving, setSaving] = useState(false);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -346,7 +343,7 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects }) {
             {isRTL ? 'المرحلة' : 'Stage'}
           </label>
           <Select value={form.stage} onChange={e => f('stage', e.target.value)}>
-            {STAGE_CONFIG.filter(s => s.id !== 'all').map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
+            {stageConfig.map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
           </Select>
         </div>
         <div className="col-span-2">
@@ -416,9 +413,14 @@ export default function OpportunitiesPage() {
   const [activeStage, setActiveStage] = useState('all');
   const [filterAgent, setFilterAgent] = useState('all');
   const [filterTemp, setFilterTemp] = useState('all');
+  const [filterDept, setFilterDept] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
+
+  // Dynamic stage config based on department filter
+  const currentStages = filterDept === 'all' ? getDeptStages('sales') : getDeptStages(filterDept);
+  const stageConfigWithAll = [{ id: 'all', label_ar: 'الكل', label_en: 'All', color: '#4A7AAB' }, ...currentStages];
 
   // Load data
   useEffect(() => {
@@ -442,6 +444,7 @@ export default function OpportunitiesPage() {
   const hotCount = opps.filter(o => o.temperature === 'hot').length;
 
   const filtered = opps.filter(o => {
+    if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return false;
     if (activeStage !== 'all' && o.stage !== activeStage) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -493,11 +496,11 @@ export default function OpportunitiesPage() {
               <Grid3X3 size={20} className="text-brand-500" />
             </div>
             <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">
-              {isRTL ? 'الفرص البيعية' : 'Opportunities'}
+              {isRTL ? 'الفرص' : 'Opportunities'}
             </h1>
           </div>
           <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
-            {isRTL ? 'إدارة وتتبع فرص المبيعات' : 'Manage and track sales opportunities'}
+            {isRTL ? 'إدارة وتتبع الفرص لكل الأقسام' : 'Manage and track opportunities across departments'}
           </p>
         </div>
         <Button variant="primary" size="md" onClick={() => setShowModal(true)}>
@@ -521,8 +524,9 @@ export default function OpportunitiesPage() {
 
       {/* Stage Tabs */}
       <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 flex-wrap">
-        {STAGE_CONFIG.map(s => {
-          const count = s.id === 'all' ? opps.length : opps.filter(o => o.stage === s.id).length;
+        {stageConfigWithAll.map(s => {
+          const deptFiltered = filterDept === 'all' ? opps : opps.filter(o => (o.contacts?.department || 'sales') === filterDept);
+          const count = s.id === 'all' ? deptFiltered.length : deptFiltered.filter(o => o.stage === s.id).length;
           const active = activeStage === s.id;
           return (
             <button
@@ -560,6 +564,9 @@ export default function OpportunitiesPage() {
             className="ps-8"
           />
         </div>
+        <Select className="w-auto flex-none" value={filterDept} onChange={e => { setFilterDept(e.target.value); setActiveStage('all'); }}>
+          {Object.entries(DEPT_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+        </Select>
         <Select className="w-auto flex-none" value={filterAgent} onChange={e => setFilterAgent(e.target.value)}>
           <option value="all">{isRTL ? 'كل المسؤولين' : 'All Agents'}</option>
           {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
@@ -568,9 +575,9 @@ export default function OpportunitiesPage() {
           <option value="all">{isRTL ? 'كل الحرارة' : 'All Temps'}</option>
           {Object.entries(TEMP_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
         </Select>
-        {(search || filterAgent !== 'all' || filterTemp !== 'all') && (
+        {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all') && (
           <button
-            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); }}
+            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterDept('all'); setActiveStage('all'); }}
             className="p-2 rounded-lg border-none cursor-pointer bg-red-500/10 text-red-500 flex hover:bg-red-500/20 transition-colors"
           >
             <X size={14} />
@@ -615,12 +622,12 @@ export default function OpportunitiesPage() {
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
           {filtered.map(opp => (
-            <OppCard key={opp.id} opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={setSelectedOpp} />
+            <OppCard key={opp.id} opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={setSelectedOpp} stageConfig={getDeptStages(opp.contacts?.department || 'sales')} />
           ))}
         </div>
       )}
 
-      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} />}
+      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} stageConfig={currentStages} />}
     </div>
 
     {/* Deal Created Toast */}
@@ -716,7 +723,7 @@ export default function OpportunitiesPage() {
                 {isRTL ? 'تغيير المرحلة' : 'Change Stage'}
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {STAGE_CONFIG.filter(s => s.id !== 'all').map(s => {
+                {getDeptStages(selectedOpp.contacts?.department || 'sales').map(s => {
                   const isActive = s.id === selectedOpp.stage;
                   return (
                     <button

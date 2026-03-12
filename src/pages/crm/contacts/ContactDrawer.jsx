@@ -10,9 +10,9 @@ import {
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES, TASK_STATUSES } from '../../../services/tasksService';
 import EditContactModal from './EditContactModal';
 import {
-  useEscClose, SOURCE_LABELS, SOURCE_EN, STAGE_LABELS, stageLabel, coldLabel,
+  useEscClose, SOURCE_LABELS, SOURCE_EN, stageLabel, coldLabel,
   TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
-  Chip, ScorePill,
+  Chip, ScorePill, getDeptStages, deptStageLabel,
 } from './constants';
 
 // ── Activity Form ─────────────────────────────────────────────────────────
@@ -509,8 +509,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                             style={{ textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr' }} />
                         </div>
                       ))}
+                      <div>
+                        <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL?'المرحلة':'Stage'}</label>
+                        <Select value={newOpp.stage} onChange={e=>setNewOpp(p=>({...p,stage:e.target.value}))} className="w-full">
+                          {getDeptStages(contact.department || 'sales').map(s=><option key={s.id} value={s.id}>{isRTL?s.label_ar:s.label_en}</option>)}
+                        </Select>
+                      </div>
                       {[
-                        { key:'stage', label_ar:'المرحلة', label_en:'Stage', options:[{v:'new',ar:'جديد',en:'New'},{v:'contacted',ar:'تم التواصل',en:'Contacted'},{v:'interested',ar:'مهتم',en:'Interested'},{v:'negotiation',ar:'تفاوض',en:'Negotiation'},{v:'reserved',ar:'محجوز',en:'Reserved'}] },
                         { key:'temperature', label_ar:'الحرارة', label_en:'Temperature', options:[{v:'hot',ar:'ساخن',en:'Hot'},{v:'warm',ar:'دافئ',en:'Warm'},{v:'normal',ar:'عادي',en:'Normal'},{v:'cold',ar:'بارد',en:'Cold'}] },
                         { key:'priority', label_ar:'الأولوية', label_en:'Priority', options:[{v:'urgent',ar:'عاجل',en:'Urgent'},{v:'high',ar:'عالي',en:'High'},{v:'medium',ar:'متوسط',en:'Medium'},{v:'low',ar:'منخفض',en:'Low'}] },
                       ].map(f => (
@@ -545,7 +550,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 <div key={opp.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2.5">
                   <div className="flex justify-between mb-2">
                     <span className="text-content dark:text-content-dark text-xs font-semibold">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
-                    <Chip label={stageLabel(opp.stage, isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
+                    <Chip label={deptStageLabel(opp.stage, contact.department || 'sales', isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
                   </div>
                   <div className="text-xs text-content-muted dark:text-content-muted-dark flex flex-col gap-1">
                     {opp.projects?.name_ar && <span>{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</span>}

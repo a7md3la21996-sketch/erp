@@ -20,6 +20,61 @@ export const PLATFORM_LABELS = { meta: { ar: 'Meta', en: 'Meta' }, google: { ar:
 export const AD_SOURCES = ['facebook', 'instagram', 'google_ads'];
 export const STAGE_LABELS = { new: { ar: 'جديد', en: 'New' }, contacted: { ar: 'تم التواصل', en: 'Contacted' }, interested: { ar: 'مهتم', en: 'Interested' }, site_visit_scheduled: { ar: 'موعد معاينة', en: 'Visit Scheduled' }, site_visited: { ar: 'زار الموقع', en: 'Site Visited' }, negotiation: { ar: 'تفاوض', en: 'Negotiation' }, reserved: { ar: 'محجوز', en: 'Reserved' }, contracted: { ar: 'تعاقد', en: 'Contracted' }, closed_won: { ar: 'فوز ✓', en: 'Won ✓' }, closed_lost: { ar: 'خسارة ✗', en: 'Lost ✗' }, on_hold: { ar: 'معلق', en: 'On Hold' } };
 export const stageLabel = (key, isRTL) => { const s = STAGE_LABELS[key]; return s ? (isRTL ? s.ar : s.en) : key; };
+
+// ── Department-specific Stages ────────────────────────────────────────────
+export const DEPT_STAGES = {
+  sales: [
+    { id: 'new',                  label_ar: 'جديد',           label_en: 'New',              color: '#4A7AAB' },
+    { id: 'contacted',            label_ar: 'تم التواصل',     label_en: 'Contacted',        color: '#4A7AAB' },
+    { id: 'interested',           label_ar: 'مهتم',           label_en: 'Interested',       color: '#4A7AAB' },
+    { id: 'site_visit_scheduled', label_ar: 'موعد معاينة',    label_en: 'Visit Scheduled',  color: '#2B4C6F' },
+    { id: 'site_visited',         label_ar: 'تمت المعاينة',   label_en: 'Site Visited',     color: '#2B4C6F' },
+    { id: 'negotiation',          label_ar: 'تفاوض',          label_en: 'Negotiation',      color: '#1B3347' },
+    { id: 'reserved',             label_ar: 'محجوز',          label_en: 'Reserved',         color: '#1B3347' },
+    { id: 'contracted',           label_ar: 'تعاقد',          label_en: 'Contracted',       color: '#10B981' },
+    { id: 'closed_won',           label_ar: 'تم الإغلاق',     label_en: 'Closed Won',       color: '#10B981' },
+    { id: 'closed_lost',          label_ar: 'خسارة',          label_en: 'Closed Lost',      color: '#EF4444' },
+  ],
+  hr: [
+    { id: 'applied',              label_ar: 'تقديم',          label_en: 'Applied',          color: '#4A7AAB' },
+    { id: 'screening',            label_ar: 'فرز',            label_en: 'Screening',        color: '#4A7AAB' },
+    { id: 'interview_1',          label_ar: 'مقابلة أولى',    label_en: '1st Interview',    color: '#2B4C6F' },
+    { id: 'interview_2',          label_ar: 'مقابلة ثانية',   label_en: '2nd Interview',    color: '#2B4C6F' },
+    { id: 'assessment',           label_ar: 'تقييم',          label_en: 'Assessment',       color: '#1B3347' },
+    { id: 'offer',                label_ar: 'عرض',            label_en: 'Offer',            color: '#1B3347' },
+    { id: 'closed_won',           label_ar: 'قبول',           label_en: 'Accepted',         color: '#10B981' },
+    { id: 'closed_lost',          label_ar: 'رفض',            label_en: 'Rejected',         color: '#EF4444' },
+  ],
+  marketing: [
+    { id: 'new',                  label_ar: 'جديد',           label_en: 'New',              color: '#4A7AAB' },
+    { id: 'qualified',            label_ar: 'مؤهل',           label_en: 'Qualified',        color: '#4A7AAB' },
+    { id: 'nurturing',            label_ar: 'رعاية',          label_en: 'Nurturing',        color: '#2B4C6F' },
+    { id: 'converted',            label_ar: 'محول للمبيعات',  label_en: 'Converted to Sales', color: '#10B981' },
+    { id: 'closed_lost',          label_ar: 'غير مهتم',       label_en: 'Not Interested',   color: '#EF4444' },
+  ],
+  operations: [
+    { id: 'request',              label_ar: 'طلب',            label_en: 'Request',          color: '#4A7AAB' },
+    { id: 'evaluation',           label_ar: 'تقييم',          label_en: 'Evaluation',       color: '#4A7AAB' },
+    { id: 'negotiation',          label_ar: 'تفاوض',          label_en: 'Negotiation',      color: '#2B4C6F' },
+    { id: 'agreement',            label_ar: 'اتفاق',          label_en: 'Agreement',        color: '#1B3347' },
+    { id: 'execution',            label_ar: 'تنفيذ',          label_en: 'Execution',        color: '#1B3347' },
+    { id: 'closed_won',           label_ar: 'مكتمل',          label_en: 'Completed',        color: '#10B981' },
+    { id: 'closed_lost',          label_ar: 'ملغي',           label_en: 'Cancelled',        color: '#EF4444' },
+  ],
+  finance: [
+    { id: 'pending',              label_ar: 'معلق',           label_en: 'Pending',          color: '#4A7AAB' },
+    { id: 'under_review',         label_ar: 'مراجعة',         label_en: 'Under Review',     color: '#2B4C6F' },
+    { id: 'approved',             label_ar: 'موافق عليه',     label_en: 'Approved',         color: '#1B3347' },
+    { id: 'closed_won',           label_ar: 'مكتمل',          label_en: 'Completed',        color: '#10B981' },
+    { id: 'closed_lost',          label_ar: 'مرفوض',          label_en: 'Rejected',         color: '#EF4444' },
+  ],
+};
+export const getDeptStages = (dept) => DEPT_STAGES[dept] || DEPT_STAGES.sales;
+export const deptStageLabel = (stageId, dept, isRTL) => {
+  const stages = getDeptStages(dept);
+  const s = stages.find(st => st.id === stageId);
+  return s ? (isRTL ? s.label_ar : s.label_en) : stageId;
+};
 export const COLD_LABELS = { not_contacted: { ar: 'لم يُتصل به', en: 'Not Contacted' }, no_answer: { ar: 'لا يرد', en: 'No Answer' }, not_interested: { ar: 'غير مهتم', en: 'Not Interested' }, interested: { ar: 'مهتم', en: 'Interested' }, wrong_number: { ar: 'رقم خاطئ', en: 'Wrong Number' }, call_back_later: { ar: 'اتصل لاحقاً', en: 'Call Back Later' } };
 export const coldLabel = (key, isRTL) => { const s = COLD_LABELS[key]; return s ? (isRTL ? s.ar : s.en) : key; };
 export const TEMP = {

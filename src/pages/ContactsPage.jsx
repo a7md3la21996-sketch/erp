@@ -12,7 +12,7 @@ import { PageSkeleton, Select } from '../components/ui';
 
 // ── Split modules ──────────────────────────────────────────────────────────
 import {
-  SOURCE_LABELS, SOURCE_EN, STAGE_LABELS, stageLabel, coldLabel,
+  SOURCE_LABELS, SOURCE_EN, coldLabel,
   TEMP, TYPE, MOCK,
   daysSince, initials, avatarColor, normalizePhone,
   Chip, ScorePill, PhoneCell,
@@ -56,7 +56,6 @@ export default function ContactsPage() {
   const [showBulkMenu, setShowBulkMenu] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
-  const [bulkStageModal, setBulkStageModal] = useState(false);
   const [bulkReassignModal, setBulkReassignModal] = useState(false);
   const [pinnedIds, setPinnedIds] = useState(() => { try { return JSON.parse(localStorage.getItem('platform_pinned_contacts') || '[]'); } catch { return []; } });
   const [batchCallMode, setBatchCallMode] = useState(false);
@@ -94,13 +93,13 @@ export default function ContactsPage() {
       if (e.key !== 'Escape') return;
       if (batchCallMode) { setBatchCallMode(false); return; }
       if (mergePreview) { setMergePreview(null); setMergeTargets([]); setMergeMode(false); return; }
-      if (bulkStageModal) { setBulkStageModal(false); return; }
+
       if (bulkReassignModal) { setBulkReassignModal(false); return; }
       if (confirmAction) { setConfirmAction(null); return; }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [batchCallMode, mergePreview, bulkStageModal, bulkReassignModal, confirmAction]);
+  }, [batchCallMode, mergePreview, bulkReassignModal, confirmAction]);
 
   const handleDelete = (id) => {
     const contact = contacts.find(c => c.id === id);
@@ -132,15 +131,6 @@ export default function ContactsPage() {
     });
   };
 
-  const handleBulkStage = (stage) => {
-    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, stage } : c);
-    setContacts(updated);
-    localStorage.setItem('platform_contacts', JSON.stringify(updated));
-    toast.success(isRTL ? `تم تغيير المرحلة لـ ${selectedIds.length} جهة اتصال` : `Stage updated for ${selectedIds.length} contacts`);
-    setSelectedIds([]);
-    setBulkStageModal(false);
-    setShowBulkMenu(false);
-  };
 
   const handleBulkReassign = (agentName) => {
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName } : c);
@@ -152,11 +142,6 @@ export default function ContactsPage() {
     setShowBulkMenu(false);
   };
 
-  const handleStageChange = (id, stage) => {
-    const updated = contacts.map(c => c.id === id ? { ...c, stage } : c);
-    setContacts(updated);
-    localStorage.setItem('platform_contacts', JSON.stringify(updated));
-  };
 
   // Load contacts
   useEffect(() => {
@@ -329,7 +314,6 @@ export default function ContactsPage() {
                   {[
                     { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
                     { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => setBulkReassignModal(true) },
-                    { label: isRTL ? "تغيير المرحلة" : "Change Stage", action: () => setBulkStageModal(true) },
                   ].map(item => (
                     <button key={item.label} onClick={item.action} className={`w-full px-4 py-2.5 bg-transparent border-none text-content dark:text-content-dark text-xs cursor-pointer text-start flex items-center gap-2 hover:bg-brand-500/[0.15]`}>
                       {item.label}
@@ -609,7 +593,6 @@ export default function ContactsPage() {
                   </div>
                   <div className="text-center">
                     <Chip label={isRTL ? TYPE[current.contact_type]?.label : TYPE[current.contact_type]?.labelEn} color={TYPE[current.contact_type]?.color} bg={TYPE[current.contact_type]?.bg} />
-                    {current.stage && <div className="text-[10px] mt-1 text-brand-500">{stageLabel(current.stage, isRTL)}</div>}
                   </div>
                 </div>
                 <a href={"tel:" + current.phone} className="flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#065F46] to-emerald-500 rounded-xl text-white font-bold text-sm no-underline mb-4">
@@ -731,26 +714,6 @@ export default function ContactsPage() {
             <div className="flex gap-2.5 justify-center">
               <button onClick={() => setConfirmAction(null)} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
               <button onClick={confirmAction.onConfirm} className="px-5 py-2.5 bg-gradient-to-br from-red-900 to-red-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Bulk Stage Modal */}
-      {bulkStageModal && (
-        <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
-          <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[380px]">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL ? `تغيير المرحلة (${selectedIds.length})` : `Change Stage (${selectedIds.length})`}</h3>
-              <button onClick={() => setBulkStageModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={16} /></button>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {Object.entries(STAGE_LABELS).map(([key, val]) => (
-                <button key={key} onClick={() => handleBulkStage(key)}
-                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-xs cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
-                  {isRTL ? val.ar : val.en}
-                </button>
-              ))}
             </div>
           </div>
         </div>
