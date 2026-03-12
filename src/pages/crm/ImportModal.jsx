@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx';
+import { Button, FilterPill } from '../../components/ui';
 
 const COLUMN_MAP = {
   FULL_NAME: 'full_name',
@@ -199,15 +200,15 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 <input id="fileInput" type="file" accept=".xlsx,.csv" className="hidden" onChange={handleFile} />
               </div>
               <div className="text-center mt-4">
-                <button onClick={() => {
+                <Button variant="secondary" size="sm" onClick={() => {
                   const headers = Object.keys(COLUMN_MAP);
                   const ws = XLSX.utils.aoa_to_sheet([headers]);
                   const wb = XLSX.utils.book_new();
                   XLSX.utils.book_append_sheet(wb, ws, 'Contacts');
                   XLSX.writeFile(wb, 'import_template.xlsx');
-                }} className="py-2 px-4 bg-brand-500/10 dark:bg-brand-500/10 border border-gray-300 dark:border-brand-500/25 rounded-lg text-brand-400 dark:text-brand-400 text-xs cursor-pointer">
+                }}>
                   {'\u2B07\uFE0F'} {isRTL ? 'تحميل نموذج الاستيراد' : 'Download Template'}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -222,9 +223,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
               ]} />
 
               <div className="flex gap-1.5 mb-3">
-                {[['all', `${isRTL ? 'الكل' : 'All'} (${rows.length})`], ['new', `${isRTL ? 'جديد' : 'New'} (${newRows.length})`], ['opp', `${isRTL ? 'فرص' : 'Opps'} (${oppRows.length})`], ['err', `${isRTL ? 'أخطاء' : 'Errors'} (${errRows.length})`]].map(([v, l]) => (
-                  <button key={v} onClick={() => setTab(v)}
-                    className={`py-[5px] px-3 rounded-full text-[11px] cursor-pointer border ${tab===v ? 'border-brand-500/40 dark:border-brand-500/40 bg-brand-500/[0.08] dark:bg-brand-500/15 text-brand-500' : 'border-edge dark:border-edge-dark bg-transparent text-brand-400 dark:text-brand-400'}`}>{l}</button>
+                {[['all', isRTL ? 'الكل' : 'All', rows.length], ['new', isRTL ? 'جديد' : 'New', newRows.length], ['opp', isRTL ? 'فرص' : 'Opps', oppRows.length], ['err', isRTL ? 'أخطاء' : 'Errors', errRows.length]].map(([v, l, c]) => (
+                  <FilterPill key={v} label={l} count={c} active={tab===v} onClick={() => setTab(v)} />
                 ))}
               </div>
 
@@ -268,9 +268,9 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 { num: errRows.length, label: isRTL ? 'مرفوضين' : 'Rejected', color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
               ]} />
               {errRows.length > 0 && (
-                <button onClick={downloadErrors} className="w-full p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-500 text-xs font-bold cursor-pointer flex items-center justify-center gap-2">
+                <Button variant="danger" onClick={downloadErrors} className="w-full">
                   {'\u2B07\uFE0F'} {isRTL ? `تحميل تقرير الأخطاء (${errRows.length} صف)` : `Download Error Report (${errRows.length} rows)`}
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -278,21 +278,18 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-edge dark:border-edge-dark flex justify-between">
-          <button onClick={step === 1 ? onClose : () => setStep(s => s-1)}
-            className="py-2.5 px-5 bg-gray-100 dark:bg-brand-500/10 border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
+          <Button variant="secondary" size="sm" onClick={step === 1 ? onClose : () => setStep(s => s-1)}>
             {step === 1 ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '\u2190 رجوع' : '\u2190 Back')}
-          </button>
+          </Button>
           {step === 2 && (
-            <button onClick={handleImport} disabled={importing || newRows.length === 0 && oppRows.length === 0}
-              className="py-2.5 px-[22px] bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">
+            <Button size="sm" onClick={handleImport} disabled={importing || newRows.length === 0 && oppRows.length === 0}>
               {importing ? (isRTL ? 'جاري الاستيراد...' : 'Importing...') : (isRTL ? 'تأكيد الرفع \u2713' : 'Confirm Import \u2713')}
-            </button>
+            </Button>
           )}
           {step === 3 && (
-            <button onClick={onClose}
-              className="py-2.5 px-[22px] bg-gradient-to-br from-brand-800 to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer">
+            <Button size="sm" onClick={onClose}>
               {isRTL ? 'إغلاق' : 'Close'}
-            </button>
+            </Button>
           )}
         </div>
       </div>

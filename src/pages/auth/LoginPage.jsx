@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Eye, EyeOff, Sun, Moon, Globe } from 'lucide-react';
+import { Button, Input } from '../../components/ui';
 
 export default function LoginPage() {
   const { t, i18n } = useTranslation();
@@ -73,9 +74,8 @@ export default function LoginPage() {
 
           <div className="mb-5">
             <label className="block text-sm font-medium text-gray-700 dark:text-content-dark mb-1.5">{t('auth.email')}</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown}
-              placeholder="admin@platform.com" dir="ltr"
-              className="w-full h-11 px-4 rounded-lg border border-gray-300 dark:border-edge-dark bg-white dark:bg-surface-input-dark text-gray-900 dark:text-content-dark text-sm outline-none box-border" />
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown}
+              placeholder="admin@platform.com" dir="ltr" className="!h-11" />
           </div>
 
           <div className="mb-6">
@@ -83,9 +83,8 @@ export default function LoginPage() {
               <label className="text-sm font-medium text-gray-700 dark:text-content-dark">{t('auth.password')}</label>
             </div>
             <div className="relative">
-              <input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown}
-                placeholder="••••••••" dir="ltr"
-                className="w-full h-11 pe-11 ps-4 rounded-lg border border-gray-300 dark:border-edge-dark bg-white dark:bg-surface-input-dark text-gray-900 dark:text-content-dark text-sm outline-none box-border" />
+              <Input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown}
+                placeholder="••••••••" dir="ltr" className="!h-11 !pe-11" />
               <button onClick={() => setShowPw(!showPw)}
                 className="absolute top-2.5 end-3 bg-transparent border-none cursor-pointer text-gray-400 dark:text-content-muted-dark">
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -93,10 +92,9 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button onClick={handleLogin} disabled={disabled}
-            className={`w-full h-11 rounded-lg border-none text-white text-sm font-semibold ${disabled ? 'bg-brand-300 cursor-not-allowed' : 'bg-brand-800 cursor-pointer hover:bg-brand-900'}`}>
+          <Button type="submit" onClick={handleLogin} disabled={disabled} className="w-full !h-11">
             {loading ? '...' : t('auth.login')}
-          </button>
+          </Button>
 
           <p className="text-center text-xs text-gray-400 dark:text-content-muted-dark mt-8">&copy; 2026 Platform Real Estate</p>
         </div>

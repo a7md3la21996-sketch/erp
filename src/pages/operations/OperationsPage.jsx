@@ -28,7 +28,7 @@ import {
   updateTicketStatus as svcUpdateTicketStatus,
 } from '../../services/operationsService';
 import { useTheme } from '../../contexts/ThemeContext';
-import { KpiCard, Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr } from '../../components/ui';
+import { KpiCard, Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, FilterPill } from '../../components/ui';
 import ExportButton from '../../components/ui/ExportButton';
 
 // ── Tabs ────────────────────────────────────────────────────────────────
@@ -124,14 +124,7 @@ function HandoverCard({ ho, isRTL, isDark }) {
 function StatusBadgeStatic({ status, config, isRTL }) {
   const cfg = config[status];
   if (!cfg) return null;
-  return (
-    <span
-      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
-      style={{ color: cfg.color, background: cfg.color + '18', border: `1px solid ${cfg.color}35` }}
-    >
-      {isRTL ? cfg.ar : cfg.en}
-    </span>
-  );
+  return <Badge color={cfg.color} size="sm" className="rounded-full" style={{ border: `1px solid ${cfg.color}35` }}>{isRTL ? cfg.ar : cfg.en}</Badge>;
 }
 
 export default function OperationsPage() {
@@ -276,43 +269,15 @@ export default function OperationsPage() {
   function StatusBadge({ status, config }) {
     const cfg = config[status];
     if (!cfg) return null;
-    return (
-      <span
-        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap"
-        style={{ color: cfg.color, background: cfg.color + '18', border: `1px solid ${cfg.color}35` }}
-      >
-        {isRTL ? cfg.ar : cfg.en}
-      </span>
-    );
+    return <Badge color={cfg.color} size="sm" className="rounded-full" style={{ border: `1px solid ${cfg.color}35` }}>{isRTL ? cfg.ar : cfg.en}</Badge>;
   }
 
   function FilterPills({ items, active, onChange }) {
     return (
       <div className="flex gap-1.5 flex-wrap">
-        <button
-          onClick={() => onChange('all')}
-          className={`px-3 py-1 rounded-md border text-xs cursor-pointer transition-all duration-150 font-cairo ${
-            active === 'all'
-              ? 'border-brand-500/60 bg-brand-500/[0.15] text-brand-500 font-semibold'
-              : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'
-          }`}
-        >
-          {isRTL ? 'الكل' : 'All'}
-        </button>
+        <FilterPill label={isRTL ? 'الكل' : 'All'} active={active === 'all'} onClick={() => onChange('all')} />
         {items.map(([key, cfg]) => (
-          <button
-            key={key}
-            onClick={() => onChange(key)}
-            className="px-3 py-1 rounded-md border text-xs cursor-pointer transition-all duration-150 font-cairo"
-            style={{
-              borderColor: active === key ? cfg.color + '60' : undefined,
-              background: active === key ? cfg.color + '15' : 'transparent',
-              color: active === key ? cfg.color : undefined,
-              fontWeight: active === key ? 600 : 400,
-            }}
-          >
-            {isRTL ? cfg.ar : cfg.en}
-          </button>
+          <FilterPill key={key} label={isRTL ? cfg.ar : cfg.en} active={active === key} onClick={() => onChange(key)} />
         ))}
       </div>
     );

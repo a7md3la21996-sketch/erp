@@ -187,9 +187,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </div>
             </div>
             <div className="flex gap-2 items-center">
-              <button onClick={() => setShowEdit(true)} className="bg-brand-500/10 border border-brand-500/25 rounded-md text-brand-500 cursor-pointer px-2.5 py-1 text-[11px] font-semibold flex items-center gap-1">
+              <Button variant="secondary" size="sm" onClick={() => setShowEdit(true)} className="!text-[11px] !px-2.5 !py-1">
                 <Pencil size={12} /> {isRTL ? 'تعديل' : 'Edit'}
-              </button>
+              </Button>
               <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1"><X size={18} /></button>
             </div>
           </div>
@@ -288,9 +288,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </div>
               )}
               {contact.contact_type === 'supplier' && (
-                <button className="w-full mt-3 p-2.5 bg-brand-500/10 border border-brand-500/25 rounded-lg text-brand-500 text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5">
+                <Button variant="secondary" size="sm" className="w-full mt-3">
                   <span>+</span> {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -302,9 +302,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 <FileDown size={32} className="mb-3 opacity-40 text-content-muted dark:text-content-muted-dark" />
                 <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
                 <p className="mt-1.5 mb-4 text-xs">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
-                <button className="px-5 py-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-semibold cursor-pointer">
+                <Button size="sm">
                   + {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -313,9 +313,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {tab === 'activities' && (
             <div>
               {!showActivityForm && (
-                <button onClick={() => setShowActivityForm(true)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer mb-3.5">
+                <Button onClick={() => setShowActivityForm(true)} size="sm" className="w-full mb-3.5">
                   {isRTL ? '+ إضافة نشاط' : '+ Add Activity'}
-                </button>
+                </Button>
               )}
               {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
 
@@ -357,9 +357,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* TASKS TAB */}
           {tab === 'tasks' && (
             <div>
-              <button onClick={() => setAddTaskForm(f => !f)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer mb-3.5">
+              <Button onClick={() => setAddTaskForm(f => !f)} size="sm" className="w-full mb-3.5">
                 {addTaskForm ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '+ مهمة جديدة' : '+ New Task')}
-              </button>
+              </Button>
 
               {addTaskForm && (
                 <div className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-3.5">
@@ -380,7 +380,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     </div>
                     <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
                       className="px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-[11px] outline-none" />
-                    <button onClick={async () => {
+                    <Button size="sm" onClick={async () => {
                       if (!newTask.title.trim() || !newTask.due_date) return;
                       setSavingTask(true);
                       try {
@@ -389,11 +389,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         setNewTask({ title: '', type: 'followup', priority: 'medium', due_date: '', notes: '' });
                         setAddTaskForm(false);
                       } finally { setSavingTask(false); }
-                    }} disabled={savingTask || !newTask.title.trim() || !newTask.due_date}
-                      className="py-[7px] rounded-[7px] border-none bg-[#2B4C6F] text-white text-xs font-semibold cursor-pointer"
-                      style={{ opacity: savingTask || !newTask.title.trim() || !newTask.due_date ? 0.5 : 1 }}>
+                    }} disabled={savingTask || !newTask.title.trim() || !newTask.due_date}>
                       {savingTask ? '...' : (isRTL ? 'حفظ' : 'Save')}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -441,9 +439,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* OPPORTUNITIES TAB */}
           {tab === 'opportunities' && (
             <div>
-              <button onClick={()=>setShowOppModal(true)} className="w-full p-2.5 bg-gradient-to-br from-[#2B4C6F] to-brand-500 border-none rounded-lg text-white text-xs font-bold cursor-pointer mb-3.5 font-inherit">
+              <Button onClick={()=>setShowOppModal(true)} size="sm" className="w-full mb-3.5">
                 {isRTL ? '+ فتح فرصة جديدة' : '+ New Opportunity'}
-              </button>
+              </Button>
               {showOppModal && (
                 <div onClick={()=>setShowOppModal(false)} className="fixed inset-0 z-[1100] flex items-center justify-center p-5 bg-black/50">
                   <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e=>e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[14px] p-6 w-full max-w-[420px] border border-edge dark:border-edge-dark">
@@ -479,13 +477,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       ))}
                     </div>
                     <div className="flex gap-2.5 mt-5">
-                      <button onClick={()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const opp = {...newOpp, contactName:contact.full_name, contactId:contact.id, contact_id:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:String(Date.now()), created_at:new Date().toISOString(), projects:{name_ar:newOpp.project,name_en:newOpp.project}}; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}
-                        className="flex-1 py-2.5 rounded-lg bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white border-none text-xs font-bold cursor-pointer font-inherit">
+                      <Button className="flex-1" size="sm" onClick={()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const opp = {...newOpp, contactName:contact.full_name, contactId:contact.id, contact_id:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:String(Date.now()), created_at:new Date().toISOString(), projects:{name_ar:newOpp.project,name_en:newOpp.project}}; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}>
                         {isRTL?'حفظ':'Save'}
-                      </button>
-                      <button onClick={()=>setShowOppModal(false)} className="px-4 py-2.5 rounded-lg bg-transparent text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark text-xs cursor-pointer font-inherit">
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={()=>setShowOppModal(false)}>
                         {isRTL?'إلغاء':'Cancel'}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>

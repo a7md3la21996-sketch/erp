@@ -26,20 +26,13 @@ import {
   createExpense as svcCreateExpense,
   fetchChartOfAccounts as svcFetchChartOfAccounts,
 } from '../../services/financeService';
-import { Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, KpiCard, ExportButton } from '../../components/ui';
+import { Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, KpiCard, ExportButton, FilterPill } from '../../components/ui';
 
 
 /* ── Shared sub-components ──────────────────────────────────────────────── */
 
 function StatusBadge({ label, color }) {
-  return (
-    <span
-      className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold whitespace-nowrap"
-      style={{ background: color + '18', color, border: `1px solid ${color}35` }}
-    >
-      {label}
-    </span>
-  );
+  return <Badge color={color} size="sm" className="rounded-full" style={{ border: `1px solid ${color}35` }}>{label}</Badge>;
 }
 
 function AddBtn({ label, onClick }) {
@@ -47,21 +40,6 @@ function AddBtn({ label, onClick }) {
     <Button variant="primary" size="sm" onClick={onClick}>
       <Plus size={14} />{label}
     </Button>
-  );
-}
-
-function FilterPill({ label, active, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1 rounded-md text-xs cursor-pointer transition-all duration-150 border
-        ${active
-          ? 'border-brand-500 bg-brand-500/15 text-brand-500 font-semibold'
-          : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'
-        }`}
-    >
-      {label}
-    </button>
   );
 }
 

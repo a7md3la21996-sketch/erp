@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
-import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr } from '../components/ui';
+import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr, FilterPill } from '../components/ui';
 
 // ── Mock CRM Activity Data ─────────────────────────────────────
 const MOCK_CRM_ACTIVITY = {
@@ -250,17 +250,9 @@ export default function PerformancePage() {
       </div>
 
       {/* Tabs */}
-      <div className={`flex flex-wrap gap-0 mb-5 border-b border-edge dark:border-edge-dark overflow-x-auto ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex flex-wrap gap-2 mb-5 overflow-x-auto ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         {tabs.map(t => (
-          <button key={t.key} onClick={() => setActiveTab(t.key)}
-            className={`px-5 py-[11px] border-none cursor-pointer text-xs font-medium bg-transparent transition-colors duration-200
-              ${activeTab === t.key
-                ? 'text-brand-500 border-b-2 border-brand-500'
-                : 'text-content-muted dark:text-content-muted-dark border-b-2 border-transparent'
-              }`}
-          >
-            {lang === 'ar' ? t.ar : t.en}
-          </button>
+          <FilterPill key={t.key} label={lang === 'ar' ? t.ar : t.en} active={activeTab === t.key} onClick={() => setActiveTab(t.key)} />
         ))}
       </div>
 
