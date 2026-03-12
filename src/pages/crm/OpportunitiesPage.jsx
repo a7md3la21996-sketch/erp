@@ -4,9 +4,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
+import { fetchContactActivities } from '../../services/contactsService';
 import { createDealFromOpportunity } from '../../services/dealsService';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil } from 'lucide-react';
-import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton } from '../../components/ui';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns } from 'lucide-react';
+import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 
 const DEPT_LABELS = {
@@ -29,6 +30,15 @@ const PRIORITY_CONFIG = {
   medium: { label_ar: "متوسط", label_en: "Medium", color: "#6B8DB5" },
   low:    { label_ar: "منخفض", label_en: "Low",    color: "#8BA8C8" },
 };
+
+const DATE_FILTERS = {
+  all:        { ar: 'كل الأوقات', en: 'All Time' },
+  this_week:  { ar: 'هذا الأسبوع', en: 'This Week' },
+  this_month: { ar: 'هذا الشهر', en: 'This Month' },
+  last_30:    { ar: 'آخر 30 يوم', en: 'Last 30 Days' },
+};
+
+const ACTIVITY_ICONS = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: UsersIcon, note: Clock, site_visit: Star };
 
 const fmtBudget = (n) => { if (!n) return "-"; if (n >= 1000000) return (n / 1000000).toFixed(1) + "M"; if (n >= 1000) return (n / 1000).toFixed(0) + "K"; return n.toLocaleString(); };
 const initials = (n) => (n || "").trim().split(" ").map(w => w[0]).slice(0, 2).join("") || "?";
@@ -452,6 +462,10 @@ export default function OpportunitiesPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [filterDate, setFilterDate] = useState('all');
+  const [viewMode, setViewMode] = useState('grid');
+  const [drawerActivities, setDrawerActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
 
   // ESC to close drawer
   useEffect(() => {
@@ -460,6 +474,18 @@ export default function OpportunitiesPage() {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [selectedOpp]);
+
+  // Fetch activities for drawer
+  useEffect(() => {
+    if (!selectedOpp?.contact_id) { setDrawerActivities([]); return; }
+    let cancelled = false;
+    setLoadingActivities(true);
+    fetchContactActivities(selectedOpp.contact_id)
+      .then(data => { if (!cancelled) setDrawerActivities(data?.slice(0, 5) || []); })
+      .catch(() => { if (!cancelled) setDrawerActivities([]); })
+      .finally(() => { if (!cancelled) setLoadingActivities(false); });
+    return () => { cancelled = true; };
+  }, [selectedOpp?.contact_id]);
 
   // Dynamic stage config based on department filter
   const currentStages = filterDept === 'all' ? getDeptStages('sales') : getDeptStages(filterDept);
@@ -493,8 +519,28 @@ export default function OpportunitiesPage() {
     }
     if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return false;
     if (filterTemp !== 'all' && o.temperature !== filterTemp) return false;
+    if (filterDate !== 'all' && o.created_at) {
+      const now = new Date();
+      let start;
+      if (filterDate === 'this_week') { start = new Date(now); start.setDate(now.getDate() - now.getDay()); start.setHours(0,0,0,0); }
+      else if (filterDate === 'this_month') { start = new Date(now.getFullYear(), now.getMonth(), 1); }
+      else if (filterDate === 'last_30') { start = new Date(now); start.setDate(now.getDate() - 30); }
+      if (start && new Date(o.created_at) < start) return false;
+    }
     return true;
   });
+
+  // Export data
+  const exportData = filtered.map(o => ({
+    [isRTL ? 'الاسم' : 'Name']: getContactName(o),
+    [isRTL ? 'الهاتف' : 'Phone']: o.contacts?.phone || '',
+    [isRTL ? 'المشروع' : 'Project']: getProjectName(o, lang),
+    [isRTL ? 'الميزانية' : 'Budget']: o.budget || 0,
+    [isRTL ? 'المرحلة' : 'Stage']: deptStageLabel(o.stage, o.contacts?.department || 'sales', isRTL),
+    [isRTL ? 'الحرارة' : 'Temp']: isRTL ? (TEMP_CONFIG[o.temperature]?.label_ar || '') : (TEMP_CONFIG[o.temperature]?.label_en || ''),
+    [isRTL ? 'المسؤول' : 'Agent']: getAgentName(o, lang),
+    [isRTL ? 'التاريخ' : 'Date']: o.created_at?.slice(0, 10) || '',
+  }));
 
   const totalBudget = filtered.reduce((s, o) => s + (o.budget || 0), 0);
   const wonCount = filtered.filter(o => o.stage === 'closed_won').length;
@@ -581,9 +627,12 @@ export default function OpportunitiesPage() {
             {isRTL ? 'إدارة وتتبع الفرص لكل الأقسام' : 'Manage and track opportunities across departments'}
           </p>
         </div>
-        <Button size="sm" onClick={() => setShowModal(true)}>
-          <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButton data={exportData} filename="opportunities" title={isRTL ? 'الفرص' : 'Opportunities'} />
+          <Button size="sm" onClick={() => setShowModal(true)}>
+            <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
+          </Button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -659,17 +708,24 @@ export default function OpportunitiesPage() {
           <option value="all">{isRTL ? 'كل الحرارة' : 'All Temps'}</option>
           {Object.entries(TEMP_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
         </Select>
-        {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all') && (
+        <Select className="!w-auto flex-none min-w-[110px]" value={filterDate} onChange={e => setFilterDate(e.target.value)}>
+          {Object.entries(DATE_FILTERS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+        </Select>
+        {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all' || filterDate !== 'all') && (
           <Button
             variant="danger"
             size="sm"
-            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterDept('all'); setActiveStage('all'); }}
+            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); }}
           >
             <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
           </Button>
         )}
-        <div className="ms-auto text-xs text-content-muted dark:text-content-muted-dark">
-          {filtered.length} {isRTL ? 'فرصة' : 'opportunities'}
+        <div className="ms-auto flex items-center gap-2.5">
+          <div className="flex rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
+            <button onClick={() => setViewMode('grid')} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><LayoutGrid size={14} /></button>
+            <button onClick={() => { setViewMode('kanban'); setActiveStage('all'); }} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'kanban' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><Columns size={14} /></button>
+          </div>
+          <span className="text-xs text-content-muted dark:text-content-muted-dark">{filtered.length} {isRTL ? 'فرصة' : 'opps'}</span>
         </div>
       </div>
 
@@ -706,6 +762,28 @@ export default function OpportunitiesPage() {
           <Button size="sm" onClick={() => setShowModal(true)}>
             <Plus size={14} /> {isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
           </Button>
+        </div>
+      ) : viewMode === 'kanban' ? (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {currentStages.map(stage => {
+            const stageOpps = filtered.filter(o => o.stage === stage.id);
+            return (
+              <div key={stage.id} className="flex-shrink-0 w-[300px]">
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: stage.color }} />
+                  <span className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? stage.label_ar : stage.label_en}</span>
+                  <span className="text-xs text-content-muted dark:text-content-muted-dark bg-gray-100 dark:bg-brand-500/15 rounded-full px-1.5 py-px">{stageOpps.length}</span>
+                </div>
+                <div className="flex flex-col gap-3 min-h-[200px] bg-brand-500/[0.03] dark:bg-brand-500/[0.04] rounded-xl p-2.5 border border-dashed border-edge dark:border-edge-dark">
+                  {stageOpps.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-content-muted dark:text-content-muted-dark opacity-50">{isRTL ? 'لا توجد فرص' : 'Empty'}</div>
+                  ) : stageOpps.map(opp => (
+                    <OppCard key={opp.id} opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={setSelectedOpp} stageConfig={currentStages} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
@@ -761,7 +839,7 @@ export default function OpportunitiesPage() {
       <div
         role="dialog"
         dir={isRTL ? 'rtl' : 'ltr'}
-        className={`fixed inset-0 z-[200] flex ${isRTL ? 'flex-row' : 'flex-row-reverse'}`}
+        className={`fixed inset-0 z-[200] bg-black/40 flex ${isRTL ? 'flex-row' : 'flex-row-reverse'}`}
         onClick={e => { if (e.target === e.currentTarget) setSelectedOpp(null); }}
       >
         <div className="w-full max-w-[460px] h-full bg-surface-card dark:bg-surface-card-dark shadow-[-8px_0_40px_rgba(0,0,0,0.2)] flex flex-col overflow-y-auto">
@@ -916,35 +994,89 @@ export default function OpportunitiesPage() {
               )}
             </>)}
 
-            {/* Change Stage */}
+            {/* Pipeline Stepper */}
+            <div>
+              <p className="m-0 mb-3 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+                {isRTL ? 'مراحل التقدم' : 'Pipeline Progress'}
+              </p>
+              {(() => {
+                const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
+                const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
+                const isLost = selectedOpp.stage === 'closed_lost';
+                return (
+                  <div className="flex items-start">
+                    {stages.map((s, i) => {
+                      const isPast = i < currentIdx;
+                      const isCurrent = i === currentIdx;
+                      return (
+                        <div key={s.id} className="flex items-start flex-1 min-w-0">
+                          <button
+                            onClick={() => handleMove(selectedOpp.id, s.id)}
+                            className="flex flex-col items-center gap-1 cursor-pointer bg-transparent border-none w-full group p-0"
+                          >
+                            <div
+                              className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
+                                isCurrent ? 'ring-2 ring-offset-1 ring-offset-surface-card dark:ring-offset-surface-card-dark' : ''
+                              } ${
+                                isPast || isCurrent
+                                  ? isLost && isCurrent ? 'bg-red-500 text-white ring-red-500' : 'text-white'
+                                  : 'bg-gray-100 dark:bg-white/10 text-content-muted dark:text-content-muted-dark group-hover:bg-brand-500/20'
+                              }`}
+                              style={(isPast || isCurrent) && !(isLost && isCurrent) ? { background: s.color, '--tw-ring-color': s.color } : {}}
+                            >
+                              {isPast ? '✓' : i + 1}
+                            </div>
+                            <span className={`text-[8px] text-center leading-tight max-w-full ${isCurrent ? 'font-bold text-content dark:text-content-dark' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                              {isRTL ? s.label_ar : s.label_en}
+                            </span>
+                          </button>
+                          {i < stages.length - 1 && (
+                            <div className={`h-[2px] flex-1 min-w-[4px] mt-[13px] -mx-0.5 ${i < currentIdx ? 'bg-brand-500' : 'bg-gray-200 dark:bg-white/10'}`} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Activities Timeline */}
             <div>
               <p className="m-0 mb-2 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                {isRTL ? 'تغيير المرحلة' : 'Change Stage'}
+                {isRTL ? 'آخر الأنشطة' : 'Recent Activities'}
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {getDeptStages(selectedOpp.contacts?.department || 'sales').map(s => {
-                  const isActive = s.id === selectedOpp.stage;
-                  return (
-                    <button
-                      key={s.id}
-                      onClick={() => handleMove(selectedOpp.id, s.id)}
-                      className={`px-3 py-1.5 rounded-lg text-xs cursor-pointer font-cairo transition-all duration-150 border ${
-                        isActive ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:bg-gray-50 dark:hover:bg-brand-500/10'
-                      }`}
-                      style={isActive ? { borderColor: s.color, background: `${s.color}18`, color: s.color } : {}}
-                    >
-                      {isRTL ? s.label_ar : s.label_en}
-                    </button>
-                  );
-                })}
-              </div>
+              {loadingActivities ? (
+                <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark"><Loader2 size={16} className="animate-spin inline-block" /></div>
+              ) : drawerActivities.length === 0 ? (
+                <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark opacity-60">
+                  <Clock size={20} className="opacity-30 mb-1 mx-auto" />
+                  <p className="m-0">{isRTL ? 'لا توجد أنشطة' : 'No activities'}</p>
+                </div>
+              ) : drawerActivities.map(act => {
+                const ActIcon = ACTIVITY_ICONS[act.type] || Clock;
+                return (
+                  <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2">
+                    <div className="flex items-start gap-2 mb-1">
+                      <div className="w-[24px] h-[24px] rounded-[6px] bg-brand-500/10 flex items-center justify-center shrink-0 mt-px">
+                        <ActIcon size={12} color="#4A7AAB" />
+                      </div>
+                      <span className="text-content dark:text-content-dark text-xs font-semibold flex-1">{act.description}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-content-muted dark:text-content-muted-dark ps-8">
+                      <span>{isRTL ? (act.users?.full_name_ar || '—') : (act.users?.full_name_en || act.users?.full_name_ar || '—')}</span>
+                      <span>{act.created_at?.slice(0, 10)}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Follow Up Reminder */}
             <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={getContactName(selectedOpp)} />
           </div>
         </div>
-        <div className="flex-1 bg-black/40" onClick={() => setSelectedOpp(null)} />
+        <div className="flex-1" onClick={() => setSelectedOpp(null)} />
       </div>
     )}
   </>);
