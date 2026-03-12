@@ -178,7 +178,7 @@ export default function TasksPage() {
       )}
 
       {/* Filters */}
-      <Card className={`px-3.5 py-2.5 mb-3 flex gap-2 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <Card className={`px-3.5 py-2.5 mb-4 flex gap-2 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="relative flex-1 min-w-[160px]">
           <Search size={13} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-2.5" />
           <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder={lang==='ar'?'بحث...':'Search...'}

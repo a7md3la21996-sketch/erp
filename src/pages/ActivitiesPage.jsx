@@ -164,7 +164,7 @@ export default function ActivitiesPage() {
 
       {/* Add Form */}
       {adding && (
-        <Card className="p-[18px] mb-4">
+        <Card className="p-5 mb-4">
           <div className="grid grid-cols-2 gap-2.5 mb-3">
             {/* Dept */}
             <div>
@@ -222,7 +222,7 @@ export default function ActivitiesPage() {
       )}
 
       {/* Filters */}
-      <Card className={`px-4 py-3 mb-3 flex gap-2.5 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <Card className={`px-4 py-3 mb-4 flex gap-2.5 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         {/* Search */}
         <div className="relative flex-1 min-w-[160px]">
           <Search
@@ -281,7 +281,7 @@ export default function ActivitiesPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-[60px] px-6 text-center">
-            <div className="w-16 h-16 rounded-[18px] bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border-[1.5px] border-dashed border-brand-500/30 flex items-center justify-center mb-4">
+            <div className="w-16 h-16 rounded-2xl bg-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
               <Activity size={28} className="text-brand-500" strokeWidth={1.5} />
             </div>
             <p className="m-0 mb-1.5 font-bold text-[15px] text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}</p>

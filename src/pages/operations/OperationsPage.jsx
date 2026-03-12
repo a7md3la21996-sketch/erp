@@ -28,13 +28,7 @@ import {
   updateTicketStatus as svcUpdateTicketStatus,
 } from '../../services/operationsService';
 import { useTheme } from '../../contexts/ThemeContext';
-import KpiCard from '../../components/ui/KpiCard';
-import Button from '../../components/ui/Button';
-import Card, { CardHeader, CardBody } from '../../components/ui/Card';
-import Input, { Select } from '../../components/ui/Input';
-import Badge from '../../components/ui/Badge';
-import Modal, { ModalFooter } from '../../components/ui/Modal';
-import { Table, Th, Td, Tr } from '../../components/ui/Table';
+import { KpiCard, Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr } from '../../components/ui';
 import ExportButton from '../../components/ui/ExportButton';
 
 // ── Tabs ────────────────────────────────────────────────────────────────

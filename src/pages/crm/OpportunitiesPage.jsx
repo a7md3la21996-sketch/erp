@@ -122,7 +122,7 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect }) {
           </button>
           {menuOpen && (
             <div
-              className="absolute top-full z-50 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-[10px] shadow-lg min-w-[170px] overflow-hidden"
+              className="absolute top-full z-50 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg min-w-[170px] overflow-hidden"
               style={{ [isRTL ? 'left' : 'right']: 0 }}
             >
               <div className="py-1.5 border-b border-edge dark:border-edge-dark">
@@ -249,7 +249,7 @@ function ContactSearch({ isRTL, value, onSelect }) {
         />
       )}
       {open && !value && (query.length >= 2) && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-[10px] shadow-lg z-[60] max-h-[200px] overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg z-[60] max-h-[200px] overflow-y-auto">
           {searching ? (
             <div className="p-4 text-center text-content-muted dark:text-content-muted-dark text-xs">
               <Loader2 size={16} className="animate-spin inline-block" />
@@ -692,7 +692,7 @@ export default function OpportunitiesPage() {
                 { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
                 { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
               ].map((item, i) => (
-                <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-[10px] px-3.5 py-3">
+                <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
                   <p className="m-0 mb-1 text-[11px] text-content-muted dark:text-content-muted-dark">{item.label}</p>
                   <p className="m-0 text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
                 </div>
@@ -701,7 +701,7 @@ export default function OpportunitiesPage() {
 
             {/* Project */}
             {getProjectName(selectedOpp, lang) && (
-              <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-[10px] px-3.5 py-3">
+              <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
                 <p className="m-0 mb-1 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
                 <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{getProjectName(selectedOpp, lang)}</p>
               </div>
@@ -709,7 +709,7 @@ export default function OpportunitiesPage() {
 
             {/* Notes */}
             {selectedOpp.notes && (
-              <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-[10px] px-3.5 py-3">
+              <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
                 <p className="m-0 mb-1 text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
                 <p className="m-0 text-[13px] text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
               </div>

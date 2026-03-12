@@ -6,14 +6,7 @@ import {
   CreditCard, Building2, UserCheck, FileBarChart,
   ArrowDownToLine, Filter
 } from 'lucide-react';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
-import Modal from '../components/ui/Modal';
-import Input, { Select } from '../components/ui/Input';
-import KpiCard from '../components/ui/KpiCard';
-import ExportButton from '../components/ui/ExportButton';
-import { Table, Th, Td, Tr } from '../components/ui/Table';
+import { Card, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr } from '../components/ui';
 
 // ── Mock report data generators ──────────────────────────────────
 

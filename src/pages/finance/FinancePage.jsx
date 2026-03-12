@@ -26,14 +26,7 @@ import {
   createExpense as svcCreateExpense,
   fetchChartOfAccounts as svcFetchChartOfAccounts,
 } from '../../services/financeService';
-import Button from '../../components/ui/Button';
-import Card, { CardHeader, CardBody } from '../../components/ui/Card';
-import Input, { Select } from '../../components/ui/Input';
-import Badge from '../../components/ui/Badge';
-import Modal, { ModalFooter } from '../../components/ui/Modal';
-import { Table, Th, Td, Tr } from '../../components/ui/Table';
-import KpiCard from '../../components/ui/KpiCard';
-import ExportButton from '../../components/ui/ExportButton';
+import { Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, KpiCard, ExportButton } from '../../components/ui';
 
 
 /* ── Shared sub-components ──────────────────────────────────────────────── */

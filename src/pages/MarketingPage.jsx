@@ -4,14 +4,7 @@ import {
   Megaphone, Plus, TrendingUp, Users, DollarSign,
   BarChart3, Calendar, Filter, Search, Eye
 } from 'lucide-react';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
-import Modal, { ModalFooter } from '../components/ui/Modal';
-import Input, { Select } from '../components/ui/Input';
-import KpiCard from '../components/ui/KpiCard';
-import ExportButton from '../components/ui/ExportButton';
-import { Table, Th, Td, Tr } from '../components/ui/Table';
+import { Card, Button, Badge, Modal, ModalFooter, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr } from '../components/ui';
 
 // ── Mock campaigns data ──────────────────────────────────────────
 

@@ -247,8 +247,8 @@ export default function PerformancePage() {
           { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: MOCK_EMPLOYEES.length, icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
           <Card key={i} className="px-[18px] py-4">
-            <div className="text-[22px] mb-1.5">{s.icon}</div>
-            <div className="text-[26px] font-extrabold" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-xl mb-1.5">{s.icon}</div>
+            <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
             <div className="text-xs text-content-muted dark:text-content-muted-dark">{s.label}</div>
           </Card>
         ))}
@@ -258,7 +258,7 @@ export default function PerformancePage() {
       <div className={`flex flex-wrap gap-0 mb-5 border-b border-edge dark:border-edge-dark overflow-x-auto ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
-            className={`px-5 py-[11px] border-none cursor-pointer text-[13px] font-medium bg-transparent transition-colors duration-200
+            className={`px-5 py-[11px] border-none cursor-pointer text-xs font-medium bg-transparent transition-colors duration-200
               ${activeTab === t.key
                 ? 'text-brand-500 border-b-2 border-brand-500'
                 : 'text-content-muted dark:text-content-muted-dark border-b-2 border-transparent'
@@ -324,23 +324,23 @@ export default function PerformancePage() {
                   <div className={`flex gap-4 items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <div className="text-center min-w-[50px]">
                       <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'حضور' : 'Attend'}</div>
-                      <div className="text-[13px] font-bold text-content dark:text-content-dark">{d.presentDays}d</div>
+                      <div className="text-xs font-bold text-content dark:text-content-dark">{d.presentDays}d</div>
                     </div>
                     {d.crm.calls > 0 && (
                       <div className="text-center min-w-[50px]">
                         <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مكالمات' : 'Calls'}</div>
-                        <div className="text-[13px] font-bold text-content dark:text-content-dark">{d.crm.calls}</div>
+                        <div className="text-xs font-bold text-content dark:text-content-dark">{d.crm.calls}</div>
                       </div>
                     )}
                     {d.crm.deals_closed > 0 && (
                       <div className="text-center min-w-[50px]">
                         <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'صفقات' : 'Deals'}</div>
-                        <div className="text-[13px] font-bold text-brand-500">{d.crm.deals_closed}</div>
+                        <div className="text-xs font-bold text-brand-500">{d.crm.deals_closed}</div>
                       </div>
                     )}
                     {/* Score */}
                     <div className="text-center min-w-[60px]">
-                      <div className="text-xl font-extrabold" style={{ color }}>{d.avgPct}%</div>
+                      <div className="text-xl font-bold" style={{ color }}>{d.avgPct}%</div>
                       <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08] mt-1 w-[60px]">
                         <div className="h-full rounded-sm" style={{ width: Math.min(d.avgPct, 100) + '%', background: color }} />
                       </div>
@@ -361,7 +361,7 @@ export default function PerformancePage() {
                               <span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? kpi.ar : kpi.en}</span>
                               <Badge size="sm" className="rounded-[10px]" style={{ background: freq.color + '20', color: freq.color }}>{lang === 'ar' ? freq.ar : freq.en}</Badge>
                             </div>
-                            <div className={`text-lg font-extrabold text-start`} style={{ color: kpiColor }}>
+                            <div className={`text-lg font-bold text-start`} style={{ color: kpiColor }}>
                               {kpi.actual.toLocaleString()}{kpi.unit === 'EGP' ? '' : ''}
                               <span className="text-[11px] font-normal text-content-muted dark:text-content-muted-dark"> / {kpi.target.toLocaleString()}</span>
                             </div>
@@ -415,19 +415,19 @@ export default function PerformancePage() {
                     {deptEmps.map((d, i) => (
                       <Tr key={d.emp.id}>
                         <Td>
-                          <div className="text-[13px] font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
+                          <div className="text-xs font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</div>
                         </Td>
                         {d.scores.map((kpi, j) => {
                           const kpiColor = kpi.pct >= 90 ? '#4A7AAB' : kpi.pct >= 60 ? '#6B8DB5' : '#EF4444';
                           return (
                             <Td key={j} className="text-center">
-                              <div className="text-[13px] font-bold" style={{ color: kpiColor }}>{kpi.actual.toLocaleString()}</div>
+                              <div className="text-xs font-bold" style={{ color: kpiColor }}>{kpi.actual.toLocaleString()}</div>
                               <div className="text-[10px] text-content-muted dark:text-content-muted-dark">/{kpi.target}</div>
                             </Td>
                           );
                         })}
                         <Td className="text-center">
-                          <span className="text-[13px] font-extrabold" style={{ color: d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444' }}>{d.avgPct}%</span>
+                          <span className="text-xs font-bold" style={{ color: d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444' }}>{d.avgPct}%</span>
                         </Td>
                       </Tr>
                     ))}
@@ -442,7 +442,7 @@ export default function PerformancePage() {
       {/* ── 9-BOX TAB ── */}
       {activeTab === 'ninebox' && (
         <div>
-          <div className="px-4 py-3 rounded-lg bg-brand-500/[0.08] border border-brand-500/20 mb-5 text-[13px] text-brand-500 dark:text-brand-300">
+          <div className="px-4 py-3 rounded-lg bg-brand-500/[0.08] border border-brand-500/20 mb-5 text-xs text-brand-500 dark:text-brand-300">
             {lang === 'ar' ? ' المحور الأفقي: الأداء (KPIs) · المحور الرأسي: الالتزام (الحضور)' : 'X-axis: Performance (KPIs) · Y-axis: Commitment (Attendance)'}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -490,8 +490,8 @@ export default function PerformancePage() {
               { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.deals_closed, 0), icon: '', color: '#4A7AAB' },
             ].map((s, i) => (
               <Card key={i} className="px-[18px] py-4">
-                <div className="text-[22px] mb-1.5">{s.icon}</div>
-                <div className="text-[26px] font-extrabold" style={{ color: s.color }}>{s.value}</div>
+                <div className="text-xl mb-1.5">{s.icon}</div>
+                <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
                 <div className="text-xs text-content-muted dark:text-content-muted-dark">{s.label}</div>
               </Card>
             ))}
@@ -522,11 +522,11 @@ export default function PerformancePage() {
                     : { ar: 'جيد ', en: 'Good ', color: '#4A7AAB' };
                   return (
                     <Tr key={d.emp.id}>
-                      <Td className="text-[13px] font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</Td>
-                      <Td className="text-[13px]">{d.crm.calls}</Td>
-                      <Td className="text-[13px]">{d.crm.opportunities}</Td>
-                      <Td className="text-[13px] font-bold text-brand-500">{d.crm.deals_closed}</Td>
-                      <Td className="text-[13px] text-brand-500">{d.crm.revenue > 0 ? (d.crm.revenue / 1000).toFixed(0) + 'K' : '—'}</Td>
+                      <Td className="text-xs font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</Td>
+                      <Td className="text-xs">{d.crm.calls}</Td>
+                      <Td className="text-xs">{d.crm.opportunities}</Td>
+                      <Td className="text-xs font-bold text-brand-500">{d.crm.deals_closed}</Td>
+                      <Td className="text-xs text-brand-500">{d.crm.revenue > 0 ? (d.crm.revenue / 1000).toFixed(0) + 'K' : '—'}</Td>
                       <Td>
                         <Badge size="sm" className="rounded-[20px]" style={{ background: analysis.color + '20', color: analysis.color }}>
                           {lang === 'ar' ? analysis.ar : analysis.en}
@@ -541,7 +541,7 @@ export default function PerformancePage() {
 
           {/* Golden Rule */}
           <div className="px-5 py-3.5 rounded-[10px] bg-brand-500/[0.08] dark:bg-indigo-500/10 border border-brand-300 dark:border-indigo-500/20">
-            <div className={`text-[13px] font-bold text-brand-800 dark:text-brand-300 mb-2 text-start`}>
+            <div className={`text-xs font-bold text-brand-800 dark:text-brand-300 mb-2 text-start`}>
               {lang === 'ar' ? ' القاعدة الذهبية' : 'Golden Rule'}
             </div>
             <div className={`flex gap-5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -568,7 +568,7 @@ export default function PerformancePage() {
               return (
                 <Card key={p.key} className={`px-[18px] py-4 text-start`} style={{ borderWidth: 2, borderColor: p.color + '30' }}>
                   <div className="text-2xl mb-1.5">{p.icon}</div>
-                  <div className="text-[13px] font-bold text-content dark:text-content-dark mb-1">{lang === 'ar' ? p.ar : p.en}</div>
+                  <div className="text-xs font-bold text-content dark:text-content-dark mb-1">{lang === 'ar' ? p.ar : p.en}</div>
                   <div className="text-[28px] font-black" style={{ color: p.color }}>{avg}%</div>
                   <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08] mt-2">
                     <div className="h-full rounded-sm" style={{ width: avg + '%', background: p.color }} />
@@ -592,9 +592,9 @@ export default function PerformancePage() {
                   return (
                     <div key={i}>
                       <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <span className="text-[13px] text-content dark:text-content-dark font-medium">{lang === 'ar' ? o.ar : o.en}</span>
+                        <span className="text-xs text-content dark:text-content-dark font-medium">{lang === 'ar' ? o.ar : o.en}</span>
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[13px] font-bold" style={{ color: col }}>{fmt(o.actual)}{o.unit}</span>
+                          <span className="text-xs font-bold" style={{ color: col }}>{fmt(o.actual)}{o.unit}</span>
                           <span className="text-[11px] text-content-muted dark:text-content-muted-dark">/ {fmt(o.target)}{o.unit}</span>
                           {pct > 100 && <Badge size="sm" className="rounded-[10px] bg-brand-500/[0.12] text-brand-500 font-semibold">+{pct - 100}%</Badge>}
                         </div>
