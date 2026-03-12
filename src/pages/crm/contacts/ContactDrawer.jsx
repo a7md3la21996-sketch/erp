@@ -7,6 +7,7 @@ import {
   fetchContactActivities, createActivity,
   fetchContactOpportunities
 } from '../../../services/contactsService';
+import { createOpportunity } from '../../../services/opportunitiesService';
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES, TASK_STATUSES } from '../../../services/tasksService';
 import EditContactModal from './EditContactModal';
 import {
@@ -84,7 +85,11 @@ function ActivityForm({ contactId, onSave, onCancel }) {
 
   const currentResults = ACTIVITY_RESULTS[form.type] || [];
 
+  const resultRequired = currentResults.length > 0;
+  const canSave = !resultRequired || form.result;
+
   const handleSave = () => {
+    if (!canSave) return;
     const data = { ...form, created_at: new Date().toISOString() };
     if (form.result && currentResults.length > 0) {
       const found = currentResults.find(r => r.value === form.result);
@@ -107,7 +112,7 @@ function ActivityForm({ contactId, onSave, onCancel }) {
       </div>
       {currentResults.length > 0 && (
         <div className="mb-2.5">
-          <div className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{RESULT_TITLES[form.type]}</div>
+          <div className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{RESULT_TITLES[form.type]} <span className="text-red-500">*</span></div>
           <div className="flex gap-1.5 flex-wrap">
             {currentResults.map(r => (
               <button key={r.value} onClick={() => setForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
@@ -119,6 +124,9 @@ function ActivityForm({ contactId, onSave, onCancel }) {
           </div>
         </div>
       )}
+      {resultRequired && !form.result && (
+        <div className="text-[10px] text-red-500 mb-1.5">{isRTL ? 'اختر النتيجة أولاً' : 'Select a result first'}</div>
+      )}
       <Textarea size="sm" className="mb-2.5" rows={2}
         placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
         value={form.description} onChange={e => set('description', e.target.value)} />
@@ -129,7 +137,7 @@ function ActivityForm({ contactId, onSave, onCancel }) {
         <Button variant="secondary" size="sm" onClick={onCancel}>
           {isRTL ? 'إلغاء' : 'Cancel'}
         </Button>
-        <Button size="sm" onClick={handleSave}>
+        <Button size="sm" onClick={handleSave} disabled={!canSave} className={!canSave ? 'opacity-50 cursor-not-allowed' : ''}>
           {isRTL ? 'حفظ' : 'Save'}
         </Button>
       </div>
@@ -158,31 +166,24 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showOppModal, setShowOppModal] = useState(false);
   const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'new', temperature:'warm', priority:'medium', agent:'', notes:'' });
 
+  // Fetch ALL tab data on mount so counts show immediately
   useEffect(() => {
     let cancelled = false;
-    if (tab === 'activities') {
-      setLoadingActs(true);
-      fetchContactActivities(contact.id)
-        .then(data => { if (!cancelled) setActivities(data); })
-        .catch(() => { if (!cancelled) { setActivities([]); toast.error(isRTL ? 'تعذر تحميل النشاطات' : 'Failed to load activities'); } })
-        .finally(() => { if (!cancelled) setLoadingActs(false); });
-    }
-    if (tab === 'tasks') {
-      setLoadingTasks(true);
-      fetchTasks({ contactId: contact.id })
-        .then(data => { if (!cancelled) setTasks(data); })
-        .catch(() => { if (!cancelled) { setTasks([]); toast.error(isRTL ? 'تعذر تحميل المهام' : 'Failed to load tasks'); } })
-        .finally(() => { if (!cancelled) setLoadingTasks(false); });
-    }
-    if (tab === 'opportunities') {
-      setLoadingOpps(true);
-      fetchContactOpportunities(contact.id)
-        .then(data => { if (!cancelled) setOpportunities(data); })
-        .catch(() => { if (!cancelled) setOpportunities([]); })
-        .finally(() => { if (!cancelled) setLoadingOpps(false); });
-    }
+    setLoadingActs(true); setLoadingTasks(true); setLoadingOpps(true);
+    fetchContactActivities(contact.id)
+      .then(data => { if (!cancelled) setActivities(data); })
+      .catch(() => { if (!cancelled) setActivities([]); })
+      .finally(() => { if (!cancelled) setLoadingActs(false); });
+    fetchTasks({ contactId: contact.id })
+      .then(data => { if (!cancelled) setTasks(data); })
+      .catch(() => { if (!cancelled) setTasks([]); })
+      .finally(() => { if (!cancelled) setLoadingTasks(false); });
+    fetchContactOpportunities(contact.id)
+      .then(data => { if (!cancelled) setOpportunities(data); })
+      .catch(() => { if (!cancelled) setOpportunities([]); })
+      .finally(() => { if (!cancelled) setLoadingOpps(false); });
     return () => { cancelled = true; };
-  }, [tab, contact.id]);
+  }, [contact.id]);
 
   useEffect(() => {
     if (!showOppModal) return;
@@ -215,7 +216,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const tempInfo = TEMP[contact.temperature];
   const tp = TYPE[contact.contact_type];
 
-  const baseTabs = [['info', isRTL ? 'البيانات' : 'Info'], ['activities', isRTL ? 'الأنشطة' : 'Activities'], ['opportunities', isRTL ? 'الفرص' : 'Opportunities'], ['tasks', isRTL ? 'المهام' : 'Tasks']];
+  const actCount = activities.length;
+  const oppCount = opportunities.length;
+  const taskCount = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled').length;
+  const baseTabs = [
+    ['info', isRTL ? 'البيانات' : 'Info'],
+    ['activities', (isRTL ? 'الأنشطة' : 'Activities') + (actCount ? ` (${actCount})` : '')],
+    ['opportunities', (isRTL ? 'الفرص' : 'Opps') + (oppCount ? ` (${oppCount})` : '')],
+    ['tasks', (isRTL ? 'المهام' : 'Tasks') + (taskCount ? ` (${taskCount})` : '')],
+  ];
   const tabs = contact.contact_type === 'supplier' ? [...baseTabs, ['invoices', isRTL ? 'الفواتير' : 'Invoices']] : baseTabs;
 
   const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.08] text-xs';
@@ -287,6 +296,22 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* INFO TAB */}
           {tab === 'info' && (
             <div>
+              {/* Quick Summary Cards */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <button onClick={() => setTab('activities')} className="bg-brand-500/[0.07] border border-brand-500/[0.12] rounded-xl p-2.5 cursor-pointer text-center hover:bg-brand-500/[0.12] transition-colors">
+                  <div className="text-lg font-bold text-brand-500">{loadingActs ? '…' : actCount}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'نشاط' : 'Activities'}</div>
+                </button>
+                <button onClick={() => setTab('opportunities')} className="bg-emerald-500/[0.07] border border-emerald-500/[0.15] rounded-xl p-2.5 cursor-pointer text-center hover:bg-emerald-500/[0.12] transition-colors">
+                  <div className="text-lg font-bold text-emerald-500">{loadingOpps ? '…' : oppCount}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'فرصة' : 'Opps'}</div>
+                </button>
+                <button onClick={() => setTab('tasks')} className="bg-amber-500/[0.07] border border-amber-500/[0.15] rounded-xl p-2.5 cursor-pointer text-center hover:bg-amber-500/[0.12] transition-colors">
+                  <div className="text-lg font-bold text-amber-500">{loadingTasks ? '…' : taskCount}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'مهمة مفتوحة' : 'Open Tasks'}</div>
+                </button>
+              </div>
+
               <div className="grid grid-cols-2 gap-2.5 mb-4">
                 <div className="bg-brand-500/[0.07] rounded-xl p-3 border border-brand-500/[0.12]">
                   <div className="text-content-muted dark:text-content-muted-dark text-xs mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
@@ -529,7 +554,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       ))}
                     </div>
                     <div className="flex gap-2.5 mt-5">
-                      <Button className="flex-1" size="sm" onClick={()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const opp = {...newOpp, contactName:contact.full_name, contactId:contact.id, contact_id:contact.id, budget:Number(newOpp.budget)||0, lastActivityDays:0, agent:'', id:String(Date.now()), created_at:new Date().toISOString(), projects:{name_ar:newOpp.project,name_en:newOpp.project}}; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}>
+                      <Button className="flex-1" size="sm" onClick={async ()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const oppData = { contact_id:contact.id, budget:Number(newOpp.budget)||0, stage:newOpp.stage, temperature:newOpp.temperature, priority:newOpp.priority, notes:newOpp.notes }; const saved = await createOpportunity(oppData); const opp = { ...saved, contactName:contact.full_name, contacts:{ id:contact.id, full_name:contact.full_name, phone:contact.phone, email:contact.email, department:contact.department, contact_type:contact.contact_type }, projects:{name_ar:newOpp.project,name_en:newOpp.project} }; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}>
                         {isRTL?'حفظ':'Save'}
                       </Button>
                       <Button variant="secondary" size="sm" onClick={()=>setShowOppModal(false)}>

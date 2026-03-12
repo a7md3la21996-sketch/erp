@@ -68,7 +68,6 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const handleSave = async () => {
     if (!form.department) { toast.error(isRTL ? 'يرجى اختيار القسم' : 'Please select a department'); return; }
     if (!form.contact_type) { toast.error(isRTL ? 'يرجى اختيار نوع جهة الاتصال' : 'Please select contact type'); return; }
-    if (!form.full_name.trim()) { toast.error(isRTL ? 'الاسم مطلوب' : 'Name is required'); return; }
     const fullPhone = getFullPhone(form.phone, form.countryCode);
     if (!fullPhone || !validatePhone(fullPhone)) { toast.error(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
     const invalidExtra = extraPhones.find(p => p && !validatePhone(getFullPhone(p, form.countryCode)));
@@ -76,8 +75,9 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     setSaving(true);
     try {
       const validExtras = extraPhones.filter(p => p && validatePhone(getFullPhone(p, form.countryCode))).map(p => getFullPhone(p, form.countryCode));
+      const { countryCode, ...formData } = form;
       await onSave({
-        ...form,
+        ...formData,
         phone: fullPhone,
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
@@ -332,7 +332,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
           <div className="flex gap-2.5">
             {step === 2 && <Button variant="secondary" onClick={() => setStep(1)}>{isRTL ? 'السابق →' : '← Back'}</Button>}
             {step === 1
-              ? (() => { const canNext = form.department && form.contact_type && form.full_name.trim() && validatePhone(getFullPhone(form.phone, form.countryCode)) && !dupWarning; return <Button onClick={() => setStep(2)} disabled={!canNext}>{isRTL ? '← التالي' : 'Next →'}</Button>; })()
+              ? (() => { const canNext = form.department && form.contact_type && validatePhone(getFullPhone(form.phone, form.countryCode)) && !dupWarning; return <Button onClick={() => setStep(2)} disabled={!canNext}>{isRTL ? '← التالي' : 'Next →'}</Button>; })()
               : <Button onClick={handleSave} disabled={saving}>{saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (isRTL ? 'حفظ' : 'Save')}</Button>
             }
           </div>

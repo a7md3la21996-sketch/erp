@@ -24,7 +24,7 @@ export const TASK_TYPES = {
   general:   { ar: 'عامة',        en: 'General',     icon: 'CheckSquare'  },
 };
 
-const MOCK_TASKS = [
+const SEED_TASKS = [
   { id: 't1', title: 'متابعة أحمد محمد بخصوص الوحدة', type: 'followup', priority: 'high', status: 'pending', contact_id: '1', contact_name: 'أحمد محمد السيد', assigned_to_name_ar: 'سارة علي', assigned_to_name_en: 'Sara Ali', due_date: new Date(Date.now() + 2*60*60*1000).toISOString(), notes: 'مهتم بوحدة في الشيخ زايد', dept: 'crm', created_at: new Date(Date.now() - 60*60*1000).toISOString() },
   { id: 't2', title: 'إرسال عرض سعر لمنى عبدالله', type: 'email', priority: 'high', status: 'pending', contact_id: '2', contact_name: 'منى عبدالله حسن', assigned_to_name_ar: 'محمد خالد', assigned_to_name_en: 'Mohamed Khaled', due_date: new Date(Date.now() + 4*60*60*1000).toISOString(), notes: '', dept: 'crm', created_at: new Date(Date.now() - 30*60*1000).toISOString() },
   { id: 't3', title: 'اجتماع مراجعة أداء الفريق', type: 'meeting', priority: 'medium', status: 'in_progress', contact_id: null, contact_name: null, assigned_to_name_ar: 'أحمد علاء', assigned_to_name_en: 'Ahmed Alaa', due_date: new Date(Date.now() + 24*60*60*1000).toISOString(), notes: 'مراجعة شهرية', dept: 'hr', created_at: new Date(Date.now() - 2*60*60*1000).toISOString() },
@@ -33,41 +33,57 @@ const MOCK_TASKS = [
   { id: 't6', title: 'واتساب رانيا وليد متابعة التعاقد', type: 'whatsapp', priority: 'low', status: 'pending', contact_id: '10', contact_name: 'رانيا وليد زكي', assigned_to_name_ar: 'محمد خالد', assigned_to_name_en: 'Mohamed Khaled', due_date: new Date(Date.now() + 48*60*60*1000).toISOString(), notes: '', dept: 'crm', created_at: new Date(Date.now() - 3*60*60*1000).toISOString() },
 ];
 
+// ── localStorage helpers ──
+function getLocalTasks() {
+  try {
+    const saved = localStorage.getItem('platform_tasks');
+    if (saved) return JSON.parse(saved);
+  } catch { /* ignore */ }
+  localStorage.setItem('platform_tasks', JSON.stringify(SEED_TASKS));
+  return [...SEED_TASKS];
+}
+function saveLocalTasks(tasks) {
+  try { localStorage.setItem('platform_tasks', JSON.stringify(tasks)); } catch { /* ignore */ }
+}
+
 export async function fetchTasks({ contactId, dept, status } = {}) {
+  let supaData = [];
   try {
     let query = supabase.from('tasks').select('*').order('due_date', { ascending: true });
     if (contactId) query = query.eq('contact_id', contactId);
     if (dept)      query = query.eq('dept', dept);
     if (status)    query = query.eq('status', status);
     const { data, error } = await query;
-    if (error) throw error;
-    return data || [];
-  } catch {
-    let r = [...MOCK_TASKS];
-    if (contactId) r = r.filter(t => t.contact_id === contactId);
-    if (dept)      r = r.filter(t => t.dept === dept);
-    if (status)    r = r.filter(t => t.status === status);
-    return r.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
-  }
+    if (!error && data?.length) supaData = data;
+  } catch { /* ignore */ }
+
+  // Always merge with localStorage
+  let local = getLocalTasks();
+  if (contactId) local = local.filter(t => String(t.contact_id) === String(contactId));
+  if (dept)      local = local.filter(t => t.dept === dept);
+  if (status)    local = local.filter(t => t.status === status);
+  local = local.filter(t => !supaData.some(s => String(s.id) === String(t.id)));
+  return [...supaData, ...local].sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
 }
 
 export async function createTask(data) {
+  const mock = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
+
+  // Always save to localStorage first
+  const all = getLocalTasks();
+  all.unshift(mock);
+  saveLocalTasks(all);
+
+  // Try Supabase in background
   try {
     const { data: d, error } = await supabase.from('tasks').insert([{ ...data, created_at: new Date().toISOString() }]).select('*').single();
-    if (error) throw error;
-    logCreate('task', d.id, d);
-    return d;
-  } catch {
-    if (!navigator.onLine) {
-      const tempId = 'temp_' + Date.now();
-      const tempTask = { ...data, id: tempId, created_at: new Date().toISOString(), _offline: true };
-      enqueue('task', 'create', tempTask);
-      return tempTask;
+    if (!error && d) {
+      logCreate('task', d.id, d);
+      return d;
     }
-    const mock = { ...data, id: Date.now().toString(), created_at: new Date().toISOString() };
-    MOCK_TASKS.unshift(mock);
-    return mock;
-  }
+  } catch { /* ignore */ }
+
+  return mock;
 }
 
 export async function updateTask(id, updates) {
@@ -82,9 +98,11 @@ export async function updateTask(id, updates) {
       enqueue('task', 'update', { _id: id, ...updates });
       return { id, ...updates, _offline: true };
     }
-    const idx = MOCK_TASKS.findIndex(t => t.id === id);
-    if (idx > -1) Object.assign(MOCK_TASKS[idx], updates);
-    return MOCK_TASKS[idx];
+    const all = getLocalTasks();
+    const idx = all.findIndex(t => String(t.id) === String(id));
+    if (idx > -1) Object.assign(all[idx], updates);
+    saveLocalTasks(all);
+    return idx > -1 ? all[idx] : { id, ...updates };
   }
 }
 
@@ -98,6 +116,8 @@ export async function deleteTask(id) {
       enqueue('task', 'delete', { id });
       return;
     }
-    const idx = MOCK_TASKS.findIndex(t => t.id === id); if (idx > -1) MOCK_TASKS.splice(idx, 1);
+    const all = getLocalTasks();
+    const filtered = all.filter(t => String(t.id) !== String(id));
+    saveLocalTasks(filtered);
   }
 }

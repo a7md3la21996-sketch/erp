@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import * as XLSX from 'xlsx';
 import { Button, FilterPill } from '../../components/ui';
 
+const SOURCE_PLATFORM = { facebook: 'meta', instagram: 'meta', google_ads: 'google', website: 'organic', call: 'direct', walk_in: 'direct', referral: 'direct', developer: 'direct', cold_call: 'direct', other: 'other' };
+
 const COLUMN_MAP = {
   FULL_NAME: 'full_name',
   MOBILE_NUMBERS: 'phone',
@@ -10,7 +12,7 @@ const COLUMN_MAP = {
   CAMPAIGNS: 'campaign_name',
   TYPE: 'contact_type',
   RATING: 'temperature',
-  STATUS: 'stage',
+  DEPARTMENT: 'department',
   ASSIGNEES: 'assigned_to_name',
   CREATED_AT: 'created_at',
   DESCRIPTION: 'notes',
@@ -89,6 +91,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
           full_name,
           contact_type: TYPE_MAP[mapped.contact_type] || 'lead',
           temperature: RATING_MAP[mapped.temperature] || 'warm',
+          department: mapped.department || 'sales',
+          platform: SOURCE_PLATFORM[mapped.source] || 'other',
           _row: idx + 2,
           _status: 'new',
         };

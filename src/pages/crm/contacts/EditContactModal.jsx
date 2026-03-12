@@ -3,18 +3,39 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { X } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
-import { useEscClose, SOURCE_LABELS, SOURCE_EN } from './constants';
+import { useEscClose, SOURCE_LABELS, SOURCE_EN, SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES, COUNTRY_CODES, getCountryFromPhone, getPhoneInfo, validatePhone, normalizePhone } from './constants';
+
+const getFullPhone = (phone, code) => {
+  if (!phone) return '';
+  if (phone.startsWith('+')) return phone;
+  if (phone.startsWith('0')) return normalizePhone(phone);
+  return code + phone;
+};
 
 export default function EditContactModal({ contact, onClose, onSave }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   useEscClose(onClose);
+
+  // Extract local phone from stored full phone
+  const initPhone = (p) => {
+    if (!p) return '';
+    const cc = getCountryFromPhone(p);
+    if (cc) return p.replace(cc.code, '');
+    return p;
+  };
+  const initCode = (p) => {
+    if (!p) return '+20';
+    const cc = getCountryFromPhone(p);
+    return cc ? cc.code : '+20';
+  };
+
   const [form, setForm] = useState({
     prefix: contact.prefix || '',
     full_name: contact.full_name || '',
-    phone: contact.phone || '',
-    phone2: contact.phone2 || '',
+    phone: initPhone(contact.phone),
+    phone2: initPhone(contact.phone2),
     email: contact.email || '',
     contact_type: contact.contact_type || 'lead',
     source: contact.source || 'facebook',
@@ -30,16 +51,39 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     birth_date: contact.birth_date || '',
     company: contact.company || '',
     job_title: contact.job_title || '',
+    countryCode: initCode(contact.phone),
+    countryCode2: initCode(contact.phone2),
+    platform: SOURCE_PLATFORM[contact.source] || 'other',
   });
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const isSalesType = ['lead','cold','client'].includes(form.contact_type);
+  const isSalesDept = form.department === 'sales';
+  const emailValid = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
+
+  const handlePhoneChange = (val, field, codeField) => {
+    set(field, val);
+    if (val.startsWith('0')) {
+      const detected = getCountryFromPhone(normalizePhone(val));
+      if (detected) set(codeField, detected.code);
+    }
+  };
+
+  const handleSourceChange = (src) => {
+    set('source', src);
+    set('platform', SOURCE_PLATFORM[src] || 'other');
+  };
 
   const handleSave = async () => {
-    if (!form.full_name.trim()) { toast.warning(isRTL ? 'الاسم مطلوب' : 'Name is required'); return; }
+    const fullPhone = getFullPhone(form.phone, form.countryCode);
+    if (!validatePhone(fullPhone)) { toast.warning(isRTL ? 'رقم الهاتف غير صحيح' : 'Invalid phone number'); return; }
+    if (form.email && !emailValid) { toast.warning(isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email'); return; }
     setSaving(true);
     try {
-      await onSave({ ...contact, ...form,
+      const { countryCode, countryCode2, ...formData } = form;
+      await onSave({ ...contact, ...formData,
+        phone: fullPhone,
+        phone2: getFullPhone(form.phone2, countryCode2),
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
       });
@@ -107,78 +151,116 @@ export default function EditContactModal({ contact, onClose, onSave }) {
             </div>
           </div>
 
-          {/* الهاتف والإيميل */}
+          {/* الهاتف */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span></label>
-              <Input value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="010xxxxxxxx" />
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+                {isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span>
+                {(() => { const fp = getFullPhone(form.phone, form.countryCode); if (!fp) return null; if (!validatePhone(fp)) return <span className="text-xs text-orange-500 ms-1">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-xs text-emerald-500 ms-1">{info.flag} {info.country}</span> : null; })()}
+              </label>
+              <div className="flex gap-1.5">
+                <Select value={form.countryCode} onChange={e => set('countryCode', e.target.value)} className="!w-[90px] shrink-0">
+                  {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
+                </Select>
+                <Input value={form.phone} onChange={e => handlePhoneChange(e.target.value, 'phone', 'countryCode')} placeholder="10xxxxxxxx" className="flex-1" />
+              </div>
             </div>
             <div>
-              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'هاتف 2' : 'Phone 2'}</label>
-              <Input value={form.phone2} onChange={e => set('phone2', e.target.value)} placeholder="011xxxxxxxx" />
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+                {isRTL ? 'هاتف 2' : 'Phone 2'}
+                {(() => { const fp = getFullPhone(form.phone2, form.countryCode2); if (!fp) return null; if (!validatePhone(fp)) return <span className="text-xs text-orange-500 ms-1">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-xs text-emerald-500 ms-1">{info.flag} {info.country}</span> : null; })()}
+              </label>
+              <div className="flex gap-1.5">
+                <Select value={form.countryCode2} onChange={e => set('countryCode2', e.target.value)} className="!w-[90px] shrink-0">
+                  {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
+                </Select>
+                <Input value={form.phone2} onChange={e => handlePhoneChange(e.target.value, 'phone2', 'countryCode2')} placeholder="11xxxxxxxx" className="flex-1" />
+              </div>
             </div>
           </div>
 
+          {/* الإيميل */}
           <div>
             <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
             <Input value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@domain.com" />
+            {form.email && !emailValid && <span className="text-red-500 text-[10px] mt-0.5">{isRTL ? 'بريد إلكتروني غير صحيح' : 'Invalid email format'}</span>}
           </div>
 
-          {/* الشركة والمسمى */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الشركة' : 'Company'}</label>
-              <Input value={form.company} onChange={e => set('company', e.target.value)} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} />
-            </div>
-            <div>
-              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
-              <Input value={form.job_title} onChange={e => set('job_title', e.target.value)} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} />
-            </div>
-          </div>
-
-          {/* المصدر — للـ sales types فقط */}
-          {isSalesType && (
+          {/* الشركة والمسمى — مخفية لقسم المبيعات */}
+          {!isSalesDept && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المصدر' : 'Source'}</label>
-                <Select value={form.source} onChange={e => set('source', e.target.value)}>
-                  {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
-                </Select>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الشركة' : 'Company'}</label>
+                <Input value={form.company} onChange={e => set('company', e.target.value)} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} />
               </div>
               <div>
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الميزانية (من - إلى)' : 'Budget (min - max)'}</label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <Input value={form.budget_min} onChange={e => set('budget_min', e.target.value)} placeholder={isRTL ? 'من' : 'Min'} type="number" />
-                  <Input value={form.budget_max} onChange={e => set('budget_max', e.target.value)} placeholder={isRTL ? 'إلى' : 'Max'} type="number" />
-                </div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</label>
+                <Input value={form.job_title} onChange={e => set('job_title', e.target.value)} placeholder={isRTL ? 'مدير / مهندس...' : 'Manager / Engineer...'} />
               </div>
             </div>
           )}
 
-          {/* الجنس والجنسية */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الجنس' : 'Gender'}</label>
-              <Select value={form.gender} onChange={e => set('gender', e.target.value)}>
-                <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-                <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
-                <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
-              </Select>
+          {/* المصدر والمنصة — للـ sales types فقط */}
+          {isSalesType && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المصدر' : 'Source'}</label>
+                <Select value={form.source} onChange={e => handleSourceChange(e.target.value)}>
+                  {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
+                </Select>
+              </div>
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المنصة' : 'Platform'}</label>
+                <Input value={PLATFORM_LABELS[form.platform]?.[isRTL ? 'ar' : 'en'] || form.platform} readOnly className="!bg-gray-50 dark:!bg-gray-800/50 !cursor-default" />
+              </div>
             </div>
+          )}
+
+          {/* الكامبين — فقط لمصادر الإعلانات */}
+          {isSalesType && AD_SOURCES.includes(form.source) && (
             <div>
-              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الجنسية' : 'Nationality'}</label>
-              <Select value={form.nationality} onChange={e => set('nationality', e.target.value)}>
-                <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-                <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
-                <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
-                <option value="emirati">{isRTL ? 'إماراتي' : 'Emirati'}</option>
-                <option value="kuwaiti">{isRTL ? 'كويتي' : 'Kuwaiti'}</option>
-                <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
-                <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
-                <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
-              </Select>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'اسم الحملة' : 'Campaign Name'}</label>
+              <Input value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} placeholder={isRTL ? 'اسم الحملة...' : 'Campaign name...'} />
             </div>
-          </div>
+          )}
+
+          {/* الميزانية — للـ sales types فقط */}
+          {isSalesType && (
+            <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الميزانية (من - إلى)' : 'Budget (min - max)'}</label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Input value={form.budget_min} onChange={e => set('budget_min', e.target.value)} placeholder={isRTL ? 'من' : 'Min'} type="number" />
+                <Input value={form.budget_max} onChange={e => set('budget_max', e.target.value)} placeholder={isRTL ? 'إلى' : 'Max'} type="number" />
+              </div>
+            </div>
+          )}
+
+          {/* الجنس والجنسية — مخفية لقسم المبيعات */}
+          {!isSalesDept && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الجنس' : 'Gender'}</label>
+                <Select value={form.gender} onChange={e => set('gender', e.target.value)}>
+                  <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                  <option value="male">{isRTL ? 'ذكر' : 'Male'}</option>
+                  <option value="female">{isRTL ? 'أنثى' : 'Female'}</option>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الجنسية' : 'Nationality'}</label>
+                <Select value={form.nationality} onChange={e => set('nationality', e.target.value)}>
+                  <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                  <option value="egyptian">{isRTL ? 'مصري' : 'Egyptian'}</option>
+                  <option value="saudi">{isRTL ? 'سعودي' : 'Saudi'}</option>
+                  <option value="emirati">{isRTL ? 'إماراتي' : 'Emirati'}</option>
+                  <option value="kuwaiti">{isRTL ? 'كويتي' : 'Kuwaiti'}</option>
+                  <option value="qatari">{isRTL ? 'قطري' : 'Qatari'}</option>
+                  <option value="libyan">{isRTL ? 'ليبي' : 'Libyan'}</option>
+                  <option value="other">{isRTL ? 'أخرى' : 'Other'}</option>
+                </Select>
+              </div>
+            </div>
+          )}
 
           {/* ملاحظات */}
           <div>

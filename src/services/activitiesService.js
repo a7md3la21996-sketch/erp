@@ -19,8 +19,8 @@ export const ACTIVITY_TYPES = {
   task:          { ar: 'مهمة',          en: 'Task',          icon: 'CheckSquare',  color: '#6B8DB5', dept: ['crm','sales','hr','finance'] },
 };
 
-// ── MOCK DATA ──────────────────────────────────────────────────────────────
-const MOCK_ACTIVITIES = [
+// ── SEED DATA ──────────────────────────────────────────────────────────────
+const SEED_ACTIVITIES = [
   { id: '1', type: 'call', notes: 'العميل مهتم بوحدة في الشيخ زايد، طلب موعد معاينة', contact_id: '1', entity_type: 'contact', user_name_ar: 'سارة علي', user_name_en: 'Sara Ali', dept: 'crm', created_at: new Date(Date.now() - 2*60*60*1000).toISOString() },
   { id: '2', type: 'whatsapp', notes: 'تم إرسال بروشور المشروع', contact_id: '1', entity_type: 'contact', user_name_ar: 'سارة علي', user_name_en: 'Sara Ali', dept: 'crm', created_at: new Date(Date.now() - 5*60*60*1000).toISOString() },
   { id: '3', type: 'meeting', notes: 'اجتماع مراجعة الأداء الشهري مع الفريق', entity_type: 'internal', user_name_ar: 'أحمد علاء', user_name_en: 'Ahmed Alaa', dept: 'hr', created_at: new Date(Date.now() - 24*60*60*1000).toISOString() },
@@ -33,8 +33,22 @@ const MOCK_ACTIVITIES = [
   { id: '10', type: 'status_change', notes: 'تم تحويل الليد من "مهتم" إلى "موعد معاينة"', contact_id: '7', entity_type: 'contact', user_name_ar: 'ريم أحمد', user_name_en: 'Reem Ahmed', dept: 'crm', created_at: new Date(Date.now() - 4*60*60*1000).toISOString() },
 ];
 
+// ── localStorage helpers (shared key with contactsService) ──
+function getLocalActivities() {
+  try {
+    const saved = localStorage.getItem('platform_activities');
+    if (saved) return JSON.parse(saved);
+  } catch { /* ignore */ }
+  localStorage.setItem('platform_activities', JSON.stringify(SEED_ACTIVITIES));
+  return [...SEED_ACTIVITIES];
+}
+function saveLocalActivities(acts) {
+  try { localStorage.setItem('platform_activities', JSON.stringify(acts)); } catch { /* ignore */ }
+}
+
 // ── Service Functions ───────────────────────────────────────────────────────
 export async function fetchActivities({ entityType, entityId, dept, limit = 50 } = {}) {
+  let supaData = [];
   try {
     let query = supabase
       .from('activities')
@@ -47,19 +61,21 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50 }
     if (dept)       query = query.eq('dept', dept);
 
     const { data, error } = await query;
-    if (error) throw error;
-    return data?.map(a => ({
+    if (!error && data?.length) supaData = data.map(a => ({
       ...a,
       user_name_ar: a.users?.full_name_ar || a.user_name_ar,
       user_name_en: a.users?.full_name_en || a.user_name_en,
-    })) || [];
-  } catch {
-    // Fallback to mock
-    let results = [...MOCK_ACTIVITIES];
-    if (entityId)   results = results.filter(a => a[`${entityType}_id`] === entityId);
-    if (dept)       results = results.filter(a => a.dept === dept);
-    return results.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, limit);
-  }
+    }));
+  } catch { /* ignore */ }
+
+  // Always merge with localStorage
+  let local = getLocalActivities();
+  if (entityId)   local = local.filter(a => String(a[`${entityType}_id`]) === String(entityId));
+  if (dept)       local = local.filter(a => a.dept === dept);
+  local = local.filter(a => !supaData.some(s => String(s.id) === String(a.id)));
+  return [...supaData, ...local]
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    .slice(0, limit);
 }
 
 export async function createActivity({ type, notes, entityType, entityId, dept, userId }) {
@@ -80,7 +96,6 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
     if (error) throw error;
 
     logCreate('activity', data.id, data);
-    // update last_activity_at on entity
     if (entityType === 'contact' && entityId) {
       await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
     }
@@ -92,9 +107,10 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
       enqueue('activity', 'create', tempActivity);
       return tempActivity;
     }
-    // Mock fallback
     const mock = { ...payload, id: Date.now().toString(), user_name_ar: 'أنت', user_name_en: 'You' };
-    MOCK_ACTIVITIES.unshift(mock);
+    const all = getLocalActivities();
+    all.unshift(mock);
+    saveLocalActivities(all);
     return mock;
   }
 }
@@ -110,7 +126,7 @@ export async function deleteActivity(id) {
       enqueue('activity', 'delete', { id });
       return;
     }
-    const idx = MOCK_ACTIVITIES.findIndex(a => a.id === id);
-    if (idx > -1) MOCK_ACTIVITIES.splice(idx, 1);
+    const filtered = getLocalActivities().filter(a => String(a.id) !== String(id));
+    saveLocalActivities(filtered);
   }
 }

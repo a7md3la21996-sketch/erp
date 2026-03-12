@@ -91,43 +91,89 @@ export async function checkDuplicate(phone) {
 }
 
 export async function fetchContactActivities(contactId) {
-  const { data, error } = await supabase
-    .from('activities')
-    .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en)`)
-    .eq('contact_id', contactId)
-    .order('created_at', { ascending: false })
-    .limit(50);
-  if (error) throw error;
-  return data || [];
+  let supaData = [];
+  try {
+    const { data, error } = await supabase
+      .from('activities')
+      .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en)`)
+      .eq('contact_id', contactId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (!error && data?.length) supaData = data;
+  } catch { /* ignore */ }
+
+  // Always merge with localStorage
+  try {
+    const local = JSON.parse(localStorage.getItem('platform_activities') || '[]')
+      .filter(a => String(a.contact_id) === String(contactId))
+      .filter(a => !supaData.some(s => String(s.id) === String(a.id)));
+    return [...supaData, ...local]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      .slice(0, 50);
+  } catch { return supaData; }
 }
 
 export async function createActivity(activityData) {
-  const { user_id, ...cleanData } = activityData;
-  const { data, error } = await supabase
-    .from('activities')
-    .insert([cleanData])
-    .select('*')
-    .single();
-  if (error) throw error;
+  const mock = {
+    ...activityData,
+    id: Date.now().toString(),
+    created_at: activityData.created_at || new Date().toISOString(),
+    users: { full_name_ar: 'أنت', full_name_en: 'You' },
+  };
 
-  await supabase
-    .from('contacts')
-    .update({ last_activity_at: new Date().toISOString() })
-    .eq('id', activityData.contact_id);
+  // Always save to localStorage first
+  try {
+    const all = JSON.parse(localStorage.getItem('platform_activities') || '[]');
+    all.unshift(mock);
+    localStorage.setItem('platform_activities', JSON.stringify(all));
+    if (activityData.contact_id) {
+      const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      const idx = contacts.findIndex(c => String(c.id) === String(activityData.contact_id));
+      if (idx > -1) {
+        contacts[idx].last_activity_at = new Date().toISOString();
+        localStorage.setItem('platform_contacts', JSON.stringify(contacts));
+      }
+    }
+  } catch { /* ignore */ }
 
-  return data;
+  // Try Supabase in background
+  try {
+    const { user_id, ...cleanData } = activityData;
+    const { data, error } = await supabase
+      .from('activities')
+      .insert([cleanData])
+      .select('*')
+      .single();
+    if (!error && data) {
+      await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', activityData.contact_id);
+      return data;
+    }
+  } catch { /* ignore */ }
+
+  return mock;
 }
 
 export async function fetchContactOpportunities(contactId) {
-  const { data, error } = await supabase
-    .from('opportunities')
-    .select(`
-      *,
-      users!opportunities_assigned_to_fkey (full_name_ar, full_name_en),
-      projects (name_ar, name_en)
-    `)
-    .eq('contact_id', contactId)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  let supaData = [];
+  try {
+    const { data, error } = await supabase
+      .from('opportunities')
+      .select(`
+        *,
+        users!opportunities_assigned_to_fkey (full_name_ar, full_name_en),
+        projects (name_ar, name_en)
+      `)
+      .eq('contact_id', contactId)
+      .order('created_at', { ascending: false });
+    if (!error && data?.length) supaData = data;
+  } catch { /* ignore */ }
+
+  // Always merge with localStorage
+  try {
+    const local = JSON.parse(localStorage.getItem('platform_opportunities') || '[]')
+      .filter(o => String(o.contact_id) === String(contactId))
+      .filter(o => !supaData.some(s => String(s.id) === String(o.id)));
+    return [...supaData, ...local]
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  } catch { return supaData; }
 }

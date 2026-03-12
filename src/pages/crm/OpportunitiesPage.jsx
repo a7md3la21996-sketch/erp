@@ -4,9 +4,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
-import { fetchContactActivities } from '../../services/contactsService';
+import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity } from '../../services/dealsService';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, Hash, ExternalLink } from 'lucide-react';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, ArrowUpDown, CheckSquare, AlertTriangle, Timer, ChevronUp, ChevronDown as ChevronDownIcon } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 
@@ -54,7 +54,19 @@ const CONTACT_TYPE_LABELS = {
   partner: { ar: 'شريك', en: 'Partner' },
 };
 
+const SORT_OPTIONS = {
+  newest: { ar: 'الأحدث', en: 'Newest' },
+  oldest: { ar: 'الأقدم', en: 'Oldest' },
+  budget_high: { ar: 'الميزانية (الأعلى)', en: 'Budget (High)' },
+  budget_low: { ar: 'الميزانية (الأقل)', en: 'Budget (Low)' },
+  temp_hot: { ar: 'الأسخن', en: 'Hottest' },
+  stale: { ar: 'بدون تواصل', en: 'Stale (No Contact)' },
+};
+const TEMP_ORDER = { hot: 0, warm: 1, cool: 2, cold: 3 };
+
 const fmtBudget = (n) => { if (!n) return "-"; if (n >= 1000000) return (n / 1000000).toFixed(1) + "M"; if (n >= 1000) return (n / 1000).toFixed(0) + "K"; return n.toLocaleString(); };
+const daysSince = (date) => date ? Math.floor((Date.now() - new Date(date).getTime()) / 86400000) : 999;
+const daysInStage = (opp) => daysSince(opp.stage_changed_at || opp.updated_at || opp.created_at);
 const initials = (n) => (n || "").trim().split(" ").map(w => w[0]).slice(0, 2).join("") || "?";
 const ACOLORS = ["#1B3347", "#2B4C6F", "#4A7AAB", "#6B8DB5", "#8BA8C8"];
 const avatarColor = (id) => ACOLORS[(id || 0) % ACOLORS.length];
@@ -195,23 +207,27 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig }) 
         </div>
       </div>
 
-      {/* Footer: Agent + Last Activity */}
+      {/* Footer: Agent + Last Activity + Days in stage */}
       <div className="flex items-center justify-between pt-2 border-t border-edge dark:border-edge-dark">
-        <div className="flex items-center gap-1.5 text-xs text-content-muted dark:text-content-muted-dark">
-          <User size={11} />{agentName}
+        <div className="flex items-center gap-1.5 text-xs text-content-muted dark:text-content-muted-dark truncate">
+          <User size={11} className="shrink-0" /><span className="truncate">{agentName}</span>
         </div>
-        <div className="text-xs font-bold" style={{ color: act.color }}>{act.text}</div>
+        <div className="flex items-center gap-2 shrink-0">
+          {(() => {
+            const days = daysInStage(opp);
+            return days > 0 && (
+              <span className={`text-[10px] px-1.5 py-px rounded-full ${days > 7 ? 'bg-red-500/10 text-red-500' : days > 3 ? 'bg-amber-500/10 text-amber-500' : 'bg-gray-100 dark:bg-white/10 text-content-muted dark:text-content-muted-dark'}`}>
+                <Timer size={8} className="inline -mt-px" /> {days}{isRTL ? 'ي' : 'd'}
+              </span>
+            );
+          })()}
+          <div className="text-xs font-bold" style={{ color: act.color }}>{act.text}</div>
+        </div>
       </div>
 
       {/* Notes */}
       {opp.notes && (
         <div className="text-xs text-content-muted dark:text-content-muted-dark truncate -mt-1">{opp.notes}</div>
-      )}
-      {/* Created date */}
-      {opp.created_at && (
-        <div className="text-[10px] text-content-muted dark:text-content-muted-dark -mt-1">
-          {new Date(opp.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
-        </div>
       )}
     </div>
   );
@@ -312,7 +328,7 @@ function ContactSearch({ isRTL, value, onSelect }) {
 // ═══════════════════════════════════════════════
 // AddModal — with real contact search & agent select
 // ═══════════════════════════════════════════════
-function AddModal({ isRTL, lang, onClose, onSave, agents, projects }) {
+function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [] }) {
   const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'new', project_id: '', notes: '' });
   const [saving, setSaving] = useState(false);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -357,6 +373,12 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects }) {
             {isRTL ? 'جهة الاتصال *' : 'Contact *'}
           </label>
           <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => { f('contact', c); if (c) { const stages = getDeptStages(c.department || 'sales'); f('stage', stages[0]?.id || 'new'); } }} />
+          {form.contact && existingOpps.some(o => o.contact_id === form.contact.id) && (
+            <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-semibold">
+              <AlertTriangle size={12} />
+              {isRTL ? 'تنبيه: يوجد فرصة أخرى لنفس العميل' : 'Warning: This contact already has an opportunity'}
+            </div>
+          )}
         </div>
         <div>
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
@@ -492,6 +514,11 @@ export default function OpportunitiesPage() {
   const [viewMode, setViewMode] = useState('grid');
   const [drawerActivities, setDrawerActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
+  const [sortBy, setSortBy] = useState('newest');
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState(new Set());
+  const [showAddActivity, setShowAddActivity] = useState(false);
+  const [activityForm, setActivityForm] = useState({ type: 'call', description: '' });
 
   // ESC to close drawer
   useEffect(() => {
@@ -573,6 +600,18 @@ export default function OpportunitiesPage() {
     return true;
   });
 
+  // Apply sorting
+  filtered.sort((a, b) => {
+    switch (sortBy) {
+      case 'oldest': return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+      case 'budget_high': return (b.budget || 0) - (a.budget || 0);
+      case 'budget_low': return (a.budget || 0) - (b.budget || 0);
+      case 'temp_hot': return (TEMP_ORDER[a.temperature] ?? 4) - (TEMP_ORDER[b.temperature] ?? 4);
+      case 'stale': return daysSince(a.contacts?.last_activity_at || a.updated_at) - daysSince(b.contacts?.last_activity_at || b.updated_at);
+      default: return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    }
+  });
+
   // Export data
   const exportData = filtered.map(o => ({
     [isRTL ? 'الاسم' : 'Name']: getContactName(o),
@@ -588,6 +627,8 @@ export default function OpportunitiesPage() {
   const totalBudget = filtered.reduce((s, o) => s + (o.budget || 0), 0);
   const wonCount = filtered.filter(o => o.stage === 'closed_won').length;
   const hotCount = filtered.filter(o => o.temperature === 'hot').length;
+  const newThisWeek = opps.filter(o => { const d = new Date(o.created_at); const w = new Date(); w.setDate(w.getDate() - 7); return d >= w; }).length;
+  const conversionRate = opps.length > 0 ? Math.round((opps.filter(o => o.stage === 'closed_won').length / opps.length) * 100) : 0;
 
   const handleMove = async (id, toStage) => {
     setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage } : o));
@@ -651,7 +692,32 @@ export default function OpportunitiesPage() {
     setEditSaving(false);
   };
 
-  if (loading) return <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={5} />;
+  // Bulk operations
+  const toggleBulk = (id) => setBulkSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const bulkMoveAll = async (toStage) => {
+    const ids = [...bulkSelected];
+    setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: toStage } : o));
+    setBulkSelected(new Set()); setBulkMode(false);
+    await Promise.all(ids.map(id => updateOpportunity(id, { stage: toStage }).catch(() => {})));
+  };
+  const bulkAssign = async (agentId) => {
+    const ids = [...bulkSelected];
+    const agent = agents.find(a => a.id === agentId);
+    setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, assigned_to: agentId, users: agent || o.users } : o));
+    setBulkSelected(new Set()); setBulkMode(false);
+    await Promise.all(ids.map(id => updateOpportunity(id, { assigned_to: agentId }).catch(() => {})));
+  };
+  const bulkDeleteAll = async () => {
+    const ids = [...bulkSelected];
+    setOpps(p => p.filter(o => !ids.includes(o.id)));
+    setBulkSelected(new Set()); setBulkMode(false);
+    await Promise.all(ids.map(id => deleteOpportunity(id).catch(() => {})));
+  };
+
+  // Duplicate detection
+  const isDuplicate = (contactId) => opps.filter(o => o.contact_id === contactId).length > 1;
+
+  if (loading) return <PageSkeleton hasKpis kpiCount={6} tableRows={6} tableCols={5} />;
 
   return (<>
     <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark font-cairo px-4 py-4 md:px-7 md:py-6 pb-10">
@@ -681,12 +747,14 @@ export default function OpportunitiesPage() {
       {/* KPIs */}
       <div className="flex gap-3 mb-5 flex-wrap">
         {[
-          { label: isRTL ? 'إجمالي الفرص' : 'Total', value: filtered.length, color: '#4A7AAB', icon: Grid3X3 },
-          { label: isRTL ? 'إجمالي الميزانيات' : 'Budget', value: fmtBudget(totalBudget) + (isRTL ? ' ج' : ' EGP'), color: '#4A7AAB', icon: Banknote },
-          { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', icon: Building2 },
-          { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame },
+          { label: isRTL ? 'إجمالي الفرص' : 'Total', value: filtered.length, color: '#4A7AAB', icon: Grid3X3, onClick: () => { setFilterTemp('all'); setActiveStage('all'); } },
+          { label: isRTL ? 'الميزانيات' : 'Budget', value: fmtBudget(totalBudget) + (isRTL ? ' ج' : ' EGP'), color: '#4A7AAB', icon: Banknote },
+          { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', icon: Building2, onClick: () => setActiveStage('closed_won') },
+          { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame, onClick: () => setFilterTemp('hot') },
+          { label: isRTL ? 'التحويل' : 'Conv.', value: conversionRate + '%', color: '#8B5CF6', icon: TrendingUp },
+          { label: isRTL ? 'جديد هذا الأسبوع' : 'New/Week', value: newThisWeek, color: '#0EA5E9', icon: Plus },
         ].map((s, i) => (
-          <div key={i} className="flex-[1_1_140px]">
+          <div key={i} className={`flex-[1_1_120px] ${s.onClick ? 'cursor-pointer' : ''}`} onClick={s.onClick}>
             <KpiCard icon={s.icon} label={s.label} value={s.value} color={s.color} />
           </div>
         ))}
@@ -754,16 +822,27 @@ export default function OpportunitiesPage() {
         <Select className="!w-auto flex-none min-w-[110px]" value={filterDate} onChange={e => setFilterDate(e.target.value)}>
           {Object.entries(DATE_FILTERS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
         </Select>
-        {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all' || filterDate !== 'all') && (
+        <Select className="!w-auto flex-none min-w-[110px]" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+          {Object.entries(SORT_OPTIONS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+        </Select>
+        {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterDept !== 'all' || filterDate !== 'all' || sortBy !== 'newest') && (
           <Button
             variant="danger"
             size="sm"
-            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); }}
+            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); }}
           >
             <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
           </Button>
         )}
         <div className="ms-auto flex items-center gap-2.5">
+          <Button
+            variant={bulkMode ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => { setBulkMode(m => !m); setBulkSelected(new Set()); }}
+            title={isRTL ? 'تحديد متعدد' : 'Bulk Select'}
+          >
+            <CheckSquare size={14} />
+          </Button>
           <div className="flex rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
             <button onClick={() => setViewMode('grid')} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><LayoutGrid size={14} /></button>
             <button onClick={() => { setViewMode('kanban'); setActiveStage('all'); }} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'kanban' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><Columns size={14} /></button>
@@ -771,6 +850,26 @@ export default function OpportunitiesPage() {
           <span className="text-xs text-content-muted dark:text-content-muted-dark">{filtered.length} {isRTL ? 'فرصة' : 'opps'}</span>
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {bulkMode && bulkSelected.size > 0 && (
+        <div className="mb-4 p-3 rounded-xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20 flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
+            {bulkSelected.size} {isRTL ? 'محدد' : 'selected'}
+          </span>
+          <Select className="!w-auto min-w-[130px] text-xs" onChange={e => { if (e.target.value) bulkMoveAll(e.target.value); e.target.value = ''; }}>
+            <option value="">{isRTL ? 'نقل إلى مرحلة...' : 'Move to stage...'}</option>
+            {currentStages.map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
+          </Select>
+          <Select className="!w-auto min-w-[130px] text-xs" onChange={e => { if (e.target.value) bulkAssign(e.target.value); e.target.value = ''; }}>
+            <option value="">{isRTL ? 'تعيين لمسؤول...' : 'Assign to agent...'}</option>
+            {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
+          </Select>
+          <Button variant="danger" size="sm" onClick={bulkDeleteAll}><Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}</Button>
+          <Button variant="ghost" size="sm" onClick={() => setBulkSelected(new Set(filtered.map(o => o.id)))}>{isRTL ? 'تحديد الكل' : 'Select All'}</Button>
+          <Button variant="ghost" size="sm" onClick={() => { setBulkSelected(new Set()); setBulkMode(false); }}><X size={13} /></Button>
+        </div>
+      )}
 
       {/* Content */}
       {loading ? (
@@ -819,9 +918,28 @@ export default function OpportunitiesPage() {
                 </div>
                 <div className="flex flex-col gap-3 min-h-[200px] bg-brand-500/[0.03] dark:bg-brand-500/[0.04] rounded-xl p-2.5 border border-dashed border-edge dark:border-edge-dark">
                   {stageOpps.length === 0 ? (
-                    <div className="text-center py-8 text-xs text-content-muted dark:text-content-muted-dark opacity-50">{isRTL ? 'لا توجد فرص' : 'Empty'}</div>
+                    <div className="text-center py-8">
+                      <p className="text-xs text-content-muted dark:text-content-muted-dark opacity-50 mb-2">{isRTL ? 'لا توجد فرص' : 'Empty'}</p>
+                      <button onClick={() => setShowModal(true)} className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo">
+                        <Plus size={10} className="inline -mt-px" /> {isRTL ? 'إضافة' : 'Add'}
+                      </button>
+                    </div>
                   ) : stageOpps.map(opp => (
-                    <OppCard key={opp.id} opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={setSelectedOpp} stageConfig={currentStages} />
+                    <div key={opp.id} className="relative">
+                      {bulkMode && (
+                        <button
+                          onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
+                          className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} z-10 w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] cursor-pointer transition-colors ${
+                            bulkSelected.has(opp.id)
+                              ? 'bg-brand-500 border-brand-500 text-white'
+                              : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-600'
+                          }`}
+                        >
+                          {bulkSelected.has(opp.id) && '✓'}
+                        </button>
+                      )}
+                      <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : setSelectedOpp} stageConfig={currentStages} />
+                    </div>
                   ))}
                 </div>
               </div>
@@ -831,12 +949,31 @@ export default function OpportunitiesPage() {
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
           {filtered.map(opp => (
-            <OppCard key={opp.id} opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={setSelectedOpp} stageConfig={getDeptStages(opp.contacts?.department || 'sales')} />
+            <div key={opp.id} className="relative">
+              {bulkMode && (
+                <button
+                  onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
+                  className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} z-10 w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] cursor-pointer transition-colors ${
+                    bulkSelected.has(opp.id)
+                      ? 'bg-brand-500 border-brand-500 text-white'
+                      : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-600'
+                  }`}
+                >
+                  {bulkSelected.has(opp.id) && '✓'}
+                </button>
+              )}
+              {isDuplicate(opp.contact_id) && (
+                <div className={`absolute top-2 ${isRTL ? 'right-2' : 'left-2'} z-10`} title={isRTL ? 'فرصة مكررة لنفس العميل' : 'Duplicate: same contact has another opportunity'}>
+                  <AlertTriangle size={14} className="text-amber-500" />
+                </div>
+              )}
+              <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : setSelectedOpp} stageConfig={getDeptStages(opp.contacts?.department || 'sales')} />
+            </div>
           ))}
         </div>
       )}
 
-      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} />}
+      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} existingOpps={opps} />}
 
       {/* Delete Confirmation */}
       {confirmDelete && (
@@ -845,8 +982,10 @@ export default function OpportunitiesPage() {
             <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
               <Trash2 size={20} className="text-red-500" />
             </div>
-            <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">{isRTL ? 'حذف الفرصة؟' : 'Delete Opportunity?'}</h3>
-            <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'هل أنت متأكد من حذف هذه الفرصة؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure you want to delete this opportunity? This action cannot be undone.'}</p>
+            <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">
+              {isRTL ? 'حذف فرصة' : 'Delete Opportunity'} {(() => { const o = opps.find(x => x.id === confirmDelete); return o ? `"${getContactName(o)}"` : ''; })()}?
+            </h3>
+            <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'هل أنت متأكد؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure? This action cannot be undone.'}</p>
             <div className="flex gap-2.5 justify-center">
               <Button variant="secondary" size="sm" onClick={() => setConfirmDelete(null)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
               <Button variant="danger" size="sm" onClick={confirmDeleteOpp}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</Button>
@@ -1014,7 +1153,7 @@ export default function OpportunitiesPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الميزانية' : 'Budget'}</label>
-                  <Input type="number" value={editForm.budget} onChange={e => setEditForm(f => ({ ...f, budget: e.target.value }))} />
+                  <Input type="number" min="0" value={editForm.budget} onChange={e => setEditForm(f => ({ ...f, budget: Math.max(0, e.target.value) }))} />
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المسؤول' : 'Agent'}</label>
@@ -1080,6 +1219,8 @@ export default function OpportunitiesPage() {
                   { label: isRTL ? 'الحرارة' : 'Temperature', value: isRTL ? (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_en, color: (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).color },
                   { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
                   { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
+                  { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
+                  { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: opps.filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
                 ].map((item, i) => (
                   <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
                     <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{item.label}</p>
@@ -1154,9 +1295,62 @@ export default function OpportunitiesPage() {
 
             {/* Activities Timeline */}
             <div>
-              <p className="m-0 mb-2 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                {isRTL ? 'آخر الأنشطة' : 'Recent Activities'}
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+                  {isRTL ? 'آخر الأنشطة' : 'Recent Activities'}
+                </p>
+                <button
+                  onClick={() => setShowAddActivity(a => !a)}
+                  className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2 py-1 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold"
+                >
+                  <Plus size={10} className="inline -mt-px" /> {isRTL ? 'سجّل نشاط' : 'Log Activity'}
+                </button>
+              </div>
+              {showAddActivity && (
+                <div className="bg-brand-500/[0.06] rounded-xl p-3 mb-3 border border-brand-500/10">
+                  <div className="flex gap-1.5 mb-2 flex-wrap">
+                    {Object.entries(ACTIVITY_ICONS).map(([type, Icon]) => (
+                      <button
+                        key={type}
+                        onClick={() => setActivityForm(f => ({ ...f, type }))}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold font-cairo border-none cursor-pointer transition-colors ${
+                          activityForm.type === type
+                            ? 'bg-brand-500 text-white'
+                            : 'bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
+                        }`}
+                      >
+                        <Icon size={10} />{type}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    value={activityForm.description}
+                    onChange={e => setActivityForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
+                    className="mb-2 text-xs"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={async () => {
+                      if (!activityForm.description.trim()) return;
+                      const act = await createActivity({
+                        type: activityForm.type,
+                        description: activityForm.description,
+                        contact_id: selectedOpp.contact_id,
+                        entity_type: 'opportunity',
+                        entity_id: selectedOpp.id,
+                      });
+                      setDrawerActivities(prev => [act, ...prev].slice(0, 5));
+                      setActivityForm({ type: 'call', description: '' });
+                      setShowAddActivity(false);
+                    }}>
+                      {isRTL ? 'حفظ' : 'Save'}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setShowAddActivity(false)}>
+                      {isRTL ? 'إلغاء' : 'Cancel'}
+                    </Button>
+                  </div>
+                </div>
+              )}
               {loadingActivities ? (
                 <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark"><Loader2 size={16} className="animate-spin inline-block" /></div>
               ) : drawerActivities.length === 0 ? (

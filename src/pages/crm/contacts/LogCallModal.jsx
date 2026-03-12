@@ -12,9 +12,8 @@ const CALL_RESULTS = [
   { key: 'answered', ar: 'رد', en: 'Answered', color: '#10B981' },
   { key: 'no_answer', ar: 'لم يرد', en: 'No Answer', color: '#F59E0B' },
   { key: 'busy', ar: 'مشغول', en: 'Busy', color: '#EF4444' },
-  { key: 'interested', ar: 'مهتم', en: 'Interested', color: '#4A7AAB' },
-  { key: 'not_interested', ar: 'غير مهتم', en: 'Not Interested', color: '#6b7280' },
-  { key: 'call_back', ar: 'اتصل لاحقاً', en: 'Call Back', color: '#8B5CF6' },
+  { key: 'switched_off', ar: 'مغلق', en: 'Switched Off', color: '#6b7280' },
+  { key: 'wrong_number', ar: 'رقم خاطئ', en: 'Wrong Number', color: '#8B5CF6' },
 ];
 const FOLLOWUP_PRESETS = [
   { key: 'tomorrow', ar: 'غداً', en: 'Tomorrow', days: 1 },
@@ -58,7 +57,7 @@ export default function LogCallModal({ contact, onClose }) {
   };
 
   useEffect(() => {
-    if (['call_back', 'no_answer', 'busy', 'interested'].includes(callResult)) {
+    if (['no_answer', 'busy', 'switched_off'].includes(callResult)) {
       setAddFollowup(true);
       if (!followupPreset) {
         const p = FOLLOWUP_PRESETS[0];
