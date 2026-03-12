@@ -10,7 +10,7 @@ import { fetchEmployees } from '../../services/employeesService';
 import { fetchOpportunities } from '../../services/opportunitiesService';
 import {
   Search, X, Users, ClipboardList, Target, FileText, ArrowRight, Command,
-  Loader2, Briefcase, Activity, Clock, CheckSquare, UserCheck
+  Loader2, Briefcase, Activity, Clock, CheckSquare, UserCheck, AlertTriangle
 } from 'lucide-react';
 
 const RECENT_KEY = 'platform_global_search_recent';
@@ -90,6 +90,7 @@ export default function GlobalSearch({ onClose }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Cached entity data
   const [contacts, setContacts] = useState([]);
@@ -148,6 +149,8 @@ export default function GlobalSearch({ onClose }) {
         if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value);
         if (employeesRes.status === 'fulfilled') setEmployees(employeesRes.value);
         if (activitiesRes.status === 'fulfilled') setActivities(activitiesRes.value);
+        const allFailed = [contactsRes, oppsRes, tasksRes, employeesRes, activitiesRes].every(r => r.status === 'rejected');
+        if (allFailed) setLoadError(true);
         setDataLoaded(true);
       } catch { /* ignore */ }
       if (!cancelled) setLoading(false);
@@ -471,7 +474,13 @@ export default function GlobalSearch({ onClose }) {
 
         {/* Results */}
         <div ref={listRef} className="max-h-[420px] overflow-y-auto p-2">
-          {!hasResults && q && !isSearching ? (
+          {loadError && q ? (
+            <div className="text-center py-8 px-5 text-content-muted dark:text-brand-400">
+              <AlertTriangle size={28} className="opacity-40 mb-2 mx-auto text-amber-500" />
+              <p className="m-0 text-sm">{isRTL ? 'تعذر تحميل البيانات' : 'Failed to load data'}</p>
+              <p className="m-0 text-[11px] mt-1 opacity-60">{isRTL ? 'تحقق من الاتصال وحاول مرة أخرى' : 'Check your connection and try again'}</p>
+            </div>
+          ) : !hasResults && q && !isSearching ? (
             <div className="text-center py-8 px-5 text-content-muted dark:text-brand-400">
               <Search size={28} className="opacity-30 mb-2 mx-auto" />
               <p className="m-0 text-sm">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>

@@ -185,7 +185,7 @@ export default function DashboardPage() {
   const targetPct = crm.revenue > 0 && MOCK_SALES.target > 0
     ? Math.round((crm.revenue / MOCK_SALES.target) * 100)
     : Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
-  const chartData = REVENUE_TREND.map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en }));
+  const chartData = useMemo(() => REVENUE_TREND.map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en })), [lang]);
 
   // Pipeline chart — real data if available
   const realPipeline = useMemo(() => {
@@ -195,7 +195,7 @@ export default function DashboardPage() {
     }
     return null;
   }, [dashData]);
-  const pipeData = (realPipeline || PIPELINE_DATA).map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en }));
+  const pipeData = useMemo(() => (realPipeline || PIPELINE_DATA).map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en })), [realPipeline, lang]);
 
   // Employee count from real data
   const employeeCount = dashData?.employees?.totalEmployees ?? hr.total;
@@ -296,12 +296,12 @@ export default function DashboardPage() {
           <Box>
             <CardTitle icon={Wallet} title={lang === 'ar' ? 'توزيع المصروفات' : 'Expenses'} sub={new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })} />
             <ResponsiveContainer width="100%" height={120}>
-              <PieChart><Pie data={EXPENSE_CATS} cx="50%" cy="50%" innerRadius={34} outerRadius={52} paddingAngle={3} dataKey="value">{EXPENSE_CATS.map((_, i) => <Cell key={i} fill={BRAND[i + 1]} />)}</Pie><Tooltip formatter={v => [(v / 1000).toFixed(0) + 'K EGP']} /></PieChart>
+              <PieChart><Pie data={EXPENSE_CATS} cx="50%" cy="50%" innerRadius={34} outerRadius={52} paddingAngle={3} dataKey="value">{EXPENSE_CATS.map((_, i) => <Cell key={i} fill={BRAND[i]} />)}</Pie><Tooltip formatter={v => [(v / 1000).toFixed(0) + 'K EGP']} /></PieChart>
             </ResponsiveContainer>
             <div className="flex flex-col gap-1.5 mt-1.5">
               {EXPENSE_CATS.map((cat, i) => (
                 <div key={i} className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><div className="w-[7px] h-[7px] rounded-full" style={{ background: BRAND[i + 1] }} /><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? cat.name_ar : cat.name_en}</span></div>
+                  <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><div className="w-[7px] h-[7px] rounded-full" style={{ background: BRAND[i] }} /><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? cat.name_ar : cat.name_en}</span></div>
                   <span className="text-xs font-bold text-content dark:text-content-dark">{cat.pct}%</span>
                 </div>
               ))}

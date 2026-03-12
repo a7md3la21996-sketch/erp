@@ -166,7 +166,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [loadingOpps, setLoadingOpps] = useState(false);
   const [showActivityForm, setShowActivityForm] = useState(false);
   const [showOppModal, setShowOppModal] = useState(false);
-  const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'new', temperature:'warm', priority:'medium', agent:'', notes:'' });
+  const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'new', temperature:'warm', priority:'medium', notes:'' });
 
   // Fetch ALL tab data on mount so counts show immediately
   useEffect(() => {
@@ -454,7 +454,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
                       className="px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
                     <Button size="sm" onClick={async () => {
-                      if (!newTask.title.trim() || !newTask.due_date) return;
+                      if (!newTask.title.trim() || !newTask.due_date || !contact) return;
                       setSavingTask(true);
                       try {
                         const savedTask = await createTask({ ...newTask, contact_id: contact.id, contact_name: contact.full_name, dept: 'crm' });
@@ -555,7 +555,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       ))}
                     </div>
                     <div className="flex gap-2.5 mt-5">
-                      <Button className="flex-1" size="sm" onClick={async ()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const oppData = { contact_id:contact.id, budget:Number(newOpp.budget)||0, stage:newOpp.stage, temperature:newOpp.temperature, priority:newOpp.priority, notes:newOpp.notes }; const saved = await createOpportunity(oppData); const opp = { ...saved, contactName:contact.full_name, contacts:{ id:contact.id, full_name:contact.full_name, phone:contact.phone, email:contact.email, department:contact.department, contact_type:contact.contact_type }, projects:{name_ar:newOpp.project,name_en:newOpp.project} }; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',agent:'',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}>
+                      <Button className="flex-1" size="sm" onClick={async ()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const oppData = { contact_id:contact.id, budget:Number(newOpp.budget)||0, stage:newOpp.stage, temperature:newOpp.temperature, priority:newOpp.priority, notes:newOpp.notes }; const saved = await createOpportunity(oppData); const opp = { ...saved, contactName:contact.full_name, contacts:{ id:contact.id, full_name:contact.full_name, phone:contact.phone, email:contact.email, department:contact.department, contact_type:contact.contact_type }, projects:{name_ar:newOpp.project,name_en:newOpp.project} }; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'new',temperature:'warm',priority:'medium',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}>
                         {isRTL?'حفظ':'Save'}
                       </Button>
                       <Button variant="secondary" size="sm" onClick={()=>setShowOppModal(false)}>
