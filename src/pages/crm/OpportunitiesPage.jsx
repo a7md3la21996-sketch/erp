@@ -181,7 +181,7 @@ const getProjectName = (opp, lang) => {
 // ═══════════════════════════════════════════════
 // OppCard — cleaned up, no duplicate stage display
 // ═══════════════════════════════════════════════
-function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig }) {
+function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig, score: preScore }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const temp = TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold;
@@ -293,7 +293,7 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig }) 
           {isRTL ? prio.label_ar : prio.label_en}
         </div>
         {(() => {
-          const score = calcLeadScore(opp);
+          const score = preScore ?? calcLeadScore(opp);
           return (
             <div className="rounded-md px-2 py-1 text-[10px] font-bold flex items-center gap-0.5" style={{ background: `${scoreColor(score)}18`, color: scoreColor(score) }}>
               <Zap size={9} />{score}
@@ -519,7 +519,7 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
             {isRTL ? 'الميزانية' : 'Budget'}
           </label>
-          <Input type="number" value={form.budget} onChange={e => f('budget', e.target.value)} />
+          <Input type="number" min="0" value={form.budget} onChange={e => f('budget', Math.max(0, e.target.value))} />
         </div>
         <div>
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
@@ -640,6 +640,7 @@ export default function OpportunitiesPage() {
   const [agents, setAgents] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [activeStage, setActiveStage] = useState('all');
   const [filterAgent, setFilterAgent] = useState('all');
@@ -678,6 +679,13 @@ export default function OpportunitiesPage() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filterPriority, setFilterPriority] = useState('all');
   const [filterSource, setFilterSource] = useState('all');
+  const [bulkToast, setBulkToast] = useState(null);
+
+  // Debounce search input
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 250);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   // Check if edit form has unsaved changes
   const isEditDirty = editingOpp && selectedOpp && (
@@ -699,17 +707,25 @@ export default function OpportunitiesPage() {
     setEditingOpp(false);
   }, [isEditDirty, isRTL]);
 
-  // ESC to close modals/drawer (priority: lost reason > confirm delete > drawer)
+  // ESC to close modals/drawer (priority: lost reason > confirm delete > add modal > drawer)
+  // Ctrl+N / ⌘+N to open add modal
   useEffect(() => {
     const handler = (e) => {
-      if (e.key !== 'Escape') return;
-      if (lostReasonModal) { setLostReasonModal(null); return; }
-      if (confirmDelete) { setConfirmDelete(null); return; }
-      if (selectedOpp) closeDrawer();
+      if (e.key === 'Escape') {
+        if (lostReasonModal) { setLostReasonModal(null); return; }
+        if (confirmDelete) { setConfirmDelete(null); return; }
+        if (showModal) { setShowModal(false); return; }
+        if (selectedOpp) closeDrawer();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        if (!showModal && !selectedOpp) setShowModal(true);
+      }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [selectedOpp, lostReasonModal, confirmDelete, closeDrawer]);
+  }, [selectedOpp, lostReasonModal, confirmDelete, showModal, closeDrawer]);
 
   // Fetch activities for drawer
   useEffect(() => {
@@ -829,6 +845,7 @@ export default function OpportunitiesPage() {
     [isRTL ? 'الأولوية' : 'Priority']: isRTL ? (PRIORITY_CONFIG[o.priority]?.label_ar || '') : (PRIORITY_CONFIG[o.priority]?.label_en || ''),
     [isRTL ? 'درجة العميل' : 'Lead Score']: calcLeadScore(o),
     [isRTL ? 'المصدر' : 'Source']: (() => { const src = o.contacts?.source || o.source; return src ? (isRTL ? (SOURCE_LABELS[src]?.ar || src) : (SOURCE_LABELS[src]?.en || src)) : ''; })(),
+    [isRTL ? 'سبب الخسارة' : 'Lost Reason']: o.lost_reason ? (LOST_REASONS[o.lost_reason] ? (isRTL ? LOST_REASONS[o.lost_reason].ar : LOST_REASONS[o.lost_reason].en) : o.lost_reason) : '',
     [isRTL ? 'الإغلاق المتوقع' : 'Expected Close']: o.expected_close_date || '',
     [isRTL ? 'التاريخ' : 'Date']: o.created_at?.slice(0, 10) || '',
   }));
@@ -904,6 +921,7 @@ export default function OpportunitiesPage() {
       const ids = lostReasonModal.bulkIds;
       ids.forEach(id => { const opp = opps.find(o => o.id === id); if (opp && opp.stage !== 'closed_lost') addStageHistory(id, opp.stage, 'closed_lost'); });
       setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() } : o));
+      showBulkToast(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
       setBulkSelected(new Set()); setBulkMode(false);
       setLostReasonModal(null);
       await Promise.all(ids.map(id => updateOpportunity(id, { stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() }).catch(() => {})));
@@ -1027,6 +1045,7 @@ export default function OpportunitiesPage() {
     const ids = [...bulkSelected];
     ids.forEach(id => { const opp = opps.find(o => o.id === id); if (opp && opp.stage !== toStage) addStageHistory(id, opp.stage, toStage); });
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString() } : o));
+    showBulkToast(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
     setBulkSelected(new Set()); setBulkMode(false);
     await Promise.all(ids.map(id => updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString() }).catch(() => {})));
   };
@@ -1034,33 +1053,40 @@ export default function OpportunitiesPage() {
     const ids = [...bulkSelected];
     const agent = agents.find(a => a.id === agentId);
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, assigned_to: agentId, users: agent || o.users } : o));
+    showBulkToast(isRTL ? `تم تعيين ${ids.length} فرصة` : `${ids.length} opportunities assigned`);
     setBulkSelected(new Set()); setBulkMode(false);
     await Promise.all(ids.map(id => updateOpportunity(id, { assigned_to: agentId }).catch(() => {})));
   };
   const bulkDeleteAll = async () => {
     const ids = [...bulkSelected];
     setOpps(p => p.filter(o => !ids.includes(o.id)));
+    showBulkToast(isRTL ? `تم حذف ${ids.length} فرصة` : `${ids.length} opportunities deleted`);
     setBulkSelected(new Set()); setBulkMode(false);
     await Promise.all(ids.map(id => deleteOpportunity(id).catch(() => {})));
   };
   const bulkChangeTemp = async (temp) => {
     const ids = [...bulkSelected];
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, temperature: temp } : o));
+    showBulkToast(isRTL ? `تم تحديث ${ids.length} فرصة` : `${ids.length} opportunities updated`);
     setBulkSelected(new Set()); setBulkMode(false);
     await Promise.all(ids.map(id => updateOpportunity(id, { temperature: temp }).catch(() => {})));
   };
   const bulkChangePriority = async (priority) => {
     const ids = [...bulkSelected];
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, priority } : o));
+    showBulkToast(isRTL ? `تم تحديث ${ids.length} فرصة` : `${ids.length} opportunities updated`);
     setBulkSelected(new Set()); setBulkMode(false);
     await Promise.all(ids.map(id => updateOpportunity(id, { priority }).catch(() => {})));
   };
   const bulkSetCloseDate = async (date) => {
     const ids = [...bulkSelected];
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, expected_close_date: date } : o));
+    showBulkToast(isRTL ? `تم تحديث ${ids.length} فرصة` : `${ids.length} opportunities updated`);
     setBulkSelected(new Set()); setBulkMode(false);
     await Promise.all(ids.map(id => updateOpportunity(id, { expected_close_date: date || null }).catch(() => {})));
   };
+
+  const showBulkToast = (msg) => { setBulkToast(msg); setTimeout(() => setBulkToast(null), 3000); };
 
   // Duplicate detection
   const isDuplicate = (contactId) => opps.filter(o => o.contact_id === contactId).length > 1;
@@ -1183,8 +1209,8 @@ export default function OpportunitiesPage() {
           />
           <Input
             placeholder={isRTL ? 'بحث...' : 'Search...'}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
             className="ps-8"
           />
         </div>
@@ -1231,11 +1257,11 @@ export default function OpportunitiesPage() {
           <option value="warm">{isRTL ? 'دافئ (40-69)' : 'Warm (40-69)'}</option>
           <option value="cold">{isRTL ? 'بارد (<40)' : 'Cold (<40)'}</option>
         </Select>
-        {(search || filterAgent !== 'all' || filterTemp !== 'all' || filterPriority !== 'all' || filterDept !== 'all' || filterDate !== 'all' || sortBy !== 'newest' || filterScore !== 'all') && (
+        {(searchInput || filterAgent !== 'all' || filterTemp !== 'all' || filterPriority !== 'all' || filterDept !== 'all' || filterDate !== 'all' || sortBy !== 'newest' || filterScore !== 'all' || filterSource !== 'all') && (
           <Button
             variant="danger"
             size="sm"
-            onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); setFilterSource('all'); }}
+            onClick={() => { setSearchInput(''); setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); setFilterSource('all'); }}
           >
             <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
           </Button>
@@ -1252,7 +1278,7 @@ export default function OpportunitiesPage() {
                 <Input value={filterName} onChange={e => setFilterName(e.target.value)} placeholder={isRTL ? 'اسم الفلتر...' : 'Filter name...'} className="text-xs flex-1" />
                 <Button size="sm" onClick={() => {
                   if (!filterName.trim()) return;
-                  const f = { name: filterName, search, filterAgent, filterTemp, filterPriority, filterDept, filterDate, sortBy, activeStage, filterScore, filterSource };
+                  const f = { name: filterName, search: searchInput, filterAgent, filterTemp, filterPriority, filterDept, filterDate, sortBy, activeStage, filterScore, filterSource };
                   const all = [...savedFilters, f];
                   saveSavedFilters(all); setSavedFilters(all); setFilterName('');
                 }}>{isRTL ? 'حفظ' : 'Save'}</Button>
@@ -1262,7 +1288,7 @@ export default function OpportunitiesPage() {
                   {savedFilters.map((f, i) => (
                     <div key={i} className="flex items-center justify-between py-1.5 hover:bg-gray-50 dark:hover:bg-white/5 px-1.5 rounded-md transition-colors">
                       <button onClick={() => {
-                        setSearch(f.search || ''); setFilterAgent(f.filterAgent || 'all'); setFilterTemp(f.filterTemp || 'all');
+                        setSearchInput(f.search || ''); setSearch(f.search || ''); setFilterAgent(f.filterAgent || 'all'); setFilterTemp(f.filterTemp || 'all');
                         setFilterDept(f.filterDept || 'all'); setFilterDate(f.filterDate || 'all'); setSortBy(f.sortBy || 'newest');
                         setActiveStage(f.activeStage || 'all'); setFilterScore(f.filterScore || 'all'); setFilterPriority(f.filterPriority || 'all'); setFilterSource(f.filterSource || 'all'); setShowSaveFilter(false);
                       }} className="bg-transparent border-none cursor-pointer text-xs text-content dark:text-content-dark font-semibold font-cairo truncate flex-1 text-start">{f.name}</button>
@@ -1358,7 +1384,7 @@ export default function OpportunitiesPage() {
               : (isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet')}
           </p>
           {opps.length > 0 ? (
-            <Button variant="secondary" size="sm" onClick={() => { setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); setFilterSource('all'); }}>
+            <Button variant="secondary" size="sm" onClick={() => { setSearchInput(''); setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); setFilterSource('all'); }}>
               <X size={14} /> {isRTL ? 'مسح كل الفلاتر' : 'Clear All Filters'}
             </Button>
           ) : (
@@ -1394,9 +1420,10 @@ export default function OpportunitiesPage() {
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: stage.color }} />
                   <span className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? stage.label_ar : stage.label_en}</span>
                   <span className="text-xs text-content-muted dark:text-content-muted-dark bg-gray-100 dark:bg-brand-500/15 rounded-full px-1.5 py-px">{stageOpps.length}</span>
-                  {stageOpps.length > 0 && (
+                  {stageOpps.length > 0 && (<>
+                    {(() => { const staleCount = stageOpps.filter(o => daysSince(o.contacts?.last_activity_at || o.updated_at || o.created_at) >= 7).length; return staleCount > 0 ? <span className="text-[10px] font-semibold text-amber-500" title={isRTL ? 'فرص راكدة' : 'Stale opps'}>⚠ {staleCount}</span> : null; })()}
                     <span className="text-[10px] font-bold text-brand-500 ms-auto">{fmtBudget(stageOpps.reduce((s, o) => s + (o.budget || 0), 0))}</span>
-                  )}
+                  </>)}
                 </div>
                 <div className={`flex flex-col gap-3 min-h-[200px] rounded-xl p-2.5 border border-dashed transition-colors duration-200 ${
                   isOver ? 'bg-brand-500/10 border-brand-500' : 'bg-brand-500/[0.03] dark:bg-brand-500/[0.04] border-edge dark:border-edge-dark'
@@ -1426,7 +1453,7 @@ export default function OpportunitiesPage() {
                           {bulkSelected.has(opp.id) && '✓'}
                         </button>
                       )}
-                      <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : setSelectedOpp} stageConfig={currentStages} />
+                      <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : setSelectedOpp} stageConfig={currentStages} score={scoreMap[opp.id]} />
                     </div>
                   ))}
                 </div>
@@ -1455,7 +1482,7 @@ export default function OpportunitiesPage() {
                   <AlertTriangle size={14} className="text-amber-500" />
                 </div>
               )}
-              <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : setSelectedOpp} stageConfig={getDeptStages(opp.contacts?.department || 'sales')} />
+              <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : setSelectedOpp} stageConfig={getDeptStages(opp.contacts?.department || 'sales')} score={scoreMap[opp.id]} />
             </div>
           ))}
         </div>
@@ -1500,6 +1527,16 @@ export default function OpportunitiesPage() {
         >
           ✕
         </button>
+      </div>
+    )}
+    {/* Bulk Operation Toast */}
+    {bulkToast && (
+      <div
+        className="fixed bottom-6 z-[300] bg-gradient-to-br from-brand-500 to-brand-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-semibold animate-[slideUp_0.3s_ease-out]"
+        style={{ [isRTL ? 'right' : 'left']: 24 }}
+      >
+        <CheckSquare size={16} />
+        {bulkToast}
       </div>
     )}
     <style>{`@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
@@ -1637,11 +1674,18 @@ export default function OpportunitiesPage() {
                     <Phone size={13} /> {selectedOpp.contacts.phone2}
                   </a>
                 )}
-                {selectedOpp.contacts.phone && (
+                {selectedOpp.contacts.phone && (<>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(selectedOpp.contacts.phone); setBulkToast(isRTL ? 'تم نسخ الرقم' : 'Phone copied'); setTimeout(() => setBulkToast(null), 2000); }}
+                    className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-content-muted dark:text-content-muted-dark border-none cursor-pointer hover:bg-gray-200 dark:hover:bg-white/15 transition-colors font-semibold font-cairo"
+                    title={isRTL ? 'نسخ الرقم' : 'Copy phone'}
+                  >
+                    📋
+                  </button>
                   <a href={`https://wa.me/${(selectedOpp.contacts.phone || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors font-semibold">
                     <MessageCircle size={13} /> WhatsApp
                   </a>
-                )}
+                </>)}
                 {selectedOpp.contacts.email && (
                   <a href={`mailto:${selectedOpp.contacts.email}`} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 no-underline hover:bg-blue-500/20 transition-colors font-semibold">
                     <Mail size={13} /> {selectedOpp.contacts.email}
@@ -1818,9 +1862,21 @@ export default function OpportunitiesPage() {
 
             {/* Pipeline Stepper */}
             <div>
-              <p className="m-0 mb-3 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                {isRTL ? 'مراحل التقدم' : 'Pipeline Progress'}
-              </p>
+              {(() => {
+                const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
+                const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
+                const progressPct = stages.length > 1 ? Math.round((Math.max(0, currentIdx) / (stages.length - 1)) * 100) : 0;
+                return (
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+                      {isRTL ? 'مراحل التقدم' : 'Pipeline Progress'}
+                    </p>
+                    <span className="text-xs font-bold" style={{ color: progressPct >= 80 ? '#10B981' : progressPct >= 40 ? '#F59E0B' : '#6B8DB5' }}>
+                      {progressPct}%
+                    </span>
+                  </div>
+                );
+              })()}
               {(() => {
                 const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
                 const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
