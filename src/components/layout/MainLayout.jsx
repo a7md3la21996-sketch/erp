@@ -16,7 +16,17 @@ function useIsMobile(breakpoint = 768) {
 }
 
 export default function MainLayout() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    const saved = localStorage.getItem('sidebar-collapsed');
+    return saved === 'true';
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      localStorage.setItem('sidebar-collapsed', String(!prev));
+      return !prev;
+    });
+  };
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -31,7 +41,7 @@ export default function MainLayout() {
     <div className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark" dir={isRTL ? 'rtl' : 'ltr'}>
       <Sidebar
         collapsed={collapsed}
-        onToggle={() => setCollapsed(!collapsed)}
+        onToggle={toggleCollapsed}
         mobileOpen={sidebarOpen}
         onMobileClose={() => setSidebarOpen(false)}
       />
