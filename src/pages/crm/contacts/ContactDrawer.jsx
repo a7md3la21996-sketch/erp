@@ -159,6 +159,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   useEscClose(onClose);
+  const [tab, setTab] = useState('summary');
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -416,164 +417,200 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </button>
             )}
           </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-edge dark:border-edge-dark mt-4">
+            {[
+              ['summary', isRTL ? 'ملخص' : 'Summary'],
+              ['timeline', (isRTL ? 'السجل' : 'Timeline') + (timeline.length ? ` (${timeline.length})` : '')],
+              ...(contact.contact_type === 'supplier' ? [['invoices', isRTL ? 'الفواتير' : 'Invoices']] : []),
+            ].map(([k, v]) => (
+              <button key={k} onClick={() => setTab(k)} className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer ${tab === k ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal'}`}>{v}</button>
+            ))}
+          </div>
         </div>
 
-        {/* ═══ Drawer Body — Single Scrollable View ═══ */}
+        {/* ═══ Drawer Body ═══ */}
         <div className="flex-1 overflow-auto p-5">
 
-          {/* ── Stats Row ── */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="bg-brand-500/[0.07] border border-brand-500/[0.12] rounded-xl p-2.5 text-center">
-              <div className="text-lg font-bold text-brand-500">{loadingData ? '…' : actCount}</div>
-              <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'نشاط' : 'Activities'}</div>
-            </div>
-            <div className="bg-emerald-500/[0.07] border border-emerald-500/[0.15] rounded-xl p-2.5 text-center">
-              <div className="text-lg font-bold text-emerald-500">{loadingData ? '…' : oppCount}</div>
-              <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'فرصة' : 'Opps'}</div>
-            </div>
-            <div className="bg-amber-500/[0.07] border border-amber-500/[0.15] rounded-xl p-2.5 text-center">
-              <div className="text-lg font-bold text-amber-500">{loadingData ? '…' : openTaskCount}</div>
-              <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'مهمة مفتوحة' : 'Open Tasks'}</div>
-            </div>
-          </div>
-
-          {/* ── Score & Temperature ── */}
-          <div className="grid grid-cols-2 gap-2.5 mb-4">
-            <div className="bg-brand-500/[0.07] rounded-xl p-3 border border-brand-500/[0.12]">
-              <div className="text-content-muted dark:text-content-muted-dark text-xs mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
-              <ScorePill score={contact.lead_score} />
-            </div>
-            <div className="rounded-xl p-3" style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.05)', border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
-              <div className="text-content-muted dark:text-content-muted-dark text-xs mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
-              {tempInfo?.Icon ? <div className="flex items-center gap-1.5"><tempInfo.Icon size={14} color={tempInfo.color} /><span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div> : <span className="text-xs text-content-muted dark:text-content-muted-dark">—</span>}
-            </div>
-          </div>
-
-          {/* ── Key Info ── */}
-          <div className="mb-3">
-            {keyInfo.map(r => (
-              <div key={r.label} className={rowCls}>
-                <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
-                <span className="text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis">{r.val}</span>
+          {/* ══════ SUMMARY TAB ══════ */}
+          {tab === 'summary' && (
+            <div>
+              {/* Stats Row */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <div className="bg-brand-500/[0.07] border border-brand-500/[0.12] rounded-xl p-2.5 text-center">
+                  <div className="text-lg font-bold text-brand-500">{loadingData ? '…' : actCount}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'نشاط' : 'Activities'}</div>
+                </div>
+                <div className="bg-emerald-500/[0.07] border border-emerald-500/[0.15] rounded-xl p-2.5 text-center">
+                  <div className="text-lg font-bold text-emerald-500">{loadingData ? '…' : oppCount}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'فرصة' : 'Opps'}</div>
+                </div>
+                <div className="bg-amber-500/[0.07] border border-amber-500/[0.15] rounded-xl p-2.5 text-center">
+                  <div className="text-lg font-bold text-amber-500">{loadingData ? '…' : openTaskCount}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'مهمة مفتوحة' : 'Open Tasks'}</div>
+                </div>
               </div>
-            ))}
 
-            {/* Expandable details */}
-            <button onClick={() => setShowAllDetails(p => !p)}
-              className="w-full flex items-center justify-center gap-1 py-2 mt-1 text-[11px] text-brand-500 font-semibold bg-transparent border-none cursor-pointer hover:bg-brand-500/5 rounded-lg transition-colors">
-              <ChevronDown size={13} className={`transition-transform ${showAllDetails ? 'rotate-180' : ''}`} />
-              {showAllDetails ? (isRTL ? 'إخفاء التفاصيل' : 'Hide Details') : (isRTL ? 'عرض كل البيانات' : 'Show All Details')}
-            </button>
+              {/* Score & Temperature */}
+              <div className="grid grid-cols-2 gap-2.5 mb-4">
+                <div className="bg-brand-500/[0.07] rounded-xl p-3 border border-brand-500/[0.12]">
+                  <div className="text-content-muted dark:text-content-muted-dark text-xs mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
+                  <ScorePill score={contact.lead_score} />
+                </div>
+                <div className="rounded-xl p-3" style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.05)', border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
+                  <div className="text-content-muted dark:text-content-muted-dark text-xs mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
+                  {tempInfo?.Icon ? <div className="flex items-center gap-1.5"><tempInfo.Icon size={14} color={tempInfo.color} /><span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div> : <span className="text-xs text-content-muted dark:text-content-muted-dark">—</span>}
+                </div>
+              </div>
 
-            {showAllDetails && (
-              <div className="mt-1">
-                {extraInfo.map(r => (
+              {/* Key Info */}
+              <div className="mb-3">
+                {keyInfo.map(r => (
                   <div key={r.label} className={rowCls}>
                     <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
                     <span className="text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis">{r.val}</span>
                   </div>
                 ))}
+
+                {/* Expandable details */}
+                <button onClick={() => setShowAllDetails(p => !p)}
+                  className="w-full flex items-center justify-center gap-1 py-2 mt-1 text-[11px] text-brand-500 font-semibold bg-transparent border-none cursor-pointer hover:bg-brand-500/5 rounded-lg transition-colors">
+                  <ChevronDown size={13} className={`transition-transform ${showAllDetails ? 'rotate-180' : ''}`} />
+                  {showAllDetails ? (isRTL ? 'إخفاء التفاصيل' : 'Hide Details') : (isRTL ? 'عرض كل البيانات' : 'Show All Details')}
+                </button>
+
+                {showAllDetails && (
+                  <div className="mt-1">
+                    {extraInfo.map(r => (
+                      <div key={r.label} className={rowCls}>
+                        <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
+                        <span className="text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis">{r.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Notes */}
-          {contact.notes && (
-            <div className="mb-4 px-3.5 py-2.5 bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl text-xs text-content-muted dark:text-content-muted-dark">
-              <div className="font-semibold mb-1 text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'ملاحظات' : 'Notes'}</div>
-              {contact.notes}
-            </div>
-          )}
-
-          {/* Blacklist reason */}
-          {contact.is_blacklisted && contact.blacklist_reason && (
-            <div className="mb-4 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl text-xs text-red-500 flex gap-1.5 items-start">
-              <Ban size={13} className="shrink-0 mt-0.5" /> <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
-            </div>
-          )}
-
-          {/* ── Action Buttons ── */}
-          <div className="flex gap-2 mb-4">
-            <button onClick={() => { setShowActivityForm(p => !p); setShowTaskForm(false); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showActivityForm ? 'bg-brand-500 text-white border-brand-500' : 'bg-brand-500/[0.08] border-brand-500/25 text-brand-500'}`}>
-              <Plus size={13} /> {isRTL ? 'نشاط' : 'Activity'}
-            </button>
-            <button onClick={() => { setShowTaskForm(p => !p); setShowActivityForm(false); }}
-              className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showTaskForm ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/[0.08] border-amber-500/25 text-amber-500'}`}>
-              <Plus size={13} /> {isRTL ? 'مهمة' : 'Task'}
-            </button>
-            <button onClick={() => setShowOppModal(true)}
-              className="flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border bg-emerald-500/[0.08] border-emerald-500/25 text-emerald-500 transition-colors">
-              <Plus size={13} /> {isRTL ? 'فرصة' : 'Opportunity'}
-            </button>
-          </div>
-
-          {/* ── Inline Activity Form ── */}
-          {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
-
-          {/* ── Inline Task Form ── */}
-          {showTaskForm && (
-            <div className="bg-amber-500/[0.07] border border-amber-500/20 rounded-xl p-3.5 mb-3">
-              <div className="flex flex-col gap-2">
-                <input value={newTask.title} onChange={e => setNewTask(f => ({ ...f, title: e.target.value }))}
-                  placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
-                  className="px-2.5 py-[7px] rounded-[7px] border border-amber-500/20 bg-[#f8fafc] dark:bg-[rgba(15,30,45,0.6)] text-content dark:text-content-dark text-xs outline-none"
-                  dir={isRTL ? 'rtl' : 'ltr'} />
-                <div className="flex gap-1.5">
-                  <Select value={newTask.type} onChange={e => setNewTask(f => ({ ...f, type: e.target.value }))} className="flex-1">
-                    {Object.entries(TASK_TYPES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-                  </Select>
-                  <Select value={newTask.priority} onChange={e => setNewTask(f => ({ ...f, priority: e.target.value }))} className="flex-1">
-                    {Object.entries(TASK_PRIORITIES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-                  </Select>
+              {/* Notes */}
+              {contact.notes && (
+                <div className="mb-4 px-3.5 py-2.5 bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl text-xs text-content-muted dark:text-content-muted-dark">
+                  <div className="font-semibold mb-1 text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'ملاحظات' : 'Notes'}</div>
+                  {contact.notes}
                 </div>
-                <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({ ...f, due_date: e.target.value }))}
-                  className="px-2 py-1.5 rounded-[7px] border border-amber-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
-                <div className="flex gap-2 justify-end">
-                  <Button variant="secondary" size="sm" onClick={() => setShowTaskForm(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-                  <Button size="sm" onClick={handleSaveTask} disabled={savingTask || !newTask.title.trim() || !newTask.due_date}>
-                    {savingTask ? '...' : (isRTL ? 'حفظ' : 'Save')}
-                  </Button>
+              )}
+
+              {/* Blacklist reason */}
+              {contact.is_blacklisted && contact.blacklist_reason && (
+                <div className="mb-4 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl text-xs text-red-500 flex gap-1.5 items-start">
+                  <Ban size={13} className="shrink-0 mt-0.5" /> <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
                 </div>
+              )}
+
+              {/* Recent Timeline Preview (last 5) */}
+              <div className="mb-2">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'آخر الأحداث' : 'Recent Activity'}</div>
+                  <div className="flex-1 h-px bg-brand-500/10" />
+                </div>
+
+                {loadingData ? (
+                  <div className="text-center p-6 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+                ) : timeline.length === 0 ? (
+                  <div className="text-center p-6 text-content-muted dark:text-content-muted-dark">
+                    <Clock size={24} className="opacity-25 mb-2 mx-auto" />
+                    <p className="m-0 text-xs">{isRTL ? 'لا توجد سجلات بعد' : 'No records yet'}</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="divide-y divide-brand-500/[0.06]">
+                      {timeline.slice(0, 5).map(item => renderTimelineItem(item))}
+                    </div>
+                    {timeline.length > 5 && (
+                      <button onClick={() => setTab('timeline')}
+                        className="w-full mt-2 py-2 text-[11px] text-brand-500 font-semibold bg-brand-500/[0.05] hover:bg-brand-500/[0.10] border border-brand-500/15 rounded-lg cursor-pointer transition-colors">
+                        {isRTL ? `عرض السجل الكامل (${timeline.length})` : `View Full Timeline (${timeline.length})`}
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}
 
-          {/* ── Timeline Section ── */}
-          <div className="mb-2">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'السجل الزمني' : 'Timeline'}</div>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold">{timeline.length}</span>
-              <div className="flex-1 h-px bg-brand-500/10" />
+          {/* ══════ TIMELINE TAB ══════ */}
+          {tab === 'timeline' && (
+            <div>
+              {/* Action Buttons */}
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => { setShowActivityForm(p => !p); setShowTaskForm(false); }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showActivityForm ? 'bg-brand-500 text-white border-brand-500' : 'bg-brand-500/[0.08] border-brand-500/25 text-brand-500'}`}>
+                  <Plus size={13} /> {isRTL ? 'نشاط' : 'Activity'}
+                </button>
+                <button onClick={() => { setShowTaskForm(p => !p); setShowActivityForm(false); }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showTaskForm ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/[0.08] border-amber-500/25 text-amber-500'}`}>
+                  <Plus size={13} /> {isRTL ? 'مهمة' : 'Task'}
+                </button>
+                <button onClick={() => setShowOppModal(true)}
+                  className="flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border bg-emerald-500/[0.08] border-emerald-500/25 text-emerald-500 transition-colors">
+                  <Plus size={13} /> {isRTL ? 'فرصة' : 'Opportunity'}
+                </button>
+              </div>
+
+              {/* Inline Activity Form */}
+              {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
+
+              {/* Inline Task Form */}
+              {showTaskForm && (
+                <div className="bg-amber-500/[0.07] border border-amber-500/20 rounded-xl p-3.5 mb-3">
+                  <div className="flex flex-col gap-2">
+                    <input value={newTask.title} onChange={e => setNewTask(f => ({ ...f, title: e.target.value }))}
+                      placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
+                      className="px-2.5 py-[7px] rounded-[7px] border border-amber-500/20 bg-[#f8fafc] dark:bg-[rgba(15,30,45,0.6)] text-content dark:text-content-dark text-xs outline-none"
+                      dir={isRTL ? 'rtl' : 'ltr'} />
+                    <div className="flex gap-1.5">
+                      <Select value={newTask.type} onChange={e => setNewTask(f => ({ ...f, type: e.target.value }))} className="flex-1">
+                        {Object.entries(TASK_TYPES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+                      </Select>
+                      <Select value={newTask.priority} onChange={e => setNewTask(f => ({ ...f, priority: e.target.value }))} className="flex-1">
+                        {Object.entries(TASK_PRIORITIES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+                      </Select>
+                    </div>
+                    <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({ ...f, due_date: e.target.value }))}
+                      className="px-2 py-1.5 rounded-[7px] border border-amber-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+                    <div className="flex gap-2 justify-end">
+                      <Button variant="secondary" size="sm" onClick={() => setShowTaskForm(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+                      <Button size="sm" onClick={handleSaveTask} disabled={savingTask || !newTask.title.trim() || !newTask.due_date}>
+                        {savingTask ? '...' : (isRTL ? 'حفظ' : 'Save')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Full Timeline */}
+              {loadingData ? (
+                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+              ) : timeline.length === 0 ? (
+                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
+                  <Clock size={28} className="opacity-25 mb-2 mx-auto" />
+                  <p className="m-0 text-xs">{isRTL ? 'لا توجد سجلات بعد' : 'No records yet'}</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-brand-500/[0.06]">
+                  {timeline.map(item => renderTimelineItem(item))}
+                </div>
+              )}
             </div>
+          )}
 
-            {loadingData ? (
-              <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
-            ) : timeline.length === 0 ? (
-              <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                <Clock size={28} className="opacity-25 mb-2 mx-auto" />
-                <p className="m-0 text-xs">{isRTL ? 'لا توجد سجلات بعد' : 'No records yet'}</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-brand-500/[0.06]">
-                {timeline.map(item => renderTimelineItem(item))}
-              </div>
-            )}
-          </div>
-
-          {/* Supplier Invoices */}
-          {contact.contact_type === 'supplier' && (
-            <div className="mt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'الفواتير' : 'Invoices'}</div>
-                <div className="flex-1 h-px bg-brand-500/10" />
-              </div>
-              <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                <FileDown size={28} className="mb-2 opacity-30 mx-auto" />
-                <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
-                <p className="mt-1 mb-3 text-xs">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
-                <Button size="sm">+ {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}</Button>
-              </div>
+          {/* ══════ INVOICES TAB ══════ */}
+          {tab === 'invoices' && (
+            <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
+              <FileDown size={28} className="mb-2 opacity-30 mx-auto" />
+              <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
+              <p className="mt-1 mb-3 text-xs">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
+              <Button size="sm">+ {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}</Button>
             </div>
           )}
         </div>
