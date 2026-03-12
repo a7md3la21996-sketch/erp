@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
-import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, ChevronDown, Plus } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity,
@@ -17,6 +17,12 @@ import {
 } from './constants';
 
 const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock, site_visit: Star };
+
+const TIMELINE_CONFIG = {
+  activity: { color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)', defaultIcon: Clock },
+  task:     { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  defaultIcon: CheckSquare },
+  opportunity: { color: '#10B981', bg: 'rgba(16,185,129,0.10)', defaultIcon: Target },
+};
 
 // ── Activity Form ─────────────────────────────────────────────────────────
 function ActivityForm({ contactId, onSave, onCancel }) {
@@ -86,7 +92,6 @@ function ActivityForm({ contactId, onSave, onCancel }) {
   const set = (k, v) => setForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '' } : {}) }));
 
   const currentResults = ACTIVITY_RESULTS[form.type] || [];
-
   const resultRequired = currentResults.length > 0;
   const canSave = !resultRequired || form.result;
 
@@ -154,36 +159,33 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   useEscClose(onClose);
-  const [tab, setTab] = useState('info');
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [tasks, setTasks] = useState([]);
-  const [addTaskForm, setAddTaskForm] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [showActivityForm, setShowActivityForm] = useState(false);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showOppModal, setShowOppModal] = useState(false);
+  const [showAllDetails, setShowAllDetails] = useState(false);
   const [newTask, setNewTask] = useState({ title: '', type: 'followup', priority: 'medium', due_date: '', notes: '' });
   const [savingTask, setSavingTask] = useState(false);
-  const [loadingActs, setLoadingActs] = useState(false);
-  const [loadingTasks, setLoadingTasks] = useState(false);
-  const [loadingOpps, setLoadingOpps] = useState(false);
-  const [showActivityForm, setShowActivityForm] = useState(false);
-  const [showOppModal, setShowOppModal] = useState(false);
   const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'qualification', temperature:'warm', priority:'medium', notes:'' });
 
-  // Fetch ALL tab data on mount so counts show immediately
+  // Fetch all data on mount
   useEffect(() => {
     let cancelled = false;
-    setLoadingActs(true); setLoadingTasks(true); setLoadingOpps(true);
-    fetchContactActivities(contact.id)
-      .then(data => { if (!cancelled) setActivities(data); })
-      .catch(() => { if (!cancelled) setActivities([]); })
-      .finally(() => { if (!cancelled) setLoadingActs(false); });
-    fetchTasks({ contactId: contact.id })
-      .then(data => { if (!cancelled) setTasks(data); })
-      .catch(() => { if (!cancelled) setTasks([]); })
-      .finally(() => { if (!cancelled) setLoadingTasks(false); });
-    fetchContactOpportunities(contact.id)
-      .then(data => { if (!cancelled) setOpportunities(data); })
-      .catch(() => { if (!cancelled) setOpportunities([]); })
-      .finally(() => { if (!cancelled) setLoadingOpps(false); });
+    setLoadingData(true);
+    Promise.allSettled([
+      fetchContactActivities(contact.id),
+      fetchTasks({ contactId: contact.id }),
+      fetchContactOpportunities(contact.id),
+    ]).then(([actsRes, tasksRes, oppsRes]) => {
+      if (cancelled) return;
+      if (actsRes.status === 'fulfilled') setActivities(actsRes.value);
+      if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value);
+      if (oppsRes.status === 'fulfilled') setOpportunities(oppsRes.value);
+      setLoadingData(false);
+    });
     return () => { cancelled = true; };
   }, [contact.id]);
 
@@ -214,32 +216,163 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     }
   };
 
+  const handleSaveTask = async () => {
+    if (!newTask.title.trim() || !newTask.due_date || !contact) return;
+    setSavingTask(true);
+    try {
+      const savedTask = await createTask({ ...newTask, contact_id: contact.id, contact_name: contact.full_name, dept: 'crm' });
+      setTasks(prev => [savedTask, ...prev]);
+      setNewTask({ title: '', type: 'followup', priority: 'medium', due_date: '', notes: '' });
+      setShowTaskForm(false);
+    } finally { setSavingTask(false); }
+  };
+
+  const handleSaveOpp = async () => {
+    if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; }
+    const oppData = { contact_id: contact.id, budget: Number(newOpp.budget) || 0, stage: newOpp.stage, temperature: newOpp.temperature, priority: newOpp.priority, notes: newOpp.notes };
+    const saved = await createOpportunity(oppData);
+    const opp = { ...saved, contactName: contact.full_name, contacts: { id: contact.id, full_name: contact.full_name, phone: contact.phone, email: contact.email, department: contact.department, contact_type: contact.contact_type }, projects: { name_ar: newOpp.project, name_en: newOpp.project } };
+    setOpportunities(prev => [opp, ...prev]);
+    setShowOppModal(false);
+    setNewOpp({ project: '', budget: '', stage: 'qualification', temperature: 'warm', priority: 'medium', notes: '' });
+    toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created');
+  };
+
   if (!contact) return null;
   const tempInfo = contact.temperature ? TEMP[contact.temperature] : null;
   const tp = contact.contact_type ? TYPE[contact.contact_type] : null;
 
   const actCount = activities.length;
   const oppCount = opportunities.length;
-  const taskCount = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled').length;
-  const baseTabs = [
-    ['info', isRTL ? 'البيانات' : 'Info'],
-    ['activities', (isRTL ? 'الأنشطة' : 'Activities') + (actCount ? ` (${actCount})` : '')],
-    ['opportunities', (isRTL ? 'الفرص' : 'Opps') + (oppCount ? ` (${oppCount})` : '')],
-    ['tasks', (isRTL ? 'المهام' : 'Tasks') + (taskCount ? ` (${taskCount})` : '')],
-  ];
-  const tabs = contact.contact_type === 'supplier' ? [...baseTabs, ['invoices', isRTL ? 'الفواتير' : 'Invoices']] : baseTabs;
+  const openTaskCount = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled').length;
 
-  const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.08] text-xs';
+  // ── Unified Timeline ─────────────────────────────────────────────────────
+  const timeline = useMemo(() => {
+    const items = [];
+    activities.forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at }));
+    tasks.forEach(t => items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date }));
+    opportunities.forEach(o => items.push({ ...o, _type: 'opportunity', _date: o.created_at }));
+    return items.sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
+  }, [activities, tasks, opportunities]);
+
+  // Key info rows (always visible)
+  const keyInfo = [
+    { label: isRTL ? 'الهاتف' : 'Phone', val: contact.phone },
+    { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
+    { label: isRTL ? 'الميزانية' : 'Budget', val: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
+    { label: isRTL ? 'الموقع' : 'Location', val: contact.preferred_location || '—' },
+    { label: isRTL ? 'المسؤول' : 'Assigned', val: contact.assigned_to_name || '—' },
+  ];
+
+  // Extra details (expandable)
+  const extraInfo = [
+    { label: isRTL ? 'الهاتف الثاني' : 'Phone 2', val: contact.phone2 || '—' },
+    { label: isRTL ? 'الإيميل' : 'Email', val: contact.email || '—' },
+    { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name || '—' },
+    { label: isRTL ? 'نوع العقار' : 'Property', val: (isRTL ? { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' } : { residential: 'Residential', commercial: 'Commercial', administrative: 'Administrative' })[contact.interested_in_type] || '—' },
+    { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: contact.last_activity_at ? (() => { const d = daysSince(contact.last_activity_at); return d === 0 ? (isRTL ? 'اليوم' : 'Today') : isRTL ? `منذ ${d} يوم` : `${d} days ago`; })() : '—' },
+    { label: isRTL ? 'تاريخ الإنشاء' : 'Created', val: contact.created_at ? new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
+    { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
+    { label: isRTL ? 'الشركة' : 'Company', val: contact.company || '—' },
+    { label: isRTL ? 'المسمى الوظيفي' : 'Job Title', val: contact.job_title || '—' },
+    { label: isRTL ? 'الجنس' : 'Gender', val: contact.gender ? ((isRTL ? { male: 'ذكر', female: 'أنثى' } : { male: 'Male', female: 'Female' })[contact.gender] || contact.gender) : '—' },
+    { label: isRTL ? 'الجنسية' : 'Nationality', val: contact.nationality ? ((isRTL ? { egyptian: 'مصري', saudi: 'سعودي', emirati: 'إماراتي', kuwaiti: 'كويتي', qatari: 'قطري', libyan: 'ليبي', other: 'أخرى' } : { egyptian: 'Egyptian', saudi: 'Saudi', emirati: 'Emirati', kuwaiti: 'Kuwaiti', qatari: 'Qatari', libyan: 'Libyan', other: 'Other' })[contact.nationality] || contact.nationality) : '—' },
+    { label: isRTL ? 'تاريخ الميلاد' : 'Birth Date', val: contact.birth_date || '—' },
+  ];
+
+  const rowCls = 'flex justify-between items-center py-1.5 border-b border-brand-500/[0.06] text-xs';
+
+  // ── Timeline Item Renderer ─────────────────────────────────────────────
+  const renderTimelineItem = (item) => {
+    const cfg = TIMELINE_CONFIG[item._type];
+    const dateStr = item._date?.slice(0, 10) || '';
+
+    if (item._type === 'activity') {
+      const ActIcon = ACT_ICON_MAP[item.type] || cfg.defaultIcon;
+      return (
+        <div key={'act-' + item.id} className="flex gap-3 py-2.5">
+          <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center mt-0.5" style={{ background: cfg.bg }}>
+            <ActIcon size={14} color={cfg.color} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-semibold text-content dark:text-content-dark leading-snug">{item.description || (isRTL ? 'نشاط' : 'Activity')}</div>
+            <div className="flex items-center gap-2 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">
+              <span>{isRTL ? (item.users?.full_name_ar || 'مجهول') : (item.users?.full_name_en || item.users?.full_name_ar || 'Unknown')}</span>
+              <span className="opacity-40">·</span>
+              <span>{dateStr}</span>
+            </div>
+            {item.next_action && (
+              <div className="mt-1.5 px-2.5 py-1 bg-brand-500/[0.08] rounded-md text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">
+                › {item.next_action}{item.next_action_date ? ` — ${item.next_action_date}` : ''}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (item._type === 'task') {
+      const pri = TASK_PRIORITIES[item.priority];
+      const st = TASK_STATUSES[item.status];
+      const due = new Date(item.due_date);
+      const overdue = due < new Date() && item.status !== 'done';
+      return (
+        <div key={'task-' + item.id} className="flex gap-3 py-2.5">
+          <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center mt-0.5" style={{ background: cfg.bg }}>
+            <CheckSquare size={14} color={cfg.color} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className={`text-xs font-semibold text-content dark:text-content-dark leading-snug ${item.status === 'done' ? 'line-through opacity-60' : ''}`}>
+              {item.title}
+            </div>
+            <div className="flex gap-1.5 flex-wrap mt-1">
+              <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold" style={{ background: (pri?.color || '#4A7AAB') + '22', color: pri?.color || '#4A7AAB' }}>
+                {isRTL ? pri?.ar : pri?.en}
+              </span>
+              <span className="text-[10px] px-1.5 py-px rounded-[5px]" style={{ background: (st?.color || '#4A7AAB') + '22', color: st?.color || '#4A7AAB' }}>
+                {isRTL ? st?.ar : st?.en}
+              </span>
+              <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                <Clock size={9} />
+                {due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (item._type === 'opportunity') {
+      return (
+        <div key={'opp-' + item.id} className="flex gap-3 py-2.5">
+          <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center mt-0.5" style={{ background: cfg.bg }}>
+            <Target size={14} color={cfg.color} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'فرصة' : 'Opp'} #{String(item.id).slice(-4)}</span>
+              <Chip label={deptStageLabel(item.stage, contact.department || 'sales', isRTL)} color="#10B981" bg="rgba(16,185,129,0.1)" />
+            </div>
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark flex flex-col gap-0.5">
+              {item.projects?.name_ar && <span>{isRTL ? item.projects.name_ar : (item.projects.name_en || item.projects.name_ar)}</span>}
+              <span>{dateStr}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <>
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); setShowEdit(false); }} />}
     <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
       <div onClick={onClose} className="flex-1 bg-black/45" />
-      <div className={`contact-drawer w-[430px] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
+      <div className={`contact-drawer w-[430px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
 
-        {/* Drawer Header */}
-        <div className="px-5 pt-5 bg-gradient-to-b from-surface-bg to-surface-card dark:from-[#1B3347] dark:to-surface-card-dark">
+        {/* ═══ Drawer Header ═══ */}
+        <div className="px-5 pt-5 pb-4 bg-gradient-to-b from-surface-bg to-surface-card dark:from-[#1B3347] dark:to-surface-card-dark shrink-0">
           <div className="flex justify-between items-start mb-3.5">
             <div className="flex gap-3 items-center">
               <div className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-lg font-bold ${contact.is_blacklisted ? 'bg-red-500/20 text-red-500' : 'bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white'}`}>
@@ -247,7 +380,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </div>
               <div>
                 <div className={`text-base font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[280px] ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
-                  {contact.prefix ? <span className={`text-[#6B8DB5] dark:text-[#6B8DB5] me-1`}>{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                  {contact.prefix ? <span className="text-[#6B8DB5] dark:text-[#6B8DB5] me-1">{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                 </div>
                 <div className="mt-1 flex gap-1.5 items-center flex-wrap">
                   {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
@@ -265,7 +398,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           </div>
 
           {/* Quick Actions */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-2">
             <a href={`tel:${contact.phone}`} className="flex-1 py-2 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-500 text-xs font-semibold text-center no-underline flex items-center justify-center gap-1.5">
               <Phone size={13} /> {isRTL ? 'اتصال' : 'Call'}
             </a>
@@ -283,313 +416,220 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </button>
             )}
           </div>
-
-          {/* Tabs */}
-          <div className="flex border-b border-edge dark:border-edge-dark">
-            {tabs.map(([k, v]) => (
-              <button key={k} onClick={() => setTab(k)} className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer ${tab === k ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal'}`}>{v}</button>
-            ))}
-          </div>
         </div>
 
-        {/* Drawer Body */}
+        {/* ═══ Drawer Body — Single Scrollable View ═══ */}
         <div className="flex-1 overflow-auto p-5">
 
-          {/* INFO TAB */}
-          {tab === 'info' && (
-            <div>
-              {/* Quick Summary Cards */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <button onClick={() => setTab('activities')} className="bg-brand-500/[0.07] border border-brand-500/[0.12] rounded-xl p-2.5 cursor-pointer text-center hover:bg-brand-500/[0.12] transition-colors">
-                  <div className="text-lg font-bold text-brand-500">{loadingActs ? '…' : actCount}</div>
-                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'نشاط' : 'Activities'}</div>
-                </button>
-                <button onClick={() => setTab('opportunities')} className="bg-emerald-500/[0.07] border border-emerald-500/[0.15] rounded-xl p-2.5 cursor-pointer text-center hover:bg-emerald-500/[0.12] transition-colors">
-                  <div className="text-lg font-bold text-emerald-500">{loadingOpps ? '…' : oppCount}</div>
-                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'فرصة' : 'Opps'}</div>
-                </button>
-                <button onClick={() => setTab('tasks')} className="bg-amber-500/[0.07] border border-amber-500/[0.15] rounded-xl p-2.5 cursor-pointer text-center hover:bg-amber-500/[0.12] transition-colors">
-                  <div className="text-lg font-bold text-amber-500">{loadingTasks ? '…' : taskCount}</div>
-                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'مهمة مفتوحة' : 'Open Tasks'}</div>
-                </button>
-              </div>
+          {/* ── Stats Row ── */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="bg-brand-500/[0.07] border border-brand-500/[0.12] rounded-xl p-2.5 text-center">
+              <div className="text-lg font-bold text-brand-500">{loadingData ? '…' : actCount}</div>
+              <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'نشاط' : 'Activities'}</div>
+            </div>
+            <div className="bg-emerald-500/[0.07] border border-emerald-500/[0.15] rounded-xl p-2.5 text-center">
+              <div className="text-lg font-bold text-emerald-500">{loadingData ? '…' : oppCount}</div>
+              <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'فرصة' : 'Opps'}</div>
+            </div>
+            <div className="bg-amber-500/[0.07] border border-amber-500/[0.15] rounded-xl p-2.5 text-center">
+              <div className="text-lg font-bold text-amber-500">{loadingData ? '…' : openTaskCount}</div>
+              <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'مهمة مفتوحة' : 'Open Tasks'}</div>
+            </div>
+          </div>
 
-              <div className="grid grid-cols-2 gap-2.5 mb-4">
-                <div className="bg-brand-500/[0.07] rounded-xl p-3 border border-brand-500/[0.12]">
-                  <div className="text-content-muted dark:text-content-muted-dark text-xs mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
-                  <ScorePill score={contact.lead_score} />
-                </div>
-                <div className="rounded-xl p-3" style={{ background: tempInfo?.bg, border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
-                  <div className="text-content-muted dark:text-content-muted-dark text-xs mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
-                  {tempInfo?.Icon && <div className="flex items-center gap-1.5"><tempInfo.Icon size={14} color={tempInfo.color} /><span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div>}
-                </div>
-              </div>
+          {/* ── Score & Temperature ── */}
+          <div className="grid grid-cols-2 gap-2.5 mb-4">
+            <div className="bg-brand-500/[0.07] rounded-xl p-3 border border-brand-500/[0.12]">
+              <div className="text-content-muted dark:text-content-muted-dark text-xs mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
+              <ScorePill score={contact.lead_score} />
+            </div>
+            <div className="rounded-xl p-3" style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.05)', border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
+              <div className="text-content-muted dark:text-content-muted-dark text-xs mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
+              {tempInfo?.Icon ? <div className="flex items-center gap-1.5"><tempInfo.Icon size={14} color={tempInfo.color} /><span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div> : <span className="text-xs text-content-muted dark:text-content-muted-dark">—</span>}
+            </div>
+          </div>
 
-              {[
-                { label: isRTL ? 'الهاتف الأول' : 'Phone 1',   val: contact.phone },
-                { label: isRTL ? 'الهاتف الثاني' : 'Phone 2',  val: contact.phone2 || '—' },
-                { label: isRTL ? 'الإيميل' : 'Email',         val: contact.email || '—' },
-                { label: isRTL ? 'المصدر'   : 'Source',   val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
-                { label: isRTL ? 'الحملة'   : 'Campaign', val: contact.campaign_name || '—' },
-                { label: isRTL ? 'الميزانية': 'Budget',   val: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
-                { label: isRTL ? 'الموقع'   : 'Location', val: contact.preferred_location || '—' },
-                { label: isRTL ? 'نوع العقار': 'Property', val: (isRTL ? { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' } : { residential: 'Residential', commercial: 'Commercial', administrative: 'Administrative' })[contact.interested_in_type] || '—' },
-                { label: isRTL ? 'المسؤول'  : 'Assigned', val: contact.assigned_to_name || '—' },
-                { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: contact.last_activity_at ? (() => { const d = daysSince(contact.last_activity_at); return d === 0 ? (isRTL ? 'اليوم' : 'Today') : isRTL ? `منذ ${d} يوم` : `${d} days ago`; })() : '—' },
-                { label: isRTL ? 'تاريخ الإنشاء' : 'Created', val: contact.created_at ? new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
-                { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
-                { label: isRTL ? 'الشركة' : 'Company', val: contact.company || '—' },
-                { label: isRTL ? 'المسمى الوظيفي' : 'Job Title', val: contact.job_title || '—' },
-                { label: isRTL ? 'الجنس' : 'Gender', val: contact.gender ? ((isRTL ? { male: 'ذكر', female: 'أنثى' } : { male: 'Male', female: 'Female' })[contact.gender] || contact.gender) : '—' },
-                { label: isRTL ? 'الجنسية' : 'Nationality', val: contact.nationality ? ((isRTL ? { egyptian: 'مصري', saudi: 'سعودي', emirati: 'إماراتي', kuwaiti: 'كويتي', qatari: 'قطري', libyan: 'ليبي', other: 'أخرى' } : { egyptian: 'Egyptian', saudi: 'Saudi', emirati: 'Emirati', kuwaiti: 'Kuwaiti', qatari: 'Qatari', libyan: 'Libyan', other: 'Other' })[contact.nationality] || contact.nationality) : '—' },
-                { label: isRTL ? 'تاريخ الميلاد' : 'Birth Date', val: contact.birth_date || '—' },
-              ].map(r => (
+          {/* ── Key Info ── */}
+          <div className="mb-3">
+            {keyInfo.map(r => (
               <div key={r.label} className={rowCls}>
                 <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
-                <span className={`text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis`}>{r.val}</span>
+                <span className="text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis">{r.val}</span>
               </div>
-              ))}
-              {contact.notes && (
-                <div className="mt-3 px-3.5 py-2.5 bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl text-xs text-content-muted dark:text-content-muted-dark">
-                  <div className="font-semibold mb-1 text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'ملاحظات' : 'Notes'}</div>
-                  {contact.notes}
-                </div>
-              )}
+            ))}
 
-              {contact.is_blacklisted && contact.blacklist_reason && (
-                <div className="mt-3.5 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl text-xs text-red-500 flex gap-1.5 items-start">
-                  <Ban size={13} className="shrink-0 mt-0.5" /> <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
-                </div>
-              )}
-              {contact.contact_type === 'supplier' && (
-                <Button variant="secondary" size="sm" className="w-full mt-3" onClick={() => { setTab('invoices'); }}>
-                  <span>+</span> {isRTL ? 'عرض الفواتير' : 'View Invoices'}
-                </Button>
-              )}
+            {/* Expandable details */}
+            <button onClick={() => setShowAllDetails(p => !p)}
+              className="w-full flex items-center justify-center gap-1 py-2 mt-1 text-[11px] text-brand-500 font-semibold bg-transparent border-none cursor-pointer hover:bg-brand-500/5 rounded-lg transition-colors">
+              <ChevronDown size={13} className={`transition-transform ${showAllDetails ? 'rotate-180' : ''}`} />
+              {showAllDetails ? (isRTL ? 'إخفاء التفاصيل' : 'Hide Details') : (isRTL ? 'عرض كل البيانات' : 'Show All Details')}
+            </button>
+
+            {showAllDetails && (
+              <div className="mt-1">
+                {extraInfo.map(r => (
+                  <div key={r.label} className={rowCls}>
+                    <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
+                    <span className="text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis">{r.val}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Notes */}
+          {contact.notes && (
+            <div className="mb-4 px-3.5 py-2.5 bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl text-xs text-content-muted dark:text-content-muted-dark">
+              <div className="font-semibold mb-1 text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'ملاحظات' : 'Notes'}</div>
+              {contact.notes}
             </div>
           )}
 
-          {/* INVOICES TAB */}
-          {tab === 'invoices' && (
-            <div>
-              <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
-                <FileDown size={32} className="mb-3 opacity-40 text-content-muted dark:text-content-muted-dark" />
-                <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
-                <p className="mt-1.5 mb-4 text-xs">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
-                <Button size="sm">
-                  + {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}
-                </Button>
+          {/* Blacklist reason */}
+          {contact.is_blacklisted && contact.blacklist_reason && (
+            <div className="mb-4 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl text-xs text-red-500 flex gap-1.5 items-start">
+              <Ban size={13} className="shrink-0 mt-0.5" /> <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
+            </div>
+          )}
+
+          {/* ── Action Buttons ── */}
+          <div className="flex gap-2 mb-4">
+            <button onClick={() => { setShowActivityForm(p => !p); setShowTaskForm(false); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showActivityForm ? 'bg-brand-500 text-white border-brand-500' : 'bg-brand-500/[0.08] border-brand-500/25 text-brand-500'}`}>
+              <Plus size={13} /> {isRTL ? 'نشاط' : 'Activity'}
+            </button>
+            <button onClick={() => { setShowTaskForm(p => !p); setShowActivityForm(false); }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showTaskForm ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-500/[0.08] border-amber-500/25 text-amber-500'}`}>
+              <Plus size={13} /> {isRTL ? 'مهمة' : 'Task'}
+            </button>
+            <button onClick={() => setShowOppModal(true)}
+              className="flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border bg-emerald-500/[0.08] border-emerald-500/25 text-emerald-500 transition-colors">
+              <Plus size={13} /> {isRTL ? 'فرصة' : 'Opportunity'}
+            </button>
+          </div>
+
+          {/* ── Inline Activity Form ── */}
+          {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
+
+          {/* ── Inline Task Form ── */}
+          {showTaskForm && (
+            <div className="bg-amber-500/[0.07] border border-amber-500/20 rounded-xl p-3.5 mb-3">
+              <div className="flex flex-col gap-2">
+                <input value={newTask.title} onChange={e => setNewTask(f => ({ ...f, title: e.target.value }))}
+                  placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
+                  className="px-2.5 py-[7px] rounded-[7px] border border-amber-500/20 bg-[#f8fafc] dark:bg-[rgba(15,30,45,0.6)] text-content dark:text-content-dark text-xs outline-none"
+                  dir={isRTL ? 'rtl' : 'ltr'} />
+                <div className="flex gap-1.5">
+                  <Select value={newTask.type} onChange={e => setNewTask(f => ({ ...f, type: e.target.value }))} className="flex-1">
+                    {Object.entries(TASK_TYPES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+                  </Select>
+                  <Select value={newTask.priority} onChange={e => setNewTask(f => ({ ...f, priority: e.target.value }))} className="flex-1">
+                    {Object.entries(TASK_PRIORITIES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+                  </Select>
+                </div>
+                <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({ ...f, due_date: e.target.value }))}
+                  className="px-2 py-1.5 rounded-[7px] border border-amber-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+                <div className="flex gap-2 justify-end">
+                  <Button variant="secondary" size="sm" onClick={() => setShowTaskForm(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+                  <Button size="sm" onClick={handleSaveTask} disabled={savingTask || !newTask.title.trim() || !newTask.due_date}>
+                    {savingTask ? '...' : (isRTL ? 'حفظ' : 'Save')}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
 
-          {/* ACTIVITIES TAB */}
-          {tab === 'activities' && (
-            <div>
-              {!showActivityForm && (
-                <Button onClick={() => setShowActivityForm(true)} size="sm" className="w-full mb-3.5">
-                  {isRTL ? '+ إضافة نشاط' : '+ Add Activity'}
-                </Button>
-              )}
-              {showActivityForm && <ActivityForm contactId={contact.id} onSave={handleSaveActivity} onCancel={() => setShowActivityForm(false)} />}
-
-              {loadingActs ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
-              ) : activities.length === 0 ? (
-                <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
-                  <Clock size={32} className="opacity-30 mb-2" />
-                  <p className="m-0 text-xs">{isRTL ? 'لا توجد أنشطة بعد' : 'No activities yet'}</p>
-                </div>
-              ) : activities.map(act => {
-                const ActIcon = ACT_ICON_MAP[act.type] || Clock;
-                return (
-                <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2.5">
-                  <div className="flex justify-between mb-1.5 items-start gap-2">
-                    <div className="flex items-start gap-2 flex-1">
-                      <div className="w-[26px] h-[26px] rounded-[7px] bg-brand-500/10 flex items-center justify-center shrink-0 mt-px">
-                        <ActIcon size={13} color="#4A7AAB" />
-                      </div>
-                      <span className="text-content dark:text-content-dark text-xs font-semibold">{act.description}</span>
-                    </div>
-                  </div>
-                  <div className="flex justify-between text-xs text-content-muted dark:text-content-muted-dark">
-                    <span>{isRTL ? (act.users?.full_name_ar || 'مجهول') : (act.users?.full_name_en || act.users?.full_name_ar || 'Unknown')}</span>
-                    <span>{act.created_at?.slice(0, 10)}</span>
-                  </div>
-                  {act.next_action && (
-                    <div className="mt-2 px-2.5 py-1.5 bg-brand-500/[0.08] rounded-md text-xs text-[#6B8DB5] dark:text-[#6B8DB5]">
-                      › {act.next_action}{act.next_action_date ? ` — ${act.next_action_date}` : ''}
-                    </div>
-                  )}
-                </div>
-              ); })}
+          {/* ── Timeline Section ── */}
+          <div className="mb-2">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'السجل الزمني' : 'Timeline'}</div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold">{timeline.length}</span>
+              <div className="flex-1 h-px bg-brand-500/10" />
             </div>
-          )}
 
+            {loadingData ? (
+              <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+            ) : timeline.length === 0 ? (
+              <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
+                <Clock size={28} className="opacity-25 mb-2 mx-auto" />
+                <p className="m-0 text-xs">{isRTL ? 'لا توجد سجلات بعد' : 'No records yet'}</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-brand-500/[0.06]">
+                {timeline.map(item => renderTimelineItem(item))}
+              </div>
+            )}
+          </div>
 
-          {/* TASKS TAB */}
-          {tab === 'tasks' && (
-            <div>
-              <Button onClick={() => setAddTaskForm(f => !f)} size="sm" className="w-full mb-3.5">
-                {addTaskForm ? (isRTL ? 'إلغاء' : 'Cancel') : (isRTL ? '+ مهمة جديدة' : '+ New Task')}
-              </Button>
-
-              {addTaskForm && (
-                <div className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-3.5">
-                  <div className="flex flex-col gap-2">
-                    <input value={newTask.title} onChange={e => setNewTask(f => ({...f, title: e.target.value}))}
-                      placeholder={isRTL ? 'عنوان المهمة...' : 'Task title...'}
-                      className="px-2.5 py-[7px] rounded-[7px] border border-brand-500/20 bg-[#f8fafc] dark:bg-[rgba(15,30,45,0.6)] text-content dark:text-content-dark text-xs outline-none"
-                      dir={isRTL ? 'rtl' : 'ltr'} />
-                    <div className="flex gap-1.5">
-                      <Select value={newTask.type} onChange={e => setNewTask(f => ({...f, type: e.target.value}))}
-                        className="flex-1">
-                        {Object.entries(TASK_TYPES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-                      </Select>
-                      <Select value={newTask.priority} onChange={e => setNewTask(f => ({...f, priority: e.target.value}))}
-                        className="flex-1">
-                        {Object.entries(TASK_PRIORITIES).map(([k,v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-                      </Select>
-                    </div>
-                    <input type="datetime-local" value={newTask.due_date} onChange={e => setNewTask(f => ({...f, due_date: e.target.value}))}
-                      className="px-2 py-1.5 rounded-[7px] border border-brand-500/20 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
-                    <Button size="sm" onClick={async () => {
-                      if (!newTask.title.trim() || !newTask.due_date || !contact) return;
-                      setSavingTask(true);
-                      try {
-                        const savedTask = await createTask({ ...newTask, contact_id: contact.id, contact_name: contact.full_name, dept: 'crm' });
-                        setTasks(prev => [savedTask, ...prev]);
-                        setNewTask({ title: '', type: 'followup', priority: 'medium', due_date: '', notes: '' });
-                        setAddTaskForm(false);
-                      } finally { setSavingTask(false); }
-                    }} disabled={savingTask || !newTask.title.trim() || !newTask.due_date}>
-                      {savingTask ? '...' : (isRTL ? 'حفظ' : 'Save')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {loadingTasks ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
-              ) : tasks.length === 0 ? (
-                <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
-                  <CheckSquare size={32} className="opacity-30 mb-2" />
-                  <p className="m-0 text-xs">{isRTL ? 'لا توجد مهام مرتبطة' : 'No tasks linked'}</p>
-                </div>
-              ) : tasks.map(task => {
-                const pri = TASK_PRIORITIES[task.priority];
-                const typ = TASK_TYPES[task.type];
-                const st  = TASK_STATUSES[task.status];
-                const due = new Date(task.due_date);
-                const overdue = due < new Date() && task.status !== 'done';
-                return (
-                  <div key={task.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl px-3 py-2.5 mb-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1">
-                        <div className={`text-xs font-semibold text-content dark:text-content-dark mb-1 ${task.status === 'done' ? 'line-through opacity-60' : ''}`}>
-                          {task.title}
-                        </div>
-                        <div className="flex gap-1.5 flex-wrap">
-                          <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold" style={{ background: (pri?.color || '#4A7AAB') + '22', color: pri?.color || '#4A7AAB' }}>
-                            {isRTL ? pri?.ar : pri?.en}
-                          </span>
-                          <span className="text-[10px] px-1.5 py-px rounded-[5px]" style={{ background: (st?.color || '#4A7AAB') + '22', color: st?.color || '#4A7AAB' }}>
-                            {isRTL ? st?.ar : st?.en}
-                          </span>
-                          <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
-                            <Clock size={9} />
-                            {due.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* OPPORTUNITIES TAB */}
-          {tab === 'opportunities' && (
-            <div>
-              <Button onClick={()=>setShowOppModal(true)} size="sm" className="w-full mb-3.5">
-                {isRTL ? '+ فتح فرصة جديدة' : '+ New Opportunity'}
-              </Button>
-              {showOppModal && (
-                <div onClick={()=>setShowOppModal(false)} className="fixed inset-0 z-[1100] flex items-center justify-center p-5 bg-black/50">
-                  <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e=>e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-xl p-6 w-full max-w-[420px] border border-edge dark:border-edge-dark">
-                    <div className="flex justify-between items-center mb-5">
-                      <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL?'فرصة جديدة - ':'New Opportunity - '}{contact.full_name}</h3>
-                      <button onClick={()=>setShowOppModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer text-lg">✕</button>
-                    </div>
-                    <div className="flex flex-col gap-3">
-                      {[
-                        { key:'project', label_ar:'المشروع', label_en:'Project', type:'text' },
-                        { key:'budget',  label_ar:'الميزانية', label_en:'Budget', type:'number' },
-                        { key:'notes',   label_ar:'ملاحظات', label_en:'Notes', type:'text' },
-                      ].map(f => (
-                        <div key={f.key}>
-                          <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start`}>{isRTL?f.label_ar:f.label_en}</label>
-                          <input type={f.type} value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs outline-none box-border font-inherit"
-                            style={{ textAlign:isRTL?'right':'left', direction:isRTL?'rtl':'ltr' }} />
-                        </div>
-                      ))}
-                      <div>
-                        <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL?'المرحلة':'Stage'}</label>
-                        <Select value={newOpp.stage} onChange={e=>setNewOpp(p=>({...p,stage:e.target.value}))} className="w-full">
-                          {getDeptStages(contact.department || 'sales').map(s=><option key={s.id} value={s.id}>{isRTL?s.label_ar:s.label_en}</option>)}
-                        </Select>
-                      </div>
-                      {[
-                        { key:'temperature', label_ar:'الحرارة', label_en:'Temperature', options:[{v:'hot',ar:'ساخن',en:'Hot'},{v:'warm',ar:'دافئ',en:'Warm'},{v:'normal',ar:'عادي',en:'Normal'},{v:'cold',ar:'بارد',en:'Cold'}] },
-                        { key:'priority', label_ar:'الأولوية', label_en:'Priority', options:[{v:'urgent',ar:'عاجل',en:'Urgent'},{v:'high',ar:'عالي',en:'High'},{v:'medium',ar:'متوسط',en:'Medium'},{v:'low',ar:'منخفض',en:'Low'}] },
-                      ].map(f => (
-                        <div key={f.key}>
-                          <label className={`text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start`}>{isRTL?f.label_ar:f.label_en}</label>
-                          <Select value={newOpp[f.key]} onChange={e=>setNewOpp(p=>({...p,[f.key]:e.target.value}))}
-                            className="w-full">
-                            {f.options.map(o=><option key={o.v} value={o.v}>{isRTL?o.ar:o.en}</option>)}
-                          </Select>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2.5 mt-5">
-                      <Button className="flex-1" size="sm" onClick={async ()=>{ if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; } const oppData = { contact_id:contact.id, budget:Number(newOpp.budget)||0, stage:newOpp.stage, temperature:newOpp.temperature, priority:newOpp.priority, notes:newOpp.notes }; const saved = await createOpportunity(oppData); const opp = { ...saved, contactName:contact.full_name, contacts:{ id:contact.id, full_name:contact.full_name, phone:contact.phone, email:contact.email, department:contact.department, contact_type:contact.contact_type }, projects:{name_ar:newOpp.project,name_en:newOpp.project} }; setOpportunities(prev=>[opp,...prev]); setShowOppModal(false); setNewOpp({project:'',budget:'',stage:'qualification',temperature:'warm',priority:'medium',notes:''}); toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created'); }}>
-                        {isRTL?'حفظ':'Save'}
-                      </Button>
-                      <Button variant="secondary" size="sm" onClick={()=>setShowOppModal(false)}>
-                        {isRTL?'إلغاء':'Cancel'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {loadingOpps ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
-              ) : opportunities.length === 0 ? (
-                <div className="text-center p-10 text-content-muted dark:text-content-muted-dark">
-                  <Star size={32} className="opacity-30 mb-2" />
-                  <p className="m-0 text-xs">{isRTL ? 'لا توجد فرص مرتبطة' : 'No opportunities linked'}</p>
-                </div>
-              ) : opportunities.map(opp => (
-                <div key={opp.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2.5">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-content dark:text-content-dark text-xs font-semibold">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
-                    <Chip label={deptStageLabel(opp.stage, contact.department || 'sales', isRTL)} color="#4A7AAB" bg="rgba(74,122,171,0.1)" />
-                  </div>
-                  <div className="text-xs text-content-muted dark:text-content-muted-dark flex flex-col gap-1">
-                    {opp.projects?.name_ar && <span>{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</span>}
-                    <span>{isRTL ? (opp.users?.full_name_ar || '—') : (opp.users?.full_name_en || opp.users?.full_name_ar || '—')}</span>
-                    {opp.next_follow_up && <span>{isRTL ? 'متابعة' : 'Follow-up'}: {opp.next_follow_up}</span>}
-                  </div>
-                </div>
-              ))}
+          {/* Supplier Invoices */}
+          {contact.contact_type === 'supplier' && (
+            <div className="mt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'الفواتير' : 'Invoices'}</div>
+                <div className="flex-1 h-px bg-brand-500/10" />
+              </div>
+              <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
+                <FileDown size={28} className="mb-2 opacity-30 mx-auto" />
+                <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
+                <p className="mt-1 mb-3 text-xs">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
+                <Button size="sm">+ {isRTL ? 'إضافة فاتورة' : 'Add Invoice'}</Button>
+              </div>
             </div>
           )}
         </div>
       </div>
     </div>
+
+    {/* ═══ New Opportunity Modal ═══ */}
+    {showOppModal && (
+      <div onClick={() => setShowOppModal(false)} className="fixed inset-0 z-[1100] flex items-center justify-center p-5 bg-black/50">
+        <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-xl p-6 w-full max-w-[420px] border border-edge dark:border-edge-dark">
+          <div className="flex justify-between items-center mb-5">
+            <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL ? 'فرصة جديدة - ' : 'New Opportunity - '}{contact.full_name}</h3>
+            <button onClick={() => setShowOppModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer text-lg">✕</button>
+          </div>
+          <div className="flex flex-col gap-3">
+            {[
+              { key: 'project', label_ar: 'المشروع', label_en: 'Project', type: 'text' },
+              { key: 'budget', label_ar: 'الميزانية', label_en: 'Budget', type: 'number' },
+              { key: 'notes', label_ar: 'ملاحظات', label_en: 'Notes', type: 'text' },
+            ].map(f => (
+              <div key={f.key}>
+                <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? f.label_ar : f.label_en}</label>
+                <input type={f.type} value={newOpp[f.key]} onChange={e => setNewOpp(p => ({ ...p, [f.key]: e.target.value }))}
+                  className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs outline-none box-border font-inherit"
+                  style={{ textAlign: isRTL ? 'right' : 'left', direction: isRTL ? 'rtl' : 'ltr' }} />
+              </div>
+            ))}
+            <div>
+              <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? 'المرحلة' : 'Stage'}</label>
+              <Select value={newOpp.stage} onChange={e => setNewOpp(p => ({ ...p, stage: e.target.value }))} className="w-full">
+                {getDeptStages(contact.department || 'sales').map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
+              </Select>
+            </div>
+            {[
+              { key: 'temperature', label_ar: 'الحرارة', label_en: 'Temperature', options: [{ v: 'hot', ar: 'ساخن', en: 'Hot' }, { v: 'warm', ar: 'دافئ', en: 'Warm' }, { v: 'normal', ar: 'عادي', en: 'Normal' }, { v: 'cold', ar: 'بارد', en: 'Cold' }] },
+              { key: 'priority', label_ar: 'الأولوية', label_en: 'Priority', options: [{ v: 'urgent', ar: 'عاجل', en: 'Urgent' }, { v: 'high', ar: 'عالي', en: 'High' }, { v: 'medium', ar: 'متوسط', en: 'Medium' }, { v: 'low', ar: 'منخفض', en: 'Low' }] },
+            ].map(f => (
+              <div key={f.key}>
+                <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? f.label_ar : f.label_en}</label>
+                <Select value={newOpp[f.key]} onChange={e => setNewOpp(p => ({ ...p, [f.key]: e.target.value }))} className="w-full">
+                  {f.options.map(o => <option key={o.v} value={o.v}>{isRTL ? o.ar : o.en}</option>)}
+                </Select>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2.5 mt-5">
+            <Button className="flex-1" size="sm" onClick={handleSaveOpp}>
+              {isRTL ? 'حفظ' : 'Save'}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setShowOppModal(false)}>
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }
