@@ -177,6 +177,10 @@ export default function DashboardPage() {
     return MOCK_CRM;
   }, [dashData]);
 
+  // Task & Activity stats
+  const taskStats = dashData?.tasks;
+  const activityStats = dashData?.activities;
+
   // TODO: Revenue trend and top sellers cannot be sourced from current services — keep mock
   const targetPct = crm.revenue > 0 && MOCK_SALES.target > 0
     ? Math.round((crm.revenue / MOCK_SALES.target) * 100)
@@ -253,6 +257,24 @@ export default function DashboardPage() {
           <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : crm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" />
           <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : crm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" />
           <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (crm.revenue / 1000).toFixed(0) + 'K'} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" />
+        </div>
+      )}
+
+      {/* Tasks & Activities Row */}
+      {sections.showCRM && (taskStats || activityStats) && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
+          {taskStats && (
+            <>
+              <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#F59E0B" />
+              <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#EF4444' : '#10B981'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} />
+            </>
+          )}
+          {activityStats && (
+            <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#8B5CF6" trendUp />
+          )}
+          <Link to="/crm/opportunities" className="no-underline">
+            <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={crm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((crm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#10B981" />
+          </Link>
         </div>
       )}
 
