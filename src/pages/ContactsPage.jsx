@@ -8,11 +8,11 @@ import {
   blacklistContact, createActivity,
 } from '../services/contactsService';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton, Select } from '../components/ui';
+import { PageSkeleton, Select, Input } from '../components/ui';
 
 // ── Split modules ──────────────────────────────────────────────────────────
 import {
-  SOURCE_LABELS, SOURCE_EN, coldLabel,
+  SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, MOCK,
   daysSince, initials, avatarColor, normalizePhone,
   Chip, ScorePill, PhoneCell,
@@ -228,8 +228,8 @@ export default function ContactsPage() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const exportCSV = (list) => {
-    const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','الحرارة','المرحلة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Temperature','Stage','Company','Created'];
-    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.temperature || '', c.stage || '', c.company || '', c.created_at || '']);
+    const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','الحرارة','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Temperature','Platform','Company','Created'];
+    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.temperature || '', c.platform || '', c.company || '', c.created_at || '']);
     const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -246,7 +246,6 @@ export default function ContactsPage() {
       temperature: 'hot',
       temperature_auto: true,
       cold_status: form.contact_type === 'cold' ? 'not_contacted' : null,
-      stage: form.contact_type === 'lead' ? 'new' : null,
       is_blacklisted: false,
       assigned_to_name: profile?.full_name_ar || '—',
       created_at: new Date().toISOString(),
@@ -270,7 +269,6 @@ export default function ContactsPage() {
     if (selected?.id === contact.id) setSelected(null);
   };
 
-  const selCls = 'bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg px-3 py-2 text-content dark:text-content-dark text-xs outline-none cursor-pointer';
   const thCls = `text-xs text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap text-start`;
   const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-xs text-content dark:text-content-dark text-start`;
 
@@ -360,9 +358,9 @@ export default function ContactsPage() {
       {/* Filter Bar */}
       <div className="flex gap-2.5 mb-4 flex-wrap items-center bg-gray-50 dark:bg-brand-500/[0.08] px-3.5 py-2.5 rounded-xl border border-edge dark:border-edge-dark">
         <div className="relative flex-[1_1_220px]">
-          <Search size={14} className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[#6B8DB5] dark:text-[#6B8DB5]" />
-          <input type="text" placeholder={i18n.language === 'ar' ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={searchInput} onChange={e => setSearchInput(e.target.value)}
-            className={`${selCls} w-full box-border pe-8`} />
+          <Search size={14} className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[#6B8DB5] dark:text-[#6B8DB5] pointer-events-none" />
+          <Input placeholder={isRTL ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={searchInput} onChange={e => setSearchInput(e.target.value)}
+            className="w-full pe-8" />
         </div>
         <Select value={filterSource} onChange={e => setFilterSource(e.target.value)}>
           <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
@@ -429,6 +427,7 @@ export default function ContactsPage() {
                 <th className={thCls}>{t('contacts.fullName')}</th>
                 <th className={thCls}>{t('contacts.phone')}</th>
                 <th className={thCls}>{t('contacts.type')}</th>
+                <th className={thCls}>{isRTL ? 'القسم' : 'Dept'}</th>
                 <th className={thCls}>{t('contacts.temperature')}</th>
                 <th className={thCls}>{t('contacts.source')}</th>
                 <th className={thCls}>{t('common.actions')}</th>
@@ -436,9 +435,9 @@ export default function ContactsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+                <tr><td colSpan={9} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="p-0 border-none">
+                <tr><td colSpan={9} className="p-0 border-none">
                   <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                       <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -480,6 +479,7 @@ export default function ContactsPage() {
                     {c.phone2 && <PhoneCell phone={c.phone2} small />}
                   </td>
                   <td className={tdCls}>{TYPE[c.contact_type] ? <Chip label={isRTL ? TYPE[c.contact_type].label : TYPE[c.contact_type].labelEn} color={TYPE[c.contact_type].color} bg={TYPE[c.contact_type].bg} /> : <span className="text-content-muted dark:text-content-muted-dark">—</span>}</td>
+                  <td className={tdCls}><span className="text-xs text-content-muted dark:text-content-muted-dark">{(isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' })[c.department] || '—'}</span></td>
                   <td className={tdCls}>
                     {(() => { const TempIcon = TEMP[c.temperature]?.Icon; return TempIcon ? <TempIcon size={15} color={TEMP[c.temperature]?.color} /> : '—'; })()}
                   </td>
@@ -551,7 +551,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Modals */}
-      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const found = contacts.find(c => c.phone === phone || c.phone2 === phone || (c.extra_phones || []).includes(phone)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
+      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const np = normalizePhone(phone); const found = contacts.find(c => normalizePhone(c.phone) === np || normalizePhone(c.phone2) === np || (c.extra_phones || []).some(p => normalizePhone(p) === np)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => { /* optimistic */ }) }} onAddOpportunity={() => {}} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
@@ -605,11 +605,11 @@ export default function ContactsPage() {
                       { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
                       { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
                       { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#EF4444' },
-                      { value: 'interested', label: isRTL ? 'مهتم' : 'Interested', color: '#4A7AAB' },
-                      { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not Interested', color: '#6b7280' },
+                      { value: 'switched_off', label: isRTL ? 'مغلق' : 'Switched Off', color: '#6b7280' },
+                      { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong Number', color: '#9333EA' },
                     ].map(r => (
-                      <button key={r.value} onClick={() => setBatchCallResult(r.value)}
-                        className={`px-3 py-1.5 rounded-2xl text-xs cursor-pointer ${batchCallResult === r.value ? 'font-bold' : 'font-normal bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                      <button key={r.value} onClick={() => setBatchCallResult(batchCallResult === r.value ? '' : r.value)}
+                        className={`px-3 py-1.5 rounded-2xl text-xs cursor-pointer border ${batchCallResult === r.value ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
                         style={batchCallResult === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>{r.label}</button>
                     ))}
                   </div>
@@ -623,7 +623,7 @@ export default function ContactsPage() {
                   </button>
                   <button onClick={async () => {
                     if (batchCallResult) {
-                      const resultLabel = { answered: isRTL?'رد':'Answered', no_answer: isRTL?'لم يرد':'No Answer', busy: isRTL?'مشغول':'Busy', interested: isRTL?'مهتم':'Interested', not_interested: isRTL?'غير مهتم':'Not Interested' }[batchCallResult] || batchCallResult;
+                      const resultLabel = { answered: isRTL?'رد':'Answered', no_answer: isRTL?'لم يرد':'No Answer', busy: isRTL?'مشغول':'Busy', switched_off: isRTL?'مغلق':'Switched Off', wrong_number: isRTL?'رقم خاطئ':'Wrong Number' }[batchCallResult] || batchCallResult;
                       const activity = { type: 'call', description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, created_at: new Date().toISOString() };
                       try { await createActivity(activity); } catch { /* optimistic */ }
                       setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);
@@ -657,7 +657,7 @@ export default function ContactsPage() {
         if ((c2.lead_score || 0) > (c1.lead_score || 0)) merged.lead_score = c2.lead_score;
         if (!c1.company && c2.company) merged.company = c2.company;
         if (!c1.preferred_location && c2.preferred_location) merged.preferred_location = c2.preferred_location;
-        const fields = ['full_name','phone','phone2','email','contact_type','source','temperature','stage','company','preferred_location'];
+        const fields = ['full_name','phone','phone2','email','contact_type','source','department','temperature','company','preferred_location'];
         return (
           <div className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
             <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[600px] max-h-[80vh] overflow-y-auto">
