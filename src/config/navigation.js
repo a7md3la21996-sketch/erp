@@ -29,7 +29,10 @@ export const NAV_ITEMS = [
     { id: 'ops-after-sales', label: { ar: 'خدمة ما بعد البيع',  en: 'After-Sales' },       path: '/operations/after-sales',  permission: P.OPS_AFTERSALES },
   ]},
   { id: 'marketing', label: { ar: 'التسويق', en: 'Marketing' }, icon: Megaphone, permission: P.CAMPAIGNS_VIEW, children: [
-    { id: 'campaigns', label: { ar: 'الحملات', en: 'Campaigns' }, path: '/marketing/campaigns', permission: P.CAMPAIGNS_VIEW },
+    { id: 'mkt-dashboard', label: { ar: 'نظرة عامة', en: 'Dashboard' }, path: '/marketing', permission: P.CAMPAIGNS_VIEW },
+    { id: 'mkt-campaigns', label: { ar: 'الحملات', en: 'Campaigns' }, path: '/marketing/campaigns', permission: P.CAMPAIGNS_VIEW },
+    { id: 'mkt-channels', label: { ar: 'القنوات', en: 'Channels' }, path: '/marketing/channels', permission: P.CAMPAIGNS_VIEW },
+    { id: 'mkt-funnel', label: { ar: 'القمع التسويقي', en: 'Funnel' }, path: '/marketing/funnel', permission: P.CAMPAIGNS_VIEW },
   ]},
   { id: 'performance', label: { ar: 'الأداء', en: 'Performance' }, icon: Target, permission: P.HR_VIEW_OWN, path: '/performance' },
   { id: 'hr', label: { ar: 'الموارد البشرية', en: 'HR' }, icon: UserCog, permission: P.HR_VIEW_OWN, children: [
@@ -47,7 +50,13 @@ export const NAV_ITEMS = [
     { id: 'onboarding',     label: { ar: 'الاستقبال والمغادرة',   en: 'Onboarding' },             path: '/hr/onboarding',     permission: P.HR_VIEW_ALL },
   ]},
   { id: 'finance', label: { ar: 'المالية', en: 'Finance' }, icon: Wallet, permission: P.FINANCE_VIEW, children: [
-    { id: 'expenses', label: { ar: 'المصروفات', en: 'Expenses' }, path: '/finance/expenses', permission: P.EXPENSES_VIEW_OWN },
+    { id: 'fin-overview', label: { ar: 'نظرة عامة', en: 'Overview' }, path: '/finance', permission: P.FINANCE_VIEW },
+    { id: 'fin-coa', label: { ar: 'دليل الحسابات', en: 'Chart of Accounts' }, path: '/finance/coa', permission: P.FINANCE_VIEW },
+    { id: 'fin-journal', label: { ar: 'القيود اليومية', en: 'Journal Entries' }, path: '/finance/journal', permission: P.FINANCE_VIEW },
+    { id: 'fin-invoices', label: { ar: 'الفواتير', en: 'Invoices' }, path: '/finance/invoices', permission: P.FINANCE_VIEW },
+    { id: 'fin-expenses', label: { ar: 'المصروفات', en: 'Expenses' }, path: '/finance/expenses', permission: P.EXPENSES_VIEW_OWN },
+    { id: 'fin-reports', label: { ar: 'التقارير المالية', en: 'Reports' }, path: '/finance/reports', permission: P.FINANCE_VIEW },
+    { id: 'fin-budget', label: { ar: 'الموازنة', en: 'Budget' }, path: '/finance/budget', permission: P.FINANCE_VIEW },
   ]},
   { id: 'tasks', label: { ar: 'المهام', en: 'Tasks' }, icon: ClipboardList, path: '/tasks', permission: P.TASKS_VIEW_OWN },
   { id: 'calendar', label: { ar: 'التقويم', en: 'Calendar' }, icon: CalendarDays, path: '/calendar', permission: P.CALENDAR },
@@ -59,5 +68,7 @@ export const NAV_ITEMS = [
     { id: 'audit', label: { ar: 'سجل المراجعة', en: 'Audit Log' }, path: '/settings/audit-log', permission: P.AUDIT_VIEW },
     { id: 'system-config', label: { ar: 'إعدادات النظام', en: 'System Config' }, path: '/settings/system', permission: P.SETTINGS_MANAGE },
     { id: 'user-tracking', label: { ar: 'تتبع المستخدمين', en: 'User Tracking' }, path: '/settings/tracking', permission: P.AUDIT_VIEW },
+    { id: 'triggers', label: { ar: 'المشغلات التلقائية', en: 'Triggers' }, path: '/settings/triggers', permission: P.SETTINGS_MANAGE },
+    { id: 'custom-fields', label: { ar: 'حقول مخصصة', en: 'Custom Fields' }, path: '/settings/custom-fields', permission: P.SETTINGS_MANAGE },
   ]},
 ];

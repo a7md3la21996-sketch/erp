@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
-import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2 } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity,
@@ -13,6 +13,8 @@ import { createOpportunity } from '../../../services/opportunitiesService';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_STATUSES } from '../../../services/tasksService';
 import EditContactModal from './EditContactModal';
+import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
+import DocumentsSection from '../../../components/ui/DocumentsSection';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
@@ -639,6 +641,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const tabs = [
     { key: 'activity', label: isRTL ? 'النشاط' : 'Activity', icon: Clock },
     { key: deptTab.key, label: isRTL ? deptTab.label_ar : deptTab.label_en, icon: deptTab.icon },
+    { key: 'documents', label: isRTL ? 'المستندات' : 'Documents', icon: FileText },
     { key: 'data', label: isRTL ? 'البيانات' : 'Data', icon: Briefcase },
   ];
 
@@ -1053,6 +1056,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </div>
           )}
 
+          {/* ══════ DOCUMENTS TAB (المستندات) ══════ */}
+          {tab === 'documents' && (
+            <DocumentsSection
+              entity="contact"
+              entityId={contact.id}
+              entityName={contact.full_name}
+            />
+          )}
+
           {/* ══════ DATA TAB (البيانات) ══════ */}
           {tab === 'data' && (
             <div>
@@ -1124,6 +1136,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   </div>
                 );
               })()}
+
+              {/* Custom Fields */}
+              <CustomFieldsRenderer entity="contact" entityId={contact.id} mode="edit" defaultCollapsed={false} />
             </div>
           )}
         </div>

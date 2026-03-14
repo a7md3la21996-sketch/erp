@@ -10,8 +10,10 @@ import {
   blacklistContact, createActivity,
 } from '../services/contactsService';
 import { logAction } from '../services/auditService';
+import { setFieldValues as setCFValues } from '../services/customFieldsService';
 import { fetchCampaigns } from '../services/marketingService';
 import { notifyLeadAssigned } from '../services/notificationsService';
+import { evaluateTriggers } from '../services/triggerService';
 import ImportModal from './crm/ImportModal';
 import { PageSkeleton, Button, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
@@ -429,17 +431,23 @@ export default function ContactsPage() {
       created_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString(),
     };
+    const cfValues = form._customFieldValues;
+    const { _customFieldValues, ...cleanForm } = form;
     try {
-      const saved = await createContact(form);
+      const saved = await createContact(cleanForm);
       const updated = [saved, ...contacts];
       setContacts(updated);
       localStorage.setItem('platform_contacts', JSON.stringify(updated));
-      logAction({ action: 'create', entity: 'contact', entityId: saved.id, entityName: form.full_name, description: `Created contact: ${form.full_name} (${form.contact_type})`, userName: profile?.full_name_ar });
+      if (cfValues) setCFValues('contact', saved.id, cfValues);
+      logAction({ action: 'create', entity: 'contact', entityId: saved.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
+      evaluateTriggers('contact', 'created', saved);
     } catch {
       const updated = [newContact, ...contacts];
       setContacts(updated);
       localStorage.setItem('platform_contacts', JSON.stringify(updated));
-      logAction({ action: 'create', entity: 'contact', entityId: newContact.id, entityName: form.full_name, description: `Created contact: ${form.full_name} (${form.contact_type})`, userName: profile?.full_name_ar });
+      if (cfValues) setCFValues('contact', newContact.id, cfValues);
+      logAction({ action: 'create', entity: 'contact', entityId: newContact.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
+      evaluateTriggers('contact', 'created', newContact);
     }
   };
 

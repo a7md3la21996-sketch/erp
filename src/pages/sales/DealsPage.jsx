@@ -8,12 +8,13 @@ import {
   AlertCircle, FileText, Building2, User, Phone, Calendar,
   ArrowUpDown, Hash, CreditCard, Banknote,
 } from 'lucide-react';
-import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination, PageSkeleton } from '../../components/ui';
+import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination, PageSkeleton, DocumentsSection } from '../../components/ui';
 import { getWonDeals } from '../../services/dealsService';
 import { logView } from '../../services/viewTrackingService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { fmtMoney } from '../../utils/formatting';
+import CustomFieldsRenderer from '../../components/ui/CustomFieldsRenderer';
 import { thCls } from '../../utils/tableStyles';
 
 // ── Status Config ────────────────────────────────────────────────
@@ -481,6 +482,16 @@ export default function DealsPage() {
                     })}
                   </div>
                 </div>
+
+                {/* Attached Documents */}
+                <DocumentsSection
+                  entity="deal"
+                  entityId={deal.id}
+                  entityName={deal.deal_number || `Deal #${deal.id}`}
+                />
+
+                {/* Custom Fields */}
+                <CustomFieldsRenderer entity="deal" entityId={deal.id} mode="edit" defaultCollapsed={false} />
 
               </div>
             </div>

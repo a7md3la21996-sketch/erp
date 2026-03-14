@@ -47,6 +47,8 @@ const CommissionsPage = lazy(() => import('./pages/sales/CommissionsPage'));
 const ProjectsPage = lazy(() => import('./pages/real-estate/ProjectsPage'));
 const UnitsPage = lazy(() => import('./pages/real-estate/UnitsPage'));
 const UsersPage = lazy(() => import('./pages/settings/UsersPage'));
+const TriggersPage = lazy(() => import('./pages/settings/TriggersPage'));
+const CustomFieldsPage = lazy(() => import('./pages/settings/CustomFieldsPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -155,6 +157,8 @@ export default function App() {
                 <Route path="/settings/system" element={<Guarded><SystemConfigPage /></Guarded>} />
                 <Route path="/settings/tracking" element={<Guarded><UserTrackingPage /></Guarded>} />
                 <Route path="/settings/users" element={<Guarded><UsersPage /></Guarded>} />
+                <Route path="/settings/triggers" element={<Guarded><TriggersPage /></Guarded>} />
+                <Route path="/settings/custom-fields" element={<Guarded><CustomFieldsPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />

@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
+import { getApprovals } from '../../services/approvalService';
 import { KpiCard, Badge, Card, CardHeader, CardBody } from '../../components/ui';
 import {
   User, FileText, CalendarOff, DollarSign, Bell, ChevronRight,
   CalendarDays, Clock, CheckCircle2, XCircle, Monitor, Wrench,
   Shield, TrendingUp, Megaphone, PartyPopper, AlertCircle, Palmtree,
-  Briefcase, Heart, UserCog,
+  Briefcase, Heart, UserCog, MessageSquare, Target, ChevronUp, ChevronDown, Minus,
 } from 'lucide-react';
+import { ensureTargets, computeActuals, getEmployeeTargets, METRIC_CONFIG, METRICS } from '../../services/kpiTargetsService';
 
 /* ─── Quick Actions ─── */
 const QUICK_ACTIONS = [
@@ -97,17 +99,37 @@ function LeaveBar({ label, used, total, color }) {
   );
 }
 
-function StatusChip({ status, lang }) {
+function ApprovalBadge({ status, approverName, comments, lang }) {
   const map = {
-    pending:  { label_ar: 'معلق',  label_en: 'Pending',  color: '#F59E0B' },
-    approved: { label_ar: 'موافق', label_en: 'Approved', color: '#10B981' },
-    rejected: { label_ar: 'مرفوض', label_en: 'Rejected', color: '#EF4444' },
+    pending:  { label_ar: 'بانتظار الموافقة', label_en: 'Pending Approval', color: '#F59E0B', icon: Clock },
+    approved: { label_ar: 'تمت الموافقة',     label_en: 'Approved',         color: '#10B981', icon: CheckCircle2 },
+    rejected: { label_ar: 'مرفوض',            label_en: 'Rejected',         color: '#EF4444', icon: XCircle },
   };
   const s = map[status] || map.pending;
+  const Icon = s.icon;
+
   return (
-    <Badge color={s.color} size="sm">
-      {lang === 'ar' ? s.label_ar : s.label_en}
-    </Badge>
+    <div className="flex flex-col gap-1">
+      <div
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold w-fit"
+        style={{ background: `${s.color}18`, color: s.color, border: `1px solid ${s.color}35` }}
+      >
+        <Icon size={12} />
+        {lang === 'ar' ? s.label_ar : s.label_en}
+      </div>
+      {status !== 'pending' && approverName && (
+        <div className="flex items-center gap-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+          <User size={10} />
+          <span>{approverName}</span>
+        </div>
+      )}
+      {status !== 'pending' && comments && (
+        <div className="flex items-center gap-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+          <MessageSquare size={10} />
+          <span className="truncate max-w-[140px]">{comments}</span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -134,13 +156,37 @@ export default function SelfServicePage() {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const [employees, setEmployees] = useState([]);
+  const [approvals, setApprovals] = useState([]);
 
-  useEffect(() => { fetchEmployees().then(data => setEmployees(data)); }, []);
+  const loadApprovals = useCallback(() => {
+    // Load approvals for the current user (simulated as first employee)
+    const allApprovals = getApprovals({});
+    setApprovals(allApprovals);
+  }, []);
+
+  useEffect(() => { fetchEmployees().then(data => setEmployees(data)); loadApprovals(); }, [loadApprovals]);
+
+  // Listen for approval changes
+  useEffect(() => {
+    const handler = () => loadApprovals();
+    window.addEventListener('platform_approval_change', handler);
+    return () => window.removeEventListener('platform_approval_change', handler);
+  }, [loadApprovals]);
 
   // Simulate logged-in user with first employee
   const emp = employees[0];
   const name = (isRTL ? emp?.full_name_ar : emp?.full_name_en) || emp?.full_name_ar || (isRTL ? 'أحمد محمد' : 'Ahmed Mohamed');
   const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
+  // Enrich MY_REQUESTS with approval data
+  const getRequestApproval = (req) => {
+    // Try to find a matching approval by category/type
+    return approvals.find(a => {
+      if (req.category === 'leave' && a.type === 'leave') return true;
+      if (req.category === 'expense' && a.type === 'expense') return true;
+      return false;
+    }) || null;
+  };
 
   const pendingCount = MY_REQUESTS.filter(r => r.status === 'pending').length;
   const attendancePct = Math.round((ATTENDANCE_SUMMARY.present / ATTENDANCE_SUMMARY.totalWorkDays) * 100);
@@ -342,7 +388,7 @@ export default function SelfServicePage() {
                   isRTL ? 'النوع' : 'Type',
                   isRTL ? 'التفاصيل' : 'Details',
                   isRTL ? 'التاريخ' : 'Date',
-                  isRTL ? 'الحالة' : 'Status',
+                  isRTL ? 'حالة الموافقة' : 'Approval Status',
                 ].map((h, i) => (
                   <th key={i} className={`px-5 py-3 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
                     {h}
@@ -351,7 +397,10 @@ export default function SelfServicePage() {
               </tr>
             </thead>
             <tbody>
-              {MY_REQUESTS.map((req) => (
+              {MY_REQUESTS.map((req) => {
+                const approval = getRequestApproval(req);
+                const effectiveStatus = approval ? approval.status : req.status;
+                return (
                 <tr key={req.id} className="border-b border-edge/50 dark:border-edge-dark/50 hover:bg-[#F8FAFC] dark:hover:bg-brand-500/[0.05] transition-colors cursor-pointer">
                   <td className={`px-5 py-3 ${isRTL ? 'text-right' : 'text-left'}`}>
                     <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -368,14 +417,130 @@ export default function SelfServicePage() {
                     {req.date}
                   </td>
                   <td className={`px-5 py-3 ${isRTL ? 'text-right' : 'text-left'}`}>
-                    <StatusChip status={req.status} lang={lang} />
+                    <ApprovalBadge
+                      status={effectiveStatus}
+                      approverName={approval?.approver_name}
+                      comments={approval?.comments}
+                      lang={lang}
+                    />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* ── My Targets / أهدافي ── */}
+      {(() => {
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+        const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+        const empId = emp?.id || 'e1';
+        const empRole = emp?.role || 'sales_agent';
+
+        // Ensure targets exist
+        ensureTargets(empId, empRole, currentMonth, currentYear);
+        const targets = getEmployeeTargets(empId, currentMonth, currentYear);
+        const actuals = computeActuals(empId, currentMonth, currentYear);
+
+        // Previous month for trend
+        ensureTargets(empId, empRole, prevMonth, prevYear);
+        const prevTargets = getEmployeeTargets(empId, prevMonth, prevYear);
+        const prevActuals = computeActuals(empId, prevMonth, prevYear);
+
+        const getPctColor = (pct) => pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444';
+        const fmtVal = (metric, val) => metric === 'revenue' ? (val >= 1000000 ? (val/1000000).toFixed(1)+'M' : val >= 1000 ? (val/1000).toFixed(0)+'K' : val) : val;
+
+        const metricRows = METRICS.map(metric => {
+          const tgt = targets.find(t => t.metric === metric);
+          const targetVal = tgt?.target_value || 0;
+          const actualVal = actuals[metric] || 0;
+          const pct = targetVal > 0 ? Math.round((actualVal / targetVal) * 100) : 0;
+
+          // Previous month pct
+          const prevTgt = prevTargets.find(t => t.metric === metric);
+          const prevTargetVal = prevTgt?.target_value || 0;
+          const prevActualVal = prevActuals[metric] || 0;
+          const prevPct = prevTargetVal > 0 ? Math.round((prevActualVal / prevTargetVal) * 100) : 0;
+          const trend = pct - prevPct;
+
+          return { metric, target: targetVal, actual: actualVal, pct, trend };
+        });
+
+        const overallPct = metricRows.length > 0 ? Math.round(metricRows.reduce((s, m) => s + m.pct, 0) / metricRows.length) : 0;
+
+        return (
+          <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden mb-6">
+            <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <Target size={16} className="text-brand-500" />
+                <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
+                  {isRTL ? 'أهدافي — KPI' : 'My Targets — KPI'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-extrabold" style={{ color: getPctColor(overallPct) }}>{overallPct}%</span>
+                <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'إجمالي' : 'Overall'}</span>
+              </div>
+            </div>
+            <div className="px-5 py-4">
+              {metricRows.map(m => {
+                const cfg = METRIC_CONFIG[m.metric];
+                const mColor = getPctColor(m.pct);
+                return (
+                  <div key={m.metric} className="mb-3.5 last:mb-0">
+                    <div className={`flex items-center justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: cfg.color + '18' }}>
+                          <span className="text-[10px]" style={{ color: cfg.color }}>
+                            {m.metric === 'calls' ? '📞' : m.metric === 'new_opportunities' ? '💼' : m.metric === 'closed_deals' ? '🏆' : m.metric === 'revenue' ? '💰' : m.metric === 'meetings' ? '👥' : '📍'}
+                          </span>
+                        </div>
+                        <span className="text-xs font-semibold text-content dark:text-content-dark">{isRTL ? cfg.ar : cfg.en}</span>
+                      </div>
+                      <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <span className="text-xs"><span className="font-bold" style={{ color: mColor }}>{fmtVal(m.metric, m.actual)}</span><span className="text-content-muted dark:text-content-muted-dark mx-1">/</span><span className="text-content-muted dark:text-content-muted-dark">{fmtVal(m.metric, m.target)}</span></span>
+                        {m.trend > 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-green-500"><ChevronUp size={12} />+{m.trend}%</span>
+                        ) : m.trend < 0 ? (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-500"><ChevronDown size={12} />{m.trend}%</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] text-content-muted dark:text-content-muted-dark"><Minus size={12} /></span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-brand-500/10 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(m.pct, 100)}%`, background: mColor }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="mt-4 pt-3 border-t border-edge dark:border-edge-dark">
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <span className="text-xs font-semibold text-content dark:text-content-dark">
+                    {isRTL ? 'الإنجاز الكلي' : 'Overall Achievement'}
+                  </span>
+                  <span className="text-sm font-extrabold" style={{ color: getPctColor(overallPct) }}>
+                    {overallPct}%
+                  </span>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-gray-100 dark:bg-brand-500/10 overflow-hidden mt-1.5">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(overallPct, 100)}%`, background: `linear-gradient(90deg, ${getPctColor(overallPct)}cc, ${getPctColor(overallPct)})` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Announcements ── */}
       <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden">

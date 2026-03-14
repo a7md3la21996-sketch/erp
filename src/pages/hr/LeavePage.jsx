@@ -1,10 +1,46 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../services/leaveService';
+import { createApproval, getApprovals, approveRequest, rejectRequest, getApprovalByEntity } from '../../services/approvalService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
-import { CalendarOff, Clock, CheckCircle2, XCircle, Plus, Check, X } from 'lucide-react';
+import { CalendarOff, Clock, CheckCircle2, XCircle, Plus, Check, X, MessageSquare, User } from 'lucide-react';
 import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
+
+/* ─── Inline ApprovalBadge Component ─── */
+function ApprovalBadge({ status, approverName, comments, lang }) {
+  const map = {
+    pending:  { label_ar: 'بانتظار الموافقة', label_en: 'Pending Approval', color: '#F59E0B', bg: '#F59E0B18', icon: Clock },
+    approved: { label_ar: 'تمت الموافقة',     label_en: 'Approved',         color: '#10B981', bg: '#10B98118', icon: CheckCircle2 },
+    rejected: { label_ar: 'مرفوض',            label_en: 'Rejected',         color: '#EF4444', bg: '#EF444418', icon: XCircle },
+  };
+  const s = map[status] || map.pending;
+  const Icon = s.icon;
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold"
+        style={{ background: s.bg, color: s.color, border: `1px solid ${s.color}35` }}
+      >
+        <Icon size={12} />
+        {lang === 'ar' ? s.label_ar : s.label_en}
+      </div>
+      {status !== 'pending' && approverName && (
+        <div className="flex items-center gap-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+          <User size={10} />
+          <span>{approverName}</span>
+        </div>
+      )}
+      {status !== 'pending' && comments && (
+        <div className="flex items-center gap-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+          <MessageSquare size={10} />
+          <span className="truncate max-w-[140px]">{comments}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function LeavePage() {
   const { i18n } = useTranslation();
@@ -15,27 +51,91 @@ export default function LeavePage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [smartFilters, setSmartFilters] = useState([]);
+  const [approvals, setApprovals] = useState([]);
+  const [rejectCommentId, setRejectCommentId] = useState(null);
+  const [rejectComment, setRejectComment] = useState('');
 
   const { auditFields, applyAuditFilters } = useAuditFilter('leave');
+
+  const loadApprovals = useCallback(() => {
+    setApprovals(getApprovals({ type: 'leave' }));
+  }, []);
 
   useEffect(() => {
     Promise.all([fetchLeaveRequests(), fetchEmployees()]).then(([l, e]) => {
       setLeaves(l); setEmployees(e); setLoading(false);
     });
-  }, []);
+    loadApprovals();
+  }, [loadApprovals]);
 
-  const pending  = leaves.filter(l=>l.status==='pending').length;
-  const approved = leaves.filter(l=>l.status==='approved').length;
-  const rejected = leaves.filter(l=>l.status==='rejected').length;
+  // Listen for approval changes
+  useEffect(() => {
+    const handler = () => loadApprovals();
+    window.addEventListener('platform_approval_change', handler);
+    return () => window.removeEventListener('platform_approval_change', handler);
+  }, [loadApprovals]);
 
-  const approve = async (id) => {
-    await approveLeaveRequest(id);
-    setLeaves(prev=>prev.map(l=>l.id===id?{...l,status:'approved'}:l));
+  // Get the approval record for a leave request
+  const getLeaveApproval = (leaveId) => {
+    return approvals.find(a => a.data?.entity_id === leaveId) || null;
   };
-  const reject = async (id) => {
-    await rejectLeaveRequest(id);
-    setLeaves(prev=>prev.map(l=>l.id===id?{...l,status:'rejected'}:l));
+
+  // Determine effective status: use approval record if exists, otherwise fall back to leave status
+  const getEffectiveStatus = (lv) => {
+    const approval = getLeaveApproval(lv.id);
+    return approval ? approval.status : lv.status;
   };
+
+  const pending  = leaves.filter(l => getEffectiveStatus(l) === 'pending').length;
+  const approved = leaves.filter(l => getEffectiveStatus(l) === 'approved').length;
+  const rejected = leaves.filter(l => getEffectiveStatus(l) === 'rejected').length;
+
+  const approve = async (leaveId) => {
+    const approval = getLeaveApproval(leaveId);
+    if (approval) {
+      // Approve via approval workflow
+      approveRequest(approval.id, lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager', '');
+      loadApprovals();
+    }
+    // Also update the leave request itself
+    await approveLeaveRequest(leaveId);
+    setLeaves(prev => prev.map(l => l.id === leaveId ? { ...l, status: 'approved' } : l));
+  };
+
+  const reject = async (leaveId) => {
+    const approval = getLeaveApproval(leaveId);
+    const comment = rejectCommentId === leaveId ? rejectComment : '';
+    if (approval) {
+      rejectRequest(approval.id, lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager', comment);
+      loadApprovals();
+    }
+    await rejectLeaveRequest(leaveId, comment);
+    setLeaves(prev => prev.map(l => l.id === leaveId ? { ...l, status: 'rejected' } : l));
+    setRejectCommentId(null);
+    setRejectComment('');
+  };
+
+  // Ensure existing pending leaves have approval records (migration for mock data)
+  useEffect(() => {
+    if (leaves.length && employees.length) {
+      leaves.forEach(lv => {
+        if (lv.status === 'pending' && !getLeaveApproval(lv.id)) {
+          const emp = employees.find(e => e.id === lv.employee_id || e.employee_id === lv.emp_id);
+          const name = emp ? ((lang === 'ar' ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar) : (lv.employee_id || 'Employee');
+          createApproval({
+            type: 'leave',
+            requesterId: lv.employee_id || lv.emp_id || '',
+            requesterName: name,
+            data: { entity_id: lv.id, leave_type: lv.type, start_date: lv.start_date, end_date: lv.end_date, days: lv.days, reason: lv.reason },
+            approverId: 'e1',
+            approverName: lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager',
+          });
+        }
+      });
+      loadApprovals();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leaves.length, employees.length]);
 
   const SMART_FIELDS = useMemo(() => [
     {
@@ -43,6 +143,14 @@ export default function LeavePage() {
       options: [
         { value: 'pending', label: 'معلق', labelEn: 'Pending' },
         { value: 'approved', label: 'موافق', labelEn: 'Approved' },
+        { value: 'rejected', label: 'مرفوض', labelEn: 'Rejected' },
+      ],
+    },
+    {
+      id: 'approval_status', label: 'حالة الموافقة', labelEn: 'Approval Status', type: 'select',
+      options: [
+        { value: 'pending', label: 'بانتظار الموافقة', labelEn: 'Pending Approval' },
+        { value: 'approved', label: 'تمت الموافقة', labelEn: 'Approved' },
         { value: 'rejected', label: 'مرفوض', labelEn: 'Rejected' },
       ],
     },
@@ -62,10 +170,21 @@ export default function LeavePage() {
 
   const filtered = useMemo(() => {
     let result = leaves;
-    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
-    result = applyAuditFilters(result, smartFilters);
+    // Handle approval_status filter manually since it comes from approvals, not leave data
+    const approvalFilter = smartFilters.find(f => f.field === 'approval_status');
+    if (approvalFilter) {
+      result = result.filter(lv => {
+        const approval = getLeaveApproval(lv.id);
+        const effectiveStatus = approval ? approval.status : lv.status;
+        return effectiveStatus === approvalFilter.value;
+      });
+    }
+    const otherFilters = smartFilters.filter(f => f.field !== 'approval_status');
+    result = applySmartFilters(result, otherFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, otherFilters);
     return result;
-  }, [leaves, smartFilters, SMART_FIELDS]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leaves, smartFilters, SMART_FIELDS, approvals]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -73,7 +192,7 @@ export default function LeavePage() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [smartFilters]);
 
-  const statusColor = s => s==='approved'?'#4A7AAB':s==='pending'?'#6B8DB5':'#EF4444';
+  const statusColor = s => s==='approved'?'#10B981':s==='pending'?'#F59E0B':'#EF4444';
   const statusLabel = (s,lang) => ({ approved:lang==='ar'?'موافق':'Approved', pending:lang==='ar'?'معلق':'Pending', rejected:lang==='ar'?'مرفوض':'Rejected' }[s]||s);
   const typeLabel   = (t,lang) => ({ annual:lang==='ar'?'سنوية':'Annual', sick:lang==='ar'?'مرضية':'Sick', unpaid:lang==='ar'?'بدون راتب':'Unpaid', emergency:lang==='ar'?'طارئة':'Emergency' }[t]||t);
 
@@ -107,7 +226,7 @@ export default function LeavePage() {
               { header: isRTL ? 'الأيام' : 'Days', key: 'days' },
               { header: isRTL ? 'من' : 'From', key: r => r.start_date || r.from },
               { header: isRTL ? 'إلى' : 'To', key: r => r.end_date || r.to },
-              { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(r.status, lang) },
+              { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(getEffectiveStatus(r), lang) },
             ]}
           />
           <Button size="md"><Plus size={16}/>{lang==='ar'?'+ طلب إجازة':'+ Request Leave'}</Button>
@@ -117,8 +236,8 @@ export default function LeavePage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
         <KpiCard icon={CalendarOff}  label={lang==='ar'?'إجمالي الطلبات':'Total Requests'} value={leaves.length} color="#1B3347" />
-        <KpiCard icon={Clock}        label={lang==='ar'?'معلقة':'Pending'} value={pending} color="#6B8DB5" />
-        <KpiCard icon={CheckCircle2} label={lang==='ar'?'موافق عليها':'Approved'} value={approved} color="#4A7AAB" />
+        <KpiCard icon={Clock}        label={lang==='ar'?'بانتظار الموافقة':'Pending Approval'} value={pending} color="#F59E0B" />
+        <KpiCard icon={CheckCircle2} label={lang==='ar'?'موافق عليها':'Approved'} value={approved} color="#10B981" />
         <KpiCard icon={XCircle}      label={lang==='ar'?'مرفوضة':'Rejected'} value={rejected} color="#EF4444" />
       </div>
 
@@ -162,7 +281,7 @@ export default function LeavePage() {
         <Table>
           <thead>
             <tr>
-              {[lang==='ar'?'الموظف':'Employee',lang==='ar'?'النوع':'Type',lang==='ar'?'من':'From',lang==='ar'?'إلى':'To',lang==='ar'?'أيام':'Days',lang==='ar'?'الحالة':'Status',''].map((h,i)=>(
+              {[lang==='ar'?'الموظف':'Employee',lang==='ar'?'النوع':'Type',lang==='ar'?'من':'From',lang==='ar'?'إلى':'To',lang==='ar'?'أيام':'Days',lang==='ar'?'حالة الموافقة':'Approval Status',''].map((h,i)=>(
                 <Th key={i}>{h}</Th>
               ))}
             </tr>
@@ -178,22 +297,46 @@ export default function LeavePage() {
             ) : paged.map(lv => {
             const emp = employees.find(e=>e.id===lv.employee_id||e.employee_id===lv.emp_id);
             const name = emp?((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar):(lv.employee_id||lv.emp_id);
+            const approval = getLeaveApproval(lv.id);
+            const effectiveStatus = approval ? approval.status : lv.status;
             return (
               <Tr key={lv.id}>
                 <Td className="font-semibold">{name}</Td>
-                <Td><Badge style={{ background:statusColor(lv.status)+'18', color:'#4A7AAB', border:'1px solid #4A7AAB35' }}>{typeLabel(lv.type,lang)}</Badge></Td>
+                <Td><Badge style={{ background:'#4A7AAB18', color:'#4A7AAB', border:'1px solid #4A7AAB35' }}>{typeLabel(lv.type,lang)}</Badge></Td>
                 <Td className="text-content-muted dark:text-content-muted-dark">{lv.start_date||lv.from}</Td>
                 <Td className="text-content-muted dark:text-content-muted-dark">{lv.end_date||lv.to}</Td>
                 <Td className="font-bold text-brand-500">{lv.days}</Td>
-                <Td><Badge style={{ background:statusColor(lv.status)+'18', color:statusColor(lv.status), border:`1px solid ${statusColor(lv.status)}35` }}>{statusLabel(lv.status,lang)}</Badge></Td>
-                <Td>{lv.status==='pending'&&(
-                  <div className="flex gap-1.5">
-                    <button onClick={(e)=>{e.stopPropagation();approve(lv.id);}} className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-brand-500/10 hover:border-brand-500/40 flex items-center justify-center cursor-pointer transition-all duration-150">
-                      <Check size={13} className="text-brand-500" />
-                    </button>
-                    <button onClick={(e)=>{e.stopPropagation();reject(lv.id);}} className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-red-500/10 hover:border-red-500/40 flex items-center justify-center cursor-pointer transition-all duration-150">
-                      <X size={13} className="text-red-500" />
-                    </button>
+                <Td>
+                  <ApprovalBadge
+                    status={effectiveStatus}
+                    approverName={approval?.approver_name}
+                    comments={approval?.comments}
+                    lang={lang}
+                  />
+                </Td>
+                <Td>{effectiveStatus==='pending'&&(
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex gap-1.5">
+                      <button onClick={(e)=>{e.stopPropagation();approve(lv.id);}} className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-emerald-500/10 hover:border-emerald-500/40 flex items-center justify-center cursor-pointer transition-all duration-150" title={lang==='ar'?'موافقة':'Approve'}>
+                        <Check size={13} className="text-emerald-500" />
+                      </button>
+                      <button onClick={(e)=>{e.stopPropagation(); rejectCommentId === lv.id ? reject(lv.id) : setRejectCommentId(lv.id);}} className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-red-500/10 hover:border-red-500/40 flex items-center justify-center cursor-pointer transition-all duration-150" title={lang==='ar'?'رفض':'Reject'}>
+                        <X size={13} className="text-red-500" />
+                      </button>
+                    </div>
+                    {rejectCommentId === lv.id && (
+                      <div className="flex gap-1">
+                        <input
+                          type="text"
+                          value={rejectComment}
+                          onChange={e => setRejectComment(e.target.value)}
+                          placeholder={lang==='ar'?'سبب الرفض...':'Rejection reason...'}
+                          className="flex-1 px-2 py-1 text-[11px] rounded-md border border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark placeholder:text-content-muted dark:placeholder:text-content-muted-dark outline-none focus:border-brand-500"
+                          autoFocus
+                          onKeyDown={e => { if (e.key === 'Enter') reject(lv.id); if (e.key === 'Escape') { setRejectCommentId(null); setRejectComment(''); } }}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}</Td>
               </Tr>

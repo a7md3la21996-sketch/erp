@@ -15,6 +15,8 @@ import {
 
 const RECENT_KEY = 'platform_global_search_recent';
 const MAX_RECENT = 5;
+const HISTORY_KEY = 'platform_global_search_history';
+const MAX_HISTORY = 8;
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 let _searchCache = { data: null, ts: 0 };
 
@@ -103,12 +105,18 @@ export default function GlobalSearch({ onClose }) {
 
   // Recent searches
   const [recentSearches, setRecentSearches] = useState([]);
+  // Search query history
+  const [searchHistory, setSearchHistory] = useState([]);
 
   // Load recent searches from localStorage
   useEffect(() => {
     try {
       const r = localStorage.getItem(RECENT_KEY);
       if (r) setRecentSearches(JSON.parse(r));
+    } catch { /* ignore */ }
+    try {
+      const h = localStorage.getItem(HISTORY_KEY);
+      if (h) setSearchHistory(JSON.parse(h));
     } catch { /* ignore */ }
     inputRef.current?.focus();
   }, []);
@@ -192,6 +200,16 @@ export default function GlobalSearch({ onClose }) {
     // No query: show recent searches + quick nav
     if (!q) {
       const items = [];
+      // Search history
+      searchHistory.forEach(term => {
+        items.push({
+          type: 'history',
+          id: 'history-' + term,
+          title: term,
+          subtitle: '',
+          section: 'history',
+        });
+      });
       // Recent searches
       recentSearches.forEach(r => {
         items.push({
@@ -355,7 +373,7 @@ export default function GlobalSearch({ onClose }) {
     });
 
     return { groupedResults: limited, flatResults: flat };
-  }, [debouncedQuery, contacts, opportunities, tasks, employees, activities, lang, isRTL, recentSearches]);
+  }, [debouncedQuery, contacts, opportunities, tasks, employees, activities, lang, isRTL, recentSearches, searchHistory]);
 
   // Reset active index when results change
   useEffect(() => { setActiveIndex(0); }, [flatResults]);
@@ -385,7 +403,27 @@ export default function GlobalSearch({ onClose }) {
     } catch { /* ignore */ }
   };
 
+  const saveHistory = (term) => {
+    try {
+      const history = [term, ...searchHistory.filter(h => h !== term)].slice(0, MAX_HISTORY);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      setSearchHistory(history);
+    } catch { /* ignore */ }
+  };
+
+  const clearHistory = () => {
+    localStorage.removeItem(HISTORY_KEY);
+    setSearchHistory([]);
+  };
+
   const handleSelect = (item) => {
+    if (item.type === 'history') {
+      setQuery(item.title);
+      return; // don't navigate, just fill the search
+    }
+    if (debouncedQuery.trim()) {
+      saveHistory(debouncedQuery.trim());
+    }
     saveRecent(item);
     const cfg = ENTITY_CONFIG[item.type];
     if (item.type === 'page') {
@@ -405,9 +443,13 @@ export default function GlobalSearch({ onClose }) {
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && flatResults[activeIndex]) {
+    } else if (e.key === 'Enter') {
       e.preventDefault();
-      handleSelect(flatResults[activeIndex]);
+      if (flatResults[activeIndex]) {
+        handleSelect(flatResults[activeIndex]);
+      } else if (debouncedQuery.trim()) {
+        saveHistory(debouncedQuery.trim());
+      }
     }
   };
 
@@ -431,6 +473,7 @@ export default function GlobalSearch({ onClose }) {
   };
 
   const getSectionLabel = (section) => {
+    if (section === 'history') return isRTL ? 'عمليات بحث سابقة' : 'Search History';
     if (section === 'recent') return isRTL ? 'عمليات بحث حديثة' : 'Recent Searches';
     if (section === 'pages') return isRTL ? 'تنقل سريع' : 'Quick Navigation';
     if (section === 'page') return isRTL ? 'الصفحات' : 'Pages';
@@ -451,7 +494,7 @@ export default function GlobalSearch({ onClose }) {
   const q = debouncedQuery.toLowerCase().trim();
   const sectionOrder = q
     ? ['page', 'contact', 'opportunity', 'task', 'employee', 'activity']
-    : ['recent', 'pages'];
+    : ['history', 'recent', 'pages'];
 
   const hasResults = flatResults.length > 0;
   const isSearching = loading && !dataLoaded;
@@ -516,6 +559,11 @@ export default function GlobalSearch({ onClose }) {
                             {(() => { const Icon = ENTITY_CONFIG[section].icon; return <Icon size={12} />; })()}
                           </span>
                         )}
+                        {section === 'history' && (
+                          <span style={{ color: '#8BA8C8', opacity: 0.7 }}>
+                            <Clock size={12} />
+                          </span>
+                        )}
                         {section === 'recent' && (
                           <span style={{ color: '#8BA8C8', opacity: 0.7 }}>
                             <Clock size={12} />
@@ -525,6 +573,14 @@ export default function GlobalSearch({ onClose }) {
                           {getSectionLabel(section)}
                         </span>
                       </div>
+                      {section === 'history' && searchHistory.length > 0 && (
+                        <button
+                          onClick={clearHistory}
+                          className="text-[10px] text-content-muted dark:text-brand-400 hover:text-red-400 bg-transparent border-none cursor-pointer px-1"
+                        >
+                          {isRTL ? 'مسح' : 'Clear'}
+                        </button>
+                      )}
                       {section === 'recent' && recentSearches.length > 0 && (
                         <button
                           onClick={clearRecent}
@@ -556,13 +612,15 @@ export default function GlobalSearch({ onClose }) {
                           <div
                             className="w-9 h-9 rounded-[10px] shrink-0 flex items-center justify-center"
                             style={{
-                              background: itemType === 'page'
-                                ? (isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)')
-                                : (color + '15'),
-                              color: itemType === 'page' ? '#4A7AAB' : color,
+                              background: itemType === 'history'
+                                ? (isDark ? 'rgba(139,168,200,0.12)' : 'rgba(139,168,200,0.08)')
+                                : itemType === 'page'
+                                  ? (isDark ? 'rgba(74,122,171,0.12)' : 'rgba(74,122,171,0.08)')
+                                  : (color + '15'),
+                              color: itemType === 'history' ? '#8BA8C8' : itemType === 'page' ? '#4A7AAB' : color,
                             }}
                           >
-                            {itemType === 'page' && Icon ? <Icon size={16} /> : getTypeIcon(itemType)}
+                            {itemType === 'history' ? <Clock size={16} /> : itemType === 'page' && Icon ? <Icon size={16} /> : getTypeIcon(itemType)}
                           </div>
 
                           {/* Text */}

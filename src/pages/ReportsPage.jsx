@@ -11,6 +11,7 @@ import {
 import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { MOCK_EMPLOYEES } from '../data/hr_mock_data';
+import { getTeamKPIs, setTargets, METRIC_CONFIG, METRICS } from '../services/kpiTargetsService';
 import {
   fetchReportsData, filterByDateRange,
   computeContactsBySource, computeLeadsConversion, computePipeline,
@@ -456,9 +457,223 @@ function TargetTrackerTab({ lang, isRTL }) {
 
 // ── Main Component ───────────────────────────────────────────────
 
+// ── KPI Performance Tab ──────────────────────────────────────────
+
+const KPI_MONTHS = [
+  { id: 1, ar: 'يناير', en: 'January' },
+  { id: 2, ar: 'فبراير', en: 'February' },
+  { id: 3, ar: 'مارس', en: 'March' },
+  { id: 4, ar: 'أبريل', en: 'April' },
+  { id: 5, ar: 'مايو', en: 'May' },
+  { id: 6, ar: 'يونيو', en: 'June' },
+  { id: 7, ar: 'يوليو', en: 'July' },
+  { id: 8, ar: 'أغسطس', en: 'August' },
+  { id: 9, ar: 'سبتمبر', en: 'September' },
+  { id: 10, ar: 'أكتوبر', en: 'October' },
+  { id: 11, ar: 'نوفمبر', en: 'November' },
+  { id: 12, ar: 'ديسمبر', en: 'December' },
+];
+
+function KpiPerformanceTab({ lang, isRTL }) {
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear] = useState(new Date().getFullYear());
+  const [editingCell, setEditingCell] = useState(null); // { empId, metric }
+  const [editValue, setEditValue] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const salesEmployees = useMemo(() =>
+    MOCK_EMPLOYEES.filter(e => ['sales_director','sales_manager','team_leader','sales_agent'].includes(e.role)),
+  []);
+
+  const teamKpis = useMemo(() =>
+    getTeamKPIs(salesEmployees, selectedMonth, selectedYear),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [salesEmployees, selectedMonth, selectedYear, refreshKey]);
+
+  const teamOverall = teamKpis.length > 0
+    ? Math.round(teamKpis.reduce((s, k) => s + k.overallPct, 0) / teamKpis.length)
+    : 0;
+
+  const aboveTarget = teamKpis.filter(k => k.overallPct >= 80).length;
+
+  const getPctColor = (pct) => pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444';
+  const fmtVal = (metric, val) => metric === 'revenue' ? (val >= 1000000 ? (val/1000000).toFixed(1)+'M' : val >= 1000 ? (val/1000).toFixed(0)+'K' : val) : val;
+
+  const handleSaveEdit = (empId, metric) => {
+    const val = Number(editValue);
+    if (!isNaN(val) && val >= 0) {
+      setTargets(empId, selectedMonth, selectedYear, { [metric]: val });
+      setRefreshKey(k => k + 1);
+    }
+    setEditingCell(null);
+    setEditValue('');
+  };
+
+  const monthLabel = KPI_MONTHS.find(m => m.id === selectedMonth);
+
+  // Pick 4 key metrics to show in table (space-efficient)
+  const TABLE_METRICS = ['calls', 'new_opportunities', 'closed_deals', 'revenue'];
+
+  return (
+    <>
+      {/* Month selector */}
+      <div className="flex gap-1.5 mb-5 flex-wrap">
+        {KPI_MONTHS.filter(m => m.id <= new Date().getMonth() + 1).map(m => (
+          <FilterPill key={m.id} active={selectedMonth === m.id} onClick={() => setSelectedMonth(m.id)} label={lang === 'ar' ? m.ar : m.en} />
+        ))}
+      </div>
+
+      {/* KPI Summary Cards */}
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4 mb-5">
+        <KpiCard icon={Target} label={lang === 'ar' ? 'أداء الفريق' : 'Team Performance'} value={`${teamOverall}%`} sub={lang === 'ar' ? monthLabel?.ar : monthLabel?.en} color={getPctColor(teamOverall)} />
+        <KpiCard icon={Users} label={lang === 'ar' ? 'أعضاء الفريق' : 'Team Members'} value={teamKpis.length} sub={lang === 'ar' ? 'موظف مبيعات' : 'sales agents'} color="#4A7AAB" />
+        <KpiCard icon={Award} label={lang === 'ar' ? 'فوق 80%' : 'Above 80%'} value={`${aboveTarget} / ${teamKpis.length}`} sub={lang === 'ar' ? 'حققوا الهدف' : 'hit target'} color="#10B981" />
+        <KpiCard icon={Trophy} label={lang === 'ar' ? 'الأفضل' : 'Top Performer'} value={teamKpis[0] ? (lang === 'ar' ? teamKpis[0].employee.full_name_ar.split(' ')[0] : teamKpis[0].employee.full_name_en.split(' ')[0]) : '—'} sub={teamKpis[0] ? `${teamKpis[0].overallPct}%` : ''} color="#FFD700" />
+      </div>
+
+      {/* Main KPI Table */}
+      <Card className="overflow-hidden mb-5">
+        <CardHeader className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold text-content dark:text-content-dark flex items-center gap-1.5">
+            <BarChart3 size={16} className="text-brand-500" />
+            {lang === 'ar' ? 'أداء الفريق — ' + (monthLabel?.ar || '') : 'Team Performance — ' + (monthLabel?.en || '')}
+          </span>
+          <span className="text-xs text-content-muted dark:text-content-muted-dark">
+            {lang === 'ar' ? 'اضغط على الرقم المستهدف للتعديل' : 'Click target value to edit'}
+          </span>
+        </CardHeader>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm min-w-[800px]">
+            <thead>
+              <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
+                <Th className="w-10">#</Th>
+                <Th>{lang === 'ar' ? 'الموظف' : 'Employee'}</Th>
+                {TABLE_METRICS.map(m => (
+                  <Th key={m} className="text-center w-[130px]">
+                    <div className="text-center">
+                      <div className="text-[10px]">{lang === 'ar' ? METRIC_CONFIG[m].ar : METRIC_CONFIG[m].en}</div>
+                      <div className="text-[9px] text-content-muted dark:text-content-muted-dark mt-0.5">{lang === 'ar' ? 'هدف / فعلي' : 'Target / Actual'}</div>
+                    </div>
+                  </Th>
+                ))}
+                <Th className="w-[100px] text-center">{lang === 'ar' ? 'الإجمالي' : 'Overall %'}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamKpis.map((row, idx) => {
+                const pctColor = getPctColor(row.overallPct);
+                return (
+                  <Tr key={row.employee.id}>
+                    <Td className="text-center">{getRankIcon(idx + 1)}</Td>
+                    <Td>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-[32px] h-[32px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: row.employee.avatar_color || '#4A7AAB' }}>
+                          {(lang === 'ar' ? row.employee.full_name_ar : row.employee.full_name_en).charAt(0)}
+                        </div>
+                        <div>
+                          <div className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? row.employee.full_name_ar : row.employee.full_name_en}</div>
+                          <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-px">{lang === 'ar' ? row.employee.job_title_ar : row.employee.job_title_en}</div>
+                        </div>
+                      </div>
+                    </Td>
+                    {TABLE_METRICS.map(metric => {
+                      const m = row.metrics.find(x => x.metric === metric);
+                      if (!m) return <Td key={metric} />;
+                      const mColor = getPctColor(m.pct);
+                      const isEditing = editingCell?.empId === row.employee.id && editingCell?.metric === metric;
+                      return (
+                        <Td key={metric} className="text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="flex items-center gap-1 text-xs">
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  className="w-16 px-1 py-0.5 rounded border border-brand-500 text-center text-xs bg-surface-bg dark:bg-surface-bg-dark text-content dark:text-content-dark outline-none"
+                                  value={editValue}
+                                  autoFocus
+                                  onChange={e => setEditValue(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') handleSaveEdit(row.employee.id, metric); if (e.key === 'Escape') setEditingCell(null); }}
+                                  onBlur={() => handleSaveEdit(row.employee.id, metric)}
+                                />
+                              ) : (
+                                <span
+                                  className="text-content-muted dark:text-content-muted-dark cursor-pointer hover:text-brand-500 transition-colors"
+                                  title={lang === 'ar' ? 'اضغط للتعديل' : 'Click to edit'}
+                                  onClick={() => { setEditingCell({ empId: row.employee.id, metric }); setEditValue(String(m.target)); }}
+                                >
+                                  {fmtVal(metric, m.target)}
+                                </span>
+                              )}
+                              <span className="text-content-muted dark:text-content-muted-dark">/</span>
+                              <span className="font-bold" style={{ color: mColor }}>{fmtVal(metric, m.actual)}</span>
+                            </div>
+                            <div className="w-full h-1.5 rounded bg-gray-200 dark:bg-brand-500/[0.12] max-w-[80px]">
+                              <div className="h-full rounded" style={{ width: `${Math.min(m.pct, 100)}%`, background: mColor }} />
+                            </div>
+                            <span className="text-[10px] font-bold" style={{ color: mColor }}>{m.pct}%</span>
+                          </div>
+                        </Td>
+                      );
+                    })}
+                    <Td className="text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-lg font-extrabold" style={{ color: pctColor }}>{row.overallPct}%</span>
+                        <div className="w-full h-2 rounded bg-gray-200 dark:bg-brand-500/[0.12] max-w-[60px]">
+                          <div className="h-full rounded" style={{ width: `${Math.min(row.overallPct, 100)}%`, background: pctColor }} />
+                        </div>
+                      </div>
+                    </Td>
+                  </Tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* All Metrics Detail — expandable cards per employee */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {teamKpis.map(row => {
+          const pctColor = getPctColor(row.overallPct);
+          return (
+            <Card key={row.employee.id} className="p-4">
+              <div className="flex items-center gap-2.5 mb-3">
+                <div className="w-[36px] h-[36px] rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ background: row.employee.avatar_color || '#4A7AAB' }}>
+                  {(lang === 'ar' ? row.employee.full_name_ar : row.employee.full_name_en).charAt(0)}
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-bold text-content dark:text-content-dark">{lang === 'ar' ? row.employee.full_name_ar : row.employee.full_name_en}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? row.employee.job_title_ar : row.employee.job_title_en}</div>
+                </div>
+                <Badge size="sm" className="font-bold rounded-md" style={{ color: pctColor, background: `${pctColor}15` }}>{row.overallPct}%</Badge>
+              </div>
+              {row.metrics.map(m => {
+                const cfg = METRIC_CONFIG[m.metric];
+                const mColor = getPctColor(m.pct);
+                return (
+                  <div key={m.metric} className="mb-2.5 last:mb-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? cfg.ar : cfg.en}</span>
+                      <span className="text-[11px]"><span className="text-content-muted dark:text-content-muted-dark">{fmtVal(m.metric, m.actual)}</span> <span className="mx-0.5 text-content-muted dark:text-content-muted-dark">/</span> <span className="text-content dark:text-content-dark font-medium">{fmtVal(m.metric, m.target)}</span></span>
+                    </div>
+                    <div className="w-full h-1.5 rounded bg-gray-200 dark:bg-brand-500/[0.12]">
+                      <div className="h-full rounded transition-all duration-300" style={{ width: `${Math.min(m.pct, 100)}%`, background: mColor }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </Card>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 const TABS = [
   { id: 'reports', ar: 'التقارير', en: 'Reports', icon: FileText },
   { id: 'targets', ar: 'التارجت', en: 'Targets', icon: Trophy },
+  { id: 'kpi', ar: 'أداء الفريق', en: 'Team Performance', icon: Target },
 ];
 
 export default function ReportsPage() {
@@ -654,7 +869,9 @@ export default function ReportsPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'targets' ? (
+      {activeTab === 'kpi' ? (
+        <KpiPerformanceTab lang={lang} isRTL={isRTL} />
+      ) : activeTab === 'targets' ? (
         <TargetTrackerTab lang={lang} isRTL={isRTL} />
       ) : (
         <>

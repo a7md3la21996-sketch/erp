@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import FollowUpReminder from '../../components/ui/FollowUpReminder';
+import DocumentsSection from '../../components/ui/DocumentsSection';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +16,7 @@ import { logView } from '../../services/viewTrackingService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { notifyDealWon } from '../../services/notificationsService';
+import { evaluateTriggers } from '../../services/triggerService';
 
 const DEPT_LABELS = {
   all:        { ar: 'كل الأقسام', en: 'All Departments' },
@@ -997,6 +999,7 @@ export default function OpportunitiesPage() {
     }
     await updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates }).catch(() => {});
     logAction({ action: 'stage_change', entity: 'opportunity', entityId: id, entityName: getContactName(opps.find(o => o.id === id) || {}), description: isRTL ? 'تغيير مرحلة' : 'Stage changed', oldValue: fromStage, newValue: toStage, userName: profile?.full_name_ar || profile?.full_name_en || '' });
+    evaluateTriggers('opportunity', 'stage_changed', { ...(opps.find(o => o.id === id) || {}), stage: toStage, previous_stage: fromStage });
 
     // Auto-create deal in Operations when closed_won (sales only)
     if (toStage === 'closed_won') {
@@ -2217,6 +2220,13 @@ export default function OpportunitiesPage() {
                 })()}
               </div>
             )}
+
+            {/* Documents */}
+            <DocumentsSection
+              entity="opportunity"
+              entityId={selectedOpp.id}
+              entityName={getContactName(selectedOpp)}
+            />
 
             {/* Follow Up Reminder */}
             <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={getContactName(selectedOpp)} />

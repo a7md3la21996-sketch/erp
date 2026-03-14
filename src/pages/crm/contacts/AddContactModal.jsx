@@ -10,6 +10,7 @@ import {
   COUNTRY_CODES, getCountryFromPhone,
   SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES,
 } from './constants';
+import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 
 export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity, onAddInteraction }) {
   const { i18n } = useTranslation();
@@ -46,6 +47,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const [extraDups, setExtraDups] = useState([]);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [customFieldValues, setCustomFieldValues] = useState({});
   const loggedInteractionRef = useRef(null); // track which dup+campaign combo was logged
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -121,6 +123,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
         extra_phones: validExtras.length > 0 ? validExtras : null,
+        _customFieldValues: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined,
       });
       onClose();
     } catch (err) {
@@ -375,6 +378,9 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               <div className="col-span-full">
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ملاحظات' : 'Notes'}</label>
                 <Textarea rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />
+              </div>
+              <div className="col-span-full">
+                <CustomFieldsRenderer entity="contact" mode="edit" values={customFieldValues} onChange={setCustomFieldValues} defaultCollapsed={false} />
               </div>
             </div>
           )}

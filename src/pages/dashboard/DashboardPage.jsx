@@ -8,6 +8,7 @@ import { getAttendanceForMonth } from '../../data/attendanceStore';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fetchTodayReminders } from '../../services/remindersService';
 import { fetchAllDashboardData, buildPipelineData, getDateRange, buildRevenueTrend, buildTopSellers, filterStatsByRange } from '../../services/dashboardService';
+import { getTopPerformers, getTeamOverallPct, METRIC_CONFIG } from '../../services/kpiTargetsService';
 import { getWonDeals } from '../../services/dealsService';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -467,6 +468,55 @@ export default function DashboardPage() {
         </div>
       )}
 
+
+      {/* ===== أداء الفريق - KPI ===== */}
+      {sections.showSales && (() => {
+        const salesEmps = MOCK_EMPLOYEES.filter(e => ['sales_director','sales_manager','team_leader','sales_agent'].includes(e.role));
+        const topPerformers = getTopPerformers(salesEmps, MONTH, YEAR, 3);
+        const teamPct = getTeamOverallPct(salesEmps, MONTH, YEAR);
+        const teamColor = teamPct >= 80 ? '#10B981' : teamPct >= 50 ? '#F59E0B' : '#EF4444';
+        return (
+          <Box className="mb-5">
+            <CardTitle icon={Target} title={lang === 'ar' ? 'أداء الفريق — KPI' : 'Team Performance — KPI'} sub={lang === 'ar' ? 'تحقيق أهداف الشهر الحالي' : 'Current month target achievement'} />
+            <div className={`flex items-center gap-3 mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div className="flex-1">
+                <div className={`flex items-center justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'أداء الفريق الكلي' : 'Overall Team Achievement'}</span>
+                  <span className="text-sm font-extrabold" style={{ color: teamColor }}>{teamPct}%</span>
+                </div>
+                <div className="h-2.5 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden">
+                  <div className="h-full rounded transition-all duration-500" style={{ width: `${Math.min(teamPct, 100)}%`, background: `linear-gradient(90deg, ${teamColor}cc, ${teamColor})` }} />
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2.5">
+              {topPerformers.map((p, i) => {
+                const pColor = p.overallPct >= 80 ? '#10B981' : p.overallPct >= 50 ? '#F59E0B' : '#EF4444';
+                return (
+                  <div key={p.employee.id} className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#FFD700' + '22' : i === 1 ? '#C0C0C0' + '22' : '#CD7F32' + '22', border: `2px solid ${i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32'}` }}>
+                      <span className="text-xs font-bold" style={{ color: i === 0 ? '#B8860B' : i === 1 ? '#808080' : '#CD7F32' }}>{i + 1}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <span className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? p.employee.full_name_ar : p.employee.full_name_en}</span>
+                        <span className="text-xs font-bold" style={{ color: pColor }}>{p.overallPct}%</span>
+                      </div>
+                      <div className="h-1.5 rounded bg-gray-200 dark:bg-white/[0.08]">
+                        <div className="h-full rounded transition-all duration-300" style={{ width: `${Math.min(p.overallPct, 100)}%`, background: pColor }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className={`mt-3.5 pt-3 border-t border-edge dark:border-edge-dark flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'المقاييس: مكالمات، فرص، صفقات، إيرادات، اجتماعات، زيارات' : 'Metrics: Calls, Opps, Deals, Revenue, Meetings, Visits'}</span>
+              <Link to="/reports" className="text-[11px] font-semibold text-brand-500 no-underline hover:underline">{lang === 'ar' ? 'عرض التفاصيل' : 'View Details'}</Link>
+            </div>
+          </Box>
+        );
+      })()}
 
       {/* ===== متابعات اليوم ===== */}
       <TodayReminders lang={lang} isRTL={isRTL} isDark={isDark} userId={profile?.id} />
