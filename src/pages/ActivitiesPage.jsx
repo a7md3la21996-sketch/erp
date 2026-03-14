@@ -48,17 +48,44 @@ export default function ActivitiesPage() {
   const [saving, setSaving]         = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
+  const uniqueUsers = useMemo(() => {
+    const map = new Map();
+    activities.forEach(a => {
+      const key = a.user_name_en || a.user_id || '';
+      if (key && !map.has(key)) map.set(key, { value: key, label: a.user_name_ar || key, labelEn: a.user_name_en || key });
+    });
+    return [...map.values()];
+  }, [activities]);
+
+  const uniqueEntities = useMemo(() => {
+    const map = new Map();
+    activities.forEach(a => {
+      if (a.entity_name && !map.has(a.entity_name)) map.set(a.entity_name, { value: a.entity_name, label: a.entity_name, labelEn: a.entity_name });
+    });
+    return [...map.values()];
+  }, [activities]);
+
   const SMART_FIELDS = useMemo(() => [
+    { id: 'user_name_en', label: 'بواسطة', labelEn: 'Done By', type: 'select', options: uniqueUsers },
+    { id: 'type', label: 'نوع النشاط', labelEn: 'Activity Type', type: 'select', options: Object.entries(ACTIVITY_TYPES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'dept', label: 'القسم', labelEn: 'Department', type: 'select', options: [
       { value: 'crm', label: 'CRM', labelEn: 'CRM' },
       { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
       { value: 'hr', label: 'HR', labelEn: 'HR' },
       { value: 'finance', label: 'المالية', labelEn: 'Finance' },
     ]},
-    { id: 'type', label: 'نوع النشاط', labelEn: 'Activity Type', type: 'select', options: Object.entries(ACTIVITY_TYPES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
-    { id: 'user_name_en', label: 'المستخدم', labelEn: 'User', type: 'text' },
+    { id: 'entity_name', label: 'الجهة', labelEn: 'Related Entity', type: 'select', options: uniqueEntities },
+    { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
     { id: 'notes', label: 'الملاحظات', labelEn: 'Notes', type: 'text' },
-    { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
+  ], [uniqueUsers, uniqueEntities]);
+
+  const QUICK_FILTERS = useMemo(() => [
+    { label: 'اليوم', labelEn: 'Today', filters: [{ field: 'created_at', operator: 'is', value: new Date().toISOString().slice(0, 10) }] },
+    { label: 'هذا الأسبوع', labelEn: 'This Week', filters: [{ field: 'created_at', operator: 'this_week', value: '' }] },
+    { label: 'هذا الشهر', labelEn: 'This Month', filters: [{ field: 'created_at', operator: 'this_month', value: '' }] },
+    { label: 'مكالمات', labelEn: 'Calls', filters: [{ field: 'type', operator: 'is', value: 'call' }] },
+    { label: 'اجتماعات', labelEn: 'Meetings', filters: [{ field: 'type', operator: 'is', value: 'meeting' }] },
+    { label: 'زيارات', labelEn: 'Visits', filters: [{ field: 'type', operator: 'is', value: 'site_visit' }] },
   ], []);
 
   const load = async () => {
@@ -245,6 +272,7 @@ export default function ActivitiesPage() {
         search={search}
         onSearchChange={setSearch}
         searchPlaceholder={isRTL ? 'بحث بالملاحظات أو اسم المستخدم...' : 'Search by notes or user name...'}
+        quickFilters={QUICK_FILTERS}
         resultsCount={filtered.length}
       />
 
