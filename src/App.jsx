@@ -49,6 +49,7 @@ const UnitsPage = lazy(() => import('./pages/real-estate/UnitsPage'));
 const UsersPage = lazy(() => import('./pages/settings/UsersPage'));
 const TriggersPage = lazy(() => import('./pages/settings/TriggersPage'));
 const CustomFieldsPage = lazy(() => import('./pages/settings/CustomFieldsPage'));
+const ChatInboxPage = lazy(() => import('./pages/ChatInboxPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -150,7 +151,7 @@ export default function App() {
                 <Route path="/marketing" element={<Guarded><MarketingPage /></Guarded>} />
                 <Route path="/marketing/*" element={<Guarded><MarketingPage /></Guarded>} />
                 <Route path="/calendar" element={<Guarded><CalendarPage /></Guarded>} />
-                <Route path="/chat" element={<ComingSoon title="Chat" />} />
+                <Route path="/chat" element={<Guarded><ChatInboxPage /></Guarded>} />
                 <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
                 <Route path="/settings/general" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/settings/audit-log" element={<Guarded><AuditLogPage /></Guarded>} />

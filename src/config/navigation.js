@@ -60,7 +60,7 @@ export const NAV_ITEMS = [
   ]},
   { id: 'tasks', label: { ar: 'المهام', en: 'Tasks' }, icon: ClipboardList, path: '/tasks', permission: P.TASKS_VIEW_OWN },
   { id: 'calendar', label: { ar: 'التقويم', en: 'Calendar' }, icon: CalendarDays, path: '/calendar', permission: P.CALENDAR },
-  { id: 'chat', label: { ar: 'الدردشة', en: 'Chat' }, icon: MessageSquare, path: '/chat', permission: P.CHAT_USE },
+  { id: 'chat', label: { ar: 'المحادثات', en: 'Chat' }, icon: MessageSquare, path: '/chat', permission: P.CHAT_USE },
   { id: 'reports', label: { ar: 'التقارير', en: 'Reports' }, icon: BarChart3, path: '/reports', permission: P.RPT_SALES },
   { id: 'settings', label: { ar: 'الإعدادات', en: 'Settings' }, icon: Settings, permission: P.SETTINGS_VIEW, children: [
     { id: 'general', label: { ar: 'إعدادات عامة', en: 'General' }, path: '/settings/general', permission: P.SETTINGS_MANAGE },

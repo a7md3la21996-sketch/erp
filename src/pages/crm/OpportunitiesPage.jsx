@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import FollowUpReminder from '../../components/ui/FollowUpReminder';
 import DocumentsSection from '../../components/ui/DocumentsSection';
+import CommentsSection from '../../components/ui/CommentsSection';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -2223,6 +2224,13 @@ export default function OpportunitiesPage() {
 
             {/* Documents */}
             <DocumentsSection
+              entity="opportunity"
+              entityId={selectedOpp.id}
+              entityName={getContactName(selectedOpp)}
+            />
+
+            {/* Comments */}
+            <CommentsSection
               entity="opportunity"
               entityId={selectedOpp.id}
               entityName={getContactName(selectedOpp)}

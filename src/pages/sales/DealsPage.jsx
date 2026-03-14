@@ -15,6 +15,7 @@ import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { fmtMoney } from '../../utils/formatting';
 import CustomFieldsRenderer from '../../components/ui/CustomFieldsRenderer';
+import CommentsSection from '../../components/ui/CommentsSection';
 import { thCls } from '../../utils/tableStyles';
 
 // ── Status Config ────────────────────────────────────────────────
@@ -492,6 +493,13 @@ export default function DealsPage() {
 
                 {/* Custom Fields */}
                 <CustomFieldsRenderer entity="deal" entityId={deal.id} mode="edit" defaultCollapsed={false} />
+
+                {/* Comments */}
+                <CommentsSection
+                  entity="deal"
+                  entityId={deal.id}
+                  entityName={deal.deal_number || `Deal #${deal.id}`}
+                />
 
               </div>
             </div>

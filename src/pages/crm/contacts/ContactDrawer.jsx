@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
-import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity,
@@ -15,6 +15,7 @@ import { fetchTasks, createTask, TASK_PRIORITIES, TASK_STATUSES } from '../../..
 import EditContactModal from './EditContactModal';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
+import CommentsSection from '../../../components/ui/CommentsSection';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
@@ -641,6 +642,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const tabs = [
     { key: 'activity', label: isRTL ? 'النشاط' : 'Activity', icon: Clock },
     { key: deptTab.key, label: isRTL ? deptTab.label_ar : deptTab.label_en, icon: deptTab.icon },
+    { key: 'comments', label: isRTL ? 'تعليقات' : 'Comments', icon: MessageSquare },
     { key: 'documents', label: isRTL ? 'المستندات' : 'Documents', icon: FileText },
     { key: 'data', label: isRTL ? 'البيانات' : 'Data', icon: Briefcase },
   ];
@@ -1054,6 +1056,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </>
               )}
             </div>
+          )}
+
+          {/* ══════ COMMENTS TAB (تعليقات) ══════ */}
+          {tab === 'comments' && (
+            <CommentsSection
+              entity="contact"
+              entityId={contact.id}
+              entityName={contact.full_name}
+            />
           )}
 
           {/* ══════ DOCUMENTS TAB (المستندات) ══════ */}
