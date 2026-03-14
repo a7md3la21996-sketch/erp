@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees, fetchDepartments } from '../../services/employeesService';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 import {
   Users, Plus, Eye, Edit2, FileText,
   AlertTriangle, Clock, Building2,
@@ -52,6 +53,8 @@ export default function EmployeesPage() {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const { auditFields, applyAuditFilters } = useAuditFilter('employee');
+
   useEffect(() => {
     Promise.all([fetchEmployees(), fetchDepartments()])
       .then(([emps, depts]) => { setEmployees(emps); setDepartments(depts); })
@@ -91,13 +94,15 @@ export default function EmployeesPage() {
     },
     { id: 'salary', label: 'الراتب', labelEn: 'Salary', type: 'number' },
     { id: 'hire_date', label: 'تاريخ التعيين', labelEn: 'Hire Date', type: 'date' },
-  ], [departments]);
+    ...auditFields,
+  ], [departments, auditFields]);
 
   const filtered = useMemo(() => {
     let result = employees;
 
     // Apply smart filters
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
 
     // Apply search
     if (search) {

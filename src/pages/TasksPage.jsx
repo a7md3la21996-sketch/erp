@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
+import { useAuditFilter } from '../hooks/useAuditFilter';
 
 const ICONS = { Phone, PhoneCall, Users, Mail, MessageCircle, CheckSquare };
 
@@ -36,6 +37,8 @@ export default function TasksPage() {
   const [page, setPage]             = useState(1);
   const [pageSize, setPageSize]     = useState(25);
 
+  const { auditFields, applyAuditFilters } = useAuditFilter('task');
+
   const assignedToOptions = useMemo(() =>
     [...new Set(tasks.map(t => t.assigned_to_name_en).filter(Boolean))].map(name => {
       const match = tasks.find(t => t.assigned_to_name_en === name);
@@ -57,7 +60,8 @@ export default function TasksPage() {
     { id: 'contact_name', label: 'العميل', labelEn: 'Contact', type: 'text' },
     { id: 'due_date', label: 'تاريخ الاستحقاق', labelEn: 'Due Date', type: 'date' },
     { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created At', type: 'date' },
-  ], [assignedToOptions]);
+    ...auditFields,
+  ], [assignedToOptions, auditFields]);
 
   const SORT_OPTIONS = useMemo(() => [
     { value: 'due_date_asc', label: 'الاستحقاق (الأقرب)', labelEn: 'Due Date (soonest)' },
@@ -79,6 +83,7 @@ export default function TasksPage() {
 
   const filtered = useMemo(() => {
     let result = applySmartFilters(tasks, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
     if (search) {
       const s = search.toLowerCase();
       result = result.filter(t => t.title?.toLowerCase().includes(s) || t.contact_name?.toLowerCase().includes(s));

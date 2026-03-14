@@ -12,6 +12,7 @@ import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknot
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 import { logView } from '../../services/viewTrackingService';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 
 const DEPT_LABELS = {
   all:        { ar: 'كل الأقسام', en: 'All Departments' },
@@ -637,6 +638,7 @@ export default function OpportunitiesPage() {
   const rawLang = i18n.language || 'ar';
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
+  const { auditFields, applyAuditFilters } = useAuditFilter('opportunity');
 
   const [opps, setOpps] = useState([]);
   const [agents, setAgents] = useState([]);
@@ -718,7 +720,8 @@ export default function OpportunitiesPage() {
     { id: 'budget', label: 'الميزانية', labelEn: 'Budget', type: 'number' },
     { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
     { id: 'expected_close_date', label: 'تاريخ الإغلاق المتوقع', labelEn: 'Expected Close', type: 'date' },
-  ], [agents]);
+    ...auditFields,
+  ], [agents, auditFields]);
 
   const SMART_SORT_OPTIONS = useMemo(() =>
     Object.entries(SORT_OPTIONS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })),
@@ -843,6 +846,7 @@ export default function OpportunitiesPage() {
   const filtered = useMemo(() => {
     // Apply smart filters
     let result = applySmartFilters(normalizedOpps, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
     // Apply stage tab filter
     if (activeStage !== 'all') result = result.filter(o => o.stage === activeStage);
     // Apply search
@@ -1177,6 +1181,7 @@ export default function OpportunitiesPage() {
   const stageCounts = useMemo(() => {
     // Re-apply smartFilters + search but NOT activeStage to get per-stage counts
     let base = applySmartFilters(normalizedOpps, smartFilters, SMART_FIELDS);
+    base = applyAuditFilters(base, smartFilters);
     if (search) {
       const q = search.toLowerCase();
       base = base.filter(o => {

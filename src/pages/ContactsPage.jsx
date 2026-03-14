@@ -14,6 +14,7 @@ import { fetchCampaigns } from '../services/marketingService';
 import { notifyLeadAssigned } from '../services/notificationsService';
 import ImportModal from './crm/ImportModal';
 import { PageSkeleton, Button, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
+import { useAuditFilter } from '../hooks/useAuditFilter';
 import { thCls } from '../utils/tableStyles';
 
 // ── Split modules ──────────────────────────────────────────────────────────
@@ -78,6 +79,7 @@ export default function ContactsPage() {
   const [mergeTargets, setMergeTargets] = useState([]);
   const [mergePreview, setMergePreview] = useState(null);
   const isAdmin = profile?.role === 'admin';
+  const { auditFields, applyAuditFilters } = useAuditFilter('contact');
 
   const MAX_PINS = 4;
   const togglePin = (id) => {
@@ -324,7 +326,8 @@ export default function ContactsPage() {
     { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
     { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: [...new Set(contacts.map(c => c.assigned_to_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set(contacts.map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
-  ], [contacts]);
+    ...auditFields,
+  ], [contacts, auditFields]);
 
   const SORT_OPTIONS = useMemo(() => [
     { value: 'created', label: 'ترتيب: الأحدث', labelEn: 'Sort: Newest' },
@@ -349,6 +352,7 @@ export default function ContactsPage() {
     list = list.map(c => c._country ? c : { ...c, _country: detectCountry(c.phone) });
     // Apply smart filters
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
+    list = applyAuditFilters(list, smartFilters);
     list.sort((a, b) => {
       const aPinned = pinnedIds.includes(a.id) ? 0 : 1;
       const bPinned = pinnedIds.includes(b.id) ? 0 : 1;

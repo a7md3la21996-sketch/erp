@@ -11,6 +11,7 @@ import {
 import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination } from '../../components/ui';
 import { getWonDeals } from '../../services/dealsService';
 import { logView } from '../../services/viewTrackingService';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { fmtMoney } from '../../utils/formatting';
 import { thCls } from '../../utils/tableStyles';
 
@@ -64,6 +65,7 @@ export default function DealsPage() {
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
+  const { auditFields, applyAuditFilters } = useAuditFilter('deal');
 
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -95,8 +97,9 @@ export default function DealsPage() {
       },
       STATIC_SMART_FIELDS[1], // deal_value
       { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
+      ...auditFields,
     ];
-  }, [deals, lang]);
+  }, [deals, lang, auditFields]);
 
   // Load data
   useEffect(() => {
@@ -110,6 +113,7 @@ export default function DealsPage() {
   const filtered = useMemo(() => {
     let result = [...deals];
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(d =>
