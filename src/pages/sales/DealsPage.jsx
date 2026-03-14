@@ -74,6 +74,8 @@ export default function DealsPage() {
   const [sortBy, setSortBy] = useState('date_desc');
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(-1);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 25;
 
   // Load data
   useEffect(() => {
@@ -111,6 +113,13 @@ export default function DealsPage() {
     });
     return result;
   }, [deals, smartFilters, search, sortBy, lang]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  useEffect(() => { setPage(1); }, [smartFilters, search, sortBy]);
 
   // KPIs
   const totalValue = deals.reduce((s, d) => s + (d.deal_value || 0), 0);
@@ -206,7 +215,7 @@ export default function DealsPage() {
       <div className="md:hidden divide-y divide-edge/50 dark:divide-edge-dark/50 bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden mb-4">
         {filtered.length === 0 ? (
           <div className="text-center py-12 text-content-muted dark:text-content-muted-dark text-sm">{isRTL ? 'لا توجد صفقات' : 'No deals'}</div>
-        ) : filtered.map(deal => {
+        ) : paged.map(deal => {
           const status = getStatus(deal.status);
           const dp = docProgress(deal.documents);
           return (
@@ -253,7 +262,7 @@ export default function DealsPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr><td colSpan={10} className="text-center py-12 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد صفقات' : 'No deals'}</td></tr>
-            ) : filtered.map(deal => {
+            ) : paged.map(deal => {
               const status = getStatus(deal.status);
               const dp = docProgress(deal.documents);
               return (
@@ -297,6 +306,23 @@ export default function DealsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* ═══ Pagination ═══ */}
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 py-4">
+          <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === 1 ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
+            {isRTL ? '← السابق' : '← Prev'}
+          </button>
+          <span className="text-xs text-content-muted dark:text-content-muted-dark">
+            {isRTL ? `${safePage} من ${totalPages}` : `${safePage} of ${totalPages}`}
+          </span>
+          <button disabled={safePage === totalPages} onClick={() => setPage(p => p + 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${safePage === totalPages ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
+            {isRTL ? 'التالي →' : 'Next →'}
+          </button>
+        </div>
+      )}
 
       {/* ═══ Summary Bar ═══ */}
       <div className="px-4 py-3 rounded-lg bg-brand-500/[0.06] border border-brand-500/[0.15] flex flex-wrap gap-5 text-xs text-brand-800 dark:text-brand-300 mb-4">

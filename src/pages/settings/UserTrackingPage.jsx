@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { thCls } from '../../utils/tableStyles';
 import {
   Monitor, Smartphone, Tablet, Globe, Eye, Clock, Users, Shield,
   ChevronDown, ChevronUp, Search, X, Laptop, Activity,
@@ -68,7 +69,6 @@ export default function UserTrackingPage() {
     return Object.entries(map).sort((a, b) => b[1].sessions.length - a[1].sessions.length);
   }, [filteredSessions]);
 
-  const thCls = 'text-[11px] text-[#6B8DB5] font-bold uppercase tracking-wider px-4 py-3 bg-gray-50/80 dark:bg-brand-500/[0.06] border-b border-edge dark:border-edge-dark whitespace-nowrap text-start';
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 

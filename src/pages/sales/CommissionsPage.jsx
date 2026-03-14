@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -53,6 +53,9 @@ export default function CommissionsPage() {
   const isDark = theme === 'dark';
 
   const [tab, setTab] = useState('agent');
+  const [agentPage, setAgentPage] = useState(1);
+  const [companyPage, setCompanyPage] = useState(1);
+  const PAGE_SIZE = 25;
 
   // ── Data state with localStorage persistence ──
   const [agentData, setAgentData] = useState(() => loadData(STORAGE_KEY_AGENT, MOCK_AGENT_COMMISSIONS));
@@ -132,6 +135,18 @@ export default function CommissionsPage() {
     }
     return d;
   }, [companyData, companyFilters, companyFields, companySearch]);
+
+  // ── Pagination ──
+  const agentTotalPages = Math.max(1, Math.ceil(filteredAgents.length / PAGE_SIZE));
+  const agentSafePage = Math.min(agentPage, agentTotalPages);
+  const pagedAgents = filteredAgents.slice((agentSafePage - 1) * PAGE_SIZE, agentSafePage * PAGE_SIZE);
+
+  const companyTotalPages = Math.max(1, Math.ceil(filteredCompany.length / PAGE_SIZE));
+  const companySafePage = Math.min(companyPage, companyTotalPages);
+  const pagedCompany = filteredCompany.slice((companySafePage - 1) * PAGE_SIZE, companySafePage * PAGE_SIZE);
+
+  useEffect(() => { setAgentPage(1); }, [agentFilters, agentSearch]);
+  useEffect(() => { setCompanyPage(1); }, [companyFilters, companySearch]);
 
   // ── KPI helpers ──
   const calcKpis = (data) => {
@@ -294,14 +309,14 @@ export default function CommissionsPage() {
                     </td>
                   </tr>
                 )}
-                {filteredAgents.map((r, i) => (
+                {pagedAgents.map((r, i) => (
                   <tr
                     key={r.id}
                     className={rowCls(r.id)}
                     onMouseEnter={() => setHoveredRow(r.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    <td className={tdCls + ' text-content-muted dark:text-content-muted-dark text-xs'}>{i + 1}</td>
+                    <td className={tdCls + ' text-content-muted dark:text-content-muted-dark text-xs'}>{(agentSafePage - 1) * PAGE_SIZE + i + 1}</td>
                     <td className={tdCls + ' font-semibold'}>{lang === 'ar' ? r.agent_ar : r.agent_en}</td>
                     <td className={tdCls}>
                       <span className="px-2 py-0.5 rounded bg-brand-500/[0.08] text-brand-500 text-xs font-mono font-semibold">{r.deal_ref}</span>
@@ -340,14 +355,14 @@ export default function CommissionsPage() {
                     </td>
                   </tr>
                 )}
-                {filteredCompany.map((r, i) => (
+                {pagedCompany.map((r, i) => (
                   <tr
                     key={r.id}
                     className={rowCls(r.id)}
                     onMouseEnter={() => setHoveredRow(r.id)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    <td className={tdCls + ' text-content-muted dark:text-content-muted-dark text-xs'}>{i + 1}</td>
+                    <td className={tdCls + ' text-content-muted dark:text-content-muted-dark text-xs'}>{(companySafePage - 1) * PAGE_SIZE + i + 1}</td>
                     <td className={tdCls + ' font-semibold'}>{lang === 'ar' ? r.developer_ar : r.developer_en}</td>
                     <td className={tdCls}>{lang === 'ar' ? r.project_ar : r.project_en}</td>
                     <td className={tdCls}>
@@ -379,6 +394,50 @@ export default function CommissionsPage() {
         </div>
       </div>
 
+      {/* ── Pagination (desktop) ── */}
+      {tab === 'agent' && agentTotalPages > 1 && (
+        <div className="hidden md:flex justify-center items-center gap-2 py-4">
+          <button
+            disabled={agentSafePage === 1}
+            onClick={() => setAgentPage(p => p - 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${agentSafePage === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-500/[0.08] cursor-pointer'} text-content dark:text-content-dark`}
+          >
+            {isRTL ? '← السابق' : '← Prev'}
+          </button>
+          <span className="text-xs text-content-muted dark:text-content-muted-dark">
+            {isRTL ? `${agentSafePage} من ${agentTotalPages}` : `${agentSafePage} of ${agentTotalPages}`}
+          </span>
+          <button
+            disabled={agentSafePage === agentTotalPages}
+            onClick={() => setAgentPage(p => p + 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${agentSafePage === agentTotalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-500/[0.08] cursor-pointer'} text-content dark:text-content-dark`}
+          >
+            {isRTL ? 'التالي →' : 'Next →'}
+          </button>
+        </div>
+      )}
+      {tab === 'company' && companyTotalPages > 1 && (
+        <div className="hidden md:flex justify-center items-center gap-2 py-4">
+          <button
+            disabled={companySafePage === 1}
+            onClick={() => setCompanyPage(p => p - 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${companySafePage === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-500/[0.08] cursor-pointer'} text-content dark:text-content-dark`}
+          >
+            {isRTL ? '← السابق' : '← Prev'}
+          </button>
+          <span className="text-xs text-content-muted dark:text-content-muted-dark">
+            {isRTL ? `${companySafePage} من ${companyTotalPages}` : `${companySafePage} of ${companyTotalPages}`}
+          </span>
+          <button
+            disabled={companySafePage === companyTotalPages}
+            onClick={() => setCompanyPage(p => p + 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${companySafePage === companyTotalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-500/[0.08] cursor-pointer'} text-content dark:text-content-dark`}
+          >
+            {isRTL ? 'التالي →' : 'Next →'}
+          </button>
+        </div>
+      )}
+
       {/* ── Mobile Card View ── */}
       <div className="md:hidden flex flex-col gap-3">
         {tab === 'agent' ? (
@@ -387,7 +446,7 @@ export default function CommissionsPage() {
               {lang === 'ar' ? 'لا توجد بيانات' : 'No data found'}
             </div>
           ) : (
-            filteredAgents.map(r => (
+            pagedAgents.map(r => (
               <div
                 key={r.id}
                 className="rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark p-4"
@@ -426,7 +485,7 @@ export default function CommissionsPage() {
               {lang === 'ar' ? 'لا توجد بيانات' : 'No data found'}
             </div>
           ) : (
-            filteredCompany.map(r => (
+            pagedCompany.map(r => (
               <div
                 key={r.id}
                 className="rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark p-4"
@@ -471,6 +530,50 @@ export default function CommissionsPage() {
           )
         )}
       </div>
+
+      {/* ── Pagination (mobile) ── */}
+      {tab === 'agent' && agentTotalPages > 1 && (
+        <div className="md:hidden flex justify-center items-center gap-2 py-4">
+          <button
+            disabled={agentSafePage === 1}
+            onClick={() => setAgentPage(p => p - 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${agentSafePage === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-500/[0.08] cursor-pointer'} text-content dark:text-content-dark`}
+          >
+            {isRTL ? '← السابق' : '← Prev'}
+          </button>
+          <span className="text-xs text-content-muted dark:text-content-muted-dark">
+            {isRTL ? `${agentSafePage} من ${agentTotalPages}` : `${agentSafePage} of ${agentTotalPages}`}
+          </span>
+          <button
+            disabled={agentSafePage === agentTotalPages}
+            onClick={() => setAgentPage(p => p + 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${agentSafePage === agentTotalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-500/[0.08] cursor-pointer'} text-content dark:text-content-dark`}
+          >
+            {isRTL ? 'التالي →' : 'Next →'}
+          </button>
+        </div>
+      )}
+      {tab === 'company' && companyTotalPages > 1 && (
+        <div className="md:hidden flex justify-center items-center gap-2 py-4">
+          <button
+            disabled={companySafePage === 1}
+            onClick={() => setCompanyPage(p => p - 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${companySafePage === 1 ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-500/[0.08] cursor-pointer'} text-content dark:text-content-dark`}
+          >
+            {isRTL ? '← السابق' : '← Prev'}
+          </button>
+          <span className="text-xs text-content-muted dark:text-content-muted-dark">
+            {isRTL ? `${companySafePage} من ${companyTotalPages}` : `${companySafePage} of ${companyTotalPages}`}
+          </span>
+          <button
+            disabled={companySafePage === companyTotalPages}
+            onClick={() => setCompanyPage(p => p + 1)}
+            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${companySafePage === companyTotalPages ? 'opacity-40 cursor-not-allowed' : 'hover:bg-brand-500/[0.08] cursor-pointer'} text-content dark:text-content-dark`}
+          >
+            {isRTL ? 'التالي →' : 'Next →'}
+          </button>
+        </div>
+      )}
 
       {/* ── Summary Bar ── */}
       <div className="mt-4 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark px-5 py-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
