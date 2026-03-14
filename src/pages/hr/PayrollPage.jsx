@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download } from 'lucide-react';
-import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select } from '../../components/ui';
+import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select, Pagination } from '../../components/ui';
 
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -13,6 +13,8 @@ export default function PayrollPage() {
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     fetchEmployees().then(data => { setEmployees(data); setLoading(false); });
@@ -20,6 +22,12 @@ export default function PayrollPage() {
 
   const totalSalaries = useMemo(() => employees.reduce((s,e)=>s+(e.salary||0),0), [employees]);
   const avgSalary = employees.length ? Math.round(totalSalaries / employees.length) : 0;
+
+  const totalPages = Math.max(1, Math.ceil(employees.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = employees.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [month]);
 
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
@@ -90,10 +98,11 @@ export default function PayrollPage() {
               ))}
             </tr>
           </thead>
-          <tbody>{employees.map(emp=>(
+          <tbody>{paged.map(emp=>(
             <PayrollRow key={emp.id} emp={emp} isRTL={isRTL} lang={lang} />
           ))}</tbody>
         </Table>
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={employees.length} />
       </Card>
     </div>
   );

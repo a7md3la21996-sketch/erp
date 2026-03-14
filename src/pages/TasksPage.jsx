@@ -7,7 +7,7 @@ import {
   User, CloudOff
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
-import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../components/ui';
+import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 
 const ICONS = { Phone, PhoneCall, Users, Mail, MessageCircle, CheckSquare };
 
@@ -33,6 +33,8 @@ export default function TasksPage() {
   const [showAdd, setShowAdd]       = useState(false);
   const [form, setForm]             = useState({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'crm', due_date: '', notes: '', contact_name: '' });
   const [saving, setSaving]         = useState(false);
+  const [page, setPage]             = useState(1);
+  const [pageSize, setPageSize]     = useState(25);
 
   const SMART_FIELDS = useMemo(() => [
     { id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select', options: Object.entries(TASK_STATUSES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
@@ -87,6 +89,12 @@ export default function TasksPage() {
     });
     return result;
   }, [tasks, smartFilters, SMART_FIELDS, search, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [search, smartFilters, sortBy]);
 
   const stats = useMemo(() => ({
     total:   tasks.length,
@@ -236,7 +244,7 @@ export default function TasksPage() {
                 <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي مهام بعد أو جرّب تغيير الفلتر':'No tasks found, try changing the filter'}</p>
               </div>
-            ) : filtered.map((task, idx) => {
+            ) : paged.map((task, idx) => {
           const typeDef = TASK_TYPES[task.type] || TASK_TYPES.general;
           const Ic = ICONS[typeDef.icon] || CheckSquare;
           const priDef = TASK_PRIORITIES[task.priority];
@@ -247,7 +255,7 @@ export default function TasksPage() {
           return (
             <div key={task.id} className={`
               flex items-start gap-3 px-4 py-3
-              ${idx < filtered.length-1 ? 'border-b border-edge dark:border-edge-dark' : ''}
+              ${idx < paged.length-1 ? 'border-b border-edge dark:border-edge-dark' : ''}
               ${isRTL ? 'flex-row-reverse' : 'flex-row'}
               ${isDone ? 'opacity-65' : 'opacity-100'}
               transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.06]
@@ -326,6 +334,16 @@ export default function TasksPage() {
           );
         })}
       </Card>
+
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={v => { setPageSize(v); setPage(1); }}
+        totalItems={filtered.length}
+        safePage={safePage}
+      />
     </div>
   );
 }

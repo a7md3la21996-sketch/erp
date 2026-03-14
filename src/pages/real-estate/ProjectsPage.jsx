@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { Building2, MapPin, Home, TrendingUp, Package, X, ChevronRight, ChevronLeft, Users, Layers } from 'lucide-react';
-import { KpiCard, ExportButton } from '../../components/ui';
+import { KpiCard, ExportButton, Pagination } from '../../components/ui';
 import { fmtMoney } from '../../utils/formatting';
 import { useEscClose } from '../../utils/hooks';
 
@@ -59,6 +59,8 @@ export default function ProjectsPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selectedProject, setSelectedProject] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
@@ -78,6 +80,12 @@ export default function ProjectsPage() {
     }
     return result;
   }, [projects, statusFilter, typeFilter, search]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [statusFilter, typeFilter, search, pageSize]);
 
   // KPI values
   const kpis = useMemo(() => {
@@ -190,7 +198,7 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map(project => (
+          {paged.map(project => (
             <ProjectCard
               key={project.id}
               project={project}
@@ -201,6 +209,16 @@ export default function ProjectsPage() {
           ))}
         </div>
       )}
+
+      {/* Pagination */}
+      <Pagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        totalItems={filtered.length}
+      />
 
       {/* Drawer */}
       {selectedProject && (

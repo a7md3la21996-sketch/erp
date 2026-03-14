@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-const SIZE_OPTIONS = [25, 50, 100];
+const SIZE_OPTIONS = [25, 50, 100, 250];
 
 export default function Pagination({ page, totalPages, onPageChange, pageSize, onPageSizeChange, totalItems, safePage }) {
   const { i18n } = useTranslation();

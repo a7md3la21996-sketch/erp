@@ -6,7 +6,7 @@ import {
   AlertTriangle, Clock, Building2,
   UserCheck
 } from 'lucide-react';
-import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../../components/ui';
+import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 
 
 /* ─── Icon Button ─── */
@@ -45,6 +45,8 @@ export default function EmployeesPage() {
 
   const [search,  setSearch]  = useState('');
   const [smartFilters, setSmartFilters] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
   const [selected, setSelected] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -108,6 +110,12 @@ export default function EmployeesPage() {
 
     return result;
   }, [employees, smartFilters, SMART_FIELDS, search, isRTL]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [search, smartFilters]);
 
   const statusColor = s => s === 'active' ? '#4A7AAB' : s === 'on_leave' ? '#6B8DB5' : '#94a3b8';
   const statusLabel = s => ({ active: lang === 'ar' ? 'نشط' : 'Active', on_leave: lang === 'ar' ? 'إجازة' : 'On Leave', inactive: lang === 'ar' ? 'غير نشط' : 'Inactive' }[s] || s);
@@ -200,7 +208,7 @@ export default function EmployeesPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(emp => {
+            {paged.map(emp => {
               const name   = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
               const dept   = departments.find(d => d.id === emp.department);
               const deptName = dept ? (isRTL ? dept.name_ar : dept.name_en) : '—';
@@ -256,6 +264,16 @@ export default function EmployeesPage() {
             })}
           </tbody>
       </Table>
+      {filtered.length > 0 && (
+        <Pagination
+          currentPage={safePage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(val) => { setPageSize(val); setPage(1); }}
+          totalItems={filtered.length}
+        />
+      )}
       {filtered.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">

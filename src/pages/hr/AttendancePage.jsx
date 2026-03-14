@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
 import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar } from 'lucide-react';
-import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Select } from '../../components/ui';
+import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Select, Pagination } from '../../components/ui';
 
 function AttendanceRow({ emp, attendance, isRTL }) {
   const recs = attendance[emp.employee_id] || [];
@@ -52,6 +52,8 @@ export default function AttendancePage() {
   const [employees, setEmployees] = useState([]);
   const [allRecords, setAllRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     fetchEmployees().then(data => { setEmployees(data); setLoading(false); });
@@ -81,6 +83,12 @@ export default function AttendancePage() {
     });
     return { present, absent, late, leave };
   }, [allRecords]);
+  const totalPages = Math.max(1, Math.ceil(employees.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = employees.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [month]);
+
   const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
   if (loading) return (
@@ -151,11 +159,12 @@ export default function AttendancePage() {
                 <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد بيانات حضور':'No Attendance Data'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي بيانات حضور بعد':'No attendance records yet'}</p>
               </td></tr>
-            ) : employees.map(emp => (
+            ) : paged.map(emp => (
               <AttendanceRow key={emp.id} emp={emp} attendance={attendance} isRTL={isRTL} />
             ))}
           </tbody>
         </Table>
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={employees.length} />
       </Card>
     </div>
   );

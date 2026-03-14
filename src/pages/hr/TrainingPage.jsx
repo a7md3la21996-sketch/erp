@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Users, CheckCircle2, Clock, Plus, GraduationCap } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, ExportButton } from '../../components/ui';
+import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, ExportButton, Pagination } from '../../components/ui';
 
 const MOCK_PROGRAMS = [
   { id:1, title:'مهارات التفاوض', title_en:'Negotiation Skills', category:'sales', duration:16, enrolled:6, completed:4, status:'active', start:'2026-03-10' },
@@ -14,10 +14,17 @@ export default function TrainingPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [programs] = useState(MOCK_PROGRAMS);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const active    = programs.filter(p=>p.status==='active').length;
   const totalEnr  = programs.reduce((s,p)=>s+p.enrolled,0);
   const totalComp = programs.reduce((s,p)=>s+p.completed,0);
+
+  const totalPages = Math.max(1, Math.ceil(programs.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = programs.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const statusColor = s => s==='completed'?'#4A7AAB':s==='active'?'#6B8DB5':'#8BA8C8';
   const statusLabel = (s,lang) => ({ active:lang==='ar'?'نشط':'Active', completed:lang==='ar'?'مكتمل':'Completed', upcoming:lang==='ar'?'قادم':'Upcoming' }[s]||s);
@@ -71,7 +78,7 @@ export default function TrainingPage() {
             <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد برامج تدريبية':'No Training Programs'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي برامج تدريبية بعد':'No training programs added yet'}</p>
           </div>
-        ) : programs.map(prog => {
+        ) : paged.map(prog => {
           const pct = prog.enrolled ? Math.round(prog.completed/prog.enrolled*100) : 0;
           return (
             <Card key={prog.id} hover className="p-5">
@@ -108,7 +115,7 @@ export default function TrainingPage() {
             </tr>
           </thead>
           <tbody>
-            {programs.map(prog => (
+            {paged.map(prog => (
               <Tr key={prog.id}>
                 <Td>
                   <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -127,6 +134,7 @@ export default function TrainingPage() {
           </tbody>
         </Table>
       </Card>
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={programs.length} />
     </div>
   );
 }

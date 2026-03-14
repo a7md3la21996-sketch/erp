@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../services/leaveService';
 import { CalendarOff, Clock, CheckCircle2, XCircle, Plus, Check, X } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton } from '../../components/ui';
+import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Pagination } from '../../components/ui';
 
 export default function LeavePage() {
   const { i18n } = useTranslation();
@@ -11,6 +11,8 @@ export default function LeavePage() {
   const [leaves, setLeaves] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     Promise.all([fetchLeaveRequests(), fetchEmployees()]).then(([l, e]) => {
@@ -30,6 +32,11 @@ export default function LeavePage() {
     await rejectLeaveRequest(id);
     setLeaves(prev=>prev.map(l=>l.id===id?{...l,status:'rejected'}:l));
   };
+
+  const totalPages = Math.max(1, Math.ceil(leaves.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = leaves.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const statusColor = s => s==='approved'?'#4A7AAB':s==='pending'?'#6B8DB5':'#EF4444';
   const statusLabel = (s,lang) => ({ approved:lang==='ar'?'موافق':'Approved', pending:lang==='ar'?'معلق':'Pending', rejected:lang==='ar'?'مرفوض':'Rejected' }[s]||s);
@@ -130,7 +137,7 @@ export default function LeavePage() {
                 <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد طلبات إجازة':'No Leave Requests'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تقديم أي طلبات إجازة بعد':'No leave requests submitted yet'}</p>
               </td></tr>
-            ) : leaves.map(lv => {
+            ) : paged.map(lv => {
             const emp = employees.find(e=>e.id===lv.employee_id||e.employee_id===lv.emp_id);
             const name = emp?((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar):(lv.employee_id||lv.emp_id);
             return (
@@ -155,6 +162,7 @@ export default function LeavePage() {
             );
           })}</tbody>
         </Table>
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={leaves.length} />
       </Card>
     </div>
   );

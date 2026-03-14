@@ -7,7 +7,7 @@ import {
   Monitor, Smartphone, Tablet, Globe, Eye, Clock, Users, Shield,
   ChevronDown, ChevronUp, Search, X, Laptop, Activity,
 } from 'lucide-react';
-import { Card, KpiCard, Input } from '../../components/ui';
+import { Card, KpiCard, Input, Pagination } from '../../components/ui';
 import { getAllSessions, getSessionStats } from '../../services/sessionService';
 import { getViewLogs, getViewStats } from '../../services/viewTrackingService';
 
@@ -28,6 +28,8 @@ export default function UserTrackingPage() {
   const [tab, setTab] = useState('sessions');
   const [search, setSearch] = useState('');
   const [expandedUser, setExpandedUser] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Load data
   const sessions = useMemo(() => getAllSessions(), []);
@@ -69,6 +71,15 @@ export default function UserTrackingPage() {
     return Object.entries(map).sort((a, b) => b[1].sessions.length - a[1].sessions.length);
   }, [filteredSessions]);
 
+  // Pagination — sessions tab paginates sessionsByUser, views tab paginates filteredViews
+  const currentData = tab === 'sessions' ? sessionsByUser : filteredViews;
+  const totalPages = Math.max(1, Math.ceil(currentData.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedSessions = sessionsByUser.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const pagedViews = filteredViews.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [search, tab]);
 
   const fmtDate = (d) => d ? new Date(d).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
 
@@ -236,7 +247,7 @@ export default function UserTrackingPage() {
         {/* Sessions by User (expandable) */}
         <Card className="mb-5">
           <p className="m-0 px-4 pt-4 pb-2 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'سجل الجلسات' : 'Session Log'}</p>
-          {sessionsByUser.map(([userId, data]) => (
+          {pagedSessions.map(([userId, data]) => (
             <div key={userId} className="border-b border-edge/50 dark:border-edge-dark/50">
               <button
                 onClick={() => setExpandedUser(expandedUser === userId ? null : userId)}
@@ -289,6 +300,9 @@ export default function UserTrackingPage() {
           ))}
           {sessionsByUser.length === 0 && (
             <p className="px-4 py-8 text-center text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد جلسات بعد' : 'No sessions yet'}</p>
+          )}
+          {sessionsByUser.length > 0 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={v => { setPageSize(v); setPage(1); }} totalItems={sessionsByUser.length} safePage={safePage} />
           )}
         </Card>
 
@@ -344,7 +358,7 @@ export default function UserTrackingPage() {
             <tbody>
               {filteredViews.length === 0 ? (
                 <tr><td colSpan={6} className="text-center py-12 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد مشاهدات' : 'No views yet'}</td></tr>
-              ) : filteredViews.slice(0, 200).map(v => (
+              ) : pagedViews.map(v => (
                 <tr key={v.id} className="border-b border-edge/50 dark:border-edge-dark/50">
                   <td className="px-4 py-2.5">
                     <div>
@@ -374,6 +388,9 @@ export default function UserTrackingPage() {
               ))}
             </tbody>
           </table>
+          {filteredViews.length > 0 && (
+            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={v => { setPageSize(v); setPage(1); }} totalItems={filteredViews.length} safePage={safePage} />
+          )}
         </div>
 
       </>)}

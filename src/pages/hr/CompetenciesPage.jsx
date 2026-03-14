@@ -1,17 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { COMPETENCIES } from '../../data/hr_mock_data';
 import { Award, TrendingUp, Users, Star, ChevronDown } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, FilterPill, Table, Th, Td, Tr } from '../../components/ui';
+import { KpiCard, Badge, Button, Card, FilterPill, Table, Th, Td, Tr, Pagination } from '../../components/ui';
 
 export default function CompetenciesPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [filter, setFilter] = useState('all');
   const [expanded, setExpanded] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const categories = [...new Set(COMPETENCIES.map(c=>c.category))];
   const filtered = filter==='all' ? COMPETENCIES : COMPETENCIES.filter(c=>c.category===filter);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [filter]);
+
   const avgLevel = Math.round(COMPETENCIES.reduce((s,c)=>s+(c.required_level||3),0)/COMPETENCIES.length);
 
   return (
@@ -69,7 +78,7 @@ export default function CompetenciesPage() {
                 <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد كفاءات مسجلة':'No Competencies Found'}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي كفاءات بعد':'No competencies added yet'}</p>
               </td></tr>
-            ) : filtered.map((comp, idx) => {
+            ) : paged.map((comp, idx) => {
               const isExp = expanded===idx;
               return (
                 <tbody key={idx}>
@@ -108,6 +117,7 @@ export default function CompetenciesPage() {
           </tbody>
         </Table>
       </Card>
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
     </div>
   );
 }

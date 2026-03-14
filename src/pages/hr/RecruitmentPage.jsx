@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Briefcase, Users, Clock, CheckCircle2, Plus, Eye } from 'lucide-react';
-import { KpiCard, Button, Th, Td, Tr, ExportButton } from '../../components/ui';
+import { KpiCard, Button, Th, Td, Tr, ExportButton, Pagination } from '../../components/ui';
 
 const MOCK_JOBS = [
   { id:1, title_ar:'مدير مبيعات', title_en:'Sales Manager', dept:'المبيعات', type:'full-time', status:'open', applicants:12, posted:'2026-02-15' },
@@ -29,6 +29,13 @@ export default function RecruitmentPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [jobs] = useState(MOCK_JOBS);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  const totalPages = Math.max(1, Math.ceil(jobs.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = jobs.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const open = jobs.filter(j=>j.status==='open').length;
   const interviewing = jobs.filter(j=>j.status==='interviewing').length;
@@ -98,12 +105,13 @@ export default function RecruitmentPage() {
                   </div>
                 </td>
               </tr>
-            ) : jobs.map(job => (
+            ) : paged.map(job => (
               <JobRow key={job.id} job={job} lang={lang} isRTL={isRTL} />
             ))}
           </tbody>
         </table>
       </div>
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={jobs.length} />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, ShieldAlert } from 'lucide-react';
-import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton } from '../../components/ui';
+import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton, Pagination } from '../../components/ui';
 
 
 const MOCK_CASES = [
@@ -29,6 +29,8 @@ export default function DisciplinaryPage() {
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [cases] = useState(MOCK_CASES);
   const [employees, setEmployees] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const [loading, setLoading] = useState(true);
   useEffect(() => { fetchEmployees().then(data => { setEmployees(data); setLoading(false); }); }, []);
@@ -36,6 +38,11 @@ export default function DisciplinaryPage() {
   const open   = cases.filter(c=>c.status==='open').length;
   const closed = cases.filter(c=>c.status==='closed').length;
   const high   = cases.filter(c=>c.severity==='high').length;
+
+  const totalPages = Math.max(1, Math.ceil(cases.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = cases.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const severityColor = s => s==='high'?'#EF4444':s==='medium'?'#6B8DB5':'#4A7AAB';
   const severityLabel = (s,lang) => ({ high:lang==='ar'?'عالي':'High', medium:lang==='ar'?'متوسط':'Medium', low:lang==='ar'?'منخفض':'Low' }[s]||s);
@@ -112,7 +119,7 @@ export default function DisciplinaryPage() {
                   </div>
                 </td>
               </tr>
-            ) : cases.map(cas => {
+            ) : paged.map(cas => {
               const emp = employees.find(e=>e.employee_id===cas.emp_id||e.id===cas.emp_id);
               const name = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : cas.emp_id;
               return (
@@ -128,6 +135,7 @@ export default function DisciplinaryPage() {
             })}
           </tbody>
         </Table>
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={cases.length} />
       </Card>
     </div>
   );

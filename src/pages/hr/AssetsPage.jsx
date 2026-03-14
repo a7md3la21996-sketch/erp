@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { Package, CheckCircle2, AlertCircle, Clock, Plus, Edit2, Trash2 } from 'lucide-react';
-import { Button, Card, KpiCard, Th, Tr, Td, FilterPill, ExportButton } from '../../components/ui';
+import { Button, Card, KpiCard, Th, Tr, Td, FilterPill, ExportButton, Pagination } from '../../components/ui';
 
 
 const MOCK_ASSETS = [
@@ -20,10 +20,19 @@ export default function AssetsPage() {
   const [assets] = useState(MOCK_ASSETS);
   const [filter, setFilter] = useState('all');
   const [employees, setEmployees] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => { fetchEmployees().then(data => setEmployees(data)); }, []);
 
   const filtered = filter==='all' ? assets : assets.filter(a=>a.status===filter);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [filter]);
+
   const active = assets.filter(a=>a.status==='active').length;
   const available = assets.filter(a=>a.status==='available').length;
   const maintenance = assets.filter(a=>a.status==='maintenance').length;
@@ -105,7 +114,7 @@ export default function AssetsPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(asset => (
+            {paged.map(asset => (
               <AssetRow key={asset.id} asset={asset} isRTL={isRTL} lang={lang} statusColor={statusColor} statusLabel={statusLabel} employees={employees} />
             ))}
           </tbody>
@@ -116,6 +125,7 @@ export default function AssetsPage() {
         </div>
         </>)}
       </Card>
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
     </div>
   );
 }

@@ -8,7 +8,7 @@ import {
   Clock, Activity, TrendingUp, CloudOff
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
-import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../components/ui';
+import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -47,6 +47,8 @@ export default function ActivitiesPage() {
   const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'crm' });
   const [saving, setSaving]         = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const uniqueUsers = useMemo(() => {
     const map = new Map();
@@ -111,6 +113,12 @@ export default function ActivitiesPage() {
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
     return list;
   }, [activities, search, smartFilters, SMART_FIELDS]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [smartFilters, search, pageSize]);
 
   // Stats
   const stats = useMemo(() => {
@@ -299,14 +307,14 @@ export default function ActivitiesPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started'}</p>
           </div>
         ) : (
-          filtered.map((act, idx) => {
+          paged.map((act, idx) => {
             const typeDef = ACTIVITY_TYPES[act.type] || ACTIVITY_TYPES.note;
             const Ic = ICONS[typeDef.icon] || FileText;
             const deptDef = DEPT_LABELS[act.dept];
             return (
               <div
                 key={act.id}
-                className={`group flex items-start gap-3 px-4 py-3 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.07] ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${idx < filtered.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}`}
+                className={`group flex items-start gap-3 px-4 py-3 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.07] ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${idx < paged.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}`}
               >
                 {/* Icon */}
                 <div
@@ -367,6 +375,8 @@ export default function ActivitiesPage() {
           })
         )}
       </Card>
+
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
     </div>
   );
 }
