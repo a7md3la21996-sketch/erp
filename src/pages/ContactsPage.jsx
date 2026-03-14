@@ -9,6 +9,7 @@ import {
   fetchContacts, createContact, updateContact,
   blacklistContact, createActivity,
 } from '../services/contactsService';
+import { logAction } from '../services/auditService';
 import { fetchCampaigns } from '../services/marketingService';
 import { notifyLeadAssigned } from '../services/notificationsService';
 import ImportModal from './crm/ImportModal';
@@ -173,6 +174,7 @@ export default function ContactsPage() {
         const updated = contacts.filter(c => c.id !== id);
         setContacts(updated);
         localStorage.setItem('platform_contacts', JSON.stringify(updated));
+        logAction({ action: 'delete', entity: 'contact', entityId: id, entityName: contact?.full_name, description: `Deleted contact: ${contact?.full_name}`, userName: profile?.full_name_ar });
         toast.success(isRTL ? 'تم الحذف بنجاح' : 'Deleted successfully');
         setConfirmAction(null);
       }
@@ -185,9 +187,11 @@ export default function ContactsPage() {
       message: isRTL ? `حذف ${selectedIds.length} جهة اتصال؟ لا يمكن التراجع.` : `Delete ${selectedIds.length} contacts? This cannot be undone.`,
       onConfirm: () => {
         const count = selectedIds.length;
+        const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
         const updated = contacts.filter(c => !selectedIds.includes(c.id));
         setContacts(updated);
         localStorage.setItem('platform_contacts', JSON.stringify(updated));
+        logAction({ action: 'bulk_delete', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk deleted ${count} contacts: ${names}`, userName: profile?.full_name_ar });
         setSelectedIds([]);
         toast.success(isRTL ? `تم حذف ${count} جهة اتصال` : `${count} contacts deleted`);
         setConfirmAction(null);
@@ -198,9 +202,11 @@ export default function ContactsPage() {
 
   const handleBulkReassign = async (agentName) => {
     const assignedByName = profile?.full_name_ar || '—';
+    const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_by_name: assignedByName } : c);
     setContacts(updated);
     localStorage.setItem('platform_contacts', JSON.stringify(updated));
+    logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
     setSelectedIds([]);
     setBulkReassignModal(false);
@@ -420,16 +426,19 @@ export default function ContactsPage() {
       const updated = [saved, ...contacts];
       setContacts(updated);
       localStorage.setItem('platform_contacts', JSON.stringify(updated));
+      logAction({ action: 'create', entity: 'contact', entityId: saved.id, entityName: form.full_name, description: `Created contact: ${form.full_name} (${form.contact_type})`, userName: profile?.full_name_ar });
     } catch {
       const updated = [newContact, ...contacts];
       setContacts(updated);
       localStorage.setItem('platform_contacts', JSON.stringify(updated));
+      logAction({ action: 'create', entity: 'contact', entityId: newContact.id, entityName: form.full_name, description: `Created contact: ${form.full_name} (${form.contact_type})`, userName: profile?.full_name_ar });
     }
   };
 
   const handleBlacklist = async (contact, reason) => {
     try { await blacklistContact(contact.id, reason); } catch { /* optimistic */ }
     setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c));
+    logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
     if (selected?.id === contact.id) setSelected(null);
   };
 

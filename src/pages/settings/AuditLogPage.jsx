@@ -1,13 +1,26 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import supabase from '../../lib/supabase';
-import { History, ChevronDown, ChevronUp, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
-import { Button, Badge, Table, Th, Td, Tr, ExportButton, SmartFilter } from '../../components/ui';
+import { History, ChevronDown, ChevronUp, Plus, Pencil, Trash2, RefreshCw, Ban, UserCheck, Users2, Merge, Upload, Thermometer, ArrowRightLeft, Info } from 'lucide-react';
+import { Button, Badge, Table, Th, Td, Tr, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
+import { ACTION_TYPES, getLocalAuditLogs } from '../../services/auditService';
 
 const ACTION_CONFIG = {
-  create: { variant: 'success', icon: Plus, ar: 'إنشاء', en: 'Create' },
-  update: { variant: 'default', icon: Pencil, ar: 'تعديل', en: 'Update' },
-  delete: { variant: 'danger', icon: Trash2, ar: 'حذف', en: 'Delete' },
+  create:           { variant: 'success', icon: Plus,           ar: 'إنشاء',               en: 'Create' },
+  update:           { variant: 'default', icon: Pencil,         ar: 'تعديل',               en: 'Update' },
+  delete:           { variant: 'danger',  icon: Trash2,         ar: 'حذف',                 en: 'Delete' },
+  status_change:    { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير حالة',           en: 'Status Change' },
+  type_change:      { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير نوع',           en: 'Type Change' },
+  blacklist:        { variant: 'danger',  icon: Ban,            ar: 'بلاك ليست',           en: 'Blacklisted' },
+  unblacklist:      { variant: 'success', icon: Ban,            ar: 'إلغاء بلاك ليست',     en: 'Unblacklisted' },
+  reassign:         { variant: 'default', icon: UserCheck,      ar: 'إعادة تعيين',         en: 'Reassigned' },
+  bulk_reassign:    { variant: 'default', icon: Users2,         ar: 'إعادة تعيين جماعي',   en: 'Bulk Reassign' },
+  bulk_delete:      { variant: 'danger',  icon: Trash2,         ar: 'حذف جماعي',           en: 'Bulk Delete' },
+  merge:            { variant: 'default', icon: Merge,          ar: 'دمج',                 en: 'Merge' },
+  import:           { variant: 'success', icon: Upload,         ar: 'استيراد',              en: 'Import' },
+  stage_change:     { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير مرحلة',         en: 'Stage Change' },
+  temperature_change: { variant: 'default', icon: Thermometer,  ar: 'تغيير حرارة',         en: 'Temperature Change' },
+  batch_call:       { variant: 'default', icon: Plus,           ar: 'اتصال جماعي',         en: 'Batch Call' },
 };
 
 const ENTITY_LABELS = {
@@ -17,21 +30,24 @@ const ENTITY_LABELS = {
   activity: { ar: 'نشاط', en: 'Activity' },
   employee: { ar: 'موظف', en: 'Employee' },
   invoice: { ar: 'فاتورة', en: 'Invoice' },
+  deal: { ar: 'صفقة', en: 'Deal' },
+  campaign: { ar: 'حملة', en: 'Campaign' },
+  leave_request: { ar: 'طلب إجازة', en: 'Leave Request' },
+  expense: { ar: 'مصروف', en: 'Expense' },
+  journal_entry: { ar: 'قيد يومي', en: 'Journal Entry' },
+  ticket: { ar: 'تذكرة', en: 'Ticket' },
 };
 
 const BASE_SMART_FIELDS = [
   {
     id: 'action', label: 'الإجراء', labelEn: 'Action', type: 'select',
-    options: [
-      { value: 'create', label: 'إنشاء', labelEn: 'Create' },
-      { value: 'update', label: 'تعديل', labelEn: 'Update' },
-      { value: 'delete', label: 'حذف', labelEn: 'Delete' },
-    ],
+    options: Object.entries(ACTION_CONFIG).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })),
   },
   {
     id: 'entity', label: 'الكيان', labelEn: 'Entity', type: 'select',
     options: Object.entries(ENTITY_LABELS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })),
   },
+  { id: 'entity_name', label: 'الاسم', labelEn: 'Name', type: 'text' },
   { id: 'description', label: 'الوصف', labelEn: 'Description', type: 'text' },
   { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
 ];
@@ -59,29 +75,33 @@ export default function AuditLogPage() {
     },
   ], [userOptions]);
 
-  // Fetch distinct users from audit_logs on mount
+  // Fetch distinct users from audit_logs + localStorage on mount
   useEffect(() => {
     (async () => {
+      const map = new Map();
+      // From Supabase
       try {
         const { data } = await supabase
           .from('audit_logs')
           .select('user_id, users:user_id (full_name_ar, full_name_en)')
           .order('created_at', { ascending: false });
         if (data) {
-          const map = new Map();
           data.forEach(row => {
             if (row.user_id && !map.has(row.user_id)) {
               const u = row.users || {};
-              map.set(row.user_id, {
-                value: row.user_id,
-                label: u.full_name_ar || row.user_id,
-                labelEn: u.full_name_en || row.user_id,
-              });
+              map.set(row.user_id, { value: row.user_id, label: u.full_name_ar || row.user_id, labelEn: u.full_name_en || row.user_id });
             }
           });
-          setUserOptions([...map.values()]);
         }
       } catch { /* ignore */ }
+      // From localStorage
+      const { data: localLogs } = getLocalAuditLogs({ limit: 500 });
+      localLogs.forEach(l => {
+        if (l.user_name && !map.has(l.user_name)) {
+          map.set(l.user_name, { value: l.user_name, label: l.user_name, labelEn: l.user_name });
+        }
+      });
+      setUserOptions([...map.values()]);
     })();
   }, []);
 
@@ -103,12 +123,15 @@ export default function AuditLogPage() {
 
   const fetchLogs = async () => {
     setLoading(true);
+    let allLogs = [];
+
+    // Fetch from Supabase
     try {
       let query = supabase
         .from('audit_logs')
         .select('*, users:user_id (full_name_ar, full_name_en)')
         .order('created_at', { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        .limit(200);
 
       if (filterAction) query = query.eq('action', filterAction);
       if (filterEntity) query = query.eq('entity', filterEntity);
@@ -116,15 +139,26 @@ export default function AuditLogPage() {
       if (search) query = query.or(`description.ilike.%${search}%,entity.ilike.%${search}%`);
 
       const { data, error } = await query;
-      if (error) throw error;
-      setLogs((data || []).map(row => ({
-        ...row,
-        _user_name_ar: row.users?.full_name_ar || '',
-        _user_name_en: row.users?.full_name_en || '',
-      })));
-    } catch {
-      setLogs([]);
-    }
+      if (!error && data) {
+        allLogs = data.map(row => ({
+          ...row,
+          _user_name_ar: row.users?.full_name_ar || '',
+          _user_name_en: row.users?.full_name_en || '',
+        }));
+      }
+    } catch { /* ignore */ }
+
+    // Merge with localStorage logs
+    const { data: localLogs } = getLocalAuditLogs({ limit: 500, action: filterAction, entity: filterEntity, search });
+    const supaIds = new Set(allLogs.map(l => l.id));
+    const uniqueLocal = localLogs.filter(l => !supaIds.has(l.id)).map(l => ({
+      ...l,
+      _user_name_ar: l.user_name || '',
+      _user_name_en: l.user_name || '',
+    }));
+
+    allLogs = [...allLogs, ...uniqueLocal].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    setLogs(allLogs);
     setLoading(false);
   };
 
@@ -138,6 +172,17 @@ export default function AuditLogPage() {
   const handleSearchChange = (val) => {
     setSearch(val);
   };
+
+  // Client-side filtering for text/date fields
+  const filtered = useMemo(() => {
+    let result = logs;
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(l => (l.description || '').toLowerCase().includes(q) || (l.entity_name || '').toLowerCase().includes(q) || (l._user_name_ar || '').includes(q) || (l._user_name_en || '').toLowerCase().includes(q));
+    }
+    result = applySmartFilters(result, smartFilters.filter(f => !['action', 'entity', 'user_id'].includes(f.field)), smartFields);
+    return result;
+  }, [logs, search, smartFilters, smartFields]);
 
   const formatDate = (iso) => {
     if (!iso) return '';
@@ -165,6 +210,7 @@ export default function AuditLogPage() {
             columns={[
               { header: isRTL ? 'الإجراء' : 'Action', key: r => isRTL ? ACTION_CONFIG[r.action]?.ar : ACTION_CONFIG[r.action]?.en },
               { header: isRTL ? 'الكيان' : 'Entity', key: r => isRTL ? (ENTITY_LABELS[r.entity]?.ar || r.entity) : (ENTITY_LABELS[r.entity]?.en || r.entity) },
+              { header: isRTL ? 'الاسم' : 'Name', key: 'entity_name' },
               { header: isRTL ? 'الوصف' : 'Description', key: 'description' },
               { header: isRTL ? 'بواسطة' : 'Done By', key: r => isRTL ? (r._user_name_ar || '') : (r._user_name_en || '') },
               { header: isRTL ? 'التاريخ' : 'Date', key: 'created_at' },
@@ -184,7 +230,7 @@ export default function AuditLogPage() {
         search={search}
         onSearchChange={handleSearchChange}
         searchPlaceholder={isRTL ? 'بحث في السجل... (Enter للبحث)' : 'Search logs... (Enter to search)'}
-        resultsCount={logs.length}
+        resultsCount={filtered.length}
       />
 
       {/* Table */}
@@ -193,6 +239,7 @@ export default function AuditLogPage() {
           <tr>
             <Th>{isRTL ? 'الإجراء' : 'Action'}</Th>
             <Th>{isRTL ? 'الكيان' : 'Entity'}</Th>
+            <Th>{isRTL ? 'الاسم' : 'Name'}</Th>
             <Th>{isRTL ? 'الوصف' : 'Description'}</Th>
             <Th>{isRTL ? 'بواسطة' : 'Done By'}</Th>
             <Th>{isRTL ? 'التاريخ' : 'Date'}</Th>
@@ -201,23 +248,23 @@ export default function AuditLogPage() {
         </thead>
         <tbody>
           {loading ? (
-            Array.from({ length: 6 }).map((_, i) => (
+            Array.from({ length: 7 }).map((_, i) => (
               <Tr key={i}>
-                {Array.from({ length: 6 }).map((_, j) => (
+                {Array.from({ length: 7 }).map((_, j) => (
                   <Td key={j}>
                     <div className="h-3.5 rounded-md bg-gray-100 dark:bg-white/5 animate-pulse" />
                   </Td>
                 ))}
               </Tr>
             ))
-          ) : logs.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <tr>
-              <Td colSpan={6} className="text-center !py-10 text-content-muted dark:text-content-muted-dark">
+              <Td colSpan={7} className="text-center !py-10 text-content-muted dark:text-content-muted-dark">
                 {isRTL ? 'لا توجد سجلات' : 'No logs found'}
               </Td>
             </tr>
           ) : (
-            logs.map(log => {
+            filtered.map(log => {
               const ac = ACTION_CONFIG[log.action] || ACTION_CONFIG.update;
               const AIcon = ac.icon;
               const entityLabel = ENTITY_LABELS[log.entity] || { ar: log.entity, en: log.entity };
@@ -231,6 +278,7 @@ export default function AuditLogPage() {
                       </Badge>
                     </Td>
                     <Td>{isRTL ? entityLabel.ar : entityLabel.en}</Td>
+                    <Td className="text-xs font-semibold text-content dark:text-content-dark">{log.entity_name || '—'}</Td>
                     <Td className="max-w-[280px] truncate">{log.description || '—'}</Td>
                     <Td className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">{isRTL ? (log._user_name_ar || '—') : (log._user_name_en || '—')}</Td>
                     <Td className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">{formatDate(log.created_at)}</Td>
@@ -243,7 +291,7 @@ export default function AuditLogPage() {
                   </Tr>
                   {isExpanded && log.changes && (
                     <tr>
-                      <td colSpan={6} className="px-3.5 pb-3.5 bg-gray-50 dark:bg-brand-500/[0.04]">
+                      <td colSpan={7} className="px-3.5 pb-3.5 bg-gray-50 dark:bg-brand-500/[0.04]">
                         <div className="rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
                           <table className="w-full border-collapse">
                             <thead>
