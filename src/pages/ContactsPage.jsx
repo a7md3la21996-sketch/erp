@@ -471,6 +471,7 @@ export default function ContactsPage() {
                   {[
                     { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
                     { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => setBulkReassignModal(true) },
+                    ...(selectedIds.length === 2 ? [{ label: isRTL ? "دمج جهتي اتصال" : "Merge Contacts", action: () => { setMergePreview(selectedIds); setShowBulkMenu(false); } }] : []),
                   ].map(item => (
                     <button key={item.label} onClick={item.action} className={`w-full px-4 py-2.5 bg-transparent border-none text-content dark:text-content-dark text-xs cursor-pointer text-start flex items-center gap-2 hover:bg-brand-500/[0.15]`}>
                       {item.label}
