@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
-import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity,
@@ -16,6 +16,10 @@ import EditContactModal from './EditContactModal';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
+import { getLocalAuditLogs, ACTION_TYPES } from '../../../services/auditService';
+import { getComments } from '../../../services/chatService';
+import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
+import { getWonDeals } from '../../../services/dealsService';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
@@ -25,9 +29,13 @@ import {
 const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock, site_visit: Star };
 
 const TIMELINE_CONFIG = {
-  activity: { color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)', defaultIcon: Clock },
-  task:     { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  defaultIcon: CheckSquare },
-  opportunity: { color: '#10B981', bg: 'rgba(16,185,129,0.10)', defaultIcon: Target },
+  activity:    { color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  defaultIcon: Clock },
+  task:        { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  defaultIcon: CheckSquare },
+  opportunity: { color: '#10B981', bg: 'rgba(16,185,129,0.10)',  defaultIcon: Target },
+  comment:     { color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)',  defaultIcon: MessageSquare },
+  document:    { color: '#EC4899', bg: 'rgba(236,72,153,0.10)',  defaultIcon: FileUp },
+  audit:       { color: '#6B8DB5', bg: 'rgba(107,141,181,0.10)', defaultIcon: History },
+  deal:        { color: '#0F766E', bg: 'rgba(15,118,110,0.10)',  defaultIcon: Award },
 };
 
 // Department tab config
@@ -409,14 +417,61 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const oppCount = opportunities.length;
   const openTaskCount = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled').length;
 
+  // ── Extra timeline sources (comments, documents, audit, deals) ───────────
+  const [extraSources, setExtraSources] = useState({ comments: [], documents: [], audits: [], deals: [] });
+
+  useEffect(() => {
+    if (!contact?.id) return;
+    const cid = String(contact.id);
+    try {
+      const comments = getComments('contact', cid) || [];
+      const documents = getDocumentsByEntity('contact', cid) || [];
+      const { data: allAudits } = getLocalAuditLogs({ limit: 500, entity: 'contact' });
+      const audits = allAudits.filter(a => String(a.entity_id) === cid);
+      // Filter out create/update audits that duplicate activities
+      const meaningfulAudits = audits.filter(a => !['create'].includes(a.action));
+      getWonDeals().then(allDeals => {
+        const deals = (allDeals || []).filter(d => String(d.contact_id) === cid);
+        setExtraSources({ comments, documents, audits: meaningfulAudits, deals });
+      }).catch(() => {
+        setExtraSources({ comments, documents, audits: meaningfulAudits, deals: [] });
+      });
+    } catch {
+      setExtraSources({ comments: [], documents: [], audits: [], deals: [] });
+    }
+  }, [contact?.id]);
+
+  // Listen for real-time updates
+  useEffect(() => {
+    const refresh = () => {
+      if (!contact?.id) return;
+      const cid = String(contact.id);
+      try {
+        const comments = getComments('contact', cid) || [];
+        const documents = getDocumentsByEntity('contact', cid) || [];
+        setExtraSources(prev => ({ ...prev, comments, documents }));
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('platform_comment', refresh);
+    window.addEventListener('platform_document', refresh);
+    return () => {
+      window.removeEventListener('platform_comment', refresh);
+      window.removeEventListener('platform_document', refresh);
+    };
+  }, [contact?.id]);
+
   // ── Unified Timeline ─────────────────────────────────────────────────────
   const timeline = useMemo(() => {
     const items = [];
     activities.forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at }));
     tasks.forEach(t => items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date }));
     opportunities.forEach(o => items.push({ ...o, _type: 'opportunity', _date: o.created_at }));
+    extraSources.comments.forEach(c => items.push({ ...c, _type: 'comment', _date: c.created_at }));
+    extraSources.documents.forEach(d => items.push({ ...d, _type: 'document', _date: d.uploaded_at || d.created_at }));
+    extraSources.audits.forEach(a => items.push({ ...a, _type: 'audit', _date: a.created_at }));
+    extraSources.deals.forEach(d => items.push({ ...d, _type: 'deal', _date: d.created_at }));
     return items.sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
-  }, [activities, tasks, opportunities]);
+  }, [activities, tasks, opportunities, extraSources]);
 
   const filteredTimeline = useMemo(() => {
     if (timelineFilter === 'all') return timeline;
@@ -528,6 +583,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       if (item._type === 'activity') return isRTL ? (item.users?.full_name_ar || 'مجهول') : (item.users?.full_name_en || item.users?.full_name_ar || 'Unknown');
       if (item._type === 'task') return isRTL ? (item.users?.full_name_ar || item.created_by_name || 'مجهول') : (item.users?.full_name_en || item.users?.full_name_ar || item.created_by_name || 'Unknown');
       if (item._type === 'opportunity') return isRTL ? (item.users?.full_name_ar || item.agent_name || 'مجهول') : (item.users?.full_name_en || item.users?.full_name_ar || item.agent_name || 'Unknown');
+      if (item._type === 'comment') return item.author_name || (isRTL ? 'مجهول' : 'Unknown');
+      if (item._type === 'document') return item.uploaded_by || (isRTL ? 'النظام' : 'System');
+      if (item._type === 'audit') return item.user_name || (isRTL ? 'النظام' : 'System');
+      if (item._type === 'deal') return isRTL ? (item.agent_ar || 'مجهول') : (item.agent_en || item.agent_ar || 'Unknown');
       return '';
     })();
 
@@ -538,6 +597,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       }
       if (item._type === 'task') return <CheckSquare size={11} color={cfg.color} />;
       if (item._type === 'opportunity') return <Target size={11} color={cfg.color} />;
+      if (item._type === 'comment') return <MessageSquare size={11} color={cfg.color} />;
+      if (item._type === 'document') return <FileUp size={11} color={cfg.color} />;
+      if (item._type === 'audit') return <History size={11} color={cfg.color} />;
+      if (item._type === 'deal') return <Award size={11} color={cfg.color} />;
       return null;
     })();
 
@@ -549,6 +612,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       }
       if (item._type === 'task') return isRTL ? 'مهمة' : 'Task';
       if (item._type === 'opportunity') return isRTL ? 'فرصة' : 'Opportunity';
+      if (item._type === 'comment') return isRTL ? 'تعليق' : 'Comment';
+      if (item._type === 'document') return isRTL ? 'مستند' : 'Document';
+      if (item._type === 'audit') {
+        const at = ACTION_TYPES[item.action];
+        return isRTL ? (at?.ar || 'إجراء') : (at?.en || 'Action');
+      }
+      if (item._type === 'deal') return isRTL ? 'صفقة' : 'Deal';
       return '';
     })();
 
@@ -614,6 +684,74 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             <div className="text-[11px] text-content-muted dark:text-content-muted-dark flex items-center gap-2 mt-0.5">
               {item.projects?.name_ar && <span>{isRTL ? item.projects.name_ar : (item.projects.name_en || item.projects.name_ar)}</span>}
               {item.budget > 0 && <><span className="opacity-40">·</span><span>{fmtBudget(item.budget, null, isRTL)}</span></>}
+            </div>
+          </>
+        );
+      }
+      if (item._type === 'comment') {
+        // Highlight @mentions in text
+        const renderText = (text) => {
+          if (!text) return '';
+          const parts = text.split(/(@\S+)/g);
+          return parts.map((p, i) => p.startsWith('@') ? <span key={i} style={{ color: '#8B5CF6', fontWeight: 600 }}>{p}</span> : p);
+        };
+        return (
+          <>
+            <div className="text-xs text-content dark:text-content-dark leading-relaxed">{renderText(item.text)}</div>
+            {metaLine}
+          </>
+        );
+      }
+      if (item._type === 'document') {
+        const docType = DOCUMENT_TYPES?.[item.type];
+        return (
+          <>
+            <div className="text-xs font-semibold text-content dark:text-content-dark">{item.name || item.file_name}</div>
+            {metaLine}
+            <div className="flex gap-1.5 flex-wrap mt-1">
+              {docType && (
+                <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold" style={{ background: (docType.color || '#6B7280') + '22', color: docType.color || '#6B7280' }}>
+                  {isRTL ? docType.ar : docType.en}
+                </span>
+              )}
+              {item.file_size > 0 && <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(item.file_size / 1024).toFixed(0)} KB</span>}
+            </div>
+          </>
+        );
+      }
+      if (item._type === 'audit') {
+        const desc = item.description || (isRTL ? (ACTION_TYPES[item.action]?.ar || item.action) : (ACTION_TYPES[item.action]?.en || item.action));
+        const changes = item.changes ? Object.entries(item.changes) : [];
+        return (
+          <>
+            <div className="text-xs text-content dark:text-content-dark">{desc}</div>
+            {metaLine}
+            {changes.length > 0 && changes.length <= 3 && (
+              <div className="mt-1.5 text-[10px] space-y-0.5">
+                {changes.map(([key, val]) => (
+                  <div key={key} className="flex items-center gap-1 text-content-muted dark:text-content-muted-dark">
+                    <span className="font-medium">{key}:</span>
+                    <span className="line-through text-red-400">{String(val.from ?? '—').slice(0, 20)}</span>
+                    <span className="opacity-40">→</span>
+                    <span className="text-emerald-500">{String(val.to ?? '—').slice(0, 20)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      }
+      if (item._type === 'deal') {
+        return (
+          <>
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-xs font-semibold text-content dark:text-content-dark">{item.deal_number || (isRTL ? 'صفقة' : 'Deal')}</span>
+              <Chip label={isRTL ? 'تم الإغلاق' : 'Closed Won'} color="#0F766E" bg="rgba(15,118,110,0.1)" />
+            </div>
+            {metaLine}
+            <div className="text-[11px] text-content-muted dark:text-content-muted-dark flex items-center gap-2 mt-0.5">
+              {item.deal_value > 0 && <span className="font-bold text-emerald-500">{Number(item.deal_value).toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}</span>}
+              {(item.project_ar || item.project_en) && <><span className="opacity-40">·</span><span>{isRTL ? item.project_ar : (item.project_en || item.project_ar)}</span></>}
             </div>
           </>
         );
@@ -848,7 +986,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     { key: 'activity', label: isRTL ? 'نشاط' : 'Activities', count: activities.length },
                     { key: 'task', label: isRTL ? 'مهام' : 'Tasks', count: tasks.length },
                     { key: 'opportunity', label: isRTL ? 'فرص' : 'Opps', count: opportunities.length },
-                  ].map(f => (
+                    { key: 'comment', label: isRTL ? 'تعليقات' : 'Comments', count: extraSources.comments.length },
+                    { key: 'document', label: isRTL ? 'مستندات' : 'Docs', count: extraSources.documents.length },
+                    { key: 'deal', label: isRTL ? 'صفقات' : 'Deals', count: extraSources.deals.length },
+                    { key: 'audit', label: isRTL ? 'سجل' : 'Log', count: extraSources.audits.length },
+                  ].filter(f => f.key === 'all' || f.count > 0).map(f => (
                     <button key={f.key} onClick={() => setTimelineFilter(f.key)}
                       className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-colors ${timelineFilter === f.key ? 'bg-brand-500 text-white border-brand-500 font-bold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal hover:border-brand-500/40'}`}>
                       {f.label} {f.count > 0 ? `(${f.count})` : ''}
