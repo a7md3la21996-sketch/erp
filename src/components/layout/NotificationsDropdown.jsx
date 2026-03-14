@@ -56,11 +56,13 @@ export default function NotificationsDropdown({ show, onClose }) {
   const handleMarkAllRead = () => {
     markAllAsRead(profile?.id || profile?.email);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    window.dispatchEvent(new CustomEvent('platform_notification'));
   };
 
   const handleMarkRead = (id) => {
     markAsRead(id);
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    window.dispatchEvent(new CustomEvent('platform_notification'));
   };
 
   useClickOutside(ref, onClose, show);

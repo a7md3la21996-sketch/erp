@@ -9,6 +9,8 @@ import MainLayout from './components/layout/MainLayout';
 import LoginPage from './pages/auth/LoginPage';
 import { P } from './config/roles';
 import { Button } from './components/ui';
+import { PageSkeleton } from './components/ui/PageSkeletons';
+import ErrorBoundary from './components/ErrorBoundary';
 import './i18n';
 
 // Lazy-loaded pages
@@ -47,14 +49,11 @@ const UnitsPage = lazy(() => import('./pages/real-estate/UnitsPage'));
 const UsersPage = lazy(() => import('./pages/settings/UsersPage'));
 
 function PageLoader() {
-  return (
-    <div className="flex items-center justify-center h-[60vh] flex-col gap-3">
-      <div className="w-8 h-8 border-[3px] border-brand-500/20 border-t-brand-500 rounded-full animate-spin" />
-    </div>
-  );
+  return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
 }
 
-class ErrorBoundary extends Component {
+// Top-level crash fallback (last resort)
+class AppErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
   render() {
@@ -72,6 +71,11 @@ class ErrorBoundary extends Component {
     }
     return this.props.children;
   }
+}
+
+/** Wraps a page element with a per-route ErrorBoundary */
+function Guarded({ children }) {
+  return <ErrorBoundary>{children}</ErrorBoundary>;
 }
 
 function ComingSoon({ title }) {
@@ -104,59 +108,59 @@ export default function App() {
         <SystemConfigProvider>
         <AuthProvider>
           <ToastProvider>
-            <ErrorBoundary>
+            <AppErrorBoundary>
             <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<AuthRedirect />} />
               <Route path="/" element={<AuthRedirect />} />
               <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/contacts" element={<ContactsPage />} />
-                <Route path="/activities" element={<ActivitiesPage />} />
-                <Route path="/tasks" element={<TasksPage />} />
-                <Route path="/crm/opportunities" element={<OpportunitiesPage />} />
-                <Route path="/crm/lead-pool" element={<LeadPoolPage />} />
-                <Route path="/performance" element={<PerformancePage />} />
-                <Route path="/sales/deals" element={<DealsPage />} />
-                <Route path="/sales/commissions" element={<CommissionsPage />} />
+                <Route path="/dashboard" element={<Guarded><DashboardPage /></Guarded>} />
+                <Route path="/contacts" element={<Guarded><ContactsPage /></Guarded>} />
+                <Route path="/activities" element={<Guarded><ActivitiesPage /></Guarded>} />
+                <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
+                <Route path="/crm/opportunities" element={<Guarded><OpportunitiesPage /></Guarded>} />
+                <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
+                <Route path="/performance" element={<Guarded><PerformancePage /></Guarded>} />
+                <Route path="/sales/deals" element={<Guarded><DealsPage /></Guarded>} />
+                <Route path="/sales/commissions" element={<Guarded><CommissionsPage /></Guarded>} />
                 <Route path="/sales/targets" element={<Navigate to="/reports" replace />} />
-                <Route path="/sales/*" element={<DealsPage />} />
-                <Route path="/finance" element={<FinancePage />} />
-                <Route path="/finance/*" element={<FinancePage />} />
-                <Route path="/hr/employees" element={<EmployeesPage />} />
-                <Route path="/hr/policies" element={<HRPoliciesPage />} />
-                <Route path="/hr/attendance" element={<AttendancePage />} />
-                <Route path="/hr/leave" element={<LeavePage />} />
-                <Route path="/hr/payroll" element={<PayrollPage />} />
-                <Route path="/hr/competencies" element={<CompetenciesPage />} />
-                <Route path="/hr/recruitment" element={<RecruitmentPage />} />
-                <Route path="/hr/disciplinary" element={<DisciplinaryPage />} />
-                <Route path="/hr/training" element={<TrainingPage />} />
-                <Route path="/hr/self-service" element={<SelfServicePage />} />
-                <Route path="/hr/assets" element={<AssetsPage />} />
-                <Route path="/hr/onboarding" element={<OnboardingPage />} />
+                <Route path="/sales/*" element={<Guarded><DealsPage /></Guarded>} />
+                <Route path="/finance" element={<Guarded><FinancePage /></Guarded>} />
+                <Route path="/finance/*" element={<Guarded><FinancePage /></Guarded>} />
+                <Route path="/hr/employees" element={<Guarded><EmployeesPage /></Guarded>} />
+                <Route path="/hr/policies" element={<Guarded><HRPoliciesPage /></Guarded>} />
+                <Route path="/hr/attendance" element={<Guarded><AttendancePage /></Guarded>} />
+                <Route path="/hr/leave" element={<Guarded><LeavePage /></Guarded>} />
+                <Route path="/hr/payroll" element={<Guarded><PayrollPage /></Guarded>} />
+                <Route path="/hr/competencies" element={<Guarded><CompetenciesPage /></Guarded>} />
+                <Route path="/hr/recruitment" element={<Guarded><RecruitmentPage /></Guarded>} />
+                <Route path="/hr/disciplinary" element={<Guarded><DisciplinaryPage /></Guarded>} />
+                <Route path="/hr/training" element={<Guarded><TrainingPage /></Guarded>} />
+                <Route path="/hr/self-service" element={<Guarded><SelfServicePage /></Guarded>} />
+                <Route path="/hr/assets" element={<Guarded><AssetsPage /></Guarded>} />
+                <Route path="/hr/onboarding" element={<Guarded><OnboardingPage /></Guarded>} />
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
-                <Route path="/operations" element={<OperationsPage />} />
-                <Route path="/operations/*" element={<OperationsPage />} />
-                <Route path="/real-estate/projects" element={<ProjectsPage />} />
-                <Route path="/real-estate/units" element={<UnitsPage />} />
-                <Route path="/real-estate/*" element={<ProjectsPage />} />
-                <Route path="/marketing" element={<MarketingPage />} />
-                <Route path="/marketing/*" element={<MarketingPage />} />
-                <Route path="/calendar" element={<CalendarPage />} />
+                <Route path="/operations" element={<Guarded><OperationsPage /></Guarded>} />
+                <Route path="/operations/*" element={<Guarded><OperationsPage /></Guarded>} />
+                <Route path="/real-estate/projects" element={<Guarded><ProjectsPage /></Guarded>} />
+                <Route path="/real-estate/units" element={<Guarded><UnitsPage /></Guarded>} />
+                <Route path="/real-estate/*" element={<Guarded><ProjectsPage /></Guarded>} />
+                <Route path="/marketing" element={<Guarded><MarketingPage /></Guarded>} />
+                <Route path="/marketing/*" element={<Guarded><MarketingPage /></Guarded>} />
+                <Route path="/calendar" element={<Guarded><CalendarPage /></Guarded>} />
                 <Route path="/chat" element={<ComingSoon title="Chat" />} />
-                <Route path="/reports" element={<ReportsPage />} />
-                <Route path="/settings/general" element={<SettingsPage />} />
-                <Route path="/settings/audit-log" element={<AuditLogPage />} />
-                <Route path="/settings/system" element={<SystemConfigPage />} />
-                <Route path="/settings/tracking" element={<UserTrackingPage />} />
-                <Route path="/settings/users" element={<UsersPage />} />
-                <Route path="/settings/*" element={<SettingsPage />} />
+                <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
+                <Route path="/settings/general" element={<Guarded><SettingsPage /></Guarded>} />
+                <Route path="/settings/audit-log" element={<Guarded><AuditLogPage /></Guarded>} />
+                <Route path="/settings/system" element={<Guarded><SystemConfigPage /></Guarded>} />
+                <Route path="/settings/tracking" element={<Guarded><UserTrackingPage /></Guarded>} />
+                <Route path="/settings/users" element={<Guarded><UsersPage /></Guarded>} />
+                <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
             </Suspense>
-            </ErrorBoundary>
+            </AppErrorBoundary>
           </ToastProvider>
         </AuthProvider>
         </SystemConfigProvider>

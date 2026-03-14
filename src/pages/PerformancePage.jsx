@@ -449,7 +449,8 @@ export default function PerformancePage() {
                   <div className="text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? dept.name_ar : dept.name_en}</div>
                   <div className="text-xs text-content-muted dark:text-content-muted-dark">{deptEmps.length} {lang === 'ar' ? 'موظف' : 'employees'}</div>
                 </div>
-                <table className="w-full border-collapse text-sm">
+                <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-sm min-w-[500px]">
                   <thead>
                     <tr>
                       <Th>{lang === 'ar' ? 'الموظف' : 'Employee'}</Th>
@@ -484,6 +485,7 @@ export default function PerformancePage() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </Card>
             );
           })}
@@ -553,7 +555,8 @@ export default function PerformancePage() {
             <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark text-sm font-bold text-content dark:text-content-dark text-start`}>
               {lang === 'ar' ? 'النشاط مقابل النتائج — Sales' : 'Activity vs Results — Sales'}
             </div>
-            <table className="w-full border-collapse text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm min-w-[500px]">
               <thead>
                 <tr>
                   {[lang === 'ar' ? 'الموظف' : 'Employee', lang === 'ar' ? 'مكالمات' : 'Calls', lang === 'ar' ? 'فرص' : 'Opps', lang === 'ar' ? 'صفقات' : 'Deals', lang === 'ar' ? 'الإيرادات' : 'Revenue', lang === 'ar' ? 'التحليل' : 'Analysis'].map((h, i) => (
@@ -588,6 +591,7 @@ export default function PerformancePage() {
                 })}
               </tbody>
             </table>
+            </div>
           </Card>
 
           {/* Golden Rule */}

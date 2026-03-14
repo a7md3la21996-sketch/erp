@@ -151,6 +151,63 @@ export function FormSkeleton({ fields = 4 }) {
   );
 }
 
+// ── Chart Skeleton ─────────────────────────────────────────────────────────
+export function ChartSkeleton({ height = 200 }) {
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-white/[0.08] p-5 bg-white dark:bg-white/[0.02]">
+      <style>{shimmerStyle}</style>
+      <div className="flex items-center justify-between mb-4">
+        <ShimmerBar style={{ height: 12, width: '25%' }} />
+        <ShimmerBar style={{ height: 24, width: 80, borderRadius: 6 }} className="opacity-60" />
+      </div>
+      <div className="relative overflow-hidden rounded-lg bg-gray-100 dark:bg-white/[0.04]" style={{ height }}>
+        {/* Fake bar chart silhouette */}
+        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-around gap-2 px-4 pb-3" style={{ height: '70%' }}>
+          {[55, 72, 40, 85, 60, 48, 78].map((h, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-t-md bg-gray-200 dark:bg-white/[0.08] animate-pulse"
+              style={{ height: `${h}%`, animationDelay: `${i * 0.1}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Drawer Skeleton ────────────────────────────────────────────────────────
+export function DrawerSkeleton() {
+  return (
+    <div className="flex flex-col h-full">
+      <style>{shimmerStyle}</style>
+      {/* Drawer header */}
+      <div className="px-6 py-5 border-b border-gray-200 dark:border-white/[0.08] flex items-center gap-4">
+        <div className="w-11 h-11 rounded-xl bg-gray-100 dark:bg-white/[0.06] animate-pulse shrink-0" />
+        <div className="flex-1 flex flex-col gap-2">
+          <ShimmerBar style={{ height: 16, width: '50%' }} />
+          <ShimmerBar style={{ height: 10, width: '30%' }} className="opacity-60" />
+        </div>
+      </div>
+      {/* Detail rows */}
+      <div className="px-6 py-5 flex flex-col gap-5">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4">
+            <ShimmerBar className="shrink-0" style={{ height: 10, width: 90 }} />
+            <ShimmerBar style={{ height: 12, width: `${45 + (i % 3) * 15}%` }} />
+          </div>
+        ))}
+      </div>
+      {/* Tags / badges area */}
+      <div className="px-6 pt-2 flex gap-2">
+        {[60, 80, 50].map((w, i) => (
+          <ShimmerBar key={i} style={{ height: 24, width: w, borderRadius: 12 }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Page Skeleton — combines header + filters + table/list ──────────────────
 export function PageSkeleton({ hasKpis = false, kpiCount = 4, tableRows = 6, tableCols = 5, variant = 'table' }) {
   return (

@@ -14,6 +14,7 @@ import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants
 import { logView } from '../../services/viewTrackingService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import { notifyDealWon } from '../../services/notificationsService';
 
 const DEPT_LABELS = {
   all:        { ar: 'كل الأقسام', en: 'All Departments' },
@@ -505,7 +506,7 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps
 
   return (
     <Modal open={true} onClose={onClose} title={isRTL ? 'إضافة فرصة جديدة' : 'Add New Opportunity'} width="max-w-lg">
-      <div className="grid grid-cols-2 gap-3.5 modal-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 modal-grid">
         <div className="col-span-2">
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
             {isRTL ? 'جهة الاتصال *' : 'Contact *'}
@@ -999,6 +1000,15 @@ export default function OpportunitiesPage() {
     // Auto-create deal in Operations when closed_won (sales only)
     if (toStage === 'closed_won') {
       const opp = opps.find(o => o.id === id);
+      // Notify deal won
+      if (opp) {
+        notifyDealWon({
+          dealNumber: opp.id?.slice(0, 8) || '—',
+          clientName: getContactName(opp),
+          value: opp.budget ? `${Number(opp.budget).toLocaleString()} EGP` : '—',
+          agentId: opp.assigned_to || 'all',
+        });
+      }
       if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
         const deal = await createDealFromOpportunity({ ...opp, stage: toStage });
         setDealCreatedToast(deal.deal_number);
@@ -1123,6 +1133,13 @@ export default function OpportunitiesPage() {
 
     // Auto-create deal if moved to closed_won
     if (stageChanged && editForm.stage === 'closed_won') {
+      // Notify deal won
+      notifyDealWon({
+        dealNumber: selectedOpp.id?.slice(0, 8) || '—',
+        clientName: getContactName(selectedOpp),
+        value: editForm.budget ? `${Number(editForm.budget).toLocaleString()} EGP` : '—',
+        agentId: editForm.assigned_to || selectedOpp.assigned_to || 'all',
+      });
       const opp = opps.find(o => o.id === selectedOpp.id);
       if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
         const deal = await createDealFromOpportunity({ ...opp, ...result });

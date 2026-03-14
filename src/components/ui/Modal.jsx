@@ -28,7 +28,7 @@ export default function Modal({ open, onClose, title, width = 'max-w-lg', childr
       >
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-edge dark:border-edge-dark">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-edge dark:border-edge-dark">
             <h3 className="m-0 text-base font-bold text-content dark:text-content-dark">{title}</h3>
             <button
               onClick={onClose}
@@ -40,7 +40,7 @@ export default function Modal({ open, onClose, title, width = 'max-w-lg', childr
         )}
 
         {/* Body */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {children}
         </div>
       </div>

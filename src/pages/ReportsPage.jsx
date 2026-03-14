@@ -323,7 +323,8 @@ function TargetTrackerTab({ lang, isRTL }) {
               {lang === 'ar' ? 'لا توجد بيانات تارجت لهذا القسم' : 'No target data for this department'}
             </div>
           ) : (
-            <table className="w-full border-collapse text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm min-w-[600px]">
               <thead>
                 <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
                   {[{ ar: '#', en: '#', w: 'w-10' }, { ar: 'الموظف', en: 'Agent' }, { ar: 'التارجت', en: 'Target', w: 'w-[100px]' }, { ar: 'المحقق', en: 'Achieved', w: 'w-[100px]' }, { ar: 'النسبة', en: '% Done', w: 'w-[140px]' }, { ar: 'الصفقات', en: 'Deals', w: 'w-[70px]' }, { ar: 'التغيير', en: 'vs Last', w: 'w-[80px]' }].map((h, i) => (
@@ -370,6 +371,7 @@ function TargetTrackerTab({ lang, isRTL }) {
                 })}
               </tbody>
             </table>
+            </div>
           )}
         </Card>
 

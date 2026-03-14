@@ -10,6 +10,7 @@ import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_S
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { logAction } from '../services/auditService';
+import { notifyTaskAssigned } from '../services/notificationsService';
 
 const ICONS = { Phone, PhoneCall, Users, Mail, MessageCircle, CheckSquare };
 
@@ -123,6 +124,8 @@ export default function TasksPage() {
     try {
       const t = await createTask({ ...form, assigned_to_name_ar: 'أنت', assigned_to_name_en: 'You' });
       logAction({ action: 'create', entity: 'task', entityId: t.id, entityName: t.title || '', description: 'Created task', userName: profile?.full_name_ar || profile?.full_name_en || '' });
+      // Notify assignee
+      notifyTaskAssigned({ taskTitle: t.title, assigneeId: t.assigned_to || profile?.id || 'all', assignedBy: profile?.full_name_ar || profile?.full_name_en || '' });
       setTasks(prev => [t, ...prev]);
       setForm({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'crm', due_date: '', notes: '', contact_name: '' });
       setShowAdd(false);

@@ -140,8 +140,8 @@ function AddJournalModal({ L, onClose, onSave, entryCount, chartOfAccounts }) {
         </div>
       </div>
       <div className="text-xs font-bold text-content dark:text-content-dark mb-2">{L('بنود القيد', 'Entry Lines')}</div>
-      <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden mb-3">
-        <table className="w-full border-collapse">
+      <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden overflow-x-auto mb-3">
+        <table className="w-full border-collapse min-w-[400px]">
           <thead>
             <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
               <Th>{L('الحساب', 'Account')}</Th>
@@ -1479,8 +1479,8 @@ export default function FinancePage() {
         </div>
 
         {/* Lines table */}
-        <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
-          <table className="w-full border-collapse">
+        <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden overflow-x-auto">
+          <table className="w-full border-collapse min-w-[400px]">
             <thead>
               <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
                 <Th>{L('الحساب', 'Account')}</Th>
@@ -1551,8 +1551,8 @@ export default function FinancePage() {
         </div>
 
         {/* Items table */}
-        <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden mb-4">
-          <table className="w-full border-collapse">
+        <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden overflow-x-auto mb-4">
+          <table className="w-full border-collapse min-w-[450px]">
             <thead>
               <tr className="bg-surface-bg dark:bg-brand-500/[0.08]">
                 <Th>{L('البند', 'Item')}</Th>

@@ -242,7 +242,7 @@ export default function SmartFilter({
           {/* Popover */}
           {showAddRow && (
             <div
-              className="absolute top-[36px] start-0 z-[200] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-3 min-w-[380px] max-w-[440px]"
+              className="absolute top-[36px] start-0 z-[200] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-3 min-w-[280px] sm:min-w-[380px] max-w-[calc(100vw-2rem)] sm:max-w-[440px]"
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               <div className="flex items-center justify-between mb-2.5">

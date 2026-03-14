@@ -119,7 +119,8 @@ export default function AssetsPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم تسجيل أي أصول بعد':'No assets registered yet'}</p>
           </div>
         ) : (<>
-        <table className="w-full border-collapse">
+        <div className="overflow-x-auto">
+        <table className="w-full border-collapse min-w-[600px]">
           <thead>
             <tr>
               {[lang==='ar'?'الأصل':'Asset', lang==='ar'?'النوع':'Type', lang==='ar'?'مخصص ل':'Assigned To', lang==='ar'?'الحالة':'Status', lang==='ar'?'القيمة':'Value', ''].map((h,i)=>(
@@ -133,6 +134,7 @@ export default function AssetsPage() {
             ))}
           </tbody>
         </table>
+        </div>
         <div className={`px-4 py-3 border-t border-edge dark:border-edge-dark flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
           <span className="text-xs text-content-muted dark:text-content-muted-dark">{filtered.length} {lang==='ar'?'أصل':' assets'}</span>
           <span className="text-xs font-bold text-brand-500">{lang==='ar'?'إجمالي القيمة:':'Total Value:'} {totalValue.toLocaleString()} ج.م</span>

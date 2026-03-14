@@ -465,7 +465,8 @@ export default function HRPoliciesPage() {
           </p>
         </div>
 
-        <table className="w-full border-collapse">
+        <div className="overflow-x-auto">
+        <table className="w-full border-collapse min-w-[700px]">
           <thead>
             <tr>
               {[
@@ -505,6 +506,7 @@ export default function HRPoliciesPage() {
             )}
           </tbody>
         </table>
+        </div>
       </Card>
 
       {/* ── Pagination ── */}

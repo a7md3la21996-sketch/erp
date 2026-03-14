@@ -8,7 +8,7 @@ import {
   AlertCircle, FileText, Building2, User, Phone, Calendar,
   ArrowUpDown, Hash, CreditCard, Banknote,
 } from 'lucide-react';
-import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination } from '../../components/ui';
+import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination, PageSkeleton } from '../../components/ui';
 import { getWonDeals } from '../../services/dealsService';
 import { logView } from '../../services/viewTrackingService';
 import { logAction } from '../../services/auditService';
@@ -169,15 +169,7 @@ export default function DealsPage() {
   }, [filtered, profile]);
 
   // ── Skeleton ─────────────────────────────────────
-  if (loading) return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
-      <div className="animate-pulse space-y-4">
-        <div className="h-10 bg-brand-500/10 rounded-xl w-1/3" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">{[1,2,3,4,5,6].map(i => <div key={i} className="h-20 bg-brand-500/10 rounded-xl" />)}</div>
-        <div className="h-64 bg-brand-500/10 rounded-xl" />
-      </div>
-    </div>
-  );
+  if (loading) return <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={6} />;
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">

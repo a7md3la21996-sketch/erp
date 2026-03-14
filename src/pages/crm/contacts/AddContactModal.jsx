@@ -152,7 +152,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         {/* Body */}
         <div className="flex-1 overflow-auto px-6 py-5">
           {step === 1 ? (
-            <div className="modal-grid grid grid-cols-2 gap-3.5">
+            <div className="modal-grid grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {/* القسم والنوع */}
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'القسم' : 'Department'} <span className="text-red-500">*</span></label>
@@ -319,7 +319,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
 
             </div>
           ) : (
-            <div className="modal-grid grid grid-cols-2 gap-3.5">
+            <div className="modal-grid grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               {form.department !== 'sales' && (
                 <>
                 <div>

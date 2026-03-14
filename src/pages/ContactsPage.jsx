@@ -209,6 +209,10 @@ export default function ContactsPage() {
     setContacts(updated);
     localStorage.setItem('platform_contacts', JSON.stringify(updated));
     logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
+    // Notify assigned agent
+    contacts.filter(c => selectedIds.includes(c.id)).forEach(c => {
+      notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', agentId: agentName, agentName, assignedBy: assignedByName });
+    });
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
     setSelectedIds([]);
     setBulkReassignModal(false);
@@ -1022,13 +1026,14 @@ export default function ContactsPage() {
         if (!c1.preferred_location && c2.preferred_location) merged.preferred_location = c2.preferred_location;
         const fields = ['full_name','phone','phone2','email','contact_type','source','department','temperature','company','preferred_location'];
         return (
-          <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
-            <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-3 sm:p-5">
+            <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-4 sm:p-6 w-full max-w-[95vw] sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-5">
                 <h3 className="m-0 text-content dark:text-content-dark text-base font-bold flex items-center gap-2"><Merge size={18} color="#1E40AF" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
                 <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={18} /></button>
               </div>
-              <table className="w-full border-collapse text-xs">
+              <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-xs min-w-[450px]">
                 <thead>
                   <tr>
                     <th className={`px-2.5 py-2 text-start text-content-muted dark:text-content-muted-dark font-semibold border-b border-edge dark:border-edge-dark`}>{isRTL ? 'الحقل' : 'Field'}</th>
@@ -1048,6 +1053,7 @@ export default function ContactsPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
               <div className="flex gap-2.5 mt-5 justify-end">
                 <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
                   {isRTL ? 'إلغاء' : 'Cancel'}

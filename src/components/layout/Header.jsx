@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
+import { getUnreadCount } from '../../services/notificationsService';
 
 export default function Header({ onMenuClick }) {
   const { t, i18n } = useTranslation();
@@ -18,6 +19,23 @@ export default function Header({ onMenuClick }) {
   const ref = useRef(null);
   const isRTL = i18n.language === 'ar';
   const { isOnline, pendingCount, isSyncing, syncResult } = useOfflineSync();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Keep unread count in sync
+  useEffect(() => {
+    const userId = profile?.id || profile?.email;
+    const refresh = () => setUnreadCount(getUnreadCount(userId));
+    refresh();
+    window.addEventListener('platform_notification', refresh);
+    return () => window.removeEventListener('platform_notification', refresh);
+  }, [profile?.id, profile?.email]);
+
+  // Also refresh when dropdown closes
+  useEffect(() => {
+    if (!showNotifications) {
+      setUnreadCount(getUnreadCount(profile?.id || profile?.email));
+    }
+  }, [showNotifications, profile?.id, profile?.email]);
 
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setShowProfile(false); };
@@ -105,7 +123,11 @@ export default function Header({ onMenuClick }) {
         <div className="relative">
           <button onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative">
             <Bell size={18} />
-            <span className={`absolute top-1.5 end-1.5 w-[7px] h-[7px] bg-red-500 rounded-full`} />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-[16px] bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </button>
           <NotificationsDropdown show={showNotifications} onClose={() => setShowNotifications(false)} />
         </div>
