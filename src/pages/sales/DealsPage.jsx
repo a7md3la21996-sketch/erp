@@ -9,6 +9,8 @@ import {
   ArrowUpDown, Hash, CreditCard, Banknote,
 } from 'lucide-react';
 import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination, PageSkeleton, DocumentsSection } from '../../components/ui';
+import { generateInvoiceHTML, getCompanyInfo } from '../../services/printService';
+import PrintPreview from '../../components/ui/PrintPreview';
 import { getWonDeals } from '../../services/dealsService';
 import { logView } from '../../services/viewTrackingService';
 import { logAction } from '../../services/auditService';
@@ -79,6 +81,7 @@ export default function DealsPage() {
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [printHTML, setPrintHTML] = useState(null);
 
   // ── Dynamic smart filter fields ──
   const SMART_FIELDS = useMemo(() => {
@@ -375,6 +378,24 @@ export default function DealsPage() {
                     </span>
                   </div>
                 </div>
+                <button
+                  onClick={() => {
+                    const items = [
+                      { description: isRTL ? (deal.project_ar || deal.project_en || 'وحدة') : (deal.project_en || deal.project_ar || 'Unit'), qty: 1, price: deal.deal_value || 0 },
+                    ];
+                    if (deal.down_payment) items.push({ description: isRTL ? 'مقدم مدفوع' : 'Down Payment (Paid)', qty: 1, price: -deal.down_payment });
+                    setPrintHTML(generateInvoiceHTML({
+                      ...deal,
+                      invoice_number: deal.deal_number,
+                      date: deal.created_at ? new Date(deal.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US') : new Date().toLocaleDateString(),
+                      status: isRTL ? (STATUSES.find(s => s.id === deal.status)?.ar || '') : (STATUSES.find(s => s.id === deal.status)?.en || ''),
+                    }, items, getCompanyInfo(), lang));
+                  }}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 cursor-pointer hover:bg-brand-500/[0.15]"
+                  title={isRTL ? 'طباعة' : 'Print'}
+                >
+                  <FileText size={14} />
+                </button>
                 <button onClick={() => setSelectedDeal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={14} /></button>
               </div>
 
@@ -506,6 +527,15 @@ export default function DealsPage() {
           </div>
         );
       })()}
+
+      {/* Print Preview */}
+      {printHTML && (
+        <PrintPreview
+          html={printHTML}
+          title={isRTL ? 'فاتورة صفقة' : 'Deal Invoice'}
+          onClose={() => setPrintHTML(null)}
+        />
+      )}
 
     </div>
   );

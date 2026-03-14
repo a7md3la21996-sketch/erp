@@ -21,6 +21,8 @@ import { getLocalAuditLogs, ACTION_TYPES, logAction } from '../../../services/au
 import { getComments } from '../../../services/chatService';
 import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
 import { getWonDeals } from '../../../services/dealsService';
+import { generateContactCardHTML, getCompanyInfo } from '../../../services/printService';
+import PrintPreview from '../../../components/ui/PrintPreview';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
@@ -275,6 +277,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showEdit, setShowEdit] = useState(false);
   const [showDrawerMenu, setShowDrawerMenu] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
+  const [showPrintPreview, setShowPrintPreview] = useState(false);
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -834,6 +837,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           <Send size={13} className="text-emerald-500" /> {isRTL ? 'إرسال SMS' : 'Send SMS'}
                         </button>
                       )}
+                      <button onClick={() => { setShowPrintPreview(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                        <FileDown size={13} className="text-brand-500" /> {isRTL ? 'طباعة' : 'Print'}
+                      </button>
                       {onDelete && (
                         <button onClick={() => { onDelete(contact.id); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                           <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
@@ -1366,6 +1372,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           toast.success(isRTL ? 'تم إرسال الرسالة' : 'SMS sent successfully');
           setShowSMSModal(false);
         }}
+      />
+    )}
+    {showPrintPreview && (
+      <PrintPreview
+        html={generateContactCardHTML(contact, getCompanyInfo(), isRTL ? 'ar' : 'en')}
+        title={isRTL ? 'بطاقة جهة اتصال' : 'Contact Card'}
+        onClose={() => setShowPrintPreview(false)}
       />
     )}
     </>

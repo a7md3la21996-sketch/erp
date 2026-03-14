@@ -9,6 +9,8 @@ import {
   ChevronUp, ChevronDown, Minus, Crown, Zap
 } from 'lucide-react';
 import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
+import { generateReportHTML, getCompanyInfo } from '../services/printService';
+import PrintPreview from '../components/ui/PrintPreview';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { MOCK_EMPLOYEES } from '../data/hr_mock_data';
 import { getTeamKPIs, setTargets, METRIC_CONFIG, METRICS } from '../services/kpiTargetsService';
@@ -694,6 +696,7 @@ export default function ReportsPage() {
   const [smartFilters, setSmartFilters] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [printHTML, setPrintHTML] = useState(null);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('report');
 
@@ -985,7 +988,25 @@ export default function ReportsPage() {
       <Modal open={modalOpen} onClose={() => setModalOpen(false)} title={activeReport ? (lang === 'ar' ? activeReport.report.ar : activeReport.report.en) : ''} width="max-w-3xl">
         {reportTable && (
           <div>
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end mb-4 gap-2">
+              <button
+                onClick={() => {
+                  if (!reportTable) return;
+                  const title = lang === 'ar' ? activeReport?.report.ar : activeReport?.report.en;
+                  const cols = reportTable.headers.map(h => ({ key: h, header: h }));
+                  const rows = reportTable.rows.map(row => {
+                    const obj = {};
+                    reportTable.headers.forEach((h, i) => { obj[h] = row[i]; });
+                    return obj;
+                  });
+                  setPrintHTML(generateReportHTML(title, rows, cols, getCompanyInfo(), lang));
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border border-brand-500/20 bg-brand-500/[0.08] text-brand-500 hover:bg-brand-500/[0.15]"
+                style={{ fontFamily: 'inherit' }}
+              >
+                <FileText size={13} />
+                {lang === 'ar' ? 'طباعة' : 'Print'}
+              </button>
               <ExportButton data={exportData} filename={activeReport?.report.key || 'report'} title={lang === 'ar' ? activeReport?.report.ar : activeReport?.report.en} columns={exportColumns} />
             </div>
             {(dateRange !== 'all' || dateFrom || dateTo) && (
@@ -1012,6 +1033,13 @@ export default function ReportsPage() {
           </div>
         )}
       </Modal>
+      {printHTML && (
+        <PrintPreview
+          html={printHTML}
+          title={lang === 'ar' ? 'تقرير' : 'Report'}
+          onClose={() => setPrintHTML(null)}
+        />
+      )}
     </div>
   );
 }

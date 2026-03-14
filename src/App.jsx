@@ -55,6 +55,7 @@ const CustomFieldsPage = lazy(() => import('./pages/settings/CustomFieldsPage'))
 const BackupPage = lazy(() => import('./pages/settings/BackupPage'));
 const ScheduledReportsPage = lazy(() => import('./pages/settings/ScheduledReportsPage'));
 const SMSTemplatesPage = lazy(() => import('./pages/settings/SMSTemplatesPage'));
+const PrintSettingsPage = lazy(() => import('./pages/settings/PrintSettingsPage'));
 const ChatInboxPage = lazy(() => import('./pages/ChatInboxPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const ChartBuilderPage = lazy(() => import('./pages/ChartBuilderPage'));
@@ -176,6 +177,7 @@ export default function App() {
                 <Route path="/settings/backup" element={<Guarded><BackupPage /></Guarded>} />
                 <Route path="/settings/scheduled-reports" element={<Guarded><ScheduledReportsPage /></Guarded>} />
                 <Route path="/settings/sms-templates" element={<Guarded><SMSTemplatesPage /></Guarded>} />
+                <Route path="/settings/print" element={<Guarded><PrintSettingsPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />

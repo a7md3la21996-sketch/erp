@@ -78,5 +78,6 @@ export const NAV_ITEMS = [
     { id: 'custom-fields', label: { ar: 'حقول مخصصة', en: 'Custom Fields' }, path: '/settings/custom-fields', permission: P.SETTINGS_MANAGE },
     { id: 'scheduled-reports', label: { ar: 'تقارير مجدولة', en: 'Scheduled Reports' }, path: '/settings/scheduled-reports', permission: P.SETTINGS_MANAGE },
     { id: 'sms-templates', label: { ar: 'قوالب الرسائل', en: 'SMS Templates' }, path: '/settings/sms-templates', permission: P.SETTINGS_MANAGE },
+    { id: 'print-settings', label: { ar: 'إعدادات الطباعة', en: 'Print Settings' }, path: '/settings/print', permission: P.SETTINGS_MANAGE },
   ]},
 ];
