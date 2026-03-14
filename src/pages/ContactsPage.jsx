@@ -316,7 +316,9 @@ export default function ContactsPage() {
     { id: 'lead_score', label: 'Lead Score', labelEn: 'Lead Score', type: 'number' },
     { id: 'campaign_name', label: 'الحملة', labelEn: 'Campaign', type: 'text' },
     { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
-  ], []);
+    { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: [...new Set(contacts.map(c => c.assigned_to_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
+    { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set(contacts.map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
+  ], [contacts]);
 
   const SORT_OPTIONS = useMemo(() => [
     { value: 'created', label: 'ترتيب: الأحدث', labelEn: 'Sort: Newest' },

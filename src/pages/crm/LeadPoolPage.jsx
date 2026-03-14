@@ -74,8 +74,8 @@ function getLeadScore(lead) {
   return Math.min(Math.round(lead.score + srcWeight * 5), 100);
 }
 
-// ── SmartFilter field definitions ──────────────────────────────────────────
-const SMART_FIELDS = [
+// ── SmartFilter field definitions (static parts) ──────────────────────────
+const SMART_FIELDS_STATIC = [
   {
     id: 'source', label: 'المصدر', labelEn: 'Source', type: 'select',
     options: Object.entries(SOURCES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })),
@@ -111,6 +111,15 @@ export default function LeadPoolPage() {
   const canViewAll     = canManage; // managers/directors see all teams
 
   const [leads, setLeads]             = useState(() => makeMockLeads());
+
+  const assignedToOptions = useMemo(() =>
+    [...new Set(leads.map(l => l.assigned_to).filter(Boolean))].map(name => ({ value: name, label: name, labelEn: name })),
+  [leads]);
+
+  const SMART_FIELDS = useMemo(() => [
+    ...SMART_FIELDS_STATIC,
+    { id: 'assigned_to', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: assignedToOptions },
+  ], [assignedToOptions]);
   const [selected, setSelected]       = useState([]);
   const [smartFilters, setSmartFilters] = useState([]);
   const [search, setSearch]           = useState('');

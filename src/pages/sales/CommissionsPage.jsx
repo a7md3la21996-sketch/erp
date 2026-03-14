@@ -89,6 +89,7 @@ export default function CommissionsPage() {
         label: 'السيلز', labelEn: 'Agent', type: 'select',
         options: agents.map(a => ({ value: a, label: a, labelEn: a })),
       },
+      { id: 'date', label: 'التاريخ', labelEn: 'Date', type: 'date' },
     ];
   }, [agentData, lang]);
 
@@ -104,6 +105,7 @@ export default function CommissionsPage() {
         label: 'المطور', labelEn: 'Developer', type: 'select',
         options: devs.map(d => ({ value: d, label: d, labelEn: d })),
       },
+      { id: 'date', label: 'التاريخ', labelEn: 'Date', type: 'date' },
     ];
   }, [companyData, lang]);
 

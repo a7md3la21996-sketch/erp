@@ -19,7 +19,7 @@ const ENTITY_LABELS = {
   invoice: { ar: 'فاتورة', en: 'Invoice' },
 };
 
-const SMART_FIELDS = [
+const BASE_SMART_FIELDS = [
   {
     id: 'action', label: 'الإجراء', labelEn: 'Action', type: 'select',
     options: [
@@ -47,7 +47,43 @@ export default function AuditLogPage() {
   const [smartFilters, setSmartFilters] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [page, setPage] = useState(0);
+  const [userOptions, setUserOptions] = useState([]);
   const PAGE_SIZE = 30;
+
+  // Build SMART_FIELDS with dynamic user options
+  const smartFields = useMemo(() => [
+    ...BASE_SMART_FIELDS,
+    {
+      id: 'user_id', label: 'بواسطة', labelEn: 'Done By', type: 'select',
+      options: userOptions,
+    },
+  ], [userOptions]);
+
+  // Fetch distinct users from audit_logs on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('audit_logs')
+          .select('user_id, users:user_id (full_name_ar, full_name_en)')
+          .order('created_at', { ascending: false });
+        if (data) {
+          const map = new Map();
+          data.forEach(row => {
+            if (row.user_id && !map.has(row.user_id)) {
+              const u = row.users || {};
+              map.set(row.user_id, {
+                value: row.user_id,
+                label: u.full_name_ar || row.user_id,
+                labelEn: u.full_name_en || row.user_id,
+              });
+            }
+          });
+          setUserOptions([...map.values()]);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   // Extract action and entity filter values from smartFilters for server-side filtering
   const filterAction = useMemo(() => {
@@ -60,29 +96,39 @@ export default function AuditLogPage() {
     return f?.value || '';
   }, [smartFilters]);
 
+  const filterUserId = useMemo(() => {
+    const f = smartFilters.find(f => f.field === 'user_id' && f.operator === 'is');
+    return f?.value || '';
+  }, [smartFilters]);
+
   const fetchLogs = async () => {
     setLoading(true);
     try {
       let query = supabase
         .from('audit_logs')
-        .select('*')
+        .select('*, users:user_id (full_name_ar, full_name_en)')
         .order('created_at', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (filterAction) query = query.eq('action', filterAction);
       if (filterEntity) query = query.eq('entity', filterEntity);
+      if (filterUserId) query = query.eq('user_id', filterUserId);
       if (search) query = query.or(`description.ilike.%${search}%,entity.ilike.%${search}%`);
 
       const { data, error } = await query;
       if (error) throw error;
-      setLogs(data || []);
+      setLogs((data || []).map(row => ({
+        ...row,
+        _user_name_ar: row.users?.full_name_ar || '',
+        _user_name_en: row.users?.full_name_en || '',
+      })));
     } catch {
       setLogs([]);
     }
     setLoading(false);
   };
 
-  useEffect(() => { fetchLogs(); }, [page, filterAction, filterEntity]);
+  useEffect(() => { fetchLogs(); }, [page, filterAction, filterEntity, filterUserId]);
 
   const handleSearchKeyDown = (e) => {
     if (e?.key === 'Enter') { setPage(0); fetchLogs(); }
@@ -120,6 +166,7 @@ export default function AuditLogPage() {
               { header: isRTL ? 'الإجراء' : 'Action', key: r => isRTL ? ACTION_CONFIG[r.action]?.ar : ACTION_CONFIG[r.action]?.en },
               { header: isRTL ? 'الكيان' : 'Entity', key: r => isRTL ? (ENTITY_LABELS[r.entity]?.ar || r.entity) : (ENTITY_LABELS[r.entity]?.en || r.entity) },
               { header: isRTL ? 'الوصف' : 'Description', key: 'description' },
+              { header: isRTL ? 'بواسطة' : 'Done By', key: r => isRTL ? (r._user_name_ar || '') : (r._user_name_en || '') },
               { header: isRTL ? 'التاريخ' : 'Date', key: 'created_at' },
             ]}
           />
@@ -131,7 +178,7 @@ export default function AuditLogPage() {
 
       {/* SmartFilter */}
       <SmartFilter
-        fields={SMART_FIELDS}
+        fields={smartFields}
         filters={smartFilters}
         onFiltersChange={(f) => { setSmartFilters(f); setPage(0); }}
         search={search}
@@ -147,6 +194,7 @@ export default function AuditLogPage() {
             <Th>{isRTL ? 'الإجراء' : 'Action'}</Th>
             <Th>{isRTL ? 'الكيان' : 'Entity'}</Th>
             <Th>{isRTL ? 'الوصف' : 'Description'}</Th>
+            <Th>{isRTL ? 'بواسطة' : 'Done By'}</Th>
             <Th>{isRTL ? 'التاريخ' : 'Date'}</Th>
             <Th className="w-10"></Th>
           </tr>
@@ -155,7 +203,7 @@ export default function AuditLogPage() {
           {loading ? (
             Array.from({ length: 6 }).map((_, i) => (
               <Tr key={i}>
-                {Array.from({ length: 5 }).map((_, j) => (
+                {Array.from({ length: 6 }).map((_, j) => (
                   <Td key={j}>
                     <div className="h-3.5 rounded-md bg-gray-100 dark:bg-white/5 animate-pulse" />
                   </Td>
@@ -164,7 +212,7 @@ export default function AuditLogPage() {
             ))
           ) : logs.length === 0 ? (
             <tr>
-              <Td colSpan={5} className="text-center !py-10 text-content-muted dark:text-content-muted-dark">
+              <Td colSpan={6} className="text-center !py-10 text-content-muted dark:text-content-muted-dark">
                 {isRTL ? 'لا توجد سجلات' : 'No logs found'}
               </Td>
             </tr>
@@ -184,6 +232,7 @@ export default function AuditLogPage() {
                     </Td>
                     <Td>{isRTL ? entityLabel.ar : entityLabel.en}</Td>
                     <Td className="max-w-[280px] truncate">{log.description || '—'}</Td>
+                    <Td className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">{isRTL ? (log._user_name_ar || '—') : (log._user_name_en || '—')}</Td>
                     <Td className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">{formatDate(log.created_at)}</Td>
                     <Td>
                       {log.changes && (isExpanded
@@ -194,7 +243,7 @@ export default function AuditLogPage() {
                   </Tr>
                   {isExpanded && log.changes && (
                     <tr>
-                      <td colSpan={5} className="px-3.5 pb-3.5 bg-gray-50 dark:bg-brand-500/[0.04]">
+                      <td colSpan={6} className="px-3.5 pb-3.5 bg-gray-50 dark:bg-brand-500/[0.04]">
                         <div className="rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
                           <table className="w-full border-collapse">
                             <thead>

@@ -35,10 +35,8 @@ const DOC_LABELS = {
 
 const getStatus = (id) => STATUSES.find(s => s.id === id) || STATUSES[0];
 
-const SMART_FIELDS = [
+const STATIC_SMART_FIELDS = [
   { id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select', options: STATUSES.map(s => ({ value: s.id, label: s.ar, labelEn: s.en })) },
-  { id: 'agent_ar', label: 'الموظف', labelEn: 'Agent', type: 'text' },
-  { id: 'project_ar', label: 'المشروع', labelEn: 'Project', type: 'text' },
   { id: 'deal_value', label: 'قيمة الصفقة', labelEn: 'Deal Value', type: 'number' },
 ];
 
@@ -76,6 +74,29 @@ export default function DealsPage() {
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+
+  // ── Dynamic smart filter fields ──
+  const SMART_FIELDS = useMemo(() => {
+    const agentField = lang === 'ar' ? 'agent_ar' : 'agent_en';
+    const agents = [...new Set(deals.map(d => d[agentField]).filter(Boolean))].sort();
+    const projectField = lang === 'ar' ? 'project_ar' : 'project_en';
+    const projects = [...new Set(deals.map(d => d[projectField]).filter(Boolean))].sort();
+    return [
+      STATIC_SMART_FIELDS[0], // status
+      {
+        id: agentField,
+        label: 'السيلز', labelEn: 'Agent', type: 'select',
+        options: agents.map(a => ({ value: a, label: a, labelEn: a })),
+      },
+      {
+        id: projectField,
+        label: 'المشروع', labelEn: 'Project', type: 'select',
+        options: projects.map(p => ({ value: p, label: p, labelEn: p })),
+      },
+      STATIC_SMART_FIELDS[1], // deal_value
+      { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
+    ];
+  }, [deals, lang]);
 
   // Load data
   useEffect(() => {

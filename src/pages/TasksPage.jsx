@@ -36,6 +36,13 @@ export default function TasksPage() {
   const [page, setPage]             = useState(1);
   const [pageSize, setPageSize]     = useState(25);
 
+  const assignedToOptions = useMemo(() =>
+    [...new Set(tasks.map(t => t.assigned_to_name_en).filter(Boolean))].map(name => {
+      const match = tasks.find(t => t.assigned_to_name_en === name);
+      return { value: name, label: match?.assigned_to_name_ar || name, labelEn: name };
+    }),
+  [tasks]);
+
   const SMART_FIELDS = useMemo(() => [
     { id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select', options: Object.entries(TASK_STATUSES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'priority', label: 'الأولوية', labelEn: 'Priority', type: 'select', options: Object.entries(TASK_PRIORITIES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
@@ -45,11 +52,12 @@ export default function TasksPage() {
       { value: 'finance', label: 'المالية', labelEn: 'Finance' },
       { value: 'general', label: 'عام', labelEn: 'General' },
     ]},
+    { id: 'assigned_to_name_en', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: assignedToOptions },
     { id: 'title', label: 'العنوان', labelEn: 'Title', type: 'text' },
     { id: 'contact_name', label: 'العميل', labelEn: 'Contact', type: 'text' },
     { id: 'due_date', label: 'تاريخ الاستحقاق', labelEn: 'Due Date', type: 'date' },
     { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created At', type: 'date' },
-  ], []);
+  ], [assignedToOptions]);
 
   const SORT_OPTIONS = useMemo(() => [
     { value: 'due_date_asc', label: 'الاستحقاق (الأقرب)', labelEn: 'Due Date (soonest)' },
