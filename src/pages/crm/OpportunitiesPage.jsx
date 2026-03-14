@@ -7,9 +7,11 @@ import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportu
 import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, Filter } from 'lucide-react';
-import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton } from '../../components/ui';
+import { useSystemConfig } from '../../contexts/SystemConfigContext';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
+import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
+import { logView } from '../../services/viewTrackingService';
 
 const DEPT_LABELS = {
   all:        { ar: 'كل الأقسام', en: 'All Departments' },
@@ -65,15 +67,7 @@ const SORT_OPTIONS = {
   stale: { ar: 'بدون تواصل', en: 'Stale (No Contact)' },
 };
 
-const LOST_REASONS = {
-  price: { ar: 'السعر مرتفع', en: 'Price too high' },
-  competitor: { ar: 'اختار منافس', en: 'Chose competitor' },
-  timing: { ar: 'التوقيت غير مناسب', en: 'Bad timing' },
-  no_budget: { ar: 'لا يوجد ميزانية', en: 'No budget' },
-  no_response: { ar: 'لا يوجد رد', en: 'No response' },
-  not_interested: { ar: 'غير مهتم', en: 'Not interested' },
-  other: { ar: 'أخرى', en: 'Other' },
-};
+// LOST_REASONS now loaded from SystemConfigContext (lostReasons array)
 const TEMP_ORDER = { hot: 0, warm: 1, cool: 2, cold: 3 };
 
 // ─── Stage Win Rates for Weighted Pipeline Forecast ───
@@ -181,7 +175,7 @@ const getProjectName = (opp, lang) => {
 // ═══════════════════════════════════════════════
 // OppCard — cleaned up, no duplicate stage display
 // ═══════════════════════════════════════════════
-function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig, score: preScore }) {
+function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig, score: preScore, isAdmin }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
   const temp = TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold;
@@ -244,7 +238,13 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig, sc
                 <div className="px-3 py-1 text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">
                   {isRTL ? "نقل الى" : "Move to"}
                 </div>
-                {stageConfig.filter(s => s.id !== opp.stage).slice(0, 5).map(s => (
+                {stageConfig.filter(s => {
+                  if (s.id === opp.stage) return false;
+                  if (isAdmin) return true;
+                  const currentIdx = stageConfig.findIndex(st => st.id === opp.stage);
+                  const targetIdx = stageConfig.findIndex(st => st.id === s.id);
+                  return targetIdx > currentIdx;
+                }).slice(0, 5).map(s => (
                   <button
                     key={s.id}
                     onClick={e => { e.stopPropagation(); onMove(opp.id, s.id); setMenuOpen(false); }}
@@ -462,7 +462,7 @@ function ContactSearch({ isRTL, value, onSelect }) {
 // ═══════════════════════════════════════════════
 // AddModal — with real contact search & agent select
 // ═══════════════════════════════════════════════
-function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [] }) {
+function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [], currentUserId }) {
   const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'qualification', project_id: '', notes: '', expected_close_date: '' });
   const [saving, setSaving] = useState(false);
   const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -476,6 +476,7 @@ function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps
       contact_id: form.contact.id,
       budget: Number(form.budget) || 0,
       assigned_to: form.assigned_to || null,
+      assigned_by: currentUserId || null,
       temperature: form.temperature,
       priority: form.priority,
       stage: form.stage,
@@ -632,6 +633,7 @@ export default function OpportunitiesPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const { lostReasons: configLostReasons } = useSystemConfig();
   const rawLang = i18n.language || 'ar';
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
@@ -643,9 +645,7 @@ export default function OpportunitiesPage() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [activeStage, setActiveStage] = useState('all');
-  const [filterAgent, setFilterAgent] = useState('all');
-  const [filterTemp, setFilterTemp] = useState('all');
-  const [filterDept, setFilterDept] = useState('all');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [editingOpp, setEditingOpp] = useState(false);
@@ -653,7 +653,6 @@ export default function OpportunitiesPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [filterDate, setFilterDate] = useState('all');
   const [viewMode, setViewMode] = useState('grid');
   const [drawerActivities, setDrawerActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
@@ -670,16 +669,14 @@ export default function OpportunitiesPage() {
   const [drawerNotes, setDrawerNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
   const [stageHistory, setStageHistory] = useState([]);
-  const [filterScore, setFilterScore] = useState('all');
   const [showNotes, setShowNotes] = useState(false);
   const [lostReasonModal, setLostReasonModal] = useState(null); // { id, toStage }
   const [lostReason, setLostReason] = useState('');
   const [lostReasonCustom, setLostReasonCustom] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [filterPriority, setFilterPriority] = useState('all');
-  const [filterSource, setFilterSource] = useState('all');
   const [bulkToast, setBulkToast] = useState(null);
+  const [moveWarningToast, setMoveWarningToast] = useState(null);
+  const isAdmin = profile?.role === 'admin';
   const [gridPage, setGridPage] = useState(1);
   const GRID_PAGE_SIZE = 30;
   const savedFilterRef = useRef(null);
@@ -697,6 +694,41 @@ export default function OpportunitiesPage() {
     const t = setTimeout(() => setSearch(searchInput), 250);
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  // ─── SmartFilter field definitions ───
+  const SMART_FIELDS = useMemo(() => [
+    { id: 'department', label: 'القسم', labelEn: 'Department', type: 'select',
+      options: Object.entries(DEPT_LABELS).filter(([k]) => k !== 'all').map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
+    { id: 'assigned_to', label: 'المسؤول', labelEn: 'Agent', type: 'select',
+      options: agents.map(a => ({ value: a.id, label: a.full_name_ar || a.full_name_en, labelEn: a.full_name_en || a.full_name_ar })) },
+    { id: 'temperature', label: 'الحرارة', labelEn: 'Temperature', type: 'select',
+      options: Object.entries(TEMP_CONFIG).map(([k, v]) => ({ value: k, label: v.label_ar, labelEn: v.label_en })) },
+    { id: 'priority', label: 'الأولوية', labelEn: 'Priority', type: 'select',
+      options: Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: v.label_ar, labelEn: v.label_en })) },
+    { id: 'source', label: 'المصدر', labelEn: 'Source', type: 'select',
+      options: Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
+    { id: 'lead_score', label: 'درجة العميل', labelEn: 'Lead Score', type: 'select',
+      options: [
+        { value: 'hot', label: 'ساخن (70+)', labelEn: 'Hot (70+)' },
+        { value: 'warm', label: 'دافئ (40-69)', labelEn: 'Warm (40-69)' },
+        { value: 'cold', label: 'بارد (<40)', labelEn: 'Cold (<40)' },
+      ] },
+    { id: 'stage', label: 'المرحلة', labelEn: 'Stage', type: 'select',
+      options: getDeptStages('sales').map(s => ({ value: s.id, label: s.label_ar, labelEn: s.label_en })) },
+    { id: 'budget', label: 'الميزانية', labelEn: 'Budget', type: 'number' },
+    { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
+    { id: 'expected_close_date', label: 'تاريخ الإغلاق المتوقع', labelEn: 'Expected Close', type: 'date' },
+  ], [agents]);
+
+  const SMART_SORT_OPTIONS = useMemo(() =>
+    Object.entries(SORT_OPTIONS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })),
+  []);
+
+  // Derive filterDept from smartFilters for stage config
+  const filterDept = useMemo(() => {
+    const deptFilter = smartFilters.find(f => f.field === 'department' && f.operator === 'is');
+    return deptFilter ? deptFilter.value : 'all';
+  }, [smartFilters]);
 
   // Check if edit form has unsaved changes
   const isEditDirty = editingOpp && selectedOpp && (
@@ -800,59 +832,69 @@ export default function OpportunitiesPage() {
     return m;
   }, [opps]);
 
-  const filtered = opps.filter(o => {
-    if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return false;
-    if (activeStage !== 'all' && o.stage !== activeStage) return false;
+  // Normalize data for SmartFilter (flatten nested fields + computed lead_score)
+  const normalizedOpps = useMemo(() => opps.map(o => ({
+    ...o,
+    department: o.contacts?.department || 'sales',
+    source: o.contacts?.source || o.source || '',
+    lead_score: (() => { const s = scoreMap[o.id] || 0; return s >= 70 ? 'hot' : s >= 40 ? 'warm' : 'cold'; })(),
+  })), [opps, scoreMap]);
+
+  const filtered = useMemo(() => {
+    // Apply smart filters
+    let result = applySmartFilters(normalizedOpps, smartFilters, SMART_FIELDS);
+    // Apply stage tab filter
+    if (activeStage !== 'all') result = result.filter(o => o.stage === activeStage);
+    // Apply search
     if (search) {
       const q = search.toLowerCase();
-      const name = getContactName(o).toLowerCase();
-      const project = getProjectName(o, lang).toLowerCase();
-      const phone = (o.contacts?.phone || '').toLowerCase();
-      const email = (o.contacts?.email || '').toLowerCase();
-      if (!name.includes(q) && !project.includes(q) && !phone.includes(q) && !email.includes(q)) return false;
+      result = result.filter(o => {
+        const name = getContactName(o).toLowerCase();
+        const project = getProjectName(o, lang).toLowerCase();
+        const phone = (o.contacts?.phone || '').toLowerCase();
+        const email = (o.contacts?.email || '').toLowerCase();
+        return name.includes(q) || project.includes(q) || phone.includes(q) || email.includes(q);
+      });
     }
-    if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return false;
-    if (filterTemp !== 'all' && o.temperature !== filterTemp) return false;
-    if (filterPriority !== 'all' && o.priority !== filterPriority) return false;
-    if (filterSource !== 'all' && (o.contacts?.source || o.source || '') !== filterSource) return false;
-    if (filterScore !== 'all') {
-      const s = scoreMap[o.id] || 0;
-      if (filterScore === 'hot' && s < 70) return false;
-      if (filterScore === 'warm' && (s < 40 || s >= 70)) return false;
-      if (filterScore === 'cold' && s >= 40) return false;
-    }
-    if (filterDate !== 'all' && o.created_at) {
-      const now = new Date();
-      let start;
-      if (filterDate === 'this_week') { start = new Date(now); start.setDate(now.getDate() - now.getDay()); start.setHours(0,0,0,0); }
-      else if (filterDate === 'this_month') { start = new Date(now.getFullYear(), now.getMonth(), 1); }
-      else if (filterDate === 'last_30') { start = new Date(now); start.setDate(now.getDate() - 30); }
-      if (start && new Date(o.created_at) < start) return false;
-    }
-    return true;
-  });
+    return result;
+  }, [normalizedOpps, smartFilters, SMART_FIELDS, activeStage, search, lang]);
 
   // Apply sorting
-  filtered.sort((a, b) => {
-    switch (sortBy) {
-      case 'oldest': return new Date(a.created_at || 0) - new Date(b.created_at || 0);
-      case 'budget_high': return (b.budget || 0) - (a.budget || 0);
-      case 'budget_low': return (a.budget || 0) - (b.budget || 0);
-      case 'temp_hot': return (TEMP_ORDER[a.temperature] ?? 4) - (TEMP_ORDER[b.temperature] ?? 4);
-      case 'lead_score': return (scoreMap[b.id] || 0) - (scoreMap[a.id] || 0);
-      case 'stale': return daysSince(b.contacts?.last_activity_at || b.updated_at) - daysSince(a.contacts?.last_activity_at || a.updated_at);
-      default: return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-    }
-  });
+  const sortedFiltered = useMemo(() => {
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      switch (sortBy) {
+        case 'oldest': return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+        case 'budget_high': return (b.budget || 0) - (a.budget || 0);
+        case 'budget_low': return (a.budget || 0) - (b.budget || 0);
+        case 'temp_hot': return (TEMP_ORDER[a.temperature] ?? 4) - (TEMP_ORDER[b.temperature] ?? 4);
+        case 'lead_score': return (scoreMap[b.id] || 0) - (scoreMap[a.id] || 0);
+        case 'stale': return daysSince(b.contacts?.last_activity_at || b.updated_at) - daysSince(a.contacts?.last_activity_at || a.updated_at);
+        default: return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      }
+    });
+    return arr;
+  }, [filtered, sortBy, scoreMap]);
+
+  // Select opp with view tracking
+  const selectOpp = useCallback((opp) => {
+    setSelectedOpp(opp);
+    if (opp) logView({ entityType: 'opportunity', entityId: opp.id, entityName: opp.project || opp.contacts?.full_name, viewer: profile });
+  }, [profile]);
+
+  // Drawer prev/next navigation
+  const selectedOppIdx = selectedOpp ? sortedFiltered.findIndex(o => o.id === selectedOpp.id) : -1;
+  const handleOppPrev = selectedOppIdx > 0 ? () => { selectOpp(sortedFiltered[selectedOppIdx - 1]); setEditingOpp(false); } : null;
+  const handleOppNext = selectedOppIdx >= 0 && selectedOppIdx < sortedFiltered.length - 1 ? () => { selectOpp(sortedFiltered[selectedOppIdx + 1]); setEditingOpp(false); } : null;
 
   // Grid pagination
-  const gridTotalPages = Math.max(1, Math.ceil(filtered.length / GRID_PAGE_SIZE));
+  const gridTotalPages = Math.max(1, Math.ceil(sortedFiltered.length / GRID_PAGE_SIZE));
   const gridSafePage = Math.min(gridPage, gridTotalPages);
-  const gridPaged = viewMode === 'grid' ? filtered.slice((gridSafePage - 1) * GRID_PAGE_SIZE, gridSafePage * GRID_PAGE_SIZE) : filtered;
-  useEffect(() => { setGridPage(1); }, [search, filterAgent, filterTemp, filterPriority, filterDept, filterDate, filterScore, filterSource, activeStage, sortBy]);
+  const gridPaged = viewMode === 'grid' ? sortedFiltered.slice((gridSafePage - 1) * GRID_PAGE_SIZE, gridSafePage * GRID_PAGE_SIZE) : sortedFiltered;
+  useEffect(() => { setGridPage(1); }, [search, smartFilters, activeStage, sortBy]);
 
   // Export data
-  const exportData = filtered.map(o => ({
+  const exportData = sortedFiltered.map(o => ({
     [isRTL ? 'الاسم' : 'Name']: getContactName(o),
     [isRTL ? 'الهاتف' : 'Phone']: o.contacts?.phone || '',
     [isRTL ? 'المشروع' : 'Project']: getProjectName(o, lang),
@@ -901,6 +943,22 @@ export default function OpportunitiesPage() {
   }, [lostReasonCounts]);
 
   const handleMove = async (id, toStage, extraUpdates = {}) => {
+    // Prevent non-admin users from moving backwards in the pipeline
+    if (!isAdmin) {
+      const opp = opps.find(o => o.id === id);
+      if (opp) {
+        const dept = opp.contacts?.department || 'sales';
+        const stages = getDeptStages(dept);
+        const fromIdx = stages.findIndex(s => s.id === opp.stage);
+        const toIdx = stages.findIndex(s => s.id === toStage);
+        if (fromIdx !== -1 && toIdx !== -1 && toIdx < fromIdx) {
+          setMoveWarningToast(isRTL ? 'لا يمكن نقل الفرصة لمرحلة سابقة' : 'Cannot move opportunity to a previous stage');
+          setTimeout(() => setMoveWarningToast(null), 3500);
+          return;
+        }
+      }
+    }
+
     // Intercept closed_lost to ask for reason
     if (toStage === 'closed_lost' && !extraUpdates.lost_reason) {
       setLostReasonModal({ id, toStage });
@@ -1021,11 +1079,13 @@ export default function OpportunitiesPage() {
       }
       addStageHistory(selectedOpp.id, selectedOpp.stage, editForm.stage);
     }
+    const assignmentChanged = editForm.assigned_to !== (selectedOpp.assigned_to || '');
     const updates = {
       budget: Number(editForm.budget) || 0,
       temperature: editForm.temperature,
       priority: editForm.priority,
       assigned_to: editForm.assigned_to || null,
+      ...(assignmentChanged ? { assigned_by: profile?.id || null } : {}),
       project_id: editForm.project_id || null,
       notes: editForm.notes,
       expected_close_date: editForm.expected_close_date || null,
@@ -1069,10 +1129,10 @@ export default function OpportunitiesPage() {
   const bulkAssign = async (agentId) => {
     const ids = [...bulkSelected];
     const agent = agents.find(a => a.id === agentId);
-    setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, assigned_to: agentId, users: agent || o.users } : o));
+    setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, assigned_to: agentId, assigned_by: profile?.id || null, users: agent || o.users } : o));
     showBulkToast(isRTL ? `تم تعيين ${ids.length} فرصة` : `${ids.length} opportunities assigned`);
     setBulkSelected(new Set()); setBulkMode(false);
-    await Promise.all(ids.map(id => updateOpportunity(id, { assigned_to: agentId }).catch(() => {})));
+    await Promise.all(ids.map(id => updateOpportunity(id, { assigned_to: agentId, assigned_by: profile?.id || null }).catch(() => {})));
   };
   const bulkDeleteAll = async () => {
     const ids = [...bulkSelected];
@@ -1113,22 +1173,24 @@ export default function OpportunitiesPage() {
   }, [opps]);
   const isDuplicate = (contactId) => duplicateContactIds.has(String(contactId));
 
-  // Memoize stage tab counts
+  // Memoize stage tab counts — uses filtered (before stage tab filter) excluding activeStage
   const stageCounts = useMemo(() => {
-    const counts = { _total: 0 };
-    opps.forEach(o => {
-      if (filterDept !== 'all' && (o.contacts?.department || 'sales') !== filterDept) return;
-      if (search) { const q = search.toLowerCase(); const n = getContactName(o).toLowerCase(); const p = getProjectName(o, lang).toLowerCase(); const ph = (o.contacts?.phone || '').toLowerCase(); const em = (o.contacts?.email || '').toLowerCase(); if (!n.includes(q) && !p.includes(q) && !ph.includes(q) && !em.includes(q)) return; }
-      if (filterAgent !== 'all' && o.assigned_to !== filterAgent) return;
-      if (filterTemp !== 'all' && o.temperature !== filterTemp) return;
-      if (filterPriority !== 'all' && o.priority !== filterPriority) return;
-      if (filterSource !== 'all' && (o.contacts?.source || o.source || '') !== filterSource) return;
-      if (filterScore !== 'all') { const sc = scoreMap[o.id] || 0; if (filterScore === 'hot' && sc < 70) return; if (filterScore === 'warm' && (sc < 40 || sc >= 70)) return; if (filterScore === 'cold' && sc >= 40) return; }
-      counts._total = (counts._total || 0) + 1;
-      counts[o.stage] = (counts[o.stage] || 0) + 1;
-    });
+    // Re-apply smartFilters + search but NOT activeStage to get per-stage counts
+    let base = applySmartFilters(normalizedOpps, smartFilters, SMART_FIELDS);
+    if (search) {
+      const q = search.toLowerCase();
+      base = base.filter(o => {
+        const name = getContactName(o).toLowerCase();
+        const project = getProjectName(o, lang).toLowerCase();
+        const phone = (o.contacts?.phone || '').toLowerCase();
+        const email = (o.contacts?.email || '').toLowerCase();
+        return name.includes(q) || project.includes(q) || phone.includes(q) || email.includes(q);
+      });
+    }
+    const counts = { _total: base.length };
+    base.forEach(o => { counts[o.stage] = (counts[o.stage] || 0) + 1; });
     return counts;
-  }, [opps, filterDept, search, filterAgent, filterTemp, filterPriority, filterSource, filterScore, scoreMap, lang]);
+  }, [normalizedOpps, smartFilters, SMART_FIELDS, search, lang]);
 
   if (loading) return <PageSkeleton hasKpis kpiCount={6} tableRows={6} tableCols={5} />;
 
@@ -1163,10 +1225,10 @@ export default function OpportunitiesPage() {
       {/* KPIs */}
       <div className="flex gap-3 mb-5 flex-wrap">
         {[
-          { label: isRTL ? 'إجمالي الفرص' : 'Total', value: filtered.length, color: '#4A7AAB', icon: Grid3X3, onClick: () => { setFilterTemp('all'); setActiveStage('all'); } },
+          { label: isRTL ? 'إجمالي الفرص' : 'Total', value: filtered.length, color: '#4A7AAB', icon: Grid3X3, onClick: () => { setSmartFilters([]); setActiveStage('all'); } },
           { label: isRTL ? 'الميزانيات' : 'Budget', value: fmtBudget(totalBudget) + (isRTL ? ' ج' : ' EGP'), color: '#4A7AAB', icon: Banknote },
           { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', icon: Building2, onClick: () => setActiveStage('closed_won') },
-          { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame, onClick: () => setFilterTemp('hot') },
+          { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame, onClick: () => setSmartFilters([{ field: 'temperature', operator: 'is', value: 'hot' }]) },
           { label: isRTL ? 'التوقع المرجح' : 'Forecast', value: fmtBudget(weightedForecast) + (isRTL ? ' ج' : ' EGP'), color: '#8B5CF6', icon: TrendingUp, title: isRTL ? 'الإيراد المتوقع (الميزانية × نسبة الفوز)' : 'Weighted revenue (budget × win rate)' },
           { label: isRTL ? 'التحويل' : 'Conv.', value: conversionRate + '%', color: '#6B8DB5', icon: Zap },
           { label: isRTL ? 'جديد/أسبوع' : 'New/Wk', value: newThisWeek, color: '#0EA5E9', icon: Plus },
@@ -1223,112 +1285,54 @@ export default function OpportunitiesPage() {
       </Card>
 
       {/* Filters */}
-      <div className="flex gap-2.5 mb-5 flex-wrap items-center">
-        <div className="relative flex-[1_1_180px] max-w-[320px]">
-          <Search
-            size={14}
-            className="absolute top-1/2 -translate-y-1/2 pointer-events-none text-content-muted dark:text-content-muted-dark start-2.5"
-          />
-          <Input
-            placeholder={isRTL ? 'بحث...' : 'Search...'}
-            value={searchInput}
-            onChange={e => setSearchInput(e.target.value)}
-            className="ps-8"
-          />
-        </div>
-        {/* Mobile filter toggle */}
-        <button
-          onClick={() => setMobileFiltersOpen(v => !v)}
-          className="md:hidden flex items-center gap-1.5 px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs font-semibold text-content-muted dark:text-content-muted-dark cursor-pointer font-cairo"
-        >
-          <Filter size={13} />
-          {isRTL ? 'فلاتر' : 'Filters'}
-          {(() => {
-            const count = [filterAgent, filterTemp, filterPriority, filterDept, filterDate, filterScore, filterSource].filter(f => f !== 'all').length;
-            return count > 0 ? (
-              <span className="min-w-[16px] h-4 rounded-full bg-brand-500 text-white text-[9px] font-bold flex items-center justify-center px-1">{count}</span>
-            ) : null;
-          })()}
-        </button>
-        <div className={`flex gap-2.5 flex-wrap items-center ${mobileFiltersOpen ? '' : 'hidden md:flex'}`}>
-        <Select className="!w-auto flex-none min-w-[120px]" value={filterDept} onChange={e => { setFilterDept(e.target.value); setActiveStage('all'); }}>
-          {Object.entries(DEPT_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-        </Select>
-        <Select className="!w-auto flex-none min-w-[120px]" value={filterAgent} onChange={e => setFilterAgent(e.target.value)}>
-          <option value="all">{isRTL ? 'كل المسؤولين' : 'All Agents'}</option>
-          {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
-        </Select>
-        <Select className="!w-auto flex-none min-w-[100px]" value={filterTemp} onChange={e => setFilterTemp(e.target.value)}>
-          <option value="all">{isRTL ? 'كل الحرارة' : 'All Temps'}</option>
-          {Object.entries(TEMP_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
-        </Select>
-        <Select className="!w-auto flex-none min-w-[100px]" value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
-          <option value="all">{isRTL ? 'كل الأولويات' : 'All Priority'}</option>
-          {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
-        </Select>
-        <Select className="!w-auto flex-none min-w-[110px]" value={filterDate} onChange={e => setFilterDate(e.target.value)}>
-          {Object.entries(DATE_FILTERS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-        </Select>
-        <Select className="!w-auto flex-none min-w-[110px]" value={sortBy} onChange={e => setSortBy(e.target.value)}>
-          {Object.entries(SORT_OPTIONS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-        </Select>
-        <Select className="!w-auto flex-none min-w-[100px]" value={filterSource} onChange={e => setFilterSource(e.target.value)}>
-          <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
-          {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
-        </Select>
-        <Select className="!w-auto flex-none min-w-[100px]" value={filterScore} onChange={e => setFilterScore(e.target.value)}>
-          <option value="all">{isRTL ? 'كل الدرجات' : 'All Scores'}</option>
-          <option value="hot">{isRTL ? 'ساخن (70+)' : 'Hot (70+)'}</option>
-          <option value="warm">{isRTL ? 'دافئ (40-69)' : 'Warm (40-69)'}</option>
-          <option value="cold">{isRTL ? 'بارد (<40)' : 'Cold (<40)'}</option>
-        </Select>
-        {(searchInput || filterAgent !== 'all' || filterTemp !== 'all' || filterPriority !== 'all' || filterDept !== 'all' || filterDate !== 'all' || sortBy !== 'newest' || filterScore !== 'all' || filterSource !== 'all') && (
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => { setSearchInput(''); setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); setFilterSource('all'); }}
-          >
-            <X size={14} /> {isRTL ? 'مسح' : 'Clear'}
-          </Button>
-        )}
-        </div>{/* end mobile filter wrapper */}
-        {/* Save / Load Filters */}
-        <div className="relative" ref={savedFilterRef}>
-          <Button variant="ghost" size="sm" onClick={() => setShowSaveFilter(s => !s)} title={isRTL ? 'حفظ / تحميل فلتر' : 'Save / Load Filter'}>
-            <Bookmark size={14} />
-          </Button>
-          {showSaveFilter && (
-            <div className="absolute top-full mt-1 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg z-50 p-3 w-[220px]" style={{ [isRTL ? 'right' : 'left']: 0 }}>
-              <div className="flex gap-1.5 mb-2">
-                <Input value={filterName} onChange={e => setFilterName(e.target.value)} placeholder={isRTL ? 'اسم الفلتر...' : 'Filter name...'} className="text-xs flex-1" />
-                <Button size="sm" onClick={() => {
-                  if (!filterName.trim()) return;
-                  const f = { name: filterName, search: searchInput, filterAgent, filterTemp, filterPriority, filterDept, filterDate, sortBy, activeStage, filterScore, filterSource };
-                  const all = [...savedFilters, f];
-                  saveSavedFilters(all); setSavedFilters(all); setFilterName('');
-                }}>{isRTL ? 'حفظ' : 'Save'}</Button>
-              </div>
-              {savedFilters.length > 0 && (
-                <div className="border-t border-edge dark:border-edge-dark pt-2 max-h-[150px] overflow-y-auto">
-                  {savedFilters.map((f, i) => (
-                    <div key={i} className="flex items-center justify-between py-1.5 hover:bg-gray-50 dark:hover:bg-white/5 px-1.5 rounded-md transition-colors">
-                      <button onClick={() => {
-                        setSearchInput(f.search || ''); setSearch(f.search || ''); setFilterAgent(f.filterAgent || 'all'); setFilterTemp(f.filterTemp || 'all');
-                        setFilterDept(f.filterDept || 'all'); setFilterDate(f.filterDate || 'all'); setSortBy(f.sortBy || 'newest');
-                        setActiveStage(f.activeStage || 'all'); setFilterScore(f.filterScore || 'all'); setFilterPriority(f.filterPriority || 'all'); setFilterSource(f.filterSource || 'all'); setShowSaveFilter(false);
-                      }} className="bg-transparent border-none cursor-pointer text-xs text-content dark:text-content-dark font-semibold font-cairo truncate flex-1 text-start">{f.name}</button>
-                      <button onClick={() => {
-                        const all = savedFilters.filter((_, j) => j !== i);
-                        saveSavedFilters(all); setSavedFilters(all);
-                      }} className="bg-transparent border-none cursor-pointer text-red-400 p-0.5 shrink-0"><X size={11} /></button>
-                    </div>
-                  ))}
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={(f) => { setSmartFilters(f); setActiveStage('all'); }}
+        search={searchInput}
+        onSearchChange={setSearchInput}
+        searchPlaceholder={isRTL ? 'بحث بالاسم، المشروع، الهاتف...' : 'Search name, project, phone...'}
+        sortOptions={SMART_SORT_OPTIONS}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        resultsCount={filtered.length}
+        extraActions={<>
+          {/* Save / Load Filters */}
+          <div className="relative" ref={savedFilterRef}>
+            <Button variant="ghost" size="sm" onClick={() => setShowSaveFilter(s => !s)} title={isRTL ? 'حفظ / تحميل فلتر' : 'Save / Load Filter'}>
+              <Bookmark size={14} />
+            </Button>
+            {showSaveFilter && (
+              <div className="absolute top-full mt-1 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg z-50 p-3 w-[220px]" style={{ [isRTL ? 'right' : 'left']: 0 }}>
+                <div className="flex gap-1.5 mb-2">
+                  <Input value={filterName} onChange={e => setFilterName(e.target.value)} placeholder={isRTL ? 'اسم الفلتر...' : 'Filter name...'} className="text-xs flex-1" />
+                  <Button size="sm" onClick={() => {
+                    if (!filterName.trim()) return;
+                    const f = { name: filterName, search: searchInput, smartFilters, sortBy, activeStage };
+                    const all = [...savedFilters, f];
+                    saveSavedFilters(all); setSavedFilters(all); setFilterName('');
+                  }}>{isRTL ? 'حفظ' : 'Save'}</Button>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="ms-auto flex items-center gap-2.5">
+                {savedFilters.length > 0 && (
+                  <div className="border-t border-edge dark:border-edge-dark pt-2 max-h-[150px] overflow-y-auto">
+                    {savedFilters.map((f, i) => (
+                      <div key={i} className="flex items-center justify-between py-1.5 hover:bg-gray-50 dark:hover:bg-white/5 px-1.5 rounded-md transition-colors">
+                        <button onClick={() => {
+                          setSearchInput(f.search || ''); setSearch(f.search || '');
+                          setSmartFilters(f.smartFilters || []); setSortBy(f.sortBy || 'newest');
+                          setActiveStage(f.activeStage || 'all'); setShowSaveFilter(false);
+                        }} className="bg-transparent border-none cursor-pointer text-xs text-content dark:text-content-dark font-semibold font-cairo truncate flex-1 text-start">{f.name}</button>
+                        <button onClick={() => {
+                          const all = savedFilters.filter((_, j) => j !== i);
+                          saveSavedFilters(all); setSavedFilters(all);
+                        }} className="bg-transparent border-none cursor-pointer text-red-400 p-0.5 shrink-0"><X size={11} /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <Button
             variant={bulkMode ? 'primary' : 'ghost'}
             size="sm"
@@ -1341,9 +1345,8 @@ export default function OpportunitiesPage() {
             <button onClick={() => setViewMode('grid')} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><LayoutGrid size={14} /></button>
             <button onClick={() => { setViewMode('kanban'); setActiveStage('all'); }} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'kanban' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><Columns size={14} /></button>
           </div>
-          <span className="text-xs text-content-muted dark:text-content-muted-dark">{filtered.length} {isRTL ? 'فرصة' : 'opps'}</span>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Bulk Actions Bar */}
       {bulkMode && bulkSelected.size > 0 && (
@@ -1369,7 +1372,7 @@ export default function OpportunitiesPage() {
           </Select>
           <Input type="date" className="!w-auto min-w-[130px] text-xs" onChange={e => { if (e.target.value) bulkSetCloseDate(e.target.value); }} placeholder={isRTL ? 'تاريخ الإغلاق' : 'Close date'} />
           <Button variant="danger" size="sm" onClick={bulkDeleteAll}><Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}</Button>
-          <Button variant="ghost" size="sm" onClick={() => setBulkSelected(new Set(filtered.map(o => o.id)))}>{isRTL ? 'تحديد الكل' : 'Select All'}</Button>
+          <Button variant="ghost" size="sm" onClick={() => setBulkSelected(new Set(sortedFiltered.map(o => o.id)))}>{isRTL ? 'تحديد الكل' : 'Select All'}</Button>
           <Button variant="ghost" size="sm" onClick={() => { setBulkSelected(new Set()); setBulkMode(false); }}><X size={13} /></Button>
         </div>
       )}
@@ -1409,7 +1412,7 @@ export default function OpportunitiesPage() {
               : (isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet')}
           </p>
           {opps.length > 0 ? (
-            <Button variant="secondary" size="sm" onClick={() => { setSearchInput(''); setSearch(''); setFilterAgent('all'); setFilterTemp('all'); setFilterPriority('all'); setFilterDept('all'); setFilterDate('all'); setActiveStage('all'); setSortBy('newest'); setFilterScore('all'); setFilterSource('all'); }}>
+            <Button variant="secondary" size="sm" onClick={() => { setSearchInput(''); setSearch(''); setSmartFilters([]); setActiveStage('all'); setSortBy('newest'); }}>
               <X size={14} /> {isRTL ? 'مسح كل الفلاتر' : 'Clear All Filters'}
             </Button>
           ) : (
@@ -1420,13 +1423,13 @@ export default function OpportunitiesPage() {
         </div>
       ) : viewMode === 'kanban' ? (<>
         <div className="flex items-center gap-3 mb-3 px-1 text-xs text-content-muted dark:text-content-muted-dark">
-          <span className="font-semibold">{filtered.length} {isRTL ? 'فرصة' : 'opportunities'}</span>
+          <span className="font-semibold">{sortedFiltered.length} {isRTL ? 'فرصة' : 'opportunities'}</span>
           <span>•</span>
           <span className="font-bold text-brand-500">{fmtBudget(totalBudget)} {isRTL ? 'ج' : 'EGP'}</span>
         </div>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {currentStages.map(stage => {
-            const stageOpps = filtered.filter(o => o.stage === stage.id);
+            const stageOpps = sortedFiltered.filter(o => o.stage === stage.id);
             const isOver = dragOverStage === stage.id;
             return (
               <div key={stage.id} className="flex-shrink-0 w-[300px]"
@@ -1481,7 +1484,7 @@ export default function OpportunitiesPage() {
                           {bulkSelected.has(opp.id) && '✓'}
                         </button>
                       )}
-                      <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : setSelectedOpp} stageConfig={currentStages} score={scoreMap[opp.id]} />
+                      <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : selectOpp} stageConfig={currentStages} score={scoreMap[opp.id]} isAdmin={isAdmin} />
                     </div>
                   ))}
                 </div>
@@ -1510,7 +1513,7 @@ export default function OpportunitiesPage() {
                   <AlertTriangle size={14} className="text-amber-500" />
                 </div>
               )}
-              <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : setSelectedOpp} stageConfig={getDeptStages(opp.contacts?.department || 'sales')} score={scoreMap[opp.id]} />
+              <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : selectOpp} stageConfig={getDeptStages(opp.contacts?.department || 'sales')} score={scoreMap[opp.id]} isAdmin={isAdmin} />
             </div>
           ))}
         </div>
@@ -1532,7 +1535,7 @@ export default function OpportunitiesPage() {
         )}
       </>)}
 
-      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} existingOpps={opps} />}
+      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} existingOpps={opps} currentUserId={profile?.id} />}
 
       {/* Delete Confirmation */}
       {confirmDelete && (
@@ -1583,7 +1586,17 @@ export default function OpportunitiesPage() {
         {bulkToast}
       </div>
     )}
-    <style>{`@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+    {/* Move Warning Toast */}
+    {moveWarningToast && (
+      <div
+        className="fixed bottom-6 z-[300] bg-gradient-to-br from-amber-500 to-amber-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-semibold animate-[slideUp_0.3s_ease-out]"
+        style={{ [isRTL ? 'right' : 'left']: 24 }}
+      >
+        <AlertTriangle size={16} />
+        {moveWarningToast}
+      </div>
+    )}
+
 
     {/* Lost Reason Modal */}
     {lostReasonModal && (
@@ -1599,19 +1612,29 @@ export default function OpportunitiesPage() {
             {isRTL ? 'لماذا تم خسارة هذه الفرصة؟' : 'Why was this opportunity lost?'}
           </p>
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {Object.entries(LOST_REASONS).map(([k, v]) => (
+            {configLostReasons.map(r => (
               <button
-                key={k}
-                onClick={() => setLostReason(k)}
+                key={r.key}
+                onClick={() => setLostReason(r.key)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-cairo cursor-pointer border-2 transition-all ${
-                  lostReason === k
+                  lostReason === r.key
                     ? 'border-red-500 bg-red-500/10 text-red-500'
                     : 'border-transparent bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
                 }`}
               >
-                {isRTL ? v.ar : v.en}
+                {isRTL ? r.label_ar : r.label_en}
               </button>
             ))}
+            <button
+              onClick={() => setLostReason('other')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold font-cairo cursor-pointer border-2 transition-all ${
+                lostReason === 'other'
+                  ? 'border-red-500 bg-red-500/10 text-red-500'
+                  : 'border-transparent bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
+              }`}
+            >
+              {isRTL ? 'أخرى' : 'Other'}
+            </button>
           </div>
           {lostReason === 'other' && (
             <Input
@@ -1702,6 +1725,18 @@ export default function OpportunitiesPage() {
               >
                 <Trash2 size={15} />
               </button>
+              {handleOppPrev && (
+                <button onClick={handleOppPrev} title={isRTL ? 'السابق' : 'Previous'}
+                  className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md hover:bg-brand-500/10 transition-colors">
+                  <ChevronUp size={16} />
+                </button>
+              )}
+              {handleOppNext && (
+                <button onClick={handleOppNext} title={isRTL ? 'التالي' : 'Next'}
+                  className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md hover:bg-brand-500/10 transition-colors">
+                  <ChevronDown size={16} />
+                </button>
+              )}
               <button
                 onClick={closeDrawer}
                 className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xl leading-none p-1 hover:text-content dark:hover:text-content-dark transition-colors"
@@ -1870,6 +1905,7 @@ export default function OpportunitiesPage() {
                   { label: isRTL ? 'الحرارة' : 'Temperature', value: isRTL ? (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_en, color: (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).color },
                   { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
                   { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
+                  { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', value: (() => { if (!selectedOpp.assigned_by) return '—'; const a = agents.find(ag => ag.id === selectedOpp.assigned_by); return a ? (lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)) : '—'; })(), color: '#6B8DB5' },
                   { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
                   ...(selectedOpp.expected_close_date ? [{ label: isRTL ? 'الإغلاق المتوقع' : 'Expected Close', value: new Date(selectedOpp.expected_close_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: new Date(selectedOpp.expected_close_date) < new Date() ? '#EF4444' : '#6B8DB5' }] : []),
                   ...((selectedOpp.contacts?.source || selectedOpp.source) ? [{ label: isRTL ? 'المصدر' : 'Source', value: (() => { const src = selectedOpp.contacts?.source || selectedOpp.source; return isRTL ? (SOURCE_LABELS[src]?.ar || src) : (SOURCE_LABELS[src]?.en || src); })(), color: '#6B8DB5' }] : []),
@@ -1931,11 +1967,12 @@ export default function OpportunitiesPage() {
                     {stages.map((s, i) => {
                       const isPast = i < currentIdx;
                       const isCurrent = i === currentIdx;
+                      const isBackward = !isAdmin && i < currentIdx;
                       return (
                         <div key={s.id} className="flex items-start flex-1 min-w-0">
                           <button
-                            onClick={() => handleMove(selectedOpp.id, s.id)}
-                            className="flex flex-col items-center gap-1 cursor-pointer bg-transparent border-none w-full group p-0"
+                            onClick={() => !isBackward && handleMove(selectedOpp.id, s.id)}
+                            className={`flex flex-col items-center gap-1 bg-transparent border-none w-full group p-0 ${isBackward ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                           >
                             <div
                               className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${

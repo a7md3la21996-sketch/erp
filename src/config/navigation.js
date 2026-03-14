@@ -20,7 +20,6 @@ export const NAV_ITEMS = [
   { id: 'sales', label: { ar: 'المبيعات', en: 'Sales' }, icon: DollarSign, permission: P.DEALS_VIEW_OWN, children: [
     { id: 'deals', label: { ar: 'الصفقات', en: 'Deals' }, path: '/sales/deals', permission: P.DEALS_VIEW_OWN },
     { id: 'commissions', label: { ar: 'العمولات', en: 'Commissions' }, path: '/sales/commissions', permission: P.COMM_VIEW_OWN },
-    { id: 'targets', label: { ar: 'التارجت', en: 'Targets' }, path: '/sales/targets', permission: P.RPT_SALES },
   ]},
   { id: 'operations', label: { ar: 'العمليات', en: 'Operations' }, icon: ClipboardCheck, permission: P.OPS_VIEW, children: [
     { id: 'ops-overview',    label: { ar: 'نظرة عامة',         en: 'Overview' },          path: '/operations',              permission: P.OPS_VIEW },
@@ -58,5 +57,7 @@ export const NAV_ITEMS = [
     { id: 'general', label: { ar: 'إعدادات عامة', en: 'General' }, path: '/settings/general', permission: P.SETTINGS_MANAGE },
     { id: 'users-mgmt', label: { ar: 'المستخدمين', en: 'Users' }, path: '/settings/users', permission: P.USERS_MANAGE },
     { id: 'audit', label: { ar: 'سجل المراجعة', en: 'Audit Log' }, path: '/settings/audit-log', permission: P.AUDIT_VIEW },
+    { id: 'system-config', label: { ar: 'إعدادات النظام', en: 'System Config' }, path: '/settings/system', permission: P.SETTINGS_MANAGE },
+    { id: 'user-tracking', label: { ar: 'تتبع المستخدمين', en: 'User Tracking' }, path: '/settings/tracking', permission: P.AUDIT_VIEW },
   ]},
 ];

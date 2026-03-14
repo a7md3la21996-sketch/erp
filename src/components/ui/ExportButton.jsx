@@ -1,20 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileSpreadsheet, FileText, Printer, ChevronDown } from 'lucide-react';
 import { exportToExcel, exportToCSV, printTable } from '../../utils/exportUtils';
+import { useClickOutside } from '../../utils/hooks';
 
 export default function ExportButton({ data, filename = 'export', title = '', columns }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
+  const closeMenu = useCallback(() => setOpen(false), []);
+  useClickOutside(ref, closeMenu, open);
 
   const items = [
     { icon: FileSpreadsheet, label: isRTL ? 'تصدير Excel' : 'Export Excel', action: () => exportToExcel(data, filename) },

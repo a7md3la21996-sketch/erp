@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ROLE_PERMISSIONS } from '../config/roles';
+import { logSession, endSession, updateSessionActivity } from '../services/sessionService';
 
 const AuthContext = createContext(null);
 
@@ -48,10 +49,22 @@ export function AuthProvider({ children }) {
     setProfile(profileData);
     setPermissions(ROLE_PERMISSIONS[mockUser.role] || []);
     localStorage.setItem('platform_mock_user', JSON.stringify(profileData));
+    logSession(profileData);
     return profileData;
   };
 
+  // Update session activity every 2 minutes
+  const activityInterval = useRef(null);
+  useEffect(() => {
+    if (user) {
+      activityInterval.current = setInterval(updateSessionActivity, 120000);
+      return () => clearInterval(activityInterval.current);
+    }
+  }, [user]);
+
   const logout = () => {
+    endSession();
+    clearInterval(activityInterval.current);
     localStorage.removeItem('platform_mock_user');
     setUser(null);
     setProfile(null);

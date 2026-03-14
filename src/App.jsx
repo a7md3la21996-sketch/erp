@@ -2,6 +2,7 @@ import { Component, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { SystemConfigProvider } from './contexts/SystemConfigContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute } from './components/auth/PermissionGate';
 import MainLayout from './components/layout/MainLayout';
@@ -19,7 +20,6 @@ const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
 const TasksPage = lazy(() => import('./pages/TasksPage'));
 const PerformancePage = lazy(() => import('./pages/PerformancePage'));
 const FinancePage = lazy(() => import('./pages/finance/FinancePage'));
-const TargetTrackerPage = lazy(() => import('./pages/sales/TargetTrackerPage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 const EmployeesPage = lazy(() => import('./pages/hr/EmployeesPage'));
 const HRPoliciesPage = lazy(() => import('./pages/hr/HRPoliciesPage'));
@@ -38,6 +38,12 @@ const AuditLogPage = lazy(() => import('./pages/settings/AuditLogPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 const MarketingPage = lazy(() => import('./pages/MarketingPage'));
+const SystemConfigPage = lazy(() => import('./pages/settings/SystemConfigPage'));
+const UserTrackingPage = lazy(() => import('./pages/settings/UserTrackingPage'));
+const DealsPage = lazy(() => import('./pages/sales/DealsPage'));
+const CommissionsPage = lazy(() => import('./pages/sales/CommissionsPage'));
+const ProjectsPage = lazy(() => import('./pages/real-estate/ProjectsPage'));
+const UnitsPage = lazy(() => import('./pages/real-estate/UnitsPage'));
 
 function PageLoader() {
   return (
@@ -94,6 +100,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
+        <SystemConfigProvider>
         <AuthProvider>
           <ToastProvider>
             <ErrorBoundary>
@@ -109,8 +116,10 @@ export default function App() {
                 <Route path="/crm/opportunities" element={<OpportunitiesPage />} />
                 <Route path="/crm/lead-pool" element={<LeadPoolPage />} />
                 <Route path="/performance" element={<PerformancePage />} />
-                <Route path="/sales/targets" element={<TargetTrackerPage />} />
-                <Route path="/sales/*" element={<ComingSoon title="Sales" />} />
+                <Route path="/sales/deals" element={<DealsPage />} />
+                <Route path="/sales/commissions" element={<CommissionsPage />} />
+                <Route path="/sales/targets" element={<Navigate to="/reports" replace />} />
+                <Route path="/sales/*" element={<DealsPage />} />
                 <Route path="/finance" element={<FinancePage />} />
                 <Route path="/finance/*" element={<FinancePage />} />
                 <Route path="/hr/employees" element={<EmployeesPage />} />
@@ -128,7 +137,9 @@ export default function App() {
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
                 <Route path="/operations" element={<OperationsPage />} />
                 <Route path="/operations/*" element={<OperationsPage />} />
-                <Route path="/real-estate/*" element={<ComingSoon title="Real Estate" />} />
+                <Route path="/real-estate/projects" element={<ProjectsPage />} />
+                <Route path="/real-estate/units" element={<UnitsPage />} />
+                <Route path="/real-estate/*" element={<ProjectsPage />} />
                 <Route path="/marketing" element={<MarketingPage />} />
                 <Route path="/marketing/*" element={<MarketingPage />} />
                 <Route path="/calendar" element={<CalendarPage />} />
@@ -136,6 +147,8 @@ export default function App() {
                 <Route path="/reports" element={<ReportsPage />} />
                 <Route path="/settings/general" element={<SettingsPage />} />
                 <Route path="/settings/audit-log" element={<AuditLogPage />} />
+                <Route path="/settings/system" element={<SystemConfigPage />} />
+                <Route path="/settings/tracking" element={<UserTrackingPage />} />
                 <Route path="/settings/*" element={<SettingsPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />
@@ -144,6 +157,7 @@ export default function App() {
             </ErrorBoundary>
           </ToastProvider>
         </AuthProvider>
+        </SystemConfigProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

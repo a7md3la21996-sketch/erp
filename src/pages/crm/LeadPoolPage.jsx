@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  Users, Phone, Clock, AlertTriangle, CheckSquare, Filter,
-  Search, UserPlus, Flame, Bell, X, Lock,
+  Users, Phone, Clock, AlertTriangle, CheckSquare,
+  Search, UserPlus, Flame, Bell, Lock,
   Plus, Zap
 } from 'lucide-react';
 import { P } from '../../config/roles';
-import { Button, Card, Input, Select, Badge, KpiCard, Modal, ModalFooter, FilterPill } from '../../components/ui';
+import { Button, Card, Badge, KpiCard, Modal, ModalFooter, Input, SmartFilter, applySmartFilters } from '../../components/ui';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCES = {
@@ -74,6 +74,31 @@ function getLeadScore(lead) {
   return Math.min(Math.round(lead.score + srcWeight * 5), 100);
 }
 
+// ── SmartFilter field definitions ──────────────────────────────────────────
+const SMART_FIELDS = [
+  {
+    id: 'source', label: 'المصدر', labelEn: 'Source', type: 'select',
+    options: Object.entries(SOURCES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })),
+  },
+  {
+    id: 'type', label: 'النوع', labelEn: 'Type', type: 'select',
+    options: [
+      { value: 'fresh', label: 'فريش', labelEn: 'Fresh' },
+      { value: 'cold_call', label: 'كولد كول', labelEn: 'Cold Call' },
+    ],
+  },
+  {
+    id: '_aging_level', label: 'العمر', labelEn: 'Aging', type: 'select',
+    options: [
+      { value: 'fresh', label: 'جديد', labelEn: 'Fresh' },
+      { value: 'warn', label: 'تحذير', labelEn: 'Warn' },
+      { value: 'old', label: 'قديم', labelEn: 'Old' },
+    ],
+  },
+  { id: 'score', label: 'السكور', labelEn: 'Score', type: 'number' },
+  { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created At', type: 'date' },
+];
+
 export default function LeadPoolPage() {
   const { i18n } = useTranslation();
   const { hasPermission, user } = useAuth();
@@ -87,9 +112,7 @@ export default function LeadPoolPage() {
 
   const [leads, setLeads]             = useState(() => makeMockLeads());
   const [selected, setSelected]       = useState([]);
-  const [sourceFilter, setSourceFilter] = useState('all');
-  const [typeFilter, setTypeFilter]   = useState('all');
-  const [agingFilter, setAgingFilter] = useState('all');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [search, setSearch]           = useState('');
   const [poolScope, setPoolScope]     = useState('my_team'); // 'my_team' | 'all'
   const [assignModal, setAssignModal] = useState(null); // lead or 'bulk'
@@ -105,28 +128,35 @@ export default function LeadPoolPage() {
 
   // Filter leads based on permissions and filters
   const visible = useMemo(() => {
-    return leads.filter(l => {
+    // First apply permission + scope filters
+    let result = leads.filter(l => {
       if (!canViewFresh && l.type === 'fresh') return false;
       if (canViewAll && poolScope === 'my_team' && l.team !== (user?.team_id || 'team1')) return false;
-      if (sourceFilter !== 'all' && l.source !== sourceFilter) return false;
-      if (typeFilter !== 'all' && l.type !== typeFilter) return false;
-      if (agingFilter !== 'all') {
-        const aging = getAging(l.created_at);
-        if (agingFilter !== aging.level) return false;
-      }
-      if (search) {
-        const q = search.toLowerCase();
-        const src = SOURCES[l.source];
-        if (!l.name.toLowerCase().includes(q) && !l.phone.includes(q) && !(src?.ar.includes(q)) && !(src?.en.toLowerCase().includes(q))) return false;
-      }
       return true;
-    }).sort((a, b) => {
-      // Pool Priority Queue: Score DESC, then Aging ASC
+    });
+
+    // Add computed _aging_level for SmartFilter
+    result = result.map(l => ({ ...l, _aging_level: getAging(l.created_at).level }));
+
+    // Apply smart filters
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+
+    // Apply search
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(l => {
+        const src = SOURCES[l.source];
+        return l.name.toLowerCase().includes(q) || l.phone.includes(q) || src?.ar.includes(q) || src?.en.toLowerCase().includes(q);
+      });
+    }
+
+    // Sort: Score DESC, then Aging ASC
+    return result.sort((a, b) => {
       const scoreDiff = getLeadScore(b) - getLeadScore(a);
       if (scoreDiff !== 0) return scoreDiff;
       return new Date(a.created_at) - new Date(b.created_at);
     });
-  }, [leads, canViewFresh, canViewAll, poolScope, sourceFilter, typeFilter, agingFilter, search, tick, user?.team_id]);
+  }, [leads, canViewFresh, canViewAll, poolScope, smartFilters, search, tick, user?.team_id]);
 
   // Stats
   const stats = useMemo(() => {
@@ -172,6 +202,31 @@ export default function LeadPoolPage() {
 
   const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   const toggleAll = () => setSelected(prev => prev.length === visible.length ? [] : visible.map(l => l.id));
+
+  const poolScopeToggle = canViewAll ? (
+    <div className="flex rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
+      {[
+        { value: 'my_team', ar: 'تيمي', en: 'My Team' },
+        { value: 'all',     ar: 'الكل',  en: 'All Teams' },
+      ].map(opt => (
+        <button key={opt.value} onClick={() => setPoolScope(opt.value)} className={`
+          px-3.5 py-[7px] text-xs font-semibold border-none cursor-pointer transition-all duration-150
+          ${poolScope === opt.value
+            ? 'bg-brand-500 text-white'
+            : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}
+        `}>
+          {lang === 'ar' ? opt.ar : opt.en}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  const selectAllBtn = canAssign ? (
+    <Button variant="ghost" size="sm" onClick={toggleAll}>
+      <CheckSquare size={13} />
+      {lang === 'ar' ? 'تحديد الكل' : 'Select All'}
+    </Button>
+  ) : null;
 
   return (
     <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -224,75 +279,17 @@ export default function LeadPoolPage() {
         </div>
       )}
 
-      {/* Filters */}
-      <Card className={`px-3.5 py-2.5 mb-3 flex gap-2 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-        {/* Search */}
-        <div className="relative flex-1 min-w-[160px]">
-          <Search size={13} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-2.5" />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
-            size="sm"
-            className="ps-[30px] pe-2.5"
-          />
-        </div>
-
-        {/* Type filter */}
-        {canViewFresh && ['all','fresh','cold_call'].map(t => (
-          <FilterPill
-            key={t}
-            active={typeFilter === t}
-            onClick={() => setTypeFilter(t)}
-            label={t === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : t === 'fresh' ? (lang === 'ar' ? 'فريش' : 'Fresh') : (lang === 'ar' ? 'كولد كول' : 'Cold Call')}
-          />
-        ))}
-
-        {/* Source filter */}
-        <Select value={sourceFilter} onChange={e => setSourceFilter(e.target.value)} size="sm" className="w-auto flex-none">
-          <option value="all">{lang === 'ar' ? 'كل المصادر' : 'All Sources'}</option>
-          {Object.entries(SOURCES).map(([k, v]) => (
-            <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
-          ))}
-        </Select>
-
-        {/* Aging filter */}
-        {['all','fresh','warn','old'].map(a => (
-          <FilterPill
-            key={a}
-            active={agingFilter === a}
-            onClick={() => setAgingFilter(a)}
-            label={a === 'all' ? (lang === 'ar' ? 'الكل' : 'All') : a === 'fresh' ? (lang === 'ar' ? 'جديد' : 'Fresh') : a === 'warn' ? (lang === 'ar' ? 'تحذير' : 'Warn') : (lang === 'ar' ? 'قديم' : 'Old')}
-          />
-        ))}
-
-        {/* Team / Global Pool Toggle — visible to managers only */}
-        {canViewAll && (
-          <div className="flex rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
-            {[
-              { value: 'my_team', ar: 'تيمي', en: 'My Team' },
-              { value: 'all',     ar: 'الكل',  en: 'All Teams' },
-            ].map(opt => (
-              <button key={opt.value} onClick={() => setPoolScope(opt.value)} className={`
-                px-3.5 py-[7px] text-xs font-semibold border-none cursor-pointer transition-all duration-150
-                ${poolScope === opt.value
-                  ? 'bg-brand-500 text-white'
-                  : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}
-              `}>
-                {lang === 'ar' ? opt.ar : opt.en}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Select all */}
-        {canAssign && (
-          <Button variant="ghost" size="sm" onClick={toggleAll}>
-            <CheckSquare size={13} />
-            {lang === 'ar' ? 'تحديد الكل' : 'Select All'}
-          </Button>
-        )}
-      </Card>
+      {/* SmartFilter */}
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={lang === 'ar' ? 'بحث بالاسم أو الموبايل...' : 'Search by name or phone...'}
+        resultsCount={visible.length}
+        extraActions={<>{poolScopeToggle}{selectAllBtn}</>}
+      />
 
       {/* Leads List */}
       <Card className="overflow-hidden">

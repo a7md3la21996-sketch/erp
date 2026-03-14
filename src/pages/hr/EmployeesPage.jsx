@@ -2,11 +2,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees, fetchDepartments } from '../../services/employeesService';
 import {
-  Users, Plus, Search, Eye, Edit2, FileText,
-  AlertTriangle, Clock, ChevronDown, Building2,
-  UserCheck, Briefcase, Shield, X, Check
+  Users, Plus, Eye, Edit2, FileText,
+  AlertTriangle, Clock, Building2,
+  UserCheck
 } from 'lucide-react';
-import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, Select as UISelect, ExportButton } from '../../components/ui';
+import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../../components/ui';
 
 
 /* ─── Icon Button ─── */
@@ -35,22 +35,6 @@ function DynBadge({ label, color = '#4A7AAB' }) {
   );
 }
 
-/* ─── Select ─── */
-function FilterSelect({ value, onChange, options, isRTL }) {
-  return (
-    <div className="relative inline-flex items-center">
-      <select
-        value={value} onChange={e => onChange(e.target.value)}
-        className="appearance-none px-3 py-2 pe-8 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs cursor-pointer outline-none transition-colors duration-150 focus:border-brand-500"
-        dir={isRTL ? 'rtl' : 'ltr'}
-      >
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <ChevronDown size={14} className="absolute text-content-muted dark:text-content-muted-dark pointer-events-none" style={{ [isRTL ? 'left' : 'right']: 10 }} />
-    </div>
-  );
-}
-
 /* ══════════════════════════════════════════════
    MAIN PAGE
 ══════════════════════════════════════════════ */
@@ -60,9 +44,7 @@ export default function EmployeesPage() {
   const lang  = i18n.language;
 
   const [search,  setSearch]  = useState('');
-  const [deptF,   setDeptF]   = useState('all');
-  const [contractF, setContractF] = useState('all');
-  const [view,    setView]    = useState('list');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [selected, setSelected] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -84,17 +66,48 @@ export default function EmployeesPage() {
   const probation = employees.filter(e => e.employment_type === 'probation');
   const active    = employees.filter(e => e.status === 'active');
 
-  const filtered = useMemo(() => employees.filter(e => {
-    const name = (isRTL ? e.full_name_ar : e.full_name_en) || e.full_name_ar || '';
-    const matchSearch = name.toLowerCase().includes(search.toLowerCase()) ||
-                        (e.employee_id || '').toLowerCase().includes(search.toLowerCase());
-    const matchDept   = deptF === 'all' || e.department === deptF;
-    const matchCont   = contractF === 'all' || e.employment_type === contractF;
-    return matchSearch && matchDept && matchCont;
-  }), [search, deptF, contractF, isRTL]);
+  const SMART_FIELDS = useMemo(() => [
+    {
+      id: 'department', label: 'القسم', labelEn: 'Department', type: 'select',
+      options: departments.map(d => ({ value: d.id, label: d.name_ar, labelEn: d.name_en })),
+    },
+    {
+      id: 'employment_type', label: 'نوع العقد', labelEn: 'Contract Type', type: 'select',
+      options: [
+        { value: 'full_time', label: 'دوام كامل', labelEn: 'Full Time' },
+        { value: 'part_time', label: 'دوام جزئي', labelEn: 'Part Time' },
+        { value: 'probation', label: 'فترة تجربة', labelEn: 'Probation' },
+      ],
+    },
+    {
+      id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select',
+      options: [
+        { value: 'active', label: 'نشط', labelEn: 'Active' },
+        { value: 'on_leave', label: 'إجازة', labelEn: 'On Leave' },
+        { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive' },
+      ],
+    },
+    { id: 'salary', label: 'الراتب', labelEn: 'Salary', type: 'number' },
+    { id: 'hire_date', label: 'تاريخ التعيين', labelEn: 'Hire Date', type: 'date' },
+  ], [departments]);
 
-  const deptOptions  = [{ value: 'all', label: lang === 'ar' ? 'كل الأقسام' : 'All Departments' }, ...departments.map(d => ({ value: d.id, label: isRTL ? d.name_ar : d.name_en }))];
-  const contractOpts = [{ value: 'all', label: lang === 'ar' ? 'كل العقود' : 'All Contracts' }, { value: 'full_time', label: lang === 'ar' ? 'دوام كامل' : 'Full Time' }, { value: 'part_time', label: lang === 'ar' ? 'دوام جزئي' : 'Part Time' }, { value: 'probation', label: lang === 'ar' ? 'فترة تجربة' : 'Probation' }];
+  const filtered = useMemo(() => {
+    let result = employees;
+
+    // Apply smart filters
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+
+    // Apply search
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(e => {
+        const name = (isRTL ? e.full_name_ar : e.full_name_en) || e.full_name_ar || '';
+        return name.toLowerCase().includes(q) || (e.employee_id || '').toLowerCase().includes(q);
+      });
+    }
+
+    return result;
+  }, [employees, smartFilters, SMART_FIELDS, search, isRTL]);
 
   const statusColor = s => s === 'active' ? '#4A7AAB' : s === 'on_leave' ? '#6B8DB5' : '#94a3b8';
   const statusLabel = s => ({ active: lang === 'ar' ? 'نشط' : 'Active', on_leave: lang === 'ar' ? 'إجازة' : 'On Leave', inactive: lang === 'ar' ? 'غير نشط' : 'Inactive' }[s] || s);
@@ -158,24 +171,16 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* ── Toolbar ── */}
-      <Card className={`!rounded-xl px-4 py-3.5 mb-4 flex items-center gap-2.5 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
-        {/* Search */}
-        <div className="relative flex-1 min-w-[180px]">
-          <Search size={14} className="absolute top-1/2 -translate-y-1/2 pointer-events-none text-content-muted dark:text-content-muted-dark" style={{ [isRTL ? 'right' : 'left']: 12 }} />
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employees...'}
-            className="w-full rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none box-border transition-colors focus:border-brand-500"
-            style={{ padding: isRTL ? '8px 36px 8px 12px' : '8px 12px 8px 36px', direction: isRTL ? 'rtl' : 'ltr' }}
-          />
-        </div>
-        <FilterSelect value={deptF}     onChange={setDeptF}     options={deptOptions}  isRTL={isRTL} />
-        <FilterSelect value={contractF} onChange={setContractF} options={contractOpts} isRTL={isRTL} />
-        <span className="text-xs text-content-muted dark:text-content-muted-dark ms-auto">
-          {filtered.length} {lang === 'ar' ? 'نتيجة' : 'results'}
-        </span>
-      </Card>
+      {/* ── SmartFilter ── */}
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employees...'}
+        resultsCount={filtered.length}
+      />
 
       {/* ── Table ── */}
       <Table>

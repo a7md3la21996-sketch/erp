@@ -1,8 +1,8 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import supabase from '../../lib/supabase';
-import { History, Search, ChevronDown, ChevronUp, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
-import { Button, Input, Select, Badge, Table, Th, Td, Tr, ExportButton } from '../../components/ui';
+import { History, ChevronDown, ChevronUp, Plus, Pencil, Trash2, RefreshCw } from 'lucide-react';
+import { Button, Badge, Table, Th, Td, Tr, ExportButton, SmartFilter } from '../../components/ui';
 
 const ACTION_CONFIG = {
   create: { variant: 'success', icon: Plus, ar: 'إنشاء', en: 'Create' },
@@ -19,6 +19,23 @@ const ENTITY_LABELS = {
   invoice: { ar: 'فاتورة', en: 'Invoice' },
 };
 
+const SMART_FIELDS = [
+  {
+    id: 'action', label: 'الإجراء', labelEn: 'Action', type: 'select',
+    options: [
+      { value: 'create', label: 'إنشاء', labelEn: 'Create' },
+      { value: 'update', label: 'تعديل', labelEn: 'Update' },
+      { value: 'delete', label: 'حذف', labelEn: 'Delete' },
+    ],
+  },
+  {
+    id: 'entity', label: 'الكيان', labelEn: 'Entity', type: 'select',
+    options: Object.entries(ENTITY_LABELS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })),
+  },
+  { id: 'description', label: 'الوصف', labelEn: 'Description', type: 'text' },
+  { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
+];
+
 export default function AuditLogPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -27,11 +44,21 @@ export default function AuditLogPage() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [filterAction, setFilterAction] = useState('');
-  const [filterEntity, setFilterEntity] = useState('');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 30;
+
+  // Extract action and entity filter values from smartFilters for server-side filtering
+  const filterAction = useMemo(() => {
+    const f = smartFilters.find(f => f.field === 'action' && f.operator === 'is');
+    return f?.value || '';
+  }, [smartFilters]);
+
+  const filterEntity = useMemo(() => {
+    const f = smartFilters.find(f => f.field === 'entity' && f.operator === 'is');
+    return f?.value || '';
+  }, [smartFilters]);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -57,7 +84,14 @@ export default function AuditLogPage() {
 
   useEffect(() => { fetchLogs(); }, [page, filterAction, filterEntity]);
 
-  const handleSearch = () => { setPage(0); fetchLogs(); };
+  const handleSearchKeyDown = (e) => {
+    if (e?.key === 'Enter') { setPage(0); fetchLogs(); }
+  };
+
+  // We override onSearchChange to also handle Enter-based searching
+  const handleSearchChange = (val) => {
+    setSearch(val);
+  };
 
   const formatDate = (iso) => {
     if (!iso) return '';
@@ -95,31 +129,16 @@ export default function AuditLogPage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2.5 mb-4 flex-wrap">
-        <div className="flex-1 min-w-[200px] relative">
-          <Search size={16} className="absolute top-2.5 text-content-muted dark:text-content-muted-dark ltr:left-3 rtl:right-3" />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            placeholder={isRTL ? 'بحث في السجل...' : 'Search logs...'}
-            className="ltr:!pl-9 rtl:!pr-9"
-          />
-        </div>
-        <Select value={filterAction} onChange={e => { setFilterAction(e.target.value); setPage(0); }}>
-          <option value="">{isRTL ? 'كل الإجراءات' : 'All Actions'}</option>
-          <option value="create">{isRTL ? 'إنشاء' : 'Create'}</option>
-          <option value="update">{isRTL ? 'تعديل' : 'Update'}</option>
-          <option value="delete">{isRTL ? 'حذف' : 'Delete'}</option>
-        </Select>
-        <Select value={filterEntity} onChange={e => { setFilterEntity(e.target.value); setPage(0); }}>
-          <option value="">{isRTL ? 'كل الكيانات' : 'All Entities'}</option>
-          {Object.entries(ENTITY_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>
-          ))}
-        </Select>
-      </div>
+      {/* SmartFilter */}
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={(f) => { setSmartFilters(f); setPage(0); }}
+        search={search}
+        onSearchChange={handleSearchChange}
+        searchPlaceholder={isRTL ? 'بحث في السجل... (Enter للبحث)' : 'Search logs... (Enter to search)'}
+        resultsCount={logs.length}
+      />
 
       {/* Table */}
       <Table>

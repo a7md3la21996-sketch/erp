@@ -3,20 +3,24 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
-import { Phone, MessageCircle, Plus, Upload, Download, Search, Ban, X, Flame, Pin, PhoneCall, Merge, SkipForward, MoreVertical, Bell, FileDown, Trash2 } from 'lucide-react';
+import { useSystemConfig } from '../contexts/SystemConfigContext';
+import { Phone, MessageCircle, Plus, Upload, Download, Search, Ban, X, Pin, PhoneCall, Merge, SkipForward, MoreVertical, Bell, FileDown, Trash2, Zap } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, createActivity,
 } from '../services/contactsService';
+import { fetchCampaigns } from '../services/marketingService';
+import { notifyLeadAssigned } from '../services/notificationsService';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton, Select, Input, Button } from '../components/ui';
+import { PageSkeleton, Button, SmartFilter, applySmartFilters } from '../components/ui';
+import { thCls } from '../utils/tableStyles';
 
 // ── Split modules ──────────────────────────────────────────────────────────
 import {
   SOURCE_LABELS, SOURCE_EN,
-  TEMP, TYPE, MOCK,
+  TYPE, MOCK,
   daysSince, initials, avatarColor, normalizePhone,
-  Chip, PhoneCell,
+  Chip, PhoneCell, COUNTRY_CODES,
 } from './crm/contacts/constants';
 import AddContactModal from './crm/contacts/AddContactModal';
 import LogCallModal from './crm/contacts/LogCallModal';
@@ -34,6 +38,7 @@ export default function ContactsPage() {
   const highlightId = searchParams.get('highlight');
 
   const [contacts, setContacts] = useState([]);
+  const [campaignsList, setCampaignsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
@@ -42,15 +47,17 @@ export default function ContactsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
   const [filterType, setFilterType] = useState('all');
-  const [filterSource, setFilterSource] = useState('all');
-  const [filterDept, setFilterDept] = useState('all');
-  const [filterTemp, setFilterTemp] = useState('all');
   const [showBlacklisted, setShowBlacklisted] = useState(false);
-  const [sortBy, setSortBy] = useState('last_activity');
+  const [sortBy, setSortBy] = useState('created');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [blacklistTarget, setBlacklistTarget] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [openWithAction, setOpenWithAction] = useState(false);
+  const [quickActionTarget, setQuickActionTarget] = useState(null);
+  const [quickActionForm, setQuickActionForm] = useState({ type: 'call', result: '', description: '' });
+  const [savingQuickAction, setSavingQuickAction] = useState(false);
   const [logCallTarget, setLogCallTarget] = useState(null);
   const [reminderTarget, setReminderTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
@@ -71,14 +78,71 @@ export default function ContactsPage() {
   const [mergePreview, setMergePreview] = useState(null);
   const isAdmin = profile?.role === 'admin';
 
+  const MAX_PINS = 4;
   const togglePin = (id) => {
     setPinnedIds(prev => {
-      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      if (prev.includes(id)) {
+        const next = prev.filter(x => x !== id);
+        localStorage.setItem('platform_pinned_contacts', JSON.stringify(next));
+        return next;
+      }
+      if (prev.length >= MAX_PINS) return prev;
+      const next = [...prev, id];
       localStorage.setItem('platform_pinned_contacts', JSON.stringify(next));
       return next;
     });
   };
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+
+  const { activityResults: configResults } = useSystemConfig();
+  const QUICK_RESULTS = useMemo(() => {
+    if (configResults && Object.keys(configResults).length > 0) return configResults;
+    return {
+      call: [
+        { value: 'answered', label_ar: 'رد', label_en: 'Answered', color: '#10B981' },
+        { value: 'no_answer', label_ar: 'لم يرد', label_en: 'No Answer', color: '#F59E0B' },
+        { value: 'busy', label_ar: 'مشغول', label_en: 'Busy', color: '#EF4444' },
+        { value: 'switched_off', label_ar: 'مغلق', label_en: 'Switched Off', color: '#6b7280' },
+      ],
+      whatsapp: [
+        { value: 'replied', label_ar: 'رد', label_en: 'Replied', color: '#10B981' },
+        { value: 'seen', label_ar: 'شاف', label_en: 'Seen', color: '#3B82F6' },
+        { value: 'delivered', label_ar: 'وصلت', label_en: 'Delivered', color: '#F59E0B' },
+      ],
+      email: [
+        { value: 'replied', label_ar: 'رد', label_en: 'Replied', color: '#10B981' },
+        { value: 'sent', label_ar: 'تم الإرسال', label_en: 'Sent', color: '#F59E0B' },
+      ],
+    };
+  }, [configResults]);
+
+  const handleQuickAction = async (contact) => {
+    if (!quickActionForm.type) return;
+    setSavingQuickAction(true);
+    const results = QUICK_RESULTS[quickActionForm.type] || [];
+    const resultObj = results.find(r => r.value === quickActionForm.result);
+    const resultLabel = resultObj ? (isRTL ? resultObj.label_ar : resultObj.label_en) : '';
+    const desc = resultLabel ? `${resultLabel}${quickActionForm.description ? ' — ' + quickActionForm.description : ''}` : quickActionForm.description;
+
+    try {
+      await createActivity({
+        type: quickActionForm.type,
+        description: desc || (isRTL ? 'إجراء سريع' : 'Quick action'),
+        contact_id: contact.id,
+        created_at: new Date().toISOString(),
+      });
+      if (contact.contact_status === 'new' || !contact.contact_status) {
+        const updated = { ...contact, contact_status: 'contacted' };
+        setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; });
+        updateContact(updated.id, updated).catch(() => {});
+      }
+      toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
+    } catch {
+      toast.success(isRTL ? 'تم حفظ النشاط محلياً' : 'Activity saved locally');
+    }
+    setSavingQuickAction(false);
+    setQuickActionTarget(null);
+  };
 
   useEffect(() => {
     const close = () => setOpenMenuId(null);
@@ -89,6 +153,7 @@ export default function ContactsPage() {
   useEffect(() => {
     const handler = (e) => {
       if (e.key !== 'Escape') return;
+      if (quickActionTarget) { setQuickActionTarget(null); return; }
       if (batchCallMode) { setBatchCallMode(false); return; }
       if (mergePreview) { setMergePreview(null); setMergeTargets([]); setMergeMode(false); return; }
 
@@ -97,7 +162,7 @@ export default function ContactsPage() {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [batchCallMode, mergePreview, bulkReassignModal, confirmAction]);
+  }, [quickActionTarget, batchCallMode, mergePreview, bulkReassignModal, confirmAction]);
 
   const handleDelete = (id) => {
     const contact = contacts.find(c => c.id === id);
@@ -131,14 +196,17 @@ export default function ContactsPage() {
   };
 
 
-  const handleBulkReassign = (agentName) => {
-    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName } : c);
+  const handleBulkReassign = async (agentName) => {
+    const assignedByName = profile?.full_name_ar || '—';
+    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_by_name: assignedByName } : c);
     setContacts(updated);
     localStorage.setItem('platform_contacts', JSON.stringify(updated));
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
+    // Persist to DB + audit log
+    await Promise.all(selectedIds.map(id => updateContact(id, { assigned_to_name: agentName, assigned_by_name: assignedByName }).catch(() => {})));
   };
 
 
@@ -171,6 +239,8 @@ export default function ContactsPage() {
     };
     if (profile) load();
     else { setContacts(MOCK); setLoading(false); }
+    // Load campaigns for ID linking
+    fetchCampaigns().then(c => setCampaignsList(c)).catch(() => {});
   }, [profile]);
 
   // Handle highlight query param (scroll to & select contact)
@@ -187,30 +257,90 @@ export default function ContactsPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const counts = { total: contacts.length, hot: 0, blacklisted: 0 };
+    const counts = { total: contacts.length, blacklisted: 0 };
     Object.keys(TYPE).forEach(k => { counts[k] = 0; });
     contacts.forEach(c => {
       if (c.contact_type && counts[c.contact_type] !== undefined) counts[c.contact_type]++;
-      if (c.temperature === 'hot') counts.hot++;
       if (c.is_blacklisted) counts.blacklisted++;
     });
     return counts;
   }, [contacts]);
+
+  // Smart filter field definitions
+  // Detect country from phone number prefix
+  const detectCountry = (phone) => {
+    if (!phone) return '';
+    const p = phone.replace(/\s+/g, '');
+    if (p.startsWith('+20') || (p.startsWith('01') && ['0','1','2','5'].includes(p[2]))) return 'EG';
+    if (p.startsWith('+966') || p.startsWith('05')) return 'SA';
+    if (p.startsWith('+971')) return 'AE';
+    if (p.startsWith('+965')) return 'KW';
+    if (p.startsWith('+974')) return 'QA';
+    if (p.startsWith('+968')) return 'OM';
+    if (p.startsWith('+973')) return 'BH';
+    if (p.startsWith('+962') || p.startsWith('07')) return 'JO';
+    if (p.startsWith('+964') || p.startsWith('09')) return 'IQ';
+    if (p.startsWith('+961')) return 'LB';
+    if (p.startsWith('+218')) return 'LY';
+    if (p.startsWith('+212')) return 'MA';
+    if (p.startsWith('+216')) return 'TN';
+    if (p.startsWith('+249')) return 'SD';
+    return '';
+  };
+
+  const COUNTRY_OPTIONS = COUNTRY_CODES.filter(c => ['EG','SA','AE','KW','QA','OM','BH','JO','IQ','LB','LY','MA','TN','SD'].includes(c.country)).map(c => ({ value: c.country, label: c.labelAr, labelEn: c.label }));
+
+  const SMART_FIELDS = useMemo(() => [
+    { id: 'contact_type', label: 'النوع', labelEn: 'Type', type: 'select', options: [
+      { value: 'lead', label: 'ليد', labelEn: 'Lead' },
+      { value: 'cold', label: 'كولد كول', labelEn: 'Cold Call' },
+      { value: 'client', label: 'عميل', labelEn: 'Client' },
+      { value: 'supplier', label: 'مورد', labelEn: 'Supplier' },
+      { value: 'developer', label: 'مطور عقاري', labelEn: 'Developer' },
+      { value: 'applicant', label: 'متقدم لوظيفة', labelEn: 'Applicant' },
+      { value: 'partner', label: 'شريك', labelEn: 'Partner' },
+    ]},
+    { id: 'source', label: 'المصدر', labelEn: 'Source', type: 'select', options: Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: v, labelEn: SOURCE_EN[k] || v })) },
+    { id: 'department', label: 'القسم', labelEn: 'Department', type: 'select', options: [
+      { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
+      { value: 'hr', label: 'HR', labelEn: 'HR' },
+      { value: 'finance', label: 'المالية', labelEn: 'Finance' },
+      { value: 'marketing', label: 'التسويق', labelEn: 'Marketing' },
+      { value: 'operations', label: 'العمليات', labelEn: 'Operations' },
+    ]},
+    { id: 'full_name', label: 'الاسم', labelEn: 'Name', type: 'text' },
+    { id: 'email', label: 'الإيميل', labelEn: 'Email', type: 'text' },
+    { id: 'phone', label: 'الهاتف', labelEn: 'Phone', type: 'text' },
+    { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
+    { id: 'last_activity_at', label: 'آخر نشاط', labelEn: 'Last Activity', type: 'date' },
+    { id: 'lead_score', label: 'Lead Score', labelEn: 'Lead Score', type: 'number' },
+    { id: 'campaign_name', label: 'الحملة', labelEn: 'Campaign', type: 'text' },
+    { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
+  ], []);
+
+  const SORT_OPTIONS = useMemo(() => [
+    { value: 'created', label: 'ترتيب: الأحدث', labelEn: 'Sort: Newest' },
+    { value: 'last_activity', label: 'ترتيب: آخر نشاط', labelEn: 'Sort: Last Activity' },
+    { value: 'score', label: 'ترتيب: Lead Score', labelEn: 'Sort: Lead Score' },
+    { value: 'name', label: 'ترتيب: الاسم', labelEn: 'Sort: Name' },
+    { value: 'stale', label: 'ترتيب: يحتاج متابعة', labelEn: 'Sort: Needs Follow-up' },
+  ], []);
 
   // Filter + Sort
   const filtered = useMemo(() => {
     let list = contacts.filter(c => {
       if (!showBlacklisted && c.is_blacklisted) return false;
       if (filterType !== 'all' && c.contact_type !== filterType) return false;
-      if (filterSource !== 'all' && c.source !== filterSource) return false;
-      if (filterTemp !== 'all' && c.temperature !== filterTemp) return false;
-      if (filterDept !== 'all' && (c.department || 'sales') !== filterDept) return false;
       if (search) {
         const q = search.toLowerCase();
-        return (c.full_name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q) || c.campaign_name?.toLowerCase().includes(q));
+        return (c.full_name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q) || c.campaign_name?.toLowerCase().includes(q) || String(c.id).toLowerCase().includes(q));
       }
       return true;
     });
+    // Compute country from phone for filtering
+    list = list.map(c => c._country ? c : { ...c, _country: detectCountry(c.phone) });
+    // Apply smart filters
+    list = applySmartFilters(list, smartFilters, SMART_FIELDS);
     list.sort((a, b) => {
       const aPinned = pinnedIds.includes(a.id) ? 0 : 1;
       const bPinned = pinnedIds.includes(b.id) ? 0 : 1;
@@ -219,24 +349,32 @@ export default function ContactsPage() {
       if (sortBy === 'score') return (b.lead_score || 0) - (a.lead_score || 0);
       if (sortBy === 'name') return (a.full_name || '').localeCompare(b.full_name || '', 'ar');
       if (sortBy === 'created') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-      if (sortBy === 'temperature') {
-        const order = { hot: 0, warm: 1, cool: 2, cold: 3 };
-        return (order[a.temperature] ?? 4) - (order[b.temperature] ?? 4);
-      }
       if (sortBy === 'stale') {
         return new Date(a.last_activity_at || 0) - new Date(b.last_activity_at || 0);
       }
       return 0;
     });
     return list;
-  }, [contacts, filterType, filterSource, filterTemp, filterDept, search, showBlacklisted, sortBy, pinnedIds]);
+  }, [contacts, filterType, search, showBlacklisted, sortBy, pinnedIds, smartFilters, SMART_FIELDS]);
 
-  useEffect(() => { setPage(1); setSelectedIds([]); }, [filterType, filterSource, filterTemp, filterDept, search, showBlacklisted, sortBy]);
+  useEffect(() => { setPage(1); setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+
+  const selectedIdx = selected ? filtered.findIndex(c => c.id === selected.id) : -1;
+  const handlePrev = selectedIdx > 0 ? () => {
+    setSelected(filtered[selectedIdx - 1]);
+    setOpenWithAction(false);
+    setPage(Math.floor((selectedIdx - 1) / PAGE_SIZE) + 1);
+  } : null;
+  const handleNext = selectedIdx >= 0 && selectedIdx < filtered.length - 1 ? () => {
+    setSelected(filtered[selectedIdx + 1]);
+    setOpenWithAction(false);
+    setPage(Math.floor((selectedIdx + 1) / PAGE_SIZE) + 1);
+  } : null;
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const toggleSelectAll = () => {
@@ -246,8 +384,8 @@ export default function ContactsPage() {
   };
 
   const exportCSV = (list) => {
-    const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','الحرارة','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Temperature','Platform','Company','Created'];
-    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.temperature || '', c.platform || '', c.company || '', c.created_at || '']);
+    const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Platform','Company','Created'];
+    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.platform || '', c.company || '', c.created_at || '']);
     const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -257,6 +395,10 @@ export default function ContactsPage() {
   };
 
   const handleSave = async (form) => {
+    const matchedCampaign = form.campaign_name ? campaignsList.find(c => c.name_en?.toLowerCase() === form.campaign_name.toLowerCase() || c.name_ar?.toLowerCase() === form.campaign_name.toLowerCase()) : null;
+    const campaign_interactions = form.campaign_name
+      ? [{ campaign: form.campaign_name, campaign_id: matchedCampaign?.id || null, source: form.source, platform: form.platform, date: new Date().toISOString() }]
+      : [];
     const newContact = {
       ...form,
       id: String(Math.max(0, ...contacts.map(c => parseInt(c.id) || 0)) + 1),
@@ -266,6 +408,8 @@ export default function ContactsPage() {
       cold_status: form.contact_type === 'cold' ? 'not_contacted' : null,
       is_blacklisted: false,
       assigned_to_name: profile?.full_name_ar || '—',
+      assigned_by_name: profile?.full_name_ar || '—',
+      campaign_interactions,
       created_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString(),
     };
@@ -287,8 +431,7 @@ export default function ContactsPage() {
     if (selected?.id === contact.id) setSelected(null);
   };
 
-  const thCls = `text-xs text-[#6B8DB5] font-bold uppercase tracking-wide px-3.5 py-3 bg-gray-50 dark:bg-brand-500/[0.08] border-b border-edge dark:border-edge-dark whitespace-nowrap text-start`;
-  const tdCls = `px-3.5 py-3 border-b border-edge dark:border-edge-dark align-middle text-xs text-content dark:text-content-dark text-start`;
+  const tdCls = `px-4 py-3.5 border-b border-edge/50 dark:border-edge-dark/50 align-middle text-xs text-content dark:text-content-dark text-start`;
 
   if (loading) return <PageSkeleton hasKpis={false} tableRows={8} tableCols={7} />;
 
@@ -299,7 +442,7 @@ export default function ContactsPage() {
         <div>
           <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p className="mt-1 mb-0 text-xs text-content-muted dark:text-content-muted-dark">
-            {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${filtered.length} ${isRTL ? 'نتيجة' : 'results'}`}
+            {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${filtered.length} ${isRTL ? 'نتيجة' : (filtered.length === 1 ? 'result' : 'results')}`}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -368,53 +511,27 @@ export default function ContactsPage() {
         <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
           <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
         </button>
-        <button onClick={() => setFilterTemp(filterTemp === 'hot' ? 'all' : 'hot')} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${filterTemp === 'hot' ? 'border border-red-500 bg-red-500/[0.08] text-red-500' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
-          <Flame size={11} /> {isRTL ? 'حار فقط' : 'Hot Only'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${filterTemp === 'hot' ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.hot}</span>
-        </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="flex gap-2.5 mb-4 flex-wrap items-center bg-gray-50 dark:bg-brand-500/[0.08] px-3.5 py-2.5 rounded-xl border border-edge dark:border-edge-dark">
-        <div className="relative flex-[1_1_220px]">
-          <Search size={14} className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[#6B8DB5] dark:text-[#6B8DB5] pointer-events-none" />
-          <Input placeholder={isRTL ? 'بحث بالاسم، الهاتف، الإيميل...' : 'Search by name, phone, email...'} value={searchInput} onChange={e => setSearchInput(e.target.value)}
-            className="w-full pe-8" />
-        </div>
-        <Select value={filterSource} onChange={e => setFilterSource(e.target.value)}>
-          <option value="all">{isRTL ? 'كل المصادر' : 'All Sources'}</option>
-          {Object.entries(SOURCE_LABELS).map(([k, v]) => <option key={k} value={k}>{isRTL ? v : (SOURCE_EN[k] || v)}</option>)}
-        </Select>
-        <Select value={filterType} onChange={e => setFilterType(e.target.value)}>
-          <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
-          <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
-          <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
-          <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
-          <option value="supplier">{isRTL ? 'مورد' : 'Supplier'}</option>
-          <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
-          <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
-          <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
-        </Select>
-        <Select value={filterDept} onChange={e => setFilterDept(e.target.value)}>
-          <option value="all">{isRTL ? 'كل الأقسام' : 'All Depts'}</option>
-          <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
-          <option value="hr">{isRTL ? 'HR' : 'HR'}</option>
-          <option value="finance">{isRTL ? 'المالية' : 'Finance'}</option>
-          <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
-          <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
-        </Select>
-        <Select value={filterTemp} onChange={e => setFilterTemp(e.target.value)}>
-          <option value="all">{isRTL ? 'كل الدرجات' : 'All Temps'}</option>
-          {Object.entries(TEMP).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.labelAr : v.label}</option>)}
-        </Select>
-        <Select value={sortBy} onChange={e => setSortBy(e.target.value)}>
-          <option value="last_activity">{isRTL ? 'ترتيب: آخر نشاط' : 'Sort: Last Activity'}</option>
-          <option value="score">{isRTL ? 'ترتيب: Lead Score' : 'Sort: Lead Score'}</option>
-          <option value="name">{isRTL ? 'ترتيب: الاسم' : 'Sort: Name'}</option>
-          <option value="created">{isRTL ? 'ترتيب: تاريخ الإنشاء' : 'Sort: Created Date'}</option>
-          <option value="temperature">{isRTL ? 'ترتيب: الحرارة' : 'Sort: Temperature'}</option>
-          <option value="stale">{isRTL ? 'ترتيب: يحتاج متابعة' : 'Sort: Needs Follow-up'}</option>
-        </Select>
-      </div>
+      {/* Smart Filter Bar */}
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+        search={searchInput}
+        onSearchChange={setSearchInput}
+        searchPlaceholder={isRTL ? 'بحث بالاسم، الهاتف، الإيميل، ID...' : 'Search by name, phone, email, ID...'}
+        sortOptions={SORT_OPTIONS}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        resultsCount={filtered.length}
+        quickFilters={[
+          { label: 'ليدز جدد', labelEn: 'New Leads', filters: [{ field: 'contact_type', operator: 'is', value: 'lead' }, { field: 'created_at', operator: 'last_7' }] },
+          { label: 'بدون نشاط', labelEn: 'No Activity 30d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) }] },
+          { label: 'عملاء مبيعات', labelEn: 'Sales Clients', filters: [{ field: 'contact_type', operator: 'is', value: 'client' }, { field: 'department', operator: 'is', value: 'sales' }] },
+          { label: 'موردين', labelEn: 'Suppliers', filters: [{ field: 'contact_type', operator: 'is', value: 'supplier' }] },
+        ]}
+      />
 
       {/* Table */}
       <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
@@ -436,26 +553,135 @@ export default function ContactsPage() {
             </div>
           </div>
         )}
-        <div className="overflow-x-auto">
-          <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[800px]">
+        {/* ═══ MOBILE CARD VIEW ═══ */}
+        <div className="md:hidden">
+          {loading ? (
+            <div className="text-center p-10 text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
+                <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
+              </div>
+              <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-edge/50 dark:divide-edge-dark/50">
+              {paged.map(c => {
+                const isPinned = pinnedIds.includes(c.id);
+                const typeInfo = TYPE[c.contact_type];
+                const typeBorderColor = typeInfo?.color || '#4A7AAB';
+                const DEPT_LABELS_M = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
+                return (
+                  <div key={c.id}
+                    onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < 2 ? [...prev, c.id] : prev) : setSelected(c)}
+                    className={`px-4 py-3.5 cursor-pointer transition-colors ${selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'active:bg-surface-bg dark:active:bg-brand-500/[0.06]'}`}
+                    style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
+                  >
+                    {/* Row 1: Avatar + Name + Actions */}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-sm font-bold"
+                        style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
+                        {c.is_blacklisted ? <Ban size={15} /> : initials(c.full_name)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                            {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                          </span>
+                          {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
+                          {c.department && <span className="text-[10px] px-2 py-px rounded-full bg-brand-500/[0.06] text-[#6B8DB5] font-medium">{DEPT_LABELS_M[c.department] || c.department}</span>}
+                          <span className={`text-[10px] px-2 py-px rounded-full font-medium ${(!c.contact_status || c.contact_status === 'new') ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>{(!c.contact_status || c.contact_status === 'new') ? (isRTL ? 'جديد' : 'New') : (isRTL ? 'تم التواصل' : 'Contacted')}</span>
+                          {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
+                        </div>
+                      </div>
+                      {/* Quick actions */}
+                      <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                        <button onClick={(e) => { e.stopPropagation(); setQuickActionTarget(quickActionTarget?.id === c.id ? null : c); setQuickActionForm({ type: 'call', result: '', description: '' }); }} title={isRTL ? 'إجراء سريع' : 'Quick Action'}
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${quickActionTarget?.id === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 hover:bg-brand-500/[0.15]'}`}>
+                          <Zap size={14} />
+                        </button>
+                        {c.phone && (
+                          <a href={`tel:${normalizePhone(c.phone)}`} className="w-8 h-8 flex items-center justify-center bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg text-emerald-500 no-underline">
+                            <Phone size={14} />
+                          </a>
+                        )}
+                        {c.phone && (
+                          <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center bg-[#25D366]/[0.08] border border-[#25D366]/20 rounded-lg text-[#25D366] no-underline">
+                            <MessageCircle size={14} />
+                          </a>
+                        )}
+                        <button onClick={() => togglePin(c.id)} disabled={!isPinned && pinnedIds.length >= MAX_PINS}
+                          className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${isPinned ? 'bg-amber-500/[0.15] border border-amber-500/30 text-amber-500' : !isPinned && pinnedIds.length >= MAX_PINS ? 'bg-transparent border border-edge dark:border-edge-dark text-content-muted/30 cursor-not-allowed' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
+                          <Pin size={14} />
+                        </button>
+                        <div className="relative">
+                          <button onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                            className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${openMenuId === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
+                            <MoreVertical size={14} />
+                          </button>
+                          {openMenuId === c.id && (
+                            <div className={`absolute top-[36px] ${isRTL ? 'start-0' : 'end-0'} bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden`}>
+                              <div className="p-1">
+                                <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                  <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
+                                </button>
+                                <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                  <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
+                                </button>
+                                <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر'] : ['Name','Phone','Type','Source']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                  <FileDown size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'تصدير' : 'Export'}
+                                </button>
+                                <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                  <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
+                                </button>
+                              </div>
+                              {!c.is_blacklisted && (<><div className="h-px bg-edge dark:bg-edge-dark mx-1" /><div className="p-1">
+                                <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                                  <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
+                                </button>
+                              </div></>)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Row 2: Phone + Source + Date */}
+                    {(c.phone || c.source) && (
+                      <div className="flex items-center gap-3 mt-2 ms-[52px] text-[11px] text-content-muted dark:text-content-muted-dark">
+                        {c.phone && <span className="font-mono">{c.phone.slice(0, 6)}****</span>}
+                        {c.source && <><span className="opacity-30">·</span><span>{isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></>}
+                        {c.campaign_name && <><span className="opacity-30">·</span><span className="text-brand-500/70 dark:text-brand-400/70">{c.campaign_name}</span></>}
+                        {c.created_at && <><span className="opacity-30">·</span><span>{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span></>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* ═══ DESKTOP TABLE VIEW ═══ */}
+        <div className="hidden md:block overflow-x-auto">
+          <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[700px]">
             <thead>
               <tr>
-                <th className={`${thCls} w-9 !px-2 !py-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
-                <th className={`${thCls} w-[50px]`}>ID</th>
-                <th className={thCls}>{t('contacts.fullName')}</th>
+                <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
+                <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>
                 <th className={thCls}>{t('contacts.phone')}</th>
-                <th className={thCls}>{t('contacts.type')}</th>
-                <th className={thCls}>{isRTL ? 'القسم' : 'Dept'}</th>
-                <th className={thCls}>{t('contacts.temperature')}</th>
-                <th className={thCls}>{t('contacts.source')}</th>
-                <th className={thCls}>{t('common.actions')}</th>
+                <th className={thCls}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
+                <th className={`${thCls} text-center`}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+                <tr><td colSpan={5} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="p-0 border-none">
+                <tr><td colSpan={5} className="p-0 border-none">
                   <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                       <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -467,78 +693,102 @@ export default function ContactsPage() {
               ) : paged.map((c) => {
                 const isPinned = pinnedIds.includes(c.id);
                 const isMergeSelected = mergeTargets.includes(c.id);
+                const typeInfo = TYPE[c.contact_type];
+                const typeBorderColor = typeInfo?.color || '#4A7AAB';
+                const DEPT_LABELS = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
                 return (
                 <tr key={c.id}
                   onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < 2 ? [...prev, c.id] : prev) : setSelected(c)}
-                  className={`cursor-pointer transition-colors ${isMergeSelected ? 'bg-brand-800/[0.08]' : selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.06]'}`}
+                  className={`group cursor-pointer transition-colors ${isMergeSelected ? 'bg-brand-800/[0.08]' : selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.04]'}`}
+                  style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
                 >
-                  <td className={`${tdCls} !px-2 !py-3`} onClick={e => e.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} className="cursor-pointer" /></td>
-                  <td className={`${tdCls} text-[10px] text-[#6B8DB5] dark:text-[#6B8DB5] font-mono`}>
-                    <div className="flex items-center gap-1">
-                      {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
-                      #{String(c.id).slice(-4)}
+                  {/* Checkbox */}
+                  <td className={`${tdCls} !px-2.5 w-9`} onClick={e => e.stopPropagation()}>
+                    <div className={`${selectedIds.includes(c.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                      <input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} className="cursor-pointer" />
                     </div>
                   </td>
+
+                  {/* Contact — Name + Type + Dept + Activity */}
                   <td className={tdCls}>
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-[34px] h-[34px] rounded-xl shrink-0 flex items-center justify-center text-xs font-bold"
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold"
                         style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
                         {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                       </div>
-                      <div>
-                        <div className={`font-semibold whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px] ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</div>
-                        {c.email && <div className="text-xs text-[#6B8DB5] dark:text-[#6B8DB5] whitespace-nowrap overflow-hidden text-ellipsis max-w-[180px]">{c.email}</div>}
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' أيام' : d + 'd ago')}</span>; })()}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                            {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                          </span>
+                          {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
+                          {c.department && <span className="text-[10px] px-2 py-px rounded-full bg-brand-500/[0.06] text-[#6B8DB5] font-medium">{DEPT_LABELS[c.department] || c.department}</span>}
+                          {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
                           {c.opportunities?.length > 0 && <span className="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">{c.opportunities.length} {isRTL ? 'فرص' : 'opps'}</span>}
                         </div>
                       </div>
                     </div>
                   </td>
+
+                  {/* Phone */}
                   <td className={tdCls} onClick={e => e.stopPropagation()}>
                     <PhoneCell phone={c.phone} />
                     {c.phone2 && <PhoneCell phone={c.phone2} small />}
                   </td>
-                  <td className={tdCls}>{TYPE[c.contact_type] ? <Chip label={isRTL ? TYPE[c.contact_type].label : TYPE[c.contact_type].labelEn} color={TYPE[c.contact_type].color} bg={TYPE[c.contact_type].bg} /> : <span className="text-content-muted dark:text-content-muted-dark">—</span>}</td>
-                  <td className={tdCls}><span className="text-xs text-content-muted dark:text-content-muted-dark">{(isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' })[c.department] || '—'}</span></td>
+
+                  {/* Source + Date */}
                   <td className={tdCls}>
-                    {(() => { const TempIcon = TEMP[c.temperature]?.Icon; return TempIcon ? <TempIcon size={15} color={TEMP[c.temperature]?.color} /> : '—'; })()}
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
+                    {c.campaign_name && <div className="text-[10px] text-brand-500/70 dark:text-brand-400/70 mt-0.5 truncate max-w-[160px]" title={c.campaign_name}>{c.campaign_name}</div>}
+                    {c.created_at && <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60 mt-0.5">{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
                   </td>
-                  <td className={tdCls}><span className="text-xs bg-gray-100 dark:bg-brand-500/[0.12] border border-edge dark:border-edge-dark rounded-md px-2 py-1 text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</span></td>
+
+                  {/* Actions — 3 visible + menu */}
                   <td className={tdCls} onClick={e => e.stopPropagation()}>
-                    <div className="flex gap-1 items-center">
-                      <a href={`tel:${normalizePhone(c.phone)}`} title={isRTL ? "اتصال" : "Call"} className="w-[26px] h-[26px] flex items-center justify-center bg-emerald-500/[0.06] border border-emerald-500/20 rounded-md text-emerald-500 no-underline">
-                        <Phone size={12} />
-                      </a>
-                      <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-[26px] h-[26px] flex items-center justify-center bg-[#25D366]/[0.06] border border-[#25D366]/20 rounded-md text-[#25D366] no-underline">
-                        <MessageCircle size={12} />
-                      </a>
-                      <button onClick={() => setLogCallTarget(c)} title={isRTL ? 'تسجيل مكالمة' : 'Log Call'} className="w-[26px] h-[26px] flex items-center justify-center bg-brand-500/[0.06] border border-brand-500/20 rounded-md text-brand-500 cursor-pointer">
-                        <PhoneCall size={12} />
+                    <div className="flex gap-1 items-center justify-center">
+                      {c.phone && (
+                        <a href={`tel:${normalizePhone(c.phone)}`} title={isRTL ? "اتصال" : "Call"} className="w-7 h-7 flex items-center justify-center bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg text-emerald-500 no-underline hover:bg-emerald-500/[0.15] transition-colors">
+                          <Phone size={13} />
+                        </a>
+                      )}
+                      {c.phone && (
+                        <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-7 h-7 flex items-center justify-center bg-[#25D366]/[0.08] border border-[#25D366]/20 rounded-lg text-[#25D366] no-underline hover:bg-[#25D366]/[0.15] transition-colors">
+                          <MessageCircle size={13} />
+                        </a>
+                      )}
+                      <button onClick={(e) => { e.stopPropagation(); setQuickActionTarget(quickActionTarget?.id === c.id ? null : c); setQuickActionForm({ type: 'call', result: '', description: '' }); }} title={isRTL ? 'إجراء سريع' : 'Quick Action'}
+                        className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${quickActionTarget?.id === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 hover:bg-brand-500/[0.15]'}`}>
+                        <Zap size={13} />
                       </button>
-                      <button onClick={() => setReminderTarget(c)} title={isRTL ? 'تذكير' : 'Reminder'} className="w-[26px] h-[26px] flex items-center justify-center bg-amber-500/[0.06] border border-amber-500/20 rounded-md text-amber-500 cursor-pointer">
-                        <Bell size={12} />
-                      </button>
-                      <button onClick={() => togglePin(c.id)} title={isRTL ? 'تثبيت' : 'Pin'} className={`w-[26px] h-[26px] flex items-center justify-center rounded-md cursor-pointer ${isPinned ? 'bg-amber-500/[0.12] border border-amber-500/30 text-amber-500' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
-                        <Pin size={12} />
+                      <button onClick={() => togglePin(c.id)} title={isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : pinnedIds.length >= MAX_PINS ? (isRTL ? `الحد الأقصى ${MAX_PINS} مثبتين` : `Max ${MAX_PINS} pins`) : (isRTL ? 'تثبيت' : 'Pin')} disabled={!isPinned && pinnedIds.length >= MAX_PINS} className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${isPinned ? 'bg-amber-500/[0.15] border border-amber-500/30 text-amber-500' : !isPinned && pinnedIds.length >= MAX_PINS ? 'bg-transparent border border-edge dark:border-edge-dark text-content-muted/30 dark:text-content-muted-dark/30 cursor-not-allowed' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
+                        <Pin size={13} />
                       </button>
                       <div className="relative" onClick={e => e.stopPropagation()}>
                         <button onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                          className={`w-[26px] h-[26px] flex items-center justify-center rounded-md cursor-pointer ${openMenuId === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
-                          <MoreVertical size={12} />
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${openMenuId === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
+                          <MoreVertical size={13} />
                         </button>
                         {openMenuId === c.id && (
-                          <div className={`absolute top-[30px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[180px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.12)] overflow-hidden`}>
+                          <div className={`absolute top-[32px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden`}>
                             <div className="p-1">
-                              <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                                <FileDown size={13} /> {isRTL ? 'تصدير' : 'Export'}
+                              <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
                               </button>
-                              <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                                <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
+                              <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
+                              </button>
+                              <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                <FileDown size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'تصدير' : 'Export'}
+                              </button>
+                              <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
                               </button>
                             </div>
-                            {!c.is_blacklisted && (<><div className="h-px bg-edge dark:bg-edge-dark" /><div className="p-1">
-                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                            {!c.is_blacklisted && (<><div className="h-px bg-edge dark:bg-edge-dark mx-1" /><div className="p-1">
+                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
                                 <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
                               </button>
                             </div></>)}
@@ -571,9 +821,93 @@ export default function ContactsPage() {
         )}
       </div>
 
+      {/* Quick Action Popover */}
+      {quickActionTarget && (
+        <div className="fixed inset-0 z-[150]" onClick={() => setQuickActionTarget(null)}>
+          <div onClick={e => e.stopPropagation()}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.2)] p-4 w-[320px] z-[151]"
+            dir={isRTL ? 'rtl' : 'ltr'}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Zap size={14} className="text-brand-500" />
+                <span className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'إجراء سريع' : 'Quick Action'}</span>
+              </div>
+              <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{quickActionTarget.full_name}</span>
+            </div>
+
+            {/* Activity type chips */}
+            <div className="flex gap-1.5 flex-wrap mb-2.5">
+              {[
+                { key: 'call', ar: 'مكالمة', en: 'Call' },
+                { key: 'whatsapp', ar: 'واتساب', en: 'WhatsApp' },
+                { key: 'email', ar: 'إيميل', en: 'Email' },
+                { key: 'note', ar: 'ملاحظة', en: 'Note' },
+              ].map(v => (
+                <button key={v.key} onClick={() => setQuickActionForm(f => ({ ...f, type: v.key, result: '' }))}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${
+                    quickActionForm.type === v.key
+                      ? 'bg-brand-500 text-white border-brand-500'
+                      : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/40'
+                  }`}>
+                  {isRTL ? v.ar : v.en}
+                </button>
+              ))}
+            </div>
+
+            {/* Result chips (required) */}
+            {(QUICK_RESULTS[quickActionForm.type] || []).length > 0 && (
+              <div className="mb-2.5">
+                <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النتيجة' : 'Result'} <span className="text-red-500">*</span></div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {(QUICK_RESULTS[quickActionForm.type] || []).map(r => (
+                    <button key={r.value} onClick={() => setQuickActionForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
+                      className={`px-2 py-0.5 rounded-lg text-[11px] cursor-pointer border ${
+                        quickActionForm.result === r.value
+                          ? 'font-bold'
+                          : 'font-normal bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
+                      }`}
+                      style={quickActionForm.result === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>
+                      {isRTL ? r.label_ar : r.label_en}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            <textarea
+              rows={2}
+              placeholder={isRTL ? 'ملاحظات...' : 'Notes...'}
+              value={quickActionForm.description}
+              onChange={e => setQuickActionForm(f => ({ ...f, description: e.target.value }))}
+              className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none resize-none mb-3 box-border"
+            />
+
+            {/* Save / Cancel */}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setQuickActionTarget(null)} className="px-3 py-1.5 rounded-lg text-xs border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button onClick={() => handleQuickAction(quickActionTarget)} disabled={savingQuickAction || ((QUICK_RESULTS[quickActionForm.type] || []).length > 0 && !quickActionForm.result)}
+                className="px-3 py-1.5 rounded-lg text-xs bg-brand-500 text-white border border-brand-500 cursor-pointer hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1">
+                <Zap size={11} />
+                {savingQuickAction ? '...' : (isRTL ? 'حفظ' : 'Save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modals */}
-      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const np = normalizePhone(phone); const found = contacts.find(c => normalizePhone(c.phone) === np || normalizePhone(c.phone2) === np || (c.extra_phones || []).some(p => normalizePhone(p) === np)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => setSelected(null)} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => { /* optimistic */ }) }} onAddOpportunity={() => {}} />}
+      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const np = normalizePhone(phone); const found = contacts.find(c => normalizePhone(c.phone) === np || normalizePhone(c.phone2) === np || (c.extra_phones || []).some(p => normalizePhone(p) === np)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} onAddInteraction={(contact, interaction) => {
+        const existing = contact.campaign_interactions || [];
+        const updated = { ...contact, campaign_interactions: [...existing, interaction] };
+        setContacts(prev => prev.map(c => c.id === contact.id ? updated : c));
+        localStorage.setItem('platform_contacts', JSON.stringify(contacts.map(c => c.id === contact.id ? updated : c)));
+        updateContact(contact.id, { campaign_interactions: updated.campaign_interactions }).catch(() => {});
+      }} />}
+      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => { /* optimistic */ }) }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
     {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
@@ -587,8 +921,8 @@ export default function ContactsPage() {
         const progress = batchCallLog.length;
         const total = batchContacts.length;
         return (
-          <div className="fixed inset-0 bg-black/60 z-[1200] flex items-center justify-center p-5">
-            <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[20px] w-full max-w-[520px] overflow-hidden">
+          <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/60 z-[1200] flex items-center justify-center p-5">
+            <div className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[20px] w-full max-w-[520px] overflow-hidden">
               <div className="bg-gradient-to-br from-[#065F46] to-emerald-500 px-6 py-4 flex justify-between items-center">
                 <div className="flex items-center gap-2.5">
                   <PhoneCall size={18} color="#fff" />
@@ -680,8 +1014,8 @@ export default function ContactsPage() {
         if (!c1.preferred_location && c2.preferred_location) merged.preferred_location = c2.preferred_location;
         const fields = ['full_name','phone','phone2','email','contact_type','source','department','temperature','company','preferred_location'];
         return (
-          <div className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
-            <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[600px] max-h-[80vh] overflow-y-auto">
+          <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
+            <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[600px] max-h-[80vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-5">
                 <h3 className="m-0 text-content dark:text-content-dark text-base font-bold flex items-center gap-2"><Merge size={18} color="#1E40AF" /> {isRTL ? 'معاينة الدمج' : 'Merge Preview'}</h3>
                 <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={18} /></button>

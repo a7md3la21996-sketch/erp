@@ -9,3 +9,4 @@ export { TableSkeleton, KpiSkeleton, DashboardSkeleton, ListSkeleton, FormSkelet
 export { default as FilterPill } from './FilterPill';
 export { default as EmptyState } from './EmptyState';
 export { default as ExportButton } from './ExportButton';
+export { default as SmartFilter, applySmartFilters } from './SmartFilter';

@@ -8,6 +8,7 @@ import { getAttendanceForMonth } from '../../data/attendanceStore';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fetchTodayReminders } from '../../services/remindersService';
 import { fetchAllDashboardData, buildPipelineData } from '../../services/dashboardService';
+import { getWonDeals } from '../../services/dealsService';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle } from 'lucide-react';
@@ -181,11 +182,39 @@ export default function DashboardPage() {
   const taskStats = dashData?.tasks;
   const activityStats = dashData?.activities;
 
-  // TODO: Revenue trend and top sellers cannot be sourced from current services — keep mock
+  // Revenue trend & top sellers from real deals
+  const [wonDeals, setWonDeals] = useState([]);
+  useEffect(() => { getWonDeals().then(d => setWonDeals(d || [])).catch(() => {}); }, []);
+
+  const realRevenueTrend = useMemo(() => {
+    if (!wonDeals.length) return null;
+    const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MONTH_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    const map = {};
+    wonDeals.forEach(d => { const m = new Date(d.created_at).getMonth(); map[m] = (map[m] || 0) + (d.deal_value || 0); });
+    const months = Object.keys(map).sort((a, b) => a - b).slice(-6);
+    if (months.length < 2) return null;
+    return months.map(m => ({ label_ar: MONTH_AR[m], label_en: MONTH_LABELS[m], value: map[m] }));
+  }, [wonDeals]);
+
+  const realTopSellers = useMemo(() => {
+    if (!wonDeals.length) return null;
+    const map = {};
+    wonDeals.forEach(d => {
+      const key = d.agent_ar || d.agent_en || 'Unknown';
+      if (!map[key]) map[key] = { name_ar: d.agent_ar || key, name_en: d.agent_en || key, revenue: 0 };
+      map[key].revenue += d.deal_value || 0;
+    });
+    const arr = Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 4);
+    const maxRev = arr[0]?.revenue || 1;
+    return arr.map(a => ({ ...a, pct: Math.round((a.revenue / maxRev) * 100) }));
+  }, [wonDeals]);
+
+  const salesData = realTopSellers || MOCK_SALES.topSales;
   const targetPct = crm.revenue > 0 && MOCK_SALES.target > 0
     ? Math.round((crm.revenue / MOCK_SALES.target) * 100)
     : Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
-  const chartData = useMemo(() => REVENUE_TREND.map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en })), [lang]);
+  const chartData = useMemo(() => (realRevenueTrend || REVENUE_TREND).map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en })), [lang, realRevenueTrend]);
 
   // Pipeline chart — real data if available
   const realPipeline = useMemo(() => {
@@ -327,7 +356,7 @@ export default function DashboardPage() {
           <Box>
             <CardTitle icon={Trophy} title={lang === 'ar' ? 'أفضل البائعين' : 'Top Performers'} sub={lang === 'ar' ? 'حسب الإيرادات' : 'By revenue'} />
             <div className="flex flex-col gap-2.5">
-              {MOCK_SALES.topSales.map((s, i) => (
+              {salesData.map((s, i) => (
                 <div key={i} className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#1B3347' : i === 1 ? '#2B4C6F' : 'rgba(74,122,171,0.15)' }}><span className={`text-xs font-bold ${i < 2 ? 'text-white' : 'text-brand-500'}`}>{i + 1}</span></div>
                   <div className="flex-1 min-w-0">

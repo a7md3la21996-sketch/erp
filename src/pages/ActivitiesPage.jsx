@@ -4,11 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
   UserCheck, AlertTriangle, Star, Receipt, Banknote,
-  RefreshCw, CheckSquare, Plus, X, Search, Filter,
+  RefreshCw, CheckSquare, Plus, X,
   Clock, Activity, TrendingUp, CloudOff
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
-import { Button, Card, Input, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton } from '../components/ui';
+import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../components/ui';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -41,13 +41,25 @@ export default function ActivitiesPage() {
 
   const [activities, setActivities] = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [deptFilter, setDeptFilter] = useState('all');
-  const [typeFilter, setTypeFilter] = useState('all');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [search, setSearch]         = useState('');
   const [adding, setAdding]         = useState(false);
   const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'crm' });
   const [saving, setSaving]         = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const SMART_FIELDS = useMemo(() => [
+    { id: 'dept', label: 'القسم', labelEn: 'Department', type: 'select', options: [
+      { value: 'crm', label: 'CRM', labelEn: 'CRM' },
+      { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
+      { value: 'hr', label: 'HR', labelEn: 'HR' },
+      { value: 'finance', label: 'المالية', labelEn: 'Finance' },
+    ]},
+    { id: 'type', label: 'نوع النشاط', labelEn: 'Activity Type', type: 'select', options: Object.entries(ACTIVITY_TYPES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
+    { id: 'user_name_en', label: 'المستخدم', labelEn: 'User', type: 'text' },
+    { id: 'notes', label: 'الملاحظات', labelEn: 'Notes', type: 'text' },
+    { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
+  ], []);
 
   const load = async () => {
     setLoading(true);
@@ -60,14 +72,18 @@ export default function ActivitiesPage() {
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
-    return activities.filter(a => {
-      if (deptFilter !== 'all' && a.dept !== deptFilter) return false;
-      if (typeFilter !== 'all' && a.type !== typeFilter) return false;
-      if (search && !a.notes?.toLowerCase().includes(search.toLowerCase()) &&
-          !a.user_name_ar?.includes(search) && !a.user_name_en?.toLowerCase().includes(search.toLowerCase())) return false;
-      return true;
-    });
-  }, [activities, deptFilter, typeFilter, search]);
+    let list = activities;
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter(a =>
+        a.notes?.toLowerCase().includes(s) ||
+        a.user_name_ar?.includes(search) ||
+        a.user_name_en?.toLowerCase().includes(s)
+      );
+    }
+    list = applySmartFilters(list, smartFilters, SMART_FIELDS);
+    return list;
+  }, [activities, search, smartFilters, SMART_FIELDS]);
 
   // Stats
   const stats = useMemo(() => {
@@ -221,52 +237,19 @@ export default function ActivitiesPage() {
         </Card>
       )}
 
-      {/* Filters */}
-      <Card className={`px-4 py-3 mb-4 flex gap-2.5 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-        {/* Search */}
-        <div className="relative flex-1 min-w-[160px]">
-          <Search
-            size={13}
-            className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-2.5"
-          />
-          <Input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder={lang === 'ar' ? 'بحث...' : 'Search...'}
-            size="sm"
-            className="ps-[30px] pe-2.5"
-          />
-        </div>
-        {/* Dept filter */}
-        {Object.entries(DEPT_LABELS).map(([k, v]) => (
-          <button
-            key={k}
-            onClick={() => setDeptFilter(k)}
-            className={`px-3 py-[5px] rounded-md border text-xs cursor-pointer transition-colors duration-150
-              ${deptFilter === k
-                ? 'border-brand-500 bg-brand-500/[0.09] text-brand-500 font-semibold'
-                : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'
-              }`}
-          >
-            {lang === 'ar' ? v.ar : v.en}
-          </button>
-        ))}
-        {/* Type filter */}
-        <Select
-          size="sm"
-          value={typeFilter}
-          onChange={e => setTypeFilter(e.target.value)}
-          className="w-auto min-w-[110px]"
-        >
-          <option value="all">{lang === 'ar' ? 'كل الأنواع' : 'All Types'}</option>
-          {Object.entries(ACTIVITY_TYPES).map(([k, v]) => (
-            <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
-          ))}
-        </Select>
-      </Card>
+      {/* SmartFilter */}
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={isRTL ? 'بحث بالملاحظات أو اسم المستخدم...' : 'Search by notes or user name...'}
+        resultsCount={filtered.length}
+      />
 
       {/* Activities List */}
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden mt-4">
         {loading ? (
           <div className="p-6">
             {[1,2,3,4,5].map(i => (

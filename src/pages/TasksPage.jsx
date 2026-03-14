@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  CheckSquare, Plus, X, Search, Clock, Phone, PhoneCall,
-  Users, Mail, MessageCircle, Filter, Trash2, Check,
-  AlertCircle, Calendar, User, ChevronDown, CloudOff
+  CheckSquare, Plus, X, Clock, Phone, PhoneCall,
+  Users, Mail, MessageCircle, Trash2, Check,
+  User, CloudOff
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
-import { Button, Card, Input, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton } from '../components/ui';
+import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../components/ui';
 
 const ICONS = { Phone, PhoneCall, Users, Mail, MessageCircle, CheckSquare };
 
@@ -28,13 +28,36 @@ export default function TasksPage() {
 
   const [tasks, setTasks]           = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
-  const [deptFilter, setDeptFilter] = useState('all');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [search, setSearch]         = useState('');
   const [showAdd, setShowAdd]       = useState(false);
   const [form, setForm]             = useState({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'crm', due_date: '', notes: '', contact_name: '' });
   const [saving, setSaving]         = useState(false);
+
+  const SMART_FIELDS = useMemo(() => [
+    { id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select', options: Object.entries(TASK_STATUSES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
+    { id: 'priority', label: 'الأولوية', labelEn: 'Priority', type: 'select', options: Object.entries(TASK_PRIORITIES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
+    { id: 'dept', label: 'القسم', labelEn: 'Department', type: 'select', options: [
+      { value: 'crm', label: 'CRM', labelEn: 'CRM' },
+      { value: 'hr', label: 'HR', labelEn: 'HR' },
+      { value: 'finance', label: 'المالية', labelEn: 'Finance' },
+      { value: 'general', label: 'عام', labelEn: 'General' },
+    ]},
+    { id: 'title', label: 'العنوان', labelEn: 'Title', type: 'text' },
+    { id: 'contact_name', label: 'العميل', labelEn: 'Contact', type: 'text' },
+    { id: 'due_date', label: 'تاريخ الاستحقاق', labelEn: 'Due Date', type: 'date' },
+    { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created At', type: 'date' },
+  ], []);
+
+  const SORT_OPTIONS = useMemo(() => [
+    { value: 'due_date_asc', label: 'الاستحقاق (الأقرب)', labelEn: 'Due Date (soonest)' },
+    { value: 'due_date_desc', label: 'الاستحقاق (الأبعد)', labelEn: 'Due Date (latest)' },
+    { value: 'created_at_desc', label: 'الأحدث', labelEn: 'Newest' },
+    { value: 'created_at_asc', label: 'الأقدم', labelEn: 'Oldest' },
+    { value: 'priority_desc', label: 'الأولوية (الأعلى)', labelEn: 'Priority (highest)' },
+  ], []);
+
+  const [sortBy, setSortBy] = useState('due_date_asc');
 
   const load = async () => {
     setLoading(true);
@@ -45,14 +68,25 @@ export default function TasksPage() {
   useEffect(() => { load(); }, []);
 
   const filtered = useMemo(() => {
-    return tasks.filter(t => {
-      if (statusFilter !== 'all' && t.status !== statusFilter) return false;
-      if (priorityFilter !== 'all' && t.priority !== priorityFilter) return false;
-      if (deptFilter !== 'all' && t.dept !== deptFilter) return false;
-      if (search && !t.title?.includes(search) && !t.contact_name?.includes(search)) return false;
-      return true;
+    let result = applySmartFilters(tasks, smartFilters, SMART_FIELDS);
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(t => t.title?.toLowerCase().includes(s) || t.contact_name?.toLowerCase().includes(s));
+    }
+    // Sort
+    const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case 'due_date_asc': return new Date(a.due_date) - new Date(b.due_date);
+        case 'due_date_desc': return new Date(b.due_date) - new Date(a.due_date);
+        case 'created_at_desc': return new Date(b.created_at) - new Date(a.created_at);
+        case 'created_at_asc': return new Date(a.created_at) - new Date(b.created_at);
+        case 'priority_desc': return (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
+        default: return 0;
+      }
     });
-  }, [tasks, statusFilter, priorityFilter, deptFilter, search]);
+    return result;
+  }, [tasks, smartFilters, SMART_FIELDS, search, sortBy]);
 
   const stats = useMemo(() => ({
     total:   tasks.length,
@@ -177,30 +211,18 @@ export default function TasksPage() {
       )}
 
       {/* Filters */}
-      <Card className={`px-3.5 py-2.5 mb-4 flex gap-2 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-        <div className="relative flex-1 min-w-[160px]">
-          <Search size={13} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-2.5" />
-          <Input value={search} onChange={e=>setSearch(e.target.value)} placeholder={lang==='ar'?'بحث...':'Search...'}
-            size="sm"
-            className="ps-[30px] pe-2.5" />
-        </div>
-        {/* Status */}
-        {['all','pending','in_progress','done'].map(s => (
-          <button key={s} onClick={()=>setStatusFilter(s)} className={`
-            px-[11px] py-[5px] rounded-md border text-xs cursor-pointer transition-colors
-            ${statusFilter===s
-              ? 'border-brand-500 bg-brand-500/[0.09] text-brand-500 font-semibold'
-              : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark font-normal'}
-          `}>
-            {s==='all'?(lang==='ar'?'الكل':'All'):lang==='ar'?TASK_STATUSES[s]?.ar:TASK_STATUSES[s]?.en}
-          </button>
-        ))}
-        {/* Priority */}
-        <Select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)} size="sm" className="!w-auto">
-          <option value="all">{lang==='ar'?'كل الأولويات':'All Priorities'}</option>
-          {Object.entries(TASK_PRIORITIES).map(([k,v])=><option key={k} value={k}>{lang==='ar'?v.ar:v.en}</option>)}
-        </Select>
-      </Card>
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={lang === 'ar' ? 'بحث بالعنوان أو العميل...' : 'Search by title or contact...'}
+        sortOptions={SORT_OPTIONS}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        resultsCount={filtered.length}
+      />
 
       {/* Tasks List */}
       <Card className="overflow-hidden">

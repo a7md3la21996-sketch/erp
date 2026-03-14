@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
+import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { X } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
@@ -10,20 +11,26 @@ import {
   SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES,
 } from './constants';
 
-export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity }) {
+export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity, onAddInteraction }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
+  const { contactTypes } = useSystemConfig();
   useEscClose(onClose);
   const dupTimer = useRef(null);
   const [step, setStep] = useState(1);
-  const DEPT_TYPES = {
-    sales: ['lead','cold','client','developer','partner'],
-    hr: ['applicant'],
-    finance: ['supplier'],
-    marketing: ['lead','cold'],
-    operations: ['partner','supplier'],
-  };
+  // Build DEPT_TYPES from system config — each type has a departments array
+  const DEPT_TYPES = (() => {
+    const map = { sales: [], hr: [], marketing: [], finance: [], operations: [] };
+    (contactTypes || []).forEach(t => {
+      (t.departments || []).forEach(d => { if (map[d] && !map[d].includes(t.key)) map[d].push(t.key); });
+    });
+    // Fallback if config has no departments set
+    if (Object.values(map).every(v => v.length === 0)) {
+      return { sales: ['lead','cold','developer','partner'], hr: ['applicant'], finance: ['supplier'], marketing: ['lead','cold'], operations: ['partner','supplier'] };
+    }
+    return map;
+  })();
   const [form, setForm] = useState({
     prefix: '', full_name: '', phone: '', phone2: '', email: '',
     contact_type: '', source: 'facebook', platform: 'meta', campaign_name: '',
@@ -31,6 +38,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     interested_in_type: '', notes: '', department: '',
     gender: '', nationality: '', birth_date: '', company: '', job_title: '',
     countryCode: '+20',
+    country: 'EG',
   });
   const [dupWarning, setDupWarning] = useState(null);
   const [extraPhones, setExtraPhones] = useState([]);
@@ -38,7 +46,29 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const [extraDups, setExtraDups] = useState([]);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const loggedInteractionRef = useRef(null); // track which dup+campaign combo was logged
+  const set = (k, v) => {
+    setForm(f => ({ ...f, [k]: v }));
+    // Auto-log interaction when campaign_name is typed while duplicate exists
+    if (k === 'campaign_name' && v && dupWarning && onAddInteraction) {
+      const logKey = `${dupWarning.id}_${v}`;
+      if (loggedInteractionRef.current !== logKey) {
+        loggedInteractionRef.current = logKey;
+        onAddInteraction(dupWarning, { campaign: v, source: form.source, platform: form.platform, date: new Date().toISOString() });
+        setDupWarning(prev => prev ? { ...prev, _interactionLogged: true } : prev);
+      }
+    }
+  };
+
+  // Auto-detect country from local phone number prefix
+  const detectCountryFromLocal = (phone) => {
+    if (!phone || phone.startsWith('+')) return null;
+    if (phone.startsWith('01') && phone.length >= 3 && ['0','1','2','5'].includes(phone[2])) return { code: '+20', country: 'EG', flag: '\u{1F1EA}\u{1F1EC}' };
+    if (phone.startsWith('05')) return { code: '+966', country: 'SA', flag: '\u{1F1F8}\u{1F1E6}' };
+    if (phone.startsWith('07')) return { code: '+962', country: 'JO', flag: '\u{1F1EF}\u{1F1F4}' };
+    if (phone.startsWith('09')) return { code: '+964', country: 'IQ', flag: '\u{1F1EE}\u{1F1F6}' };
+    return null;
+  };
   const setDept = (dept) => {
     const types = DEPT_TYPES[dept] || [];
     setForm(f => ({ ...f, department: dept, contact_type: types[0] || '' }));
@@ -52,7 +82,16 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
       setChecking(true);
       try {
         const dup = await checkDup(phone);
-        setDupWarning(dup || null);
+        if (dup && form.campaign_name && onAddInteraction) {
+          const logKey = `${dup.id}_${form.campaign_name}`;
+          if (loggedInteractionRef.current !== logKey) {
+            loggedInteractionRef.current = logKey;
+            onAddInteraction(dup, { campaign: form.campaign_name, source: form.source, platform: form.platform, date: new Date().toISOString() });
+          }
+          setDupWarning({ ...dup, _interactionLogged: true });
+        } else {
+          setDupWarning(dup || null);
+        }
       } catch { setDupWarning(null); }
       setChecking(false);
     }, 400);
@@ -97,15 +136,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <div>
             <h2 className="m-0 text-content dark:text-content-dark text-[17px] font-bold">
-              {isRTL ? ({
-                lead: 'إضافة ليد', cold: 'إضافة كولد كول', client: 'إضافة عميل',
-                supplier: 'إضافة مورد', developer: 'إضافة مطور عقاري',
-                applicant: 'إضافة متقدم لوظيفة', partner: 'إضافة شريك'
-              }[form.contact_type] || 'إضافة جهة اتصال') : ({
-                lead: 'Add Lead', cold: 'Add Cold Call', client: 'Add Client',
-                supplier: 'Add Supplier', developer: 'Add Developer',
-                applicant: 'Add Applicant', partner: 'Add Partner'
-              }[form.contact_type] || 'Add Contact')}
+              {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
             </h2>
             <p className="mt-[3px] mb-0 text-xs text-content-muted dark:text-content-muted-dark">
               {step === 1 ? (isRTL ? 'البيانات الأساسية' : 'Basic Info') : (isRTL ? 'البيانات الإضافية' : 'Additional Info')}
@@ -138,7 +169,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'النوع' : 'Type'} <span className="text-red-500">*</span></label>
                 <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department}>
                   {!form.department && <option value="">{isRTL ? 'اختر القسم أولاً...' : 'Select department first...'}</option>}
-                  {availableTypes.map(t => <option key={t} value={t}>{isRTL ? ({lead:'ليد',cold:'كولد كول',client:'عميل',supplier:'مورد',developer:'مطور عقاري',applicant:'متقدم لوظيفة',partner:'شريك'}[t]) : ({lead:'Lead',cold:'Cold Call',client:'Client',supplier:'Supplier',developer:'Developer',applicant:'Applicant',partner:'Partner'}[t])}</option>)}
+                  {availableTypes.map(t => { const ct = (contactTypes || []).find(c => c.key === t); return <option key={t} value={t}>{ct ? (isRTL ? ct.label_ar : ct.label_en) : t}</option>; })}
                 </Select>
               </div>
 
@@ -158,8 +189,12 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               </div>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span> {(() => { const fp = getFullPhone(form.phone, form.countryCode); return (<>{fp && !validatePhone(fp) && <span className="text-xs text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{fp && validatePhone(fp) && (() => { const info = getPhoneInfo(fp); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
-                <div className="flex gap-1.5">
-                  <Select className="!w-[100px] shrink-0" value={form.countryCode} onChange={e => set('countryCode', e.target.value)}>
+                <div className="flex gap-1.5 items-center">
+                  <Select className="!w-[100px] shrink-0" value={form.countryCode} onChange={e => {
+                    set('countryCode', e.target.value);
+                    const match = COUNTRY_CODES.find(c => c.code === e.target.value);
+                    if (match) set('country', match.country);
+                  }}>
                     {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
                   </Select>
                   <Input className={`flex-1 ${dupWarning ? '!border-red-500' : ''}`}
@@ -169,22 +204,41 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                       set('phone', v);
                       // Auto-detect country from number
                       if (v.startsWith('+')) {
-                        set('countryCode', getCountryFromPhone(v));
-                      } else if (v.startsWith('01') && v.length >= 5) {
-                        set('countryCode', '+20'); // Egyptian local
+                        const detected = getCountryFromPhone(v);
+                        set('countryCode', detected);
+                        const match = COUNTRY_CODES.find(c => c.code === detected);
+                        if (match) set('country', match.country);
+                      } else {
+                        const detected = detectCountryFromLocal(v);
+                        if (detected) {
+                          set('countryCode', detected.code);
+                          set('country', detected.country);
+                        }
                       }
                       setDupWarning(null);
                       const full = getFullPhone(v, form.countryCode);
                       if (validatePhone(full)) { checkPhoneNumber(full); }
                     }} />
+                  {/* Country auto-detect indicator */}
+                  {form.phone && !form.phone.startsWith('+') && (() => {
+                    const det = detectCountryFromLocal(form.phone);
+                    if (!det) return null;
+                    const cc = COUNTRY_CODES.find(c => c.country === det.country);
+                    return <span className="shrink-0 text-xs font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/10 px-2 py-1 rounded-lg whitespace-nowrap">{det.flag} {isRTL ? (cc?.labelAr || det.country) : (cc?.label || det.country)}</span>;
+                  })()}
                 </div>
                 {checking && <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div className="mt-2 p-3 bg-red-500/[0.08] border border-red-500/30 rounded-xl text-xs">
                     <div className="text-red-500 font-bold mb-2">⚠️ {isRTL ? 'هذا الرقم مسجل باسم' : 'This number belongs to'}: <strong>{dupWarning.full_name}</strong> <span className="text-xs text-content-muted dark:text-content-muted-dark font-mono">— ID: {dupWarning.id}</span></div>
-                    <div className="flex gap-2">
+                    {dupWarning._interactionLogged && (
+                      <div className="mb-2 p-2 bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg text-emerald-600 dark:text-emerald-400 font-semibold">
+                        {isRTL ? `تم تسجيل تفاعل "${form.campaign_name}" تلقائيًا` : `"${form.campaign_name}" interaction logged automatically`}
+                      </div>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
                       <Button size="sm" onClick={() => { onOpenOpportunity(dupWarning); onClose(); }} className="flex-1">
-                        ✨ {isRTL ? 'فتح فرصة جديدة لـ ' + dupWarning.full_name : 'New opportunity for ' + dupWarning.full_name}
+                        {isRTL ? 'فتح فرصة جديدة' : 'New opportunity'}
                       </Button>
                       <Button variant="secondary" size="sm" onClick={onClose}>
                         {isRTL ? 'إلغاء' : 'Cancel'}

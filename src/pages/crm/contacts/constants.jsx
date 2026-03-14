@@ -3,14 +3,8 @@ import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { Flame, Wind, Snowflake, Thermometer } from 'lucide-react';
 
-// ── Hooks ──────────────────────────────────────────────────────────────────
-export function useEscClose(onClose) {
-  useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); onClose(); } };
-    document.addEventListener('keydown', handler, true);
-    return () => document.removeEventListener('keydown', handler, true);
-  }, [onClose]);
-}
+// ── Hooks (re-export from shared) ────────────────────────────────────────
+export { useEscClose } from '../../../utils/hooks';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 export const SOURCE_LABELS = { facebook: 'فيسبوك', instagram: 'إنستجرام', google_ads: 'جوجل أدز', website: 'الموقع', call: 'اتصال وارد', walk_in: 'زيارة مباشرة', referral: 'ترشيح', developer: 'مطور', cold_call: 'كولد كول', other: 'أخرى' };
