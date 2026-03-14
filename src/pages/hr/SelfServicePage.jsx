@@ -10,6 +10,8 @@ import {
   Briefcase, Heart, UserCog, MessageSquare, Target, ChevronUp, ChevronDown, Minus,
 } from 'lucide-react';
 import { ensureTargets, computeActuals, getEmployeeTargets, METRIC_CONFIG, METRICS } from '../../services/kpiTargetsService';
+import { getEmployeeClaims, EXPENSE_CATEGORIES } from '../../services/expenseClaimService';
+import { useNavigate } from 'react-router-dom';
 
 /* ─── Quick Actions ─── */
 const QUICK_ACTIONS = [
@@ -537,6 +539,96 @@ export default function SelfServicePage() {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── My Expenses ── */}
+      {(() => {
+        const empId = emp?.id || 'e1';
+        const myClaims = getEmployeeClaims(empId).slice(0, 5);
+        const myPendingAmt = myClaims.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0);
+        const myApprovedAmt = myClaims.filter(c => c.status === 'approved' || c.status === 'paid').reduce((s, c) => s + c.amount, 0);
+        const statusMap = {
+          pending:  { ar: 'معلق',     en: 'Pending',  color: '#F59E0B' },
+          approved: { ar: 'موافق عليه', en: 'Approved', color: '#10B981' },
+          rejected: { ar: 'مرفوض',    en: 'Rejected', color: '#EF4444' },
+          paid:     { ar: 'مدفوع',    en: 'Paid',     color: '#4A7AAB' },
+        };
+        return (
+          <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden mb-6">
+            <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <DollarSign size={16} className="text-brand-500" />
+                <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
+                  {isRTL ? 'مصروفاتي' : 'My Expenses'}
+                </p>
+              </div>
+              <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-[11px] text-content-muted dark:text-content-muted-dark">
+                  {isRTL ? `معلق: ${myPendingAmt.toLocaleString()} ج.م` : `Pending: ${myPendingAmt.toLocaleString()} EGP`}
+                </span>
+                <span className="text-[11px] font-semibold" style={{ color: '#10B981' }}>
+                  {isRTL ? `موافق عليه: ${myApprovedAmt.toLocaleString()} ج.م` : `Approved: ${myApprovedAmt.toLocaleString()} EGP`}
+                </span>
+                <button
+                  onClick={() => window.location.href = '/hr/expense-claims'}
+                  className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border-none cursor-pointer transition-colors"
+                  style={{ background: 'rgba(74,122,171,0.12)', color: '#4A7AAB' }}
+                >
+                  {isRTL ? 'عرض الكل' : 'View All'}
+                </button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[480px]">
+                <thead>
+                  <tr className="border-b border-edge dark:border-edge-dark">
+                    {[
+                      isRTL ? 'التاريخ' : 'Date',
+                      isRTL ? 'العنوان' : 'Title',
+                      isRTL ? 'الفئة' : 'Category',
+                      isRTL ? 'المبلغ' : 'Amount',
+                      isRTL ? 'الحالة' : 'Status',
+                    ].map((h, i) => (
+                      <th key={i} className={`px-5 py-3 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {myClaims.length === 0 && (
+                    <tr><td colSpan={5} className={`px-5 py-6 text-center text-xs text-content-muted dark:text-content-muted-dark`}>
+                      {isRTL ? 'لا توجد طلبات مصروفات' : 'No expense claims yet'}
+                    </td></tr>
+                  )}
+                  {myClaims.map(claim => {
+                    const cat = EXPENSE_CATEGORIES[claim.category] || EXPENSE_CATEGORIES.other;
+                    const st = statusMap[claim.status] || statusMap.pending;
+                    return (
+                      <tr key={claim.id} className="border-b border-edge/50 dark:border-edge-dark/50 hover:bg-[#F8FAFC] dark:hover:bg-brand-500/[0.05] transition-colors">
+                        <td className={`px-5 py-3 text-xs text-content-muted dark:text-content-muted-dark ${isRTL ? 'text-right' : 'text-left'}`}>{claim.date}</td>
+                        <td className={`px-5 py-3 text-xs font-semibold text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`}>{claim.title}</td>
+                        <td className={`px-5 py-3 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold" style={{ background: `${cat.color}15`, color: cat.color, border: `1px solid ${cat.color}30` }}>
+                            {isRTL ? cat.ar : cat.en}
+                          </span>
+                        </td>
+                        <td className={`px-5 py-3 text-xs font-bold text-content dark:text-content-dark ${isRTL ? 'text-right' : 'text-left'}`}>
+                          {claim.amount.toLocaleString()} {claim.currency}
+                        </td>
+                        <td className={`px-5 py-3 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold" style={{ background: `${st.color}15`, color: st.color, border: `1px solid ${st.color}30` }}>
+                            {isRTL ? st.ar : st.en}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         );

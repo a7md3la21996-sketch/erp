@@ -35,6 +35,7 @@ const TrainingPage = lazy(() => import('./pages/hr/TrainingPage'));
 const SelfServicePage = lazy(() => import('./pages/hr/SelfServicePage'));
 const AssetsPage = lazy(() => import('./pages/hr/AssetsPage'));
 const OnboardingPage = lazy(() => import('./pages/hr/OnboardingPage'));
+const ExpenseClaimsPage = lazy(() => import('./pages/hr/ExpenseClaimsPage'));
 const OperationsPage = lazy(() => import('./pages/operations/OperationsPage'));
 const AuditLogPage = lazy(() => import('./pages/settings/AuditLogPage'));
 const CalendarPage = lazy(() => import('./pages/CalendarPage'));
@@ -145,6 +146,7 @@ export default function App() {
                 <Route path="/hr/self-service" element={<Guarded><SelfServicePage /></Guarded>} />
                 <Route path="/hr/assets" element={<Guarded><AssetsPage /></Guarded>} />
                 <Route path="/hr/onboarding" element={<Guarded><OnboardingPage /></Guarded>} />
+                <Route path="/hr/expense-claims" element={<Guarded><ExpenseClaimsPage /></Guarded>} />
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
                 <Route path="/operations" element={<Guarded><OperationsPage /></Guarded>} />
                 <Route path="/operations/*" element={<Guarded><OperationsPage /></Guarded>} />

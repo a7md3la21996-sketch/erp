@@ -49,6 +49,7 @@ export const NAV_ITEMS = [
     { id: 'self-service',   label: { ar: 'بوابة الموظف',          en: 'Self-Service' },           path: '/hr/self-service',   permission: P.HR_VIEW_OWN },
     { id: 'assets',         label: { ar: 'إدارة الأصول',          en: 'Assets' },                 path: '/hr/assets',         permission: P.HR_VIEW_ALL },
     { id: 'onboarding',     label: { ar: 'الاستقبال والمغادرة',   en: 'Onboarding' },             path: '/hr/onboarding',     permission: P.HR_VIEW_ALL },
+    { id: 'expense-claims', label: { ar: 'طلبات المصروفات',      en: 'Expense Claims' },         path: '/hr/expense-claims', permission: P.HR_VIEW_OWN },
   ]},
   { id: 'finance', label: { ar: 'المالية', en: 'Finance' }, icon: Wallet, permission: P.FINANCE_VIEW, children: [
     { id: 'fin-overview', label: { ar: 'نظرة عامة', en: 'Overview' }, path: '/finance', permission: P.FINANCE_VIEW },
