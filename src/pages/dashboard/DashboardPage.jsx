@@ -16,6 +16,7 @@ import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck,
 import { Card, KpiCard, Badge, DashboardSkeleton } from '../../components/ui';
 import { generateDueInstances, getTodayInstances, completeInstance, skipInstance, PRIORITY_OPTIONS } from '../../services/recurringTaskService';
 import { getLayout, saveLayout, resetLayout, getWidgetMeta, AVAILABLE_WIDGETS, WIDGET_CATEGORIES, SIZE_OPTIONS } from '../../services/widgetService';
+import SuggestionsPanel from '../../components/ui/SuggestionsPanel';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -1040,6 +1041,9 @@ export default function DashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Smart Suggestions Panel */}
+      <SuggestionsPanel />
 
       {/* Dashboard controls: Date range + Customize button */}
       <div style={{

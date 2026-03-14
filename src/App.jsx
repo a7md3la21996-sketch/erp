@@ -54,8 +54,10 @@ const TriggersPage = lazy(() => import('./pages/settings/TriggersPage'));
 const CustomFieldsPage = lazy(() => import('./pages/settings/CustomFieldsPage'));
 const BackupPage = lazy(() => import('./pages/settings/BackupPage'));
 const ScheduledReportsPage = lazy(() => import('./pages/settings/ScheduledReportsPage'));
+const SMSTemplatesPage = lazy(() => import('./pages/settings/SMSTemplatesPage'));
 const ChatInboxPage = lazy(() => import('./pages/ChatInboxPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
+const ChartBuilderPage = lazy(() => import('./pages/ChartBuilderPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -163,6 +165,7 @@ export default function App() {
                 <Route path="/chat" element={<Guarded><ChatInboxPage /></Guarded>} />
                 <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
                 <Route path="/analytics" element={<Guarded><AnalyticsPage /></Guarded>} />
+                <Route path="/chart-builder" element={<Guarded><ChartBuilderPage /></Guarded>} />
                 <Route path="/settings/general" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/settings/audit-log" element={<Guarded><AuditLogPage /></Guarded>} />
                 <Route path="/settings/system" element={<Guarded><SystemConfigPage /></Guarded>} />
@@ -172,6 +175,7 @@ export default function App() {
                 <Route path="/settings/custom-fields" element={<Guarded><CustomFieldsPage /></Guarded>} />
                 <Route path="/settings/backup" element={<Guarded><BackupPage /></Guarded>} />
                 <Route path="/settings/scheduled-reports" element={<Guarded><ScheduledReportsPage /></Guarded>} />
+                <Route path="/settings/sms-templates" element={<Guarded><SMSTemplatesPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />
