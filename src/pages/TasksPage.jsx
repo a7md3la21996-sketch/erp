@@ -9,6 +9,7 @@ import {
 import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
+import { logAction } from '../services/auditService';
 
 const ICONS = { Phone, PhoneCall, Users, Mail, MessageCircle, CheckSquare };
 
@@ -23,7 +24,7 @@ function formatDue(dateStr, lang) {
 
 export default function TasksPage() {
   const { i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const lang   = i18n.language;
   const isRTL   = lang === 'ar';
 
@@ -121,6 +122,7 @@ export default function TasksPage() {
     setSaving(true);
     try {
       const t = await createTask({ ...form, assigned_to_name_ar: 'أنت', assigned_to_name_en: 'You' });
+      logAction({ action: 'create', entity: 'task', entityId: t.id, entityName: t.title || '', description: 'Created task', userName: profile?.full_name_ar || profile?.full_name_en || '' });
       setTasks(prev => [t, ...prev]);
       setForm({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'crm', due_date: '', notes: '', contact_name: '' });
       setShowAdd(false);
@@ -128,12 +130,16 @@ export default function TasksPage() {
   };
 
   const handleStatus = async (task, newStatus) => {
+    const oldStatus = task.status;
     await updateTask(task.id, { status: newStatus });
+    logAction({ action: 'status_change', entity: 'task', entityId: task.id, entityName: task.title || '', description: `Changed task status from ${oldStatus} to ${newStatus}`, oldValue: oldStatus, newValue: newStatus, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
   };
 
   const handleDelete = async (id) => {
+    const task = tasks.find(t => t.id === id);
     await deleteTask(id);
+    logAction({ action: 'delete', entity: 'task', entityId: id, entityName: task?.title || '', description: 'Deleted task', userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setTasks(prev => prev.filter(t => t.id !== id));
   };
 

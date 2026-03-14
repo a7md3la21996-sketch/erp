@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar } from 'lucide-react';
-import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Select, Pagination } from '../../components/ui';
+import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Select, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
 function AttendanceRow({ emp, attendance, isRTL }) {
   const recs = attendance[emp.employee_id] || [];
@@ -54,6 +55,9 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [smartFilters, setSmartFilters] = useState([]);
+
+  const { auditFields, applyAuditFilters } = useAuditFilter('attendance');
 
   useEffect(() => {
     fetchEmployees().then(data => { setEmployees(data); setLoading(false); });
@@ -83,9 +87,21 @@ export default function AttendancePage() {
     });
     return { present, absent, late, leave };
   }, [allRecords]);
-  const totalPages = Math.max(1, Math.ceil(employees.length / pageSize));
+
+  const SMART_FIELDS = useMemo(() => [
+    ...auditFields,
+  ], [auditFields]);
+
+  const filtered = useMemo(() => {
+    let result = employees;
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+    return result;
+  }, [employees, smartFilters, SMART_FIELDS]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = employees.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [month]);
 
@@ -110,7 +126,8 @@ export default function AttendancePage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{MONTHS_AR[month-1]} {year}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
           <Select value={month} onChange={e=>setMonth(+e.target.value)}>
             {MONTHS_AR.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
           </Select>
@@ -164,7 +181,7 @@ export default function AttendancePage() {
             ))}
           </tbody>
         </Table>
-        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={employees.length} />
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
       </Card>
     </div>
   );

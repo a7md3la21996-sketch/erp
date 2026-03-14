@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, ShieldAlert } from 'lucide-react';
-import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton, Pagination } from '../../components/ui';
+import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 
 
 const MOCK_CASES = [
@@ -31,18 +32,71 @@ export default function DisciplinaryPage() {
   const [employees, setEmployees] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [smartFilters, setSmartFilters] = useState([]);
+  const [search, setSearch] = useState('');
 
   const [loading, setLoading] = useState(true);
   useEffect(() => { fetchEmployees().then(data => { setEmployees(data); setLoading(false); }); }, []);
 
-  const open   = cases.filter(c=>c.status==='open').length;
-  const closed = cases.filter(c=>c.status==='closed').length;
-  const high   = cases.filter(c=>c.severity==='high').length;
+  const { auditFields, applyAuditFilters } = useAuditFilter('disciplinary');
 
-  const totalPages = Math.max(1, Math.ceil(cases.length / pageSize));
+  const SMART_FIELDS = useMemo(() => [
+    {
+      id: 'type', label: 'النوع', labelEn: 'Type', type: 'select',
+      options: [
+        { value: 'warning', label: 'إنذار', labelEn: 'Warning' },
+        { value: 'suspension', label: 'إيقاف', labelEn: 'Suspension' },
+        { value: 'termination', label: 'فصل', labelEn: 'Termination' },
+      ],
+    },
+    {
+      id: 'severity', label: 'الخطورة', labelEn: 'Severity', type: 'select',
+      options: [
+        { value: 'high', label: 'عالي', labelEn: 'High' },
+        { value: 'medium', label: 'متوسط', labelEn: 'Medium' },
+        { value: 'low', label: 'منخفض', labelEn: 'Low' },
+      ],
+    },
+    {
+      id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select',
+      options: [
+        { value: 'open', label: 'مفتوح', labelEn: 'Open' },
+        { value: 'closed', label: 'مغلق', labelEn: 'Closed' },
+      ],
+    },
+    { id: 'date', label: 'التاريخ', labelEn: 'Date', type: 'date' },
+    ...auditFields,
+  ], [auditFields]);
+
+  const filtered = useMemo(() => {
+    let result = cases;
+
+    // Apply smart filters
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+
+    // Apply search
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(c => {
+        const emp = employees.find(e => e.employee_id === c.emp_id || e.id === c.emp_id);
+        const name = emp ? ((isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar) : c.emp_id;
+        return name.toLowerCase().includes(q) || (c.reason || '').toLowerCase().includes(q) || (c.emp_id || '').toLowerCase().includes(q);
+      });
+    }
+
+    return result;
+  }, [cases, smartFilters, SMART_FIELDS, search, employees, isRTL]);
+
+  const open   = filtered.filter(c=>c.status==='open').length;
+  const closed = filtered.filter(c=>c.status==='closed').length;
+  const high   = filtered.filter(c=>c.severity==='high').length;
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = cases.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [search, smartFilters]);
 
   const severityColor = s => s==='high'?'#EF4444':s==='medium'?'#6B8DB5':'#4A7AAB';
   const severityLabel = (s,lang) => ({ high:lang==='ar'?'عالي':'High', medium:lang==='ar'?'متوسط':'Medium', low:lang==='ar'?'منخفض':'Low' }[s]||s);
@@ -88,11 +142,17 @@ export default function DisciplinaryPage() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-        <KpiCard icon={Shield}       label={lang==='ar'?'إجمالي الحالات':'Total Cases'} value={cases.length} color="#1B3347" />
+        <KpiCard icon={Shield}       label={lang==='ar'?'إجمالي الحالات':'Total Cases'} value={filtered.length} color="#1B3347" />
         <KpiCard icon={AlertTriangle} label={lang==='ar'?'مفتوحة':'Open'}           value={open}         color="#6B8DB5" />
         <KpiCard icon={XCircle}      label={lang==='ar'?'خطورة عالية':'High Severity'} value={high}         color="#EF4444" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'مغلقة':'Closed'}          value={closed}       color="#4A7AAB" />
       </div>
+
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+      />
 
       <Card className="!rounded-xl overflow-hidden">
         <div className="px-4 py-3.5 border-b border-edge dark:border-edge-dark">
@@ -107,7 +167,7 @@ export default function DisciplinaryPage() {
             </tr>
           </thead>
           <tbody>
-            {cases.length === 0 ? (
+            {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6}>
                   <div className="text-center py-16 px-5">
@@ -135,7 +195,7 @@ export default function DisciplinaryPage() {
             })}
           </tbody>
         </Table>
-        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={cases.length} />
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
       </Card>
     </div>
   );

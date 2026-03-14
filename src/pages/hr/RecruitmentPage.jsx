@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { Briefcase, Users, Clock, CheckCircle2, Plus, Eye } from 'lucide-react';
-import { KpiCard, Button, Th, Td, Tr, ExportButton, Pagination } from '../../components/ui';
+import { KpiCard, Button, Th, Td, Tr, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
 const MOCK_JOBS = [
   { id:1, title_ar:'مدير مبيعات', title_en:'Sales Manager', dept:'المبيعات', type:'full-time', status:'open', applicants:12, posted:'2026-02-15' },
@@ -29,12 +30,49 @@ export default function RecruitmentPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [jobs] = useState(MOCK_JOBS);
+  const [search, setSearch] = useState('');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  const totalPages = Math.max(1, Math.ceil(jobs.length / pageSize));
+  const { auditFields, applyAuditFilters } = useAuditFilter('recruitment');
+
+  const SMART_FIELDS = useMemo(() => [
+    {
+      id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select',
+      options: [
+        { value: 'open', label: 'مفتوح', labelEn: 'Open' },
+        { value: 'interviewing', label: 'مقابلات', labelEn: 'Interviewing' },
+        { value: 'closed', label: 'مغلق', labelEn: 'Closed' },
+      ],
+    },
+    { id: 'dept', label: 'القسم', labelEn: 'Department', type: 'text' },
+    { id: 'type', label: 'نوع الوظيفة', labelEn: 'Job Type', type: 'text' },
+    { id: 'posted', label: 'تاريخ النشر', labelEn: 'Posted Date', type: 'date' },
+    ...auditFields,
+  ], [auditFields]);
+
+  const filtered = useMemo(() => {
+    let result = jobs;
+
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(j =>
+        (j.title_ar || '').toLowerCase().includes(q) ||
+        (j.title_en || '').toLowerCase().includes(q) ||
+        (j.dept || '').toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [jobs, smartFilters, SMART_FIELDS, search, applyAuditFilters]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = jobs.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const open = jobs.filter(j=>j.status==='open').length;
@@ -80,6 +118,15 @@ export default function RecruitmentPage() {
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'ماتمت المقابلة':'Interviewing'} value={interviewing} color="#2B4C6F" />
       </div>
 
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={lang === 'ar' ? 'ابحث عن وظيفة...' : 'Search jobs...'}
+      />
+
       <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
         <div className="px-5 py-3.5 border-b border-edge dark:border-edge-dark">
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'الوظائف المتاحة':'Job Openings'}</p>
@@ -111,7 +158,7 @@ export default function RecruitmentPage() {
           </tbody>
         </table>
       </div>
-      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={jobs.length} />
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
     </div>
   );
 }

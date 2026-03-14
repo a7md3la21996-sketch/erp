@@ -11,6 +11,7 @@ import {
 import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination } from '../../components/ui';
 import { getWonDeals } from '../../services/dealsService';
 import { logView } from '../../services/viewTrackingService';
+import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { fmtMoney } from '../../utils/formatting';
 import { thCls } from '../../utils/tableStyles';

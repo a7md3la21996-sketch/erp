@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { Package, CheckCircle2, AlertCircle, Clock, Plus, Edit2, Trash2 } from 'lucide-react';
-import { Button, Card, KpiCard, Th, Tr, Td, FilterPill, ExportButton, Pagination } from '../../components/ui';
+import { Button, Card, KpiCard, Th, Tr, Td, FilterPill, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
 
 const MOCK_ASSETS = [
@@ -22,10 +23,22 @@ export default function AssetsPage() {
   const [employees, setEmployees] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [smartFilters, setSmartFilters] = useState([]);
+
+  const { auditFields, applyAuditFilters } = useAuditFilter('asset');
 
   useEffect(() => { fetchEmployees().then(data => setEmployees(data)); }, []);
 
-  const filtered = filter==='all' ? assets : assets.filter(a=>a.status===filter);
+  const SMART_FIELDS = useMemo(() => [
+    ...auditFields,
+  ], [auditFields]);
+
+  const filtered = useMemo(() => {
+    let result = filter==='all' ? assets : assets.filter(a=>a.status===filter);
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+    return result;
+  }, [assets, filter, smartFilters, SMART_FIELDS]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -90,10 +103,11 @@ export default function AssetsPage() {
       <Card className="!rounded-xl overflow-hidden">
         <div className={`px-4 py-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'قائمة الأصول':'Asset List'}</p>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1.5 items-center">
             {filters.map(f => (
               <FilterPill key={f.key} label={f.label} active={filter===f.key} onClick={()=>setFilter(f.key)} />
             ))}
+            <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
           </div>
         </div>
         {filtered.length === 0 ? (

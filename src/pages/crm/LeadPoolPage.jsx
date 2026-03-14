@@ -9,6 +9,7 @@ import {
 import { P } from '../../config/roles';
 import { Button, Card, Badge, KpiCard, Modal, ModalFooter, Input, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import { logAction } from '../../services/auditService';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCES = {
@@ -102,7 +103,7 @@ const SMART_FIELDS_STATIC = [
 
 export default function LeadPoolPage() {
   const { i18n } = useTranslation();
-  const { hasPermission, user } = useAuth();
+  const { hasPermission, user, profile } = useAuth();
   const lang  = i18n.language;
   const isRTL  = lang === 'ar';
 
@@ -191,6 +192,8 @@ export default function LeadPoolPage() {
   }, [leads, tick]);
 
   const handleReserve = (lead) => {
+    const userName = profile?.full_name_ar || profile?.full_name_en || '';
+    logAction({ action: 'assign', entity: 'lead', entityId: lead.id, entityName: lead.name || '', description: 'Reserved lead for 5 minutes', userName });
     setLeads(prev => prev.map(l => l.id === lead.id ? {
       ...l, reserved_by: user?.id || 'me',
       reserved_until: new Date(Date.now() + 5*60*1000).toISOString()
@@ -198,6 +201,19 @@ export default function LeadPoolPage() {
   };
 
   const handleAssign = (leadIds, agentId) => {
+    const agent = MOCK_AGENTS.find(a => a.id === agentId);
+    const agentName = agent ? (lang === 'ar' ? agent.name_ar : agent.name_en) : agentId;
+    const userName = profile?.full_name_ar || profile?.full_name_en || '';
+    const isBulk = Array.isArray(leadIds) && leadIds.length > 1;
+
+    if (isBulk) {
+      logAction({ action: 'bulk_reassign', entity: 'lead', entityId: leadIds.join(','), entityName: `${leadIds.length} leads`, description: `Bulk assigned ${leadIds.length} leads to ${agentName}`, userName });
+    } else {
+      const leadId = Array.isArray(leadIds) ? leadIds[0] : leadIds;
+      const lead = leads.find(l => l.id === leadId);
+      logAction({ action: 'assign', entity: 'lead', entityId: leadId, entityName: lead?.name || '', description: `Assigned lead to ${agentName}`, userName });
+    }
+
     setLeads(prev => prev.filter(l => !leadIds.includes(l.id)));
     setSelected([]);
     setAssignModal(null);
@@ -218,6 +234,8 @@ export default function LeadPoolPage() {
       reserved_by: null,
       reserved_until: null,
     };
+    const userName = profile?.full_name_ar || profile?.full_name_en || '';
+    logAction({ action: 'assign', entity: 'lead', entityId: lead.id, entityName: lead.name || '', description: 'Added new cold call lead to pool', userName });
     setLeads(prev => [lead, ...prev]);
     setNewLead({ name: '', phone: '', source: 'cold_call' });
     setAddModal(false);

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download } from 'lucide-react';
 import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select, Pagination } from '../../components/ui';
 
@@ -10,6 +11,7 @@ const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو
 export default function PayrollPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
+  const { auditFields, applyAuditFilters } = useAuditFilter('payroll');
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);

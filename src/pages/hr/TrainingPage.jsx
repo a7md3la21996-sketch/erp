@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Users, CheckCircle2, Clock, Plus, GraduationCap } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, ExportButton, Pagination } from '../../components/ui';
+import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 
 const MOCK_PROGRAMS = [
   { id:1, title:'مهارات التفاوض', title_en:'Negotiation Skills', category:'sales', duration:16, enrolled:6, completed:4, status:'active', start:'2026-03-10' },
@@ -16,14 +17,28 @@ export default function TrainingPage() {
   const [programs] = useState(MOCK_PROGRAMS);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [smartFilters, setSmartFilters] = useState([]);
 
-  const active    = programs.filter(p=>p.status==='active').length;
-  const totalEnr  = programs.reduce((s,p)=>s+p.enrolled,0);
-  const totalComp = programs.reduce((s,p)=>s+p.completed,0);
+  const { auditFields, applyAuditFilters } = useAuditFilter('training');
 
-  const totalPages = Math.max(1, Math.ceil(programs.length / pageSize));
+  const SMART_FIELDS = useMemo(() => [
+    ...auditFields,
+  ], [auditFields]);
+
+  const filtered = useMemo(() => {
+    let result = programs;
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+    return result;
+  }, [programs, smartFilters, SMART_FIELDS]);
+
+  const active    = filtered.filter(p=>p.status==='active').length;
+  const totalEnr  = filtered.reduce((s,p)=>s+p.enrolled,0);
+  const totalComp = filtered.reduce((s,p)=>s+p.completed,0);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = programs.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const statusColor = s => s==='completed'?'#4A7AAB':s==='active'?'#6B8DB5':'#8BA8C8';
@@ -44,7 +59,7 @@ export default function TrainingPage() {
         </div>
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <ExportButton
-            data={programs}
+            data={filtered}
             filename={isRTL ? 'التدريب' : 'training'}
             title={isRTL ? 'التدريب والتطوير' : 'Training & Development'}
             columns={[
@@ -62,15 +77,17 @@ export default function TrainingPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-        <KpiCard icon={BookOpen}     label={lang==='ar'?'إجمالي البرامج':'Total Programs'} value={programs.length} color="#1B3347" />
+        <KpiCard icon={BookOpen}     label={lang==='ar'?'إجمالي البرامج':'Total Programs'} value={filtered.length} color="#1B3347" />
         <KpiCard icon={Clock}        label={lang==='ar'?'نشطة':'Active'}            value={active}          color="#6B8DB5" />
         <KpiCard icon={Users}        label={lang==='ar'?'إجمالي المسجلين':'Enrolled'}         value={totalEnr}        color="#4A7AAB" />
         <KpiCard icon={CheckCircle2} label={lang==='ar'?'أتموا التدريب':'Completed'}        value={totalComp}       color="#2B4C6F" />
       </div>
 
+      <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
+
       {/* Program Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-4">
-        {programs.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="text-center py-16 px-5 col-span-2">
             <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
               <GraduationCap size={24} color='#4A7AAB' />
@@ -134,7 +151,7 @@ export default function TrainingPage() {
           </tbody>
         </Table>
       </Card>
-      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={programs.length} />
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
     </div>
   );
 }

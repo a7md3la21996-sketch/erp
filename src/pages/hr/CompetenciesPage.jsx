@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { COMPETENCIES } from '../../data/hr_mock_data';
 import { Award, TrendingUp, Users, Star, ChevronDown } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, FilterPill, Table, Th, Td, Tr, Pagination } from '../../components/ui';
+import { KpiCard, Badge, Button, Card, FilterPill, Table, Th, Td, Tr, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 
 export default function CompetenciesPage() {
   const { i18n } = useTranslation();
@@ -11,15 +12,36 @@ export default function CompetenciesPage() {
   const [expanded, setExpanded] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [smartFilters, setSmartFilters] = useState([]);
+
+  const { auditFields, applyAuditFilters } = useAuditFilter('competency');
 
   const categories = [...new Set(COMPETENCIES.map(c=>c.category))];
-  const filtered = filter==='all' ? COMPETENCIES : COMPETENCIES.filter(c=>c.category===filter);
+
+  const SMART_FIELDS = useMemo(() => [
+    {
+      id: 'category', label: 'الفئة', labelEn: 'Category', type: 'select',
+      options: categories.map(c => ({ value: c, label: c, labelEn: c })),
+    },
+    {
+      id: 'required_level', label: 'المستوى المطلوب', labelEn: 'Required Level', type: 'select',
+      options: [1,2,3,4,5].map(n => ({ value: n, label: String(n), labelEn: String(n) })),
+    },
+    ...auditFields,
+  ], [auditFields, categories.length]);
+
+  const filtered = useMemo(() => {
+    let result = filter==='all' ? COMPETENCIES : COMPETENCIES.filter(c=>c.category===filter);
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+    return result;
+  }, [filter, smartFilters, SMART_FIELDS]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
-  useEffect(() => { setPage(1); }, [filter]);
+  useEffect(() => { setPage(1); }, [filter, smartFilters]);
 
   const avgLevel = Math.round(COMPETENCIES.reduce((s,c)=>s+(c.required_level||3),0)/COMPETENCIES.length);
 
@@ -58,6 +80,12 @@ export default function CompetenciesPage() {
           />
         ))}
       </div>
+
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+      />
 
       {/* Competencies Table */}
       <Card className="overflow-hidden">

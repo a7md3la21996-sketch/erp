@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../services/leaveService';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { CalendarOff, Clock, CheckCircle2, XCircle, Plus, Check, X } from 'lucide-react';
-import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Pagination } from '../../components/ui';
+import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 
 export default function LeavePage() {
   const { i18n } = useTranslation();
@@ -13,6 +14,9 @@ export default function LeavePage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [smartFilters, setSmartFilters] = useState([]);
+
+  const { auditFields, applyAuditFilters } = useAuditFilter('leave');
 
   useEffect(() => {
     Promise.all([fetchLeaveRequests(), fetchEmployees()]).then(([l, e]) => {
@@ -33,10 +37,41 @@ export default function LeavePage() {
     setLeaves(prev=>prev.map(l=>l.id===id?{...l,status:'rejected'}:l));
   };
 
-  const totalPages = Math.max(1, Math.ceil(leaves.length / pageSize));
+  const SMART_FIELDS = useMemo(() => [
+    {
+      id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select',
+      options: [
+        { value: 'pending', label: 'معلق', labelEn: 'Pending' },
+        { value: 'approved', label: 'موافق', labelEn: 'Approved' },
+        { value: 'rejected', label: 'مرفوض', labelEn: 'Rejected' },
+      ],
+    },
+    {
+      id: 'type', label: 'النوع', labelEn: 'Type', type: 'select',
+      options: [
+        { value: 'annual', label: 'سنوية', labelEn: 'Annual' },
+        { value: 'sick', label: 'مرضية', labelEn: 'Sick' },
+        { value: 'unpaid', label: 'بدون راتب', labelEn: 'Unpaid' },
+        { value: 'emergency', label: 'طارئة', labelEn: 'Emergency' },
+      ],
+    },
+    { id: 'start_date', label: 'من', labelEn: 'From', type: 'date' },
+    { id: 'end_date', label: 'إلى', labelEn: 'To', type: 'date' },
+    ...auditFields,
+  ], [auditFields]);
+
+  const filtered = useMemo(() => {
+    let result = leaves;
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+    return result;
+  }, [leaves, smartFilters, SMART_FIELDS]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = leaves.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [smartFilters]);
 
   const statusColor = s => s==='approved'?'#4A7AAB':s==='pending'?'#6B8DB5':'#EF4444';
   const statusLabel = (s,lang) => ({ approved:lang==='ar'?'موافق':'Approved', pending:lang==='ar'?'معلق':'Pending', rejected:lang==='ar'?'مرفوض':'Rejected' }[s]||s);
@@ -116,6 +151,9 @@ export default function LeavePage() {
         </div>
       </Card>
 
+      {/* Smart Filters */}
+      <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
+
       {/* Leave Requests Table */}
       <Card className="overflow-hidden">
         <CardHeader>
@@ -162,7 +200,7 @@ export default function LeavePage() {
             );
           })}</tbody>
         </Table>
-        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={leaves.length} />
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
       </Card>
     </div>
   );

@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { fetchEmployees, fetchDepartments } from '../../services/employeesService';
+import { useAuth } from '../../contexts/AuthContext';
+import { fetchEmployees, fetchDepartments, createEmployee, updateEmployee, deleteEmployee } from '../../services/employeesService';
+import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import {
   Users, Plus, Eye, Edit2, FileText,
@@ -43,6 +45,7 @@ export default function EmployeesPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const lang  = i18n.language;
+  const { profile } = useAuth();
 
   const [search,  setSearch]  = useState('');
   const [smartFilters, setSmartFilters] = useState([]);
@@ -54,12 +57,97 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('employee');
+  const userName = profile?.full_name_ar || profile?.full_name_en || '';
 
   useEffect(() => {
     Promise.all([fetchEmployees(), fetchDepartments()])
       .then(([emps, depts]) => { setEmployees(emps); setDepartments(depts); })
       .finally(() => setLoading(false));
   }, []);
+
+  /* ─── Mutation handlers with audit logging ─── */
+
+  const handleCreateEmployee = async (data) => {
+    try {
+      const result = await createEmployee(data);
+      logAction({
+        action: 'create',
+        entity: 'employee',
+        entityId: result.id,
+        entityName: result.full_name_ar || result.full_name_en || '',
+        description: `Created employee: ${result.full_name_ar || result.full_name_en || ''}`,
+        userName,
+      });
+      setEmployees(prev => [result, ...prev]);
+      return result;
+    } catch (err) {
+      console.error('Create employee failed:', err);
+      throw err;
+    }
+  };
+
+  const handleUpdateEmployee = async (id, updates) => {
+    try {
+      const old = employees.find(e => e.id === id);
+      const result = await updateEmployee(id, updates);
+      logAction({
+        action: 'update',
+        entity: 'employee',
+        entityId: id,
+        entityName: result.full_name_ar || result.full_name_en || '',
+        description: `Updated employee: ${result.full_name_ar || result.full_name_en || ''}`,
+        oldValue: old ? JSON.stringify(old) : null,
+        newValue: JSON.stringify(result),
+        userName,
+      });
+      setEmployees(prev => prev.map(e => e.id === id ? result : e));
+      return result;
+    } catch (err) {
+      console.error('Update employee failed:', err);
+      throw err;
+    }
+  };
+
+  const handleDeleteEmployee = async (id) => {
+    try {
+      const emp = employees.find(e => e.id === id);
+      await deleteEmployee(id);
+      logAction({
+        action: 'delete',
+        entity: 'employee',
+        entityId: id,
+        entityName: emp?.full_name_ar || emp?.full_name_en || '',
+        description: `Deleted employee: ${emp?.full_name_ar || emp?.full_name_en || ''}`,
+        userName,
+      });
+      setEmployees(prev => prev.filter(e => e.id !== id));
+    } catch (err) {
+      console.error('Delete employee failed:', err);
+      throw err;
+    }
+  };
+
+  const handleStatusChange = async (id, newStatus) => {
+    try {
+      const old = employees.find(e => e.id === id);
+      const result = await updateEmployee(id, { status: newStatus });
+      logAction({
+        action: 'status_change',
+        entity: 'employee',
+        entityId: id,
+        entityName: result.full_name_ar || result.full_name_en || '',
+        description: `Changed employee status: ${old?.status} → ${newStatus}`,
+        oldValue: old?.status,
+        newValue: newStatus,
+        userName,
+      });
+      setEmployees(prev => prev.map(e => e.id === id ? result : e));
+      return result;
+    } catch (err) {
+      console.error('Status change failed:', err);
+      throw err;
+    }
+  };
 
   /* stats */
   const today = new Date();
