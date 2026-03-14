@@ -7,10 +7,10 @@ import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 import { getAttendanceForMonth } from '../../data/attendanceStore';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fetchTodayReminders } from '../../services/remindersService';
-import { fetchAllDashboardData, buildPipelineData } from '../../services/dashboardService';
+import { fetchAllDashboardData, buildPipelineData, getDateRange, buildRevenueTrend, buildTopSellers, filterStatsByRange } from '../../services/dashboardService';
 import { getWonDeals } from '../../services/dealsService';
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle } from 'lucide-react';
 import { Card, KpiCard, Badge, DashboardSkeleton } from '../../components/ui';
 
@@ -44,9 +44,9 @@ function getSections(role) {
 function ChartTooltip({ active, payload, label, isDark, isRTL }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className={`rounded-lg px-3 py-2 shadow-lg text-xs border border-brand-500/30 ${isDark ? 'bg-surface-card-dark' : 'bg-white'}`} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div className="mb-0.5 text-content-muted dark:text-content-muted-dark">{label}</div>
-      {payload.map((p, i) => <div key={i} className="text-brand-500 font-bold">{typeof p.value === 'number' && p.value >= 10000 ? (p.value / 1000).toFixed(0) + 'K EGP' : p.value}</div>)}
+    <div className={`rounded-lg px-3.5 py-2.5 shadow-xl text-xs border border-brand-500/20 backdrop-blur-sm ${isDark ? 'bg-surface-card-dark/95' : 'bg-white/95'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="mb-1 text-content-muted dark:text-content-muted-dark font-medium">{label}</div>
+      {payload.map((p, i) => <div key={i} className="text-brand-500 font-bold text-sm">{typeof p.value === 'number' && p.value >= 10000 ? Number((p.value / 1000).toFixed(0)).toLocaleString() + 'K EGP' : typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</div>)}
     </div>
   );
 }
@@ -141,8 +141,19 @@ export default function DashboardPage() {
   const role = profile?.role || 'admin';
   const name = isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar);
   const roleLabel = ROLE_LABELS[role]?.[lang] || '';
+  const navigate = useNavigate();
   const sections = getSections(role);
   const attendance = getAttendanceForMonth(YEAR, MONTH);
+
+  // ── Date range filter ────────────────────────────────────────────────────
+  const [dateRange, setDateRange] = useState('this_year');
+  const DATE_RANGE_OPTIONS = [
+    { value: 'this_week',     label_ar: 'هذا الأسبوع',    label_en: 'This Week' },
+    { value: 'this_month',    label_ar: 'هذا الشهر',     label_en: 'This Month' },
+    { value: 'last_3_months', label_ar: 'آخر 3 أشهر',    label_en: 'Last 3 Months' },
+    { value: 'this_year',     label_ar: 'هذا العام',     label_en: 'This Year' },
+  ];
+  const activeDateRange = getDateRange(dateRange);
   const hr = useMemo(() => buildHRStats(attendance), [attendance]);
   const dateStr = new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const hour = new Date().getHours();
@@ -182,25 +193,48 @@ export default function DashboardPage() {
   const taskStats = dashData?.tasks;
   const activityStats = dashData?.activities;
 
-  // Revenue trend & top sellers from real deals
+  // ── Revenue trend & top sellers from real opportunities (with date range) ──
+  const rawOpps = dashData?.opportunities?.rawOpps;
+
+  // Also fetch won deals for agent names (deals have agent_ar/agent_en)
   const [wonDeals, setWonDeals] = useState([]);
   useEffect(() => { getWonDeals().then(d => setWonDeals(d || [])).catch(() => {}); }, []);
 
+  // Date-range filtered stats from raw opportunities
+  const rangeStats = useMemo(() => {
+    if (!rawOpps?.length) return null;
+    return filterStatsByRange(rawOpps, activeDateRange);
+  }, [rawOpps, activeDateRange]);
+
+  // Override CRM KPIs with date-range filtered data when available
+  const filteredCrm = useMemo(() => {
+    if (rangeStats) {
+      return {
+        ...crm,
+        activeOpps: rangeStats.activeOpps,
+        closedDeals: rangeStats.closedDeals,
+        revenue: rangeStats.revenue,
+      };
+    }
+    return crm;
+  }, [crm, rangeStats]);
+
   const realRevenueTrend = useMemo(() => {
-    if (!wonDeals.length) return null;
-    const MONTH_LABELS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const MONTH_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
-    const map = {};
-    wonDeals.forEach(d => { const m = new Date(d.created_at).getMonth(); map[m] = (map[m] || 0) + (d.deal_value || 0); });
-    const months = Object.keys(map).sort((a, b) => a - b).slice(-6);
-    if (months.length < 2) return null;
-    return months.map(m => ({ label_ar: MONTH_AR[m], label_en: MONTH_LABELS[m], value: map[m] }));
-  }, [wonDeals]);
+    if (!rawOpps?.length) return null;
+    return buildRevenueTrend(rawOpps, activeDateRange);
+  }, [rawOpps, activeDateRange]);
 
   const realTopSellers = useMemo(() => {
     if (!wonDeals.length) return null;
+    const { start, end } = activeDateRange || {};
+    const filtered = wonDeals.filter(d => {
+      if (start && new Date(d.created_at) < start) return false;
+      if (end && new Date(d.created_at) > end) return false;
+      return true;
+    });
+    if (!filtered.length) return null;
     const map = {};
-    wonDeals.forEach(d => {
+    filtered.forEach(d => {
       const key = d.agent_ar || d.agent_en || 'Unknown';
       if (!map[key]) map[key] = { name_ar: d.agent_ar || key, name_en: d.agent_en || key, revenue: 0 };
       map[key].revenue += d.deal_value || 0;
@@ -208,22 +242,23 @@ export default function DashboardPage() {
     const arr = Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 4);
     const maxRev = arr[0]?.revenue || 1;
     return arr.map(a => ({ ...a, pct: Math.round((a.revenue / maxRev) * 100) }));
-  }, [wonDeals]);
+  }, [wonDeals, activeDateRange]);
 
   const salesData = realTopSellers || MOCK_SALES.topSales;
-  const targetPct = crm.revenue > 0 && MOCK_SALES.target > 0
-    ? Math.round((crm.revenue / MOCK_SALES.target) * 100)
+  const targetPct = filteredCrm.revenue > 0 && MOCK_SALES.target > 0
+    ? Math.round((filteredCrm.revenue / MOCK_SALES.target) * 100)
     : Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
   const chartData = useMemo(() => (realRevenueTrend || REVENUE_TREND).map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en })), [lang, realRevenueTrend]);
 
-  // Pipeline chart — real data if available
+  // Pipeline chart — real data filtered by date range if available
   const realPipeline = useMemo(() => {
-    if (dashData?.opportunities?.stageCounts) {
-      const built = buildPipelineData(dashData.opportunities.stageCounts);
+    const stageCounts = rangeStats?.stageCounts || dashData?.opportunities?.stageCounts;
+    if (stageCounts) {
+      const built = buildPipelineData(stageCounts);
       if (built && built.length > 0) return built;
     }
     return null;
-  }, [dashData]);
+  }, [dashData, rangeStats]);
   const pipeData = useMemo(() => (realPipeline || PIPELINE_DATA).map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en })), [realPipeline, lang]);
 
   // Employee count from real data
@@ -232,8 +267,8 @@ export default function DashboardPage() {
   // Recharts needs raw color strings for tick fills
   const mutedColor = isDark ? '#8BA8C8' : '#64748B';
 
-  const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB' }) => (
-    <Card className="relative overflow-hidden px-5 py-[18px]">
+  const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB', onClick }) => (
+    <Card className={`relative overflow-hidden px-5 py-[18px] ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow duration-200' : ''}`} onClick={onClick}>
       <div className="absolute top-0 start-0 w-1 h-full rounded-s-xl" style={{ background: 'linear-gradient(180deg,' + color + ',transparent)' }} />
       <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="text-start">
@@ -271,7 +306,7 @@ export default function DashboardPage() {
           <p className="m-0 text-xs text-white/65">{roleLabel} · {dateStr}</p>
         </div>
         <div className={`flex gap-3 relative ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: crm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
+          {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: filteredCrm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
             <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-xl">
               <p className="m-0 text-xl font-bold text-white">{s.v}</p>
               <p className="m-0 text-xs text-white/65">{s.l}</p>
@@ -280,12 +315,34 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Date range filter */}
+      {sections.showCRM && (
+        <div className={`flex items-center gap-2 mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <Clock size={14} className="text-content-muted dark:text-content-muted-dark" />
+          <div className={`flex gap-1.5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+            {DATE_RANGE_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setDateRange(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${
+                  dateRange === opt.value
+                    ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
+                    : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark border-edge dark:border-edge-dark hover:border-brand-500 hover:text-brand-500'
+                }`}
+              >
+                {lang === 'ar' ? opt.label_ar : opt.label_en}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {sections.showCRM && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-          <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" />
-          <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : crm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" />
-          <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : crm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" />
-          <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (crm.revenue / 1000).toFixed(0) + 'K'} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" />
+          <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/crm/contacts')} />
+          <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
+          <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities')} />
+          <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue / 1000).toFixed(0) + 'K'} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
         </div>
       )}
 
@@ -294,31 +351,29 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           {taskStats && (
             <>
-              <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#F59E0B" />
-              <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#EF4444' : '#10B981'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} />
+              <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#F59E0B" onClick={() => navigate('/crm/opportunities')} />
+              <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#EF4444' : '#10B981'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} onClick={() => navigate('/crm/opportunities')} />
             </>
           )}
           {activityStats && (
-            <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#8B5CF6" trendUp />
+            <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#8B5CF6" trendUp onClick={() => navigate('/crm/opportunities')} />
           )}
-          <Link to="/crm/opportunities" className="no-underline">
-            <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={crm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((crm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#10B981" />
-          </Link>
+          <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={filteredCrm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((filteredCrm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#10B981" onClick={() => navigate('/crm/opportunities')} />
         </div>
       )}
 
       {sections.showCRM && (
         <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 mb-5">
           <Box>
-            <CardTitle icon={TrendingUp} title={lang === 'ar' ? 'تطور الإيرادات' : 'Revenue Trend'} sub={lang === 'ar' ? 'آخر 6 أشهر' : 'Last 6 months'} />
+            <CardTitle icon={TrendingUp} title={lang === 'ar' ? 'تطور الإيرادات' : 'Revenue Trend'} sub={lang === 'ar' ? DATE_RANGE_OPTIONS.find(o => o.value === dateRange)?.label_ar : DATE_RANGE_OPTIONS.find(o => o.value === dateRange)?.label_en} />
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                 <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4A7AAB" stopOpacity={0.25} /><stop offset="95%" stopColor="#4A7AAB" stopOpacity={0} /></linearGradient></defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.1)' : 'rgba(0,0,0,0.06)'} />
                 <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => (v / 1000) + 'K'} />
-                <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
-                <Area type="monotone" dataKey="value" stroke="#4A7AAB" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#4A7AAB', r: 3 }} activeDot={{ r: 5 }} />
+                <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ stroke: isDark ? 'rgba(74,122,171,0.3)' : 'rgba(74,122,171,0.2)', strokeWidth: 1 }} />
+                <Area type="monotone" dataKey="value" stroke="#4A7AAB" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#4A7AAB', r: 3 }} activeDot={{ r: 6, stroke: '#4A7AAB', strokeWidth: 2, fill: isDark ? '#1B3347' : '#fff' }} />
               </AreaChart>
             </ResponsiveContainer>
           </Box>
@@ -344,12 +399,13 @@ export default function DashboardPage() {
           <Box>
             <CardTitle icon={Activity} title={lang === 'ar' ? 'خط الأنابيب' : 'Sales Pipeline'} sub={lang === 'ar' ? 'فرص لكل مرحلة' : 'Opps per stage'} />
             <ResponsiveContainer width="100%" height={185}>
-              <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
+              <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }} style={{ cursor: 'pointer' }}
+                onClick={(e) => { if (e?.activePayload?.[0]?.payload?.stage_key) navigate('/crm/opportunities', { state: { initialStage: e.activePayload[0].payload.stage_key } }); }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
                 <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]}>{pipeData.map((_, i) => <Cell key={i} fill={'rgba(74,122,171,' + (0.35 + i * 0.13) + ')'} />)}</Bar>
+                <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ fill: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)' }} />
+                <Bar dataKey="count" radius={[6, 6, 0, 0]} className="cursor-pointer">{pipeData.map((_, i) => <Cell key={i} fill={'rgba(74,122,171,' + (0.35 + i * 0.13) + ')'} />)}</Bar>
               </BarChart>
             </ResponsiveContainer>
           </Box>
@@ -373,7 +429,7 @@ export default function DashboardPage() {
             <div className="mt-3.5 pt-3 border-t border-edge dark:border-edge-dark">
               <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span><span className="text-xs font-bold text-brand-500">{targetPct}%</span></div>
               <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: targetPct + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
-              <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(crm.revenue / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(MOCK_SALES.target / 1000).toFixed(0)}K EGP</span></div>
+              <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(filteredCrm.revenue / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(MOCK_SALES.target / 1000).toFixed(0)}K EGP</span></div>
             </div>
           </Box>
         </div>
@@ -382,10 +438,10 @@ export default function DashboardPage() {
       {sections.showHR && (
         <div className="mb-5">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
-            <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={dashLoading ? '...' : employeeCount}                color="#1B3347" />
-            <KpiCard icon={CalendarCheck} label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'}  value={hr.attendanceRate + '%'} color="#2B4C6F" />
-            <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#4A7AAB" />
-            <KpiCard icon={UserCheck}     label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}   value={hr.pendingLeaves}        color="#6B8DB5" />
+            <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={dashLoading ? '...' : employeeCount}                color="#1B3347" onClick={() => navigate('/hr/employees')} className="cursor-pointer hover:shadow-md transition-shadow" />
+            <KpiCard icon={CalendarCheck} label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'}  value={hr.attendanceRate + '%'} color="#2B4C6F" onClick={() => navigate('/hr/attendance')} className="cursor-pointer hover:shadow-md transition-shadow" />
+            <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#4A7AAB" onClick={() => navigate('/hr/recruitment')} className="cursor-pointer hover:shadow-md transition-shadow" />
+            <KpiCard icon={UserCheck}     label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}   value={hr.pendingLeaves}        color="#6B8DB5" onClick={() => navigate('/hr/self-service')} className="cursor-pointer hover:shadow-md transition-shadow" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Box>

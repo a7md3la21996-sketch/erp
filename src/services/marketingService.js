@@ -25,7 +25,15 @@ function loadCampaigns() {
 }
 
 function saveCampaigns(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+      // Campaigns are small; if still failing, trim old completed ones
+      const trimmed = list.filter(c => c.status !== 'completed').concat(list.filter(c => c.status === 'completed').slice(0, 5));
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed)); } catch { /* give up */ }
+    }
+  }
 }
 
 export async function fetchCampaigns() {

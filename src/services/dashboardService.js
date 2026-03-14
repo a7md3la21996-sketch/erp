@@ -5,6 +5,35 @@ import supabase from '../lib/supabase';
  * Each function returns a safe fallback on error so the UI never breaks.
  */
 
+// ── Date range helpers ────────────────────────────────────────────────────────
+export function getDateRange(rangeKey) {
+  const now = new Date();
+  const start = new Date();
+  switch (rangeKey) {
+    case 'this_week':
+      start.setDate(now.getDate() - now.getDay());
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'this_month':
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'last_3_months':
+      start.setMonth(now.getMonth() - 3);
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'this_year':
+      start.setMonth(0, 1);
+      start.setHours(0, 0, 0, 0);
+      break;
+    default:
+      start.setMonth(0, 1);
+      start.setHours(0, 0, 0, 0);
+  }
+  return { start, end: now };
+}
+
 // ── Contacts KPIs ────────────────────────────────────────────────────────────
 export async function fetchContactStats() {
   try {
@@ -59,7 +88,7 @@ export async function fetchOpportunityStats() {
       stageCounts[o.stage] = (stageCounts[o.stage] || 0) + 1;
     });
 
-    return { activeOpps, closedDeals, revenue, closedThisMonth, stageCounts, totalOpps: opps.length };
+    return { activeOpps, closedDeals, revenue, closedThisMonth, stageCounts, totalOpps: opps.length, rawOpps: opps };
   } catch {
     return null;
   }
@@ -151,20 +180,93 @@ export function buildPipelineData(stageCounts) {
   return orderedStages
     .filter(s => stageCounts[s] > 0)
     .map(s => ({
+      stage_key: s,
       stage_ar: STAGE_LABELS[s]?.ar || s,
       stage_en: STAGE_LABELS[s]?.en || s,
       count: stageCounts[s] || 0,
     }));
 }
 
+// ── Revenue trend from opportunities ─────────────────────────────────────────
+const MONTH_LABELS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH_LABELS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+export function buildRevenueTrend(rawOpps, dateRange) {
+  if (!rawOpps?.length) return null;
+  const { start, end } = dateRange || {};
+  const won = rawOpps.filter(o => {
+    if (o.stage !== 'closed_won') return false;
+    if (start && new Date(o.created_at) < start) return false;
+    if (end && new Date(o.created_at) > end) return false;
+    return true;
+  });
+  if (!won.length) return null;
+  const map = {};
+  won.forEach(o => {
+    const d = new Date(o.created_at);
+    const key = d.getFullYear() + '-' + String(d.getMonth()).padStart(2, '0');
+    map[key] = (map[key] || 0) + (parseFloat(o.budget) || 0);
+  });
+  const sortedKeys = Object.keys(map).sort();
+  if (sortedKeys.length < 1) return null;
+  return sortedKeys.map(k => {
+    const m = parseInt(k.split('-')[1], 10);
+    return { label_ar: MONTH_LABELS_AR[m], label_en: MONTH_LABELS_EN[m], value: map[k] };
+  });
+}
+
+export function buildTopSellers(rawOpps, dateRange) {
+  if (!rawOpps?.length) return null;
+  const { start, end } = dateRange || {};
+  const won = rawOpps.filter(o => {
+    if (o.stage !== 'closed_won') return false;
+    if (start && new Date(o.created_at) < start) return false;
+    if (end && new Date(o.created_at) > end) return false;
+    return true;
+  });
+  if (!won.length) return null;
+  // Group by assigned_to (agent)
+  // We don't have agent names here, just IDs — return IDs & amounts
+  const map = {};
+  won.forEach(o => {
+    const key = o.assigned_to || 'unknown';
+    if (!map[key]) map[key] = { id: key, revenue: 0, count: 0 };
+    map[key].revenue += parseFloat(o.budget) || 0;
+    map[key].count += 1;
+  });
+  const arr = Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+  const maxRev = arr[0]?.revenue || 1;
+  return arr.map(a => ({ ...a, pct: Math.round((a.revenue / maxRev) * 100) }));
+}
+
+export function filterStatsByRange(rawOpps, dateRange) {
+  if (!rawOpps?.length) return null;
+  const { start, end } = dateRange || {};
+  const filtered = rawOpps.filter(o => {
+    if (start && new Date(o.created_at) < start) return false;
+    if (end && new Date(o.created_at) > end) return false;
+    return true;
+  });
+  const activeOpps = filtered.filter(o => !['closed_won', 'closed_lost', 'cancelled'].includes(o.stage)).length;
+  const closedDeals = filtered.filter(o => o.stage === 'closed_won').length;
+  const revenue = filtered.filter(o => o.stage === 'closed_won').reduce((s, o) => s + (parseFloat(o.budget) || 0), 0);
+  const stageCounts = {};
+  filtered.forEach(o => { stageCounts[o.stage] = (stageCounts[o.stage] || 0) + 1; });
+  return { activeOpps, closedDeals, revenue, stageCounts, totalOpps: filtered.length };
+}
+
 // ── Fetch all dashboard data in parallel ─────────────────────────────────────
 export async function fetchAllDashboardData() {
-  const [contacts, opportunities, tasks, activities, employees] = await Promise.all([
-    fetchContactStats(),
-    fetchOpportunityStats(),
-    fetchTaskStats(),
-    fetchActivityStats(),
-    fetchEmployeeStats(),
-  ]);
-  return { contacts, opportunities, tasks, activities, employees };
+  try {
+    const [contacts, opportunities, tasks, activities, employees] = await Promise.all([
+      fetchContactStats(),
+      fetchOpportunityStats(),
+      fetchTaskStats(),
+      fetchActivityStats(),
+      fetchEmployeeStats(),
+    ]);
+    return { contacts, opportunities, tasks, activities, employees };
+  } catch {
+    return { contacts: null, opportunities: null, tasks: null, activities: null, employees: null };
+  }
 }

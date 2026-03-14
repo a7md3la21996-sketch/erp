@@ -12,9 +12,11 @@ import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportB
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { MOCK_EMPLOYEES } from '../data/hr_mock_data';
 import {
-  fetchReportsData,
+  fetchReportsData, filterByDateRange,
   computeContactsBySource, computeLeadsConversion, computePipeline,
   computeActivitySummary, computeRevenueByMonth, computeTopPerformers, computeDealCycle,
+  computeAttendance, computeLeaveBalance, computePayroll, computeHeadcount,
+  computePnl, computeExpenseBreakdown, computeInvoiceAging, computeCashflow,
 } from '../services/reportsDataService';
 
 // ── Mock report data generators ──────────────────────────────────
@@ -209,6 +211,14 @@ const DEPARTMENTS = [
 ];
 
 const DEPT_TO_CATEGORY = { sales: 'sales', marketing: 'crm', hr: 'hr', finance: 'finance' };
+
+const DATE_RANGES = [
+  { id: 'all', ar: 'كل الوقت', en: 'All Time' },
+  { id: 'this_month', ar: 'هذا الشهر', en: 'This Month' },
+  { id: 'last_3_months', ar: 'آخر 3 أشهر', en: 'Last 3 Months' },
+  { id: 'last_6_months', ar: 'آخر 6 أشهر', en: 'Last 6 Months' },
+  { id: 'this_year', ar: 'هذه السنة', en: 'This Year' },
+];
 
 // ── Target Tracker Data ──────────────────────────────────────────
 
@@ -460,10 +470,12 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('reports');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [dateRange, setDateRange] = useState('all');
   const [deptFilter, setDeptFilter] = useState('all');
   const [activeReport, setActiveReport] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [liveData, setLiveData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [smartFilters, setSmartFilters] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -493,25 +505,47 @@ export default function ReportsPage() {
 
   // Load real data for reports
   useEffect(() => {
+    setLoading(true);
     fetchReportsData(profile).then(data => {
       setLiveData(data);
-    });
+    }).finally(() => setLoading(false));
   }, [profile]);
 
-  // Compute live report data
+  // Compute live report data with date range filtering
   const liveReports = useMemo(() => {
     if (!liveData) return {};
+    const contacts = filterByDateRange(liveData.contacts, dateRange);
+    const opportunities = filterByDateRange(liveData.opportunities, dateRange);
+    const deals = filterByDateRange(liveData.deals, dateRange);
+    const activities = filterByDateRange(liveData.activities, dateRange);
+    const employees = liveData.employees || [];
+    const attendance = filterByDateRange(liveData.attendance || [], dateRange, 'date');
+    const invoices = filterByDateRange(liveData.invoices || [], dateRange, 'date');
+    const expenses = filterByDateRange(liveData.expenses || [], dateRange, 'date');
+
     return {
-      contacts_by_source: computeContactsBySource(liveData.contacts),
-      leads_conversion: computeLeadsConversion(liveData.contacts, liveData.opportunities, liveData.deals),
-      pipeline: computePipeline(liveData.opportunities),
-      activity_summary: computeActivitySummary(liveData.activities),
-      revenue_by_month: computeRevenueByMonth(liveData.deals),
-      target_achievement: computeTopPerformers(liveData.deals),
-      top_performers: computeTopPerformers(liveData.deals),
-      deal_cycle: computeDealCycle(liveData.deals),
+      // CRM
+      contacts_by_source: computeContactsBySource(contacts),
+      leads_conversion: computeLeadsConversion(contacts, opportunities, deals),
+      pipeline: computePipeline(opportunities),
+      activity_summary: computeActivitySummary(activities),
+      // Sales
+      revenue_by_month: computeRevenueByMonth(deals),
+      target_achievement: computeTopPerformers(deals),
+      top_performers: computeTopPerformers(deals),
+      deal_cycle: computeDealCycle(deals),
+      // HR
+      attendance: computeAttendance(attendance, employees),
+      leave_balance: computeLeaveBalance(employees),
+      payroll: computePayroll(employees),
+      headcount: computeHeadcount(employees),
+      // Finance
+      pnl: computePnl(invoices, expenses),
+      expense_breakdown: computeExpenseBreakdown(expenses),
+      invoice_aging: computeInvoiceAging(invoices),
+      cashflow: computeCashflow(invoices, expenses),
     };
-  }, [liveData]);
+  }, [liveData, dateRange]);
 
   // Get report data — use live if available, fallback to mock
   const getReportData = (reportKey, mockData) => {
@@ -563,7 +597,7 @@ export default function ReportsPage() {
   }, [pagedReports]);
 
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
-  useEffect(() => { setPage(1); }, [smartFilters, deptFilter]);
+  useEffect(() => { setPage(1); }, [smartFilters, deptFilter, dateRange]);
 
   const totalReports = REPORT_CATEGORIES.reduce((s, c) => s + c.reports.length, 0);
 
@@ -635,6 +669,12 @@ export default function ReportsPage() {
           {/* Filter bar */}
           <div className="flex flex-wrap gap-3 mb-4 items-end">
             <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'الفترة' : 'Period'}</label>
+              <Select value={dateRange} onChange={e => setDateRange(e.target.value)} className="w-auto min-w-[160px]">
+                {DATE_RANGES.map(d => <option key={d.id} value={d.id}>{lang === 'ar' ? d.ar : d.en}</option>)}
+              </Select>
+            </div>
+            <div>
               <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'من تاريخ' : 'From'}</label>
               <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[160px]" />
             </div>
@@ -657,6 +697,18 @@ export default function ReportsPage() {
             onFiltersChange={setSmartFilters}
             resultsCount={totalFilteredReports}
           />
+
+          {/* Loading state */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="flex items-center gap-3">
+                <div className="w-5 h-5 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+                <span className="text-sm text-content-muted dark:text-content-muted-dark">
+                  {lang === 'ar' ? 'جاري تحميل البيانات...' : 'Loading report data...'}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Report Categories */}
           {pagedCategories.map(category => {
@@ -681,9 +733,16 @@ export default function ReportsPage() {
                             <h3 className="m-0 text-sm font-semibold text-content dark:text-content-dark mb-0.5">{lang === 'ar' ? report.ar : report.en}</h3>
                             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark leading-relaxed">{lang === 'ar' ? report.desc_ar : report.desc_en}</p>
                           </div>
-                          <Button size="sm" variant="secondary" onClick={() => handleGenerate(report, category)} className="shrink-0">
-                            <ArrowDownToLine size={14} /> {lang === 'ar' ? 'إنشاء' : 'Generate'}
-                          </Button>
+                          <div className="flex flex-col items-end gap-1.5 shrink-0">
+                            <Button size="sm" variant="secondary" onClick={() => handleGenerate(report, category)}>
+                              <ArrowDownToLine size={14} /> {lang === 'ar' ? 'إنشاء' : 'Generate'}
+                            </Button>
+                            {liveReports[report.key]?.length > 0 && (
+                              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                {lang === 'ar' ? 'بيانات حية' : 'Live data'}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </Card>
                     );
@@ -712,9 +771,12 @@ export default function ReportsPage() {
             <div className="flex justify-end mb-4">
               <ExportButton data={exportData} filename={activeReport?.report.key || 'report'} title={lang === 'ar' ? activeReport?.report.ar : activeReport?.report.en} columns={exportColumns} />
             </div>
-            {(dateFrom || dateTo) && (
+            {(dateRange !== 'all' || dateFrom || dateTo) && (
               <div className="text-xs text-content-muted dark:text-content-muted-dark mb-3">
-                {lang === 'ar' ? 'الفترة:' : 'Period:'} {dateFrom || '—'} → {dateTo || '—'}
+                {lang === 'ar' ? 'الفترة:' : 'Period:'}{' '}
+                {dateRange !== 'all'
+                  ? (lang === 'ar' ? DATE_RANGES.find(d => d.id === dateRange)?.ar : DATE_RANGES.find(d => d.id === dateRange)?.en)
+                  : `${dateFrom || '—'} → ${dateTo || '—'}`}
               </div>
             )}
             <Table>

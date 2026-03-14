@@ -1,13 +1,14 @@
 import { useState } from 'react';
 
-export default function KpiCard({ icon: Icon, label, value, sub, color = '#4A7AAB' }) {
+export default function KpiCard({ icon: Icon, label, value, sub, color = '#4A7AAB', onClick, className: extraClass = '' }) {
   const [hov, setHov] = useState(false);
 
   return (
     <div
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      className="relative overflow-hidden rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark transition-all duration-200"
+      onClick={onClick}
+      className={`relative overflow-hidden rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark transition-all duration-200 ${extraClass}`}
       style={{
         borderColor: hov ? `${color}60` : undefined,
         transform: hov ? 'translateY(-2px)' : 'none',

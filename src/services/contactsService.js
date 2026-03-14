@@ -2,40 +2,48 @@ import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
 
 export async function fetchContacts({ role, userId, teamId, filters = {} }) {
-  let query = supabase
-    .from('contacts')
-    .select(`
-      *,
-      opportunities!left (
-        id, stage, assigned_to, priority,
-        users!opportunities_assigned_to_fkey (full_name_ar, full_name_en)
-      )
-    `)
-    .order('last_activity_at', { ascending: false });
+  try {
+    let query = supabase
+      .from('contacts')
+      .select(`
+        *,
+        opportunities!left (
+          id, stage, assigned_to, priority,
+          users!opportunities_assigned_to_fkey (full_name_ar, full_name_en)
+        )
+      `)
+      .order('last_activity_at', { ascending: false });
 
-  if (role === 'sales_agent') {
-    query = query.eq('opportunities.assigned_to', userId);
-  } else if (role === 'team_leader' && teamId) {
-    const { data: teamMembers } = await supabase
-      .from('users')
-      .select('id')
-      .eq('team_id', teamId);
-    const ids = teamMembers?.map(m => m.id) || [];
-    query = query.in('opportunities.assigned_to', ids);
+    if (role === 'sales_agent') {
+      query = query.eq('opportunities.assigned_to', userId);
+    } else if (role === 'team_leader' && teamId) {
+      const { data: teamMembers } = await supabase
+        .from('users')
+        .select('id')
+        .eq('team_id', teamId);
+      const ids = teamMembers?.map(m => m.id) || [];
+      query = query.in('opportunities.assigned_to', ids);
+    }
+
+    if (filters.search) {
+      query = query.or(`full_name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,email.ilike.%${filters.search}%,campaign_name.ilike.%${filters.search}%`);
+    }
+    if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
+    if (filters.source) query = query.eq('source', filters.source);
+    if (filters.temperature) query = query.eq('temperature', filters.temperature);
+    if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
+    if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
+
+    const { data, error } = await query.limit(200);
+    if (error) throw error;
+    return data || [];
+  } catch {
+    // Fallback to localStorage when Supabase is unreachable
+    try {
+      const cached = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      return cached.slice(0, 200);
+    } catch { return []; }
   }
-
-  if (filters.search) {
-    query = query.or(`full_name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,email.ilike.%${filters.search}%,campaign_name.ilike.%${filters.search}%`);
-  }
-  if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
-  if (filters.source) query = query.eq('source', filters.source);
-  if (filters.temperature) query = query.eq('temperature', filters.temperature);
-  if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
-  if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
-
-  const { data, error } = await query.limit(200);
-  if (error) throw error;
-  return data || [];
 }
 
 export async function createContact(contactData) {
@@ -125,13 +133,22 @@ export async function createActivity(activityData) {
   try {
     const all = JSON.parse(localStorage.getItem('platform_activities') || '[]');
     all.unshift(mock);
-    localStorage.setItem('platform_activities', JSON.stringify(all));
+    // Keep max 500 activities locally
+    if (all.length > 500) all.length = 500;
+    try {
+      localStorage.setItem('platform_activities', JSON.stringify(all));
+    } catch (e) {
+      if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+        all.length = Math.min(all.length, 250);
+        try { localStorage.setItem('platform_activities', JSON.stringify(all)); } catch { /* give up */ }
+      }
+    }
     if (activityData.contact_id) {
       const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
       const idx = contacts.findIndex(c => String(c.id) === String(activityData.contact_id));
       if (idx > -1) {
         contacts[idx].last_activity_at = new Date().toISOString();
-        localStorage.setItem('platform_contacts', JSON.stringify(contacts));
+        try { localStorage.setItem('platform_contacts', JSON.stringify(contacts)); } catch { /* ignore quota */ }
       }
     }
   } catch { /* ignore */ }

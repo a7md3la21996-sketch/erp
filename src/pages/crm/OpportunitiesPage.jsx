@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
 import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
@@ -221,7 +221,7 @@ function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig, sc
           <div className="min-w-0">
             <div className="text-sm font-bold text-content dark:text-content-dark truncate">{contactName}</div>
             {opp.contacts?.phone && (
-              <div className="text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">{opp.contacts.phone}</div>
+              <div className="text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">{opp.contacts?.phone}</div>
             )}
           </div>
         </div>
@@ -636,6 +636,7 @@ export default function OpportunitiesPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { lostReasons: configLostReasons } = useSystemConfig();
   const lostReasonsMap = useMemo(() => {
     const m = {};
@@ -653,7 +654,7 @@ export default function OpportunitiesPage() {
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
-  const [activeStage, setActiveStage] = useState('all');
+  const [activeStage, setActiveStage] = useState(location.state?.initialStage || 'all');
   const [smartFilters, setSmartFilters] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);

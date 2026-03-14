@@ -10,7 +10,15 @@ function loadLogs() {
 
 function saveLogs(logs) {
   if (logs.length > MAX_LOGS) logs = logs.slice(0, MAX_LOGS);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
+  } catch (e) {
+    // QuotaExceededError — trim to 1000 and retry
+    if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+      logs = logs.slice(0, 1000);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(logs)); } catch { /* give up */ }
+    }
+  }
 }
 
 /**

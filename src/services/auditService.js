@@ -34,7 +34,15 @@ function saveLocalLog(entry) {
     logs.unshift(entry);
     // Keep max 500 local logs
     if (logs.length > 500) logs.length = 500;
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(logs));
+    try {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(logs));
+    } catch (e) {
+      // QuotaExceededError — trim to 250 and retry
+      if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+        logs.length = Math.min(logs.length, 250);
+        try { localStorage.setItem(LOCAL_KEY, JSON.stringify(logs)); } catch { /* give up */ }
+      }
+    }
   } catch { /* ignore */ }
 }
 

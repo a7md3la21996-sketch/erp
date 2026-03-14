@@ -7,7 +7,15 @@ function load() {
 
 function save(list) {
   if (list.length > MAX_NOTIFICATIONS) list = list.slice(0, MAX_NOTIFICATIONS);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    // QuotaExceededError — trim to half and retry
+    if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+      list = list.slice(0, Math.floor(MAX_NOTIFICATIONS / 2));
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch { /* give up */ }
+    }
+  }
 }
 
 /**

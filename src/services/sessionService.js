@@ -8,7 +8,15 @@ function loadSessions() {
 }
 
 function saveSessions(list) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  } catch (e) {
+    // QuotaExceededError — trim to 250 and retry
+    if (e?.name === 'QuotaExceededError' || e?.code === 22) {
+      if (list.length > 250) list.length = 250;
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch { /* give up */ }
+    }
+  }
 }
 
 /**
