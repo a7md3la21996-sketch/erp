@@ -2,12 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { getUnreadCount } from '../../services/notificationsService';
+import { useShortcutsHelp } from './KeyboardShortcutsProvider';
 
 export default function Header({ onMenuClick }) {
   const { t, i18n } = useTranslation();
@@ -20,6 +21,7 @@ export default function Header({ onMenuClick }) {
   const isRTL = i18n.language === 'ar';
   const { isOnline, pendingCount, isSyncing, syncResult } = useOfflineSync();
   const [unreadCount, setUnreadCount] = useState(0);
+  const { setShowHelp } = useShortcutsHelp();
 
   // Keep unread count in sync
   useEffect(() => {
@@ -114,6 +116,13 @@ export default function Header({ onMenuClick }) {
             <span className="hidden sm:inline">{isRTL ? 'تمت المزامنة' : 'Synced'}</span>
           </div>
         )}
+        <button
+          onClick={() => setShowHelp(true)}
+          className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark hidden sm:flex items-center"
+          title={isRTL ? 'اختصارات لوحة المفاتيح' : 'Keyboard Shortcuts'}
+        >
+          <Keyboard size={18} />
+        </button>
         <button onClick={handleLangToggle} className="p-2 px-3 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark flex items-center gap-1 text-[13px] font-semibold">
           <Globe size={18} /><span className="hidden sm:inline">{i18n.language === 'ar' ? 'EN' : 'عربي'}</span>
         </button>

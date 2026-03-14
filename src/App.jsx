@@ -6,6 +6,7 @@ import { SystemConfigProvider } from './contexts/SystemConfigContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute } from './components/auth/PermissionGate';
 import MainLayout from './components/layout/MainLayout';
+import KeyboardShortcutsProvider from './components/layout/KeyboardShortcutsProvider';
 import LoginPage from './pages/auth/LoginPage';
 import { P } from './config/roles';
 import { Button } from './components/ui';
@@ -52,7 +53,9 @@ const UsersPage = lazy(() => import('./pages/settings/UsersPage'));
 const TriggersPage = lazy(() => import('./pages/settings/TriggersPage'));
 const CustomFieldsPage = lazy(() => import('./pages/settings/CustomFieldsPage'));
 const BackupPage = lazy(() => import('./pages/settings/BackupPage'));
+const ScheduledReportsPage = lazy(() => import('./pages/settings/ScheduledReportsPage'));
 const ChatInboxPage = lazy(() => import('./pages/ChatInboxPage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -115,6 +118,7 @@ export default function App() {
         <AuthProvider>
           <ToastProvider>
             <AppErrorBoundary>
+            <KeyboardShortcutsProvider>
             <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<AuthRedirect />} />
@@ -158,6 +162,7 @@ export default function App() {
                 <Route path="/calendar" element={<Guarded><CalendarPage /></Guarded>} />
                 <Route path="/chat" element={<Guarded><ChatInboxPage /></Guarded>} />
                 <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
+                <Route path="/analytics" element={<Guarded><AnalyticsPage /></Guarded>} />
                 <Route path="/settings/general" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/settings/audit-log" element={<Guarded><AuditLogPage /></Guarded>} />
                 <Route path="/settings/system" element={<Guarded><SystemConfigPage /></Guarded>} />
@@ -166,11 +171,13 @@ export default function App() {
                 <Route path="/settings/triggers" element={<Guarded><TriggersPage /></Guarded>} />
                 <Route path="/settings/custom-fields" element={<Guarded><CustomFieldsPage /></Guarded>} />
                 <Route path="/settings/backup" element={<Guarded><BackupPage /></Guarded>} />
+                <Route path="/settings/scheduled-reports" element={<Guarded><ScheduledReportsPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>
             </Suspense>
+            </KeyboardShortcutsProvider>
             </AppErrorBoundary>
           </ToastProvider>
         </AuthProvider>

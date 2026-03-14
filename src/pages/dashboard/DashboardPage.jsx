@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -12,9 +12,10 @@ import { getTopPerformers, getTeamOverallPct, METRIC_CONFIG } from '../../servic
 import { getWonDeals } from '../../services/dealsService';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle, Repeat, Check, SkipForward, User } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle, Repeat, Check, SkipForward, User, Settings, X, ChevronUp, ChevronDown, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { Card, KpiCard, Badge, DashboardSkeleton } from '../../components/ui';
 import { generateDueInstances, getTodayInstances, completeInstance, skipInstance, PRIORITY_OPTIONS } from '../../services/recurringTaskService';
+import { getLayout, saveLayout, resetLayout, getWidgetMeta, AVAILABLE_WIDGETS, WIDGET_CATEGORIES, SIZE_OPTIONS } from '../../services/widgetService';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -86,7 +87,7 @@ function TodayRecurringTasks({ lang, isRTL, isDark }) {
   if (!loaded) return null;
 
   return (
-    <Card className="p-5 mb-5">
+    <div>
       <div className={`flex items-center justify-between mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className="w-9 h-9 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
@@ -169,7 +170,7 @@ function TodayRecurringTasks({ lang, isRTL, isDark }) {
           )}
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -191,7 +192,7 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
   };
 
   return (
-    <Card className="p-5 mb-5">
+    <div>
       <div className={`flex items-center justify-between mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className="w-9 h-9 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
@@ -241,7 +242,292 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ─── Widget Wrapper ─────────────────────────────────────────────────── */
+function WidgetCard({ title, children, isDark, isRTL, lang, collapsed, onToggleCollapse }) {
+  return (
+    <Card className="p-5">
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: collapsed ? 0 : 12,
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+      }}>
+        <span style={{
+          fontSize: 13,
+          fontWeight: 700,
+          color: isDark ? '#e2e8f0' : '#1e293b',
+        }}>{title}</span>
+        <button
+          onClick={onToggleCollapse}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 4,
+            borderRadius: 6,
+            display: 'flex',
+            alignItems: 'center',
+            color: isDark ? '#94a3b8' : '#64748b',
+          }}
+          title={collapsed ? (lang === 'ar' ? 'توسيع' : 'Expand') : (lang === 'ar' ? 'طي' : 'Collapse')}
+        >
+          {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
+      </div>
+      {!collapsed && children}
     </Card>
+  );
+}
+
+/* ─── Customize Panel ────────────────────────────────────────────────── */
+function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lang }) {
+  const [activeCategory, setActiveCategory] = useState('all');
+
+  const moveWidget = (index, direction) => {
+    const newLayout = [...layout];
+    const targetIdx = index + direction;
+    if (targetIdx < 0 || targetIdx >= newLayout.length) return;
+    const temp = { ...newLayout[index] };
+    newLayout[index] = { ...newLayout[targetIdx] };
+    newLayout[targetIdx] = temp;
+    newLayout.forEach((item, i) => { item.order = i; });
+    onUpdate(newLayout);
+  };
+
+  const toggleVisibility = (widgetId) => {
+    const newLayout = layout.map(item =>
+      item.widgetId === widgetId ? { ...item, visible: !item.visible } : item
+    );
+    onUpdate(newLayout);
+  };
+
+  const changeSize = (widgetId, newSize) => {
+    const newLayout = layout.map(item =>
+      item.widgetId === widgetId ? { ...item, size: newSize } : item
+    );
+    onUpdate(newLayout);
+  };
+
+  const filteredLayout = activeCategory === 'all'
+    ? layout
+    : layout.filter(item => {
+        const meta = getWidgetMeta(item.widgetId);
+        return meta?.category === activeCategory;
+      });
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(0,0,0,0.5)',
+        zIndex: 200,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+      dir={isRTL ? 'rtl' : 'ltr'}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: isDark ? '#1a2332' : '#ffffff',
+        borderRadius: 16,
+        width: '90%',
+        maxWidth: 600,
+        maxHeight: '80vh',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '18px 24px',
+          borderBottom: '1px solid ' + (isDark ? '#ffffff12' : '#e2e8f0'),
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <Settings size={18} color="#4A7AAB" />
+            <span style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+              {lang === 'ar' ? 'تخصيص الويدجت' : 'Customize Widgets'}
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+            <button
+              onClick={onReset}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '6px 12px', borderRadius: 8, border: 'none',
+                fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                background: isDark ? '#ffffff0a' : '#f1f5f9',
+                color: isDark ? '#94a3b8' : '#64748b',
+              }}
+            >
+              <RotateCcw size={12} />
+              {lang === 'ar' ? 'إعادة تعيين' : 'Reset'}
+            </button>
+            <button onClick={onClose} style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 4, borderRadius: 6, display: 'flex',
+              color: isDark ? '#94a3b8' : '#64748b',
+            }}>
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Category filter tabs */}
+        <div style={{
+          display: 'flex', gap: 6, padding: '12px 24px',
+          borderBottom: '1px solid ' + (isDark ? '#ffffff08' : '#f1f5f9'),
+          flexDirection: isRTL ? 'row-reverse' : 'row',
+          flexWrap: 'wrap',
+        }}>
+          <button
+            style={{
+              padding: '6px 14px', borderRadius: 8, border: 'none',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer',
+              background: activeCategory === 'all' ? '#4A7AAB' : (isDark ? '#ffffff0a' : '#f1f5f9'),
+              color: activeCategory === 'all' ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
+              transition: 'all 0.15s',
+            }}
+            onClick={() => setActiveCategory('all')}
+          >
+            {lang === 'ar' ? 'الكل' : 'All'}
+          </button>
+          {WIDGET_CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              style={{
+                padding: '6px 14px', borderRadius: 8, border: 'none',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                background: activeCategory === cat.id ? '#4A7AAB' : (isDark ? '#ffffff0a' : '#f1f5f9'),
+                color: activeCategory === cat.id ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
+                transition: 'all 0.15s',
+              }}
+              onClick={() => setActiveCategory(cat.id)}
+            >
+              {lang === 'ar' ? cat.label_ar : cat.label_en}
+            </button>
+          ))}
+        </div>
+
+        {/* Widget list */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+          {filteredLayout.map((item) => {
+            const meta = getWidgetMeta(item.widgetId);
+            if (!meta) return null;
+            const globalIdx = layout.findIndex(l => l.widgetId === item.widgetId);
+            return (
+              <div key={item.widgetId} style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                borderRadius: 10,
+                background: isDark
+                  ? (item.visible ? '#4A7AAB12' : '#ffffff06')
+                  : (item.visible ? '#4A7AAB08' : '#f8fafc'),
+                border: '1px solid ' + (isDark ? '#ffffff0a' : '#e2e8f0'),
+                marginBottom: 8,
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+                opacity: item.visible ? 1 : 0.6,
+              }}>
+                {/* Arrows */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <button
+                    onClick={() => moveWidget(globalIdx, -1)}
+                    disabled={globalIdx === 0}
+                    style={{
+                      background: 'none', border: 'none', cursor: globalIdx === 0 ? 'default' : 'pointer',
+                      padding: 2, opacity: globalIdx === 0 ? 0.3 : 1,
+                      color: isDark ? '#94a3b8' : '#64748b',
+                    }}
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    onClick={() => moveWidget(globalIdx, 1)}
+                    disabled={globalIdx === layout.length - 1}
+                    style={{
+                      background: 'none', border: 'none', cursor: globalIdx === layout.length - 1 ? 'default' : 'pointer',
+                      padding: 2, opacity: globalIdx === layout.length - 1 ? 0.3 : 1,
+                      color: isDark ? '#94a3b8' : '#64748b',
+                    }}
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                </div>
+
+                {/* Widget info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 13, fontWeight: 600,
+                    color: isDark ? '#e2e8f0' : '#1e293b',
+                    marginBottom: 2,
+                  }}>
+                    {lang === 'ar' ? meta.title_ar : meta.title_en}
+                  </div>
+                  <div style={{
+                    fontSize: 11,
+                    color: isDark ? '#94a3b8' : '#64748b',
+                  }}>
+                    {lang === 'ar' ? meta.description_ar : meta.description_en}
+                  </div>
+                  {/* Size selector */}
+                  <div style={{
+                    display: 'flex', gap: 4, marginTop: 6,
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                  }}>
+                    {SIZE_OPTIONS.map(s => (
+                      <button
+                        key={s.value}
+                        style={{
+                          padding: '2px 8px', borderRadius: 5,
+                          border: '1px solid ' + (item.size === s.value ? '#4A7AAB' : (isDark ? '#ffffff15' : '#e2e8f0')),
+                          fontSize: 10, fontWeight: 600, cursor: 'pointer',
+                          background: item.size === s.value ? '#4A7AAB22' : 'transparent',
+                          color: item.size === s.value ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                        }}
+                        onClick={() => changeSize(item.widgetId, s.value)}
+                      >
+                        {lang === 'ar' ? s.label_ar : s.label_en}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Toggle visibility */}
+                <button
+                  onClick={() => toggleVisibility(item.widgetId)}
+                  style={{
+                    background: item.visible ? '#4A7AAB22' : (isDark ? '#ffffff0a' : '#f1f5f9'),
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '6px 8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    color: item.visible ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b'),
+                  }}
+                  title={item.visible ? (lang === 'ar' ? 'إخفاء' : 'Hide') : (lang === 'ar' ? 'إظهار' : 'Show')}
+                >
+                  {item.visible ? <Eye size={16} /> : <EyeOff size={16} />}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -258,6 +544,25 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const sections = getSections(role);
   const attendance = getAttendanceForMonth(YEAR, MONTH);
+
+  // ── Widget layout state ────────────────────────────────────────────────
+  const [widgetLayout, setWidgetLayout] = useState(() => getLayout(role));
+  const [collapsedWidgets, setCollapsedWidgets] = useState({});
+  const [showCustomize, setShowCustomize] = useState(false);
+
+  const handleUpdateLayout = useCallback((newLayout) => {
+    setWidgetLayout(newLayout);
+    saveLayout(newLayout);
+  }, []);
+
+  const handleResetLayout = useCallback(() => {
+    const defaults = resetLayout(role);
+    setWidgetLayout(defaults);
+  }, [role]);
+
+  const toggleCollapse = useCallback((widgetId) => {
+    setCollapsedWidgets(prev => ({ ...prev, [widgetId]: !prev[widgetId] }));
+  }, []);
 
   // ── Date range filter ────────────────────────────────────────────────────
   const [dateRange, setDateRange] = useState('this_year');
@@ -286,7 +591,6 @@ export default function DashboardPage() {
     }).catch(() => setDashLoading(false));
   }, []);
 
-  // Derive CRM KPIs — use real data when available, fallback to MOCK_CRM
   const crm = useMemo(() => {
     const c = dashData?.contacts;
     const o = dashData?.opportunities;
@@ -303,24 +607,19 @@ export default function DashboardPage() {
     return MOCK_CRM;
   }, [dashData]);
 
-  // Task & Activity stats
   const taskStats = dashData?.tasks;
   const activityStats = dashData?.activities;
 
-  // ── Revenue trend & top sellers from real opportunities (with date range) ──
   const rawOpps = dashData?.opportunities?.rawOpps;
 
-  // Also fetch won deals for agent names (deals have agent_ar/agent_en)
   const [wonDeals, setWonDeals] = useState([]);
   useEffect(() => { getWonDeals().then(d => setWonDeals(d || [])).catch(() => {}); }, []);
 
-  // Date-range filtered stats from raw opportunities
   const rangeStats = useMemo(() => {
     if (!rawOpps?.length) return null;
     return filterStatsByRange(rawOpps, activeDateRange);
   }, [rawOpps, activeDateRange]);
 
-  // Override CRM KPIs with date-range filtered data when available
   const filteredCrm = useMemo(() => {
     if (rangeStats) {
       return {
@@ -364,7 +663,6 @@ export default function DashboardPage() {
     : Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
   const chartData = useMemo(() => (realRevenueTrend || REVENUE_TREND).map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en })), [lang, realRevenueTrend]);
 
-  // Pipeline chart — real data filtered by date range if available
   const realPipeline = useMemo(() => {
     const stageCounts = rangeStats?.stageCounts || dashData?.opportunities?.stageCounts;
     if (stageCounts) {
@@ -375,10 +673,8 @@ export default function DashboardPage() {
   }, [dashData, rangeStats]);
   const pipeData = useMemo(() => (realPipeline || PIPELINE_DATA).map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en })), [realPipeline, lang]);
 
-  // Employee count from real data
   const employeeCount = dashData?.employees?.totalEmployees ?? hr.total;
 
-  // Recharts needs raw color strings for tick fills
   const mutedColor = isDark ? '#8BA8C8' : '#64748B';
 
   const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB', onClick }) => (
@@ -408,77 +704,41 @@ export default function DashboardPage() {
 
   const Box = ({ children, className: cn = '' }) => <Card className={`p-5 ${cn}`}>{children}</Card>;
 
-  if (dashLoading) return <DashboardSkeleton />;
-
-  return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Hero banner */}
-      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-4 py-4 md:px-7 md:py-6 mb-5 flex flex-wrap md:flex-nowrap justify-between items-center gap-4 relative overflow-hidden ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-        <div className={`absolute w-40 h-40 rounded-full bg-white/[0.04] pointer-events-none ${isRTL ? '-left-5 top-[-40px]' : '-right-5 top-[-40px]'}`} />
-        <div className="relative">
-          <p className="m-0 mb-1 text-xl font-bold text-white">{greeting}، {name}</p>
-          <p className="m-0 text-xs text-white/65">{roleLabel} · {dateStr}</p>
-        </div>
-        <div className={`flex gap-3 relative ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: filteredCrm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
-            <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-xl">
-              <p className="m-0 text-xl font-bold text-white">{s.v}</p>
-              <p className="m-0 text-xs text-white/65">{s.l}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Date range filter */}
-      {sections.showCRM && (
-        <div className={`flex items-center gap-2 mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          <Clock size={14} className="text-content-muted dark:text-content-muted-dark" />
-          <div className={`flex gap-1.5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-            {DATE_RANGE_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setDateRange(opt.value)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${
-                  dateRange === opt.value
-                    ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
-                    : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark border-edge dark:border-edge-dark hover:border-brand-500 hover:text-brand-500'
-                }`}
-              >
-                {lang === 'ar' ? opt.label_ar : opt.label_en}
-              </button>
-            ))}
+  // ── Widget render map ─────────────────────────────────────────────────
+  const renderWidget = (widgetId) => {
+    switch (widgetId) {
+      case 'kpi_overview':
+        if (!sections.showCRM) return null;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+            <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/crm/contacts')} />
+            <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
+            <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities')} />
+            <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue / 1000).toFixed(0) + 'K'} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
           </div>
-        </div>
-      )}
+        );
 
-      {sections.showCRM && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-          <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/crm/contacts')} />
-          <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
-          <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities')} />
-          <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue / 1000).toFixed(0) + 'K'} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
-        </div>
-      )}
+      case 'recent_activities':
+        if (!sections.showCRM || !(taskStats || activityStats)) return null;
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+            {taskStats && (
+              <>
+                <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#F59E0B" onClick={() => navigate('/crm/opportunities')} />
+                <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#EF4444' : '#10B981'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} onClick={() => navigate('/crm/opportunities')} />
+              </>
+            )}
+            {activityStats && (
+              <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#8B5CF6" trendUp onClick={() => navigate('/crm/opportunities')} />
+            )}
+            <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={filteredCrm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((filteredCrm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#10B981" onClick={() => navigate('/crm/opportunities')} />
+          </div>
+        );
 
-      {/* Tasks & Activities Row */}
-      {sections.showCRM && (taskStats || activityStats) && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-          {taskStats && (
-            <>
-              <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#F59E0B" onClick={() => navigate('/crm/opportunities')} />
-              <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#EF4444' : '#10B981'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} onClick={() => navigate('/crm/opportunities')} />
-            </>
-          )}
-          {activityStats && (
-            <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#8B5CF6" trendUp onClick={() => navigate('/crm/opportunities')} />
-          )}
-          <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={filteredCrm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((filteredCrm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#10B981" onClick={() => navigate('/crm/opportunities')} />
-        </div>
-      )}
-
-      {sections.showCRM && (
-        <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr] gap-4 mb-5">
-          <Box>
+      case 'revenue_trend':
+        if (!sections.showCRM) return null;
+        return (
+          <div>
             <CardTitle icon={TrendingUp} title={lang === 'ar' ? 'تطور الإيرادات' : 'Revenue Trend'} sub={lang === 'ar' ? DATE_RANGE_OPTIONS.find(o => o.value === dateRange)?.label_ar : DATE_RANGE_OPTIONS.find(o => o.value === dateRange)?.label_en} />
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
@@ -490,8 +750,13 @@ export default function DashboardPage() {
                 <Area type="monotone" dataKey="value" stroke="#4A7AAB" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#4A7AAB', r: 3 }} activeDot={{ r: 6, stroke: '#4A7AAB', strokeWidth: 2, fill: isDark ? '#1B3347' : '#fff' }} />
               </AreaChart>
             </ResponsiveContainer>
-          </Box>
-          <Box>
+          </div>
+        );
+
+      case 'expense_summary':
+        if (!sections.showCRM) return null;
+        return (
+          <div>
             <CardTitle icon={Wallet} title={lang === 'ar' ? 'توزيع المصروفات' : 'Expenses'} sub={new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })} />
             <ResponsiveContainer width="100%" height={120}>
               <PieChart><Pie data={EXPENSE_CATS} cx="50%" cy="50%" innerRadius={34} outerRadius={52} paddingAngle={3} dataKey="value">{EXPENSE_CATS.map((_, i) => <Cell key={i} fill={BRAND[i]} />)}</Pie><Tooltip formatter={v => [(v / 1000).toFixed(0) + 'K EGP']} /></PieChart>
@@ -504,13 +769,13 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          </Box>
-        </div>
-      )}
+          </div>
+        );
 
-      {sections.showSales && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-          <Box>
+      case 'pipeline_chart':
+        if (!sections.showSales) return null;
+        return (
+          <div>
             <CardTitle icon={Activity} title={lang === 'ar' ? 'خط الأنابيب' : 'Sales Pipeline'} sub={lang === 'ar' ? 'فرص لكل مرحلة' : 'Opps per stage'} />
             <ResponsiveContainer width="100%" height={185}>
               <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }} style={{ cursor: 'pointer' }}
@@ -522,8 +787,13 @@ export default function DashboardPage() {
                 <Bar dataKey="count" radius={[6, 6, 0, 0]} className="cursor-pointer">{pipeData.map((_, i) => <Cell key={i} fill={'rgba(74,122,171,' + (0.35 + i * 0.13) + ')'} />)}</Bar>
               </BarChart>
             </ResponsiveContainer>
-          </Box>
-          <Box>
+          </div>
+        );
+
+      case 'top_sellers':
+        if (!sections.showSales) return null;
+        return (
+          <div>
             <CardTitle icon={Trophy} title={lang === 'ar' ? 'أفضل البائعين' : 'Top Performers'} sub={lang === 'ar' ? 'حسب الإيرادات' : 'By revenue'} />
             <div className="flex flex-col gap-2.5">
               {salesData.map((s, i) => (
@@ -545,51 +815,51 @@ export default function DashboardPage() {
               <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: targetPct + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
               <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(filteredCrm.revenue / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(MOCK_SALES.target / 1000).toFixed(0)}K EGP</span></div>
             </div>
-          </Box>
-        </div>
-      )}
-
-      {sections.showHR && (
-        <div className="mb-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
-            <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={dashLoading ? '...' : employeeCount}                color="#1B3347" onClick={() => navigate('/hr/employees')} className="cursor-pointer hover:shadow-md transition-shadow" />
-            <KpiCard icon={CalendarCheck} label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'}  value={hr.attendanceRate + '%'} color="#2B4C6F" onClick={() => navigate('/hr/attendance')} className="cursor-pointer hover:shadow-md transition-shadow" />
-            <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#4A7AAB" onClick={() => navigate('/hr/recruitment')} className="cursor-pointer hover:shadow-md transition-shadow" />
-            <KpiCard icon={UserCheck}     label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}   value={hr.pendingLeaves}        color="#6B8DB5" onClick={() => navigate('/hr/self-service')} className="cursor-pointer hover:shadow-md transition-shadow" />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Box>
-              <CardTitle icon={Building2} title={lang === 'ar' ? 'توزيع الأقسام' : 'Departments'} sub={lang === 'ar' ? 'عدد الموظفين' : 'Headcount'} />
-              <ResponsiveContainer width="100%" height={160}>
-                <BarChart data={hr.deptCounts} layout="vertical" margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
-                  <XAxis type="number" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis type="category" dataKey={lang === 'ar' ? 'name_ar' : 'name_en'} tick={{ fill: mutedColor, fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
-                  <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
-                  <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#4A7AAB" />
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-            <Box>
-              <CardTitle icon={ShieldAlert} title={lang === 'ar' ? 'تنبيهات HR' : 'HR Alerts'} sub={lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention'} />
-              <div className="flex flex-col gap-2">
-                {[{ I: AlertTriangle, color: '#EF4444', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.contractAlerts + ' عقد ينتهي قريباً' : hr.contractAlerts + ' contracts expiring', show: hr.contractAlerts > 0 }, { I: Clock, color: '#6B8DB5', bgClass: 'bg-brand-400/10', label: lang === 'ar' ? hr.probationCount + ' موظف في فترة تجربة' : hr.probationCount + ' on probation', show: hr.probationCount > 0 }, { I: UserCheck, color: '#EF4444', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.absentCount + ' غائب اليوم' : hr.absentCount + ' absent today', show: hr.absentCount > 0 }, { I: Clock, color: '#4A7AAB', bgClass: 'bg-brand-500/[0.08]', label: lang === 'ar' ? hr.lateCount + ' متأخر اليوم' : hr.lateCount + ' late today', show: hr.lateCount > 0 }].filter(a => a.show).map((a, i) => { const AI = a.I; return <div key={i} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${a.bgClass} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><AI size={14} color={a.color} /><span className="text-xs font-medium" style={{ color: a.color }}>{a.label}</span></div>; })}
-                {hr.contractAlerts === 0 && hr.absentCount === 0 && hr.lateCount === 0 && <div className="text-center py-4"><p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'لا تنبيهات اليوم' : 'No alerts today'}</p></div>}
-              </div>
-            </Box>
+        );
+
+      case 'hr_overview':
+        if (!sections.showHR) return null;
+        return (
+          <div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
+              <KpiCard icon={Users}         label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={dashLoading ? '...' : employeeCount}                color="#1B3347" onClick={() => navigate('/hr/employees')} className="cursor-pointer hover:shadow-md transition-shadow" />
+              <KpiCard icon={CalendarCheck} label={lang === 'ar' ? 'معدل الحضور'     : 'Attendance Rate'}  value={hr.attendanceRate + '%'} color="#2B4C6F" onClick={() => navigate('/hr/attendance')} className="cursor-pointer hover:shadow-md transition-shadow" />
+              <KpiCard icon={Briefcase}     label={lang === 'ar' ? 'وظائف مفتوحة'   : 'Open Positions'}   value={hr.openPositions}        color="#4A7AAB" onClick={() => navigate('/hr/recruitment')} className="cursor-pointer hover:shadow-md transition-shadow" />
+              <KpiCard icon={UserCheck}     label={lang === 'ar' ? 'إجازات معلقة'   : 'Pending Leaves'}   value={hr.pendingLeaves}        color="#6B8DB5" onClick={() => navigate('/hr/self-service')} className="cursor-pointer hover:shadow-md transition-shadow" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Box>
+                <CardTitle icon={Building2} title={lang === 'ar' ? 'توزيع الأقسام' : 'Departments'} sub={lang === 'ar' ? 'عدد الموظفين' : 'Headcount'} />
+                <ResponsiveContainer width="100%" height={160}>
+                  <BarChart data={hr.deptCounts} layout="vertical" margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
+                    <XAxis type="number" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey={lang === 'ar' ? 'name_ar' : 'name_en'} tick={{ fill: mutedColor, fontSize: 11 }} axisLine={false} tickLine={false} width={70} />
+                    <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} />
+                    <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="#4A7AAB" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+              <Box>
+                <CardTitle icon={ShieldAlert} title={lang === 'ar' ? 'تنبيهات HR' : 'HR Alerts'} sub={lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention'} />
+                <div className="flex flex-col gap-2">
+                  {[{ I: AlertTriangle, color: '#EF4444', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.contractAlerts + ' عقد ينتهي قريباً' : hr.contractAlerts + ' contracts expiring', show: hr.contractAlerts > 0 }, { I: Clock, color: '#6B8DB5', bgClass: 'bg-brand-400/10', label: lang === 'ar' ? hr.probationCount + ' موظف في فترة تجربة' : hr.probationCount + ' on probation', show: hr.probationCount > 0 }, { I: UserCheck, color: '#EF4444', bgClass: 'bg-red-500/[0.08]', label: lang === 'ar' ? hr.absentCount + ' غائب اليوم' : hr.absentCount + ' absent today', show: hr.absentCount > 0 }, { I: Clock, color: '#4A7AAB', bgClass: 'bg-brand-500/[0.08]', label: lang === 'ar' ? hr.lateCount + ' متأخر اليوم' : hr.lateCount + ' late today', show: hr.lateCount > 0 }].filter(a => a.show).map((a, i) => { const AI = a.I; return <div key={i} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg ${a.bgClass} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><AI size={14} color={a.color} /><span className="text-xs font-medium" style={{ color: a.color }}>{a.label}</span></div>; })}
+                  {hr.contractAlerts === 0 && hr.absentCount === 0 && hr.lateCount === 0 && <div className="text-center py-4"><p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'لا تنبيهات اليوم' : 'No alerts today'}</p></div>}
+                </div>
+              </Box>
+            </div>
           </div>
-        </div>
-      )}
+        );
 
-
-      {/* ===== أداء الفريق - KPI ===== */}
-      {sections.showSales && (() => {
+      case 'team_performance': {
+        if (!sections.showSales) return null;
         const salesEmps = MOCK_EMPLOYEES.filter(e => ['sales_director','sales_manager','team_leader','sales_agent'].includes(e.role));
         const topPerformers = getTopPerformers(salesEmps, MONTH, YEAR, 3);
         const teamPct = getTeamOverallPct(salesEmps, MONTH, YEAR);
         const teamColor = teamPct >= 80 ? '#10B981' : teamPct >= 50 ? '#F59E0B' : '#EF4444';
         return (
-          <Box className="mb-5">
+          <div>
             <CardTitle icon={Target} title={lang === 'ar' ? 'أداء الفريق — KPI' : 'Team Performance — KPI'} sub={lang === 'ar' ? 'تحقيق أهداف الشهر الحالي' : 'Current month target achievement'} />
             <div className={`flex items-center gap-3 mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
               <div className="flex-1">
@@ -598,7 +868,7 @@ export default function DashboardPage() {
                   <span className="text-sm font-extrabold" style={{ color: teamColor }}>{teamPct}%</span>
                 </div>
                 <div className="h-2.5 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden">
-                  <div className="h-full rounded transition-all duration-500" style={{ width: `${Math.min(teamPct, 100)}%`, background: `linear-gradient(90deg, ${teamColor}cc, ${teamColor})` }} />
+                  <div className="h-full rounded transition-all duration-500" style={{ width: Math.min(teamPct, 100) + '%', background: 'linear-gradient(90deg, ' + teamColor + 'cc, ' + teamColor + ')' }} />
                 </div>
               </div>
             </div>
@@ -607,7 +877,7 @@ export default function DashboardPage() {
                 const pColor = p.overallPct >= 80 ? '#10B981' : p.overallPct >= 50 ? '#F59E0B' : '#EF4444';
                 return (
                   <div key={p.employee.id} className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#FFD700' + '22' : i === 1 ? '#C0C0C0' + '22' : '#CD7F32' + '22', border: `2px solid ${i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32'}` }}>
+                    <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#FFD700' + '22' : i === 1 ? '#C0C0C0' + '22' : '#CD7F32' + '22', border: '2px solid ' + (i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : '#CD7F32') }}>
                       <span className="text-xs font-bold" style={{ color: i === 0 ? '#B8860B' : i === 1 ? '#808080' : '#CD7F32' }}>{i + 1}</span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -616,7 +886,7 @@ export default function DashboardPage() {
                         <span className="text-xs font-bold" style={{ color: pColor }}>{p.overallPct}%</span>
                       </div>
                       <div className="h-1.5 rounded bg-gray-200 dark:bg-white/[0.08]">
-                        <div className="h-full rounded transition-all duration-300" style={{ width: `${Math.min(p.overallPct, 100)}%`, background: pColor }} />
+                        <div className="h-full rounded transition-all duration-300" style={{ width: Math.min(p.overallPct, 100) + '%', background: pColor }} />
                       </div>
                     </div>
                   </div>
@@ -627,22 +897,282 @@ export default function DashboardPage() {
               <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'المقاييس: مكالمات، فرص، صفقات، إيرادات، اجتماعات، زيارات' : 'Metrics: Calls, Opps, Deals, Revenue, Meetings, Visits'}</span>
               <Link to="/reports" className="text-[11px] font-semibold text-brand-500 no-underline hover:underline">{lang === 'ar' ? 'عرض التفاصيل' : 'View Details'}</Link>
             </div>
-          </Box>
+          </div>
         );
-      })()}
+      }
 
-      {/* ===== مهام اليوم المتكررة ===== */}
-      <TodayRecurringTasks lang={lang} isRTL={isRTL} isDark={isDark} />
+      case 'today_tasks':
+        return <TodayRecurringTasks lang={lang} isRTL={isRTL} isDark={isDark} />;
 
-      {/* ===== متابعات اليوم ===== */}
-      <TodayReminders lang={lang} isRTL={isRTL} isDark={isDark} userId={profile?.id} />
+      case 'today_followups':
+        return <TodayReminders lang={lang} isRTL={isRTL} isDark={isDark} userId={profile?.id} />;
 
-      <Box>
-        <CardTitle icon={BarChart2} title={lang === 'ar' ? 'روابط سريعة' : 'Quick Links'} />
-        <div className={`flex flex-wrap gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          {[{ l_ar: 'الموظفين', l_en: 'Employees', path: '/hr/employees', show: sections.showHR, icon: Users }, { l_ar: 'الحضور', l_en: 'Attendance', path: '/hr/attendance', show: sections.showHR, icon: CalendarCheck }, { l_ar: 'الرواتب', l_en: 'Payroll', path: '/hr/payroll', show: sections.showHR, icon: DollarSign }, { l_ar: 'التوظيف', l_en: 'Recruitment', path: '/hr/recruitment', show: sections.showHR, icon: Briefcase }, { l_ar: 'الفرص', l_en: 'Opportunities', path: '/crm/opportunities', show: sections.showCRM, icon: Star }, { l_ar: 'ليد بول', l_en: 'Lead Pool', path: '/crm/lead-pool', show: sections.showCRM, icon: Users }, { l_ar: 'الأداء', l_en: 'Performance', path: '/performance', show: true, icon: TrendingUp }, { l_ar: 'بوابة الموظف', l_en: 'Self-Service', path: '/hr/self-service', show: true, icon: UserCheck }, { l_ar: 'المالية', l_en: 'Finance', path: '/finance', show: sections.showFinance, icon: Wallet }, { l_ar: 'التارجت', l_en: 'Targets', path: '/sales/targets', show: sections.showSales, icon: Target }].filter(l => l.show).map((l, i) => { const LI = l.icon; return <Link key={i} to={l.path} className={`flex items-center gap-[7px] px-3.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-bg dark:bg-brand-500/[0.08] no-underline text-content-muted dark:text-content-muted-dark text-xs font-medium transition-all duration-150 hover:border-brand-500 hover:text-brand-500 hover:bg-brand-500/[0.08] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><LI size={13} /><span>{lang === 'ar' ? l.l_ar : l.l_en}</span></Link>; })}
+      case 'quick_stats':
+        return (
+          <div>
+            <CardTitle icon={BarChart2} title={lang === 'ar' ? 'إحصائيات سريعة' : 'Quick Stats'} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { label: lang === 'ar' ? 'جهات الاتصال' : 'Contacts', value: crm.totalLeads, color: '#4A7AAB' },
+                { label: lang === 'ar' ? 'الفرص النشطة' : 'Active Opps', value: filteredCrm.activeOpps, color: '#2B4C6F' },
+                { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Closed Deals', value: filteredCrm.closedDeals, color: '#6B8DB5' },
+              ].map((item, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  background: isDark ? '#ffffff06' : '#f8fafc',
+                  border: '1px solid ' + (isDark ? '#ffffff0a' : '#e2e8f0'),
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                }}>
+                  <span style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>{item.label}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: item.color }}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'pending_approvals':
+        if (!sections.showHR) return null;
+        return (
+          <div>
+            <CardTitle icon={ShieldAlert} title={lang === 'ar' ? 'موافقات معلقة' : 'Pending Approvals'} />
+            <div style={{ textAlign: 'center', padding: '16px 0' }}>
+              <div style={{ fontSize: 36, fontWeight: 800, color: '#4A7AAB', lineHeight: 1 }}>
+                {hr.pendingLeaves}
+              </div>
+              <p style={{ margin: '8px 0 0', fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
+                {lang === 'ar' ? 'طلب يحتاج موافقة' : 'requests pending'}
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'leave_summary':
+        if (!sections.showHR) return null;
+        return (
+          <div>
+            <CardTitle icon={CalendarCheck} title={lang === 'ar' ? 'ملخص الإجازات' : 'Leave Summary'} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { label: lang === 'ar' ? 'معلقة' : 'Pending', value: hr.pendingLeaves, color: '#F59E0B' },
+                { label: lang === 'ar' ? 'غائب اليوم' : 'Absent Today', value: hr.absentCount, color: '#EF4444' },
+                { label: lang === 'ar' ? 'معدل الحضور' : 'Attendance', value: hr.attendanceRate + '%', color: '#10B981' },
+              ].map((item, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  background: isDark ? '#ffffff06' : '#f8fafc',
+                  border: '1px solid ' + (isDark ? '#ffffff0a' : '#e2e8f0'),
+                  flexDirection: isRTL ? 'row-reverse' : 'row',
+                }}>
+                  <span style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>{item.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
+      case 'recent_comments':
+        return (
+          <div>
+            <CardTitle icon={MessageCircle} title={lang === 'ar' ? 'آخر التعليقات' : 'Recent Comments'} />
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <MessageCircle size={32} style={{ color: '#4A7AAB', opacity: 0.3, margin: '0 auto 8px' }} />
+              <p style={{ margin: 0, fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
+                {lang === 'ar' ? 'لا تعليقات جديدة' : 'No new comments'}
+              </p>
+            </div>
+          </div>
+        );
+
+      case 'quick_links':
+        return (
+          <div>
+            <CardTitle icon={BarChart2} title={lang === 'ar' ? 'روابط سريعة' : 'Quick Links'} />
+            <div className={`flex flex-wrap gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              {[{ l_ar: 'الموظفين', l_en: 'Employees', path: '/hr/employees', show: sections.showHR, icon: Users }, { l_ar: 'الحضور', l_en: 'Attendance', path: '/hr/attendance', show: sections.showHR, icon: CalendarCheck }, { l_ar: 'الرواتب', l_en: 'Payroll', path: '/hr/payroll', show: sections.showHR, icon: DollarSign }, { l_ar: 'التوظيف', l_en: 'Recruitment', path: '/hr/recruitment', show: sections.showHR, icon: Briefcase }, { l_ar: 'الفرص', l_en: 'Opportunities', path: '/crm/opportunities', show: sections.showCRM, icon: Star }, { l_ar: 'ليد بول', l_en: 'Lead Pool', path: '/crm/lead-pool', show: sections.showCRM, icon: Users }, { l_ar: 'الأداء', l_en: 'Performance', path: '/performance', show: true, icon: TrendingUp }, { l_ar: 'بوابة الموظف', l_en: 'Self-Service', path: '/hr/self-service', show: true, icon: UserCheck }, { l_ar: 'المالية', l_en: 'Finance', path: '/finance', show: sections.showFinance, icon: Wallet }, { l_ar: 'التارجت', l_en: 'Targets', path: '/sales/targets', show: sections.showSales, icon: Target }].filter(l => l.show).map((l, i) => { const LI = l.icon; return <Link key={i} to={l.path} className={`flex items-center gap-[7px] px-3.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-bg dark:bg-brand-500/[0.08] no-underline text-content-muted dark:text-content-muted-dark text-xs font-medium transition-all duration-150 hover:border-brand-500 hover:text-brand-500 hover:bg-brand-500/[0.08] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><LI size={13} /><span>{lang === 'ar' ? l.l_ar : l.l_en}</span></Link>; })}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  if (dashLoading) return <DashboardSkeleton />;
+
+  // Build ordered visible widgets
+  const visibleWidgets = widgetLayout.filter(w => w.visible).sort((a, b) => a.order - b.order);
+
+  const getGridStyle = (size) => {
+    const spans = { sm: 1, md: 2, lg: 2, full: 4 };
+    const span = spans[size] || 2;
+    return { gridColumn: 'span ' + span };
+  };
+
+  // Widgets that contain their own grid of cards (no outer Card wrapper needed)
+  const noCardWidgets = ['kpi_overview', 'recent_activities', 'hr_overview'];
+
+  return (
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Hero banner */}
+      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-4 py-4 md:px-7 md:py-6 mb-5 flex flex-wrap md:flex-nowrap justify-between items-center gap-4 relative overflow-hidden ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`absolute w-40 h-40 rounded-full bg-white/[0.04] pointer-events-none ${isRTL ? '-left-5 top-[-40px]' : '-right-5 top-[-40px]'}`} />
+        <div className="relative">
+          <p className="m-0 mb-1 text-xl font-bold text-white">{greeting}، {name}</p>
+          <p className="m-0 text-xs text-white/65">{roleLabel} · {dateStr}</p>
         </div>
-      </Box>
+        <div className={`flex gap-3 relative ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: filteredCrm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
+            <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-xl">
+              <p className="m-0 text-xl font-bold text-white">{s.v}</p>
+              <p className="m-0 text-xs text-white/65">{s.l}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Dashboard controls: Date range + Customize button */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+        flexDirection: isRTL ? 'row-reverse' : 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+      }}>
+        {sections.showCRM ? (
+          <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+            <Clock size={14} className="text-content-muted dark:text-content-muted-dark" />
+            <div className={`flex gap-1.5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              {DATE_RANGE_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setDateRange(opt.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${
+                    dateRange === opt.value
+                      ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
+                      : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark border-edge dark:border-edge-dark hover:border-brand-500 hover:text-brand-500'
+                  }`}
+                >
+                  {lang === 'ar' ? opt.label_ar : opt.label_en}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : <div />}
+
+        <button
+          onClick={() => setShowCustomize(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '7px 14px',
+            borderRadius: 10,
+            border: '1px solid ' + (isDark ? '#ffffff15' : '#e2e8f0'),
+            background: isDark ? '#1a2332' : '#ffffff',
+            color: '#4A7AAB',
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.15s',
+            flexDirection: isRTL ? 'row-reverse' : 'row',
+          }}
+        >
+          <Settings size={14} />
+          {lang === 'ar' ? 'تخصيص' : 'Customize'}
+        </button>
+      </div>
+
+      {/* Widget grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 16,
+      }}>
+        {visibleWidgets.map((item) => {
+          const meta = getWidgetMeta(item.widgetId);
+          if (!meta) return null;
+          const content = renderWidget(item.widgetId);
+          if (content === null) return null;
+          const title = lang === 'ar' ? meta.title_ar : meta.title_en;
+          const isCollapsed = !!collapsedWidgets[item.widgetId];
+          const needsCard = !noCardWidgets.includes(item.widgetId);
+
+          return (
+            <div key={item.widgetId} style={getGridStyle(item.size)}>
+              {needsCard ? (
+                <WidgetCard
+                  title={title}
+                  isDark={isDark}
+                  isRTL={isRTL}
+                  lang={lang}
+                  collapsed={isCollapsed}
+                  onToggleCollapse={() => toggleCollapse(item.widgetId)}
+                >
+                  {content}
+                </WidgetCard>
+              ) : (
+                <div>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: isCollapsed ? 0 : 8,
+                    flexDirection: isRTL ? 'row-reverse' : 'row',
+                  }}>
+                    <span style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: isDark ? '#e2e8f0' : '#1e293b',
+                    }}>{title}</span>
+                    <button
+                      onClick={() => toggleCollapse(item.widgetId)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 4,
+                        borderRadius: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        color: isDark ? '#94a3b8' : '#64748b',
+                      }}
+                    >
+                      {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                    </button>
+                  </div>
+                  {!isCollapsed && content}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Customize panel modal */}
+      {showCustomize && (
+        <CustomizePanel
+          layout={widgetLayout}
+          onUpdate={handleUpdateLayout}
+          onReset={handleResetLayout}
+          onClose={() => setShowCustomize(false)}
+          isDark={isDark}
+          isRTL={isRTL}
+          lang={lang}
+        />
+      )}
     </div>
   );
 }

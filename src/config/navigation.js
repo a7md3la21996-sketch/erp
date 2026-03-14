@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Users, Target, Building2, ActivitySquare, BookUser,
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
+  TrendingUp,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -64,6 +65,7 @@ export const NAV_ITEMS = [
   { id: 'calendar', label: { ar: 'التقويم', en: 'Calendar' }, icon: CalendarDays, path: '/calendar', permission: P.CALENDAR },
   { id: 'chat', label: { ar: 'المحادثات', en: 'Chat' }, icon: MessageSquare, path: '/chat', permission: P.CHAT_USE },
   { id: 'reports', label: { ar: 'التقارير', en: 'Reports' }, icon: BarChart3, path: '/reports', permission: P.RPT_SALES },
+  { id: 'analytics', label: { ar: 'تحليلات متقدمة', en: 'Analytics' }, icon: TrendingUp, path: '/analytics', permission: P.RPT_SALES },
   { id: 'settings', label: { ar: 'الإعدادات', en: 'Settings' }, icon: Settings, permission: P.SETTINGS_VIEW, children: [
     { id: 'general', label: { ar: 'إعدادات عامة', en: 'General' }, path: '/settings/general', permission: P.SETTINGS_MANAGE },
     { id: 'users-mgmt', label: { ar: 'المستخدمين', en: 'Users' }, path: '/settings/users', permission: P.USERS_MANAGE },
@@ -73,5 +75,6 @@ export const NAV_ITEMS = [
     { id: 'user-tracking', label: { ar: 'تتبع المستخدمين', en: 'User Tracking' }, path: '/settings/tracking', permission: P.AUDIT_VIEW },
     { id: 'triggers', label: { ar: 'المشغلات التلقائية', en: 'Triggers' }, path: '/settings/triggers', permission: P.SETTINGS_MANAGE },
     { id: 'custom-fields', label: { ar: 'حقول مخصصة', en: 'Custom Fields' }, path: '/settings/custom-fields', permission: P.SETTINGS_MANAGE },
+    { id: 'scheduled-reports', label: { ar: 'تقارير مجدولة', en: 'Scheduled Reports' }, path: '/settings/scheduled-reports', permission: P.SETTINGS_MANAGE },
   ]},
 ];
