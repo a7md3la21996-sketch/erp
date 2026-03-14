@@ -44,6 +44,7 @@ const DealsPage = lazy(() => import('./pages/sales/DealsPage'));
 const CommissionsPage = lazy(() => import('./pages/sales/CommissionsPage'));
 const ProjectsPage = lazy(() => import('./pages/real-estate/ProjectsPage'));
 const UnitsPage = lazy(() => import('./pages/real-estate/UnitsPage'));
+const UsersPage = lazy(() => import('./pages/settings/UsersPage'));
 
 function PageLoader() {
   return (
@@ -149,6 +150,7 @@ export default function App() {
                 <Route path="/settings/audit-log" element={<AuditLogPage />} />
                 <Route path="/settings/system" element={<SystemConfigPage />} />
                 <Route path="/settings/tracking" element={<UserTrackingPage />} />
+                <Route path="/settings/users" element={<UsersPage />} />
                 <Route path="/settings/*" element={<SettingsPage />} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />

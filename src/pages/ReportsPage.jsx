@@ -8,7 +8,8 @@ import {
   ArrowDownToLine, Trophy, Target, Award, Star, Medal,
   ChevronUp, ChevronDown, Minus, Crown, Zap
 } from 'lucide-react';
-import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill } from '../components/ui';
+import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
+import { useAuditFilter } from '../hooks/useAuditFilter';
 import { MOCK_EMPLOYEES } from '../data/hr_mock_data';
 import {
   fetchReportsData,
@@ -461,6 +462,32 @@ export default function ReportsPage() {
   const [activeReport, setActiveReport] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [liveData, setLiveData] = useState(null);
+  const [smartFilters, setSmartFilters] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  const { auditFields, applyAuditFilters } = useAuditFilter('report');
+
+  // Flatten all reports with category info for SmartFilter
+  const allReports = useMemo(() => {
+    return REPORT_CATEGORIES.flatMap(cat =>
+      cat.reports.map(r => ({
+        ...r,
+        category_key: cat.key,
+        category_label_ar: cat.ar,
+        category_label_en: cat.en,
+        name_en: r.en,
+        name_ar: r.ar,
+      }))
+    );
+  }, []);
+
+  const SMART_FIELDS = useMemo(() => [
+    { id: 'category_key', label: 'الفئة', labelEn: 'Category', type: 'select', options: REPORT_CATEGORIES.map(c => ({ value: c.key, label: c.ar, labelEn: c.en })) },
+    { id: 'name_en', label: 'اسم التقرير', labelEn: 'Report Name', type: 'text' },
+    { id: 'name_ar', label: 'اسم التقرير (عربي)', labelEn: 'Report Name (AR)', type: 'text' },
+    ...auditFields,
+  ], [auditFields]);
 
   // Load real data for reports
   useEffect(() => {
@@ -489,11 +516,52 @@ export default function ReportsPage() {
     return liveReports[reportKey] && liveReports[reportKey].length > 0 ? liveReports[reportKey] : mockData;
   };
 
+  // Apply SmartFilter + audit filters on flat reports
+  const smartFiltered = useMemo(() => {
+    let result = applySmartFilters(allReports, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+    return result;
+  }, [allReports, smartFilters, SMART_FIELDS, applyAuditFilters]);
+
+  // Rebuild categories from filtered reports, also respect deptFilter
   const filteredCategories = useMemo(() => {
-    if (deptFilter === 'all') return REPORT_CATEGORIES;
-    const catKey = DEPT_TO_CATEGORY[deptFilter];
-    return REPORT_CATEGORIES.filter(c => c.key === catKey || (deptFilter === 'sales' && c.key === 'crm'));
-  }, [deptFilter]);
+    const smartKeys = new Set(smartFiltered.map(r => r.key));
+    const hasSmartFilter = smartFilters.length > 0;
+
+    let cats = REPORT_CATEGORIES.map(cat => ({
+      ...cat,
+      reports: cat.reports.filter(r => !hasSmartFilter || smartKeys.has(r.key)),
+    })).filter(cat => cat.reports.length > 0);
+
+    if (deptFilter !== 'all') {
+      const catKey = DEPT_TO_CATEGORY[deptFilter];
+      cats = cats.filter(c => c.key === catKey || (deptFilter === 'sales' && c.key === 'crm'));
+    }
+    return cats;
+  }, [deptFilter, smartFiltered, smartFilters]);
+
+  // Flatten filtered reports for pagination
+  const allFilteredReports = useMemo(() =>
+    filteredCategories.flatMap(cat => cat.reports.map(r => ({ ...r, _cat: cat }))),
+  [filteredCategories]);
+
+  const totalFilteredReports = allFilteredReports.length;
+  const totalPages = Math.max(1, Math.ceil(totalFilteredReports / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedReports = allFilteredReports.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  // Rebuild paged categories from paged reports
+  const pagedCategories = useMemo(() => {
+    const catMap = new Map();
+    pagedReports.forEach(r => {
+      if (!catMap.has(r._cat.key)) catMap.set(r._cat.key, { ...r._cat, reports: [] });
+      catMap.get(r._cat.key).reports.push(r);
+    });
+    return [...catMap.values()];
+  }, [pagedReports]);
+
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [smartFilters, deptFilter]);
 
   const totalReports = REPORT_CATEGORIES.reduce((s, c) => s + c.reports.length, 0);
 
@@ -580,8 +648,16 @@ export default function ReportsPage() {
             </div>
           </div>
 
+          {/* SmartFilter */}
+          <SmartFilter
+            fields={SMART_FIELDS}
+            filters={smartFilters}
+            onFiltersChange={setSmartFilters}
+            resultsCount={totalFilteredReports}
+          />
+
           {/* Report Categories */}
-          {filteredCategories.map(category => {
+          {pagedCategories.map(category => {
             const CatIcon = category.icon;
             return (
               <div key={category.key} className="mb-8">
@@ -614,6 +690,16 @@ export default function ReportsPage() {
               </div>
             );
           })}
+
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            pageSize={pageSize}
+            onPageSizeChange={v => { setPageSize(v); setPage(1); }}
+            totalItems={totalFilteredReports}
+            safePage={safePage}
+          />
         </>
       )}
 

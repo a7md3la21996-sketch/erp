@@ -27,7 +27,7 @@ import {
   createExpense as svcCreateExpense,
   fetchChartOfAccounts as svcFetchChartOfAccounts,
 } from '../../services/financeService';
-import { Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, KpiCard, ExportButton, FilterPill } from '../../components/ui';
+import { Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, KpiCard, ExportButton, FilterPill, Pagination } from '../../components/ui';
 
 
 /* ── Shared sub-components ──────────────────────────────────────────────── */
@@ -328,8 +328,15 @@ export default function FinancePage() {
   const [viewJournal, setViewJournal] = useState(null);
   const [viewInvoice, setViewInvoice] = useState(null);
 
+  // Pagination state (shared, resets on tab/filter change)
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
   // COA state
   const [coaExpanded, setCoaExpanded] = useState({ 'acc-1000': true, 'acc-2000': true, 'acc-3000': true, 'acc-4000': true, 'acc-5000': true });
+
+  // Reset page on tab or filter changes
+  useEffect(() => { setPage(1); }, [activeTab, journalFilter, journalSearch, invoiceFilter, invoiceType, commTab, commFilter, expFilter, expSearch]);
 
   // Reports state
   const [reportView, setReportView] = useState('balance_sheet');
@@ -568,6 +575,10 @@ export default function FinancePage() {
     const totalPosted = postedEntries.reduce((s, e) => s + e.total, 0);
     const draftCount = journalEntries.filter(e => e.status === 'draft').length;
 
+    const jTotalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const jSafePage = Math.min(page, jTotalPages);
+    const jPaginated = filtered.slice((jSafePage - 1) * pageSize, jSafePage * pageSize);
+
     return (
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
@@ -608,7 +619,7 @@ export default function FinancePage() {
               <tbody>
                 {filtered.length === 0
                   ? <Empty icon={BookOpen} title={L('لا توجد قيود', 'No Entries')} sub={L('لم يتم تسجيل أي قيود بعد', 'No journal entries found')} />
-                  : filtered.map(entry => {
+                  : jPaginated.map(entry => {
                     const st = JOURNAL_STATUS[entry.status];
                     return (
                       <Tr key={entry.id} onClick={() => setViewJournal(entry)} className="cursor-pointer">
@@ -634,6 +645,7 @@ export default function FinancePage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={page} totalPages={jTotalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} safePage={jSafePage} />
         </CardWrap>
       </div>
     );
@@ -647,6 +659,10 @@ export default function FinancePage() {
     let filtered = invoices;
     if (invoiceType !== 'all') filtered = filtered.filter(inv => inv.type === invoiceType);
     if (invoiceFilter !== 'all') filtered = filtered.filter(inv => inv.status === invoiceFilter);
+
+    const invTotalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const invSafePage = Math.min(page, invTotalPages);
+    const invPaginated = filtered.slice((invSafePage - 1) * pageSize, invSafePage * pageSize);
 
     const salesTotal = invoices.filter(i => i.type === 'sales').reduce((s, i) => s + i.total, 0);
     const purchaseTotal = invoices.filter(i => i.type === 'purchase').reduce((s, i) => s + i.total, 0);
@@ -696,7 +712,7 @@ export default function FinancePage() {
               <tbody>
                 {filtered.length === 0
                   ? <Empty icon={FileText} title={L('لا توجد فواتير', 'No Invoices')} sub={L('لم يتم تسجيل أي فواتير بعد', 'No invoices found')} />
-                  : filtered.map(inv => {
+                  : invPaginated.map(inv => {
                     const st = INVOICE_STATUS[inv.status];
                     return (
                       <Tr key={inv.id} onClick={() => setViewInvoice(inv)} className="cursor-pointer">
@@ -714,6 +730,7 @@ export default function FinancePage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={page} totalPages={invTotalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} safePage={invSafePage} />
         </CardWrap>
       </div>
     );
@@ -729,6 +746,10 @@ export default function FinancePage() {
     const setData = isCompany ? setCompanyComm : setAgentComm;
 
     const filtered = commFilter === 'all' ? data : data.filter(c => c.status === commFilter);
+
+    const commTotalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const commSafePage = Math.min(page, commTotalPages);
+    const commPaginated = filtered.slice((commSafePage - 1) * pageSize, commSafePage * pageSize);
 
     const pendingAmt = data.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0);
     const approvedAmt = data.filter(c => c.status === 'approved').reduce((s, c) => s + c.amount, 0);
@@ -791,7 +812,7 @@ export default function FinancePage() {
               <tbody>
                 {filtered.length === 0
                   ? <Empty icon={DollarSign} title={L('لا توجد عمولات', 'No Commissions')} sub={L('لم يتم تسجيل أي عمولات بعد', 'No commission records found')} />
-                  : filtered.map(row => {
+                  : commPaginated.map(row => {
                     const st = COMMISSION_STATUS[row.status];
                     return (
                       <Tr key={row.id}>
@@ -838,6 +859,7 @@ export default function FinancePage() {
               </tbody>
             </table>
           </div>
+          <Pagination page={page} totalPages={commTotalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} safePage={commSafePage} />
         </CardWrap>
       </div>
     );
@@ -858,6 +880,10 @@ export default function FinancePage() {
         e.number.toLowerCase().includes(q)
       );
     }
+
+    const expTotalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const expSafePage = Math.min(page, expTotalPages);
+    const expPaginated = filtered.slice((expSafePage - 1) * pageSize, expSafePage * pageSize);
 
     const approvedAmt = expenses.filter(e => e.status === 'approved' || e.status === 'paid').reduce((s, e) => s + e.amount, 0);
     const pendingAmt = pendingExpenses.reduce((s, e) => s + e.amount, 0);
@@ -913,7 +939,7 @@ export default function FinancePage() {
                 <tbody>
                   {filtered.length === 0
                     ? <Empty icon={Receipt} title={L('لا توجد مصروفات', 'No Expenses')} sub={L('لم يتم تسجيل أي مصروفات بعد', 'No expense records found')} />
-                    : filtered.map(exp => {
+                    : expPaginated.map(exp => {
                       const st = EXPENSE_STATUS[exp.status];
                       const cat = EXPENSE_CATEGORIES[exp.category];
                       const method = PAYMENT_METHODS[exp.method];
@@ -952,6 +978,7 @@ export default function FinancePage() {
                 </tbody>
               </table>
             </div>
+            <Pagination page={page} totalPages={expTotalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} safePage={expSafePage} />
           </CardWrap>
 
           {/* Sidebar - Category breakdown */}

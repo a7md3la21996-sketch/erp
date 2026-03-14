@@ -14,6 +14,7 @@ import {
   MOCK_COMPANY_COMMISSIONS,
   COMMISSION_STATUS,
 } from '../../data/finance_mock_data';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 
 // ── Storage keys ──────────────────────────────────────────────────────────
 const STORAGE_KEY_AGENT = 'platform_agent_commissions';
@@ -51,6 +52,8 @@ export default function CommissionsPage() {
   const isRTL = lang === 'ar';
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+
+  const { auditFields, applyAuditFilters } = useAuditFilter('commission');
 
   const [tab, setTab] = useState('agent');
   const [agentPage, setAgentPage] = useState(1);
@@ -90,8 +93,9 @@ export default function CommissionsPage() {
         options: agents.map(a => ({ value: a, label: a, labelEn: a })),
       },
       { id: 'date', label: 'التاريخ', labelEn: 'Date', type: 'date' },
+      ...auditFields,
     ];
-  }, [agentData, lang]);
+  }, [agentData, lang, auditFields]);
 
   const companyFields = useMemo(() => {
     const devs = [...new Set(companyData.map(c => lang === 'ar' ? c.developer_ar : c.developer_en))];
@@ -106,12 +110,14 @@ export default function CommissionsPage() {
         options: devs.map(d => ({ value: d, label: d, labelEn: d })),
       },
       { id: 'date', label: 'التاريخ', labelEn: 'Date', type: 'date' },
+      ...auditFields,
     ];
-  }, [companyData, lang]);
+  }, [companyData, lang, auditFields]);
 
   // ── Filtered data ──
   const filteredAgents = useMemo(() => {
     let d = applySmartFilters(agentData, agentFilters, agentFields);
+    d = applyAuditFilters(d, agentFilters);
     if (agentSearch.trim()) {
       const q = agentSearch.toLowerCase();
       d = d.filter(r =>
@@ -125,6 +131,7 @@ export default function CommissionsPage() {
 
   const filteredCompany = useMemo(() => {
     let d = applySmartFilters(companyData, companyFilters, companyFields);
+    d = applyAuditFilters(d, companyFilters);
     if (companySearch.trim()) {
       const q = companySearch.toLowerCase();
       d = d.filter(r =>

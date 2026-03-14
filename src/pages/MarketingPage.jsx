@@ -11,7 +11,8 @@ import {
   Phone, MessageCircle, ArrowUpDown, Target, Repeat, Clock,
   PieChart, Calendar,
 } from 'lucide-react';
-import { Card, Button, Input, Select, Textarea, KpiCard, SmartFilter, applySmartFilters, FilterPill, ExportButton } from '../components/ui';
+import { Card, Button, Input, Select, Textarea, KpiCard, SmartFilter, applySmartFilters, FilterPill, ExportButton, Pagination } from '../components/ui';
+import { useAuditFilter } from '../hooks/useAuditFilter';
 import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, getCampaignContacts, getCampaignInteractions } from '../services/marketingService';
 import { fetchContacts } from '../services/contactsService';
 import { fetchOpportunities } from '../services/opportunitiesService';
@@ -56,7 +57,7 @@ const getPlatform = (id) => PLATFORMS.find(p => p.id === id);
 const getStatus = (id) => STATUSES.find(s => s.id === id);
 const getType = (id) => TYPES.find(t => t.id === id);
 
-const SMART_FIELDS = [
+const BASE_SMART_FIELDS = [
   { id: 'platform', label: 'المنصة', labelEn: 'Platform', type: 'select', options: PLATFORMS.map(p => ({ value: p.id, label: p.ar, labelEn: p.en })) },
   { id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select', options: STATUSES.map(s => ({ value: s.id, label: s.ar, labelEn: s.en })) },
   { id: 'type', label: 'النوع', labelEn: 'Type', type: 'select', options: TYPES.map(t => ({ value: t.id, label: t.ar, labelEn: t.en })) },
@@ -105,6 +106,14 @@ export default function MarketingPage() {
   const [editTarget, setEditTarget] = useState(null);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(-1);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const { auditFields, applyAuditFilters } = useAuditFilter('campaign');
+
+  const SMART_FIELDS = useMemo(() => [
+    ...BASE_SMART_FIELDS,
+    ...auditFields,
+  ], [auditFields]);
 
 
   // Load data
@@ -177,6 +186,7 @@ export default function MarketingPage() {
   const filtered = useMemo(() => {
     let result = [...campaigns];
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(c => (c.name_en || '').toLowerCase().includes(q) || (c.name_ar || '').toLowerCase().includes(q));
@@ -194,7 +204,13 @@ export default function MarketingPage() {
       }
     });
     return result;
-  }, [campaigns, smartFilters, search, sortBy, lang, campaignStats]);
+  }, [campaigns, smartFilters, search, sortBy, lang, campaignStats, applyAuditFilters]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginatedData = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [smartFilters, search, pageSize]);
 
   // KPIs
   const totalBudget = campaigns.reduce((s, c) => s + (c.budget || 0), 0);
@@ -529,9 +545,9 @@ export default function MarketingPage() {
 
       {/* ═══ Mobile Cards ═══ */}
       <div className="md:hidden divide-y divide-edge/50 dark:divide-edge-dark/50 bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden mb-4">
-        {filtered.length === 0 ? (
+        {paginatedData.length === 0 ? (
           <div className="text-center py-12 text-content-muted dark:text-content-muted-dark text-sm">{isRTL ? 'لا توجد حملات' : 'No campaigns'}</div>
-        ) : filtered.map(camp => {
+        ) : paginatedData.map(camp => {
           const stats = campaignStats[camp.id] || {};
           const platform = getPlatform(camp.platform);
           const status = getStatus(camp.status);
@@ -577,9 +593,9 @@ export default function MarketingPage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {paginatedData.length === 0 ? (
               <tr><td colSpan={12} className="text-center py-12 text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'لا توجد حملات' : 'No campaigns'}</td></tr>
-            ) : filtered.map(camp => {
+            ) : paginatedData.map(camp => {
               const stats = campaignStats[camp.id] || {};
               const platform = getPlatform(camp.platform);
               const status = getStatus(camp.status);
@@ -637,6 +653,8 @@ export default function MarketingPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
 
       {/* ═══ Summary Bar ═══ */}
       <div className="px-4 py-3 rounded-lg bg-brand-500/[0.06] border border-brand-500/[0.15] flex flex-wrap gap-5 text-xs text-brand-800 dark:text-brand-300 mb-4">

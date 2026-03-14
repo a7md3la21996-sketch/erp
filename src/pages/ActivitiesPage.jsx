@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
+import { useAuditFilter } from '../hooks/useAuditFilter';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -49,6 +50,7 @@ export default function ActivitiesPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const { auditFields, applyAuditFilters } = useAuditFilter('activity');
 
   const uniqueUsers = useMemo(() => {
     const map = new Map();
@@ -79,7 +81,8 @@ export default function ActivitiesPage() {
     { id: 'entity_name', label: 'الجهة', labelEn: 'Related Entity', type: 'select', options: uniqueEntities },
     { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
     { id: 'notes', label: 'الملاحظات', labelEn: 'Notes', type: 'text' },
-  ], [uniqueUsers, uniqueEntities]);
+    ...auditFields,
+  ], [uniqueUsers, uniqueEntities, auditFields]);
 
   const QUICK_FILTERS = useMemo(() => [
     { label: 'اليوم', labelEn: 'Today', filters: [{ field: 'created_at', operator: 'is', value: new Date().toISOString().slice(0, 10) }] },
@@ -111,6 +114,7 @@ export default function ActivitiesPage() {
       );
     }
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
+    list = applyAuditFilters(list, smartFilters);
     return list;
   }, [activities, search, smartFilters, SMART_FIELDS]);
 

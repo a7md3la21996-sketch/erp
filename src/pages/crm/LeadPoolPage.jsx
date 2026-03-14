@@ -7,7 +7,8 @@ import {
   Plus, Zap
 } from 'lucide-react';
 import { P } from '../../config/roles';
-import { Button, Card, Badge, KpiCard, Modal, ModalFooter, Input, SmartFilter, applySmartFilters } from '../../components/ui';
+import { Button, Card, Badge, KpiCard, Modal, ModalFooter, Input, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
+import { useAuditFilter } from '../../hooks/useAuditFilter';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCES = {
@@ -105,6 +106,8 @@ export default function LeadPoolPage() {
   const lang  = i18n.language;
   const isRTL  = lang === 'ar';
 
+  const { auditFields, applyAuditFilters } = useAuditFilter('lead');
+
   const canViewFresh   = hasPermission(P.POOL_VIEW_FRESH);
   const canAssign      = hasPermission(P.POOL_ASSIGN);
   const canManage      = hasPermission(P.POOL_MANAGE);
@@ -119,10 +122,13 @@ export default function LeadPoolPage() {
   const SMART_FIELDS = useMemo(() => [
     ...SMART_FIELDS_STATIC,
     { id: 'assigned_to', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: assignedToOptions },
-  ], [assignedToOptions]);
+    ...auditFields,
+  ], [assignedToOptions, auditFields]);
   const [selected, setSelected]       = useState([]);
   const [smartFilters, setSmartFilters] = useState([]);
   const [search, setSearch]           = useState('');
+  const [page, setPage]               = useState(1);
+  const [pageSize, setPageSize]       = useState(25);
   const [poolScope, setPoolScope]     = useState('my_team'); // 'my_team' | 'all'
   const [assignModal, setAssignModal] = useState(null); // lead or 'bulk'
   const [addModal, setAddModal]       = useState(false);
@@ -149,6 +155,7 @@ export default function LeadPoolPage() {
 
     // Apply smart filters
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
 
     // Apply search
     if (search) {
@@ -166,6 +173,13 @@ export default function LeadPoolPage() {
       return new Date(a.created_at) - new Date(b.created_at);
     });
   }, [leads, canViewFresh, canViewAll, poolScope, smartFilters, search, tick, user?.team_id]);
+
+  useEffect(() => { setPage(1); setSelected([]); }, [smartFilters, search, poolScope, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginatedData = visible.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   // Stats
   const stats = useMemo(() => {
@@ -210,7 +224,7 @@ export default function LeadPoolPage() {
   };
 
   const toggleSelect = (id) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  const toggleAll = () => setSelected(prev => prev.length === visible.length ? [] : visible.map(l => l.id));
+  const toggleAll = () => setSelected(prev => prev.length === paginatedData.length ? [] : paginatedData.map(l => l.id));
 
   const poolScopeToggle = canViewAll ? (
     <div className="flex rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
@@ -310,7 +324,7 @@ export default function LeadPoolPage() {
             <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد ليدز في الـ Pool':'No Leads in Pool'}</p>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي ليدز بعد أو جرّب تغيير الفلتر':'No leads found, try changing the filter'}</p>
           </div>
-        ) : visible.map((lead, idx) => {
+        ) : paginatedData.map((lead, idx) => {
           const aging   = getAging(lead.created_at);
           const sla     = getSLAStatus(lead);
           const src     = SOURCES[lead.source];
@@ -321,7 +335,7 @@ export default function LeadPoolPage() {
           return (
             <div key={lead.id} className={`
               flex items-center gap-3 px-4 py-3 transition-colors duration-150
-              ${idx < visible.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}
+              ${idx < paginatedData.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}
               ${isSel ? 'bg-brand-500/[0.08]' : isReserved ? 'bg-red-500/[0.04]' : 'hover:bg-[#F8FAFC] dark:hover:bg-brand-500/[0.07]'}
               ${isRTL ? 'flex-row-reverse' : ''}
             `}>
@@ -395,6 +409,16 @@ export default function LeadPoolPage() {
           );
         })}
       </Card>
+
+      {/* Pagination */}
+      <Pagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        totalItems={visible.length}
+      />
 
       {/* Assign Modal */}
       <Modal

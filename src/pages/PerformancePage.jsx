@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Target, TrendingUp, TrendingDown, Users, Star,
@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
-import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr, FilterPill } from '../components/ui';
+import { useAuditFilter } from '../hooks/useAuditFilter';
+import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 
 // ── Mock CRM Activity Data ─────────────────────────────────────
 const MOCK_CRM_ACTIVITY = {
@@ -128,8 +129,13 @@ export default function PerformancePage() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
+  const [smartFilters, setSmartFilters] = useState([]);
   const [deptFilter, setDeptFilter] = useState('all');
   const [selectedEmp, setSelectedEmp] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  const { auditFields, applyAuditFilters } = useAuditFilter('performance');
 
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const empData = useMemo(() =>
@@ -137,12 +143,53 @@ export default function PerformancePage() {
     [attendance]
   );
 
-  const filtered = useMemo(() => empData.filter(d => {
-    const name = lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en;
-    const matchSearch = !search || name.toLowerCase().includes(search.toLowerCase());
-    const matchDept = deptFilter === 'all' || d.emp.department === deptFilter;
-    return matchSearch && matchDept;
-  }), [empData, search, deptFilter, lang]);
+  const SMART_FIELDS = useMemo(() => [
+    {
+      id: 'department', label: 'القسم', labelEn: 'Department', type: 'select',
+      options: DEPARTMENTS.map(d => ({ value: d.id, label: d.name_ar, labelEn: d.name_en })),
+      accessor: d => d.emp?.department,
+    },
+    {
+      id: 'avgPct', label: 'نسبة الأداء', labelEn: 'Performance %', type: 'number',
+    },
+    {
+      id: 'compScore', label: 'تقييم الكفاءة', labelEn: 'Competency Score', type: 'number',
+    },
+    {
+      id: 'presentDays', label: 'أيام الحضور', labelEn: 'Attendance Days', type: 'number',
+    },
+    ...auditFields,
+  ], [auditFields]);
+
+  const filtered = useMemo(() => {
+    let result = empData;
+
+    // Apply smart filters
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+
+    // Apply search
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter(d => {
+        const name = lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en;
+        return name.toLowerCase().includes(q);
+      });
+    }
+
+    // Apply department filter (legacy pill filter)
+    if (deptFilter !== 'all') {
+      result = result.filter(d => d.emp.department === deptFilter);
+    }
+
+    return result;
+  }, [empData, smartFilters, SMART_FIELDS, search, deptFilter, lang]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  useEffect(() => { setPage(1); }, [search, smartFilters]);
 
   // Stats
   const avgPerf = Math.round(empData.reduce((s, d) => s + d.avgPct, 0) / empData.length);
@@ -256,25 +303,21 @@ export default function PerformancePage() {
         ))}
       </div>
 
-      {/* Filters */}
-      <div className={`flex flex-wrap gap-2.5 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-        <div className="relative flex-1 max-w-[300px]">
-          <Search size={14} className="absolute top-1/2 -translate-y-1/2 text-content-muted dark:text-content-muted-dark start-3" />
-          <Input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employee...'}
-            className="ps-[38px] pe-3"
-          />
-        </div>
-        <Select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} className="w-auto">
-          <option value="all">{lang === 'ar' ? 'كل الأقسام' : 'All Departments'}</option>
-          {DEPARTMENTS.map(d => <option key={d.id} value={d.id}>{lang === 'ar' ? d.name_ar : d.name_en}</option>)}
-        </Select>
-      </div>
+      {/* SmartFilter */}
+      <SmartFilter
+        fields={SMART_FIELDS}
+        filters={smartFilters}
+        onFiltersChange={setSmartFilters}
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employee...'}
+        resultsCount={filtered.length}
+      />
 
       {/* ── OVERVIEW TAB ── */}
       {activeTab === 'overview' && (
         <div className="flex flex-col gap-2.5">
-          {filtered.sort((a, b) => b.avgPct - a.avgPct).map((d, idx) => {
+          {paged.sort((a, b) => b.avgPct - a.avgPct).map((d, idx) => {
             const dept = DEPARTMENTS.find(dep => dep.id === d.emp.department);
             const color = d.avgPct >= 90 ? '#4A7AAB' : d.avgPct >= 60 ? '#6B8DB5' : '#EF4444';
             return (
@@ -368,6 +411,27 @@ export default function PerformancePage() {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {filtered.length > 0 && (
+        <Pagination
+          currentPage={safePage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(val) => { setPageSize(val); setPage(1); }}
+          totalItems={filtered.length}
+        />
+      )}
+      {filtered.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-900/[0.08] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
+            <Target size={28} color="#4A7AAB" strokeWidth={1.5} />
+          </div>
+          <p className="text-sm font-bold text-content dark:text-content-dark mb-1.5">{lang === 'ar' ? 'لا توجد نتائج' : 'No results found'}</p>
+          <p className="text-xs text-content-muted dark:text-content-muted-dark m-0">{lang === 'ar' ? 'جرّب البحث بكلمات مختلفة' : 'Try different search terms'}</p>
         </div>
       )}
 
