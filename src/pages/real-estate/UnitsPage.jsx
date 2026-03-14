@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
 import { Home, Package, CheckCircle, Clock, X, Building2, Maximize2, BedDouble, Eye, Layers, ShieldCheck } from 'lucide-react';
-import { KpiCard, SmartFilter, applySmartFilters, ExportButton } from '../../components/ui';
+import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination } from '../../components/ui';
 import { fmtMoney } from '../../utils/formatting';
 import { thCls, tdCls } from '../../utils/tableStyles';
 import { useEscClose } from '../../utils/hooks';
@@ -90,7 +90,7 @@ export default function UnitsPage() {
   const [filters, setFilters] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const [pageSize, setPageSize] = useState(25);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(units));
@@ -159,12 +159,12 @@ export default function UnitsPage() {
     return result;
   }, [units, search, filters, filterFields]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
-  useEffect(() => { setPage(1); }, [filters, search]);
+  useEffect(() => { setPage(1); }, [filters, search, pageSize]);
 
   // KPI values
   const kpis = useMemo(() => ({
@@ -346,21 +346,14 @@ export default function UnitsPage() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 py-4">
-          <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === 1 ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
-            {isRTL ? '← السابق' : '← Prev'}
-          </button>
-          <span className="text-xs text-content-muted dark:text-content-muted-dark">
-            {isRTL ? `${safePage} من ${totalPages}` : `${safePage} of ${totalPages}`}
-          </span>
-          <button disabled={safePage === totalPages} onClick={() => setPage(p => p + 1)}
-            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${safePage === totalPages ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
-            {isRTL ? 'التالي →' : 'Next →'}
-          </button>
-        </div>
-      )}
+      <Pagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        totalItems={filtered.length}
+      />
 
       {/* Drawer */}
       {selectedUnit && (

@@ -8,7 +8,7 @@ import {
   AlertCircle, FileText, Building2, User, Phone, Calendar,
   ArrowUpDown, Hash, CreditCard, Banknote,
 } from 'lucide-react';
-import { KpiCard, SmartFilter, applySmartFilters, ExportButton } from '../../components/ui';
+import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination } from '../../components/ui';
 import { getWonDeals } from '../../services/dealsService';
 import { logView } from '../../services/viewTrackingService';
 import { fmtMoney } from '../../utils/formatting';
@@ -75,7 +75,7 @@ export default function DealsPage() {
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const [pageSize, setPageSize] = useState(25);
 
   // Load data
   useEffect(() => {
@@ -114,12 +114,12 @@ export default function DealsPage() {
     return result;
   }, [deals, smartFilters, search, sortBy, lang]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
-  useEffect(() => { setPage(1); }, [smartFilters, search, sortBy]);
+  useEffect(() => { setPage(1); }, [smartFilters, search, sortBy, pageSize]);
 
   // KPIs
   const totalValue = deals.reduce((s, d) => s + (d.deal_value || 0), 0);
@@ -308,21 +308,14 @@ export default function DealsPage() {
       </div>
 
       {/* ═══ Pagination ═══ */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 py-4">
-          <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === 1 ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
-            {isRTL ? '← السابق' : '← Prev'}
-          </button>
-          <span className="text-xs text-content-muted dark:text-content-muted-dark">
-            {isRTL ? `${safePage} من ${totalPages}` : `${safePage} of ${totalPages}`}
-          </span>
-          <button disabled={safePage === totalPages} onClick={() => setPage(p => p + 1)}
-            className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${safePage === totalPages ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
-            {isRTL ? 'التالي →' : 'Next →'}
-          </button>
-        </div>
-      )}
+      <Pagination
+        page={safePage}
+        totalPages={totalPages}
+        onPageChange={setPage}
+        pageSize={pageSize}
+        onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+        totalItems={filtered.length}
+      />
 
       {/* ═══ Summary Bar ═══ */}
       <div className="px-4 py-3 rounded-lg bg-brand-500/[0.06] border border-brand-500/[0.15] flex flex-wrap gap-5 text-xs text-brand-800 dark:text-brand-300 mb-4">

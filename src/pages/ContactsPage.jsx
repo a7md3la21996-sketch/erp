@@ -12,7 +12,7 @@ import {
 import { fetchCampaigns } from '../services/marketingService';
 import { notifyLeadAssigned } from '../services/notificationsService';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton, Button, SmartFilter, applySmartFilters } from '../components/ui';
+import { PageSkeleton, Button, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { thCls } from '../utils/tableStyles';
 
 // ── Split modules ──────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ export default function ContactsPage() {
   const [reminderTarget, setReminderTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 25;
+  const [pageSize, setPageSize] = useState(25);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -357,23 +357,23 @@ export default function ContactsPage() {
     return list;
   }, [contacts, filterType, search, showBlacklisted, sortBy, pinnedIds, smartFilters, SMART_FIELDS]);
 
-  useEffect(() => { setPage(1); setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters]);
+  useEffect(() => { setPage(1); setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
 
   const selectedIdx = selected ? filtered.findIndex(c => c.id === selected.id) : -1;
   const handlePrev = selectedIdx > 0 ? () => {
     setSelected(filtered[selectedIdx - 1]);
     setOpenWithAction(false);
-    setPage(Math.floor((selectedIdx - 1) / PAGE_SIZE) + 1);
+    setPage(Math.floor((selectedIdx - 1) / pageSize) + 1);
   } : null;
   const handleNext = selectedIdx >= 0 && selectedIdx < filtered.length - 1 ? () => {
     setSelected(filtered[selectedIdx + 1]);
     setOpenWithAction(false);
-    setPage(Math.floor((selectedIdx + 1) / PAGE_SIZE) + 1);
+    setPage(Math.floor((selectedIdx + 1) / pageSize) + 1);
   } : null;
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -452,9 +452,7 @@ export default function ContactsPage() {
           <button onClick={() => setShowImportModal(true)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
-          <button onClick={() => setMergeMode(m => !m)} className={`px-3.5 py-2.5 rounded-lg text-xs cursor-pointer flex items-center gap-1.5 ${mergeMode ? 'bg-brand-800/10 border border-brand-800 text-brand-800' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
-            <Merge size={14} /> {isRTL ? 'دمج' : 'Merge'}
-          </button>
+
           {selectedIds.length > 0 && (
             <Button variant="call" size="sm" onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }}>
               <PhoneCall size={14} /> {isRTL ? `اتصال جماعي (${selectedIds.length})` : `Batch Call (${selectedIds.length})`}
@@ -804,21 +802,14 @@ export default function ContactsPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 py-4">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-              className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === 1 ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
-              {isRTL ? '← السابق' : '← Prev'}
-            </button>
-            <span className="text-xs text-content-muted dark:text-content-muted-dark">
-              {isRTL ? `${page} من ${totalPages}` : `${page} of ${totalPages}`}
-            </span>
-            <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-              className={`px-3.5 py-1.5 rounded-md border border-edge dark:border-edge-dark text-xs ${page === totalPages ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}>
-              {isRTL ? 'التالي →' : 'Next →'}
-            </button>
-          </div>
-        )}
+        <Pagination
+          page={safePage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          totalItems={filtered.length}
+        />
       </div>
 
       {/* Quick Action Popover */}

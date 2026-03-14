@@ -10,3 +10,4 @@ export { default as FilterPill } from './FilterPill';
 export { default as EmptyState } from './EmptyState';
 export { default as ExportButton } from './ExportButton';
 export { default as SmartFilter, applySmartFilters } from './SmartFilter';
+export { default as Pagination } from './Pagination';
