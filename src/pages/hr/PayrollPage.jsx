@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download } from 'lucide-react';
-import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select, Pagination } from '../../components/ui';
+import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -17,6 +17,7 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [smartFilters, setSmartFilters] = useState([]);
 
   useEffect(() => {
     fetchEmployees().then(data => { setEmployees(data); setLoading(false); });
@@ -25,11 +26,40 @@ export default function PayrollPage() {
   const totalSalaries = useMemo(() => employees.reduce((s,e)=>s+(e.salary||0),0), [employees]);
   const avgSalary = employees.length ? Math.round(totalSalaries / employees.length) : 0;
 
-  const totalPages = Math.max(1, Math.ceil(employees.length / pageSize));
+  const SMART_FIELDS = useMemo(() => [
+    {
+      id: 'full_name_ar', label: 'اسم الموظف', labelEn: 'Employee Name', type: 'text',
+      resolve: (row) => (isRTL ? row.full_name_ar : row.full_name_en) || row.full_name_ar,
+    },
+    {
+      id: 'department', label: 'القسم', labelEn: 'Department', type: 'select',
+      options: [...new Set(employees.map(e => e.department).filter(Boolean))].map(d => ({ value: d, label: d, labelEn: d })),
+    },
+    {
+      id: 'salary', label: 'الراتب', labelEn: 'Salary', type: 'number',
+    },
+    {
+      id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select',
+      options: [
+        { value: 'active', label: 'نشط', labelEn: 'Active' },
+        { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive' },
+      ],
+    },
+    ...auditFields,
+  ], [auditFields, employees, isRTL]);
+
+  const filtered = useMemo(() => {
+    let result = employees;
+    result = applySmartFilters(result, smartFilters, SMART_FIELDS);
+    result = applyAuditFilters(result, smartFilters);
+    return result;
+  }, [employees, smartFilters, SMART_FIELDS]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = employees.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
-  useEffect(() => { setPage(1); }, [month]);
+  useEffect(() => { setPage(1); }, [month, smartFilters]);
 
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
@@ -85,6 +115,9 @@ export default function PayrollPage() {
         <KpiCard icon={FileText} label={lang==='ar'?'تم الصرف':'Processed'} value={employees.length} color="#2B4C6F" />
       </div>
 
+      {/* Smart Filters */}
+      <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
+
       <Card className="!rounded-xl overflow-hidden">
         <div className={`px-4 py-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?`مسير ${MONTHS_AR[month-1]}`:`${MONTHS_AR[month-1]} Payroll`}</p>
@@ -104,7 +137,7 @@ export default function PayrollPage() {
             <PayrollRow key={emp.id} emp={emp} isRTL={isRTL} lang={lang} />
           ))}</tbody>
         </Table>
-        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={employees.length} />
+        <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
       </Card>
     </div>
   );
