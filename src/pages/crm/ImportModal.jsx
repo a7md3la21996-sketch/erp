@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { Button, FilterPill } from '../../components/ui';
 
 const SOURCE_PLATFORM = { facebook: 'meta', instagram: 'meta', google_ads: 'google', website: 'organic', call: 'direct', walk_in: 'direct', referral: 'direct', developer: 'direct', cold_call: 'direct', other: 'other' };
@@ -127,35 +127,53 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   const [duplicateAction, setDuplicateAction] = useState('opportunity'); // 'skip' | 'opportunity' | 'overwrite'
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, active: false });
 
-  const processFile = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const wb = XLSX.read(e.target.result, { type: 'binary' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+  const processFile = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(arrayBuffer);
+    const ws = workbook.worksheets[0];
+    if (!ws || ws.rowCount === 0) return;
 
-      if (raw.length === 0) return;
+    // Extract headers from first row
+    const headerRow = ws.getRow(1);
+    const cols = [];
+    headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      cols.push({ colNumber, name: String(cell.value || '').trim() });
+    });
+    if (cols.length === 0) return;
 
-      // Get column headers from the first row
-      const cols = Object.keys(raw[0]);
-      setExcelColumns(cols);
-      setRawData(raw);
+    const colNames = cols.map(c => c.name);
 
-      // Auto-detect column mappings
-      const autoMap = {};
-      const usedSystemFields = new Set();
-      cols.forEach(col => {
-        const normalized = col.trim().toLowerCase();
-        const detected = AUTO_DETECT_MAP[normalized] || AUTO_DETECT_MAP[col];
-        if (detected && !usedSystemFields.has(detected)) {
-          autoMap[col] = detected;
-          usedSystemFields.add(detected);
-        }
+    // Extract data rows
+    const raw = [];
+    ws.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      if (rowNumber === 1) return; // skip header
+      const obj = {};
+      cols.forEach(({ colNumber, name }) => {
+        const cellValue = row.getCell(colNumber).value;
+        obj[name] = cellValue != null ? cellValue : '';
       });
-      setColumnMapping(autoMap);
-      setStep(2); // Go to mapping step
-    };
-    reader.readAsBinaryString(file);
+      raw.push(obj);
+    });
+
+    if (raw.length === 0) return;
+
+    setExcelColumns(colNames);
+    setRawData(raw);
+
+    // Auto-detect column mappings
+    const autoMap = {};
+    const usedSystemFields = new Set();
+    colNames.forEach(col => {
+      const normalized = col.trim().toLowerCase();
+      const detected = AUTO_DETECT_MAP[normalized] || AUTO_DETECT_MAP[col];
+      if (detected && !usedSystemFields.has(detected)) {
+        autoMap[col] = detected;
+        usedSystemFields.add(detected);
+      }
+    });
+    setColumnMapping(autoMap);
+    setStep(2); // Go to mapping step
   };
 
   // Process mapped data into rows with validation and duplicate detection
@@ -271,7 +289,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
 
   const displayRows = tab === 'all' ? rows : tab === 'new' ? newRows : tab === 'dup' ? dupRows : errRows;
 
-  const downloadErrors = () => {
+  const downloadErrors = async () => {
     const data = errRows.map(r => ({
       ROW: r._row,
       FULL_NAME: r.full_name || '',
@@ -281,10 +299,16 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
       TYPE: r.contact_type || '',
       REASON: r._reason,
     }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Errors');
-    XLSX.writeFile(wb, 'import_errors.xlsx');
+    const workbook = new ExcelJS.Workbook();
+    const ws = workbook.addWorksheet('Errors');
+    const keys = Object.keys(data[0]);
+    ws.columns = keys.map(key => ({ header: key, key }));
+    data.forEach(row => ws.addRow(row));
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'import_errors.xlsx'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleImport = async () => {
@@ -384,12 +408,16 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 <input id="fileInput" type="file" accept=".xlsx,.csv" className="hidden" onChange={handleFile} />
               </div>
               <div className="text-center mt-4">
-                <Button variant="secondary" size="sm" onClick={() => {
+                <Button variant="secondary" size="sm" onClick={async () => {
                   const headers = SYSTEM_FIELDS.map(f => f.key);
-                  const ws = XLSX.utils.aoa_to_sheet([headers]);
-                  const wb = XLSX.utils.book_new();
-                  XLSX.utils.book_append_sheet(wb, ws, 'Contacts');
-                  XLSX.writeFile(wb, 'import_template.xlsx');
+                  const workbook = new ExcelJS.Workbook();
+                  const ws = workbook.addWorksheet('Contacts');
+                  ws.addRow(headers);
+                  const buffer = await workbook.xlsx.writeBuffer();
+                  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a'); a.href = url; a.download = 'import_template.xlsx'; a.click();
+                  URL.revokeObjectURL(url);
                 }}>
                   {'\u2B07\uFE0F'} {isRTL ? 'تحميل نموذج الاستيراد' : 'Download Template'}
                 </Button>

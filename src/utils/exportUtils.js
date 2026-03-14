@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 /**
  * Export data as Excel file
@@ -6,12 +6,21 @@ import * as XLSX from 'xlsx';
  * @param {string} filename - File name without extension
  * @param {string} sheetName - Sheet name (default: 'Sheet1')
  */
-export function exportToExcel(data, filename = 'export', sheetName = 'Sheet1') {
+export async function exportToExcel(data, filename = 'export', sheetName = 'Sheet1') {
   if (!data || data.length === 0) return;
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, `${filename}.xlsx`);
+  const workbook = new ExcelJS.Workbook();
+  const ws = workbook.addWorksheet(sheetName);
+  const keys = Object.keys(data[0]);
+  ws.columns = keys.map(key => ({ header: key, key }));
+  data.forEach(row => ws.addRow(row));
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filename}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 /**
@@ -21,8 +30,20 @@ export function exportToExcel(data, filename = 'export', sheetName = 'Sheet1') {
  */
 export function exportToCSV(data, filename = 'export') {
   if (!data || data.length === 0) return;
-  const ws = XLSX.utils.json_to_sheet(data);
-  const csv = XLSX.utils.sheet_to_csv(ws);
+  const keys = Object.keys(data[0]);
+  const header = keys.join(',');
+  const rows = data.map(row =>
+    keys.map(k => {
+      const val = row[k] ?? '';
+      const str = String(val);
+      // Escape fields that contain commas, quotes, or newlines
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }).join(',')
+  );
+  const csv = [header, ...rows].join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');

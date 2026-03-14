@@ -41,6 +41,7 @@ export default defineConfig({
     }),
   ],
   build: {
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: {
@@ -48,6 +49,7 @@ export default defineConfig({
           'vendor-recharts': ['recharts'],
           'vendor-i18n': ['react-i18next', 'i18next'],
           'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-exceljs': ['exceljs'],
         },
       },
     },
