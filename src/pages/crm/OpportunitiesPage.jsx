@@ -9,9 +9,10 @@ import { createDealFromOpportunity, dealExistsForOpportunity } from '../../servi
 import { useNavigate } from 'react-router-dom';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
-import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters } from '../../components/ui';
+import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 import { logView } from '../../services/viewTrackingService';
+import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 
 const DEPT_LABELS = {
@@ -635,6 +636,11 @@ export default function OpportunitiesPage() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const { lostReasons: configLostReasons } = useSystemConfig();
+  const lostReasonsMap = useMemo(() => {
+    const m = {};
+    (configLostReasons || []).forEach(r => { m[r.key] = r; });
+    return m;
+  }, [configLostReasons]);
   const rawLang = i18n.language || 'ar';
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
@@ -680,7 +686,7 @@ export default function OpportunitiesPage() {
   const [moveWarningToast, setMoveWarningToast] = useState(null);
   const isAdmin = profile?.role === 'admin';
   const [gridPage, setGridPage] = useState(1);
-  const GRID_PAGE_SIZE = 30;
+  const [pageSize, setPageSize] = useState(25);
   const savedFilterRef = useRef(null);
 
   // Click-outside for saved filters dropdown
@@ -716,7 +722,16 @@ export default function OpportunitiesPage() {
         { value: 'cold', label: 'بارد (<40)', labelEn: 'Cold (<40)' },
       ] },
     { id: 'stage', label: 'المرحلة', labelEn: 'Stage', type: 'select',
-      options: getDeptStages('sales').map(s => ({ value: s.id, label: s.label_ar, labelEn: s.label_en })) },
+      options: (() => {
+        const seen = new Set();
+        const opts = [];
+        ['sales','hr','marketing','operations','finance'].forEach(d => {
+          getDeptStages(d).forEach(s => {
+            if (!seen.has(s.id)) { seen.add(s.id); opts.push({ value: s.id, label: s.label_ar, labelEn: s.label_en }); }
+          });
+        });
+        return opts;
+      })() },
     { id: 'budget', label: 'الميزانية', labelEn: 'Budget', type: 'number' },
     { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
     { id: 'expected_close_date', label: 'تاريخ الإغلاق المتوقع', labelEn: 'Expected Close', type: 'date' },
@@ -892,10 +907,10 @@ export default function OpportunitiesPage() {
   const handleOppNext = selectedOppIdx >= 0 && selectedOppIdx < sortedFiltered.length - 1 ? () => { selectOpp(sortedFiltered[selectedOppIdx + 1]); setEditingOpp(false); } : null;
 
   // Grid pagination
-  const gridTotalPages = Math.max(1, Math.ceil(sortedFiltered.length / GRID_PAGE_SIZE));
+  const gridTotalPages = Math.max(1, Math.ceil(sortedFiltered.length / pageSize));
   const gridSafePage = Math.min(gridPage, gridTotalPages);
-  const gridPaged = viewMode === 'grid' ? sortedFiltered.slice((gridSafePage - 1) * GRID_PAGE_SIZE, gridSafePage * GRID_PAGE_SIZE) : sortedFiltered;
-  useEffect(() => { setGridPage(1); }, [search, smartFilters, activeStage, sortBy]);
+  const gridPaged = viewMode === 'grid' ? sortedFiltered.slice((gridSafePage - 1) * pageSize, gridSafePage * pageSize) : sortedFiltered;
+  useEffect(() => { setGridPage(1); }, [search, smartFilters, activeStage, sortBy, pageSize]);
 
   // Export data
   const exportData = sortedFiltered.map(o => ({
@@ -909,7 +924,7 @@ export default function OpportunitiesPage() {
     [isRTL ? 'الأولوية' : 'Priority']: isRTL ? (PRIORITY_CONFIG[o.priority]?.label_ar || '') : (PRIORITY_CONFIG[o.priority]?.label_en || ''),
     [isRTL ? 'درجة العميل' : 'Lead Score']: scoreMap[o.id] ?? calcLeadScore(o),
     [isRTL ? 'المصدر' : 'Source']: (() => { const src = o.contacts?.source || o.source; return src ? (isRTL ? (SOURCE_LABELS[src]?.ar || src) : (SOURCE_LABELS[src]?.en || src)) : ''; })(),
-    [isRTL ? 'سبب الخسارة' : 'Lost Reason']: o.lost_reason ? (LOST_REASONS[o.lost_reason] ? (isRTL ? LOST_REASONS[o.lost_reason].ar : LOST_REASONS[o.lost_reason].en) : o.lost_reason) : '',
+    [isRTL ? 'سبب الخسارة' : 'Lost Reason']: o.lost_reason ? (lostReasonsMap[o.lost_reason] ? (isRTL ? lostReasonsMap[o.lost_reason].label_ar : lostReasonsMap[o.lost_reason].label_en) : o.lost_reason) : '',
     [isRTL ? 'الإغلاق المتوقع' : 'Expected Close']: o.expected_close_date || '',
     [isRTL ? 'التاريخ' : 'Date']: o.created_at?.slice(0, 10) || '',
   }));
@@ -979,6 +994,7 @@ export default function OpportunitiesPage() {
       setStageHistory(getStageHistory(id));
     }
     await updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates }).catch(() => {});
+    logAction({ action: 'stage_change', entity: 'opportunity', entityId: id, entityName: getContactName(opps.find(o => o.id === id) || {}), description: isRTL ? 'تغيير مرحلة' : 'Stage changed', oldValue: fromStage, newValue: toStage, userName: profile?.full_name_ar || profile?.full_name_en || '' });
 
     // Auto-create deal in Operations when closed_won (sales only)
     if (toStage === 'closed_won') {
@@ -1044,6 +1060,8 @@ export default function OpportunitiesPage() {
 
   const confirmDeleteOpp = async () => {
     if (!confirmDelete) return;
+    const deletedOpp = opps.find(o => o.id === confirmDelete);
+    logAction({ action: 'delete', entity: 'opportunity', entityId: confirmDelete, entityName: getContactName(deletedOpp || {}), description: isRTL ? 'حذف فرصة' : 'Opportunity deleted', userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setOpps(p => p.filter(o => o.id !== confirmDelete));
     if (selectedOpp?.id === confirmDelete) setSelectedOpp(null);
     await deleteOpportunity(confirmDelete).catch(() => {});
@@ -1099,6 +1117,7 @@ export default function OpportunitiesPage() {
     setOpps(p => p.map(o => o.id === selectedOpp.id ? { ...o, ...result } : o));
     setSelectedOpp(prev => ({ ...prev, ...result }));
     if (stageChanged) setStageHistory(getStageHistory(selectedOpp.id));
+    logAction({ action: 'update', entity: 'opportunity', entityId: selectedOpp.id, entityName: getContactName(selectedOpp), description: isRTL ? 'تحديث فرصة' : 'Opportunity updated', userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setEditingOpp(false);
     setEditSaving(false);
 
@@ -1133,6 +1152,7 @@ export default function OpportunitiesPage() {
   const bulkAssign = async (agentId) => {
     const ids = [...bulkSelected];
     const agent = agents.find(a => a.id === agentId);
+    logAction({ action: 'bulk_reassign', entity: 'opportunity', entityId: ids.join(','), entityName: `${ids.length} opportunities`, description: isRTL ? 'إعادة تعيين جماعي' : 'Bulk reassign', newValue: agent?.full_name_ar || agent?.full_name_en || agentId, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, assigned_to: agentId, assigned_by: profile?.id || null, users: agent || o.users } : o));
     showBulkToast(isRTL ? `تم تعيين ${ids.length} فرصة` : `${ids.length} opportunities assigned`);
     setBulkSelected(new Set()); setBulkMode(false);
@@ -1140,6 +1160,7 @@ export default function OpportunitiesPage() {
   };
   const bulkDeleteAll = async () => {
     const ids = [...bulkSelected];
+    logAction({ action: 'bulk_delete', entity: 'opportunity', entityId: ids.join(','), entityName: `${ids.length} opportunities`, description: isRTL ? 'حذف جماعي' : 'Bulk delete', userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setOpps(p => p.filter(o => !ids.includes(o.id)));
     showBulkToast(isRTL ? `تم حذف ${ids.length} فرصة` : `${ids.length} opportunities deleted`);
     setBulkSelected(new Set()); setBulkMode(false);
@@ -1253,11 +1274,11 @@ export default function OpportunitiesPage() {
           </span>
           {Object.entries(lostReasonCounts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([reason, count]) => (
             <span key={reason} className="px-2 py-1 rounded-md bg-white dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark font-semibold">
-              {LOST_REASONS[reason] ? (isRTL ? LOST_REASONS[reason].ar : LOST_REASONS[reason].en) : reason} <span className="text-red-500">({count})</span>
+              {lostReasonsMap[reason] ? (isRTL ? lostReasonsMap[reason].label_ar : lostReasonsMap[reason].label_en) : reason} <span className="text-red-500">({count})</span>
             </span>
           ))}
           <span className="text-content-muted dark:text-content-muted-dark ms-auto">
-            {isRTL ? `الأكثر: ${topLostReason ? (LOST_REASONS[topLostReason[0]]?.ar || topLostReason[0]) : ''}` : `Top: ${topLostReason ? (LOST_REASONS[topLostReason[0]]?.en || topLostReason[0]) : ''}`}
+            {isRTL ? `الأكثر: ${topLostReason ? (lostReasonsMap[topLostReason[0]]?.label_ar || topLostReason[0]) : ''}` : `Top: ${topLostReason ? (lostReasonsMap[topLostReason[0]]?.label_en || topLostReason[0]) : ''}`}
           </span>
         </div>
       )}
@@ -1523,21 +1544,15 @@ export default function OpportunitiesPage() {
           ))}
         </div>
         {/* Grid Pagination */}
-        {gridTotalPages > 1 && (
-          <div className="flex justify-center items-center gap-3 mt-5">
-            <button disabled={gridPage === 1} onClick={() => setGridPage(p => p - 1)}
-              className={`px-3.5 py-1.5 rounded-lg border border-edge dark:border-edge-dark text-xs font-semibold font-cairo ${gridPage === 1 ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-brand-500/10'} bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark`}>
-              {isRTL ? '← السابق' : '← Prev'}
-            </button>
-            <span className="text-xs text-content-muted dark:text-content-muted-dark">
-              {isRTL ? `${gridSafePage} من ${gridTotalPages}` : `${gridSafePage} of ${gridTotalPages}`}
-            </span>
-            <button disabled={gridPage >= gridTotalPages} onClick={() => setGridPage(p => p + 1)}
-              className={`px-3.5 py-1.5 rounded-lg border border-edge dark:border-edge-dark text-xs font-semibold font-cairo ${gridPage >= gridTotalPages ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:bg-brand-500/10'} bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark`}>
-              {isRTL ? 'التالي →' : 'Next →'}
-            </button>
-          </div>
-        )}
+        <Pagination
+          page={gridSafePage}
+          totalPages={gridTotalPages}
+          onPageChange={setGridPage}
+          pageSize={pageSize}
+          onPageSizeChange={(s) => { setPageSize(s); setGridPage(1); }}
+          totalItems={sortedFiltered.length}
+          safePage={gridSafePage}
+        />
       </>)}
 
       {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} existingOpps={opps} currentUserId={profile?.id} />}
@@ -1936,8 +1951,8 @@ export default function OpportunitiesPage() {
                 <div className="bg-red-500/[0.08] rounded-xl px-3.5 py-3">
                   <p className="m-0 mb-1 text-xs text-red-500 font-semibold">{isRTL ? 'سبب الخسارة' : 'Lost Reason'}</p>
                   <p className="m-0 text-xs text-content dark:text-content-dark">
-                    {LOST_REASONS[selectedOpp.lost_reason]
-                      ? (isRTL ? LOST_REASONS[selectedOpp.lost_reason].ar : LOST_REASONS[selectedOpp.lost_reason].en)
+                    {lostReasonsMap[selectedOpp.lost_reason]
+                      ? (isRTL ? lostReasonsMap[selectedOpp.lost_reason].label_ar : lostReasonsMap[selectedOpp.lost_reason].label_en)
                       : selectedOpp.lost_reason}
                   </p>
                 </div>
