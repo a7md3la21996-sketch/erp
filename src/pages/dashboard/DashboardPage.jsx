@@ -12,8 +12,9 @@ import { getTopPerformers, getTeamOverallPct, METRIC_CONFIG } from '../../servic
 import { getWonDeals } from '../../services/dealsService';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle, Repeat, Check, SkipForward, User } from 'lucide-react';
 import { Card, KpiCard, Badge, DashboardSkeleton } from '../../components/ui';
+import { generateDueInstances, getTodayInstances, completeInstance, skipInstance, PRIORITY_OPTIONS } from '../../services/recurringTaskService';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -59,6 +60,118 @@ const REMINDER_TYPES = {
   meeting:  { ar: 'اجتماع',   en: 'Meeting',     color: '#8B5CF6', Icon: Users },
   email:    { ar: 'بريد',     en: 'Email',       color: '#F59E0B', Icon: Mail },
 };
+
+function TodayRecurringTasks({ lang, isRTL, isDark }) {
+  const [instances, setInstances] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    try { generateDueInstances(); } catch { /* ignore */ }
+    setInstances(getTodayInstances());
+    setLoaded(true);
+  }, []);
+
+  const handleComplete = (id) => {
+    completeInstance(id);
+    setInstances(getTodayInstances());
+  };
+  const handleSkip = (id) => {
+    skipInstance(id);
+    setInstances(getTodayInstances());
+  };
+
+  const pending = instances.filter(i => i.status === 'pending');
+  const doneCount = instances.filter(i => i.status === 'completed' || i.status === 'skipped').length;
+
+  if (!loaded) return null;
+
+  return (
+    <Card className="p-5 mb-5">
+      <div className={`flex items-center justify-between mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className="w-9 h-9 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+            <Repeat size={18} className="text-brand-500" />
+          </div>
+          <div className="text-start">
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
+              {lang === 'ar' ? 'مهام اليوم المتكررة' : "Today's Recurring Tasks"}
+            </p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+              {pending.length > 0
+                ? (lang === 'ar' ? pending.length + ' مهمة مستحقة' : pending.length + ' due')
+                : (lang === 'ar' ? 'لا مهام متكررة اليوم' : 'No recurring tasks today')}
+            </p>
+          </div>
+        </div>
+        {pending.length > 0 && (
+          <Badge variant="danger" size="sm" className="bg-red-500 text-white rounded-full px-2.5 py-0.5">
+            {pending.length}
+          </Badge>
+        )}
+      </div>
+
+      {pending.length === 0 ? (
+        <div className="text-center py-6">
+          <CheckCircle size={32} className="text-brand-500 opacity-40 mb-2 mx-auto" />
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+            {doneCount > 0
+              ? (lang === 'ar' ? 'أنجزت كل مهامك المتكررة!' : 'All recurring tasks done!')
+              : (lang === 'ar' ? 'لا مهام متكررة مجدولة اليوم' : 'No recurring tasks scheduled today')}
+          </p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {pending.slice(0, 5).map((inst) => {
+            const priColor = PRIORITY_OPTIONS[inst.priority]?.color || '#4A7AAB';
+            return (
+              <div key={inst.id} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-surface-bg dark:bg-white/[0.04] border border-edge dark:border-edge-dark ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: priColor + '18' }}>
+                  <Repeat size={15} color={priColor} />
+                </div>
+                <div className="flex-1 text-start min-w-0">
+                  <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">
+                    {lang === 'ar' ? (inst.titleAr || inst.title) : inst.title}
+                  </p>
+                  <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark" style={{ display: 'flex', gap: 6, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                      <Clock size={9} /> {inst.dueTime}
+                    </span>
+                    {inst.assigneeName && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                        <User size={9} /> {inst.assigneeName}
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexShrink: 0, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                  <button onClick={() => handleComplete(inst.id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 7,
+                    border: 'none', background: '#10B98118', color: '#10B981', fontSize: 11,
+                    fontWeight: 600, cursor: 'pointer',
+                  }}>
+                    <Check size={12} /> {lang === 'ar' ? 'تم' : 'Done'}
+                  </button>
+                  <button onClick={() => handleSkip(inst.id)} style={{
+                    display: 'flex', alignItems: 'center', gap: 3, padding: '4px 10px', borderRadius: 7,
+                    border: 'none', background: isDark ? '#ffffff0a' : '#f1f5f9', color: isDark ? '#94a3b8' : '#64748b',
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  }}>
+                    <SkipForward size={12} /> {lang === 'ar' ? 'تخطي' : 'Skip'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          {pending.length > 5 && (
+            <p className="mt-1 mb-0 text-xs text-content-muted dark:text-content-muted-dark text-center">
+              {lang === 'ar' ? '+ ' + (pending.length - 5) + ' مهام أخرى' : '+ ' + (pending.length - 5) + ' more'}
+            </p>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
 
 function TodayReminders({ lang, isRTL, isDark, userId }) {
   const [reminders, setReminders] = useState([]);
@@ -517,6 +630,9 @@ export default function DashboardPage() {
           </Box>
         );
       })()}
+
+      {/* ===== مهام اليوم المتكررة ===== */}
+      <TodayRecurringTasks lang={lang} isRTL={isRTL} isDark={isDark} />
 
       {/* ===== متابعات اليوم ===== */}
       <TodayReminders lang={lang} isRTL={isRTL} isDark={isDark} userId={profile?.id} />

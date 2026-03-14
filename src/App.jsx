@@ -44,11 +44,13 @@ const SystemConfigPage = lazy(() => import('./pages/settings/SystemConfigPage'))
 const UserTrackingPage = lazy(() => import('./pages/settings/UserTrackingPage'));
 const DealsPage = lazy(() => import('./pages/sales/DealsPage'));
 const CommissionsPage = lazy(() => import('./pages/sales/CommissionsPage'));
+const SalesForecastPage = lazy(() => import('./pages/sales/SalesForecastPage'));
 const ProjectsPage = lazy(() => import('./pages/real-estate/ProjectsPage'));
 const UnitsPage = lazy(() => import('./pages/real-estate/UnitsPage'));
 const UsersPage = lazy(() => import('./pages/settings/UsersPage'));
 const TriggersPage = lazy(() => import('./pages/settings/TriggersPage'));
 const CustomFieldsPage = lazy(() => import('./pages/settings/CustomFieldsPage'));
+const BackupPage = lazy(() => import('./pages/settings/BackupPage'));
 const ChatInboxPage = lazy(() => import('./pages/ChatInboxPage'));
 
 function PageLoader() {
@@ -126,6 +128,7 @@ export default function App() {
                 <Route path="/performance" element={<Guarded><PerformancePage /></Guarded>} />
                 <Route path="/sales/deals" element={<Guarded><DealsPage /></Guarded>} />
                 <Route path="/sales/commissions" element={<Guarded><CommissionsPage /></Guarded>} />
+                <Route path="/sales/forecast" element={<Guarded><SalesForecastPage /></Guarded>} />
                 <Route path="/sales/targets" element={<Navigate to="/reports" replace />} />
                 <Route path="/sales/*" element={<Guarded><DealsPage /></Guarded>} />
                 <Route path="/finance" element={<Guarded><FinancePage /></Guarded>} />
@@ -160,6 +163,7 @@ export default function App() {
                 <Route path="/settings/users" element={<Guarded><UsersPage /></Guarded>} />
                 <Route path="/settings/triggers" element={<Guarded><TriggersPage /></Guarded>} />
                 <Route path="/settings/custom-fields" element={<Guarded><CustomFieldsPage /></Guarded>} />
+                <Route path="/settings/backup" element={<Guarded><BackupPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />

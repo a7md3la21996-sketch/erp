@@ -1,41 +1,51 @@
 import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../contexts/ThemeContext';
 import supabase from '../../lib/supabase';
-import { History, ChevronDown, ChevronUp, Plus, Pencil, Trash2, RefreshCw, Ban, UserCheck, Users2, Merge, Upload, Thermometer, ArrowRightLeft, Info } from 'lucide-react';
+import {
+  History, ChevronDown, ChevronUp, Plus, Pencil, Trash2, RefreshCw,
+  Ban, UserCheck, Users2, Merge, Upload, Thermometer, ArrowRightLeft,
+  Activity, Calendar, User, BarChart3, Download,
+} from 'lucide-react';
 import { Button, Badge, Table, Th, Td, Tr, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 import { ACTION_TYPES, getLocalAuditLogs } from '../../services/auditService';
+import { exportToExcel, exportToCSV } from '../../utils/exportUtils';
 
 const ACTION_CONFIG = {
-  create:           { variant: 'success', icon: Plus,           ar: 'إنشاء',               en: 'Create' },
-  update:           { variant: 'default', icon: Pencil,         ar: 'تعديل',               en: 'Update' },
-  delete:           { variant: 'danger',  icon: Trash2,         ar: 'حذف',                 en: 'Delete' },
-  status_change:    { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير حالة',           en: 'Status Change' },
-  type_change:      { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير نوع',           en: 'Type Change' },
-  blacklist:        { variant: 'danger',  icon: Ban,            ar: 'بلاك ليست',           en: 'Blacklisted' },
-  unblacklist:      { variant: 'success', icon: Ban,            ar: 'إلغاء بلاك ليست',     en: 'Unblacklisted' },
-  reassign:         { variant: 'default', icon: UserCheck,      ar: 'إعادة تعيين',         en: 'Reassigned' },
-  bulk_reassign:    { variant: 'default', icon: Users2,         ar: 'إعادة تعيين جماعي',   en: 'Bulk Reassign' },
-  bulk_delete:      { variant: 'danger',  icon: Trash2,         ar: 'حذف جماعي',           en: 'Bulk Delete' },
-  merge:            { variant: 'default', icon: Merge,          ar: 'دمج',                 en: 'Merge' },
-  import:           { variant: 'success', icon: Upload,         ar: 'استيراد',              en: 'Import' },
-  stage_change:     { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير مرحلة',         en: 'Stage Change' },
-  temperature_change: { variant: 'default', icon: Thermometer,  ar: 'تغيير حرارة',         en: 'Temperature Change' },
-  batch_call:       { variant: 'default', icon: Plus,           ar: 'اتصال جماعي',         en: 'Batch Call' },
+  create:             { variant: 'success', icon: Plus,           ar: 'إنشاء',               en: 'Create' },
+  update:             { variant: 'default', icon: Pencil,         ar: 'تعديل',               en: 'Update' },
+  delete:             { variant: 'danger',  icon: Trash2,         ar: 'حذف',                 en: 'Delete' },
+  status_change:      { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير حالة',           en: 'Status Change' },
+  type_change:        { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير نوع',           en: 'Type Change' },
+  blacklist:          { variant: 'danger',  icon: Ban,            ar: 'بلاك ليست',           en: 'Blacklisted' },
+  unblacklist:        { variant: 'success', icon: Ban,            ar: 'إلغاء بلاك ليست',     en: 'Unblacklisted' },
+  reassign:           { variant: 'default', icon: UserCheck,      ar: 'إعادة تعيين',         en: 'Reassigned' },
+  bulk_reassign:      { variant: 'default', icon: Users2,         ar: 'إعادة تعيين جماعي',   en: 'Bulk Reassign' },
+  bulk_delete:        { variant: 'danger',  icon: Trash2,         ar: 'حذف جماعي',           en: 'Bulk Delete' },
+  merge:              { variant: 'default', icon: Merge,          ar: 'دمج',                 en: 'Merge' },
+  import:             { variant: 'success', icon: Upload,         ar: 'استيراد',              en: 'Import' },
+  stage_change:       { variant: 'default', icon: ArrowRightLeft, ar: 'تغيير مرحلة',         en: 'Stage Change' },
+  temperature_change: { variant: 'default', icon: Thermometer,    ar: 'تغيير حرارة',         en: 'Temperature Change' },
+  score_change:       { variant: 'default', icon: BarChart3,      ar: 'تغيير تقييم',         en: 'Score Change' },
+  assign:             { variant: 'default', icon: UserCheck,      ar: 'تعيين',               en: 'Assigned' },
+  batch_call:         { variant: 'default', icon: Plus,           ar: 'اتصال جماعي',         en: 'Batch Call' },
+  note:               { variant: 'default', icon: Pencil,         ar: 'ملاحظة',              en: 'Note' },
 };
 
 const ENTITY_LABELS = {
-  contact: { ar: 'جهة اتصال', en: 'Contact' },
-  opportunity: { ar: 'فرصة', en: 'Opportunity' },
-  task: { ar: 'مهمة', en: 'Task' },
-  activity: { ar: 'نشاط', en: 'Activity' },
-  employee: { ar: 'موظف', en: 'Employee' },
-  invoice: { ar: 'فاتورة', en: 'Invoice' },
-  deal: { ar: 'صفقة', en: 'Deal' },
-  campaign: { ar: 'حملة', en: 'Campaign' },
-  leave_request: { ar: 'طلب إجازة', en: 'Leave Request' },
-  expense: { ar: 'مصروف', en: 'Expense' },
-  journal_entry: { ar: 'قيد يومي', en: 'Journal Entry' },
-  ticket: { ar: 'تذكرة', en: 'Ticket' },
+  contact:       { ar: 'جهة اتصال',  en: 'Contact' },
+  opportunity:   { ar: 'فرصة',       en: 'Opportunity' },
+  task:          { ar: 'مهمة',       en: 'Task' },
+  activity:      { ar: 'نشاط',       en: 'Activity' },
+  employee:      { ar: 'موظف',       en: 'Employee' },
+  invoice:       { ar: 'فاتورة',     en: 'Invoice' },
+  deal:          { ar: 'صفقة',       en: 'Deal' },
+  campaign:      { ar: 'حملة',       en: 'Campaign' },
+  leave_request: { ar: 'طلب إجازة',  en: 'Leave Request' },
+  expense:       { ar: 'مصروف',      en: 'Expense' },
+  journal_entry: { ar: 'قيد يومي',   en: 'Journal Entry' },
+  ticket:        { ar: 'تذكرة',      en: 'Ticket' },
+  backup:        { ar: 'نسخة احتياطية', en: 'Backup' },
 };
 
 const BASE_SMART_FIELDS = [
@@ -54,17 +64,18 @@ const BASE_SMART_FIELDS = [
 
 export default function AuditLogPage() {
   const { i18n } = useTranslation();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
-  const lang = i18n.language;
 
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [smartFilters, setSmartFilters] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [userOptions, setUserOptions] = useState([]);
-  const PAGE_SIZE = 30;
 
   // Build SMART_FIELDS with dynamic user options
   const smartFields = useMemo(() => [
@@ -79,7 +90,6 @@ export default function AuditLogPage() {
   useEffect(() => {
     (async () => {
       const map = new Map();
-      // From Supabase
       try {
         const { data } = await supabase
           .from('audit_logs')
@@ -94,7 +104,6 @@ export default function AuditLogPage() {
           });
         }
       } catch { /* ignore */ }
-      // From localStorage
       const { data: localLogs } = getLocalAuditLogs({ limit: 500 });
       localLogs.forEach(l => {
         if (l.user_name && !map.has(l.user_name)) {
@@ -105,7 +114,6 @@ export default function AuditLogPage() {
     })();
   }, []);
 
-  // Extract action and entity filter values from smartFilters for server-side filtering
   const filterAction = useMemo(() => {
     const f = smartFilters.find(f => f.field === 'action' && f.operator === 'is');
     return f?.value || '';
@@ -125,13 +133,12 @@ export default function AuditLogPage() {
     setLoading(true);
     let allLogs = [];
 
-    // Fetch from Supabase
     try {
       let query = supabase
         .from('audit_logs')
         .select('*, users:user_id (full_name_ar, full_name_en)')
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
 
       if (filterAction) query = query.eq('action', filterAction);
       if (filterEntity) query = query.eq('entity', filterEntity);
@@ -148,7 +155,6 @@ export default function AuditLogPage() {
       }
     } catch { /* ignore */ }
 
-    // Merge with localStorage logs
     const { data: localLogs } = getLocalAuditLogs({ limit: 500, action: filterAction, entity: filterEntity, search });
     const supaIds = new Set(allLogs.map(l => l.id));
     const uniqueLocal = localLogs.filter(l => !supaIds.has(l.id)).map(l => ({
@@ -162,32 +168,104 @@ export default function AuditLogPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchLogs(); }, [page, filterAction, filterEntity, filterUserId]);
+  useEffect(() => { fetchLogs(); }, [filterAction, filterEntity, filterUserId]);
 
-  const handleSearchKeyDown = (e) => {
-    if (e?.key === 'Enter') { setPage(0); fetchLogs(); }
-  };
+  const handleSearchChange = (val) => setSearch(val);
 
-  // We override onSearchChange to also handle Enter-based searching
-  const handleSearchChange = (val) => {
-    setSearch(val);
-  };
-
-  // Client-side filtering for text/date fields
+  // Client-side filtering
   const filtered = useMemo(() => {
     let result = logs;
     if (search) {
       const q = search.toLowerCase();
-      result = result.filter(l => (l.description || '').toLowerCase().includes(q) || (l.entity_name || '').toLowerCase().includes(q) || (l._user_name_ar || '').includes(q) || (l._user_name_en || '').toLowerCase().includes(q));
+      result = result.filter(l =>
+        (l.description || '').toLowerCase().includes(q) ||
+        (l.entity_name || '').toLowerCase().includes(q) ||
+        (l._user_name_ar || '').includes(q) ||
+        (l._user_name_en || '').toLowerCase().includes(q)
+      );
     }
     result = applySmartFilters(result, smartFilters.filter(f => !['action', 'entity', 'user_id'].includes(f.field)), smartFields);
     return result;
   }, [logs, search, smartFilters, smartFields]);
 
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  // ── KPI computations ──
+  const kpis = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const todayCount = logs.filter(l => (l.created_at || '').slice(0, 10) === todayStr).length;
+
+    const users = new Set();
+    const entityCount = {};
+    logs.forEach(l => {
+      if (l.user_name || l._user_name_en) users.add(l.user_name || l._user_name_en);
+      if (l.entity) entityCount[l.entity] = (entityCount[l.entity] || 0) + 1;
+    });
+
+    let mostActiveEntity = '—';
+    let maxCount = 0;
+    Object.entries(entityCount).forEach(([e, c]) => {
+      if (c > maxCount) { maxCount = c; mostActiveEntity = e; }
+    });
+    const mostActiveLabel = ENTITY_LABELS[mostActiveEntity]
+      ? (isRTL ? ENTITY_LABELS[mostActiveEntity].ar : ENTITY_LABELS[mostActiveEntity].en)
+      : mostActiveEntity;
+
+    return { total: logs.length, today: todayCount, users: users.size, mostActive: mostActiveLabel, mostActiveCount: maxCount };
+  }, [logs, isRTL]);
+
   const formatDate = (iso) => {
     if (!iso) return '';
     return new Date(iso).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
+
+  // Export handler
+  const handleExport = async (type) => {
+    const rows = filtered.map(l => ({
+      [isRTL ? 'التاريخ' : 'Date']: l.created_at ? new Date(l.created_at).toLocaleString() : '',
+      [isRTL ? 'بواسطة' : 'User']: isRTL ? (l._user_name_ar || l.user_name || '') : (l._user_name_en || l.user_name || ''),
+      [isRTL ? 'الإجراء' : 'Action']: isRTL ? (ACTION_CONFIG[l.action]?.ar || l.action) : (ACTION_CONFIG[l.action]?.en || l.action),
+      [isRTL ? 'الكيان' : 'Entity']: isRTL ? (ENTITY_LABELS[l.entity]?.ar || l.entity) : (ENTITY_LABELS[l.entity]?.en || l.entity),
+      [isRTL ? 'الاسم' : 'Name']: l.entity_name || '',
+      [isRTL ? 'الوصف' : 'Description']: l.description || '',
+    }));
+    if (type === 'excel') {
+      await exportToExcel(rows, isRTL ? 'سجل_التدقيق' : 'audit_log', isRTL ? 'السجل' : 'Log');
+    } else {
+      exportToCSV(rows, isRTL ? 'سجل_التدقيق' : 'audit_log');
+    }
+  };
+
+  // ── Styles ──
+  const kpiCard = (accent) => ({
+    background: isDark ? '#1a2332' : '#ffffff',
+    border: `1px solid ${isDark ? '#2a3a4e' : '#e2e8f0'}`,
+    borderTop: `3px solid ${accent}`,
+    borderRadius: 12,
+    padding: '16px 18px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+  });
+
+  const iconWrap = (bg) => ({
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    background: bg,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  });
+
+  const kpiLabel = { margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' };
+  const kpiValue = { margin: 0, fontSize: 22, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' };
+  const kpiSub = { margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', marginTop: 2 };
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -198,27 +276,75 @@ export default function AuditLogPage() {
             <History size={20} className="text-brand-500" />
           </div>
           <div>
-            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'سجل التعديلات' : 'Audit Log'}</h1>
+            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'سجل التدقيق' : 'Audit Log'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'جميع التغييرات في النظام' : 'All system changes'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <ExportButton
-            data={logs}
-            filename={isRTL ? 'سجل_التعديلات' : 'audit_log'}
-            title={isRTL ? 'سجل التعديلات' : 'Audit Log'}
-            columns={[
-              { header: isRTL ? 'الإجراء' : 'Action', key: r => isRTL ? ACTION_CONFIG[r.action]?.ar : ACTION_CONFIG[r.action]?.en },
-              { header: isRTL ? 'الكيان' : 'Entity', key: r => isRTL ? (ENTITY_LABELS[r.entity]?.ar || r.entity) : (ENTITY_LABELS[r.entity]?.en || r.entity) },
-              { header: isRTL ? 'الاسم' : 'Name', key: 'entity_name' },
-              { header: isRTL ? 'الوصف' : 'Description', key: 'description' },
-              { header: isRTL ? 'بواسطة' : 'Done By', key: r => isRTL ? (r._user_name_ar || '') : (r._user_name_en || '') },
-              { header: isRTL ? 'التاريخ' : 'Date', key: 'created_at' },
-            ]}
-          />
-          <Button variant="secondary" onClick={() => { setPage(0); fetchLogs(); }}>
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <ExportButton
+              data={filtered}
+              filename={isRTL ? 'سجل_التدقيق' : 'audit_log'}
+              title={isRTL ? 'سجل التدقيق' : 'Audit Log'}
+              columns={[
+                { header: isRTL ? 'الإجراء' : 'Action', key: r => isRTL ? ACTION_CONFIG[r.action]?.ar : ACTION_CONFIG[r.action]?.en },
+                { header: isRTL ? 'الكيان' : 'Entity', key: r => isRTL ? (ENTITY_LABELS[r.entity]?.ar || r.entity) : (ENTITY_LABELS[r.entity]?.en || r.entity) },
+                { header: isRTL ? 'الاسم' : 'Name', key: 'entity_name' },
+                { header: isRTL ? 'الوصف' : 'Description', key: 'description' },
+                { header: isRTL ? 'بواسطة' : 'Done By', key: r => isRTL ? (r._user_name_ar || '') : (r._user_name_en || '') },
+                { header: isRTL ? 'التاريخ' : 'Date', key: 'created_at' },
+              ]}
+            />
+          </div>
+          <Button variant="secondary" onClick={() => { setPage(1); fetchLogs(); }}>
             <RefreshCw size={14} />{isRTL ? 'تحديث' : 'Refresh'}
           </Button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 20 }}>
+        <div style={kpiCard('#4A7AAB')}>
+          <div style={iconWrap('rgba(74,122,171,0.12)')}>
+            <BarChart3 size={20} color="#4A7AAB" />
+          </div>
+          <div>
+            <p style={kpiLabel}>{isRTL ? 'إجمالي السجلات' : 'Total Logs'}</p>
+            <p style={kpiValue}>{kpis.total}</p>
+          </div>
+        </div>
+
+        <div style={kpiCard('#10b981')}>
+          <div style={iconWrap('rgba(16,185,129,0.12)')}>
+            <Calendar size={20} color="#10b981" />
+          </div>
+          <div>
+            <p style={kpiLabel}>{isRTL ? 'إجراءات اليوم' : "Today's Actions"}</p>
+            <p style={kpiValue}>{kpis.today}</p>
+          </div>
+        </div>
+
+        <div style={kpiCard('#8b5cf6')}>
+          <div style={iconWrap('rgba(139,92,246,0.12)')}>
+            <User size={20} color="#8b5cf6" />
+          </div>
+          <div>
+            <p style={kpiLabel}>{isRTL ? 'المستخدمين النشطين' : 'Unique Users'}</p>
+            <p style={kpiValue}>{kpis.users}</p>
+          </div>
+        </div>
+
+        <div style={kpiCard('#f59e0b')}>
+          <div style={iconWrap('rgba(245,158,11,0.12)')}>
+            <Activity size={20} color="#f59e0b" />
+          </div>
+          <div>
+            <p style={kpiLabel}>{isRTL ? 'الأكثر نشاطاً' : 'Most Active Entity'}</p>
+            <p style={{ ...kpiValue, fontSize: 16 }}>{kpis.mostActive}</p>
+            {kpis.mostActiveCount > 0 && (
+              <p style={kpiSub}>{kpis.mostActiveCount} {isRTL ? 'إجراء' : 'actions'}</p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -226,117 +352,114 @@ export default function AuditLogPage() {
       <SmartFilter
         fields={smartFields}
         filters={smartFilters}
-        onFiltersChange={(f) => { setSmartFilters(f); setPage(0); }}
+        onFiltersChange={(f) => { setSmartFilters(f); setPage(1); }}
         search={search}
         onSearchChange={handleSearchChange}
-        searchPlaceholder={isRTL ? 'بحث في السجل... (Enter للبحث)' : 'Search logs... (Enter to search)'}
+        searchPlaceholder={isRTL ? 'بحث في السجل...' : 'Search logs...'}
         resultsCount={filtered.length}
       />
 
       {/* Table */}
-      <Table>
-        <thead>
-          <tr>
-            <Th>{isRTL ? 'الإجراء' : 'Action'}</Th>
-            <Th>{isRTL ? 'الكيان' : 'Entity'}</Th>
-            <Th>{isRTL ? 'الاسم' : 'Name'}</Th>
-            <Th>{isRTL ? 'الوصف' : 'Description'}</Th>
-            <Th>{isRTL ? 'بواسطة' : 'Done By'}</Th>
-            <Th>{isRTL ? 'التاريخ' : 'Date'}</Th>
-            <Th className="w-10"></Th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            Array.from({ length: 7 }).map((_, i) => (
-              <Tr key={i}>
-                {Array.from({ length: 7 }).map((_, j) => (
-                  <Td key={j}>
-                    <div className="h-3.5 rounded-md bg-gray-100 dark:bg-white/5 animate-pulse" />
-                  </Td>
-                ))}
-              </Tr>
-            ))
-          ) : filtered.length === 0 ? (
+      <div style={{ overflowX: 'auto' }}>
+        <Table>
+          <thead>
             <tr>
-              <Td colSpan={7} className="text-center !py-10 text-content-muted dark:text-content-muted-dark">
-                {isRTL ? 'لا توجد سجلات' : 'No logs found'}
-              </Td>
+              <Th>{isRTL ? 'التاريخ' : 'Date/Time'}</Th>
+              <Th>{isRTL ? 'بواسطة' : 'User'}</Th>
+              <Th>{isRTL ? 'الإجراء' : 'Action'}</Th>
+              <Th>{isRTL ? 'الكيان' : 'Entity Type'}</Th>
+              <Th>{isRTL ? 'الاسم' : 'Entity Name'}</Th>
+              <Th>{isRTL ? 'الوصف' : 'Description'}</Th>
+              <Th style={{ width: 36 }}></Th>
             </tr>
-          ) : (
-            filtered.map(log => {
-              const ac = ACTION_CONFIG[log.action] || ACTION_CONFIG.update;
-              const AIcon = ac.icon;
-              const entityLabel = ENTITY_LABELS[log.entity] || { ar: log.entity, en: log.entity };
-              const isExpanded = expandedId === log.id;
-              return (
-                <Fragment key={log.id}>
-                  <Tr className={log.changes ? 'cursor-pointer' : ''} onClick={() => log.changes && setExpandedId(isExpanded ? null : log.id)}>
-                    <Td>
-                      <Badge variant={ac.variant} size="sm">
-                        <AIcon size={12} />{isRTL ? ac.ar : ac.en}
-                      </Badge>
+          </thead>
+          <tbody>
+            {loading ? (
+              Array.from({ length: 7 }).map((_, i) => (
+                <Tr key={i}>
+                  {Array.from({ length: 7 }).map((_, j) => (
+                    <Td key={j}>
+                      <div className="h-3.5 rounded-md bg-gray-100 dark:bg-white/5 animate-pulse" />
                     </Td>
-                    <Td>{isRTL ? entityLabel.ar : entityLabel.en}</Td>
-                    <Td className="text-xs font-semibold text-content dark:text-content-dark">{log.entity_name || '—'}</Td>
-                    <Td className="max-w-[280px] truncate">{log.description || '—'}</Td>
-                    <Td className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">{isRTL ? (log._user_name_ar || '—') : (log._user_name_en || '—')}</Td>
-                    <Td className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">{formatDate(log.created_at)}</Td>
-                    <Td>
-                      {log.changes && (isExpanded
-                        ? <ChevronUp size={14} className="text-content-muted dark:text-content-muted-dark" />
-                        : <ChevronDown size={14} className="text-content-muted dark:text-content-muted-dark" />
-                      )}
-                    </Td>
-                  </Tr>
-                  {isExpanded && log.changes && (
-                    <tr>
-                      <td colSpan={7} className="px-3.5 pb-3.5 bg-gray-50 dark:bg-brand-500/[0.04]">
-                        <div className="rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr>
-                                <Th className="!text-[10px]">{isRTL ? 'الحقل' : 'Field'}</Th>
-                                <Th className="!text-[10px]">{isRTL ? 'القيمة القديمة' : 'Old Value'}</Th>
-                                <Th className="!text-[10px]">{isRTL ? 'القيمة الجديدة' : 'New Value'}</Th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {Object.entries(log.changes).map(([field, val]) => (
-                                <Tr key={field}>
-                                  <Td className="!text-xs font-semibold">{field}</Td>
-                                  <Td className="!text-xs text-red-500">{val.from != null ? String(val.from) : '—'}</Td>
-                                  <Td className="!text-xs text-emerald-500">{val.to != null ? String(val.to) : '—'}</Td>
-                                </Tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </Fragment>
-              );
-            })
-          )}
-        </tbody>
-      </Table>
+                  ))}
+                </Tr>
+              ))
+            ) : paged.length === 0 ? (
+              <tr>
+                <Td colSpan={7} className="text-center !py-10 text-content-muted dark:text-content-muted-dark">
+                  {isRTL ? 'لا توجد سجلات' : 'No logs found'}
+                </Td>
+              </tr>
+            ) : (
+              paged.map(log => {
+                const ac = ACTION_CONFIG[log.action] || ACTION_CONFIG.update;
+                const AIcon = ac.icon;
+                const entityLabel = ENTITY_LABELS[log.entity] || { ar: log.entity, en: log.entity };
+                const isExpanded = expandedId === log.id;
+                return (
+                  <Fragment key={log.id}>
+                    <Tr className={log.changes ? 'cursor-pointer' : ''} onClick={() => log.changes && setExpandedId(isExpanded ? null : log.id)}>
+                      <Td className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">{formatDate(log.created_at)}</Td>
+                      <Td className="text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap">{isRTL ? (log._user_name_ar || log.user_name || '—') : (log._user_name_en || log.user_name || '—')}</Td>
+                      <Td>
+                        <Badge variant={ac.variant} size="sm">
+                          <AIcon size={12} />{isRTL ? ac.ar : ac.en}
+                        </Badge>
+                      </Td>
+                      <Td>{isRTL ? entityLabel.ar : entityLabel.en}</Td>
+                      <Td className="text-xs font-semibold text-content dark:text-content-dark">{log.entity_name || '—'}</Td>
+                      <Td className="max-w-[280px] truncate">{log.description || '—'}</Td>
+                      <Td>
+                        {log.changes && (isExpanded
+                          ? <ChevronUp size={14} className="text-content-muted dark:text-content-muted-dark" />
+                          : <ChevronDown size={14} className="text-content-muted dark:text-content-muted-dark" />
+                        )}
+                      </Td>
+                    </Tr>
+                    {isExpanded && log.changes && (
+                      <tr>
+                        <td colSpan={7} className="px-3.5 pb-3.5 bg-gray-50 dark:bg-brand-500/[0.04]">
+                          <div className="rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr>
+                                  <Th className="!text-[10px]">{isRTL ? 'الحقل' : 'Field'}</Th>
+                                  <Th className="!text-[10px]">{isRTL ? 'القيمة القديمة' : 'Old Value'}</Th>
+                                  <Th className="!text-[10px]">{isRTL ? 'القيمة الجديدة' : 'New Value'}</Th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {Object.entries(log.changes).map(([field, val]) => (
+                                  <Tr key={field}>
+                                    <Td className="!text-xs font-semibold">{field}</Td>
+                                    <Td className="!text-xs" style={{ color: '#ef4444' }}>{val.from != null ? String(val.from) : '—'}</Td>
+                                    <Td className="!text-xs" style={{ color: '#10b981' }}>{val.to != null ? String(val.to) : '—'}</Td>
+                                  </Tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })
+            )}
+          </tbody>
+        </Table>
+      </div>
 
       {/* Pagination */}
-      {!loading && logs.length > 0 && (
-        <div className="mt-3 px-4 py-3 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl flex justify-between items-center">
-          <span className="text-xs text-content-muted dark:text-content-muted-dark">
-            {isRTL ? `صفحة ${page + 1}` : `Page ${page + 1}`}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="secondary" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-              {isRTL ? 'السابق' : 'Previous'}
-            </Button>
-            <Button variant="secondary" size="sm" disabled={logs.length < PAGE_SIZE} onClick={() => setPage(p => p + 1)}>
-              {isRTL ? 'التالي' : 'Next'}
-            </Button>
-          </div>
-        </div>
+      {!loading && filtered.length > 0 && (
+        <Pagination
+          page={safePage}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
+          totalItems={filtered.length}
+        />
       )}
     </div>
   );
