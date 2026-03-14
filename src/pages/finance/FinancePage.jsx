@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
@@ -269,16 +270,6 @@ function AddExpenseModal({ L, onClose, onSave, expCount }) {
    TABS CONFIG
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const TABS = [
-  { id: 'overview',  ar: 'نظرة عامة',      en: 'Overview',          Icon: BarChart2   },
-  { id: 'coa',       ar: 'دليل الحسابات',   en: 'Chart of Accounts', Icon: FolderTree  },
-  { id: 'journal',   ar: 'القيود اليومية',   en: 'Journal Entries',   Icon: BookOpen    },
-  { id: 'invoices',  ar: 'الفواتير',         en: 'Invoices',          Icon: FileText    },
-  { id: 'commissions', ar: 'العمولات',       en: 'Commissions',       Icon: DollarSign  },
-  { id: 'expenses',  ar: 'المصروفات',        en: 'Expenses',          Icon: Receipt     },
-  { id: 'reports',   ar: 'التقارير المالية',  en: 'Reports',           Icon: ClipboardList },
-  { id: 'budget',    ar: 'الموازنة',          en: 'Budget',            Icon: Target      },
-];
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MAIN PAGE
@@ -291,7 +282,18 @@ export default function FinancePage() {
   const isRTL = i18n.language === 'ar';
   const L = (ar, en) => isRTL ? ar : en;
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const location = useLocation();
+  const activeTab = useMemo(() => {
+    const path = location.pathname;
+    if (path.includes('/finance/coa')) return 'coa';
+    if (path.includes('/finance/journal')) return 'journal';
+    if (path.includes('/finance/invoices')) return 'invoices';
+    if (path.includes('/finance/commissions')) return 'commissions';
+    if (path.includes('/finance/expenses')) return 'expenses';
+    if (path.includes('/finance/reports')) return 'reports';
+    if (path.includes('/finance/budget')) return 'budget';
+    return 'overview';
+  }, [location.pathname]);
 
   // State — initialised empty, populated from Supabase (or mock fallback) on mount
   const [journalEntries, setJournalEntries] = useState([]);
@@ -1619,22 +1621,6 @@ export default function FinancePage() {
             { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
           ]}
         />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-surface-card dark:bg-surface-card-dark rounded-xl p-1 border border-edge dark:border-edge-dark w-full md:w-fit overflow-x-auto">
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-[7px] px-4 py-[7px] rounded-[7px] border-none cursor-pointer text-xs font-medium transition-all duration-150 whitespace-nowrap
-              ${activeTab === tab.id
-                ? 'bg-brand-500 text-white'
-                : 'bg-transparent text-content-muted dark:text-content-muted-dark'
-              }`}
-          >
-            <tab.Icon size={14} />
-            {L(tab.ar, tab.en)}
-          </button>
-        ))}
       </div>
 
       {/* Tab Content */}

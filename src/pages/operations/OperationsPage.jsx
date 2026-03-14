@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   BarChart2, FileCheck, Banknote, KeyRound, Headphones,
@@ -29,15 +30,6 @@ import {
 } from '../../services/operationsService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { KpiCard, Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, FilterPill, ExportButton } from '../../components/ui';
-
-// ── Tabs ────────────────────────────────────────────────────────────────
-const TABS = [
-  { id: 'overview',     ar: 'نظرة عامة',         en: 'Overview',        Icon: BarChart2 },
-  { id: 'deals',        ar: 'معالجة الصفقات',     en: 'Deal Processing', Icon: FileCheck },
-  { id: 'payments',     ar: 'المدفوعات',          en: 'Payments',        Icon: Banknote },
-  { id: 'handover',     ar: 'التسليمات',          en: 'Handover',        Icon: KeyRound },
-  { id: 'after_sales',  ar: 'خدمة ما بعد البيع',  en: 'After-Sales',     Icon: Headphones },
-];
 
 // ── Activity type icons & colors ────────────────────────────────────────
 const ACT_TYPE = {
@@ -132,7 +124,15 @@ export default function OperationsPage() {
   const isRTL = i18n.language === 'ar';
   const isDark = theme === 'dark';
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const location = useLocation();
+  const activeTab = useMemo(() => {
+    const path = location.pathname;
+    if (path.includes('/operations/deals')) return 'deals';
+    if (path.includes('/operations/payments')) return 'payments';
+    if (path.includes('/operations/handover')) return 'handover';
+    if (path.includes('/operations/after-sales')) return 'after_sales';
+    return 'overview';
+  }, [location.pathname]);
   const [dealFilter, setDealFilter] = useState('all');
   const [payFilter, setPayFilter] = useState('all');
   const [handoverFilter, setHandoverFilter] = useState('all');
@@ -903,28 +903,6 @@ export default function OperationsPage() {
             { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
           ]}
         />
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-brand-500/[0.08] p-1 rounded-xl flex-wrap">
-        {TABS.map(tab => {
-          const active = activeTab === tab.id;
-          const TabIcon = tab.Icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl border-none cursor-pointer text-xs font-cairo whitespace-nowrap transition-all duration-200 ${
-                active
-                  ? 'font-bold bg-surface-card dark:bg-surface-card-dark text-brand-500 shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                  : 'font-medium bg-transparent text-content-muted dark:text-content-muted-dark'
-              }`}
-            >
-              <TabIcon size={16} />
-              {isRTL ? tab.ar : tab.en}
-            </button>
-          );
-        })}
       </div>
 
       {/* Tab Content */}

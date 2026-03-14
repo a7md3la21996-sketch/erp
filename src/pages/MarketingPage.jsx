@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +9,7 @@ import {
   Megaphone, Plus, TrendingUp, Users, DollarSign, BarChart3, Search, X,
   Pencil, Trash2, Eye, Zap, RefreshCw, ChevronUp, ChevronDown,
   Phone, MessageCircle, ArrowUpDown, Target, Repeat, Clock,
-  LayoutDashboard, PieChart, Filter as FilterIcon, Calendar,
+  PieChart, Calendar,
 } from 'lucide-react';
 import { Card, Button, Input, Select, Textarea, KpiCard, SmartFilter, applySmartFilters, FilterPill, ExportButton } from '../components/ui';
 import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, getCampaignContacts, getCampaignInteractions } from '../services/marketingService';
@@ -83,7 +84,15 @@ export default function MarketingPage() {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
 
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const activeTab = useMemo(() => {
+    const path = location.pathname;
+    if (path.includes('/marketing/campaigns')) return 'campaigns';
+    if (path.includes('/marketing/channels')) return 'channels';
+    if (path.includes('/marketing/funnel')) return 'funnel';
+    return 'dashboard';
+  }, [location.pathname]);
   const [campaigns, setCampaigns] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
@@ -97,12 +106,6 @@ export default function MarketingPage() {
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(-1);
 
-  const TABS = [
-    { key: 'dashboard', icon: LayoutDashboard, ar: 'نظرة عامة', en: 'Dashboard' },
-    { key: 'campaigns', icon: Megaphone, ar: 'الحملات', en: 'Campaigns' },
-    { key: 'channels', icon: PieChart, ar: 'القنوات', en: 'Channels' },
-    { key: 'funnel', icon: FilterIcon, ar: 'القمع التسويقي', en: 'Funnel' },
-  ];
 
   // Load data
   useEffect(() => {
@@ -337,19 +340,6 @@ export default function MarketingPage() {
         )}
       </div>
 
-      {/* ═══ Tab Navigation ═══ */}
-      <div className="flex gap-1 mb-5 bg-surface-card dark:bg-surface-card-dark rounded-xl p-1 border border-edge dark:border-edge-dark w-full md:w-fit overflow-x-auto">
-        {TABS.map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-[7px] px-4 py-[7px] rounded-[7px] border-none cursor-pointer text-xs font-medium transition-all duration-150 whitespace-nowrap
-              ${activeTab === tab.key ? 'bg-brand-500 text-white' : 'bg-transparent text-content-muted dark:text-content-muted-dark hover:bg-brand-500/[0.06]'}`}
-          >
-            <tab.icon size={14} />
-            {isRTL ? tab.ar : tab.en}
-          </button>
-        ))}
-      </div>
-
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* ═══ DASHBOARD TAB ═══ */}
       {/* ═══════════════════════════════════════════════════════════════ */}
@@ -470,7 +460,7 @@ export default function MarketingPage() {
               const platform = getPlatform(camp.platform);
               const cpl = stats2.cpl || 0;
               return (
-                <div key={camp.id} onClick={() => { setActiveTab('campaigns'); openDrawer(camp); }} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-brand-500/[0.04] hover:bg-brand-500/[0.08] cursor-pointer transition-colors">
+                <div key={camp.id} onClick={() => { navigate('/marketing/campaigns'); openDrawer(camp); }} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-brand-500/[0.04] hover:bg-brand-500/[0.08] cursor-pointer transition-colors">
                   <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ backgroundColor: platform?.color + '20', color: platform?.color }}>{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{isRTL ? camp.name_ar : camp.name_en}</p>
