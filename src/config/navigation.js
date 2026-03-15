@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Target, Building2, ActivitySquare, BookUser,
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
-  TrendingUp, PieChart, Volume2, Crosshair, Grid3x3, Shield, Gift, Bell,
+  TrendingUp, PieChart, Volume2, Crosshair, Grid3x3, Shield, Gift, Bell, HelpCircle,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -92,4 +92,5 @@ export const NAV_ITEMS = [
   ]},
   { id: 'notifications', label: { ar: 'الإشعارات', en: 'Notifications' }, icon: Bell, path: '/notifications', permission: P.DASHBOARD },
   { id: 'changelog', label: { ar: 'ما الجديد', en: "What's New" }, icon: Gift, path: '/changelog', permission: P.DASHBOARD },
+  { id: 'help-center', label: { ar: 'دليل الاستخدام', en: 'Help Center' }, icon: HelpCircle, path: '/help', permission: P.DASHBOARD },
 ];

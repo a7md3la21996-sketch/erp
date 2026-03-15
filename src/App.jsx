@@ -74,6 +74,7 @@ const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
 const RolesPage = lazy(() => import('./pages/settings/RolesPage'));
 const SLAManagementPage = lazy(() => import('./pages/settings/SLAManagementPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -207,6 +208,7 @@ export default function App() {
                 <Route path="/settings/sla" element={<Guarded><SLAManagementPage /></Guarded>} />
                 <Route path="/changelog" element={<Guarded><ChangelogPage /></Guarded>} />
                 <Route path="/notifications" element={<Guarded><NotificationsPage /></Guarded>} />
+                <Route path="/help" element={<Guarded><HelpCenterPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/profile" element={<Guarded><ProfilePage /></Guarded>} />
               </Route>
