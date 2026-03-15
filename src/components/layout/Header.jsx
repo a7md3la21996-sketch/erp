@@ -133,7 +133,7 @@ export default function Header({ onMenuClick }) {
         />
 
         {/* Search button - full on desktop, icon-only on mobile */}
-        <button onClick={() => setShowSearch(true)} className={`hidden md:flex w-full h-10 rounded-[10px] items-center gap-2.5 border border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-input-dark cursor-pointer text-content-muted dark:text-brand-400 text-sm font-[inherit] ps-3.5 pe-2.5`}>
+        <button data-tour="search" onClick={() => setShowSearch(true)} className={`hidden md:flex w-full h-10 rounded-[10px] items-center gap-2.5 border border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-input-dark cursor-pointer text-content-muted dark:text-brand-400 text-sm font-[inherit] ps-3.5 pe-2.5`}>
           <Search size={16} className="shrink-0" />
           <span className={`flex-1 text-start`}>{isRTL ? 'بحث...' : 'Search...'}</span>
           <kbd className="px-1.5 py-0.5 rounded-[5px] text-[11px] font-mono bg-brand-50 dark:bg-brand-500/10 border border-edge dark:border-brand-500/15 text-content-muted dark:text-brand-400 flex items-center gap-0.5">
@@ -197,6 +197,7 @@ export default function Header({ onMenuClick }) {
           )}
         </button>
         <button
+          data-tour="shortcuts"
           onClick={() => setShowHelp(true)}
           className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark hidden sm:flex items-center"
           title={isRTL ? 'اختصارات لوحة المفاتيح' : 'Keyboard Shortcuts'}
@@ -208,6 +209,7 @@ export default function Header({ onMenuClick }) {
         </button>
         <div ref={themeMenuRef} className="relative">
           <button
+            data-tour="theme"
             onClick={() => setShowThemeMenu(!showThemeMenu)}
             className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark flex items-center gap-0.5"
             title={isRTL ? 'وضع المظهر' : 'Theme Mode'}
@@ -354,6 +356,7 @@ export default function Header({ onMenuClick }) {
         </div>
         <div ref={favRef} className="relative">
           <button
+            data-tour="favorites"
             onClick={() => setShowFavorites(!showFavorites)}
             className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative"
             title={isRTL ? 'المفضلة' : 'Favorites'}
@@ -373,7 +376,7 @@ export default function Header({ onMenuClick }) {
           <RecentItemsDropdown show={showRecent} onClose={() => setShowRecent(false)} />
         </div>
         <div className="relative">
-          <button onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative">
+          <button data-tour="notifications" onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative">
             <Bell size={18} />
             {unreadCount > 0 && (
               <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-[16px] bg-red-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">

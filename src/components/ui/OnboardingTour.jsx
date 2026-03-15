@@ -28,7 +28,8 @@ const STEPS = [
   {
     id: 'sidebar',
     type: 'highlight',
-    selector: 'aside',
+    selector: '[data-tour="sidebar"]',
+    fallbackSelector: 'aside',
     position: 'right',
     icon: Layout,
     title: { ar: 'القائمة الجانبية', en: 'Sidebar Navigation' },
@@ -52,7 +53,7 @@ const STEPS = [
   {
     id: 'search',
     type: 'highlight',
-    selector: '[aria-label="Open menu"] ~ button, button:has(.lucide-search)',
+    selector: '[data-tour="search"]',
     fallbackSelector: 'header button',
     position: 'bottom',
     icon: Search,
@@ -65,7 +66,7 @@ const STEPS = [
   {
     id: 'notifications',
     type: 'highlight',
-    selector: 'button[aria-label="Notifications"], button[aria-label="الإشعارات"]',
+    selector: '[data-tour="notifications"]',
     position: 'bottom',
     icon: Bell,
     title: { ar: 'الإشعارات', en: 'Notifications' },
@@ -77,7 +78,7 @@ const STEPS = [
   {
     id: 'favorites',
     type: 'highlight',
-    selector: 'button[title="Favorites"], button[title="المفضلة"]',
+    selector: '[data-tour="favorites"]',
     position: 'bottom',
     icon: Star,
     title: { ar: 'المفضلة', en: 'Favorites' },
@@ -89,7 +90,7 @@ const STEPS = [
   {
     id: 'theme',
     type: 'highlight',
-    selector: 'button[title="Theme Mode"], button[title="وضع المظهر"]',
+    selector: '[data-tour="theme"]',
     position: 'bottom',
     icon: Moon,
     title: { ar: 'المظهر', en: 'Theme' },
@@ -101,7 +102,7 @@ const STEPS = [
   {
     id: 'shortcuts',
     type: 'highlight',
-    selector: 'button[title="Keyboard Shortcuts"], button[title="اختصارات لوحة المفاتيح"]',
+    selector: '[data-tour="shortcuts"]',
     position: 'bottom',
     icon: Keyboard,
     title: { ar: 'اختصارات لوحة المفاتيح', en: 'Keyboard Shortcuts' },
@@ -176,6 +177,11 @@ export default function OnboardingTour({ forceShow, onClose }) {
     }
     if (el) {
       const rect = el.getBoundingClientRect();
+      // Skip elements that are hidden (zero dimensions or off-screen)
+      if (rect.width === 0 || rect.height === 0) {
+        setHighlightRect(null);
+        return;
+      }
       setHighlightRect({
         top: rect.top,
         left: rect.left,
