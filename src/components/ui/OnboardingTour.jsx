@@ -169,14 +169,11 @@ export default function OnboardingTour({ forceShow, onClose }) {
       if (el) {
         const r = el.getBoundingClientRect();
         if (r.width > 0 && r.height > 0) {
-          // For very large elements (like main/aside), limit highlight to top portion
-          const maxH = Math.min(r.height, 200);
-          const maxW = Math.min(r.width, 400);
           setTargetRect({
             top: r.top,
             left: r.left,
-            width: r.width > 400 ? maxW : r.width,
-            height: r.height > 200 ? maxH : r.height,
+            width: r.width,
+            height: r.height,
           });
           return;
         }
@@ -186,7 +183,12 @@ export default function OnboardingTour({ forceShow, onClose }) {
 
     const timer = setTimeout(measure, 150);
     window.addEventListener('resize', measure);
-    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+    window.addEventListener('scroll', measure, true);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure, true);
+    };
   }, [visible, step]);
 
   // ESC to close
@@ -223,44 +225,52 @@ export default function OnboardingTour({ forceShow, onClose }) {
   if (!visible) return null;
 
   const current = STEPS[step];
-  const showAsCenter = current.type === 'center' || !targetRect;
+  const hasTarget = current.type === 'highlight' && targetRect;
+  const showAsCenter = current.type === 'center' || !hasTarget;
   const Icon = current.icon;
   const isFirst = step === 0;
   const isLast = step === STEPS.length - 1;
 
   // Colors
   const cardBg = isDark ? '#1a2332' : '#ffffff';
-  const border = isDark ? 'rgba(74,122,171,0.25)' : 'rgba(74,122,171,0.15)';
+  const borderClr = isDark ? 'rgba(74,122,171,0.25)' : 'rgba(74,122,171,0.15)';
   const text1 = isDark ? '#e2e8f0' : '#1e293b';
   const text2 = isDark ? '#94a3b8' : '#64748b';
   const accent = '#4A7AAB';
+
+  // Padding around highlighted element
+  const pad = 8;
 
   // Calculate tooltip position clamped to viewport
   const getTooltipPos = () => {
     if (!targetRect) return null;
     const tw = 340;
-    const th = 220;
+    const th = 240;
     const gap = 14;
     const pos = current.position || 'bottom';
     let top, left;
 
     if (pos === 'right') {
       top = targetRect.top + targetRect.height / 2 - th / 2;
-      left = targetRect.left + targetRect.width + gap;
+      left = targetRect.left + targetRect.width + pad + gap;
+      // If doesn't fit on right, try left
       if (left + tw > window.innerWidth - 16) {
-        // fallback bottom
-        top = targetRect.top + targetRect.height + gap;
-        left = targetRect.left;
+        left = targetRect.left - pad - gap - tw;
+        // If doesn't fit on left either, go bottom
+        if (left < 16) {
+          top = targetRect.top + targetRect.height + pad + gap;
+          left = Math.max(16, targetRect.left + targetRect.width / 2 - tw / 2);
+        }
       }
     } else if (pos === 'top') {
-      top = targetRect.top - th - gap;
+      top = targetRect.top - pad - gap - th;
       left = targetRect.left + targetRect.width / 2 - tw / 2;
       if (top < 16) {
-        top = targetRect.top + targetRect.height + gap;
+        top = targetRect.top + targetRect.height + pad + gap;
       }
     } else {
       // bottom (default)
-      top = targetRect.top + targetRect.height + gap;
+      top = targetRect.top + targetRect.height + pad + gap;
       left = targetRect.left + targetRect.width / 2 - tw / 2;
     }
 
@@ -271,189 +281,212 @@ export default function OnboardingTour({ forceShow, onClose }) {
     return { top, left, width: tw };
   };
 
-  const tooltipPos = showAsCenter ? null : getTooltipPos();
-
-  // ── Navigation buttons (shared between center and tooltip) ──
-  const NavButtons = ({ centered }) => (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: centered ? 'center' : 'space-between',
-      gap: 10,
-      marginTop: centered ? 28 : 16,
-    }}>
-      {!centered && (
-        <button onClick={finish} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: text2, padding: '6px 0', fontFamily: 'inherit' }}>
-          {isRTL ? 'تخطي' : 'Skip'}
-        </button>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {isFirst && (
-          <button onClick={finish} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: text2, padding: '8px 16px', fontFamily: 'inherit' }}>
-            {isRTL ? 'تخطي' : 'Skip'}
-          </button>
-        )}
-        {step > 0 && !isFirst && (
-          <button onClick={goPrev} style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            border: `1px solid ${border}`, background: 'none', cursor: 'pointer',
-            fontSize: 12, fontWeight: 500, color: text2, padding: '7px 14px', borderRadius: 8, fontFamily: 'inherit',
-          }}>
-            {!isRTL && <ChevronLeft size={14} />}
-            {isRTL ? 'السابق' : 'Prev'}
-            {isRTL && <ChevronRight size={14} />}
-          </button>
-        )}
-        <button onClick={isLast ? finish : goNext} style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          border: 'none', cursor: 'pointer', fontSize: centered ? 14 : 12, fontWeight: 600,
-          color: '#fff', backgroundColor: accent, padding: centered ? '12px 32px' : '7px 18px',
-          borderRadius: centered ? 12 : 8, fontFamily: 'inherit',
-          boxShadow: centered ? '0 4px 12px rgba(74,122,171,0.3)' : 'none',
-        }}>
-          {isFirst ? (isRTL ? 'ابدأ الجولة' : 'Start Tour')
-            : isLast ? (isRTL ? 'ابدأ العمل' : 'Get Started')
-            : (isRTL ? 'التالي' : 'Next')}
-          {!isFirst && !isLast && !isRTL && <ChevronRight size={14} />}
-          {!isFirst && !isLast && isRTL && <ChevronLeft size={14} />}
-        </button>
-      </div>
-    </div>
-  );
-
-  // ── Step dots ──
-  const StepDots = () => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 16 }}>
-      {STEPS.map((_, i) => (
-        <div key={i} style={{
-          width: i === step ? 18 : 6, height: 6, borderRadius: 3,
-          backgroundColor: i === step ? accent : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.1)'),
-          transition: 'all 0.3s',
-        }} />
-      ))}
-    </div>
-  );
+  const tooltipPos = hasTarget ? getTooltipPos() : null;
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
-      {/* Backdrop */}
-      <div
-        style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 1 }}
-        onClick={(e) => e.stopPropagation()}
-      />
+    <>
+      {/* Pulse animation */}
+      <style>{`
+        @keyframes onboarding-pulse {
+          0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 0 4px rgba(74,122,171,0.3); }
+          50% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.55), 0 0 0 8px rgba(74,122,171,0.15); }
+        }
+      `}</style>
 
-      {/* Spotlight cutout for highlight steps */}
-      {!showAsCenter && targetRect && (
-        <>
-          {/* Clear area over target */}
-          <div style={{
-            position: 'fixed',
-            top: targetRect.top - 8,
-            left: targetRect.left - 8,
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
-            borderRadius: 12,
-            backgroundColor: isDark ? '#0f1e2d' : '#f8fafc',
-            zIndex: 2,
-          }} />
-          {/* Border ring */}
-          <div style={{
-            position: 'fixed',
-            top: targetRect.top - 8,
-            left: targetRect.left - 8,
-            width: targetRect.width + 16,
-            height: targetRect.height + 16,
-            borderRadius: 12,
-            border: `2px solid ${accent}`,
-            zIndex: 3,
-            pointerEvents: 'none',
-            boxShadow: `0 0 0 4px rgba(74,122,171,0.15)`,
-          }} />
-        </>
-      )}
+      <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none' }}>
 
-      {/* Center card */}
-      {showAsCenter && (
-        <div style={{
-          position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: 16, zIndex: 10,
-        }}>
-          <div style={{
-            position: 'relative', width: '100%', maxWidth: 420, borderRadius: 20,
-            backgroundColor: cardBg, border: `1px solid ${border}`,
-            boxShadow: isDark ? '0 32px 64px rgba(0,0,0,0.5)' : '0 32px 64px rgba(0,0,0,0.15)',
-            padding: '40px 32px 32px', textAlign: 'center',
-          }}>
-            {/* Icon */}
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px',
-            }}>
-              <Icon size={32} style={{ color: accent }} />
-            </div>
+        {/* ── HIGHLIGHT MODE: box-shadow spotlight ── */}
+        {hasTarget && (
+          <>
+            {/* Spotlight: transparent div with massive box-shadow = dark overlay with hole */}
+            <div
+              style={{
+                position: 'fixed',
+                top: targetRect.top - pad,
+                left: targetRect.left - pad,
+                width: targetRect.width + pad * 2,
+                height: targetRect.height + pad * 2,
+                borderRadius: 12,
+                border: `2px solid ${accent}`,
+                animation: 'onboarding-pulse 2s ease-in-out infinite',
+                zIndex: 9999,
+                pointerEvents: 'auto',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            />
 
-            <h2 style={{ fontSize: 22, fontWeight: 700, color: text1, margin: '0 0 10px', lineHeight: 1.3 }}>
-              {isRTL ? current.title.ar : current.title.en}
-            </h2>
-            <p style={{ fontSize: 14, color: text2, margin: 0, lineHeight: 1.7 }}>
-              {isRTL ? current.desc.ar : current.desc.en}
-            </p>
+            {/* Tooltip */}
+            {tooltipPos && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: tooltipPos.top,
+                  left: tooltipPos.left,
+                  width: tooltipPos.width,
+                  borderRadius: 14,
+                  backgroundColor: cardBg,
+                  border: `1px solid ${borderClr}`,
+                  boxShadow: isDark ? '0 16px 40px rgba(0,0,0,0.5)' : '0 16px 40px rgba(0,0,0,0.15)',
+                  padding: '16px 20px',
+                  zIndex: 10000,
+                  pointerEvents: 'auto',
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 30, height: 30, borderRadius: '50%',
+                      background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Icon size={14} style={{ color: accent }} />
+                    </div>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: accent }}>
+                      {step + 1} / {STEPS.length}
+                    </span>
+                  </div>
+                  <button onClick={finish} style={{
+                    border: 'none', background: 'none', cursor: 'pointer', padding: 4,
+                    borderRadius: 6, display: 'flex', color: text2,
+                  }}>
+                    <X size={16} />
+                  </button>
+                </div>
 
-            <NavButtons centered />
-            <StepDots />
-          </div>
-        </div>
-      )}
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: text1, margin: '0 0 4px' }}>
+                  {isRTL ? current.title.ar : current.title.en}
+                </h3>
+                <p style={{ fontSize: 13, color: text2, margin: 0, lineHeight: 1.6 }}>
+                  {isRTL ? current.desc.ar : current.desc.en}
+                </p>
 
-      {/* Tooltip card for highlight steps */}
-      {!showAsCenter && tooltipPos && (
-        <div style={{
-          position: 'fixed',
-          top: tooltipPos.top,
-          left: tooltipPos.left,
-          width: tooltipPos.width,
-          borderRadius: 14,
-          backgroundColor: cardBg,
-          border: `1px solid ${border}`,
-          boxShadow: isDark ? '0 16px 40px rgba(0,0,0,0.4)' : '0 16px 40px rgba(0,0,0,0.12)',
-          padding: '16px 20px',
-          zIndex: 10,
-        }}>
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: '50%',
-                background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon size={14} style={{ color: accent }} />
+                {/* Nav */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+                  <button onClick={finish} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: text2, padding: '6px 0', fontFamily: 'inherit' }}>
+                    {isRTL ? 'تخطي' : 'Skip'}
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {step > 0 && (
+                      <button onClick={goPrev} style={{
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        border: `1px solid ${borderClr}`, background: 'none', cursor: 'pointer',
+                        fontSize: 12, fontWeight: 500, color: text2, padding: '7px 14px', borderRadius: 8, fontFamily: 'inherit',
+                      }}>
+                        {!isRTL && <ChevronLeft size={14} />}
+                        {isRTL ? 'السابق' : 'Prev'}
+                        {isRTL && <ChevronRight size={14} />}
+                      </button>
+                    )}
+                    <button onClick={goNext} style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                      color: '#fff', backgroundColor: accent, padding: '7px 18px', borderRadius: 8, fontFamily: 'inherit',
+                    }}>
+                      {isRTL ? 'التالي' : 'Next'}
+                      {!isRTL && <ChevronRight size={14} />}
+                      {isRTL && <ChevronLeft size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Step dots */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 14 }}>
+                  {STEPS.map((_, i) => (
+                    <div key={i} style={{
+                      width: i === step ? 18 : 6, height: 6, borderRadius: 3,
+                      backgroundColor: i === step ? accent : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.1)'),
+                      transition: 'all 0.3s',
+                    }} />
+                  ))}
+                </div>
               </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: accent }}>
-                {step + 1} / {STEPS.length}
-              </span>
-            </div>
-            <button onClick={finish} style={{
-              border: 'none', background: 'none', cursor: 'pointer', padding: 4,
-              borderRadius: 6, display: 'flex', color: text2,
+            )}
+          </>
+        )}
+
+        {/* ── CENTER MODE: welcome, done, or fallback ── */}
+        {showAsCenter && (
+          <>
+            {/* Full dark overlay */}
+            <div style={{
+              position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(2px)', zIndex: 9999, pointerEvents: 'auto',
+            }} />
+
+            {/* Center card */}
+            <div style={{
+              position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: 16, zIndex: 10000, pointerEvents: 'auto',
             }}>
-              <X size={16} />
-            </button>
-          </div>
+              <div style={{
+                position: 'relative', width: '100%', maxWidth: 420, borderRadius: 20,
+                backgroundColor: cardBg, border: `1px solid ${borderClr}`,
+                boxShadow: isDark ? '0 32px 64px rgba(0,0,0,0.5)' : '0 32px 64px rgba(0,0,0,0.15)',
+                padding: '40px 32px 32px', textAlign: 'center',
+              }}>
+                {/* Icon */}
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px',
+                }}>
+                  <Icon size={32} style={{ color: accent }} />
+                </div>
 
-          <h3 style={{ fontSize: 15, fontWeight: 700, color: text1, margin: '0 0 4px' }}>
-            {isRTL ? current.title.ar : current.title.en}
-          </h3>
-          <p style={{ fontSize: 13, color: text2, margin: 0, lineHeight: 1.6 }}>
-            {isRTL ? current.desc.ar : current.desc.en}
-          </p>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: text1, margin: '0 0 10px', lineHeight: 1.3 }}>
+                  {isRTL ? current.title.ar : current.title.en}
+                </h2>
+                <p style={{ fontSize: 14, color: text2, margin: 0, lineHeight: 1.7 }}>
+                  {isRTL ? current.desc.ar : current.desc.en}
+                </p>
 
-          <NavButtons centered={false} />
-          <StepDots />
-        </div>
-      )}
-    </div>
+                {/* Actions */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 28, flexWrap: 'wrap' }}>
+                  <button onClick={finish} style={{
+                    border: 'none', background: 'none', cursor: 'pointer', fontSize: 13,
+                    color: text2, padding: '8px 16px', fontFamily: 'inherit',
+                  }}>
+                    {isRTL ? 'تخطي' : 'Skip'}
+                  </button>
+                  {step > 0 && (
+                    <button onClick={goPrev} style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      border: `1px solid ${borderClr}`, background: 'none', cursor: 'pointer',
+                      fontSize: 13, color: text2, padding: '10px 20px', borderRadius: 10, fontFamily: 'inherit',
+                    }}>
+                      {!isRTL && <ChevronLeft size={14} />}
+                      {isRTL ? 'السابق' : 'Prev'}
+                      {isRTL && <ChevronRight size={14} />}
+                    </button>
+                  )}
+                  <button onClick={isLast ? finish : goNext} style={{
+                    border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600,
+                    color: '#fff', backgroundColor: accent, padding: '12px 32px', borderRadius: 12,
+                    fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(74,122,171,0.3)',
+                  }}>
+                    {isFirst ? (isRTL ? 'ابدأ الجولة' : 'Start Tour')
+                      : isLast ? (isRTL ? 'ابدأ العمل' : 'Get Started')
+                      : (isRTL ? 'التالي' : 'Next')}
+                  </button>
+                </div>
+
+                {/* Step dots */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 20 }}>
+                  {STEPS.map((_, i) => (
+                    <div key={i} style={{
+                      width: i === step ? 18 : 6, height: 6, borderRadius: 3,
+                      backgroundColor: i === step ? accent : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.1)'),
+                      transition: 'all 0.3s',
+                    }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }
