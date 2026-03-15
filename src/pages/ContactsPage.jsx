@@ -4,12 +4,14 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
-import { Phone, MessageCircle, Plus, Upload, Download, Search, Ban, X, Pin, PhoneCall, Merge, SkipForward, MoreVertical, Bell, FileDown, Trash2, Zap } from 'lucide-react';
+import { Phone, MessageCircle, Plus, Upload, Download, Search, Ban, X, Pin, PhoneCall, Merge, SkipForward, MoreVertical, Bell, FileDown, Trash2, Zap, Send, RefreshCw, Users, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, createActivity,
 } from '../services/contactsService';
 import { logAction } from '../services/auditService';
+import { getTemplates, renderBody, bulkSend } from '../services/smsTemplateService';
+import { createNotification } from '../services/notificationsService';
 import { setFieldValues as setCFValues } from '../services/customFieldsService';
 import { fetchCampaigns } from '../services/marketingService';
 import { notifyLeadAssigned } from '../services/notificationsService';
@@ -71,6 +73,9 @@ export default function ContactsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [bulkReassignModal, setBulkReassignModal] = useState(false);
+  const [bulkDropdownOpen, setBulkDropdownOpen] = useState(null); // 'type'|'source'|'dept'|'status'
+  const [bulkSMSModal, setBulkSMSModal] = useState(false);
+  const [bulkSMSState, setBulkSMSState] = useState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] });
   const [pinnedIds, setPinnedIds] = useState(() => { try { return JSON.parse(localStorage.getItem('platform_pinned_contacts') || '[]'); } catch { return []; } });
   const [batchCallMode, setBatchCallMode] = useState(false);
   const [batchCallIndex, setBatchCallIndex] = useState(0);
@@ -162,12 +167,14 @@ export default function ContactsPage() {
       if (batchCallMode) { setBatchCallMode(false); return; }
       if (mergePreview) { setMergePreview(null); setMergeTargets([]); setMergeMode(false); return; }
 
+      if (bulkSMSModal) { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); return; }
       if (bulkReassignModal) { setBulkReassignModal(false); return; }
       if (confirmAction) { setConfirmAction(null); return; }
+      if (bulkDropdownOpen) { setBulkDropdownOpen(null); return; }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [quickActionTarget, batchCallMode, mergePreview, bulkReassignModal, confirmAction]);
+  }, [quickActionTarget, batchCallMode, mergePreview, bulkReassignModal, confirmAction, bulkSMSModal, bulkDropdownOpen]);
 
   const handleDelete = (id) => {
     const contact = contacts.find(c => c.id === id);
@@ -223,6 +230,72 @@ export default function ContactsPage() {
     await Promise.all(selectedIds.map(id => updateContact(id, { assigned_to_name: agentName, assigned_by_name: assignedByName }).catch(() => {})));
   };
 
+
+  // ── Bulk Change Helpers ──────────────────────────────────────────────
+  const handleBulkChangeField = async (field, value, actionLabel) => {
+    const count = selectedIds.length;
+    const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
+    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, [field]: value } : c);
+    setContacts(updated);
+    localStorage.setItem('platform_contacts', JSON.stringify(updated));
+    logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: selectedIds.join(','), description: `Bulk changed ${field} to "${value}" for ${count} contacts: ${names}`, newValue: value, userName: profile?.full_name_ar });
+    createNotification({ type: 'system', title_en: `Bulk ${actionLabel}`, title_ar: `تغيير جماعي — ${actionLabel}`, body_en: `Changed ${field} to "${value}" for ${count} contacts`, body_ar: `تم تغيير ${field} إلى "${value}" لـ ${count} جهة اتصال`, for_user_id: 'all' });
+    toast.success(isRTL ? `تم تحديث ${count} جهة اتصال` : `${count} contacts updated`);
+    setSelectedIds([]);
+    setBulkDropdownOpen(null);
+    setShowBulkMenu(false);
+    await Promise.all(selectedIds.map(id => updateContact(id, { [field]: value }).catch(() => {})));
+  };
+
+  const handleBulkSMS = async () => {
+    const { templateId, lang } = bulkSMSState;
+    if (!templateId) return;
+    const smsContacts = contacts.filter(c => selectedIds.includes(c.id) && c.phone);
+    setBulkSMSState(s => ({ ...s, sending: true, total: smsContacts.length, progress: 0 }));
+    const results = bulkSend(templateId, smsContacts, lang);
+    setBulkSMSState(s => ({ ...s, sending: false, progress: smsContacts.length, done: true, results }));
+    logAction({ action: 'bulk_sms', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk SMS sent to ${results.length} contacts`, userName: profile?.full_name_ar });
+    createNotification({ type: 'system', title_en: 'Bulk SMS Sent', title_ar: 'تم إرسال رسائل جماعية', body_en: `Sent SMS to ${results.length} contacts`, body_ar: `تم إرسال رسائل لـ ${results.length} جهة اتصال`, for_user_id: 'all' });
+    toast.success(isRTL ? `تم إرسال ${results.length} رسالة` : `${results.length} messages sent`);
+  };
+
+  const exportSelectedCSV = () => {
+    const list = contacts.filter(c => selectedIds.includes(c.id));
+    exportCSVList(list);
+    toast.success(isRTL ? `تم تصدير ${list.length} جهة اتصال` : `${list.length} contacts exported`);
+    setBulkDropdownOpen(null);
+    setShowBulkMenu(false);
+  };
+
+  const exportCSVList = (list) => {
+    const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Platform','Company','Created'];
+    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.platform || '', c.company || '', c.created_at || '']);
+    const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `contacts_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Bulk action dropdown options
+  const BULK_TYPE_OPTIONS = Object.entries(TYPE).map(([k, v]) => ({ value: k, label: isRTL ? v.label : v.labelEn }));
+  const BULK_SOURCE_OPTIONS = Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: isRTL ? v : (SOURCE_EN[k] || v) }));
+  const BULK_DEPT_OPTIONS = [
+    { value: 'sales', label: isRTL ? 'المبيعات' : 'Sales' },
+    { value: 'hr', label: isRTL ? 'HR' : 'HR' },
+    { value: 'finance', label: isRTL ? 'المالية' : 'Finance' },
+    { value: 'marketing', label: isRTL ? 'التسويق' : 'Marketing' },
+    { value: 'operations', label: isRTL ? 'العمليات' : 'Operations' },
+  ];
+  const BULK_STATUS_OPTIONS = [
+    { value: 'new', label: isRTL ? 'جديد' : 'New' },
+    { value: 'contacted', label: isRTL ? 'تم التواصل' : 'Contacted' },
+    { value: 'qualified', label: isRTL ? 'مؤهل' : 'Qualified' },
+    { value: 'negotiation', label: isRTL ? 'تفاوض' : 'Negotiation' },
+    { value: 'won', label: isRTL ? 'تم الإغلاق' : 'Won' },
+    { value: 'lost', label: isRTL ? 'خسارة' : 'Lost' },
+  ];
 
   // Load contacts
   useEffect(() => {
@@ -401,16 +474,7 @@ export default function ContactsPage() {
     setSelectedIds(allSelected ? selectedIds.filter(id => !pageIds.includes(id)) : [...new Set([...selectedIds, ...pageIds])]);
   };
 
-  const exportCSV = (list) => {
-    const headers = isRTL ? ['ID','الاسم','الهاتف','الإيميل','النوع','المصدر','القسم','المنصة','الشركة','تاريخ الإنشاء'] : ['ID','Name','Phone','Email','Type','Source','Department','Platform','Company','Created'];
-    const rows = list.map(c => [c.id, c.full_name, c.phone, c.email || '', c.contact_type, c.source || '', c.department || '', c.platform || '', c.company || '', c.created_at || '']);
-    const csv = '\uFEFF' + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `contacts_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-    URL.revokeObjectURL(url);
-  };
+  const exportCSV = (list) => { exportCSVList(list); };
 
   const handleSave = async (form) => {
     const matchedCampaign = form.campaign_name ? campaignsList.find(c => c.name_en?.toLowerCase() === form.campaign_name.toLowerCase() || c.name_ar?.toLowerCase() === form.campaign_name.toLowerCase()) : null;
@@ -480,38 +544,9 @@ export default function ContactsPage() {
             <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
           </button>
 
-          {selectedIds.length > 0 && (
-            <Button variant="call" size="sm" onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }}>
-              <PhoneCall size={14} /> {isRTL ? `اتصال جماعي (${selectedIds.length})` : `Batch Call (${selectedIds.length})`}
-            </Button>
-          )}
           <Button size="sm" onClick={() => setShowAddModal(true)}>
             <Plus size={14} /> {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
           </Button>
-          {isAdmin && selectedIds.length > 0 && (
-            <div className="relative">
-              <Button size="sm" onClick={() => setShowBulkMenu(v => !v)}>
-                {isRTL ? `إجراءات (${selectedIds.length})` : `Actions (${selectedIds.length})`} ▾
-              </Button>
-              {showBulkMenu && (
-                <div className={`absolute top-[110%] start-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[200] shadow-[0_8px_24px_rgba(0,0,0,0.35)] overflow-hidden`}>
-                  {[
-                    { label: isRTL ? "تصدير المحددين" : "Export Selected", action: () => exportCSV(contacts.filter(c => selectedIds.includes(c.id))) },
-                    { label: isRTL ? "إعادة تعيين" : "Reassign", action: () => setBulkReassignModal(true) },
-                    ...(selectedIds.length === 2 ? [{ label: isRTL ? "دمج جهتي اتصال" : "Merge Contacts", action: () => { setMergePreview(selectedIds); setShowBulkMenu(false); } }] : []),
-                  ].map(item => (
-                    <button key={item.label} onClick={item.action} className={`w-full px-4 py-2.5 bg-transparent border-none text-content dark:text-content-dark text-xs cursor-pointer text-start flex items-center gap-2 hover:bg-brand-500/[0.15]`}>
-                      {item.label}
-                    </button>
-                  ))}
-                  <div className="h-px bg-red-500/20 my-1" />
-                  <button onClick={handleDeleteSelected} className={`w-full px-4 py-2.5 bg-transparent border-none text-red-500 text-xs cursor-pointer text-start flex items-center gap-2 hover:bg-red-500/10`}>
-                    {isRTL ? "حذف المحددين" : "Delete Selected"}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -1098,16 +1133,16 @@ export default function ContactsPage() {
 
       {/* Bulk Reassign Modal */}
       {bulkReassignModal && (
-        <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
-          <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[380px]">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
-              <button onClick={() => setBulkReassignModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={16} /></button>
+        <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: 'var(--surface-card, #fff)', border: '1px solid var(--edge, #e2e8f0)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
+              <button onClick={() => setBulkReassignModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={16} /></button>
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {[...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].map(agent => (
                 <button key={agent} onClick={() => handleBulkReassign(agent)}
-                  className={`px-3.5 py-2.5 bg-gray-50 dark:bg-brand-500/[0.08] border border-edge dark:border-edge-dark rounded-lg text-content dark:text-content-dark text-xs cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-brand-500/[0.15]`}>
+                  style={{ padding: '10px 14px', background: 'rgba(74,122,171,0.06)', border: '1px solid var(--edge, #e2e8f0)', borderRadius: 8, fontSize: 12, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}>
                   {agent}
                 </button>
               ))}
@@ -1115,6 +1150,297 @@ export default function ContactsPage() {
           </div>
         </div>
       )}
+
+      {/* ═══ BULK ACTION TOOLBAR ═══ */}
+      {selectedIds.length > 0 && (
+        <div dir={isRTL ? 'rtl' : 'ltr'}
+          style={{
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 300,
+            background: 'linear-gradient(135deg, #0a1929 0%, #132337 100%)',
+            borderTop: '1px solid rgba(74,122,171,0.3)',
+            padding: '10px 20px',
+            display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+            boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
+          }}>
+          {/* Count + Deselect */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginInlineEnd: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>
+              {isRTL ? `${selectedIds.length} محدد` : `${selectedIds.length} selected`}
+            </span>
+            <button onClick={() => setSelectedIds([])}
+              style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(148,163,184,0.3)', background: 'none', color: '#94a3b8', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <X size={11} /> {isRTL ? 'إلغاء' : 'Clear'}
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.2)' }} />
+
+          {/* Change Type */}
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'type' ? null : 'type')}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: bulkDropdownOpen === 'type' ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+              <Tag size={12} /> {isRTL ? 'النوع' : 'Type'} <ChevronDown size={10} />
+            </button>
+            {bulkDropdownOpen === 'type' && (
+              <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: 160, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                {BULK_TYPE_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => handleBulkChangeField('contact_type', opt.value, 'Type Change')}
+                    style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left', display: 'flex', alignItems: 'center', gap: 6 }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,122,171,0.15)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: TYPE[opt.value]?.color || '#4A7AAB', flexShrink: 0 }} />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Change Source */}
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'source' ? null : 'source')}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: bulkDropdownOpen === 'source' ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+              <RefreshCw size={12} /> {isRTL ? 'المصدر' : 'Source'} <ChevronDown size={10} />
+            </button>
+            {bulkDropdownOpen === 'source' && (
+              <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: 160, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden', maxHeight: 240, overflowY: 'auto' }}>
+                {BULK_SOURCE_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => handleBulkChangeField('source', opt.value, 'Source Change')}
+                    style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,122,171,0.15)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reassign */}
+          <button onClick={() => setBulkReassignModal(true)}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+            <Users size={12} /> {isRTL ? 'إعادة تعيين' : 'Reassign'}
+          </button>
+
+          {/* Change Department */}
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'dept' ? null : 'dept')}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: bulkDropdownOpen === 'dept' ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+              <Building2 size={12} /> {isRTL ? 'القسم' : 'Dept'} <ChevronDown size={10} />
+            </button>
+            {bulkDropdownOpen === 'dept' && (
+              <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: 150, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                {BULK_DEPT_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => handleBulkChangeField('department', opt.value, 'Department Change')}
+                    style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,122,171,0.15)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Change Status */}
+          <div style={{ position: 'relative' }}>
+            <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'status' ? null : 'status')}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: bulkDropdownOpen === 'status' ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+              <CheckCircle2 size={12} /> {isRTL ? 'الحالة' : 'Status'} <ChevronDown size={10} />
+            </button>
+            {bulkDropdownOpen === 'status' && (
+              <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: 150, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                {BULK_STATUS_OPTIONS.map(opt => (
+                  <button key={opt.value} onClick={() => handleBulkChangeField('contact_status', opt.value, 'Status Change')}
+                    style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,122,171,0.15)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Send SMS */}
+          <button onClick={() => { setBulkSMSModal(true); setBulkSMSState({ templateId: '', lang: isRTL ? 'ar' : 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); }}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.1)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+            <MessageSquare size={12} /> {isRTL ? 'رسالة SMS' : 'Send SMS'}
+          </button>
+
+          {/* Export Selected */}
+          <button onClick={exportSelectedCSV}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+            <Download size={12} /> {isRTL ? 'تصدير' : 'Export'}
+          </button>
+
+          {/* Batch Call */}
+          <button onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.08)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+            <PhoneCall size={12} /> {isRTL ? 'اتصال جماعي' : 'Batch Call'}
+          </button>
+
+          {/* Merge (when exactly 2 selected) */}
+          {selectedIds.length === 2 && (
+            <button onClick={() => { setMergePreview(selectedIds); }}
+              style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(30,64,175,0.4)', background: 'rgba(30,64,175,0.1)', color: '#93c5fd', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+              <Merge size={12} /> {isRTL ? 'دمج' : 'Merge'}
+            </button>
+          )}
+
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
+
+          {/* Delete Selected */}
+          <button onClick={handleDeleteSelected}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+            <Trash2 size={12} /> {isRTL ? 'حذف' : 'Delete'}
+          </button>
+        </div>
+      )}
+
+      {/* ═══ BULK SMS MODAL ═══ */}
+      {bulkSMSModal && (() => {
+        const templates = getTemplates();
+        const selectedTemplate = templates.find(t => t.id === bulkSMSState.templateId);
+        const smsContacts = contacts.filter(c => selectedIds.includes(c.id));
+        const withPhone = smsContacts.filter(c => c.phone);
+        const withoutPhone = smsContacts.filter(c => !c.phone);
+        const lang = bulkSMSState.lang;
+        const previewBody = selectedTemplate ? (lang === 'ar' ? (selectedTemplate.bodyAr || selectedTemplate.body) : selectedTemplate.body) : '';
+        const previewRendered = previewBody ? renderBody(previewBody, { client_name: withPhone[0]?.full_name || 'Ahmed', client_phone: withPhone[0]?.phone || '', project_name: 'Sample Project', agent_name: profile?.full_name_ar || '', company_name: 'Platform', date: new Date().toLocaleDateString('en-GB'), amount: '' }) : '';
+
+        return (
+          <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+            <div style={{ background: '#0a1929', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 20, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+              {/* Header */}
+              <div style={{ background: 'linear-gradient(135deg, #4A7AAB 0%, #2B4C6F 100%)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Send size={18} color="#fff" />
+                  <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{isRTL ? 'إرسال SMS جماعي' : 'Bulk SMS'}</span>
+                </div>
+                <button onClick={() => { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); }}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+                  <X size={14} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+                {bulkSMSState.done ? (
+                  /* Results view */
+                  <div>
+                    <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                        <CheckCircle2 size={28} color="#10B981" />
+                      </div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginBottom: 4 }}>
+                        {isRTL ? 'تم الإرسال بنجاح' : 'SMS Sent Successfully'}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                        {isRTL ? `تم إرسال ${bulkSMSState.results.length} رسالة` : `${bulkSMSState.results.length} messages sent`}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                      <button onClick={() => { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); setSelectedIds([]); }}
+                        style={{ padding: '8px 20px', borderRadius: 8, background: '#4A7AAB', border: 'none', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                        {isRTL ? 'إغلاق' : 'Close'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Template selector */}
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>{isRTL ? 'اختر قالب الرسالة' : 'Select Template'}</label>
+                      <select value={bulkSMSState.templateId} onChange={e => setBulkSMSState(s => ({ ...s, templateId: e.target.value }))}
+                        style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.3)', background: '#132337', color: '#e2e8f0', fontSize: 12, outline: 'none' }}>
+                        <option value="">{isRTL ? '— اختر قالب —' : '-- Select Template --'}</option>
+                        {templates.map(t => (
+                          <option key={t.id} value={t.id}>{lang === 'ar' ? (t.nameAr || t.name) : t.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Language toggle */}
+                    <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <label style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8' }}>{isRTL ? 'لغة الرسالة:' : 'Message Language:'}</label>
+                      <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(74,122,171,0.3)' }}>
+                        <button onClick={() => setBulkSMSState(s => ({ ...s, lang: 'en' }))}
+                          style={{ padding: '4px 14px', border: 'none', fontSize: 11, cursor: 'pointer', fontWeight: 600, background: lang === 'en' ? '#4A7AAB' : '#132337', color: lang === 'en' ? '#fff' : '#94a3b8' }}>
+                          EN
+                        </button>
+                        <button onClick={() => setBulkSMSState(s => ({ ...s, lang: 'ar' }))}
+                          style={{ padding: '4px 14px', border: 'none', fontSize: 11, cursor: 'pointer', fontWeight: 600, background: lang === 'ar' ? '#4A7AAB' : '#132337', color: lang === 'ar' ? '#fff' : '#94a3b8' }}>
+                          AR
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Preview */}
+                    {selectedTemplate && (
+                      <div style={{ marginBottom: 16, background: '#132337', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 10, padding: 14 }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{isRTL ? 'معاينة الرسالة' : 'Message Preview'}</div>
+                        <div dir={lang === 'ar' ? 'rtl' : 'ltr'} style={{ fontSize: 12, color: '#e2e8f0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                          {previewRendered || (isRTL ? 'لا يمكن عرض المعاينة' : 'Cannot render preview')}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Recipients summary */}
+                    <div style={{ marginBottom: 16, display: 'flex', gap: 10 }}>
+                      <div style={{ flex: 1, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: '#10B981' }}>{withPhone.length}</div>
+                        <div style={{ fontSize: 10, color: '#94a3b8' }}>{isRTL ? 'سيتم الإرسال لهم' : 'Will receive'}</div>
+                      </div>
+                      <div style={{ flex: 1, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: '#EF4444' }}>{withoutPhone.length}</div>
+                        <div style={{ fontSize: 10, color: '#94a3b8' }}>{isRTL ? 'بدون رقم (سيتم تخطيهم)' : 'No phone (skipped)'}</div>
+                      </div>
+                    </div>
+
+                    {/* Skipped contacts list */}
+                    {withoutPhone.length > 0 && (
+                      <div style={{ marginBottom: 16, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 8, padding: '8px 12px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 600, color: '#EF4444', marginBottom: 4 }}>{isRTL ? 'جهات بدون رقم:' : 'Contacts without phone:'}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                          {withoutPhone.map(c => c.full_name || (isRTL ? 'بدون اسم' : 'No Name')).join(', ')}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sending progress */}
+                    {bulkSMSState.sending && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ height: 4, borderRadius: 2, background: '#1a2332', overflow: 'hidden' }}>
+                          <div style={{ height: '100%', background: '#4A7AAB', borderRadius: 2, width: bulkSMSState.total > 0 ? `${(bulkSMSState.progress / bulkSMSState.total) * 100}%` : '0%', transition: 'width 0.3s' }} />
+                        </div>
+                        <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4 }}>
+                          {isRTL ? 'جاري الإرسال...' : 'Sending...'}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                      <button onClick={() => { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); }}
+                        style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.3)', background: 'none', color: '#94a3b8', fontSize: 12, cursor: 'pointer' }}>
+                        {isRTL ? 'إلغاء' : 'Cancel'}
+                      </button>
+                      <button onClick={handleBulkSMS} disabled={!bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending}
+                        style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending) ? '#1a2332' : '#4A7AAB', color: (!bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending) ? '#64748b' : '#fff', fontSize: 12, cursor: (!bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending) ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Send size={13} />
+                        {bulkSMSState.sending ? (isRTL ? 'جاري الإرسال...' : 'Sending...') : (isRTL ? `إرسال (${withPhone.length})` : `Send (${withPhone.length})`)}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

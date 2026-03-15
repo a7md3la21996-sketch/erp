@@ -6,7 +6,7 @@ import {
   Briefcase, DollarSign, TrendingUp, Users, BarChart3, X,
   ChevronUp, ChevronDown, Eye, FileCheck, Clock, CheckCircle2,
   AlertCircle, FileText, Building2, User, Phone, Calendar,
-  ArrowUpDown, Hash, CreditCard, Banknote,
+  ArrowUpDown, Hash, CreditCard, Banknote, Star,
 } from 'lucide-react';
 import { KpiCard, SmartFilter, applySmartFilters, ExportButton, Pagination, PageSkeleton, DocumentsSection } from '../../components/ui';
 import { generateInvoiceHTML, getCompanyInfo } from '../../services/printService';
@@ -19,6 +19,7 @@ import { fmtMoney } from '../../utils/formatting';
 import CustomFieldsRenderer from '../../components/ui/CustomFieldsRenderer';
 import CommentsSection from '../../components/ui/CommentsSection';
 import { thCls } from '../../utils/tableStyles';
+import { isFavorite as checkFavorite, toggleFavorite } from '../../services/favoritesService';
 
 // ── Status Config ────────────────────────────────────────────────
 const STATUSES = [
@@ -378,6 +379,32 @@ export default function DealsPage() {
                     </span>
                   </div>
                 </div>
+                {(() => {
+                  const dealFavId = `deal_${deal.id}`;
+                  const dealIsFav = checkFavorite(dealFavId);
+                  return (
+                    <button
+                      onClick={() => {
+                        toggleFavorite({
+                          id: dealFavId,
+                          type: 'deal',
+                          name: deal.deal_number || (lang === 'en' ? (deal.client_en || deal.client_ar) : (deal.client_ar || deal.client_en)),
+                          nameAr: deal.deal_number || deal.client_ar || deal.client_en || '',
+                          path: `/sales/deals?highlight=${deal.id}`,
+                        });
+                      }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg border cursor-pointer"
+                      style={{
+                        background: 'transparent',
+                        borderColor: dealIsFav ? '#F59E0B' : undefined,
+                        color: dealIsFav ? '#F59E0B' : undefined,
+                      }}
+                      title={dealIsFav ? (isRTL ? 'إزالة من المفضلة' : 'Remove from Favorites') : (isRTL ? 'إضافة للمفضلة' : 'Add to Favorites')}
+                    >
+                      <Star size={14} fill={dealIsFav ? '#F59E0B' : 'none'} />
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={() => {
                     const items = [

@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { NAV_ITEMS } from '../../config/navigation';
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star } from 'lucide-react';
+import { getFavorites, toggleFavorite, isFavorite as checkFavorite } from '../../services/favoritesService';
+import { getUnreadCount as getAnnouncementUnread } from '../../services/announcementService';
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   const { i18n } = useTranslation();
-  const { hasPermission } = useAuth();
+  const { hasPermission, profile } = useAuth();
   const location = useLocation();
   const [openMenus, setOpenMenus] = useState({});
   const { theme } = useTheme();
@@ -16,6 +18,48 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const rawLang = i18n.language || 'ar';
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
+
+  const [favPages, setFavPages] = useState([]);
+
+  const refreshFavs = useCallback(() => {
+    const all = getFavorites().filter(f => f.type === 'page');
+    setFavPages(all);
+  }, []);
+
+  useEffect(() => {
+    refreshFavs();
+    const handler = () => refreshFavs();
+    window.addEventListener('platform_favorites_changed', handler);
+    return () => window.removeEventListener('platform_favorites_changed', handler);
+  }, [refreshFavs]);
+
+  const handleStarClick = (e, item) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavorite({
+      id: `page_${item.id}`,
+      type: 'page',
+      name: item.label.en,
+      nameAr: item.label.ar,
+      path: item.path,
+    });
+    refreshFavs();
+  };
+
+  // Announcement unread count
+  const [annUnread, setAnnUnread] = useState(0);
+  useEffect(() => {
+    const userId = profile?.id || profile?.email || '';
+    if (userId) setAnnUnread(getAnnouncementUnread(userId));
+    const handler = () => { if (userId) setAnnUnread(getAnnouncementUnread(userId)); };
+    window.addEventListener('platform_announcement', handler);
+    return () => window.removeEventListener('platform_announcement', handler);
+  }, [profile]);
+  // Refresh unread on location change (user may have read announcements)
+  useEffect(() => {
+    const userId = profile?.id || profile?.email || '';
+    if (userId) setAnnUnread(getAnnouncementUnread(userId));
+  }, [location.pathname, profile]);
 
   const toggleMenu = (id) => setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
   const isActive = (path) => location.pathname === path;
@@ -88,6 +132,44 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 px-3">
+          {/* Favorites section */}
+          {!collapsed && favPages.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 12px 6px',
+              }}>
+                <Star size={11} style={{ color: '#F59E0B' }} fill="#F59E0B" />
+                <span style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5,
+                  color: isDark ? '#64748b' : '#94a3b8',
+                }}>
+                  {isRTL ? 'المفضلة' : 'Favorites'}
+                </span>
+              </div>
+              {favPages.slice(0, 5).map(fav => (
+                <Link
+                  key={fav.id}
+                  to={fav.path}
+                  onClick={handleNavClick}
+                  className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2 px-3 rounded-lg no-underline text-[12px] font-medium transition-colors ${isActive(fav.path) ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'}`}
+                >
+                  <Star size={14} className="shrink-0" style={{ color: '#F59E0B' }} fill="#F59E0B" />
+                  <span className="flex-1 text-start truncate">{isRTL ? (fav.nameAr || fav.name) : fav.name}</span>
+                </Link>
+              ))}
+              <div style={{
+                height: 1,
+                background: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)',
+                margin: '8px 12px',
+              }} />
+            </div>
+          )}
           {visibleItems.map(item => {
             const Icon = item.icon;
             const hasChildren = item.children?.length > 0;
@@ -99,10 +181,30 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
             return (
               <div key={item.id} className="mb-0.5">
                 {item.path && !hasChildren ? (
+                  <div style={{ position: 'relative' }} className="group">
                   <Link to={item.path} onClick={handleNavClick} className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg no-underline text-sm font-medium transition-colors ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'}`}>
-                    <Icon size={20} className="shrink-0" />
+                    <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+                      <Icon size={20} />
+                      {!showLabels && item.id === 'announcements' && annUnread > 0 && (
+                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{annUnread > 9 ? '9+' : annUnread}</span>
+                      )}
+                    </span>
                     {showLabels && <span className={`flex-1 text-start`}>{item.label[lang]}</span>}
+                    {showLabels && item.id === 'announcements' && annUnread > 0 && (
+                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{annUnread > 99 ? '99+' : annUnread}</span>
+                    )}
+                    {showLabels && (
+                      <span
+                        onClick={(e) => handleStarClick(e, item)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ flexShrink: 0, display: 'flex', alignItems: 'center', cursor: 'pointer', padding: 2, borderRadius: 4 }}
+                        title={checkFavorite(`page_${item.id}`) ? (isRTL ? 'إزالة من المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
+                      >
+                        <Star size={13} style={{ color: checkFavorite(`page_${item.id}`) ? '#F59E0B' : (isDark ? '#475569' : '#94a3b8') }} fill={checkFavorite(`page_${item.id}`) ? '#F59E0B' : 'none'} />
+                      </span>
+                    )}
                   </Link>
+                  </div>
                 ) : (
                   <button onClick={() => toggleMenu(item.id)} className={`w-full flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg border-none cursor-pointer text-sm font-medium ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'} text-start`}>
                     <Icon size={20} className="shrink-0" />

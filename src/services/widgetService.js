@@ -141,6 +141,15 @@ export const AVAILABLE_WIDGETS = [
     category: 'general',
     defaultSize: 'full',
   },
+  {
+    id: 'announcements',
+    title_ar: 'الإعلانات',
+    title_en: 'Announcements',
+    description_ar: 'آخر الإعلانات والتحديثات',
+    description_en: 'Latest announcements & updates',
+    category: 'general',
+    defaultSize: 'md',
+  },
 ];
 
 const CATEGORY_ROLES = {

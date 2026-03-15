@@ -2,10 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
+import FavoritesDropdown from '../ui/FavoritesDropdown';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { getUnreadCount } from '../../services/notificationsService';
 import { getSuggestionsCount } from '../../services/suggestionsService';
@@ -21,6 +22,8 @@ export default function Header({ onMenuClick }) {
   const [showProfile, setShowProfile] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showFavorites, setShowFavorites] = useState(false);
+  const favRef = useRef(null);
   const ref = useRef(null);
   const isRTL = i18n.language === 'ar';
   const { isOnline, pendingCount, isSyncing, syncResult } = useOfflineSync();
@@ -302,6 +305,16 @@ export default function Header({ onMenuClick }) {
               </div>
             );
           })()}
+        </div>
+        <div ref={favRef} className="relative">
+          <button
+            onClick={() => setShowFavorites(!showFavorites)}
+            className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative"
+            title={isRTL ? 'المفضلة' : 'Favorites'}
+          >
+            <Star size={18} />
+          </button>
+          <FavoritesDropdown show={showFavorites} onClose={() => setShowFavorites(false)} />
         </div>
         <div className="relative">
           <button onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative">

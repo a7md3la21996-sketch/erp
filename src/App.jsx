@@ -59,6 +59,8 @@ const PrintSettingsPage = lazy(() => import('./pages/settings/PrintSettingsPage'
 const ChatInboxPage = lazy(() => import('./pages/ChatInboxPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const ChartBuilderPage = lazy(() => import('./pages/ChartBuilderPage'));
+const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'));
+const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -134,6 +136,7 @@ export default function App() {
                 <Route path="/crm/opportunities" element={<Guarded><OpportunitiesPage /></Guarded>} />
                 <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
                 <Route path="/performance" element={<Guarded><PerformancePage /></Guarded>} />
+                <Route path="/goals" element={<Guarded><GoalsPage /></Guarded>} />
                 <Route path="/sales/deals" element={<Guarded><DealsPage /></Guarded>} />
                 <Route path="/sales/commissions" element={<Guarded><CommissionsPage /></Guarded>} />
                 <Route path="/sales/forecast" element={<Guarded><SalesForecastPage /></Guarded>} />
@@ -167,6 +170,7 @@ export default function App() {
                 <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
                 <Route path="/analytics" element={<Guarded><AnalyticsPage /></Guarded>} />
                 <Route path="/chart-builder" element={<Guarded><ChartBuilderPage /></Guarded>} />
+                <Route path="/announcements" element={<Guarded><AnnouncementsPage /></Guarded>} />
                 <Route path="/settings/general" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/settings/audit-log" element={<Guarded><AuditLogPage /></Guarded>} />
                 <Route path="/settings/system" element={<Guarded><SystemConfigPage /></Guarded>} />

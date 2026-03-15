@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Target, Building2, ActivitySquare, BookUser,
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
-  TrendingUp, PieChart,
+  TrendingUp, PieChart, Volume2, Crosshair,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -37,6 +37,7 @@ export const NAV_ITEMS = [
     { id: 'mkt-funnel', label: { ar: 'القمع التسويقي', en: 'Funnel' }, path: '/marketing/funnel', permission: P.CAMPAIGNS_VIEW },
   ]},
   { id: 'performance', label: { ar: 'الأداء', en: 'Performance' }, icon: Target, permission: P.HR_VIEW_OWN, path: '/performance' },
+  { id: 'goals', label: { ar: 'الأهداف', en: 'Goals & OKRs' }, icon: Crosshair, permission: P.HR_VIEW_OWN, path: '/goals' },
   { id: 'hr', label: { ar: 'الموارد البشرية', en: 'HR' }, icon: UserCog, permission: P.HR_VIEW_OWN, children: [
     { id: 'employees',    label: { ar: 'الموظفين',        en: 'Employees' },    path: '/hr/employees',    permission: P.HR_VIEW_OWN },
     { id: 'policies',     label: { ar: 'محرك السياسات',   en: 'Policies' },     path: '/hr/policies',     permission: P.HR_VIEW_ALL },
@@ -63,6 +64,7 @@ export const NAV_ITEMS = [
   ]},
   { id: 'tasks', label: { ar: 'المهام', en: 'Tasks' }, icon: ClipboardList, path: '/tasks', permission: P.TASKS_VIEW_OWN },
   { id: 'calendar', label: { ar: 'التقويم', en: 'Calendar' }, icon: CalendarDays, path: '/calendar', permission: P.CALENDAR },
+  { id: 'announcements', label: { ar: 'الإعلانات', en: 'Announcements' }, icon: Volume2, path: '/announcements', permission: P.DASHBOARD },
   { id: 'chat', label: { ar: 'المحادثات', en: 'Chat' }, icon: MessageSquare, path: '/chat', permission: P.CHAT_USE },
   { id: 'reports', label: { ar: 'التقارير', en: 'Reports' }, icon: BarChart3, path: '/reports', permission: P.RPT_SALES },
   { id: 'analytics', label: { ar: 'تحليلات متقدمة', en: 'Analytics' }, icon: TrendingUp, path: '/analytics', permission: P.RPT_SALES },

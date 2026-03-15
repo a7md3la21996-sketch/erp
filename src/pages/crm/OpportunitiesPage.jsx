@@ -9,6 +9,7 @@ import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportu
 import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { isFavorite as checkFavorite, toggleFavorite } from '../../services/favoritesService';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
@@ -1744,6 +1745,29 @@ export default function OpportunitiesPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {(() => {
+                const oppFavId = `opp_${selectedOpp.id}`;
+                const oppIsFav = checkFavorite(oppFavId);
+                const contactName = selectedOpp.contacts ? (isRTL ? (selectedOpp.contacts.full_name_ar || selectedOpp.contacts.full_name_en) : (selectedOpp.contacts.full_name_en || selectedOpp.contacts.full_name_ar)) : '';
+                return (
+                  <button
+                    onClick={() => {
+                      toggleFavorite({
+                        id: oppFavId,
+                        type: 'opportunity',
+                        name: contactName || `Opportunity #${selectedOpp.id}`,
+                        nameAr: (selectedOpp.contacts?.full_name_ar || selectedOpp.contacts?.full_name_en || `فرصة #${selectedOpp.id}`),
+                        path: `/crm/opportunities?highlight=${selectedOpp.id}`,
+                      });
+                    }}
+                    className="bg-transparent border-none cursor-pointer p-1 rounded-md hover:bg-brand-500/10 transition-colors"
+                    style={{ color: oppIsFav ? '#F59E0B' : undefined }}
+                    title={oppIsFav ? (isRTL ? 'إزالة من المفضلة' : 'Remove from Favorites') : (isRTL ? 'إضافة للمفضلة' : 'Add to Favorites')}
+                  >
+                    <Star size={15} fill={oppIsFav ? '#F59E0B' : 'none'} />
+                  </button>
+                );
+              })()}
               {selectedOpp.contact_id && (
                 <button
                   onClick={() => navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`)}

@@ -12,11 +12,13 @@ import { getTopPerformers, getTeamOverallPct, METRIC_CONFIG } from '../../servic
 import { getWonDeals } from '../../services/dealsService';
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle, Repeat, Check, SkipForward, User, Settings, X, ChevronUp, ChevronDown, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle, Repeat, Check, SkipForward, User, Settings, X, ChevronUp, ChevronDown, RotateCcw, Eye, EyeOff, Volume2, Pin } from 'lucide-react';
 import { Card, KpiCard, Badge, DashboardSkeleton } from '../../components/ui';
 import { generateDueInstances, getTodayInstances, completeInstance, skipInstance, PRIORITY_OPTIONS } from '../../services/recurringTaskService';
 import { getLayout, saveLayout, resetLayout, getWidgetMeta, AVAILABLE_WIDGETS, WIDGET_CATEGORIES, SIZE_OPTIONS } from '../../services/widgetService';
 import SuggestionsPanel from '../../components/ui/SuggestionsPanel';
+import { getQuarterSummary, computeObjectiveProgress, getObjectives, STATUS_COLORS } from '../../services/okrService';
+import { getAnnouncements, isRead as isAnnRead, markAsRead as markAnnRead, CATEGORIES as ANN_CATEGORIES, PRIORITIES as ANN_PRIORITIES } from '../../services/announcementService';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -540,6 +542,7 @@ export default function DashboardPage() {
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar'; const lang = i18n.language;
   const role = profile?.role || 'admin';
+  const userId = profile?.id || profile?.email || '';
   const name = isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar);
   const roleLabel = ROLE_LABELS[role]?.[lang] || '';
   const navigate = useNavigate();
@@ -1004,6 +1007,66 @@ export default function DashboardPage() {
           </div>
         );
 
+      case 'announcements': {
+        const annList = getAnnouncements().slice(0, 3);
+        if (annList.length === 0) return null;
+        return (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: '#4A7AAB1e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Volume2 size={16} color="#4A7AAB" />
+                </div>
+                <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                    {lang === 'ar' ? 'الإعلانات' : 'Announcements'}
+                  </p>
+                </div>
+              </div>
+              <Link to="/announcements" style={{ fontSize: 12, color: '#4A7AAB', textDecoration: 'none', fontWeight: 600 }}>
+                {lang === 'ar' ? 'عرض الكل' : 'View All'}
+              </Link>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {annList.map(ann => {
+                const cat = ANN_CATEGORIES[ann.category] || ANN_CATEGORIES.general;
+                const read = isAnnRead(ann.id, userId);
+                const title = lang === 'ar' ? (ann.titleAr || ann.title) : ann.title;
+                const body = lang === 'ar' ? (ann.bodyAr || ann.body) : ann.body;
+                return (
+                  <Link
+                    key={ann.id}
+                    to="/announcements"
+                    style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px',
+                      borderRadius: 10, textDecoration: 'none',
+                      background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                      border: `1px solid ${isDark ? '#1e3a5f30' : '#e2e8f0'}`,
+                      flexDirection: isRTL ? 'row-reverse' : 'row',
+                      position: 'relative',
+                    }}
+                  >
+                    {!read && (
+                      <div style={{ position: 'absolute', top: 8, [isRTL ? 'left' : 'right']: 8, width: 7, height: 7, borderRadius: '50%', background: '#4A7AAB' }} />
+                    )}
+                    {ann.pinned && <Pin size={12} color="#4A7AAB" style={{ marginTop: 3, flexShrink: 0 }} />}
+                    <div style={{ flex: 1, minWidth: 0, textAlign: isRTL ? 'right' : 'left' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 2 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+                        <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 10, background: cat.color + '18', color: cat.color, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                          {lang === 'ar' ? cat.ar : cat.en}
+                        </span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{body}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -1098,6 +1161,58 @@ export default function DashboardPage() {
           {lang === 'ar' ? 'تخصيص' : 'Customize'}
         </button>
       </div>
+
+      {/* Q Goals summary */}
+      {(() => {
+        const currentMonth = new Date().getMonth();
+        const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
+        const cy = new Date().getFullYear();
+        const gs = getQuarterSummary(cq, cy);
+        if (gs.total === 0) return null;
+        const pColor = gs.avgProgress >= 70 ? '#10B981' : gs.avgProgress >= 40 ? '#F59E0B' : '#EF4444';
+        return (
+          <div
+            onClick={() => navigate('/goals')}
+            style={{
+              marginBottom: 16, padding: '14px 20px', borderRadius: 14, cursor: 'pointer',
+              background: isDark ? '#1a2332' : '#ffffff',
+              border: '1px solid ' + (isDark ? '#ffffff12' : '#e2e8f0'),
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexDirection: isRTL ? 'row-reverse' : 'row', gap: 16,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Target size={18} color="#4A7AAB" />
+              </div>
+              <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                  {lang === 'ar' ? `أهداف ${cq}` : `${cq} Goals`}
+                </p>
+                <p style={{ margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' }}>
+                  {gs.total} {lang === 'ar' ? 'هدف' : 'objectives'}
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+              <div style={{ width: 120 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, color: isDark ? '#94a3b8' : '#64748b' }}>{lang === 'ar' ? 'التقدم' : 'Progress'}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: pColor }}>{gs.avgProgress}%</span>
+                </div>
+                <div style={{ width: '100%', height: 6, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.12)' : '#f1f5f9' }}>
+                  <div style={{ width: `${Math.min(gs.avgProgress, 100)}%`, height: '100%', borderRadius: 3, background: pColor, transition: 'width 0.4s' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#10B981' }}>{gs.onTrack} {lang === 'ar' ? 'على المسار' : 'on track'}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#F59E0B' }}>{gs.atRisk} {lang === 'ar' ? 'في خطر' : 'at risk'}</span>
+                {gs.behind > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: '#EF4444' }}>{gs.behind} {lang === 'ar' ? 'متأخر' : 'behind'}</span>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Widget grid */}
       <div style={{

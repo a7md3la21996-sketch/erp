@@ -12,6 +12,7 @@ import {
 import { ensureTargets, computeActuals, getEmployeeTargets, METRIC_CONFIG, METRICS } from '../../services/kpiTargetsService';
 import { getEmployeeClaims, EXPENSE_CATEGORIES } from '../../services/expenseClaimService';
 import { useNavigate } from 'react-router-dom';
+import { getObjectives, computeObjectiveProgress, STATUS_COLORS, KR_STATUS_OPTIONS } from '../../services/okrService';
 
 /* ─── Quick Actions ─── */
 const QUICK_ACTIONS = [
@@ -629,6 +630,77 @@ export default function SelfServicePage() {
                   })}
                 </tbody>
               </table>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── My Goals / OKRs ── */}
+      {(() => {
+        const currentMonth = new Date().getMonth();
+        const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
+        const cy = new Date().getFullYear();
+        const empId = emp?.id || 'e1';
+        const myObjectives = getObjectives({ quarter: cq, year: cy }).filter(o => o.owner_id === empId);
+
+        if (myObjectives.length === 0) return null;
+
+        return (
+          <div className="bg-surface-card dark:bg-surface-card-dark rounded-xl border border-edge dark:border-edge-dark overflow-hidden mb-6">
+            <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <Target size={16} className="text-brand-500" />
+                <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
+                  {isRTL ? `أهدافي — ${cq} ${cy}` : `My Goals — ${cq} ${cy}`}
+                </p>
+              </div>
+              <button
+                onClick={() => window.location.href = '/goals'}
+                className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border-none cursor-pointer transition-colors"
+                style={{ background: 'rgba(74,122,171,0.12)', color: '#4A7AAB' }}
+              >
+                {isRTL ? 'عرض الكل' : 'View All'}
+              </button>
+            </div>
+            <div className="px-5 py-4">
+              {myObjectives.map(obj => {
+                const progress = computeObjectiveProgress(obj);
+                const pColor = progress >= 70 ? '#10B981' : progress >= 40 ? '#F59E0B' : '#EF4444';
+                return (
+                  <div key={obj.id} className="mb-4 last:mb-0">
+                    <div className={`flex items-center justify-between mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <span className="text-xs font-bold text-content dark:text-content-dark">
+                        {isRTL ? (obj.titleAr || obj.title) : obj.title}
+                      </span>
+                      <span className="text-xs font-extrabold" style={{ color: pColor }}>
+                        {progress}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-gray-100 dark:bg-brand-500/10 overflow-hidden mb-2">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(progress, 100)}%`, background: pColor }}
+                      />
+                    </div>
+                    <div className={`flex flex-wrap gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      {(obj.keyResults || []).map(kr => {
+                        const krColor = STATUS_COLORS[kr.status] || '#94a3b8';
+                        const krOpt = KR_STATUS_OPTIONS.find(s => s.value === kr.status);
+                        return (
+                          <span
+                            key={kr.id}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold"
+                            style={{ background: `${krColor}15`, color: krColor, border: `1px solid ${krColor}30` }}
+                          >
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: krColor }} />
+                            {isRTL ? (kr.titleAr || kr.title) : kr.title}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         );

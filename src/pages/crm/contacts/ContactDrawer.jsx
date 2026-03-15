@@ -18,6 +18,7 @@ import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
 import { getLocalAuditLogs, ACTION_TYPES, logAction } from '../../../services/auditService';
+import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/favoritesService';
 import { getComments } from '../../../services/chatService';
 import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
 import { getWonDeals } from '../../../services/dealsService';
@@ -293,6 +294,22 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'qualification', temperature:'warm', priority:'medium', notes:'' });
 
   const { profile } = useAuth();
+
+  // Favorites
+  const [isFav, setIsFav] = useState(false);
+  useEffect(() => {
+    setIsFav(checkFavorite(`contact_${contact.id}`));
+  }, [contact.id]);
+  const handleToggleFav = () => {
+    const result = toggleFavorite({
+      id: `contact_${contact.id}`,
+      type: 'contact',
+      name: contact.full_name_en || contact.full_name || contact.full_name_ar || '',
+      nameAr: contact.full_name_ar || contact.full_name || '',
+      path: `/contacts?highlight=${contact.id}`,
+    });
+    setIsFav(result.added);
+  };
 
   // Log view
   const lastViewedId = useRef(null);
@@ -807,6 +824,24 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               {onNext && <button onClick={onNext} title={isRTL ? 'التالي' : 'Next'} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><ChevronDown size={18} /></button>}
             </div>
             <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleToggleFav}
+                title={isFav ? (isRTL ? 'إزالة من المفضلة' : 'Remove from Favorites') : (isRTL ? 'إضافة للمفضلة' : 'Add to Favorites')}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: 4,
+                  borderRadius: 6,
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: isFav ? '#F59E0B' : (undefined),
+                  transition: 'color 0.15s',
+                }}
+                className={isFav ? '' : 'text-content-muted dark:text-content-muted-dark'}
+              >
+                <Star size={16} fill={isFav ? '#F59E0B' : 'none'} />
+              </button>
               <Button variant="secondary" size="sm" onClick={() => setShowEdit(true)} className="!text-xs !px-2.5 !py-1">
                 <Pencil size={12} /> {isRTL ? 'تعديل' : 'Edit'}
               </Button>
