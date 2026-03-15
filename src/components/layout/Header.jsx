@@ -9,7 +9,7 @@ import NotificationsDropdown from './NotificationsDropdown';
 import FavoritesDropdown from '../ui/FavoritesDropdown';
 import RecentItemsDropdown from '../ui/RecentItemsDropdown';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
-import { getUnreadCount } from '../../services/notificationsService';
+import { getUnreadCount } from '../../services/notificationService';
 import { getSuggestionsCount } from '../../services/suggestionsService';
 import { getUnseenCount } from '../../pages/ChangelogPage';
 import { useShortcutsHelp } from './KeyboardShortcutsProvider';
@@ -39,19 +39,22 @@ export default function Header({ onMenuClick }) {
 
   // Keep unread count in sync
   useEffect(() => {
-    const userId = profile?.id || profile?.email;
-    const refresh = () => setUnreadCount(getUnreadCount(userId));
+    const refresh = () => setUnreadCount(getUnreadCount());
     refresh();
     window.addEventListener('platform_notification', refresh);
-    return () => window.removeEventListener('platform_notification', refresh);
-  }, [profile?.id, profile?.email]);
+    window.addEventListener('platform_notification_changed', refresh);
+    return () => {
+      window.removeEventListener('platform_notification', refresh);
+      window.removeEventListener('platform_notification_changed', refresh);
+    };
+  }, []);
 
   // Also refresh when dropdown closes
   useEffect(() => {
     if (!showNotifications) {
-      setUnreadCount(getUnreadCount(profile?.id || profile?.email));
+      setUnreadCount(getUnreadCount());
     }
-  }, [showNotifications, profile?.id, profile?.email]);
+  }, [showNotifications]);
 
   // Suggestions count — refresh every 5 minutes
   useEffect(() => {

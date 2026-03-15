@@ -1,23 +1,59 @@
 import { useState, useEffect, useRef } from 'react';
-import { useClickOutside } from '../../utils/hooks';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { fetchTodayReminders, markReminderDone } from '../../services/remindersService';
-import { getNotifications, markAsRead, markAllAsRead } from '../../services/notificationsService';
-import { Bell, Phone, MessageCircle, MapPin, Users, Mail, Check, Clock, Loader2, UserPlus, CheckSquare, Trophy, TrendingUp, Info, CheckCheck } from 'lucide-react';
+import {
+  getNotifications, markAsRead, markAllAsRead, deleteNotification, getUnreadCount,
+  NOTIFICATION_TYPES,
+} from '../../services/notificationService';
+import {
+  Bell, Phone, MessageCircle, MapPin, Users, Mail, Check, Clock, Loader2,
+  UserPlus, CheckSquare, Trophy, TrendingUp, Info, CheckCheck, Trash2,
+  AlertTriangle, XCircle, ArrowRightCircle, MessageSquare, AtSign, ShieldAlert,
+  CheckCircle2, XOctagon, Receipt, AlertCircle, Download, Upload,
+} from 'lucide-react';
 
-const ICONS = { call: Phone, whatsapp: MessageCircle, visit: MapPin, meeting: Users, email: Mail };
-const COLORS = { call: '#10B981', whatsapp: '#25D366', visit: '#4A7AAB', meeting: '#8B5CF6', email: '#F59E0B' };
-const LABELS = {
+const REMINDER_ICONS = { call: Phone, whatsapp: MessageCircle, visit: MapPin, meeting: Users, email: Mail };
+const REMINDER_COLORS = { call: '#10B981', whatsapp: '#25D366', visit: '#4A7AAB', meeting: '#8B5CF6', email: '#F59E0B' };
+const REMINDER_LABELS = {
   call: { ar: 'مكالمة', en: 'Call' },
   whatsapp: { ar: 'واتساب', en: 'WhatsApp' },
   visit: { ar: 'زيارة', en: 'Visit' },
   meeting: { ar: 'اجتماع', en: 'Meeting' },
   email: { ar: 'بريد', en: 'Email' },
 };
-const NOTIF_ICONS = { lead_assigned: UserPlus, task_assigned: CheckSquare, reminder: Bell, deal_won: Trophy, opportunity_update: TrendingUp, system: Info };
-const NOTIF_COLORS = { lead_assigned: '#4A7AAB', task_assigned: '#F59E0B', reminder: '#6B21A8', deal_won: '#10B981', opportunity_update: '#4A7AAB', system: '#6B7280' };
+
+const ICON_MAP = {
+  Clock, AlertTriangle, Trophy, XCircle, ArrowRightCircle, MessageSquare,
+  AtSign, ShieldAlert, CheckCircle2, XOctagon, Receipt, AlertCircle,
+  Download, Upload, Bell, UserPlus, CheckSquare, TrendingUp, Info,
+};
+
+function getNotifIcon(type) {
+  const cfg = NOTIFICATION_TYPES[type];
+  if (!cfg) return Info;
+  return ICON_MAP[cfg.icon] || Info;
+}
+
+function getNotifColor(type) {
+  return NOTIFICATION_TYPES[type]?.color || '#6B7280';
+}
+
+function timeAgo(iso, isRTL) {
+  if (!iso) return '';
+  const now = Date.now();
+  const diff = now - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return isRTL ? 'الآن' : 'now';
+  if (mins < 60) return isRTL ? `${mins} د` : `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return isRTL ? `${hrs} س` : `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  if (days < 7) return isRTL ? `${days} ي` : `${days}d`;
+  return new Date(iso).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' });
+}
 
 export default function NotificationsDropdown({ show, onClose }) {
   const { theme } = useTheme();
@@ -27,10 +63,20 @@ export default function NotificationsDropdown({ show, onClose }) {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const ref = useRef(null);
+  const navigate = useNavigate();
   const [reminders, setReminders] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [activeSection, setActiveSection] = useState('all');
+  const [activeTab, setActiveTab] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [hoveredId, setHoveredId] = useState(null);
+
+  const refresh = () => {
+    const filter = activeTab === 'unread' ? { unreadOnly: true, limit: 30 }
+      : activeTab === 'urgent' ? { priority: 'urgent', limit: 30 }
+      : { limit: 30 };
+    const { data } = getNotifications(filter);
+    setNotifications(data);
+  };
 
   useEffect(() => {
     if (!show) return;
@@ -39,33 +85,52 @@ export default function NotificationsDropdown({ show, onClose }) {
       fetchTodayReminders(profile?.id).catch(() => []),
     ]).then(([rem]) => {
       setReminders(rem || []);
-      setNotifications(getNotifications(profile?.id || profile?.email, { limit: 30 }));
+      refresh();
       setLoading(false);
     });
   }, [show, profile?.id, profile?.email]);
 
-  // Listen for new notifications
+  // Refresh on tab change
+  useEffect(() => { if (show) refresh(); }, [activeTab]);
+
+  // Listen for notification changes
   useEffect(() => {
-    const handler = () => {
-      setNotifications(getNotifications(profile?.id || profile?.email, { limit: 30 }));
-    };
+    const handler = () => refresh();
+    window.addEventListener('platform_notification_changed', handler);
     window.addEventListener('platform_notification', handler);
-    return () => window.removeEventListener('platform_notification', handler);
-  }, [profile?.id, profile?.email]);
+    return () => {
+      window.removeEventListener('platform_notification_changed', handler);
+      window.removeEventListener('platform_notification', handler);
+    };
+  }, [activeTab]);
+
+  // Click outside
+  useEffect(() => {
+    if (!show) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [show, onClose]);
 
   const handleMarkAllRead = () => {
-    markAllAsRead(profile?.id || profile?.email);
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    window.dispatchEvent(new CustomEvent('platform_notification'));
+    markAllAsRead();
+    refresh();
   };
 
-  const handleMarkRead = (id) => {
-    markAsRead(id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    window.dispatchEvent(new CustomEvent('platform_notification'));
+  const handleClickNotif = (n) => {
+    if (!n.read) markAsRead(n.id);
+    if (n.action_url) {
+      navigate(n.action_url);
+      onClose();
+    }
+    refresh();
   };
 
-  useClickOutside(ref, onClose, show);
+  const handleDelete = (e, id) => {
+    e.stopPropagation();
+    deleteNotification(id);
+    refresh();
+  };
 
   const handleDone = async (id) => {
     setReminders(prev => prev.filter(r => r.id !== id));
@@ -79,75 +144,141 @@ export default function NotificationsDropdown({ show, onClose }) {
 
   if (!show) return null;
 
+  const tabs = [
+    { key: 'all', ar: 'الكل', en: 'All' },
+    { key: 'unread', ar: 'غير مقروء', en: 'Unread' },
+    { key: 'urgent', ar: 'عاجل', en: 'Urgent' },
+  ];
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
   return (
     <div
       ref={ref}
-      className={`absolute top-full mt-2 end-0 w-[340px] max-h-[420px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-xl dark:shadow-2xl z-[100] overflow-hidden ${isRTL ? 'direction-rtl' : 'direction-ltr'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
+      style={{
+        position: 'absolute',
+        top: '100%',
+        marginTop: 8,
+        [isRTL ? 'left' : 'right']: 0,
+        width: 380,
+        maxHeight: 500,
+        borderRadius: 14,
+        background: isDark ? '#1a1f2e' : '#fff',
+        border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+        boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.5)' : '0 12px 40px rgba(0,0,0,0.12)',
+        zIndex: 300,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
     >
       {/* Header */}
-      <div className="px-[18px] py-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Bell size={16} className="text-brand-500" />
-          <span className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'الإشعارات' : 'Notifications'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {(reminders.length + notifications.filter(n => !n.read).length) > 0 && (
-            <span className="text-[11px] font-bold text-white bg-red-500 rounded-full px-2 py-px">{reminders.length + notifications.filter(n => !n.read).length}</span>
+      <div style={{
+        padding: '14px 18px',
+        borderBottom: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.07)'}`,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Bell size={16} color="#6366f1" />
+          <span style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+            {isRTL ? 'الإشعارات' : 'Notifications'}
+          </span>
+          {unreadCount > 0 && (
+            <span style={{
+              fontSize: 10, fontWeight: 700, color: '#fff',
+              background: '#ef4444', borderRadius: 99, padding: '1px 7px',
+              minWidth: 18, textAlign: 'center',
+            }}>{unreadCount}</span>
           )}
-          {notifications.some(n => !n.read) && (
-            <button onClick={handleMarkAllRead} title={isRTL ? 'قراءة الكل' : 'Mark all read'} className="bg-transparent border-none cursor-pointer text-brand-500 p-0">
-              <CheckCheck size={14} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {unreadCount > 0 && (
+            <button onClick={handleMarkAllRead} title={isRTL ? 'قراءة الكل' : 'Mark all read'}
+              style={{
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                color: '#6366f1', padding: 4, display: 'flex', alignItems: 'center',
+              }}>
+              <CheckCheck size={16} />
             </button>
           )}
         </div>
       </div>
 
-      {/* Section Toggle */}
-      <div className="flex gap-1 px-2 pt-2">
-        {[
-          { key: 'all', ar: 'الكل', en: 'All' },
-          { key: 'reminders', ar: 'المتابعات', en: 'Follow-ups' },
-          { key: 'notifications', ar: 'الإشعارات', en: 'Alerts' },
-        ].map(s => (
-          <button key={s.key} onClick={() => setActiveSection(s.key)}
-            className={`text-[10px] px-2.5 py-1 rounded-md border-none cursor-pointer font-medium ${activeSection === s.key ? 'bg-brand-500 text-white' : 'bg-transparent text-content-muted dark:text-content-muted-dark'}`}
-          >{isRTL ? s.ar : s.en}</button>
+      {/* Filter Tabs */}
+      <div style={{
+        display: 'flex', gap: 4, padding: '8px 12px 4px',
+      }}>
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => setActiveTab(t.key)}
+            style={{
+              fontSize: 11, fontWeight: activeTab === t.key ? 600 : 400,
+              padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              fontFamily: 'inherit',
+              background: activeTab === t.key ? '#6366f1' : 'transparent',
+              color: activeTab === t.key ? '#fff' : (isDark ? '#94a3b8' : '#64748b'),
+              transition: 'all 0.15s',
+            }}>
+            {isRTL ? t.ar : t.en}
+          </button>
         ))}
       </div>
 
       {/* Content */}
-      <div className="max-h-[340px] overflow-y-auto p-1.5">
+      <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
         {loading ? (
-          <div className="text-center py-8 text-content-muted dark:text-content-muted-dark">
-            <Loader2 size={22} className="animate-spin mb-2 mx-auto" />
-            <p className="m-0 text-[13px]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: isDark ? '#64748b' : '#94a3b8' }}>
+            <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', marginBottom: 8 }} />
+            <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
           </div>
         ) : (
           <>
             {/* Reminders */}
-            {(activeSection === 'all' || activeSection === 'reminders') && reminders.map(r => {
-              const Icon = ICONS[r.type] || Phone;
-              const color = COLORS[r.type] || '#4A7AAB';
-              const label = LABELS[r.type] || LABELS.call;
+            {activeTab === 'all' && reminders.map(r => {
+              const Icon = REMINDER_ICONS[r.type] || Phone;
+              const color = REMINDER_COLORS[r.type] || '#4A7AAB';
+              const label = REMINDER_LABELS[r.type] || REMINDER_LABELS.call;
               return (
-                <div key={r.id} className="flex items-center gap-2.5 py-2.5 px-3 rounded-[10px] mb-0.5 bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-brand-500/[0.08]">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: color + '18' }}>
+                <div key={r.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 12px', borderRadius: 10, marginBottom: 2,
+                  background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
+                  border: `1px solid ${isDark ? 'rgba(99,102,241,0.08)' : '#f1f5f9'}`,
+                }}>
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 8, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    background: color + '18',
+                  }}>
                     <Icon size={15} color={color} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-content dark:text-content-dark whitespace-nowrap overflow-hidden text-ellipsis">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>
                       {r.entity_name || (isRTL ? 'جهة اتصال' : 'Contact')}
                     </div>
-                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark whitespace-nowrap overflow-hidden text-ellipsis">
+                    <div style={{
+                      fontSize: 11, color: isDark ? '#64748b' : '#94a3b8',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>
                       {lang === 'ar' ? label.ar : label.en}{r.notes ? ' · ' + r.notes : ''}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark flex items-center gap-[3px]">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <span style={{ fontSize: 10, color: isDark ? '#64748b' : '#94a3b8', display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Clock size={10} />{formatTime(r.due_at)}
                     </span>
-                    <button onClick={() => handleDone(r.id)} title={isRTL ? 'تم' : 'Done'} className="w-6 h-6 rounded-md border border-emerald-200 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-500/10 cursor-pointer flex items-center justify-center p-0">
+                    <button onClick={() => handleDone(r.id)} title={isRTL ? 'تم' : 'Done'}
+                      style={{
+                        width: 26, height: 26, borderRadius: 6, display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer',
+                        border: `1px solid ${isDark ? 'rgba(16,185,129,0.3)' : '#d1fae5'}`,
+                        background: isDark ? 'rgba(16,185,129,0.1)' : '#ecfdf5',
+                      }}>
                       <Check size={12} color="#10B981" />
                     </button>
                   </div>
@@ -156,27 +287,80 @@ export default function NotificationsDropdown({ show, onClose }) {
             })}
 
             {/* Notifications */}
-            {(activeSection === 'all' || activeSection === 'notifications') && notifications.map(n => {
-              const NIcon = NOTIF_ICONS[n.type] || Info;
-              const nColor = NOTIF_COLORS[n.type] || '#6B7280';
+            {notifications.map(n => {
+              const NIcon = getNotifIcon(n.type);
+              const nColor = getNotifColor(n.type);
+              const isHovered = hoveredId === n.id;
+              const titleText = isRTL ? (n.title || n.title_ar) : (n.titleEn || n.title_en || n.title || n.title_ar);
+              const bodyText = isRTL ? (n.message || n.body_ar) : (n.messageEn || n.body_en || n.message || n.body_ar);
+              const isPriority = n.priority === 'urgent' || n.priority === 'high';
+
               return (
-                <div key={n.id} onClick={() => handleMarkRead(n.id)} className={`flex items-center gap-2.5 py-2.5 px-3 rounded-[10px] mb-0.5 cursor-pointer border ${n.read ? 'bg-transparent border-transparent opacity-60' : 'bg-brand-500/[0.04] border-brand-500/10'}`}>
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: nColor + '18' }}>
+                <div
+                  key={n.id}
+                  onClick={() => handleClickNotif(n)}
+                  onMouseEnter={() => setHoveredId(n.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', borderRadius: 10, marginBottom: 2, cursor: 'pointer',
+                    background: n.read
+                      ? 'transparent'
+                      : (isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)'),
+                    border: `1px solid ${n.read ? 'transparent' : (isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.08)')}`,
+                    opacity: n.read ? 0.6 : 1,
+                    transition: 'all 0.15s',
+                    position: 'relative',
+                  }}
+                >
+                  <div style={{
+                    width: 34, height: 34, borderRadius: 8, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    background: nColor + '18',
+                  }}>
                     <NIcon size={15} color={nColor} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-semibold text-content dark:text-content-dark whitespace-nowrap overflow-hidden text-ellipsis">
-                      {isRTL ? n.title_ar : n.title_en}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      display: 'flex', alignItems: 'center', gap: 6,
+                    }}>
+                      {titleText}
+                      {isPriority && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, color: '#fff',
+                          background: n.priority === 'urgent' ? '#ef4444' : '#f97316',
+                          borderRadius: 4, padding: '1px 5px',
+                          textTransform: 'uppercase',
+                        }}>
+                          {n.priority === 'urgent' ? (isRTL ? 'عاجل' : 'URGENT') : (isRTL ? 'مهم' : 'HIGH')}
+                        </span>
+                      )}
                     </div>
-                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark whitespace-nowrap overflow-hidden text-ellipsis">
-                      {isRTL ? n.body_ar : n.body_en}
+                    <div style={{
+                      fontSize: 11, color: isDark ? '#64748b' : '#94a3b8',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>
+                      {bodyText}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="text-[9px] text-content-muted dark:text-content-muted-dark">
-                      {new Date(n.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <span style={{ fontSize: 9, color: isDark ? '#475569' : '#cbd5e1' }}>
+                      {timeAgo(n.created_at, isRTL)}
                     </span>
-                    {!n.read && <span className="w-2 h-2 rounded-full bg-brand-500" />}
+                    {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366f1' }} />}
+                    {isHovered && (
+                      <button onClick={(e) => handleDelete(e, n.id)} title={isRTL ? 'حذف' : 'Delete'}
+                        style={{
+                          width: 22, height: 22, borderRadius: 5, display: 'flex',
+                          alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer',
+                          border: 'none', background: isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)',
+                          color: '#ef4444',
+                        }}>
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -184,13 +368,33 @@ export default function NotificationsDropdown({ show, onClose }) {
 
             {/* Empty state */}
             {reminders.length === 0 && notifications.length === 0 && (
-              <div className="text-center py-8 text-content-muted dark:text-content-muted-dark">
-                <Check size={28} className="opacity-30 mb-2 mx-auto" />
-                <p className="m-0 text-[13px]">{isRTL ? 'لا توجد إشعارات' : 'No notifications'}</p>
+              <div style={{
+                textAlign: 'center', padding: '40px 0',
+                color: isDark ? '#475569' : '#94a3b8',
+              }}>
+                <Bell size={32} style={{ opacity: 0.2, marginBottom: 8 }} />
+                <p style={{ margin: 0, fontSize: 13 }}>{isRTL ? 'لا توجد إشعارات' : 'No notifications'}</p>
               </div>
             )}
           </>
         )}
+      </div>
+
+      {/* Footer - View All */}
+      <div style={{
+        borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`,
+        padding: '10px 0',
+        textAlign: 'center',
+      }}>
+        <button
+          onClick={() => { navigate('/notifications'); onClose(); }}
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            color: '#6366f1', fontSize: 12, fontWeight: 600, fontFamily: 'inherit',
+            padding: '4px 12px',
+          }}>
+          {isRTL ? 'عرض الكل' : 'View All'}
+        </button>
       </div>
     </div>
   );

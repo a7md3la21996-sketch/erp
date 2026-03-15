@@ -69,7 +69,10 @@ const SecurityPage = lazy(() => import('./pages/settings/SecurityPage'));
 const WorkflowBuilderPage = lazy(() => import('./pages/settings/WorkflowBuilderPage'));
 const SystemHealthPage = lazy(() => import('./pages/settings/SystemHealthPage'));
 const APIDocsPage = lazy(() => import('./pages/settings/APIDocsPage'));
+const ExportImportHistoryPage = lazy(() => import('./pages/settings/ExportImportHistoryPage'));
 const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
+const RolesPage = lazy(() => import('./pages/settings/RolesPage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -198,7 +201,10 @@ export default function App() {
                 <Route path="/settings/workflows" element={<Guarded><WorkflowBuilderPage /></Guarded>} />
                 <Route path="/settings/system-health" element={<Guarded><SystemHealthPage /></Guarded>} />
                 <Route path="/settings/api-docs" element={<Guarded><APIDocsPage /></Guarded>} />
+                <Route path="/settings/export-import-history" element={<Guarded><ExportImportHistoryPage /></Guarded>} />
+                <Route path="/settings/roles" element={<Guarded><RolesPage /></Guarded>} />
                 <Route path="/changelog" element={<Guarded><ChangelogPage /></Guarded>} />
+                <Route path="/notifications" element={<Guarded><NotificationsPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/profile" element={<Guarded><ProfilePage /></Guarded>} />
               </Route>
