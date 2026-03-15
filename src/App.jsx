@@ -75,6 +75,7 @@ const RolesPage = lazy(() => import('./pages/settings/RolesPage'));
 const SLAManagementPage = lazy(() => import('./pages/settings/SLAManagementPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
+const ComparisonReportsPage = lazy(() => import('./pages/ComparisonReportsPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -184,6 +185,7 @@ export default function App() {
                 <Route path="/calendar" element={<Guarded><CalendarPage /></Guarded>} />
                 <Route path="/chat" element={<Guarded><ChatInboxPage /></Guarded>} />
                 <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
+                <Route path="/comparison" element={<Guarded><ComparisonReportsPage /></Guarded>} />
                 <Route path="/analytics" element={<Guarded><AnalyticsPage /></Guarded>} />
                 <Route path="/heatmap" element={<Guarded><HeatmapPage /></Guarded>} />
                 <Route path="/chart-builder" element={<Guarded><ChartBuilderPage /></Guarded>} />
