@@ -15,6 +15,7 @@ import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknot
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 import { logView } from '../../services/viewTrackingService';
+import { addRecentItem } from '../../services/recentItemsService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { notifyDealWon } from '../../services/notificationsService';
@@ -904,7 +905,10 @@ export default function OpportunitiesPage() {
   // Select opp with view tracking
   const selectOpp = useCallback((opp) => {
     setSelectedOpp(opp);
-    if (opp) logView({ entityType: 'opportunity', entityId: opp.id, entityName: opp.project || opp.contacts?.full_name, viewer: profile });
+    if (opp) {
+      logView({ entityType: 'opportunity', entityId: opp.id, entityName: opp.project || opp.contacts?.full_name, viewer: profile });
+      addRecentItem({ type: 'opportunity', id: opp.id, name: opp.contacts?.full_name || opp.project || 'Opportunity', path: '/opportunities?highlight=' + opp.id, extra: { stage: opp.stage, budget: opp.budget } });
+    }
   }, [profile]);
 
   // Drawer prev/next navigation

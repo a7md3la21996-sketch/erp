@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
+import { addRecentItem } from '../../../services/recentItemsService';
 import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send } from 'lucide-react';
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
@@ -317,6 +318,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     if (contact.id && contact.id !== lastViewedId.current) {
       lastViewedId.current = contact.id;
       logView({ entityType: 'contact', entityId: contact.id, entityName: contact.full_name, viewer: profile });
+      addRecentItem({ type: 'contact', id: contact.id, name: contact.full_name, path: '/contacts?highlight=' + contact.id, extra: { company: contact.company, type: contact.contact_type } });
     }
   }, [contact.id, profile]);
 

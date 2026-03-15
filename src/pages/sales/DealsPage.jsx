@@ -13,6 +13,7 @@ import { generateInvoiceHTML, getCompanyInfo } from '../../services/printService
 import PrintPreview from '../../components/ui/PrintPreview';
 import { getWonDeals } from '../../services/dealsService';
 import { logView } from '../../services/viewTrackingService';
+import { addRecentItem } from '../../services/recentItemsService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { fmtMoney } from '../../utils/formatting';
@@ -172,6 +173,7 @@ export default function DealsPage() {
     setSelectedDeal(deal);
     setSelectedIdx(idx);
     logView({ entityType: 'deal', entityId: deal.id, entityName: deal.deal_number, viewer: profile });
+    addRecentItem({ type: 'deal', id: deal.id, name: deal.deal_number || deal.client_name || 'Deal', path: '/deals?highlight=' + deal.id, extra: { deal_value: deal.deal_value, status: deal.status } });
   }, [filtered, profile]);
 
   // ── Skeleton ─────────────────────────────────────
