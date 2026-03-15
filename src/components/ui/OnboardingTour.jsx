@@ -256,7 +256,8 @@ export default function OnboardingTour({ forceShow, onClose }) {
   if (!visible) return null;
 
   const current = STEPS[step];
-  const isCenter = current.type === 'center';
+  // Treat as center card if it's a highlight step but target element not found
+  const isCenter = current.type === 'center' || (current.type === 'highlight' && !highlightRect);
   const Icon = current.icon;
   const totalSteps = STEPS.length;
 
@@ -500,7 +501,7 @@ export default function OnboardingTour({ forceShow, onClose }) {
                   flexWrap: 'wrap',
                 }}
               >
-                {current.id === 'welcome' && (
+                {(current.id === 'welcome' || (current.type === 'highlight' && !highlightRect)) && (
                   <button
                     onClick={handleComplete}
                     style={{
@@ -516,7 +517,7 @@ export default function OnboardingTour({ forceShow, onClose }) {
                     {isRTL ? 'تخطي' : 'Skip'}
                   </button>
                 )}
-                {current.id === 'done' && step > 0 && (
+                {(current.id === 'done' || (current.type === 'highlight' && !highlightRect)) && step > 0 && (
                   <button
                     onClick={goPrev}
                     style={{
@@ -551,7 +552,13 @@ export default function OnboardingTour({ forceShow, onClose }) {
                   onMouseEnter={(e) => { e.target.style.transform = 'scale(1.03)'; }}
                   onMouseLeave={(e) => { e.target.style.transform = 'scale(1)'; }}
                 >
-                  {isRTL ? current.buttonLabel.ar : current.buttonLabel.en}
+                  {current.buttonLabel
+                    ? (isRTL ? current.buttonLabel.ar : current.buttonLabel.en)
+                    : (step >= STEPS.length - 1
+                      ? (isRTL ? 'إنهاء' : 'Finish')
+                      : (isRTL ? 'التالي' : 'Next')
+                    )
+                  }
                 </button>
               </div>
 
