@@ -335,27 +335,27 @@ function FunnelTab({ data, trendData, isDark, isRTL, cardStyle, tableHeaderStyle
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
         <KpiCard
-          title={isRTL ? 'إجمالي الفرص' : 'Total Opportunities'}
+          label={isRTL ? 'إجمالي الفرص' : 'Total Opportunities'}
           value={data[0]?.count || 0}
-          icon={<BarChart3 size={18} />}
+          icon={BarChart3}
           color={ACCENT}
         />
         <KpiCard
-          title={isRTL ? 'معدل التحويل' : 'Overall Conversion'}
+          label={isRTL ? 'معدل التحويل' : 'Overall Conversion'}
           value={`${data[data.length - 1]?.overallRate || 0}%`}
-          icon={<TrendingUp size={18} />}
+          icon={TrendingUp}
           color="#10B981"
         />
         <KpiCard
-          title={isRTL ? 'أعلى تسرب' : 'Highest Drop-off'}
+          label={isRTL ? 'أعلى تسرب' : 'Highest Drop-off'}
           value={`${Math.max(...data.map(d => d.dropOffPct))}%`}
-          icon={<ArrowDownRight size={18} />}
+          icon={ArrowDownRight}
           color="#EF4444"
         />
         <KpiCard
-          title={isRTL ? 'الصفقات المغلقة' : 'Closed Won'}
+          label={isRTL ? 'الصفقات المغلقة' : 'Closed Won'}
           value={data[data.length - 1]?.count || 0}
-          icon={<Trophy size={18} />}
+          icon={Trophy}
           color="#F59E0B"
         />
       </div>
@@ -485,10 +485,10 @@ function ROITab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCellSty
     <div>
       {/* KPI Row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <KpiCard title={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={totalLeads.toLocaleString()} icon={<Users size={18} />} color={ACCENT} />
-        <KpiCard title={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={<DollarSign size={18} />} color="#10B981" />
-        <KpiCard title={isRTL ? 'إجمالي التكلفة' : 'Total Cost'} value={fmtMoney(totalCost)} icon={<TrendingDown size={18} />} color="#EF4444" />
-        <KpiCard title={isRTL ? 'العائد الكلي' : 'Overall ROI'} value={`${overallROI}%`} icon={<TrendingUp size={18} />} color={overallROI > 0 ? '#10B981' : '#EF4444'} />
+        <KpiCard label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={totalLeads.toLocaleString()} icon={Users} color={ACCENT} />
+        <KpiCard label={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={DollarSign} color="#10B981" />
+        <KpiCard label={isRTL ? 'إجمالي التكلفة' : 'Total Cost'} value={fmtMoney(totalCost)} icon={TrendingDown} color="#EF4444" />
+        <KpiCard label={isRTL ? 'العائد الكلي' : 'Overall ROI'} value={`${overallROI}%`} icon={TrendingUp} color={overallROI > 0 ? '#10B981' : '#EF4444'} />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -586,10 +586,10 @@ function CycleTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCellS
     <div>
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <KpiCard title={isRTL ? 'متوسط الدورة' : 'Avg Cycle'} value={`${data.overallAvg} ${isRTL ? 'يوم' : 'days'}`} icon={<Clock size={18} />} color={ACCENT} />
-        <KpiCard title={isRTL ? 'أسرع وكيل' : 'Fastest Agent'} value={data.agentAvg[0]?.agent || '—'} subtitle={`${data.agentAvg[0]?.avgDays || 0} ${isRTL ? 'يوم' : 'days'}`} icon={<Zap size={18} />} color="#10B981" />
-        <KpiCard title={isRTL ? 'أبطأ وكيل' : 'Slowest Agent'} value={data.agentAvg[data.agentAvg.length - 1]?.agent || '—'} subtitle={`${data.agentAvg[data.agentAvg.length - 1]?.avgDays || 0} ${isRTL ? 'يوم' : 'days'}`} icon={<Clock size={18} />} color="#EF4444" />
-        <KpiCard title={isRTL ? 'المراحل' : 'Stages Tracked'} value={data.stageAvg.length} icon={<Activity size={18} />} color="#8B5CF6" />
+        <KpiCard label={isRTL ? 'متوسط الدورة' : 'Avg Cycle'} value={`${data.overallAvg} ${isRTL ? 'يوم' : 'days'}`} icon={Clock} color={ACCENT} />
+        <KpiCard label={isRTL ? 'أسرع وكيل' : 'Fastest Agent'} value={data.agentAvg[0]?.agent || '—'} sub={`${data.agentAvg[0]?.avgDays || 0} ${isRTL ? 'يوم' : 'days'}`} icon={Zap} color="#10B981" />
+        <KpiCard label={isRTL ? 'أبطأ وكيل' : 'Slowest Agent'} value={data.agentAvg[data.agentAvg.length - 1]?.agent || '—'} sub={`${data.agentAvg[data.agentAvg.length - 1]?.avgDays || 0} ${isRTL ? 'يوم' : 'days'}`} icon={Clock} color="#EF4444" />
+        <KpiCard label={isRTL ? 'المراحل' : 'Stages Tracked'} value={data.stageAvg.length} icon={Activity} color="#8B5CF6" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -714,10 +714,10 @@ function WinLossTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCel
     <div>
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <KpiCard title={isRTL ? 'نسبة الفوز' : 'Win Rate'} value={`${data.overallWinRate}%`} icon={<Trophy size={18} />} color="#10B981" />
-        <KpiCard title={isRTL ? 'فرص مربوحة' : 'Total Won'} value={data.totalWon} icon={<TrendingUp size={18} />} color={ACCENT} />
-        <KpiCard title={isRTL ? 'فرص خاسرة' : 'Total Lost'} value={data.totalLost} icon={<TrendingDown size={18} />} color="#EF4444" />
-        <KpiCard title={isRTL ? 'أسباب الخسارة' : 'Loss Reasons'} value={data.lostReasons.length} icon={<Target size={18} />} color="#F59E0B" />
+        <KpiCard label={isRTL ? 'نسبة الفوز' : 'Win Rate'} value={`${data.overallWinRate}%`} icon={Trophy} color="#10B981" />
+        <KpiCard label={isRTL ? 'فرص مربوحة' : 'Total Won'} value={data.totalWon} icon={TrendingUp} color={ACCENT} />
+        <KpiCard label={isRTL ? 'فرص خاسرة' : 'Total Lost'} value={data.totalLost} icon={TrendingDown} color="#EF4444" />
+        <KpiCard label={isRTL ? 'أسباب الخسارة' : 'Loss Reasons'} value={data.lostReasons.length} icon={Target} color="#F59E0B" />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
@@ -851,10 +851,10 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
     <div>
       {/* KPI */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <KpiCard title={isRTL ? 'أفضل وكيل' : 'Top Agent'} value={topAgent?.agent || '—'} subtitle={fmtMoney(topAgent?.revenue || 0)} icon={<Trophy size={18} />} color="#FFD700" />
-        <KpiCard title={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={<DollarSign size={18} />} color="#10B981" />
-        <KpiCard title={isRTL ? 'متوسط التحويل' : 'Avg Conversion'} value={`${avgConversion}%`} icon={<Target size={18} />} color={ACCENT} />
-        <KpiCard title={isRTL ? 'عدد الوكلاء' : 'Total Agents'} value={data.length} icon={<Users size={18} />} color="#8B5CF6" />
+        <KpiCard label={isRTL ? 'أفضل وكيل' : 'Top Agent'} value={topAgent?.agent || '—'} sub={fmtMoney(topAgent?.revenue || 0)} icon={Trophy} color="#FFD700" />
+        <KpiCard label={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={DollarSign} color="#10B981" />
+        <KpiCard label={isRTL ? 'متوسط التحويل' : 'Avg Conversion'} value={`${avgConversion}%`} icon={Target} color={ACCENT} />
+        <KpiCard label={isRTL ? 'عدد الوكلاء' : 'Total Agents'} value={data.length} icon={Users} color="#8B5CF6" />
       </div>
 
       {/* Agent Cards */}

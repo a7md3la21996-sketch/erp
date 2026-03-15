@@ -20,10 +20,9 @@ const STEPS = [
     icon: Rocket,
     title: { ar: 'مرحباً بك في Platform ERP!', en: 'Welcome to Platform ERP!' },
     desc: {
-      ar: 'دعنا نأخذك في جولة سريعة للتعرف على أهم ميزات النظام. لن يستغرق الأمر أكثر من دقيقة واحدة.',
-      en: 'Let us take you on a quick tour of the key features. It will only take about a minute.',
+      ar: 'دعنا نأخذك في جولة سريعة للتعرف على أهم ميزات النظام.',
+      en: 'Let us take you on a quick tour of the key features.',
     },
-    buttonLabel: { ar: 'ابدأ الجولة', en: 'Start Tour' },
   },
   {
     id: 'sidebar',
@@ -34,20 +33,20 @@ const STEPS = [
     icon: Layout,
     title: { ar: 'القائمة الجانبية', en: 'Sidebar Navigation' },
     desc: {
-      ar: 'تنقل بسهولة بين أقسام النظام: إدارة العلاقات (CRM)، الموارد البشرية (HR)، المالية، المبيعات، والمزيد.',
-      en: 'Easily navigate between modules: CRM, HR, Finance, Sales, Operations, and more.',
+      ar: 'تنقل بسهولة بين أقسام النظام: CRM، الموارد البشرية، المالية، والمزيد.',
+      en: 'Navigate between modules: CRM, HR, Finance, Sales, and more.',
     },
   },
   {
     id: 'dashboard',
     type: 'highlight',
     selector: 'main',
-    position: 'bottom',
+    position: 'top',
     icon: BarChart3,
     title: { ar: 'لوحة التحكم', en: 'Dashboard' },
     desc: {
-      ar: 'عرض مؤشرات الأداء (KPIs)، الرسوم البيانية، وتخصيص الويدجت حسب احتياجاتك.',
-      en: 'View KPI cards, charts, and customize widgets to fit your workflow.',
+      ar: 'عرض مؤشرات الأداء والرسوم البيانية وتخصيص الويدجت.',
+      en: 'View KPI cards, charts, and customize widgets.',
     },
   },
   {
@@ -59,8 +58,8 @@ const STEPS = [
     icon: Search,
     title: { ar: 'البحث السريع', en: 'Global Search' },
     desc: {
-      ar: 'اضغط ⌘K (أو Ctrl+K) للبحث السريع في جهات الاتصال، الفرص، المهام، وكل شيء.',
-      en: 'Press ⌘K (or Ctrl+K) to quickly search contacts, opportunities, tasks, and everything.',
+      ar: 'اضغط ⌘K (أو Ctrl+K) للبحث السريع في كل شيء.',
+      en: 'Press ⌘K (or Ctrl+K) to quickly search everything.',
     },
   },
   {
@@ -71,8 +70,8 @@ const STEPS = [
     icon: Bell,
     title: { ar: 'الإشعارات', en: 'Notifications' },
     desc: {
-      ar: 'تابع التحديثات المهمة والتنبيهات في الوقت الفعلي.',
-      en: 'Stay updated with real-time alerts and important notifications.',
+      ar: 'تابع التحديثات المهمة والتنبيهات.',
+      en: 'Stay updated with real-time alerts.',
     },
   },
   {
@@ -83,8 +82,8 @@ const STEPS = [
     icon: Star,
     title: { ar: 'المفضلة', en: 'Favorites' },
     desc: {
-      ar: 'أضف الصفحات والعناصر المهمة إلى المفضلة للوصول السريع.',
-      en: 'Bookmark important pages and items for quick access.',
+      ar: 'أضف العناصر المهمة إلى المفضلة للوصول السريع.',
+      en: 'Bookmark important items for quick access.',
     },
   },
   {
@@ -95,8 +94,8 @@ const STEPS = [
     icon: Moon,
     title: { ar: 'المظهر', en: 'Theme' },
     desc: {
-      ar: 'بدّل بين الوضع الفاتح والداكن، أو فعّل الجدول الزمني التلقائي.',
-      en: 'Switch between light and dark mode, or set an automatic schedule.',
+      ar: 'بدّل بين الوضع الفاتح والداكن.',
+      en: 'Switch between light and dark mode.',
     },
   },
   {
@@ -107,8 +106,8 @@ const STEPS = [
     icon: Keyboard,
     title: { ar: 'اختصارات لوحة المفاتيح', en: 'Keyboard Shortcuts' },
     desc: {
-      ar: 'اضغط ? في أي وقت لعرض جميع الاختصارات المتاحة للتنقل السريع.',
-      en: 'Press ? anytime to see all available shortcuts for fast navigation.',
+      ar: 'اضغط ? لعرض جميع الاختصارات المتاحة.',
+      en: 'Press ? to see all available shortcuts.',
     },
   },
   {
@@ -117,10 +116,9 @@ const STEPS = [
     icon: PartyPopper,
     title: { ar: 'أنت جاهز!', en: "You're all set!" },
     desc: {
-      ar: 'أنت الآن مستعد لاستخدام النظام بكفاءة. يمكنك إعادة الجولة في أي وقت من اختصارات لوحة المفاتيح.',
-      en: "You're ready to use the platform efficiently. You can restart this tour anytime from the keyboard shortcuts menu.",
+      ar: 'أنت الآن مستعد لاستخدام النظام. يمكنك إعادة الجولة من اختصارات لوحة المفاتيح.',
+      en: "You're ready! Restart this tour anytime from keyboard shortcuts.",
     },
-    buttonLabel: { ar: 'ابدأ العمل', en: 'Get Started' },
   },
 ];
 
@@ -133,9 +131,7 @@ export default function OnboardingTour({ forceShow, onClose }) {
 
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
-  const [highlightRect, setHighlightRect] = useState(null);
-  const [animating, setAnimating] = useState(false);
-  const resizeTimer = useRef(null);
+  const [targetRect, setTargetRect] = useState(null);
 
   // Determine visibility
   useEffect(() => {
@@ -145,87 +141,65 @@ export default function OnboardingTour({ forceShow, onClose }) {
       setCurrentStep(0);
       return;
     }
-    // Only auto-show on dashboard for first-time users
     if (!isOnboardingComplete() && location.pathname === '/dashboard') {
-      const saved = getCurrentStep();
-      setStep(saved);
+      setStep(getCurrentStep());
       setVisible(true);
     }
   }, [forceShow, location.pathname]);
 
-  // Listen for restart event from ShortcutsHelpModal
+  // Listen for restart event
   useEffect(() => {
-    const handler = () => {
-      setStep(0);
-      setCurrentStep(0);
-      setVisible(true);
-    };
+    const handler = () => { setStep(0); setCurrentStep(0); setVisible(true); };
     window.addEventListener('platform_restart_tour', handler);
     return () => window.removeEventListener('platform_restart_tour', handler);
   }, []);
 
-  // Find and measure the highlighted element
-  const measureTarget = useCallback(() => {
-    const currentStep = STEPS[step];
-    if (!currentStep || currentStep.type !== 'highlight') {
-      setHighlightRect(null);
-      return;
-    }
-    let el = document.querySelector(currentStep.selector);
-    if (!el && currentStep.fallbackSelector) {
-      el = document.querySelector(currentStep.fallbackSelector);
-    }
-    if (el) {
-      const rect = el.getBoundingClientRect();
-      // Skip elements that are hidden (zero dimensions or off-screen)
-      if (rect.width === 0 || rect.height === 0) {
-        setHighlightRect(null);
-        return;
-      }
-      setHighlightRect({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      });
-    } else {
-      setHighlightRect(null);
-    }
-  }, [step]);
-
+  // Measure target element
   useEffect(() => {
     if (!visible) return;
-    // Small delay to let DOM settle
-    const timer = setTimeout(measureTarget, 100);
-    const handleResize = () => {
-      clearTimeout(resizeTimer.current);
-      resizeTimer.current = setTimeout(measureTarget, 150);
+    const current = STEPS[step];
+    if (!current || current.type !== 'highlight') {
+      setTargetRect(null);
+      return;
+    }
+
+    const measure = () => {
+      let el = document.querySelector(current.selector);
+      if (!el && current.fallbackSelector) el = document.querySelector(current.fallbackSelector);
+      if (el) {
+        const r = el.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          // For very large elements (like main/aside), limit highlight to top portion
+          const maxH = Math.min(r.height, 200);
+          const maxW = Math.min(r.width, 400);
+          setTargetRect({
+            top: r.top,
+            left: r.left,
+            width: r.width > 400 ? maxW : r.width,
+            height: r.height > 200 ? maxH : r.height,
+          });
+          return;
+        }
+      }
+      setTargetRect(null);
     };
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('scroll', measureTarget, true);
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(resizeTimer.current);
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('scroll', measureTarget, true);
-    };
-  }, [visible, step, measureTarget]);
+
+    const timer = setTimeout(measure, 150);
+    window.addEventListener('resize', measure);
+    return () => { clearTimeout(timer); window.removeEventListener('resize', measure); };
+  }, [visible, step]);
 
   // ESC to close
   useEffect(() => {
     if (!visible) return;
     const handler = (e) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        handleComplete();
-      }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); finish(); }
     };
     document.addEventListener('keydown', handler, true);
     return () => document.removeEventListener('keydown', handler, true);
   }, [visible]);
 
-  const handleComplete = useCallback(() => {
+  const finish = useCallback(() => {
     completeOnboarding();
     setVisible(false);
     setStep(0);
@@ -233,12 +207,7 @@ export default function OnboardingTour({ forceShow, onClose }) {
   }, [onClose]);
 
   const goNext = () => {
-    if (step >= STEPS.length - 1) {
-      handleComplete();
-      return;
-    }
-    setAnimating(true);
-    setTimeout(() => setAnimating(false), 300);
+    if (step >= STEPS.length - 1) { finish(); return; }
     const next = step + 1;
     setStep(next);
     setCurrentStep(next);
@@ -246,8 +215,6 @@ export default function OnboardingTour({ forceShow, onClose }) {
 
   const goPrev = () => {
     if (step <= 0) return;
-    setAnimating(true);
-    setTimeout(() => setAnimating(false), 300);
     const prev = step - 1;
     setStep(prev);
     setCurrentStep(prev);
@@ -256,535 +223,237 @@ export default function OnboardingTour({ forceShow, onClose }) {
   if (!visible) return null;
 
   const current = STEPS[step];
-  // Treat as center card if it's a highlight step but target element not found
-  const isCenter = current.type === 'center' || (current.type === 'highlight' && !highlightRect);
+  const showAsCenter = current.type === 'center' || !targetRect;
   const Icon = current.icon;
-  const totalSteps = STEPS.length;
-
-  // Tooltip position calculation
-  const getTooltipStyle = () => {
-    if (isCenter || !highlightRect) return {};
-    const padding = 16;
-    const tooltipW = 360;
-    const pos = current.position || 'bottom';
-    const style = { position: 'fixed', width: tooltipW, maxWidth: 'calc(100vw - 32px)' };
-
-    if (pos === 'bottom') {
-      style.top = highlightRect.top + highlightRect.height + padding;
-      style.left = Math.max(16, Math.min(
-        highlightRect.left + highlightRect.width / 2 - tooltipW / 2,
-        window.innerWidth - tooltipW - 16
-      ));
-    } else if (pos === 'top') {
-      style.bottom = window.innerHeight - highlightRect.top + padding;
-      style.left = Math.max(16, Math.min(
-        highlightRect.left + highlightRect.width / 2 - tooltipW / 2,
-        window.innerWidth - tooltipW - 16
-      ));
-    } else if (pos === 'right') {
-      style.top = Math.max(16, highlightRect.top + highlightRect.height / 2 - 80);
-      style.left = highlightRect.left + highlightRect.width + padding;
-      if (style.left + tooltipW > window.innerWidth - 16) {
-        // Fallback to bottom if no room on right
-        style.left = Math.max(16, highlightRect.left);
-        style.top = highlightRect.top + highlightRect.height + padding;
-      }
-    } else if (pos === 'left') {
-      style.top = Math.max(16, highlightRect.top + highlightRect.height / 2 - 80);
-      style.right = window.innerWidth - highlightRect.left + padding;
-    }
-
-    return style;
-  };
+  const isFirst = step === 0;
+  const isLast = step === STEPS.length - 1;
 
   // Colors
   const cardBg = isDark ? '#1a2332' : '#ffffff';
-  const cardBorder = isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.15)';
-  const textPrimary = isDark ? '#e2e8f0' : '#1e293b';
-  const textSecondary = isDark ? '#94a3b8' : '#64748b';
+  const border = isDark ? 'rgba(74,122,171,0.25)' : 'rgba(74,122,171,0.15)';
+  const text1 = isDark ? '#e2e8f0' : '#1e293b';
+  const text2 = isDark ? '#94a3b8' : '#64748b';
   const accent = '#4A7AAB';
 
-  // Confetti dots for the done step
-  const confettiDots = current.id === 'done' ? (
-    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none', borderRadius: 20 }}>
-      {Array.from({ length: 24 }).map((_, i) => {
-        const colors = ['#4A7AAB', '#F59E0B', '#10B981', '#EF4444', '#8B5CF6', '#EC4899'];
-        const color = colors[i % colors.length];
-        const size = 4 + Math.random() * 6;
-        const left = Math.random() * 100;
-        const top = Math.random() * 100;
-        const delay = Math.random() * 2;
-        return (
-          <div
-            key={i}
-            style={{
-              position: 'absolute',
-              left: `${left}%`,
-              top: `${top}%`,
-              width: size,
-              height: size,
-              borderRadius: Math.random() > 0.5 ? '50%' : 2,
-              backgroundColor: color,
-              opacity: 0.3 + Math.random() * 0.4,
-              transform: `rotate(${Math.random() * 360}deg)`,
-              animation: `onboarding-float ${2 + Math.random() * 3}s ease-in-out ${delay}s infinite alternate`,
-            }}
-          />
-        );
-      })}
-    </div>
-  ) : null;
+  // Calculate tooltip position clamped to viewport
+  const getTooltipPos = () => {
+    if (!targetRect) return null;
+    const tw = 340;
+    const th = 220;
+    const gap = 14;
+    const pos = current.position || 'bottom';
+    let top, left;
 
-  // Inject keyframes for confetti animation
-  const keyframesStyle = (
-    <style>{`
-      @keyframes onboarding-float {
-        0% { transform: translateY(0) rotate(0deg); opacity: 0.3; }
-        100% { transform: translateY(-20px) rotate(180deg); opacity: 0.7; }
+    if (pos === 'right') {
+      top = targetRect.top + targetRect.height / 2 - th / 2;
+      left = targetRect.left + targetRect.width + gap;
+      if (left + tw > window.innerWidth - 16) {
+        // fallback bottom
+        top = targetRect.top + targetRect.height + gap;
+        left = targetRect.left;
       }
-      @keyframes onboarding-pulse {
-        0%, 100% { box-shadow: 0 0 0 0 rgba(74,122,171,0.3); }
-        50% { box-shadow: 0 0 0 8px rgba(74,122,171,0); }
+    } else if (pos === 'top') {
+      top = targetRect.top - th - gap;
+      left = targetRect.left + targetRect.width / 2 - tw / 2;
+      if (top < 16) {
+        top = targetRect.top + targetRect.height + gap;
       }
-    `}</style>
+    } else {
+      // bottom (default)
+      top = targetRect.top + targetRect.height + gap;
+      left = targetRect.left + targetRect.width / 2 - tw / 2;
+    }
+
+    // Clamp to viewport
+    top = Math.max(16, Math.min(top, window.innerHeight - th - 16));
+    left = Math.max(16, Math.min(left, window.innerWidth - tw - 16));
+
+    return { top, left, width: tw };
+  };
+
+  const tooltipPos = showAsCenter ? null : getTooltipPos();
+
+  // ── Navigation buttons (shared between center and tooltip) ──
+  const NavButtons = ({ centered }) => (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: centered ? 'center' : 'space-between',
+      gap: 10,
+      marginTop: centered ? 28 : 16,
+    }}>
+      {!centered && (
+        <button onClick={finish} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 12, color: text2, padding: '6px 0', fontFamily: 'inherit' }}>
+          {isRTL ? 'تخطي' : 'Skip'}
+        </button>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {isFirst && (
+          <button onClick={finish} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, color: text2, padding: '8px 16px', fontFamily: 'inherit' }}>
+            {isRTL ? 'تخطي' : 'Skip'}
+          </button>
+        )}
+        {step > 0 && !isFirst && (
+          <button onClick={goPrev} style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            border: `1px solid ${border}`, background: 'none', cursor: 'pointer',
+            fontSize: 12, fontWeight: 500, color: text2, padding: '7px 14px', borderRadius: 8, fontFamily: 'inherit',
+          }}>
+            {!isRTL && <ChevronLeft size={14} />}
+            {isRTL ? 'السابق' : 'Prev'}
+            {isRTL && <ChevronRight size={14} />}
+          </button>
+        )}
+        <button onClick={isLast ? finish : goNext} style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          border: 'none', cursor: 'pointer', fontSize: centered ? 14 : 12, fontWeight: 600,
+          color: '#fff', backgroundColor: accent, padding: centered ? '12px 32px' : '7px 18px',
+          borderRadius: centered ? 12 : 8, fontFamily: 'inherit',
+          boxShadow: centered ? '0 4px 12px rgba(74,122,171,0.3)' : 'none',
+        }}>
+          {isFirst ? (isRTL ? 'ابدأ الجولة' : 'Start Tour')
+            : isLast ? (isRTL ? 'ابدأ العمل' : 'Get Started')
+            : (isRTL ? 'التالي' : 'Next')}
+          {!isFirst && !isLast && !isRTL && <ChevronRight size={14} />}
+          {!isFirst && !isLast && isRTL && <ChevronLeft size={14} />}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ── Step dots ──
+  const StepDots = () => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 16 }}>
+      {STEPS.map((_, i) => (
+        <div key={i} style={{
+          width: i === step ? 18 : 6, height: 6, borderRadius: 3,
+          backgroundColor: i === step ? accent : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.1)'),
+          transition: 'all 0.3s',
+        }} />
+      ))}
+    </div>
   );
 
   return (
-    <>
-      {keyframesStyle}
+    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, zIndex: 9999 }}>
+      {/* Backdrop */}
       <div
-        dir={isRTL ? 'rtl' : 'ltr'}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 9999,
-          pointerEvents: 'auto',
-        }}
-      >
-        {/* Semi-transparent overlay with spotlight cutout */}
-        {!isCenter && highlightRect ? (
-          <svg
-            style={{ position: 'fixed', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-            onClick={handleComplete}
-          >
-            <defs>
-              <mask id="onboarding-spotlight">
-                <rect x="0" y="0" width="100%" height="100%" fill="white" />
-                <rect
-                  x={highlightRect.left - 8}
-                  y={highlightRect.top - 8}
-                  width={highlightRect.width + 16}
-                  height={highlightRect.height + 16}
-                  rx="12"
-                  fill="black"
-                />
-              </mask>
-            </defs>
-            <rect
-              x="0" y="0" width="100%" height="100%"
-              fill="rgba(0,0,0,0.55)"
-              mask="url(#onboarding-spotlight)"
-              style={{ pointerEvents: 'auto', cursor: 'default' }}
-              onClick={(e) => e.stopPropagation()}
-            />
-          </svg>
-        ) : (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              backgroundColor: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(2px)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          />
-        )}
+        style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.55)', zIndex: 1 }}
+        onClick={(e) => e.stopPropagation()}
+      />
 
-        {/* Spotlight border ring */}
-        {!isCenter && highlightRect && (
-          <div
-            style={{
-              position: 'fixed',
-              top: highlightRect.top - 8,
-              left: highlightRect.left - 8,
-              width: highlightRect.width + 16,
-              height: highlightRect.height + 16,
-              borderRadius: 12,
-              border: `2px solid ${accent}`,
-              pointerEvents: 'none',
-              animation: 'onboarding-pulse 2s ease-in-out infinite',
-            }}
-          />
-        )}
+      {/* Spotlight cutout for highlight steps */}
+      {!showAsCenter && targetRect && (
+        <>
+          {/* Clear area over target */}
+          <div style={{
+            position: 'fixed',
+            top: targetRect.top - 8,
+            left: targetRect.left - 8,
+            width: targetRect.width + 16,
+            height: targetRect.height + 16,
+            borderRadius: 12,
+            backgroundColor: isDark ? '#0f1e2d' : '#f8fafc',
+            zIndex: 2,
+          }} />
+          {/* Border ring */}
+          <div style={{
+            position: 'fixed',
+            top: targetRect.top - 8,
+            left: targetRect.left - 8,
+            width: targetRect.width + 16,
+            height: targetRect.height + 16,
+            borderRadius: 12,
+            border: `2px solid ${accent}`,
+            zIndex: 3,
+            pointerEvents: 'none',
+            boxShadow: `0 0 0 4px rgba(74,122,171,0.15)`,
+          }} />
+        </>
+      )}
 
-        {/* Center card or tooltip */}
-        {isCenter ? (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 16,
-            }}
-          >
-            <div
-              style={{
-                position: 'relative',
-                width: '100%',
-                maxWidth: 440,
-                borderRadius: 20,
-                backgroundColor: cardBg,
-                border: `1px solid ${cardBorder}`,
-                boxShadow: isDark
-                  ? '0 32px 64px rgba(0,0,0,0.5)'
-                  : '0 32px 64px rgba(0,0,0,0.15)',
-                padding: '48px 36px 36px',
-                textAlign: 'center',
-                overflow: 'hidden',
-                opacity: animating ? 0.7 : 1,
-                transform: animating ? 'scale(0.97)' : 'scale(1)',
-                transition: 'opacity 0.3s, transform 0.3s',
-              }}
-            >
-              {confettiDots}
-
-              {/* Icon */}
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: '50%',
-                  background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 20px',
-                }}
-              >
-                <Icon size={36} style={{ color: accent }} />
-              </div>
-
-              {/* Title */}
-              <h2
-                style={{
-                  fontSize: 24,
-                  fontWeight: 700,
-                  color: textPrimary,
-                  margin: '0 0 12px',
-                  lineHeight: 1.3,
-                }}
-              >
-                {isRTL ? current.title.ar : current.title.en}
-              </h2>
-
-              {/* Description */}
-              <p
-                style={{
-                  fontSize: 14,
-                  color: textSecondary,
-                  margin: '0 0 32px',
-                  lineHeight: 1.7,
-                }}
-              >
-                {isRTL ? current.desc.ar : current.desc.en}
-              </p>
-
-              {/* Actions */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 12,
-                  flexWrap: 'wrap',
-                }}
-              >
-                {(current.id === 'welcome' || (current.type === 'highlight' && !highlightRect)) && (
-                  <button
-                    onClick={handleComplete}
-                    style={{
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      color: textSecondary,
-                      padding: '10px 20px',
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {isRTL ? 'تخطي' : 'Skip'}
-                  </button>
-                )}
-                {(current.id === 'done' || (current.type === 'highlight' && !highlightRect)) && step > 0 && (
-                  <button
-                    onClick={goPrev}
-                    style={{
-                      border: `1px solid ${cardBorder}`,
-                      background: 'none',
-                      cursor: 'pointer',
-                      fontSize: 13,
-                      color: textSecondary,
-                      padding: '10px 20px',
-                      borderRadius: 10,
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {isRTL ? 'السابق' : 'Previous'}
-                  </button>
-                )}
-                <button
-                  onClick={current.id === 'done' ? handleComplete : goNext}
-                  style={{
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: '#ffffff',
-                    backgroundColor: accent,
-                    padding: '12px 32px',
-                    borderRadius: 12,
-                    fontFamily: 'inherit',
-                    boxShadow: `0 4px 12px rgba(74,122,171,0.3)`,
-                    transition: 'transform 0.15s',
-                  }}
-                  onMouseEnter={(e) => { e.target.style.transform = 'scale(1.03)'; }}
-                  onMouseLeave={(e) => { e.target.style.transform = 'scale(1)'; }}
-                >
-                  {current.buttonLabel
-                    ? (isRTL ? current.buttonLabel.ar : current.buttonLabel.en)
-                    : (step >= STEPS.length - 1
-                      ? (isRTL ? 'إنهاء' : 'Finish')
-                      : (isRTL ? 'التالي' : 'Next')
-                    )
-                  }
-                </button>
-              </div>
-
-              {/* Step indicator */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                  marginTop: 28,
-                }}
-              >
-                {STEPS.map((_, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: i === step ? 20 : 6,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: i === step ? accent : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.1)'),
-                      transition: 'width 0.3s, background-color 0.3s',
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* Tooltip card for highlight steps */
-          <div
-            style={{
-              ...getTooltipStyle(),
-              borderRadius: 16,
-              backgroundColor: cardBg,
-              border: `1px solid ${cardBorder}`,
-              boxShadow: isDark
-                ? '0 20px 40px rgba(0,0,0,0.4)'
-                : '0 20px 40px rgba(0,0,0,0.12)',
-              padding: '20px 24px',
-              zIndex: 10000,
-              opacity: animating ? 0.7 : 1,
-              transform: animating ? 'translateY(4px)' : 'translateY(0)',
-              transition: 'opacity 0.3s, transform 0.3s',
-            }}
-          >
-            {/* Step count */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 12,
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <div
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: '50%',
-                    background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Icon size={16} style={{ color: accent }} />
-                </div>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: accent,
-                    letterSpacing: 0.5,
-                  }}
-                >
-                  {step + 1} / {totalSteps}
-                </span>
-              </div>
-              <button
-                onClick={handleComplete}
-                style={{
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  padding: 4,
-                  borderRadius: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: textSecondary,
-                }}
-                title={isRTL ? 'تخطي' : 'Skip'}
-              >
-                <X size={16} />
-              </button>
+      {/* Center card */}
+      {showAsCenter && (
+        <div style={{
+          position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 16, zIndex: 10,
+        }}>
+          <div style={{
+            position: 'relative', width: '100%', maxWidth: 420, borderRadius: 20,
+            backgroundColor: cardBg, border: `1px solid ${border}`,
+            boxShadow: isDark ? '0 32px 64px rgba(0,0,0,0.5)' : '0 32px 64px rgba(0,0,0,0.15)',
+            padding: '40px 32px 32px', textAlign: 'center',
+          }}>
+            {/* Icon */}
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px',
+            }}>
+              <Icon size={32} style={{ color: accent }} />
             </div>
 
-            {/* Title */}
-            <h3
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: textPrimary,
-                margin: '0 0 6px',
-              }}
-            >
+            <h2 style={{ fontSize: 22, fontWeight: 700, color: text1, margin: '0 0 10px', lineHeight: 1.3 }}>
               {isRTL ? current.title.ar : current.title.en}
-            </h3>
-
-            {/* Description */}
-            <p
-              style={{
-                fontSize: 13,
-                color: textSecondary,
-                margin: '0 0 18px',
-                lineHeight: 1.65,
-              }}
-            >
+            </h2>
+            <p style={{ fontSize: 14, color: text2, margin: 0, lineHeight: 1.7 }}>
               {isRTL ? current.desc.ar : current.desc.en}
             </p>
 
-            {/* Navigation */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <button
-                onClick={handleComplete}
-                style={{
-                  border: 'none',
-                  background: 'none',
-                  cursor: 'pointer',
-                  fontSize: 12,
-                  color: textSecondary,
-                  padding: '6px 0',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {isRTL ? 'تخطي' : 'Skip'}
-              </button>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {step > 0 && (
-                  <button
-                    onClick={goPrev}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 4,
-                      border: `1px solid ${cardBorder}`,
-                      background: 'none',
-                      cursor: 'pointer',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: textSecondary,
-                      padding: '7px 14px',
-                      borderRadius: 8,
-                      fontFamily: 'inherit',
-                    }}
-                  >
-                    {!isRTL && <ChevronLeft size={14} />}
-                    {isRTL ? 'السابق' : 'Previous'}
-                    {isRTL && <ChevronRight size={14} />}
-                  </button>
-                )}
-                <button
-                  onClick={goNext}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: '#ffffff',
-                    backgroundColor: accent,
-                    padding: '7px 18px',
-                    borderRadius: 8,
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  {isRTL ? 'التالي' : 'Next'}
-                  {!isRTL && <ChevronRight size={14} />}
-                  {isRTL && <ChevronLeft size={14} />}
-                </button>
-              </div>
-            </div>
-
-            {/* Progress dots */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                marginTop: 16,
-              }}
-            >
-              {STEPS.map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    width: i === step ? 16 : 5,
-                    height: 5,
-                    borderRadius: 3,
-                    backgroundColor: i === step ? accent : (isDark ? 'rgba(148,163,184,0.2)' : 'rgba(0,0,0,0.1)'),
-                    transition: 'width 0.3s, background-color 0.3s',
-                  }}
-                />
-              ))}
-            </div>
+            <NavButtons centered />
+            <StepDots />
           </div>
-        )}
-      </div>
-    </>
+        </div>
+      )}
+
+      {/* Tooltip card for highlight steps */}
+      {!showAsCenter && tooltipPos && (
+        <div style={{
+          position: 'fixed',
+          top: tooltipPos.top,
+          left: tooltipPos.left,
+          width: tooltipPos.width,
+          borderRadius: 14,
+          backgroundColor: cardBg,
+          border: `1px solid ${border}`,
+          boxShadow: isDark ? '0 16px 40px rgba(0,0,0,0.4)' : '0 16px 40px rgba(0,0,0,0.12)',
+          padding: '16px 20px',
+          zIndex: 10,
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{
+                width: 30, height: 30, borderRadius: '50%',
+                background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Icon size={14} style={{ color: accent }} />
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: accent }}>
+                {step + 1} / {STEPS.length}
+              </span>
+            </div>
+            <button onClick={finish} style={{
+              border: 'none', background: 'none', cursor: 'pointer', padding: 4,
+              borderRadius: 6, display: 'flex', color: text2,
+            }}>
+              <X size={16} />
+            </button>
+          </div>
+
+          <h3 style={{ fontSize: 15, fontWeight: 700, color: text1, margin: '0 0 4px' }}>
+            {isRTL ? current.title.ar : current.title.en}
+          </h3>
+          <p style={{ fontSize: 13, color: text2, margin: 0, lineHeight: 1.6 }}>
+            {isRTL ? current.desc.ar : current.desc.en}
+          </p>
+
+          <NavButtons centered={false} />
+          <StepDots />
+        </div>
+      )}
+    </div>
   );
 }
