@@ -88,6 +88,7 @@ export const NAV_ITEMS = [
     { id: 'api-docs', label: { ar: 'توثيق API', en: 'API Docs' }, path: '/settings/api-docs', permission: P.SETTINGS_MANAGE },
     { id: 'export-import-history', label: { ar: 'سجل التصدير والاستيراد', en: 'Export/Import History' }, path: '/settings/export-import-history', permission: P.SETTINGS_MANAGE },
     { id: 'roles', label: { ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' }, icon: Shield, path: '/settings/roles', permission: P.ROLES_MANAGE },
+    { id: 'sla', label: { ar: 'اتفاقيات مستوى الخدمة', en: 'SLA Management' }, path: '/settings/sla', permission: P.SETTINGS_MANAGE },
   ]},
   { id: 'notifications', label: { ar: 'الإشعارات', en: 'Notifications' }, icon: Bell, path: '/notifications', permission: P.DASHBOARD },
   { id: 'changelog', label: { ar: 'ما الجديد', en: "What's New" }, icon: Gift, path: '/changelog', permission: P.DASHBOARD },
