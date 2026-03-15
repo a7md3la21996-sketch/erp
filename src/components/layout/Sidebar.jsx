@@ -225,6 +225,69 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
             );
           })}
         </nav>
+        {/* Profile link at bottom */}
+        <div style={{
+          padding: collapsed ? '12px 8px' : '12px 16px',
+          borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`,
+          flexShrink: 0,
+        }}>
+          <Link
+            to="/profile"
+            onClick={handleNavClick}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: collapsed ? '8px 0' : '8px 10px',
+              borderRadius: 10,
+              textDecoration: 'none',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              background: location.pathname === '/profile'
+                ? (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)')
+                : 'transparent',
+              transition: 'background 0.15s',
+            }}
+          >
+            <div style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #2B4C6F, #4A7AAB)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 12,
+              fontWeight: 700,
+              color: '#fff',
+              flexShrink: 0,
+            }}>
+              {(profile?.full_name_en || profile?.full_name_ar || '?').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            {!collapsed && (
+              <div style={{ overflow: 'hidden', flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: isDark ? '#e2e8f0' : '#1e293b',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}>
+                  {isRTL ? (profile?.full_name_ar || profile?.full_name_en) : (profile?.full_name_en || profile?.full_name_ar)}
+                </div>
+                <div style={{
+                  fontSize: 11,
+                  color: isDark ? '#64748b' : '#94a3b8',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}>
+                  {isRTL ? 'الملف الشخصي' : 'View Profile'}
+                </div>
+              </div>
+            )}
+          </Link>
+        </div>
       </aside>
     </>
   );

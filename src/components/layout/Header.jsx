@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -11,6 +11,7 @@ import RecentItemsDropdown from '../ui/RecentItemsDropdown';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { getUnreadCount } from '../../services/notificationsService';
 import { getSuggestionsCount } from '../../services/suggestionsService';
+import { getUnseenCount } from '../../pages/ChangelogPage';
 import { useShortcutsHelp } from './KeyboardShortcutsProvider';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,6 +33,7 @@ export default function Header({ onMenuClick }) {
   const { isOnline, pendingCount, isSyncing, syncResult } = useOfflineSync();
   const [unreadCount, setUnreadCount] = useState(0);
   const [suggestionsCount, setSuggestionsCount] = useState(0);
+  const [changelogUnseen, setChangelogUnseen] = useState(0);
   const { setShowHelp } = useShortcutsHelp();
   const navigate = useNavigate();
 
@@ -56,6 +58,14 @@ export default function Header({ onMenuClick }) {
     setSuggestionsCount(getSuggestionsCount());
     const interval = setInterval(() => setSuggestionsCount(getSuggestionsCount()), 5 * 60 * 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Changelog unseen count
+  useEffect(() => {
+    setChangelogUnseen(getUnseenCount());
+    const handler = () => setChangelogUnseen(getUnseenCount());
+    window.addEventListener('changelog_seen', handler);
+    return () => window.removeEventListener('changelog_seen', handler);
   }, []);
 
   useEffect(() => {
@@ -150,6 +160,18 @@ export default function Header({ onMenuClick }) {
           {suggestionsCount > 0 && (
             <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-[16px] bg-amber-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
               {suggestionsCount > 99 ? '99+' : suggestionsCount}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => { setChangelogUnseen(0); navigate('/changelog'); }}
+          className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative flex items-center"
+          title={isRTL ? 'ما الجديد' : "What's New"}
+        >
+          <Gift size={18} />
+          {changelogUnseen > 0 && (
+            <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-[16px] bg-emerald-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
+              {changelogUnseen > 99 ? '99+' : changelogUnseen}
             </span>
           )}
         </button>
@@ -358,6 +380,9 @@ export default function Header({ onMenuClick }) {
                 <div className="text-sm font-semibold text-content dark:text-content-dark">{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
                 <div className="text-xs text-content-muted dark:text-content-muted-dark mt-0.5">{profile?.email}</div>
               </div>
+              <button onClick={() => { setShowProfile(false); navigate('/profile'); }} className="w-full flex items-center gap-2 px-4 py-2.5 border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark text-sm hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
+                <User size={16} />{isRTL ? 'الملف الشخصي' : 'My Profile'}
+              </button>
               <button onClick={logout} className="w-full flex items-center gap-2 px-4 py-2.5 border-none cursor-pointer bg-transparent text-red-500 text-sm">
                 <LogOut size={16} />{t('auth.logout')}
               </button>

@@ -150,6 +150,15 @@ export const AVAILABLE_WIDGETS = [
     category: 'general',
     defaultSize: 'md',
   },
+  {
+    id: 'activity_heatmap',
+    title_ar: 'خريطة النشاط',
+    title_en: 'Activity Heatmap',
+    description_ar: 'خريطة حرارية للنشاط اليومي',
+    description_en: 'Daily activity heatmap calendar',
+    category: 'general',
+    defaultSize: 'full',
+  },
 ];
 
 const CATEGORY_ROLES = {

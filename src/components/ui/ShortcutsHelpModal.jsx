@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
-import { X, Keyboard } from 'lucide-react';
+import { X, Keyboard, RotateCcw } from 'lucide-react';
+import { resetOnboarding } from '../../services/onboardingService';
 
 const SHORTCUT_GROUPS = [
   {
@@ -207,31 +208,57 @@ export default function ShortcutsHelpModal({ onClose }) {
           ))}
         </div>
 
-        {/* Footer hint */}
+        {/* Footer */}
         <div
           style={{
             padding: '10px 20px',
             borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}`,
-            textAlign: 'center',
-            fontSize: 11,
-            color: isDark ? '#64748b' : '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
         >
-          {isRTL ? 'اضغط' : 'Press'}{' '}
-          <kbd
+          <button
+            onClick={() => {
+              resetOnboarding();
+              onClose();
+              // Dispatch event so OnboardingTour picks it up
+              window.dispatchEvent(new CustomEvent('platform_restart_tour'));
+            }}
             style={{
-              padding: '1px 5px',
-              borderRadius: 4,
-              fontSize: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              fontSize: 12,
               fontFamily: 'inherit',
-              backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
-              color: isDark ? '#94a3b8' : '#64748b',
+              color: '#4A7AAB',
+              padding: '4px 8px',
+              borderRadius: 6,
             }}
           >
-            Esc
-          </kbd>{' '}
-          {isRTL ? 'للإغلاق' : 'to close'}
+            <RotateCcw size={13} />
+            {isRTL ? 'إعادة الجولة التعريفية' : 'Restart Tour'}
+          </button>
+          <span style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>
+            {isRTL ? 'اضغط' : 'Press'}{' '}
+            <kbd
+              style={{
+                padding: '1px 5px',
+                borderRadius: 4,
+                fontSize: 10,
+                fontFamily: 'inherit',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+                color: isDark ? '#94a3b8' : '#64748b',
+              }}
+            >
+              Esc
+            </kbd>{' '}
+            {isRTL ? 'للإغلاق' : 'to close'}
+          </span>
         </div>
       </div>
     </div>

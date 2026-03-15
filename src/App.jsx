@@ -12,6 +12,7 @@ import { P } from './config/roles';
 import { Button } from './components/ui';
 import { PageSkeleton } from './components/ui/PageSkeletons';
 import ErrorBoundary from './components/ErrorBoundary';
+import OnboardingTour from './components/ui/OnboardingTour';
 import './i18n';
 
 // Lazy-loaded pages
@@ -61,6 +62,10 @@ const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const ChartBuilderPage = lazy(() => import('./pages/ChartBuilderPage'));
 const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'));
 const GoalsPage = lazy(() => import('./pages/GoalsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const HeatmapPage = lazy(() => import('./pages/HeatmapPage'));
+const SecurityPage = lazy(() => import('./pages/settings/SecurityPage'));
+const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -124,6 +129,7 @@ export default function App() {
           <ToastProvider>
             <AppErrorBoundary>
             <KeyboardShortcutsProvider>
+            <OnboardingTour />
             <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<AuthRedirect />} />
@@ -169,6 +175,7 @@ export default function App() {
                 <Route path="/chat" element={<Guarded><ChatInboxPage /></Guarded>} />
                 <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
                 <Route path="/analytics" element={<Guarded><AnalyticsPage /></Guarded>} />
+                <Route path="/heatmap" element={<Guarded><HeatmapPage /></Guarded>} />
                 <Route path="/chart-builder" element={<Guarded><ChartBuilderPage /></Guarded>} />
                 <Route path="/announcements" element={<Guarded><AnnouncementsPage /></Guarded>} />
                 <Route path="/settings/general" element={<Guarded><SettingsPage /></Guarded>} />
@@ -182,7 +189,10 @@ export default function App() {
                 <Route path="/settings/scheduled-reports" element={<Guarded><ScheduledReportsPage /></Guarded>} />
                 <Route path="/settings/sms-templates" element={<Guarded><SMSTemplatesPage /></Guarded>} />
                 <Route path="/settings/print" element={<Guarded><PrintSettingsPage /></Guarded>} />
+                <Route path="/settings/security" element={<Guarded><SecurityPage /></Guarded>} />
+                <Route path="/changelog" element={<Guarded><ChangelogPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
+                <Route path="/profile" element={<Guarded><ProfilePage /></Guarded>} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />
             </Routes>

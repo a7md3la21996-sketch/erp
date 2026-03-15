@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Target, Building2, ActivitySquare, BookUser,
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
-  TrendingUp, PieChart, Volume2, Crosshair,
+  TrendingUp, PieChart, Volume2, Crosshair, Grid3x3, Shield, Gift,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -67,6 +67,7 @@ export const NAV_ITEMS = [
   { id: 'announcements', label: { ar: 'الإعلانات', en: 'Announcements' }, icon: Volume2, path: '/announcements', permission: P.DASHBOARD },
   { id: 'chat', label: { ar: 'المحادثات', en: 'Chat' }, icon: MessageSquare, path: '/chat', permission: P.CHAT_USE },
   { id: 'reports', label: { ar: 'التقارير', en: 'Reports' }, icon: BarChart3, path: '/reports', permission: P.RPT_SALES },
+  { id: 'heatmap', label: { ar: 'خريطة النشاط', en: 'Activity Map' }, icon: Grid3x3, path: '/heatmap', permission: P.RPT_SALES },
   { id: 'analytics', label: { ar: 'تحليلات متقدمة', en: 'Analytics' }, icon: TrendingUp, path: '/analytics', permission: P.RPT_SALES },
   { id: 'chart-builder', label: { ar: 'منشئ الرسوم البيانية', en: 'Chart Builder' }, icon: PieChart, path: '/chart-builder', permission: P.RPT_SALES },
   { id: 'settings', label: { ar: 'الإعدادات', en: 'Settings' }, icon: Settings, permission: P.SETTINGS_VIEW, children: [
@@ -81,5 +82,7 @@ export const NAV_ITEMS = [
     { id: 'scheduled-reports', label: { ar: 'تقارير مجدولة', en: 'Scheduled Reports' }, path: '/settings/scheduled-reports', permission: P.SETTINGS_MANAGE },
     { id: 'sms-templates', label: { ar: 'قوالب الرسائل', en: 'SMS Templates' }, path: '/settings/sms-templates', permission: P.SETTINGS_MANAGE },
     { id: 'print-settings', label: { ar: 'إعدادات الطباعة', en: 'Print Settings' }, path: '/settings/print', permission: P.SETTINGS_MANAGE },
+    { id: 'security', label: { ar: 'الأمان', en: 'Security' }, icon: Shield, path: '/settings/security', permission: P.SETTINGS_MANAGE },
   ]},
+  { id: 'changelog', label: { ar: 'ما الجديد', en: "What's New" }, icon: Gift, path: '/changelog', permission: P.DASHBOARD },
 ];

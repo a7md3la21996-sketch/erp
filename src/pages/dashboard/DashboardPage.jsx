@@ -19,6 +19,8 @@ import { getLayout, saveLayout, resetLayout, getWidgetMeta, AVAILABLE_WIDGETS, W
 import SuggestionsPanel from '../../components/ui/SuggestionsPanel';
 import { getQuarterSummary, computeObjectiveProgress, getObjectives, STATUS_COLORS } from '../../services/okrService';
 import { getAnnouncements, isRead as isAnnRead, markAsRead as markAnnRead, CATEGORIES as ANN_CATEGORIES, PRIORITIES as ANN_PRIORITIES } from '../../services/announcementService';
+import HeatmapCalendar from '../../components/ui/HeatmapCalendar';
+import { getActivityHeatmap } from '../../services/heatmapService';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -1063,6 +1065,44 @@ export default function DashboardPage() {
                 );
               })}
             </div>
+          </div>
+        );
+      }
+
+      case 'activity_heatmap': {
+        const heatData = getActivityHeatmap(3);
+        return (
+          <div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 14,
+              flexDirection: isRTL ? 'row-reverse' : 'row',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                flexDirection: isRTL ? 'row-reverse' : 'row',
+              }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: '#4A7AAB1e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Activity size={16} color="#4A7AAB" />
+                </div>
+                <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                    {lang === 'ar' ? 'خريطة النشاط' : 'Activity Heatmap'}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' }}>
+                    {lang === 'ar' ? 'آخر 3 أشهر' : 'Last 3 months'}
+                  </p>
+                </div>
+              </div>
+              <Link to="/heatmap" style={{ fontSize: 12, color: '#4A7AAB', textDecoration: 'none', fontWeight: 600 }}>
+                {lang === 'ar' ? 'عرض التفاصيل' : 'View Details'}
+              </Link>
+            </div>
+            <HeatmapCalendar data={heatData} months={3} compact />
           </div>
         );
       }
