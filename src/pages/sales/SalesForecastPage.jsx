@@ -284,33 +284,33 @@ export default function SalesForecastPage() {
         gap: 16, marginBottom: 24,
       }}>
         <KpiCard
-          title={isRTL ? 'إجمالي خط الأنابيب' : 'Total Pipeline'}
+          label={isRTL ? 'إجمالي خط الأنابيب' : 'Total Pipeline'}
           value={fmtMoney(kpis.totalPipeline)}
-          icon={<DollarSign size={18} />}
+          icon={DollarSign}
           color="#4A7AAB"
         />
         <KpiCard
-          title={isRTL ? 'التوقع المرجح' : 'Weighted Forecast'}
+          label={isRTL ? 'التوقع المرجح' : 'Weighted Forecast'}
           value={fmtMoney(kpis.weightedRevenue)}
-          icon={<TrendingUp size={18} />}
+          icon={TrendingUp}
           color="#3B82F6"
         />
         <KpiCard
-          title={isRTL ? 'الإيراد الفعلي' : 'Actual Revenue'}
+          label={isRTL ? 'الإيراد الفعلي' : 'Actual Revenue'}
           value={fmtMoney(kpis.actualRevenue)}
-          icon={<Target size={18} />}
+          icon={Target}
           color="#10B981"
         />
         <KpiCard
-          title={isRTL ? 'نسبة الفوز' : 'Win Rate'}
+          label={isRTL ? 'نسبة الفوز' : 'Win Rate'}
           value={`${kpis.winRate}%`}
-          icon={<Percent size={18} />}
+          icon={Percent}
           color="#F59E0B"
         />
         <KpiCard
-          title={isRTL ? 'متوسط الصفقة' : 'Avg Deal Size'}
+          label={isRTL ? 'متوسط الصفقة' : 'Avg Deal Size'}
           value={fmtMoney(kpis.avgDealSize)}
-          icon={<BarChart3 size={18} />}
+          icon={BarChart3}
           color="#8B5CF6"
         />
       </div>
