@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
-import { X, Keyboard, RotateCcw } from 'lucide-react';
-import { resetOnboarding } from '../../services/onboardingService';
+import { X, Keyboard } from 'lucide-react';
 
 const SHORTCUT_GROUPS = [
   {
@@ -218,30 +217,6 @@ export default function ShortcutsHelpModal({ onClose }) {
             justifyContent: 'space-between',
           }}
         >
-          <button
-            onClick={() => {
-              resetOnboarding();
-              onClose();
-              // Dispatch event so OnboardingTour picks it up
-              window.dispatchEvent(new CustomEvent('platform_restart_tour'));
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              fontSize: 12,
-              fontFamily: 'inherit',
-              color: '#4A7AAB',
-              padding: '4px 8px',
-              borderRadius: 6,
-            }}
-          >
-            <RotateCcw size={13} />
-            {isRTL ? 'إعادة الجولة التعريفية' : 'Restart Tour'}
-          </button>
           <span style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>
             {isRTL ? 'اضغط' : 'Press'}{' '}
             <kbd

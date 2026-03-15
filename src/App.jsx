@@ -12,7 +12,7 @@ import { P } from './config/roles';
 import { Button } from './components/ui';
 import { PageSkeleton } from './components/ui/PageSkeletons';
 import ErrorBoundary from './components/ErrorBoundary';
-import OnboardingTour from './components/ui/OnboardingTour';
+
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import './i18n';
 
@@ -138,7 +138,7 @@ export default function App() {
             <AppErrorBoundary>
             <KeyboardShortcutsProvider>
             <ConnectionStatus />
-            <OnboardingTour />
+
             <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/login" element={<AuthRedirect />} />
