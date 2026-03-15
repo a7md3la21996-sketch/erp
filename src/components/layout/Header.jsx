@@ -111,6 +111,24 @@ export default function Header({ onMenuClick }) {
           <Menu size={22} />
         </button>
 
+        {/* Connection dot indicator */}
+        <span
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: isOnline ? '#22c55e' : '#ef4444',
+            display: 'inline-block',
+            flexShrink: 0,
+            boxShadow: isOnline ? '0 0 4px rgba(34,197,94,0.4)' : '0 0 4px rgba(239,68,68,0.4)',
+            transition: 'background 0.3s, box-shadow 0.3s',
+          }}
+          title={isOnline
+            ? (isRTL ? 'متصل' : 'Online')
+            : (isRTL ? 'غير متصل' : 'Offline')
+          }
+        />
+
         {/* Search button - full on desktop, icon-only on mobile */}
         <button onClick={() => setShowSearch(true)} className={`hidden md:flex w-full h-10 rounded-[10px] items-center gap-2.5 border border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-input-dark cursor-pointer text-content-muted dark:text-brand-400 text-sm font-[inherit] ps-3.5 pe-2.5`}>
           <Search size={16} className="shrink-0" />

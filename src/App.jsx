@@ -13,6 +13,7 @@ import { Button } from './components/ui';
 import { PageSkeleton } from './components/ui/PageSkeletons';
 import ErrorBoundary from './components/ErrorBoundary';
 import OnboardingTour from './components/ui/OnboardingTour';
+import ConnectionStatus from './components/ui/ConnectionStatus';
 import './i18n';
 
 // Lazy-loaded pages
@@ -65,6 +66,9 @@ const GoalsPage = lazy(() => import('./pages/GoalsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const HeatmapPage = lazy(() => import('./pages/HeatmapPage'));
 const SecurityPage = lazy(() => import('./pages/settings/SecurityPage'));
+const WorkflowBuilderPage = lazy(() => import('./pages/settings/WorkflowBuilderPage'));
+const SystemHealthPage = lazy(() => import('./pages/settings/SystemHealthPage'));
+const APIDocsPage = lazy(() => import('./pages/settings/APIDocsPage'));
 const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
 
 function PageLoader() {
@@ -129,6 +133,7 @@ export default function App() {
           <ToastProvider>
             <AppErrorBoundary>
             <KeyboardShortcutsProvider>
+            <ConnectionStatus />
             <OnboardingTour />
             <Suspense fallback={<PageLoader />}>
             <Routes>
@@ -190,6 +195,9 @@ export default function App() {
                 <Route path="/settings/sms-templates" element={<Guarded><SMSTemplatesPage /></Guarded>} />
                 <Route path="/settings/print" element={<Guarded><PrintSettingsPage /></Guarded>} />
                 <Route path="/settings/security" element={<Guarded><SecurityPage /></Guarded>} />
+                <Route path="/settings/workflows" element={<Guarded><WorkflowBuilderPage /></Guarded>} />
+                <Route path="/settings/system-health" element={<Guarded><SystemHealthPage /></Guarded>} />
+                <Route path="/settings/api-docs" element={<Guarded><APIDocsPage /></Guarded>} />
                 <Route path="/changelog" element={<Guarded><ChangelogPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/profile" element={<Guarded><ProfilePage /></Guarded>} />

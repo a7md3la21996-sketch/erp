@@ -82,7 +82,10 @@ export const NAV_ITEMS = [
     { id: 'scheduled-reports', label: { ar: 'تقارير مجدولة', en: 'Scheduled Reports' }, path: '/settings/scheduled-reports', permission: P.SETTINGS_MANAGE },
     { id: 'sms-templates', label: { ar: 'قوالب الرسائل', en: 'SMS Templates' }, path: '/settings/sms-templates', permission: P.SETTINGS_MANAGE },
     { id: 'print-settings', label: { ar: 'إعدادات الطباعة', en: 'Print Settings' }, path: '/settings/print', permission: P.SETTINGS_MANAGE },
+    { id: 'workflows', label: { ar: 'سير العمل', en: 'Workflows' }, path: '/settings/workflows', permission: P.SETTINGS_MANAGE },
     { id: 'security', label: { ar: 'الأمان', en: 'Security' }, icon: Shield, path: '/settings/security', permission: P.SETTINGS_MANAGE },
+    { id: 'system-health', label: { ar: 'حالة النظام', en: 'System Health' }, path: '/settings/system-health', permission: P.SETTINGS_MANAGE },
+    { id: 'api-docs', label: { ar: 'توثيق API', en: 'API Docs' }, path: '/settings/api-docs', permission: P.SETTINGS_MANAGE },
   ]},
   { id: 'changelog', label: { ar: 'ما الجديد', en: "What's New" }, icon: Gift, path: '/changelog', permission: P.DASHBOARD },
 ];
