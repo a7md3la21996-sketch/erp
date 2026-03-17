@@ -26,6 +26,8 @@ import { useResponsive } from '../../hooks/useMediaQuery';
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
 const EMPTY_CRM = { totalLeads: 0, newLeadsThisMonth: 0, activeOpps: 0, closedDeals: 0, revenue: 0 };
+// Safety: ensure values are never objects when rendered as React children (error #310)
+const safeChild = (v) => (v != null && typeof v === 'object') ? JSON.stringify(v) : v;
 const DATE_RANGE_OPTIONS = [
   { value: 'this_week',     label_ar: 'هذا الأسبوع',    label_en: 'This Week' },
   { value: 'this_month',    label_ar: 'هذا الشهر',     label_en: 'This Month' },
@@ -58,7 +60,7 @@ function ChartTooltip({ active, payload, label, isDark, isRTL }) {
   return (
     <div className={`rounded-lg px-3.5 py-2.5 shadow-xl text-xs border border-brand-500/20 backdrop-blur-sm ${isDark ? 'bg-surface-card-dark/95' : 'bg-white/95'}`} dir={isRTL ? 'rtl' : 'ltr'}>
       <div className="mb-1 text-content-muted dark:text-content-muted-dark font-medium">{label}</div>
-      {payload.map((p, i) => <div key={i} className="text-brand-500 font-bold text-sm">{typeof p.value === 'number' && p.value >= 10000 ? Number((p.value / 1000).toFixed(0)).toLocaleString() + 'K EGP' : typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</div>)}
+      {payload.map((p, i) => <div key={i} className="text-brand-500 font-bold text-sm">{typeof p.value === 'number' && p.value >= 10000 ? Number((p.value / 1000).toFixed(0)).toLocaleString() + 'K EGP' : typeof p.value === 'number' ? p.value.toLocaleString() : safeChild(p.value)}</div>)}
     </div>
   );
 }
@@ -270,7 +272,7 @@ function WidgetCard({ title, children, isDark, isRTL, lang, collapsed, onToggleC
           fontSize: 13,
           fontWeight: 700,
           color: isDark ? '#e2e8f0' : '#1e293b',
-        }}>{title}</span>
+        }}>{safeChild(title)}</span>
         <button
           onClick={onToggleCollapse}
           style={{
@@ -681,16 +683,15 @@ export default function DashboardPage() {
 
   const mutedColor = isDark ? '#8BA8C8' : '#64748B';
 
-  const safeVal = (v) => (v != null && typeof v === 'object') ? JSON.stringify(v) : v;
   const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB', onClick }) => (
     <Card className={`relative overflow-hidden px-5 py-[18px] ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow duration-200' : ''}`} onClick={onClick}>
       <div className="absolute top-0 start-0 w-1 h-full rounded-s-xl" style={{ background: 'linear-gradient(180deg,' + color + ',transparent)' }} />
       <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="text-start">
-          <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark font-medium">{safeVal(label)}</p>
-          <p className="m-0 text-2xl font-bold text-content dark:text-content-dark leading-none">{safeVal(value)}</p>
-          {sub && <p className="m-0 mt-1 text-xs text-content-muted dark:text-content-muted-dark">{safeVal(sub)}</p>}
-          {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-xs font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{safeVal(trend)}</span></div>}
+          <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark font-medium">{safeChild(label)}</p>
+          <p className="m-0 text-2xl font-bold text-content dark:text-content-dark leading-none">{safeChild(value)}</p>
+          {sub && <p className="m-0 mt-1 text-xs text-content-muted dark:text-content-muted-dark">{safeChild(sub)}</p>}
+          {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-xs font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{safeChild(trend)}</span></div>}
         </div>
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: color + '18' }}><Icon size={20} color={color} /></div>
       </div>
@@ -827,12 +828,12 @@ export default function DashboardPage() {
                       <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#1B3347' : i === 1 ? '#2B4C6F' : 'rgba(74,122,171,0.15)' }}><span className={`text-xs font-bold ${i < 2 ? 'text-white' : 'text-brand-500'}`}>{i + 1}</span></div>
                       <div className="flex-1 min-w-0">
                         <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                          <span className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? s.name_ar : s.name_en}</span>
-                          <span className="text-xs text-brand-500 font-bold">{(s.revenue / 1000).toFixed(0)}K</span>
+                          <span className="text-xs font-semibold text-content dark:text-content-dark">{safeChild(lang === 'ar' ? s.name_ar : s.name_en)}</span>
+                          <span className="text-xs text-brand-500 font-bold">{((s.revenue || 0) / 1000).toFixed(0)}K</span>
                         </div>
-                        <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08]"><div className="h-full rounded-sm" style={{ width: s.pct + '%', background: i === 0 ? '#4A7AAB' : i === 1 ? '#6B8DB5' : '#8BA8C8' }} /></div>
+                        <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08]"><div className="h-full rounded-sm" style={{ width: (s.pct || 0) + '%', background: i === 0 ? '#4A7AAB' : i === 1 ? '#6B8DB5' : '#8BA8C8' }} /></div>
                       </div>
-                      <span className="text-[10px] text-content-muted dark:text-content-muted-dark min-w-[26px] text-center">{s.pct}%</span>
+                      <span className="text-[10px] text-content-muted dark:text-content-muted-dark min-w-[26px] text-center">{s.pct || 0}%</span>
                     </div>
                   ))}
                 </div>
@@ -910,7 +911,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                        <span className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? p.employee.full_name_ar : p.employee.full_name_en}</span>
+                        <span className="text-xs font-semibold text-content dark:text-content-dark">{safeChild(lang === 'ar' ? p.employee?.full_name_ar : p.employee?.full_name_en)}</span>
                         <span className="text-xs font-bold" style={{ color: pColor }}>{p.overallPct}%</span>
                       </div>
                       <div className="h-1.5 rounded bg-gray-200 dark:bg-white/[0.08]">
@@ -955,8 +956,8 @@ export default function DashboardPage() {
                   border: '1px solid ' + (isDark ? '#ffffff0a' : '#e2e8f0'),
                   flexDirection: isRTL ? 'row-reverse' : 'row',
                 }}>
-                  <span style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>{item.label}</span>
-                  <span style={{ fontSize: 16, fontWeight: 700, color: item.color }}>{item.value}</span>
+                  <span style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>{safeChild(item.label)}</span>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: item.color }}>{safeChild(item.value)}</span>
                 </div>
               ))}
             </div>
@@ -970,7 +971,7 @@ export default function DashboardPage() {
             <CardTitle icon={ShieldAlert} title={lang === 'ar' ? 'موافقات معلقة' : 'Pending Approvals'} />
             <div style={{ textAlign: 'center', padding: '16px 0' }}>
               <div style={{ fontSize: 36, fontWeight: 800, color: '#4A7AAB', lineHeight: 1 }}>
-                {hr.pendingLeaves}
+                {safeChild(hr.pendingLeaves)}
               </div>
               <p style={{ margin: '8px 0 0', fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>
                 {lang === 'ar' ? 'طلب يحتاج موافقة' : 'requests pending'}
@@ -1000,8 +1001,8 @@ export default function DashboardPage() {
                   border: '1px solid ' + (isDark ? '#ffffff0a' : '#e2e8f0'),
                   flexDirection: isRTL ? 'row-reverse' : 'row',
                 }}>
-                  <span style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>{item.label}</span>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{item.value}</span>
+                  <span style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b' }}>{safeChild(item.label)}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: item.color }}>{safeChild(item.value)}</span>
                 </div>
               ))}
             </div>
@@ -1076,12 +1077,12 @@ export default function DashboardPage() {
                     {ann.pinned && <Pin size={12} color="#4A7AAB" style={{ marginTop: 3, flexShrink: 0 }} />}
                     <div style={{ flex: 1, minWidth: 0, textAlign: isRTL ? 'right' : 'left' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row', marginBottom: 2 }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{safeChild(title)}</span>
                         <span style={{ fontSize: 9, fontWeight: 600, padding: '1px 6px', borderRadius: 10, background: cat.color + '18', color: cat.color, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                          {lang === 'ar' ? cat.ar : cat.en}
+                          {safeChild(lang === 'ar' ? cat.ar : cat.en)}
                         </span>
                       </div>
-                      <p style={{ margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{body}</p>
+                      <p style={{ margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{safeChild(body)}</p>
                     </div>
                   </Link>
                 );
@@ -1164,7 +1165,7 @@ export default function DashboardPage() {
         <div className={`flex gap-3 relative ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: filteredCrm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
             <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-xl">
-              <p className="m-0 text-xl font-bold text-white">{s.v}</p>
+              <p className="m-0 text-xl font-bold text-white">{safeChild(s.v)}</p>
               <p className="m-0 text-xs text-white/65">{s.l}</p>
             </div>
           ))}
@@ -1256,7 +1257,7 @@ export default function DashboardPage() {
                   {lang === 'ar' ? `أهداف ${cq}` : `${cq} Goals`}
                 </p>
                 <p style={{ margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' }}>
-                  {gs.total} {lang === 'ar' ? 'هدف' : 'objectives'}
+                  {safeChild(gs.total)} {lang === 'ar' ? 'هدف' : 'objectives'}
                 </p>
               </div>
             </div>
@@ -1264,16 +1265,16 @@ export default function DashboardPage() {
               <div style={{ width: 120 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span style={{ fontSize: 10, color: isDark ? '#94a3b8' : '#64748b' }}>{lang === 'ar' ? 'التقدم' : 'Progress'}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: pColor }}>{gs.avgProgress}%</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: pColor }}>{safeChild(gs.avgProgress)}%</span>
                 </div>
                 <div style={{ width: '100%', height: 6, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.12)' : '#f1f5f9' }}>
                   <div style={{ width: `${Math.min(gs.avgProgress, 100)}%`, height: '100%', borderRadius: 3, background: pColor, transition: 'width 0.4s' }} />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#10B981' }}>{gs.onTrack} {lang === 'ar' ? 'على المسار' : 'on track'}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#F59E0B' }}>{gs.atRisk} {lang === 'ar' ? 'في خطر' : 'at risk'}</span>
-                {gs.behind > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: '#EF4444' }}>{gs.behind} {lang === 'ar' ? 'متأخر' : 'behind'}</span>}
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#10B981' }}>{safeChild(gs.onTrack)} {lang === 'ar' ? 'على المسار' : 'on track'}</span>
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#F59E0B' }}>{safeChild(gs.atRisk)} {lang === 'ar' ? 'في خطر' : 'at risk'}</span>
+                {gs.behind > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: '#EF4444' }}>{safeChild(gs.behind)} {lang === 'ar' ? 'متأخر' : 'behind'}</span>}
               </div>
             </div>
           </div>
@@ -1321,7 +1322,7 @@ export default function DashboardPage() {
                       fontSize: 13,
                       fontWeight: 700,
                       color: isDark ? '#e2e8f0' : '#1e293b',
-                    }}>{title}</span>
+                    }}>{safeChild(title)}</span>
                     <button
                       onClick={() => toggleCollapse(item.widgetId)}
                       style={{
