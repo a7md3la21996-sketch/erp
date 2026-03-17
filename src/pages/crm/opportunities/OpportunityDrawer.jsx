@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/favoritesService';
 import { fetchContactActivities, createActivity } from '../../../services/contactsService';
 import FollowUpReminder from '../../../components/ui/FollowUpReminder';
@@ -7,7 +8,8 @@ import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
 import { getEmailsByOpportunity, sendEmail } from '../../../services/emailService';
 import { logMessage as logWhatsAppMessage, generateWhatsAppLink } from '../../../services/whatsappService';
-import { getDeptStages, deptStageLabel } from '../contacts/constants';
+import { getDeptStages, deptStageLabel, useEscClose } from '../contacts/constants';
+import EditOpportunityModal from './EditOpportunityModal';
 import {
   TEMP_CONFIG, PRIORITY_CONFIG, ACTIVITY_ICONS,
   calcLeadScore, scoreColor, scoreLabel, fmtBudget, daysInStage,
@@ -18,7 +20,7 @@ import {
   Plus, X, Trash2, Building2, Banknote, Loader2, Pencil,
   Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star,
   MapPin, Briefcase, Calendar, ExternalLink, StickyNote,
-  ChevronUp, ChevronDown, FileText,
+  ChevronUp, ChevronDown, FileText, MoreVertical, MessageSquare, Zap,
 } from 'lucide-react';
 import { getQuotesByOpportunity } from '../../../services/quotesService';
 import { Button, Input, Select, Textarea } from '../../../components/ui';
@@ -27,7 +29,7 @@ import { useToast } from '../../../contexts/ToastContext';
 export default function OpportunityDrawer({
   selectedOpp, onClose, onMove, onDelete, onUpdate,
   agents, projects, opps,
-  isAdmin, isRTL, lang, isDark, profile,
+  isAdmin, isRTL: isRTLProp, lang, isDark, profile,
   scoreMap, configActivityResults, configActivityTypes, ACTIVITY_ICON_MAP,
   sourceLabelsMap, configTypeMap, deptLabelsMap, lostReasonsMap, configLostReasons,
   onPrev, onNext,
@@ -35,13 +37,16 @@ export default function OpportunityDrawer({
 }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const { i18n } = useTranslation();
+  const isRTL = isRTLProp ?? i18n.language === 'ar';
 
-  // ─── Drawer-local state ───
-  const [editingOpp, setEditingOpp] = useState(false);
-  const [editForm, setEditForm] = useState({});
-  const [editSaving, setEditSaving] = useState(false);
+  // ─── State ───
+  const [tab, setTab] = useState('activity');
+  const [showEdit, setShowEdit] = useState(false);
+  const [showDrawerMenu, setShowDrawerMenu] = useState(false);
   const [showAddActivity, setShowAddActivity] = useState(false);
   const [activityForm, setActivityForm] = useState({ type: 'call', description: '', result: '' });
+  const [allActivities, setAllActivities] = useState([]);
   const [drawerActivities, setDrawerActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [activityLimit, setActivityLimit] = useState(5);
@@ -50,36 +55,37 @@ export default function OpportunityDrawer({
   const [editingNote, setEditingNote] = useState(null);
   const [editNoteText, setEditNoteText] = useState('');
   const [stageHistory, setStageHistory] = useState([]);
-  const [showNotes, setShowNotes] = useState(false);
   const [stageConfirm, setStageConfirm] = useState(null);
-  // Used for copy-phone toast inside drawer
-  const [copyToast, setCopyToast] = useState(null);
-  // Linked quotes count
   const [linkedQuotesCount, setLinkedQuotesCount] = useState(0);
-  const drawerRef = useRef(null);
 
-  // Check if edit form has unsaved changes
-  const isEditDirty = editingOpp && selectedOpp && (
-    String(editForm.budget) !== String(selectedOpp.budget || '') ||
-    editForm.temperature !== (selectedOpp.temperature || 'cold') ||
-    editForm.priority !== (selectedOpp.priority || 'medium') ||
-    editForm.assigned_to !== (selectedOpp.assigned_to || '') ||
-    editForm.project_id !== (selectedOpp.project_id || '') ||
-    editForm.notes !== (selectedOpp.notes || '') ||
-    editForm.stage !== (selectedOpp.stage || 'qualification') ||
-    editForm.expected_close_date !== (selectedOpp.expected_close_date || '')
-  );
+  // Favorites
+  const [isFav, setIsFav] = useState(false);
+  useEffect(() => {
+    if (selectedOpp?.id) setIsFav(checkFavorite(`opp_${selectedOpp.id}`));
+  }, [selectedOpp?.id]);
+  const handleToggleFav = () => {
+    const contactName = selectedOpp.contacts ? (isRTL ? (selectedOpp.contacts.full_name_ar || selectedOpp.contacts.full_name_en) : (selectedOpp.contacts.full_name_en || selectedOpp.contacts.full_name_ar)) : '';
+    const result = toggleFavorite({
+      id: `opp_${selectedOpp.id}`,
+      type: 'opportunity',
+      name: contactName || `Opportunity #${selectedOpp.id}`,
+      nameAr: selectedOpp.contacts?.full_name_ar || selectedOpp.contacts?.full_name_en || `فرصة #${selectedOpp.id}`,
+      path: `/crm/opportunities?highlight=${selectedOpp.id}`,
+    });
+    setIsFav(result.added);
+  };
 
-  const closeDrawer = useCallback(() => {
-    if (isEditDirty) {
-      if (!window.confirm(isRTL ? 'يوجد تغييرات لم يتم حفظها. هل تريد الإغلاق؟' : 'You have unsaved changes. Close anyway?')) return;
-    }
-    setEditingOpp(false);
-    onClose();
-  }, [isEditDirty, isRTL, onClose]);
+  // ESC close
+  useEscClose(onClose);
 
-  // Fetch activities for drawer
-  const [allActivities, setAllActivities] = useState([]);
+  // Reset tab on opp change
+  useEffect(() => {
+    setTab('activity');
+    setShowAddActivity(false);
+    setShowDrawerMenu(false);
+  }, [selectedOpp?.id]);
+
+  // Fetch activities
   useEffect(() => {
     if (!selectedOpp?.contact_id) { setAllActivities([]); setDrawerActivities([]); return; }
     let cancelled = false;
@@ -96,252 +102,173 @@ export default function OpportunityDrawer({
     setDrawerActivities(allActivities.slice(0, activityLimit));
   }, [activityLimit, allActivities]);
 
-  // Load notes & stage history for drawer
+  // Notes & stage history
   useEffect(() => {
     if (!selectedOpp?.id) { setDrawerNotes([]); setStageHistory([]); return; }
     setDrawerNotes(getOppNotes(selectedOpp.id));
     setStageHistory(getStageHistory(selectedOpp.id));
   }, [selectedOpp?.id, selectedOpp?.stage]);
 
-  // Reset edit mode when selectedOpp changes (e.g. prev/next navigation)
-  useEffect(() => {
-    setEditingOpp(false);
-  }, [selectedOpp?.id]);
-
-  // Load linked quotes count
+  // Quotes count
   useEffect(() => {
     if (!selectedOpp?.id) { setLinkedQuotesCount(0); return; }
-    try {
-      const quotes = getQuotesByOpportunity(selectedOpp.id);
-      setLinkedQuotesCount(quotes.length);
-    } catch { setLinkedQuotesCount(0); }
+    try { setLinkedQuotesCount(getQuotesByOpportunity(selectedOpp.id).length); } catch { setLinkedQuotesCount(0); }
   }, [selectedOpp?.id]);
 
-  const startEdit = () => {
-    setEditForm({
-      budget: selectedOpp.budget || '',
-      temperature: selectedOpp.temperature || 'cold',
-      priority: selectedOpp.priority || 'medium',
-      assigned_to: selectedOpp.assigned_to || '',
-      project_id: selectedOpp.project_id || '',
-      notes: selectedOpp.notes || '',
-      stage: selectedOpp.stage || 'qualification',
-      expected_close_date: selectedOpp.expected_close_date || '',
-    });
-    setEditingOpp(true);
-  };
-
-  const saveEdit = async () => {
-    setEditSaving(true);
-    const stageChanged = editForm.stage !== selectedOpp.stage;
-    if (stageChanged) {
-      // If changing to closed_lost, need reason — delegate to parent
-      if (editForm.stage === 'closed_lost') {
-        setEditSaving(false);
-        onEditStageLost(selectedOpp.id, editForm);
-        return;
-      }
-      addStageHistory(selectedOpp.id, selectedOpp.stage, editForm.stage);
-    }
-    const assignmentChanged = editForm.assigned_to !== (selectedOpp.assigned_to || '');
-    const updates = {
-      budget: Number(editForm.budget) || 0,
-      temperature: editForm.temperature,
-      priority: editForm.priority,
-      assigned_to: editForm.assigned_to || null,
-      ...(assignmentChanged ? { assigned_by: profile?.id || null } : {}),
-      project_id: editForm.project_id || null,
-      notes: editForm.notes,
-      expected_close_date: editForm.expected_close_date || null,
-      ...(stageChanged ? { stage: editForm.stage, stage_changed_at: new Date().toISOString() } : {}),
-    };
-    await onUpdate(selectedOpp.id, updates);
-    if (stageChanged) setStageHistory(getStageHistory(selectedOpp.id));
-    setEditingOpp(false);
-    setEditSaving(false);
-    toast.success(isRTL ? 'تم حفظ التعديلات' : 'Changes saved');
-  };
-
-  // Ctrl+S to save in edit mode
+  // Close outside click on menu
+  const menuRef = useRef(null);
   useEffect(() => {
-    const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 's' && editingOpp) {
-        e.preventDefault();
-        if (!editSaving) saveEdit();
-      }
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [editingOpp, editSaving, editForm]);
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setShowDrawerMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
-  const handlePrev = onPrev ? () => { setEditingOpp(false); onPrev(); } : null;
-  const handleNext = onNext ? () => { setEditingOpp(false); onNext(); } : null;
+  const handlePrev = onPrev ? () => onPrev() : null;
+  const handleNext = onNext ? () => onNext() : null;
+
+  const handleSaveEdit = async (oppId, updates) => {
+    await onUpdate(oppId, updates);
+    if (updates.stage && updates.stage !== selectedOpp.stage) {
+      setStageHistory(getStageHistory(oppId));
+    }
+  };
 
   if (!selectedOpp) return null;
 
+  // Derived
+  const score = scoreMap[selectedOpp.id] ?? calcLeadScore(selectedOpp);
+  const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
+  const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
+  const progressPct = stages.length > 1 ? Math.round((Math.max(0, currentIdx) / (stages.length - 1)) * 100) : 0;
+
+  // Tabs config
+  const tabs = [
+    { key: 'activity', label: isRTL ? 'النشاط' : 'Activity', icon: Clock },
+    { key: 'details', label: isRTL ? 'التفاصيل' : 'Details', icon: Briefcase },
+    { key: 'documents', label: isRTL ? 'المستندات' : 'Documents', icon: FileText },
+    { key: 'comments', label: isRTL ? 'تعليقات' : 'Comments', icon: MessageSquare },
+  ];
+
   return (
-    <div
-      role="dialog"
-      dir={isRTL ? 'rtl' : 'ltr'}
-      className={`fixed inset-0 z-[200] bg-black/40 flex ${isRTL ? 'flex-row' : 'flex-row-reverse'}`}
-      onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}
-    >
-      <div className="w-full max-w-[100vw] sm:max-w-[460px] h-full bg-surface-card dark:bg-surface-card-dark shadow-[-8px_0_40px_rgba(0,0,0,0.2)] flex flex-col overflow-y-auto">
-        {/* Drawer Header */}
-        <div className="px-6 py-5 border-b border-edge dark:border-edge-dark flex items-center justify-between bg-[#F8FAFC] dark:bg-surface-bg-dark">
-          <div className="flex items-center gap-3">
+    <>
+    {showEdit && (
+      <EditOpportunityModal
+        opp={selectedOpp}
+        agents={agents}
+        projects={projects}
+        profile={profile}
+        onClose={() => setShowEdit(false)}
+        onSave={handleSaveEdit}
+        onEditStageLost={onEditStageLost}
+      />
+    )}
+    <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
+      <div onClick={onClose} className="flex-1 bg-black/45" />
+      <div className={`w-[440px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
+
+        {/* ═══ COMPACT HEADER ═══ */}
+        <div className="shrink-0 bg-gradient-to-b from-surface-bg to-surface-card dark:from-[#1B3347] dark:to-surface-card-dark">
+          {/* Top bar */}
+          <div className="flex justify-between items-center px-5 pt-3.5 pb-0">
+            <div className="flex items-center gap-1">
+              <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><X size={18} /></button>
+              {handlePrev && <button onClick={handlePrev} title={isRTL ? 'السابق' : 'Previous'} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><ChevronUp size={18} /></button>}
+              {handleNext && <button onClick={handleNext} title={isRTL ? 'التالي' : 'Next'} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><ChevronDown size={18} /></button>}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={handleToggleFav}
+                title={isFav ? (isRTL ? 'إزالة من المفضلة' : 'Remove from Favorites') : (isRTL ? 'إضافة للمفضلة' : 'Add to Favorites')}
+                className={`bg-transparent border-none cursor-pointer p-1 rounded-md transition-colors ${isFav ? '' : 'text-content-muted dark:text-content-muted-dark'}`}
+                style={isFav ? { color: '#F59E0B' } : {}}
+              >
+                <Star size={16} fill={isFav ? '#F59E0B' : 'none'} />
+              </button>
+              <Button variant="secondary" size="sm" onClick={() => setShowEdit(true)} className="!text-xs !px-2.5 !py-1">
+                <Pencil size={12} /> {isRTL ? 'تعديل' : 'Edit'}
+              </Button>
+              <div ref={menuRef} className="relative">
+                <button onClick={() => setShowDrawerMenu(p => !p)} className={`p-1.5 rounded-lg cursor-pointer transition-colors border ${showDrawerMenu ? 'bg-brand-500 border-brand-500 text-white' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:bg-brand-500/10'}`}>
+                  <MoreVertical size={14} />
+                </button>
+                {showDrawerMenu && (
+                  <div className="absolute top-[36px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[180px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden">
+                    <div className="p-1">
+                      {selectedOpp.contact_id && (
+                        <button onClick={() => { navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <ExternalLink size={13} className="text-brand-500" /> {isRTL ? 'عرض العميل' : 'View Contact'}
+                        </button>
+                      )}
+                      <button onClick={() => { navigate(`/quotes?opportunity_id=${selectedOpp.id}`); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                        <FileText size={13} className="text-brand-500" />
+                        {isRTL ? 'عروض الأسعار' : 'Quotes'}
+                        {linkedQuotesCount > 0 && <span className="ms-auto text-[10px] bg-brand-500/15 text-brand-500 px-1.5 py-px rounded-full font-bold">{linkedQuotesCount}</span>}
+                      </button>
+                      <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
+                      <button onClick={() => { onDelete(selectedOpp.id); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                        <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Avatar + Name + Chips */}
+          <div className="flex items-start gap-3.5 px-5 pt-3 pb-3">
             <div
-              className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold text-white"
-              style={{ background: avatarColor(selectedOpp.contact_id || selectedOpp.id) }}
+              className="w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-base font-bold bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white"
             >
               {initials(getContactName(selectedOpp))}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <p className="m-0 text-base font-bold text-content dark:text-content-dark">{selectedOpp.contacts?.prefix ? selectedOpp.contacts.prefix + ' ' : ''}{getContactName(selectedOpp)}</p>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold leading-snug mb-0.5 flex items-center gap-1.5 text-content dark:text-content-dark">
+                <span>{selectedOpp.contacts?.prefix ? <span className="text-[#6B8DB5] me-1">{selectedOpp.contacts.prefix}</span> : null}{getContactName(selectedOpp)}</span>
+                {selectedOpp.id && <span className="text-[9px] font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.08] px-1.5 py-0.5 rounded-full shrink-0">#{String(selectedOpp.id).slice(-5)}</span>}
+              </div>
+              <div className="flex gap-1.5 items-center flex-wrap mb-1.5">
                 {selectedOpp.contacts?.contact_type && (
                   <span className="text-[10px] px-1.5 py-px rounded-full bg-brand-500/15 text-brand-600 dark:text-brand-400 font-semibold">
                     {isRTL ? (configTypeMap[selectedOpp.contacts.contact_type]?.label || selectedOpp.contacts.contact_type) : (configTypeMap[selectedOpp.contacts.contact_type]?.labelEn || selectedOpp.contacts.contact_type)}
                   </span>
                 )}
-              </div>
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                {selectedOpp.contacts?.company && (
-                  <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500 flex items-center gap-0.5"><Building2 size={9} /> {selectedOpp.contacts.company}</span>
-                )}
-                {selectedOpp.contacts?.job_title && (
-                  <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500 flex items-center gap-0.5"><Briefcase size={9} /> {selectedOpp.contacts.job_title}</span>
-                )}
                 {selectedOpp.contacts?.department && (
-                  <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500">
+                  <span className="text-[10px] px-1.5 py-px rounded-full text-[#8BA8C8] bg-[rgba(139,168,200,0.1)] font-semibold">
                     {isRTL ? (deptLabelsMap[selectedOpp.contacts.department]?.ar || selectedOpp.contacts.department) : (deptLabelsMap[selectedOpp.contacts.department]?.en || selectedOpp.contacts.department)}
                   </span>
                 )}
               </div>
+              {(selectedOpp.contacts?.company || selectedOpp.contacts?.job_title) && (
+                <div className="flex items-center gap-1.5 flex-wrap text-[10.5px] text-content-muted dark:text-content-muted-dark mb-1.5 opacity-80">
+                  {selectedOpp.contacts.company && <span className="flex items-center gap-0.5"><Building2 size={9} /> {selectedOpp.contacts.company}</span>}
+                  {selectedOpp.contacts.company && selectedOpp.contacts.job_title && <span className="opacity-40">·</span>}
+                  {selectedOpp.contacts.job_title && <span className="flex items-center gap-0.5"><Briefcase size={9} /> {selectedOpp.contacts.job_title}</span>}
+                </div>
+              )}
               {selectedOpp.created_at && (
-                <span className="text-[10px] text-content-muted dark:text-content-muted-dark mt-0.5 block">
+                <div className="text-[10.5px] text-content-muted dark:text-content-muted-dark opacity-70">
                   {new Date(selectedOpp.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                </span>
+                </div>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {(() => {
-              const oppFavId = `opp_${selectedOpp.id}`;
-              const oppIsFav = checkFavorite(oppFavId);
-              const contactName = selectedOpp.contacts ? (isRTL ? (selectedOpp.contacts.full_name_ar || selectedOpp.contacts.full_name_en) : (selectedOpp.contacts.full_name_en || selectedOpp.contacts.full_name_ar)) : '';
-              return (
-                <button
-                  onClick={() => {
-                    toggleFavorite({
-                      id: oppFavId,
-                      type: 'opportunity',
-                      name: contactName || `Opportunity #${selectedOpp.id}`,
-                      nameAr: (selectedOpp.contacts?.full_name_ar || selectedOpp.contacts?.full_name_en || `فرصة #${selectedOpp.id}`),
-                      path: `/crm/opportunities?highlight=${selectedOpp.id}`,
-                    });
-                  }}
-                  className="bg-transparent border-none cursor-pointer p-1 rounded-md hover:bg-brand-500/10 transition-colors"
-                  style={{ color: oppIsFav ? '#F59E0B' : undefined }}
-                  title={oppIsFav ? (isRTL ? 'إزالة من المفضلة' : 'Remove from Favorites') : (isRTL ? 'إضافة للمفضلة' : 'Add to Favorites')}
-                >
-                  <Star size={15} fill={oppIsFav ? '#F59E0B' : 'none'} />
-                </button>
-              );
-            })()}
-            {selectedOpp.contact_id && (
-              <button
-                onClick={() => navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`)}
-                className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
-                title={isRTL ? 'عرض بيانات العميل' : 'View Contact'}
-              >
-                <ExternalLink size={15} />
-              </button>
-            )}
-            <button
-              onClick={() => navigate(`/quotes?opportunity_id=${selectedOpp.id}`)}
-              className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
-              title={isRTL ? `إنشاء عرض سعر${linkedQuotesCount ? ` (${linkedQuotesCount})` : ''}` : `Create Quote${linkedQuotesCount ? ` (${linkedQuotesCount})` : ''}`}
-              style={{ position: 'relative' }}
-            >
-              <FileText size={15} />
-              {linkedQuotesCount > 0 && (
-                <span style={{
-                  position: 'absolute', top: -4, right: -4,
-                  background: '#4A7AAB', color: '#fff',
-                  fontSize: 9, fontWeight: 700,
-                  width: 15, height: 15,
-                  borderRadius: '50%',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {linkedQuotesCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => editingOpp ? setEditingOpp(false) : startEdit()}
-              className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
-              title={isRTL ? 'تعديل' : 'Edit'}
-            >
-              <Pencil size={16} />
-            </button>
-            <button
-              onClick={() => { onDelete(selectedOpp.id); }}
-              className="bg-transparent border-none cursor-pointer text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-colors"
-              title={isRTL ? 'حذف' : 'Delete'}
-            >
-              <Trash2 size={15} />
-            </button>
-            {handlePrev && (
-              <button onClick={handlePrev} title={isRTL ? 'السابق' : 'Previous'}
-                className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md hover:bg-brand-500/10 transition-colors">
-                <ChevronUp size={16} />
-              </button>
-            )}
-            {handleNext && (
-              <button onClick={handleNext} title={isRTL ? 'التالي' : 'Next'}
-                className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md hover:bg-brand-500/10 transition-colors">
-                <ChevronDown size={16} />
-              </button>
-            )}
-            <button
-              onClick={closeDrawer}
-              className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xl leading-none p-1 hover:text-content dark:hover:text-content-dark transition-colors"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
 
-        {/* Contact Quick Actions */}
-        {!editingOpp && selectedOpp.contacts && (
-          <div className="px-6 py-3 border-b border-edge dark:border-edge-dark">
-            <div className="flex gap-2 flex-wrap">
+          {/* Quick Actions */}
+          {selectedOpp.contacts && (
+            <div className="flex gap-2 px-5 pb-2.5">
               {selectedOpp.contacts.phone && (
-                <a href={`tel:${selectedOpp.contacts.phone}`} dir="ltr" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline hover:bg-brand-500/20 transition-colors font-semibold">
-                  <Phone size={13} /> {selectedOpp.contacts.phone}
+                <a href={`tel:${selectedOpp.contacts.phone}`} className="flex-1 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-500 text-[11px] font-semibold text-center no-underline flex items-center justify-center gap-1">
+                  <Phone size={12} /> {isRTL ? 'اتصال' : 'Call'}
                 </a>
               )}
-              {selectedOpp.contacts.phone2 && (
-                <a href={`tel:${selectedOpp.contacts.phone2}`} dir="ltr" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline hover:bg-brand-500/20 transition-colors font-semibold">
-                  <Phone size={13} /> {selectedOpp.contacts.phone2}
-                </a>
-              )}
-              {selectedOpp.contacts.phone && (<>
-                <button
-                  onClick={() => { navigator.clipboard.writeText(selectedOpp.contacts.phone); setCopyToast(isRTL ? 'تم نسخ الرقم' : 'Phone copied'); setTimeout(() => setCopyToast(null), 2000); }}
-                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-content-muted dark:text-content-muted-dark border-none cursor-pointer hover:bg-gray-200 dark:hover:bg-white/15 transition-colors font-semibold font-cairo"
-                  title={isRTL ? 'نسخ الرقم' : 'Copy phone'}
-                >
-                  📋
-                </button>
+              {selectedOpp.contacts.phone && (
                 <button
                   onClick={() => {
                     const phone = (selectedOpp.contacts.phone || '').replace(/[^0-9]/g, '');
-                    const contactName = getContactName(selectedOpp, isRTL);
                     logWhatsAppMessage({
                       contact_id: selectedOpp.contact_id,
-                      contact_name: contactName,
+                      contact_name: getContactName(selectedOpp),
                       contact_phone: selectedOpp.contacts.phone,
                       direction: 'outgoing',
                       message: '',
@@ -349,194 +276,155 @@ export default function OpportunityDrawer({
                     });
                     window.open(generateWhatsAppLink(phone), '_blank');
                   }}
-                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-none cursor-pointer hover:bg-emerald-500/20 transition-colors font-semibold font-cairo"
+                  className="flex-1 py-1.5 bg-[#25D366]/10 border border-[#25D366]/25 rounded-lg text-[#25D366] text-[11px] font-semibold text-center cursor-pointer flex items-center justify-center gap-1"
                 >
-                  <MessageCircle size={13} /> WhatsApp
+                  <MessageCircle size={12} /> {isRTL ? 'واتساب' : 'WA'}
                 </button>
-              </>)}
+              )}
               {selectedOpp.contacts.email && (
-                <a href={`mailto:${selectedOpp.contacts.email}`} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 no-underline hover:bg-blue-500/20 transition-colors font-semibold">
-                  <Mail size={13} /> {selectedOpp.contacts.email}
+                <a href={`mailto:${selectedOpp.contacts.email}`} className="flex-1 py-1.5 bg-brand-500/10 border border-brand-500/25 rounded-lg text-[#6B8DB5] text-[11px] font-semibold text-center no-underline flex items-center justify-center gap-1">
+                  <Mail size={12} /> {isRTL ? 'إيميل' : 'Email'}
                 </a>
               )}
+              {selectedOpp.contact_id && (
+                <button
+                  onClick={() => navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`)}
+                  className="flex-1 py-1.5 bg-brand-500/10 border border-brand-500/25 rounded-lg text-brand-500 text-[11px] font-semibold text-center cursor-pointer flex items-center justify-center gap-1"
+                >
+                  <ExternalLink size={12} /> {isRTL ? 'العميل' : 'Contact'}
+                </button>
+              )}
             </div>
-            {/* Extra info row */}
-            <div className="flex gap-2 flex-wrap mt-2">
-              {selectedOpp.contacts.source && (
-                <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                  <ExternalLink size={9} /> {isRTL ? (sourceLabelsMap[selectedOpp.contacts.source]?.ar || selectedOpp.contacts.source) : (sourceLabelsMap[selectedOpp.contacts.source]?.en || selectedOpp.contacts.source)}
-                </span>
-              )}
-              {selectedOpp.contacts.preferred_location && (
-                <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                  <MapPin size={9} /> {selectedOpp.contacts.preferred_location}
-                </span>
-              )}
-              {selectedOpp.contacts.nationality && (
-                <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                  {isRTL ? ({egyptian:'مصري',saudi:'سعودي',emirati:'إماراتي',kuwaiti:'كويتي',qatari:'قطري',libyan:'ليبي',other:'أخرى'}[selectedOpp.contacts.nationality] || selectedOpp.contacts.nationality) : selectedOpp.contacts.nationality}
-                </span>
-              )}
-              {selectedOpp.contacts.gender && (
-                <span className="text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                  {isRTL ? (selectedOpp.contacts.gender === 'male' ? 'ذكر' : 'أنثى') : selectedOpp.contacts.gender}
-                </span>
-              )}
-              {selectedOpp.contacts.birth_date && (
-                <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                  <Calendar size={9} /> {new Date(selectedOpp.contacts.birth_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                </span>
-              )}
-              {selectedOpp.contacts.budget_min && (
-                <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                  <Banknote size={9} /> {fmtBudget(selectedOpp.contacts.budget_min)} - {fmtBudget(selectedOpp.contacts.budget_max)}
-                </span>
-              )}
-              {selectedOpp.contacts.interested_in_type && (
-                <span className="text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                  {isRTL ? ({residential:'سكني',commercial:'تجاري',administrative:'إداري'}[selectedOpp.contacts.interested_in_type] || selectedOpp.contacts.interested_in_type) : selectedOpp.contacts.interested_in_type}
-                </span>
-              )}
+          )}
+
+          {/* Stats Bar */}
+          <div className="flex gap-0 mx-5 mb-2.5 rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
+            <div className="flex-1 py-1.5 text-center bg-brand-500/[0.05]">
+              <span className="text-sm font-bold" style={{ color: scoreColor(score) }}>{score}</span>
+              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'نقاط' : 'Score'}</span>
+            </div>
+            <div className="w-px bg-edge dark:bg-edge-dark" />
+            <div className="flex-1 py-1.5 text-center bg-brand-500/[0.05]">
+              <span className="text-sm font-bold text-brand-500">{fmtBudget(selectedOpp.budget)}</span>
+              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'ج' : 'EGP'}</span>
+            </div>
+            <div className="w-px bg-edge dark:bg-edge-dark" />
+            <div className="flex-1 py-1.5 text-center bg-brand-500/[0.05]">
+              <span className="text-sm font-bold" style={{ color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' }}>
+                {daysInStage(selectedOpp)}
+              </span>
+              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'يوم' : 'days'}</span>
             </div>
           </div>
-        )}
 
-        {/* Drawer Details */}
-        <div className="px-6 py-5 flex flex-col gap-4">
-          {editingOpp ? (<>
-            {/* Edit Mode */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الميزانية' : 'Budget'}</label>
-                <Input type="number" min="0" value={editForm.budget} onChange={e => setEditForm(f => ({ ...f, budget: Math.max(0, e.target.value) }))} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المسؤول' : 'Agent'}</label>
-                <Select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}>
-                  <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-                  {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المرحلة' : 'Stage'}</label>
-                <Select value={editForm.stage} onChange={e => setEditForm(f => ({ ...f, stage: e.target.value }))}>
-                  {getDeptStages(selectedOpp.contacts?.department || 'sales').map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الإغلاق المتوقع' : 'Expected Close'}</label>
-                <Input type="date" value={editForm.expected_close_date} onChange={e => setEditForm(f => ({ ...f, expected_close_date: e.target.value }))} />
-              </div>
-            </div>
+          {/* ═══ TABS ═══ */}
+          <div className="flex border-b border-edge dark:border-edge-dark px-2">
+            {tabs.map(t => {
+              const TabIcon = t.icon;
+              const isActive = tab === t.key;
+              return (
+                <button key={t.key} onClick={() => setTab(t.key)}
+                  className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors ${isActive ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal hover:text-content dark:hover:text-content-dark'}`}>
+                  <TabIcon size={13} />
+                  {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ═══ Drawer Body ═══ */}
+        <div className="flex-1 overflow-auto p-5">
+
+          {/* ══════ ACTIVITY TAB ══════ */}
+          {tab === 'activity' && (
             <div>
-              <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المشروع' : 'Project'}</label>
-              <Select value={editForm.project_id} onChange={e => setEditForm(f => ({ ...f, project_id: e.target.value }))}>
-                <option value="">{isRTL ? 'بدون مشروع' : 'No Project'}</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.name_ar : (p.name_en || p.name_ar)}</option>)}
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الحرارة' : 'Temperature'}</label>
-              <div className="flex gap-1.5">
-                {Object.entries(TEMP_CONFIG).map(([k, v]) => {
-                  const isActive = editForm.temperature === k;
-                  return (
-                    <button key={k} onClick={() => setEditForm(f => ({ ...f, temperature: k }))}
-                      className={`flex-1 py-[6px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'}`}
-                      style={isActive ? { borderColor: v.color, background: v.bg, color: v.color } : {}}
-                    >{isRTL ? v.label_ar : v.label_en}</button>
-                  );
-                })}
+              {/* Take Action Button */}
+              <div className="mb-4">
+                <button onClick={() => setShowAddActivity(p => !p)}
+                  className={`w-full py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showAddActivity ? 'bg-brand-500 text-white border-brand-500' : 'bg-brand-500/[0.08] border-brand-500/25 text-brand-500'}`}>
+                  <Zap size={13} /> {isRTL ? 'سجّل نشاط' : 'Log Activity'}
+                </button>
               </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الأولوية' : 'Priority'}</label>
-              <div className="flex gap-1.5">
-                {Object.entries(PRIORITY_CONFIG).map(([k, v]) => {
-                  const isActive = editForm.priority === k;
-                  return (
-                    <button key={k} onClick={() => setEditForm(f => ({ ...f, priority: k }))}
-                      className={`flex-1 py-[6px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'}`}
-                      style={isActive ? { borderColor: v.color, background: `${v.color}18`, color: v.color } : {}}
-                    >{isRTL ? v.label_ar : v.label_en}</button>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'ملاحظات' : 'Notes'}</label>
-              <Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="primary" size="sm" onClick={saveEdit} disabled={editSaving} className="flex-1 gap-1.5">
-                {editSaving && <Loader2 size={13} className="animate-spin" />}
-                {isRTL ? 'حفظ' : 'Save'}
-              </Button>
-              <Button variant="secondary" size="sm" onClick={() => setEditingOpp(false)} className="flex-1">
-                {isRTL ? 'إلغاء' : 'Cancel'}
-              </Button>
-            </div>
-          </>) : (<>
-            {/* View Mode */}
-            <div className="grid grid-cols-2 gap-2.5">
-              {[
-                { label: isRTL ? 'المرحلة' : 'Stage', value: deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', isRTL), color: (getDeptStages(selectedOpp.contacts?.department || 'sales').find(s => s.id === selectedOpp.stage)?.color || '#4A7AAB') },
-                { label: isRTL ? 'الميزانية' : 'Budget', value: fmtBudget(selectedOpp.budget) + ' ' + (isRTL ? 'ج' : 'EGP'), color: '#4A7AAB' },
-                { label: isRTL ? 'الحرارة' : 'Temperature', value: isRTL ? (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_en, color: (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).color },
-                { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
-                { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
-                { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', value: (() => { if (!selectedOpp.assigned_by) return '—'; const a = agents.find(ag => ag.id === selectedOpp.assigned_by); return a ? (lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)) : '—'; })(), color: '#6B8DB5' },
-                { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
-                ...(selectedOpp.expected_close_date ? [{ label: isRTL ? 'الإغلاق المتوقع' : 'Expected Close', value: new Date(selectedOpp.expected_close_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: new Date(selectedOpp.expected_close_date) < new Date() ? '#EF4444' : '#6B8DB5' }] : []),
-                ...((selectedOpp.contacts?.source || selectedOpp.source) ? [{ label: isRTL ? 'المصدر' : 'Source', value: (() => { const src = selectedOpp.contacts?.source || selectedOpp.source; return isRTL ? (sourceLabelsMap[src]?.ar || src) : (sourceLabelsMap[src]?.en || src); })(), color: '#6B8DB5' }] : []),
-                { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: opps.filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
-              ].map((item, i) => (
-                <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{item.label}</p>
-                  <p className="m-0 text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
+
+              {/* Add Activity Form */}
+              {showAddActivity && (
+                <div className="bg-gradient-to-b from-brand-500/[0.06] to-transparent border border-brand-500/20 rounded-xl p-3.5 mb-4">
+                  <div className="flex gap-1.5 mb-2 flex-wrap">
+                    {(configActivityTypes || []).map(at => {
+                      const Icon = ACTIVITY_ICON_MAP[at.key] || ACTIVITY_ICONS[at.key] || Clock;
+                      return (
+                        <button
+                          key={at.key}
+                          onClick={() => setActivityForm(f => ({ ...f, type: at.key, result: '' }))}
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold font-cairo border-none cursor-pointer transition-colors ${
+                            activityForm.type === at.key
+                              ? 'bg-brand-500 text-white'
+                              : 'bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
+                          }`}
+                        >
+                          <Icon size={11} />{isRTL ? at.label_ar : at.label_en}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {configActivityResults[activityForm.type]?.length > 0 && (
+                    <div className="mb-2">
+                      <p className="m-0 mb-1 text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Result'}</p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {configActivityResults[activityForm.type].map(r => (
+                          <button
+                            key={r.value}
+                            onClick={() => setActivityForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold font-cairo border-2 cursor-pointer transition-all ${
+                              activityForm.result === r.value
+                                ? ''
+                                : 'border-transparent bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
+                            }`}
+                            style={activityForm.result === r.value ? { borderColor: r.color, background: `${r.color}18`, color: r.color } : {}}
+                          >
+                            {isRTL ? r.label_ar : r.label_en}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <Textarea
+                    value={activityForm.description}
+                    onChange={e => setActivityForm(f => ({ ...f, description: e.target.value }))}
+                    placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
+                    rows={2}
+                    className="mb-2 text-xs"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <Button variant="ghost" size="sm" onClick={() => setShowAddActivity(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+                    <Button size="sm" onClick={async () => {
+                      if (!activityForm.description.trim()) return;
+                      try {
+                        const act = await createActivity({
+                          type: activityForm.type,
+                          description: activityForm.description,
+                          result: activityForm.result || null,
+                          contact_id: selectedOpp.contact_id,
+                          entity_type: 'opportunity',
+                          entity_id: selectedOpp.id,
+                        });
+                        setAllActivities(prev => [act, ...prev]);
+                        setActivityForm({ type: 'call', description: '', result: '' });
+                        setShowAddActivity(false);
+                        toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
+                      } catch {
+                        toast.error(isRTL ? 'فشل حفظ النشاط' : 'Failed to save activity');
+                      }
+                    }}>
+                      <Zap size={12} /> {isRTL ? 'حفظ' : 'Save'}
+                    </Button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              )}
 
-            {/* Project */}
-            {getProjectName(selectedOpp, lang) && (
-              <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
-                <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{getProjectName(selectedOpp, lang)}</p>
-              </div>
-            )}
-
-            {/* Lost Reason */}
-            {selectedOpp.lost_reason && selectedOpp.stage === 'closed_lost' && (
-              <div className="bg-red-500/[0.08] rounded-xl px-3.5 py-3">
-                <p className="m-0 mb-1 text-xs text-red-500 font-semibold">{isRTL ? 'سبب الخسارة' : 'Lost Reason'}</p>
-                <p className="m-0 text-xs text-content dark:text-content-dark">
-                  {lostReasonsMap[selectedOpp.lost_reason]
-                    ? (isRTL ? lostReasonsMap[selectedOpp.lost_reason].label_ar : lostReasonsMap[selectedOpp.lost_reason].label_en)
-                    : selectedOpp.lost_reason}
-                </p>
-              </div>
-            )}
-
-            {/* Notes */}
-            {selectedOpp.notes && (
-              <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
-                <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
-              </div>
-            )}
-          </>)}
-
-          {/* Pipeline Stepper */}
-          <div>
-            {(() => {
-              const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
-              const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
-              const progressPct = stages.length > 1 ? Math.round((Math.max(0, currentIdx) / (stages.length - 1)) * 100) : 0;
-              const isLost = selectedOpp.stage === 'closed_lost';
-              return (<>
+              {/* Pipeline Stepper */}
+              <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
                     {isRTL ? 'مراحل التقدم' : 'Pipeline Progress'}
@@ -549,6 +437,7 @@ export default function OpportunityDrawer({
                   {stages.map((s, i) => {
                     const isPast = i < currentIdx;
                     const isCurrent = i === currentIdx;
+                    const isLost = selectedOpp.stage === 'closed_lost';
                     const isBackward = !isAdmin && i < currentIdx;
                     return (
                       <div key={s.id} className="flex items-start flex-1 min-w-0">
@@ -579,189 +468,153 @@ export default function OpportunityDrawer({
                     );
                   })}
                 </div>
-              </>);
-            })()}
-          </div>
-
-          {/* Stage Change Confirmation */}
-          {stageConfirm && (
-            <div className="bg-brand-500/[0.08] border border-brand-500/20 rounded-xl p-3">
-              <p className="m-0 mb-2 text-xs font-semibold text-content dark:text-content-dark">
-                {isRTL ? 'تأكيد تغيير المرحلة' : 'Confirm Stage Change'}
-              </p>
-              <p className="m-0 mb-3 text-[11px] text-content-muted dark:text-content-muted-dark">
-                {isRTL
-                  ? `نقل من "${deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', true)}" إلى "${stageConfirm.label_ar}"؟`
-                  : `Move from "${deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', false)}" to "${stageConfirm.label_en}"?`}
-              </p>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => { onMove(selectedOpp.id, stageConfirm.id); setStageConfirm(null); }}>
-                  {isRTL ? 'تأكيد' : 'Confirm'}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setStageConfirm(null)}>
-                  {isRTL ? 'إلغاء' : 'Cancel'}
-                </Button>
               </div>
+
+              {/* Stage Confirmation */}
+              {stageConfirm && (
+                <div className="bg-brand-500/[0.08] border border-brand-500/20 rounded-xl p-3 mb-4">
+                  <p className="m-0 mb-2 text-xs font-semibold text-content dark:text-content-dark">
+                    {isRTL ? 'تأكيد تغيير المرحلة' : 'Confirm Stage Change'}
+                  </p>
+                  <p className="m-0 mb-3 text-[11px] text-content-muted dark:text-content-muted-dark">
+                    {isRTL
+                      ? `نقل من "${deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', true)}" إلى "${stageConfirm.label_ar}"؟`
+                      : `Move from "${deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', false)}" to "${stageConfirm.label_en}"?`}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => { onMove(selectedOpp.id, stageConfirm.id); setStageConfirm(null); }}>
+                      {isRTL ? 'تأكيد' : 'Confirm'}
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setStageConfirm(null)}>
+                      {isRTL ? 'إلغاء' : 'Cancel'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Activities Timeline */}
+              {loadingActivities ? (
+                <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark"><Loader2 size={16} className="animate-spin inline-block" /></div>
+              ) : drawerActivities.length === 0 ? (
+                <div className="text-center py-6 text-xs text-content-muted dark:text-content-muted-dark opacity-60">
+                  <Clock size={24} className="opacity-30 mb-1.5 mx-auto" />
+                  <p className="m-0 mb-2">{isRTL ? 'لا توجد أنشطة' : 'No activities'}</p>
+                  <button onClick={() => setShowAddActivity(true)} className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold">
+                    <Plus size={10} className="inline -mt-px" /> {isRTL ? 'سجّل أول نشاط' : 'Log first activity'}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  {drawerActivities.map(act => {
+                    const ActIcon = ACTIVITY_ICON_MAP[act.type] || ACTIVITY_ICONS[act.type] || Clock;
+                    const resultConfig = act.result && configActivityResults[act.type]?.find(r => r.value === act.result);
+                    return (
+                      <div key={act.id} className="flex gap-0 relative mb-0.5">
+                        <div className="flex flex-col items-center shrink-0" style={{ width: 28 }}>
+                          <div className="w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center shrink-0 bg-surface-card dark:bg-surface-card-dark z-[1]" style={{ borderColor: '#4A7AAB', background: 'rgba(74,122,171,0.10)' }}>
+                            <ActIcon size={11} color="#4A7AAB" />
+                          </div>
+                          <div className="w-px flex-1 min-h-[8px]" style={{ background: 'rgba(74,122,171,0.20)' }} />
+                        </div>
+                        <div className="flex-1 min-w-0 pb-3 ps-2.5 pt-0.5 group">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-content dark:text-content-dark text-xs font-semibold">{act.description || (isRTL ? 'نشاط' : 'Activity')}</span>
+                            {resultConfig && (
+                              <span className="text-[9px] font-bold px-1.5 py-px rounded-md" style={{ background: `${resultConfig.color}18`, color: resultConfig.color }}>
+                                {isRTL ? resultConfig.label_ar : resultConfig.label_en}
+                              </span>
+                            )}
+                            <button
+                              onClick={() => { setAllActivities(prev => prev.filter(a => a.id !== act.id)); toast.success(isRTL ? 'تم حذف النشاط' : 'Activity deleted'); }}
+                              className="bg-transparent border-none cursor-pointer text-red-400 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ms-auto"
+                              title={isRTL ? 'حذف' : 'Delete'}
+                            ><X size={11} /></button>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">
+                            <span className="font-bold" style={{ color: '#4A7AAB' }}>
+                              {isRTL ? ({ call: 'مكالمة', whatsapp: 'واتساب', email: 'إيميل', meeting: 'اجتماع', site_visit: 'زيارة', note: 'ملاحظة' }[act.type] || 'نشاط') : ({ call: 'Call', whatsapp: 'WhatsApp', email: 'Email', meeting: 'Meeting', site_visit: 'Site Visit', note: 'Note' }[act.type] || 'Activity')}
+                            </span>
+                            <span className="opacity-30">|</span>
+                            <span className="font-medium text-content dark:text-content-dark">{isRTL ? (act.users?.full_name_ar || '—') : (act.users?.full_name_en || act.users?.full_name_ar || '—')}</span>
+                            <span className="opacity-30">|</span>
+                            <span>{act.created_at?.slice(0, 10)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {allActivities.length > activityLimit && (
+                    <button
+                      onClick={() => setActivityLimit(l => l + 10)}
+                      className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold mt-1 w-full"
+                    >
+                      {isRTL ? `عرض المزيد (${allActivities.length - activityLimit} متبقي)` : `Load more (${allActivities.length - activityLimit} remaining)`}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Activities Timeline */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                {isRTL ? 'آخر الأنشطة' : 'Recent Activities'}
-              </p>
-              <button
-                onClick={() => setShowAddActivity(a => !a)}
-                className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2 py-1 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold"
-              >
-                <Plus size={10} className="inline -mt-px" /> {isRTL ? 'سجّل نشاط' : 'Log Activity'}
-              </button>
-            </div>
-            {showAddActivity && (
-              <div className="bg-brand-500/[0.06] rounded-xl p-3 mb-3 border border-brand-500/10">
-                {/* Activity Type Buttons (from config) */}
-                <div className="flex gap-1.5 mb-2 flex-wrap">
-                  {(configActivityTypes || []).map(at => {
-                    const Icon = ACTIVITY_ICON_MAP[at.key] || ACTIVITY_ICONS[at.key] || Clock;
-                    return (
-                      <button
-                        key={at.key}
-                        onClick={() => setActivityForm(f => ({ ...f, type: at.key, result: '' }))}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold font-cairo border-none cursor-pointer transition-colors ${
-                          activityForm.type === at.key
-                            ? 'bg-brand-500 text-white'
-                            : 'bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
-                        }`}
-                      >
-                        <Icon size={10} />{isRTL ? at.label_ar : at.label_en}
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* Activity Result Buttons (from config) */}
-                {configActivityResults[activityForm.type] && configActivityResults[activityForm.type].length > 0 && (
-                  <div className="mb-2">
-                    <p className="m-0 mb-1 text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Result'}</p>
-                    <div className="flex gap-1 flex-wrap">
-                      {configActivityResults[activityForm.type].map(r => (
-                        <button
-                          key={r.value}
-                          onClick={() => setActivityForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
-                          className={`px-2 py-1 rounded-md text-[10px] font-semibold font-cairo border-2 cursor-pointer transition-all ${
-                            activityForm.result === r.value
-                              ? ''
-                              : 'border-transparent bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
-                          }`}
-                          style={activityForm.result === r.value ? { borderColor: r.color, background: `${r.color}18`, color: r.color } : {}}
-                        >
-                          {isRTL ? r.label_ar : r.label_en}
-                        </button>
-                      ))}
-                    </div>
+          {/* ══════ DETAILS TAB ══════ */}
+          {tab === 'details' && (
+            <div className="flex flex-col gap-4">
+              {/* Data Grid */}
+              <div className="grid grid-cols-2 gap-2.5">
+                {[
+                  { label: isRTL ? 'المرحلة' : 'Stage', value: deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', isRTL), color: (stages.find(s => s.id === selectedOpp.stage)?.color || '#4A7AAB') },
+                  { label: isRTL ? 'الميزانية' : 'Budget', value: fmtBudget(selectedOpp.budget) + ' ' + (isRTL ? 'ج' : 'EGP'), color: '#4A7AAB' },
+                  { label: isRTL ? 'الحرارة' : 'Temperature', value: isRTL ? (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_en, color: (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).color },
+                  { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
+                  { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
+                  { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', value: (() => { if (!selectedOpp.assigned_by) return '—'; const a = agents.find(ag => ag.id === selectedOpp.assigned_by); return a ? (lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)) : '—'; })(), color: '#6B8DB5' },
+                  { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
+                  ...(selectedOpp.expected_close_date ? [{ label: isRTL ? 'الإغلاق المتوقع' : 'Expected Close', value: new Date(selectedOpp.expected_close_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: new Date(selectedOpp.expected_close_date) < new Date() ? '#EF4444' : '#6B8DB5' }] : []),
+                  ...((selectedOpp.contacts?.source || selectedOpp.source) ? [{ label: isRTL ? 'المصدر' : 'Source', value: (() => { const src = selectedOpp.contacts?.source || selectedOpp.source; return isRTL ? (sourceLabelsMap[src]?.ar || src) : (sourceLabelsMap[src]?.en || src); })(), color: '#6B8DB5' }] : []),
+                  { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: opps.filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
+                ].map((item, i) => (
+                  <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
+                    <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{item.label}</p>
+                    <p className="m-0 text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
                   </div>
-                )}
-                <Input
-                  value={activityForm.description}
-                  onChange={e => setActivityForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
-                  className="mb-2 text-xs"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={async () => {
-                    if (!activityForm.description.trim()) return;
-                    try {
-                      const act = await createActivity({
-                        type: activityForm.type,
-                        description: activityForm.description,
-                        result: activityForm.result || null,
-                        contact_id: selectedOpp.contact_id,
-                        entity_type: 'opportunity',
-                        entity_id: selectedOpp.id,
-                      });
-                      setAllActivities(prev => [act, ...prev]);
-                      setActivityForm({ type: 'call', description: '', result: '' });
-                      setShowAddActivity(false);
-                      toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
-                    } catch {
-                      toast.error(isRTL ? 'فشل حفظ النشاط' : 'Failed to save activity');
-                    }
-                  }}>
-                    {isRTL ? 'حفظ' : 'Save'}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddActivity(false)}>
-                    {isRTL ? 'إلغاء' : 'Cancel'}
-                  </Button>
-                </div>
+                ))}
               </div>
-            )}
-            {loadingActivities ? (
-              <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark"><Loader2 size={16} className="animate-spin inline-block" /></div>
-            ) : drawerActivities.length === 0 ? (
-              <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark opacity-60">
-                <Clock size={20} className="opacity-30 mb-1 mx-auto" />
-                <p className="m-0 mb-2">{isRTL ? 'لا توجد أنشطة' : 'No activities'}</p>
-                <button onClick={() => setShowAddActivity(true)} className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold">
-                  <Plus size={10} className="inline -mt-px" /> {isRTL ? 'سجّل أول نشاط' : 'Log first activity'}
-                </button>
-              </div>
-            ) : drawerActivities.map(act => {
-              const ActIcon = ACTIVITY_ICON_MAP[act.type] || ACTIVITY_ICONS[act.type] || Clock;
-              const resultConfig = act.result && configActivityResults[act.type]?.find(r => r.value === act.result);
-              return (
-                <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2 group">
-                  <div className="flex items-start gap-2 mb-1">
-                    <div className="w-[24px] h-[24px] rounded-[6px] bg-brand-500/10 flex items-center justify-center shrink-0 mt-px">
-                      <ActIcon size={12} color="#4A7AAB" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-content dark:text-content-dark text-xs font-semibold">{act.description}</span>
-                        {resultConfig && (
-                          <span className="text-[9px] font-bold px-1.5 py-px rounded-md" style={{ background: `${resultConfig.color}18`, color: resultConfig.color }}>
-                            {isRTL ? resultConfig.label_ar : resultConfig.label_en}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { setAllActivities(prev => prev.filter(a => a.id !== act.id)); toast.success(isRTL ? 'تم حذف النشاط' : 'Activity deleted'); }}
-                      className="bg-transparent border-none cursor-pointer text-red-400 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                      title={isRTL ? 'حذف' : 'Delete'}
-                    ><X size={11} /></button>
-                  </div>
-                  <div className="flex justify-between text-[10px] text-content-muted dark:text-content-muted-dark ps-8">
-                    <span>{isRTL ? (act.users?.full_name_ar || '—') : (act.users?.full_name_en || act.users?.full_name_ar || '—')}</span>
-                    <span>{act.created_at?.slice(0, 10)}</span>
-                  </div>
-                </div>
-              );
-            })}
-            {drawerActivities.length > 0 && allActivities.length > activityLimit && (
-              <button
-                onClick={() => setActivityLimit(l => l + 10)}
-                className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold mt-1 w-full"
-              >
-                {isRTL ? `عرض المزيد (${allActivities.length - activityLimit} متبقي)` : `Load more (${allActivities.length - activityLimit} remaining)`}
-              </button>
-            )}
-          </div>
 
-          {/* Notes Timeline */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                <StickyNote size={12} className="inline -mt-px" /> {isRTL ? 'الملاحظات' : 'Notes'}
-              </p>
-              <button
-                onClick={() => setShowNotes(n => !n)}
-                className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2 py-1 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold"
-              >
-                {showNotes ? (isRTL ? 'إخفاء' : 'Hide') : (isRTL ? 'عرض' : 'Show')} ({drawerNotes.length})
-              </button>
-            </div>
-            {showNotes && (
-              <>
+              {/* Project */}
+              {getProjectName(selectedOpp, lang) && (
+                <div className="bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
+                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
+                  <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{getProjectName(selectedOpp, lang)}</p>
+                </div>
+              )}
+
+              {/* Lost Reason */}
+              {selectedOpp.lost_reason && selectedOpp.stage === 'closed_lost' && (
+                <div className="bg-red-500/[0.08] rounded-xl px-3.5 py-3">
+                  <p className="m-0 mb-1 text-xs text-red-500 font-semibold">{isRTL ? 'سبب الخسارة' : 'Lost Reason'}</p>
+                  <p className="m-0 text-xs text-content dark:text-content-dark">
+                    {lostReasonsMap[selectedOpp.lost_reason]
+                      ? (isRTL ? lostReasonsMap[selectedOpp.lost_reason].label_ar : lostReasonsMap[selectedOpp.lost_reason].label_en)
+                      : selectedOpp.lost_reason}
+                  </p>
+                </div>
+              )}
+
+              {/* Notes from opp */}
+              {selectedOpp.notes && (
+                <div className="bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
+                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
+                  <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
+                </div>
+              )}
+
+              {/* Notes Timeline (CRUD) */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+                    <StickyNote size={12} className="inline -mt-px" /> {isRTL ? 'ملاحظات إضافية' : 'Extra Notes'} ({drawerNotes.length})
+                  </p>
+                </div>
                 <div className="flex gap-1.5 mb-2">
                   <Input value={newNote} onChange={e => setNewNote(e.target.value)} placeholder={isRTL ? 'أضف ملاحظة...' : 'Add note...'} className="text-xs flex-1" onKeyDown={e => {
                     if (e.key === 'Enter' && newNote.trim()) {
@@ -815,84 +668,72 @@ export default function OpportunityDrawer({
                     )}
                   </div>
                 ))}
-              </>
-            )}
-          </div>
-
-          {/* Stage History */}
-          {stageHistory.length > 0 && (
-            <div>
-              <p className="m-0 mb-2 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                {isRTL ? 'سجل المراحل' : 'Stage History'}
-              </p>
-              <div className="space-y-1">
-                {stageHistory.slice(0, 5).map((h, i) => {
-                  const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
-                  const fromLabel = stages.find(s => s.id === h.from);
-                  const toLabel = stages.find(s => s.id === h.to);
-                  return (
-                    <div key={i} className="flex items-center gap-2 text-[10px] text-content-muted dark:text-content-muted-dark bg-gray-50 dark:bg-white/[0.03] rounded-lg px-2.5 py-1.5">
-                      <span className="font-semibold" style={{ color: fromLabel?.color || '#6B8DB5' }}>{isRTL ? (fromLabel?.label_ar || h.from) : (fromLabel?.label_en || h.from)}</span>
-                      <span>→</span>
-                      <span className="font-semibold" style={{ color: toLabel?.color || '#6B8DB5' }}>{isRTL ? (toLabel?.label_ar || h.to) : (toLabel?.label_en || h.to)}</span>
-                      <span className="ms-auto">{new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
-                    </div>
-                  );
-                })}
               </div>
-            </div>
-          )}
 
-          {/* Lead Score */}
-          {!editingOpp && (
-            <div className="bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-              <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'درجة العميل' : 'Lead Score'}</p>
-              {(() => {
-                const score = scoreMap[selectedOpp.id] ?? calcLeadScore(selectedOpp);
-                return (
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: scoreColor(score) }} />
-                    </div>
-                    <span className="text-sm font-bold" style={{ color: scoreColor(score) }}>{score}</span>
-                    <span className="text-[10px] font-semibold" style={{ color: scoreColor(score) }}>{scoreLabel(score, isRTL)}</span>
+              {/* Lead Score */}
+              <div className="bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
+                <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'درجة العميل' : 'Lead Score'}</p>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: scoreColor(score) }} />
                   </div>
-                );
-              })()}
+                  <span className="text-sm font-bold" style={{ color: scoreColor(score) }}>{score}</span>
+                  <span className="text-[10px] font-semibold" style={{ color: scoreColor(score) }}>{scoreLabel(score, isRTL)}</span>
+                </div>
+              </div>
+
+              {/* Stage History */}
+              {stageHistory.length > 0 && (
+                <div>
+                  <p className="m-0 mb-2 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+                    {isRTL ? 'سجل المراحل' : 'Stage History'}
+                  </p>
+                  <div className="space-y-1">
+                    {stageHistory.slice(0, 5).map((h, i) => {
+                      const fromLabel = stages.find(s => s.id === h.from);
+                      const toLabel = stages.find(s => s.id === h.to);
+                      return (
+                        <div key={i} className="flex items-center gap-2 text-[10px] text-content-muted dark:text-content-muted-dark bg-gray-50 dark:bg-white/[0.03] rounded-lg px-2.5 py-1.5">
+                          <span className="font-semibold" style={{ color: fromLabel?.color || '#6B8DB5' }}>{isRTL ? (fromLabel?.label_ar || h.from) : (fromLabel?.label_en || h.from)}</span>
+                          <span>→</span>
+                          <span className="font-semibold" style={{ color: toLabel?.color || '#6B8DB5' }}>{isRTL ? (toLabel?.label_ar || h.to) : (toLabel?.label_en || h.to)}</span>
+                          <span className="ms-auto">{new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Emails */}
+              <OppEmailsSection oppId={selectedOpp.id} contactName={getContactName(selectedOpp)} contactId={selectedOpp.contact_id} isRTL={isRTL} isDark={isDark} />
+
+              {/* Follow Up Reminder */}
+              <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={getContactName(selectedOpp)} />
             </div>
           )}
 
-          {/* Emails Section */}
-          <OppEmailsSection oppId={selectedOpp.id} contactName={getContactName(selectedOpp)} contactId={selectedOpp.contact_id} isRTL={isRTL} isDark={isDark} />
+          {/* ══════ DOCUMENTS TAB ══════ */}
+          {tab === 'documents' && (
+            <DocumentsSection
+              entity="opportunity"
+              entityId={selectedOpp.id}
+              entityName={getContactName(selectedOpp)}
+            />
+          )}
 
-          {/* Documents */}
-          <DocumentsSection
-            entity="opportunity"
-            entityId={selectedOpp.id}
-            entityName={getContactName(selectedOpp)}
-          />
-
-          {/* Comments */}
-          <CommentsSection
-            entity="opportunity"
-            entityId={selectedOpp.id}
-            entityName={getContactName(selectedOpp)}
-          />
-
-          {/* Follow Up Reminder */}
-          <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={getContactName(selectedOpp)} />
+          {/* ══════ COMMENTS TAB ══════ */}
+          {tab === 'comments' && (
+            <CommentsSection
+              entity="opportunity"
+              entityId={selectedOpp.id}
+              entityName={getContactName(selectedOpp)}
+            />
+          )}
         </div>
       </div>
-      <div className="flex-1" onClick={closeDrawer} />
-
-      {/* Copy Toast */}
-      {copyToast && (
-        <div className="fixed bottom-6 z-[300] bg-gradient-to-br from-brand-500 to-brand-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-semibold animate-[slideUp_0.3s_ease-out]"
-          style={{ [isRTL ? 'right' : 'left']: 24 }}>
-          {copyToast}
-        </div>
-      )}
     </div>
+    </>
   );
 }
 
@@ -931,130 +772,81 @@ function OppEmailsSection({ oppId, contactName, contactId, isRTL, isDark }) {
   };
 
   return (
-    <div style={{
-      background: isDark ? 'rgba(74,122,171,0.06)' : 'rgba(74,122,171,0.04)',
-      borderRadius: 12, padding: '12px 14px',
-    }}>
-      <div
-        onClick={() => setExpanded(!expanded)}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Mail size={15} style={{ color: '#4A7AAB' }} />
-          <span style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+    <div className={`rounded-xl p-3 ${isDark ? 'bg-[rgba(74,122,171,0.06)]' : 'bg-[rgba(74,122,171,0.04)]'}`}>
+      <div onClick={() => setExpanded(!expanded)} className="flex items-center gap-2 cursor-pointer justify-between">
+        <div className="flex items-center gap-2">
+          <Mail size={15} className="text-[#4A7AAB]" />
+          <span className="text-xs font-semibold text-content dark:text-content-dark">
             {isRTL ? 'الرسائل' : 'Emails'}
           </span>
           {emails.length > 0 && (
-            <span style={{
-              minWidth: 18, height: 18, borderRadius: 9,
-              background: isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.1)',
-              color: '#4A7AAB', fontSize: 10, fontWeight: 700,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '0 5px',
-            }}>
+            <span className="min-w-[18px] h-[18px] rounded-full text-[10px] font-bold flex items-center justify-center px-1 bg-[rgba(74,122,171,0.15)] text-[#4A7AAB]">
               {emails.length}
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           <button
             onClick={(e) => { e.stopPropagation(); setShowCompose(!showCompose); setExpanded(true); }}
-            style={{
-              width: 24, height: 24, borderRadius: 6, border: 'none', cursor: 'pointer',
-              background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
+            className="w-6 h-6 rounded-md border-none cursor-pointer flex items-center justify-center bg-[rgba(74,122,171,0.1)]"
           >
-            <Plus size={13} style={{ color: '#4A7AAB' }} />
+            <Plus size={13} className="text-[#4A7AAB]" />
           </button>
-          {expanded ? <ChevronUp size={14} style={{ color: isDark ? '#64748b' : '#94a3b8' }} /> : <ChevronDown size={14} style={{ color: isDark ? '#64748b' : '#94a3b8' }} />}
+          {expanded ? <ChevronUp size={14} className="text-content-muted dark:text-content-muted-dark" /> : <ChevronDown size={14} className="text-content-muted dark:text-content-muted-dark" />}
         </div>
       </div>
 
       {expanded && (
-        <div style={{ marginTop: 10 }}>
-          {/* Quick compose */}
+        <div className="mt-2.5">
           {showCompose && (
-            <div style={{
-              padding: 10, borderRadius: 8, marginBottom: 10,
-              background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.8)',
-              border: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`,
-            }}>
+            <div className={`p-2.5 rounded-lg mb-2.5 border ${isDark ? 'bg-black/20 border-white/[0.06]' : 'bg-white/80 border-black/[0.06]'}`}>
               <input
                 value={subject}
                 onChange={e => setSubject(e.target.value)}
                 placeholder={isRTL ? 'الموضوع' : 'Subject'}
-                style={{
-                  width: '100%', padding: '6px 8px', borderRadius: 6, marginBottom: 6,
-                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
-                  background: 'transparent', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b',
-                  outline: 'none', boxSizing: 'border-box',
-                }}
+                className="w-full px-2 py-1.5 rounded-md border border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark text-xs outline-none mb-1.5"
               />
               <textarea
                 value={body}
                 onChange={e => setBody(e.target.value)}
                 placeholder={isRTL ? 'محتوى الرسالة...' : 'Message body...'}
                 rows={3}
-                style={{
-                  width: '100%', padding: '6px 8px', borderRadius: 6, marginBottom: 6,
-                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
-                  background: 'transparent', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b',
-                  outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box',
-                }}
+                className="w-full px-2 py-1.5 rounded-md border border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark text-xs outline-none resize-y font-inherit mb-1.5"
               />
-              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                <button onClick={() => setShowCompose(false)} style={{
-                  padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  background: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.05)',
-                  color: isDark ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 600,
-                }}>
+              <div className="flex gap-1.5 justify-end">
+                <button onClick={() => setShowCompose(false)} className="px-2.5 py-1 rounded-md border-none cursor-pointer bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark text-[11px] font-semibold">
                   {isRTL ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button onClick={handleSend} style={{
-                  padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  background: '#4A7AAB', color: '#fff', fontSize: 11, fontWeight: 600,
-                }}>
+                <button onClick={handleSend} className="px-3 py-1 rounded-md border-none cursor-pointer bg-[#4A7AAB] text-white text-[11px] font-semibold">
                   {isRTL ? 'إرسال' : 'Send'}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Email list */}
           {emails.length === 0 ? (
-            <p style={{ margin: 0, fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', textAlign: 'center', padding: '8px 0' }}>
+            <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark text-center py-2">
               {isRTL ? 'لا توجد رسائل مرتبطة' : 'No linked emails'}
             </p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="flex flex-col gap-1">
               {emails.slice(0, 5).map(email => (
-                <div key={email.id} style={{
-                  padding: '8px 10px', borderRadius: 8,
-                  background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.6)',
-                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.06)' : 'rgba(0,0,0,0.04)'}`,
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                <div key={email.id} className={`p-2 rounded-lg border ${isDark ? 'bg-black/15 border-white/[0.04]' : 'bg-white/60 border-black/[0.04]'}`}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[11px] font-semibold text-content dark:text-content-dark">
                       {email.subject || (isRTL ? '(بدون موضوع)' : '(No subject)')}
                     </span>
-                    <span style={{ fontSize: 10, color: isDark ? '#64748b' : '#94a3b8' }}>
+                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark">
                       {new Date(email.sent_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
-                  <p style={{
-                    margin: 0, fontSize: 10, color: isDark ? '#64748b' : '#94a3b8',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  }}>
+                  <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark truncate">
                     {email.body?.slice(0, 60)}
                   </p>
                 </div>
               ))}
               {emails.length > 5 && (
-                <p style={{ margin: 0, fontSize: 10, color: '#4A7AAB', textAlign: 'center', padding: '4px 0', fontWeight: 600 }}>
+                <p className="m-0 text-[10px] text-[#4A7AAB] text-center py-1 font-semibold">
                   {isRTL ? `+${emails.length - 5} رسائل أخرى` : `+${emails.length - 5} more`}
                 </p>
               )}
