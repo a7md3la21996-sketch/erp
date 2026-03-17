@@ -87,6 +87,14 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const isActive = (path) => location.pathname === path;
   const isParentActive = (item) => item.children?.some(c => location.pathname.startsWith(c.path));
   const visibleItems = NAV_ITEMS.filter(item => hasPermission(item.permission));
+  const hasChild = (item, childId) => item.children?.some(c => c.id === childId);
+  const getBadgeCount = (item) => {
+    let count = 0;
+    if (item.id === 'announcements' || hasChild(item, 'announcements')) count += annUnread;
+    if (item.id === 'approvals' || hasChild(item, 'approvals')) count += approvalPending;
+    if (item.id === 'email' || hasChild(item, 'email')) count += emailUnread;
+    return count;
+  };
 
   const ToggleIcon = collapsed
     ? (isRTL ? PanelLeftClose : PanelLeftOpen)
@@ -208,26 +216,14 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   <Link to={item.path} onClick={handleNavClick} className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg no-underline text-sm font-medium transition-colors ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'}`}>
                     <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                       <Icon size={20} />
-                      {!showLabels && item.id === 'announcements' && annUnread > 0 && (
-                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{annUnread > 9 ? '9+' : annUnread}</span>
-                      )}
-                      {!showLabels && item.id === 'approvals' && approvalPending > 0 && (
-                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#F59E0B', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{approvalPending > 9 ? '9+' : approvalPending}</span>
-                      )}
-                      {!showLabels && item.id === 'email' && emailUnread > 0 && (
-                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#4A7AAB', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{emailUnread > 9 ? '9+' : emailUnread}</span>
-                      )}
+                      {(() => { const bc = getBadgeCount(item); return !showLabels && bc > 0 ? (
+                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{bc > 9 ? '9+' : bc}</span>
+                      ) : null; })()}
                     </span>
                     {showLabels && <span className={`flex-1 text-start`}>{item.label[lang]}</span>}
-                    {showLabels && item.id === 'announcements' && annUnread > 0 && (
-                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{annUnread > 99 ? '99+' : annUnread}</span>
-                    )}
-                    {showLabels && item.id === 'approvals' && approvalPending > 0 && (
-                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#F59E0B', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{approvalPending > 99 ? '99+' : approvalPending}</span>
-                    )}
-                    {showLabels && item.id === 'email' && emailUnread > 0 && (
-                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#4A7AAB', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{emailUnread > 99 ? '99+' : emailUnread}</span>
-                    )}
+                    {(() => { const bc = getBadgeCount(item); return showLabels && bc > 0 ? (
+                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{bc > 99 ? '99+' : bc}</span>
+                    ) : null; })()}
                     {showLabels && (
                       <span
                         onClick={(e) => handleStarClick(e, item)}
@@ -242,8 +238,16 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   </div>
                 ) : (
                   <button onClick={() => toggleMenu(item.id)} className={`w-full flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg border-none cursor-pointer text-sm font-medium ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'} text-start`}>
-                    <Icon size={20} className="shrink-0" />
+                    <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
+                      <Icon size={20} />
+                      {(() => { const bc = getBadgeCount(item); return !showLabels && bc > 0 ? (
+                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{bc > 9 ? '9+' : bc}</span>
+                      ) : null; })()}
+                    </span>
                     {showLabels && <span className="flex-1">{item.label[lang]}</span>}
+                    {(() => { const bc = getBadgeCount(item); return showLabels && bc > 0 ? (
+                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{bc > 99 ? '99+' : bc}</span>
+                    ) : null; })()}
                     {showLabels && <ChevronDown size={16} className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />}
                   </button>
                 )}
