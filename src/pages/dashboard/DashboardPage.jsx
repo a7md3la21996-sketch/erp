@@ -20,6 +20,7 @@ import SuggestionsPanel from '../../components/ui/SuggestionsPanel';
 import { getQuarterSummary, computeObjectiveProgress } from '../../services/okrService';
 import { getAnnouncements, isRead as isAnnRead, markAsRead as markAnnRead, CATEGORIES as ANN_CATEGORIES } from '../../services/announcementService';
 import HeatmapCalendar from '../../components/ui/HeatmapCalendar';
+import ErrorBoundary from '../../components/ErrorBoundary';
 import { getActivityHeatmap } from '../../services/heatmapService';
 import { useResponsive } from '../../hooks/useMediaQuery';
 
@@ -1135,20 +1136,19 @@ export default function DashboardPage() {
     }
   };
 
-  if (dashLoading) return <DashboardSkeleton />;
-
-  // Build ordered visible widgets
+  // Build ordered visible widgets — MUST be before any conditional return to respect Rules of Hooks
   const visibleWidgets = useMemo(() => widgetLayout.filter(w => w.visible).sort((a, b) => a.order - b.order), [widgetLayout]);
 
   const getGridStyle = useCallback((size) => {
     if (isMobileView) {
-      // On mobile, everything is full-width (single column)
       return { gridColumn: 'span 1' };
     }
     const spans = { sm: 1, md: 2, lg: 2, full: 4 };
     const span = spans[size] || 2;
     return { gridColumn: 'span ' + span };
   }, [isMobileView]);
+
+  if (dashLoading) return <DashboardSkeleton />;
 
   // Widgets that contain their own grid of cards (no outer Card wrapper needed)
   const noCardWidgets = ['kpi_overview', 'recent_activities', 'hr_overview'];
@@ -1290,7 +1290,8 @@ export default function DashboardPage() {
         {visibleWidgets.map((item) => {
           const meta = getWidgetMeta(item.widgetId);
           if (!meta) return null;
-          const content = renderWidget(item.widgetId);
+          let content;
+          try { content = renderWidget(item.widgetId); } catch (err) { content = <div className="p-4 text-xs text-red-500">Widget error ({item.widgetId}): {String(err?.message || err)}</div>; }
           if (content === null) return null;
           const title = lang === 'ar' ? meta.title_ar : meta.title_en;
           const isCollapsed = !!collapsedWidgets[item.widgetId];
@@ -1298,6 +1299,7 @@ export default function DashboardPage() {
 
           return (
             <div key={item.widgetId} style={getGridStyle(item.size)}>
+              <ErrorBoundary compact fallback={({ error }) => <Card className="p-4"><p className="text-xs text-red-500 m-0">⚠ {item.widgetId}: {error?.message?.slice(0, 120)}</p></Card>}>
               {needsCard ? (
                 <WidgetCard
                   title={title}
@@ -1342,6 +1344,7 @@ export default function DashboardPage() {
                   {!isCollapsed && content}
                 </div>
               )}
+              </ErrorBoundary>
             </div>
           );
         })}
