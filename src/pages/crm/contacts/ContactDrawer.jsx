@@ -4,7 +4,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
 import { addRecentItem } from '../../../services/recentItemsService';
-import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle, ExternalLink, Download } from 'lucide-react';
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
@@ -26,6 +26,11 @@ import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/document
 import { getWonDeals } from '../../../services/dealsService';
 import { generateContactCardHTML, getCompanyInfo } from '../../../services/printService';
 import PrintPreview from '../../../components/ui/PrintPreview';
+import {
+  logMessage as logWhatsAppMessage, getTemplates as getWhatsAppTemplates,
+  generateWhatsAppLink, fillTemplate, getMessagesByContact,
+  TEMPLATE_CATEGORIES as WA_CATEGORIES,
+} from '../../../services/whatsappService';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
@@ -320,6 +325,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showDrawerMenu, setShowDrawerMenu] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
+  const [showWAPopup, setShowWAPopup] = useState(false);
+  const [waMessage, setWaMessage] = useState('');
+  const [waSelectedTpl, setWaSelectedTpl] = useState('');
+  const waTemplates = useMemo(() => getWhatsAppTemplates(true), []);
+  const recentWAMessages = useMemo(() => getMessagesByContact(contact?.id).slice(0, 5), [contact?.id]);
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -1054,9 +1064,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </a>
             )}
             {contact.phone && (
-              <a href={`https://wa.me/${normalizePhone(contact.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="flex-1 py-1.5 bg-[#25D366]/10 border border-[#25D366]/25 rounded-lg text-[#25D366] text-[11px] font-semibold text-center no-underline flex items-center justify-center gap-1">
+              <button onClick={() => setShowWAPopup(p => !p)} className="flex-1 py-1.5 bg-[#25D366]/10 border border-[#25D366]/25 rounded-lg text-[#25D366] text-[11px] font-semibold text-center cursor-pointer flex items-center justify-center gap-1 relative">
                 <MessageCircle size={12} /> {isRTL ? 'واتساب' : 'WA'}
-              </a>
+              </button>
             )}
             {contact.email && (
               <a href={`mailto:${contact.email}`} className="flex-1 py-1.5 bg-brand-500/10 border border-brand-500/25 rounded-lg text-[#6B8DB5] text-[11px] font-semibold text-center no-underline flex items-center justify-center gap-1">
@@ -1069,6 +1079,105 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </button>
             )}
           </div>
+
+          {/* WhatsApp Quick Send Popup */}
+          {showWAPopup && contact.phone && (
+            <div className="mx-5 mb-2.5 rounded-xl border border-[#25D366]/25 bg-[#25D366]/[0.04] dark:bg-[#25D366]/[0.06] p-3" style={{ position: 'relative' }}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-[#25D366] flex items-center gap-1.5">
+                  <MessageCircle size={13} /> {isRTL ? 'إرسال واتساب' : 'Send WhatsApp'}
+                </span>
+                <button onClick={() => setShowWAPopup(false)} className="w-5 h-5 rounded flex items-center justify-center bg-transparent border-0 cursor-pointer text-content-muted dark:text-content-muted-dark">
+                  <X size={12} />
+                </button>
+              </div>
+              {/* Template selector */}
+              <select
+                value={waSelectedTpl}
+                onChange={e => {
+                  setWaSelectedTpl(e.target.value);
+                  if (e.target.value) {
+                    const tpl = waTemplates.find(t => t.id === e.target.value);
+                    if (tpl) {
+                      const body = isRTL ? (tpl.body_ar || tpl.body) : tpl.body;
+                      const filled = fillTemplate(body, {
+                        name: contact.full_name || '',
+                        company: contact.company || '',
+                        amount: '',
+                        date: new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US'),
+                      });
+                      setWaMessage(filled);
+                    }
+                  }
+                }}
+                className="w-full px-2.5 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none mb-2 font-cairo"
+              >
+                <option value="">{isRTL ? 'اختر قالب...' : 'Pick a template...'}</option>
+                {waTemplates.map(t => (
+                  <option key={t.id} value={t.id}>{isRTL ? (t.name_ar || t.name) : t.name}</option>
+                ))}
+              </select>
+              {/* Message input */}
+              <textarea
+                value={waMessage}
+                onChange={e => setWaMessage(e.target.value)}
+                placeholder={isRTL ? 'اكتب رسالة...' : 'Type a message...'}
+                rows={3}
+                className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none resize-none font-cairo"
+                style={{ lineHeight: 1.5 }}
+              />
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => {
+                    const phone = normalizePhone(contact.phone).replace('+', '');
+                    const link = generateWhatsAppLink(phone, waMessage);
+                    logWhatsAppMessage({
+                      contact_id: contact.id,
+                      contact_name: contact.full_name,
+                      contact_phone: contact.phone,
+                      direction: 'outgoing',
+                      message: waMessage || '',
+                      template_id: waSelectedTpl || null,
+                      type: waSelectedTpl ? 'template' : 'text',
+                    });
+                    window.open(link, '_blank');
+                    setWaMessage('');
+                    setWaSelectedTpl('');
+                    setShowWAPopup(false);
+                  }}
+                  className="flex-1 py-1.5 rounded-lg border-0 text-white text-[11px] font-semibold cursor-pointer flex items-center justify-center gap-1"
+                  style={{ background: '#25D366' }}
+                >
+                  <Send size={11} /> {isRTL ? 'إرسال' : 'Send'}
+                </button>
+                <a
+                  href={generateWhatsAppLink(normalizePhone(contact.phone).replace('+', ''))}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="py-1.5 px-3 rounded-lg border border-[#25D366]/25 text-[#25D366] text-[11px] font-semibold no-underline flex items-center justify-center gap-1"
+                >
+                  <ExternalLink size={11} /> {isRTL ? 'فتح' : 'Open'}
+                </a>
+              </div>
+              {/* Recent WA messages */}
+              {recentWAMessages.length > 0 && (
+                <div className="mt-2.5 pt-2 border-t border-[#25D366]/15">
+                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">
+                    {isRTL ? 'آخر الرسائل' : 'Recent Messages'}
+                  </span>
+                  {recentWAMessages.map(m => (
+                    <div key={m.id} className="flex items-start gap-1.5 mt-1.5">
+                      {m.direction === 'outgoing' ? <Send size={9} className="text-[#25D366] mt-0.5 flex-shrink-0" /> : <Download size={9} className="text-brand-500 mt-0.5 flex-shrink-0" />}
+                      <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate flex-1">{m.message?.slice(0, 50)}</span>
+                      <span className="text-[9px] text-content-muted dark:text-content-muted-dark flex-shrink-0 opacity-60">
+                        {new Date(m.sent_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Stats Bar */}
           <div className="flex gap-0 mx-5 mb-2.5 rounded-lg border border-edge dark:border-edge-dark overflow-hidden">

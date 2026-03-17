@@ -4,7 +4,7 @@ import {
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
   TrendingUp, PieChart, Volume2, Crosshair, Grid3x3, Shield, Gift, Bell, HelpCircle,
-  GitCompareArrows, Mail, BookOpen,
+  GitCompareArrows, Mail, BookOpen, Globe, FileText, MessageCircle,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -23,6 +23,7 @@ export const NAV_ITEMS = [
     { id: 'deals', label: { ar: 'الصفقات', en: 'Deals' }, path: '/sales/deals', permission: P.DEALS_VIEW_OWN },
     { id: 'commissions', label: { ar: 'العمولات', en: 'Commissions' }, path: '/sales/commissions', permission: P.COMM_VIEW_OWN },
     { id: 'forecast', label: { ar: 'توقعات المبيعات', en: 'Sales Forecast' }, path: '/sales/forecast', permission: P.DEALS_VIEW_OWN },
+    { id: 'quotes', label: { ar: 'عروض الأسعار', en: 'Quotes' }, icon: FileText, path: '/quotes', permission: P.DEALS_VIEW_OWN },
   ]},
   { id: 'approvals', label: { ar: 'الموافقات', en: 'Approvals' }, icon: Shield, path: '/approvals', permission: P.DEALS_VIEW_OWN },
   { id: 'operations', label: { ar: 'العمليات', en: 'Operations' }, icon: ClipboardCheck, permission: P.OPS_VIEW, children: [
@@ -69,6 +70,8 @@ export const NAV_ITEMS = [
   { id: 'announcements', label: { ar: 'الإعلانات', en: 'Announcements' }, icon: Volume2, path: '/announcements', permission: P.DASHBOARD },
   { id: 'chat', label: { ar: 'المحادثات', en: 'Chat' }, icon: MessageSquare, path: '/chat', permission: P.CHAT_USE },
   { id: 'email', label: { ar: 'البريد الإلكتروني', en: 'Email' }, icon: Mail, path: '/email', permission: P.CHAT_USE },
+  { id: 'whatsapp', label: { ar: 'واتساب', en: 'WhatsApp' }, icon: MessageCircle, path: '/whatsapp', permission: P.CHAT_USE },
+  { id: 'customer-portal', label: { ar: 'بوابة العملاء', en: 'Customer Portal' }, icon: Globe, path: '/customer-portal', permission: P.CONTACTS_VIEW_OWN },
   { id: 'reports', label: { ar: 'التقارير', en: 'Reports' }, icon: BarChart3, path: '/reports', permission: P.RPT_SALES },
   { id: 'comparison', label: { ar: 'تقارير المقارنة', en: 'Comparison Reports' }, icon: GitCompareArrows, path: '/comparison', permission: P.RPT_SALES },
   { id: 'heatmap', label: { ar: 'خريطة النشاط', en: 'Activity Map' }, icon: Grid3x3, path: '/heatmap', permission: P.RPT_SALES },

@@ -6,6 +6,7 @@ import FollowUpReminder from '../../../components/ui/FollowUpReminder';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
 import { getEmailsByOpportunity, sendEmail } from '../../../services/emailService';
+import { logMessage as logWhatsAppMessage, generateWhatsAppLink } from '../../../services/whatsappService';
 import { getDeptStages, deptStageLabel } from '../contacts/constants';
 import {
   TEMP_CONFIG, PRIORITY_CONFIG, ACTIVITY_ICONS,
@@ -17,8 +18,9 @@ import {
   Plus, X, Trash2, Building2, Banknote, User, Loader2, Pencil,
   Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star,
   MapPin, Briefcase, Calendar, ExternalLink, StickyNote,
-  ChevronUp, ChevronDown,
+  ChevronUp, ChevronDown, FileText,
 } from 'lucide-react';
+import { getQuotesByOpportunity } from '../../../services/quotesService';
 import { Button, Input, Select, Textarea } from '../../../components/ui';
 
 export default function OpportunityDrawer({
@@ -46,6 +48,8 @@ export default function OpportunityDrawer({
   const [showNotes, setShowNotes] = useState(false);
   // Used for copy-phone toast inside drawer
   const [copyToast, setCopyToast] = useState(null);
+  // Linked quotes count
+  const [linkedQuotesCount, setLinkedQuotesCount] = useState(0);
 
   // Check if edit form has unsaved changes
   const isEditDirty = editingOpp && selectedOpp && (
@@ -89,6 +93,15 @@ export default function OpportunityDrawer({
   // Reset edit mode when selectedOpp changes (e.g. prev/next navigation)
   useEffect(() => {
     setEditingOpp(false);
+  }, [selectedOpp?.id]);
+
+  // Load linked quotes count
+  useEffect(() => {
+    if (!selectedOpp?.id) { setLinkedQuotesCount(0); return; }
+    try {
+      const quotes = getQuotesByOpportunity(selectedOpp.id);
+      setLinkedQuotesCount(quotes.length);
+    } catch { setLinkedQuotesCount(0); }
   }, [selectedOpp?.id]);
 
   const startEdit = () => {
@@ -220,6 +233,26 @@ export default function OpportunityDrawer({
               </button>
             )}
             <button
+              onClick={() => navigate(`/quotes?opportunity_id=${selectedOpp.id}`)}
+              className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
+              title={isRTL ? `إنشاء عرض سعر${linkedQuotesCount ? ` (${linkedQuotesCount})` : ''}` : `Create Quote${linkedQuotesCount ? ` (${linkedQuotesCount})` : ''}`}
+              style={{ position: 'relative' }}
+            >
+              <FileText size={15} />
+              {linkedQuotesCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: -4, right: -4,
+                  background: '#4A7AAB', color: '#fff',
+                  fontSize: 9, fontWeight: 700,
+                  width: 15, height: 15,
+                  borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {linkedQuotesCount}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => editingOpp ? setEditingOpp(false) : startEdit()}
               className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
               title={isRTL ? 'تعديل' : 'Edit'}
@@ -276,9 +309,24 @@ export default function OpportunityDrawer({
                 >
                   📋
                 </button>
-                <a href={`https://wa.me/${(selectedOpp.contacts.phone || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors font-semibold">
+                <button
+                  onClick={() => {
+                    const phone = (selectedOpp.contacts.phone || '').replace(/[^0-9]/g, '');
+                    const contactName = getContactName(selectedOpp, isRTL);
+                    logWhatsAppMessage({
+                      contact_id: selectedOpp.contact_id,
+                      contact_name: contactName,
+                      contact_phone: selectedOpp.contacts.phone,
+                      direction: 'outgoing',
+                      message: '',
+                      type: 'text',
+                    });
+                    window.open(generateWhatsAppLink(phone), '_blank');
+                  }}
+                  className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-none cursor-pointer hover:bg-emerald-500/20 transition-colors font-semibold font-cairo"
+                >
                   <MessageCircle size={13} /> WhatsApp
-                </a>
+                </button>
               </>)}
               {selectedOpp.contacts.email && (
                 <a href={`mailto:${selectedOpp.contacts.email}`} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 no-underline hover:bg-blue-500/20 transition-colors font-semibold">
