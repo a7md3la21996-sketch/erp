@@ -367,28 +367,35 @@ export function computeSalesCycleDuration(opportunities) {
 export function computeAgentPerformance(opportunities, activities) {
   const agents = {};
 
+  const initAgent = (name) => ({
+    agent: name, calls: 0, meetings: 0, emails: 0, opps: 0,
+    deals: 0, lost: 0, revenue: 0, totalCycleDays: 0, closedCount: 0,
+    activitiesTotal: 0,
+  });
+
   // Aggregate from opportunities
   opportunities.forEach(opp => {
     const name = opp.agent_name || opp.assigned_to || 'Unknown';
-    if (!agents[name]) {
-      agents[name] = { agent: name, calls: 0, meetings: 0, emails: 0, opps: 0, deals: 0, revenue: 0, totalCycleDays: 0, closedCount: 0 };
-    }
+    if (!agents[name]) agents[name] = initAgent(name);
     agents[name].opps++;
     if (opp.stage === 'closed_won') {
       agents[name].deals++;
-      agents[name].revenue += (opp.revenue || opp.value || 0);
-      const cycle = daysBetween(opp.created_at, opp.won_date || opp.updated_at);
+      agents[name].revenue += (opp.revenue || opp.value || opp.budget || 0);
+      const closeDate = opp.won_date || opp.stage_changed_at || opp.updated_at;
+      const cycle = daysBetween(opp.created_at, closeDate);
       agents[name].totalCycleDays += cycle;
       agents[name].closedCount++;
+    }
+    if (opp.stage === 'closed_lost') {
+      agents[name].lost++;
     }
   });
 
   // Aggregate from activities
   activities.forEach(act => {
-    const name = act.agent_name || 'Unknown';
-    if (!agents[name]) {
-      agents[name] = { agent: name, calls: 0, meetings: 0, emails: 0, opps: 0, deals: 0, revenue: 0, totalCycleDays: 0, closedCount: 0 };
-    }
+    const name = act.agent_name || act.assigned_to || 'Unknown';
+    if (!agents[name]) agents[name] = initAgent(name);
+    agents[name].activitiesTotal++;
     if (act.type === 'call') agents[name].calls++;
     else if (act.type === 'meeting') agents[name].meetings++;
     else if (act.type === 'email') agents[name].emails++;
@@ -398,7 +405,8 @@ export function computeAgentPerformance(opportunities, activities) {
     ...a,
     conversionRate: a.opps > 0 ? Math.round((a.deals / a.opps) * 100) : 0,
     avgCycleDays: a.closedCount > 0 ? Math.round(a.totalCycleDays / a.closedCount) : 0,
-    totalActivities: a.calls + a.meetings + a.emails,
+    avgDealSize: a.deals > 0 ? Math.round(a.revenue / a.deals) : 0,
+    totalActivities: a.activitiesTotal || (a.calls + a.meetings + a.emails),
   })).sort((a, b) => b.revenue - a.revenue);
 }
 

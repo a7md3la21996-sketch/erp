@@ -749,8 +749,8 @@ export default function ReportsPage() {
       activity_summary: computeActivitySummary(activities),
       // Sales
       revenue_by_month: computeRevenueByMonth(deals),
-      target_achievement: computeTopPerformers(deals),
-      top_performers: computeTopPerformers(deals),
+      target_achievement: computeTopPerformers(deals, opportunities),
+      top_performers: computeTopPerformers(deals, opportunities),
       deal_cycle: computeDealCycle(deals),
       // HR
       attendance: computeAttendance(attendance, employees),

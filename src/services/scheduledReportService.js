@@ -242,7 +242,7 @@ async function computeReportData(reportType, filters) {
       case 'finance_expenses':
         return computeExpenseBreakdown(filterByDateRange(expenses, dateRange, 'date'));
       case 'team_performance':
-        return computeTopPerformers(filterByDateRange(deals, dateRange, 'created_at'));
+        return computeTopPerformers(filterByDateRange(deals, dateRange, 'created_at'), filterByDateRange(opportunities, dateRange));
       default: {
         return computeContactsBySource(filterByDateRange(contacts, dateRange));
       }

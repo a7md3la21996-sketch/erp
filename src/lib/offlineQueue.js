@@ -1,14 +1,59 @@
-// Offline Queue Manager for Tasks & Activities
+// Offline Queue Manager
 // Stores pending operations in localStorage and syncs when online
+// Supports: tasks, activities, opportunities, contacts, deals
 
 import supabase from './supabase';
 import { logCreate, logUpdate, logDelete } from '../services/auditService';
 
-const STORAGE_KEY = 'platform_offline_queue';
+const STORAGE_KEY = 'platform_sync_queue';
+const OLD_STORAGE_KEY = 'platform_offline_queue';
+const MAX_RETRIES = 5;
+
+// Migrate from old key if needed
+if (typeof window !== 'undefined') {
+  try {
+    const old = localStorage.getItem(OLD_STORAGE_KEY);
+    if (old) {
+      const existing = localStorage.getItem(STORAGE_KEY);
+      if (!existing || existing === '[]') {
+        localStorage.setItem(STORAGE_KEY, old);
+      }
+      localStorage.removeItem(OLD_STORAGE_KEY);
+    }
+  } catch { /* ignore */ }
+}
+
+// ── Entity → Supabase table mapping ─────────────────────────────────────
+
+function resolveTable(entity) {
+  const map = {
+    task: 'tasks',
+    activity: 'activities',
+    opportunity: 'opportunities',
+    opportunities: 'opportunities',
+    contact: 'contacts',
+    contacts: 'contacts',
+    deal: 'deals',
+    deals: 'deals',
+  };
+  return map[entity] || entity;
+}
+
+// Normalize entity name to singular for audit logs
+function singularEntity(entity) {
+  const map = {
+    tasks: 'task',
+    activities: 'activity',
+    opportunities: 'opportunity',
+    contacts: 'contact',
+    deals: 'deal',
+  };
+  return map[entity] || entity;
+}
 
 // ── Queue Storage ─────────────────────────────────────────────────────────
 
-function getQueue() {
+export function getQueue() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
   } catch {
@@ -17,7 +62,9 @@ function getQueue() {
 }
 
 function saveQueue(queue) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
+  } catch { /* ignore quota errors */ }
 }
 
 // ── Public API ────────────────────────────────────────────────────────────
@@ -28,9 +75,11 @@ export function enqueue(entity, action, data) {
   queue.push({
     id: 'oq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
     timestamp: Date.now(),
-    entity,   // 'task' | 'activity'
-    action,   // 'create' | 'update' | 'delete'
+    entity,       // 'task' | 'activity' | 'opportunities' | 'contacts' | 'deals'
+    action,       // 'create' | 'update' | 'delete'
     data,
+    created_at: new Date().toISOString(),
+    retries: 0,
   });
   saveQueue(queue);
   notifyListeners();
@@ -66,13 +115,19 @@ export async function processQueue(onProgress) {
 
   _processing = true;
   let success = 0;
+  let skipped = 0;
 
   try {
-    while (true) {
-      const currentQueue = getQueue();
-      if (currentQueue.length === 0) break;
+    const currentQueue = getQueue();
+    for (let i = 0; i < currentQueue.length; i++) {
+      const item = currentQueue[i];
 
-      const item = currentQueue[0];
+      // Skip items that exceeded max retries
+      if ((item.retries || 0) > MAX_RETRIES) {
+        skipped++;
+        continue;
+      }
+
       const ok = await processItem(item);
 
       if (ok) {
@@ -83,25 +138,32 @@ export async function processQueue(onProgress) {
         notifyListeners();
         if (onProgress) onProgress({ processed: success, remaining: updated.length });
       } else {
-        // Stop on failure - will retry later
-        break;
+        // Increment retry count
+        const latestQueue = getQueue();
+        const idx = latestQueue.findIndex(q => q.id === item.id);
+        if (idx > -1) {
+          latestQueue[idx].retries = (latestQueue[idx].retries || 0) + 1;
+          saveQueue(latestQueue);
+        }
+        // Continue to next item instead of stopping entirely
       }
     }
   } finally {
     _processing = false;
   }
 
-  return { success, failed: getQueue().length };
+  return { success, failed: getQueue().length - skipped };
 }
 
 async function processItem(item) {
   const { entity, action, data } = item;
-  const table = entity === 'task' ? 'tasks' : 'activities';
+  const table = resolveTable(entity);
+  const logEntity = singularEntity(entity);
 
   try {
     if (action === 'create') {
       // Strip offline markers and temp ID
-      const { _offline, ...payload } = data;
+      const { _offline, users, contacts, projects, ...payload } = data;
       const tempId = payload.id;
       delete payload.id; // Let Supabase generate real ID
 
@@ -112,12 +174,15 @@ async function processItem(item) {
         .single();
 
       if (error) throw error;
-      logCreate(entity, created.id, created);
+      logCreate(logEntity, created.id, created);
 
       // If activity for a contact, update last_activity_at
-      if (entity === 'activity' && payload.entity_type === 'contact' && payload.contact_id) {
+      if ((entity === 'activity' || entity === 'activities') && payload.entity_type === 'contact' && payload.contact_id) {
         await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', payload.contact_id);
       }
+
+      // Update localStorage with real ID
+      updateLocalStorageId(entity, tempId, created);
 
       // Store temp->real ID mapping for reference
       storeTempIdMapping(tempId, created.id);
@@ -125,35 +190,68 @@ async function processItem(item) {
     }
 
     if (action === 'update') {
-      const { _id, ...updates } = data;
-      const realId = resolveId(_id || data.id);
+      const { _id, _offline, users, contacts, projects, ...updates } = data;
+      const targetId = _id || data.id;
+      const realId = resolveId(targetId);
+      delete updates.id;
 
       const { data: oldData } = await supabase.from(table).select('*').eq('id', realId).single();
       const { error } = await supabase.from(table).update(updates).eq('id', realId);
       if (error) throw error;
 
       const { data: newData } = await supabase.from(table).select('*').eq('id', realId).single();
-      logUpdate(entity, realId, oldData, newData);
+      logUpdate(logEntity, realId, oldData, newData);
       return true;
     }
 
     if (action === 'delete') {
       const realId = resolveId(data.id);
       // If it's still a temp ID, it was never synced - just remove from queue
-      if (realId.startsWith('temp_')) return true;
+      if (realId.startsWith('temp_') || realId.startsWith('oq_')) return true;
 
       const { data: oldData } = await supabase.from(table).select('*').eq('id', realId).single();
       const { error } = await supabase.from(table).delete().eq('id', realId);
       if (error) throw error;
-      logDelete(entity, realId, oldData);
+      logDelete(logEntity, realId, oldData);
       return true;
     }
 
     return true; // Unknown action, skip
   } catch (err) {
-    console.warn('[OfflineQueue] Failed to process item:', item, err);
+    console.warn('[OfflineQueue] Failed to process item:', item.id, entity, action, err?.message || err);
     return false;
   }
+}
+
+// ── Update localStorage after successful sync ────────────────────────────
+
+function updateLocalStorageId(entity, tempId, created) {
+  if (!tempId) return;
+
+  const storageKeyMap = {
+    task: 'platform_tasks',
+    tasks: 'platform_tasks',
+    activity: 'platform_activities',
+    activities: 'platform_activities',
+    opportunity: 'platform_opportunities',
+    opportunities: 'platform_opportunities',
+    contact: 'platform_contacts',
+    contacts: 'platform_contacts',
+    deal: 'platform_won_deals',
+    deals: 'platform_won_deals',
+  };
+
+  const key = storageKeyMap[entity];
+  if (!key) return;
+
+  try {
+    const items = JSON.parse(localStorage.getItem(key) || '[]');
+    const idx = items.findIndex(i => String(i.id) === String(tempId));
+    if (idx > -1) {
+      items[idx] = { ...items[idx], ...created };
+      localStorage.setItem(key, JSON.stringify(items));
+    }
+  } catch { /* ignore */ }
 }
 
 // ── Temp ID Mapping ───────────────────────────────────────────────────────
@@ -161,7 +259,11 @@ async function processItem(item) {
 const MAPPING_KEY = 'platform_offline_id_map';
 
 function storeTempIdMapping(tempId, realId) {
-  if (!tempId || !tempId.startsWith('temp_')) return;
+  if (!tempId) return;
+  // Only map IDs that look like temp/offline IDs
+  const isTemp = String(tempId).startsWith('temp_') || String(tempId).startsWith('oq_') || /^\d{13,}$/.test(String(tempId));
+  if (!isTemp) return;
+
   try {
     const map = JSON.parse(localStorage.getItem(MAPPING_KEY) || '{}');
     map[tempId] = realId;
@@ -170,7 +272,7 @@ function storeTempIdMapping(tempId, realId) {
 }
 
 function resolveId(id) {
-  if (!id || !id.startsWith('temp_')) return id;
+  if (!id) return id;
   try {
     const map = JSON.parse(localStorage.getItem(MAPPING_KEY) || '{}');
     return map[id] || id;

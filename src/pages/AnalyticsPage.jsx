@@ -186,13 +186,15 @@ export default function AnalyticsPage() {
       case 'agents':
         data = agentData.map(a => ({
           Agent: a.agent,
-          Calls: a.calls,
-          Meetings: a.meetings,
           Opportunities: a.opps,
-          Deals: a.deals,
-          Revenue: a.revenue,
+          Won: a.deals,
+          Lost: a.lost || 0,
           'Conversion %': `${a.conversionRate}%`,
-          'Avg Cycle Days': a.avgCycleDays,
+          Revenue: a.revenue,
+          'Avg Deal Size': a.avgDealSize || 0,
+          'Avg Close Days': a.avgCycleDays,
+          Activities: a.totalActivities,
+          Calls: a.calls,
         }));
         filename = 'agent_performance';
         break;
@@ -846,6 +848,8 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
   const topAgent = data[0];
   const totalRevenue = data.reduce((s, a) => s + a.revenue, 0);
   const avgConversion = data.length > 0 ? Math.round(data.reduce((s, a) => s + a.conversionRate, 0) / data.length) : 0;
+  const totalWon = data.reduce((s, a) => s + (a.deals || 0), 0);
+  const totalLost = data.reduce((s, a) => s + (a.lost || 0), 0);
 
   return (
     <div>
@@ -854,6 +858,8 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
         <KpiCard label={isRTL ? 'أفضل وكيل' : 'Top Agent'} value={topAgent?.agent || '—'} sub={fmtMoney(topAgent?.revenue || 0)} icon={Trophy} color="#FFD700" />
         <KpiCard label={isRTL ? 'إجمالي الإيراد' : 'Total Revenue'} value={fmtMoney(totalRevenue)} icon={DollarSign} color="#10B981" />
         <KpiCard label={isRTL ? 'متوسط التحويل' : 'Avg Conversion'} value={`${avgConversion}%`} icon={Target} color={ACCENT} />
+        <KpiCard label={isRTL ? 'صفقات رابحة' : 'Total Won'} value={totalWon} icon={Award} color="#10B981" />
+        <KpiCard label={isRTL ? 'صفقات خاسرة' : 'Total Lost'} value={totalLost} icon={TrendingDown} color="#EF4444" />
         <KpiCard label={isRTL ? 'عدد الوكلاء' : 'Total Agents'} value={data.length} icon={Users} color="#8B5CF6" />
       </div>
 
@@ -887,14 +893,16 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
                 <div style={{ fontSize: 11, color: textSecondary }}>{fmtMoney(agent.revenue)} {isRTL ? 'إيراد' : 'revenue'}</div>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
               {[
-                { label: isRTL ? 'مكالمات' : 'Calls', value: agent.calls, color: ACCENT },
-                { label: isRTL ? 'اجتماعات' : 'Meetings', value: agent.meetings, color: '#8B5CF6' },
                 { label: isRTL ? 'فرص' : 'Opps', value: agent.opps, color: '#F59E0B' },
-                { label: isRTL ? 'صفقات' : 'Deals', value: agent.deals, color: '#10B981' },
+                { label: isRTL ? 'رابحة' : 'Won', value: agent.deals, color: '#10B981' },
+                { label: isRTL ? 'خاسرة' : 'Lost', value: agent.lost || 0, color: '#EF4444' },
                 { label: isRTL ? 'تحويل' : 'Conv %', value: `${agent.conversionRate}%`, color: agent.conversionRate >= 20 ? '#10B981' : '#EF4444' },
+                { label: isRTL ? 'متوسط صفقة' : 'Avg Deal', value: fmtMoney(agent.avgDealSize || 0), color: ACCENT },
                 { label: isRTL ? 'دورة' : 'Cycle', value: `${agent.avgCycleDays}d`, color: '#6B8DB5' },
+                { label: isRTL ? 'أنشطة' : 'Activities', value: agent.totalActivities, color: '#8B5CF6' },
+                { label: isRTL ? 'مكالمات' : 'Calls', value: agent.calls, color: '#2B4C6F' },
               ].map(stat => (
                 <div key={stat.label} style={{
                   textAlign: 'center', padding: '6px 4px',
@@ -961,13 +969,15 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
               <tr>
                 <th style={tableHeaderStyle}>#</th>
                 <th style={tableHeaderStyle}>{isRTL ? 'الوكيل' : 'Agent'}</th>
-                <th style={tableHeaderStyle}>{isRTL ? 'مكالمات' : 'Calls'}</th>
-                <th style={tableHeaderStyle}>{isRTL ? 'اجتماعات' : 'Meetings'}</th>
                 <th style={tableHeaderStyle}>{isRTL ? 'فرص' : 'Opps'}</th>
-                <th style={tableHeaderStyle}>{isRTL ? 'صفقات' : 'Deals'}</th>
-                <th style={tableHeaderStyle}>{isRTL ? 'الإيراد' : 'Revenue'}</th>
+                <th style={tableHeaderStyle}>{isRTL ? 'رابحة' : 'Won'}</th>
+                <th style={tableHeaderStyle}>{isRTL ? 'خاسرة' : 'Lost'}</th>
                 <th style={tableHeaderStyle}>{isRTL ? 'التحويل' : 'Conv %'}</th>
-                <th style={tableHeaderStyle}>{isRTL ? 'متوسط الدورة' : 'Avg Cycle'}</th>
+                <th style={tableHeaderStyle}>{isRTL ? 'الإيراد' : 'Revenue'}</th>
+                <th style={tableHeaderStyle}>{isRTL ? 'متوسط صفقة' : 'Avg Deal'}</th>
+                <th style={tableHeaderStyle}>{isRTL ? 'متوسط الدورة' : 'Avg Close'}</th>
+                <th style={tableHeaderStyle}>{isRTL ? 'أنشطة' : 'Activities'}</th>
+                <th style={tableHeaderStyle}>{isRTL ? 'مكالمات' : 'Calls'}</th>
               </tr>
             </thead>
             <tbody>
@@ -987,11 +997,9 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
                       {agent.agent}
                     </div>
                   </td>
-                  <td style={tableCellStyle}>{agent.calls}</td>
-                  <td style={tableCellStyle}>{agent.meetings}</td>
                   <td style={tableCellStyle}>{agent.opps}</td>
-                  <td style={tableCellStyle}>{agent.deals}</td>
-                  <td style={{ ...tableCellStyle, fontWeight: 600, color: '#10B981' }}>{fmtMoney(agent.revenue)}</td>
+                  <td style={{ ...tableCellStyle, color: '#10B981', fontWeight: 500 }}>{agent.deals}</td>
+                  <td style={{ ...tableCellStyle, color: '#EF4444', fontWeight: 500 }}>{agent.lost || 0}</td>
                   <td style={tableCellStyle}>
                     <span style={{
                       padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600,
@@ -1001,7 +1009,11 @@ function AgentsTab({ data, isDark, isRTL, cardStyle, tableHeaderStyle, tableCell
                       {agent.conversionRate}%
                     </span>
                   </td>
+                  <td style={{ ...tableCellStyle, fontWeight: 600, color: '#10B981' }}>{fmtMoney(agent.revenue)}</td>
+                  <td style={tableCellStyle}>{fmtMoney(agent.avgDealSize || 0)}</td>
                   <td style={tableCellStyle}>{agent.avgCycleDays} {isRTL ? 'يوم' : 'days'}</td>
+                  <td style={tableCellStyle}>{agent.totalActivities}</td>
+                  <td style={tableCellStyle}>{agent.calls}</td>
                 </tr>
               ))}
             </tbody>

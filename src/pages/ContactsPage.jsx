@@ -2,13 +2,16 @@ import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
-import { Phone, MessageCircle, Plus, Upload, Download, Search, Ban, X, Pin, PhoneCall, Merge, SkipForward, MoreVertical, Bell, FileDown, Trash2, Zap, Send, RefreshCw, Users, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown } from 'lucide-react';
+import { Phone, MessageCircle, Plus, Upload, Download, Search, Ban, X, Pin, PhoneCall, Merge, SkipForward, MoreVertical, Bell, FileDown, Trash2, Zap, Send, RefreshCw, Users, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown, Briefcase, ListTodo } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, createActivity,
 } from '../services/contactsService';
+import { createOpportunity, fetchProjects } from '../services/opportunitiesService';
+import { createTask } from '../services/tasksService';
 import { logAction } from '../services/auditService';
 import { getTemplates, renderBody, bulkSend } from '../services/smsTemplateService';
 import { createNotification } from '../services/notificationsService';
@@ -26,7 +29,7 @@ import {
   SOURCE_LABELS, SOURCE_EN,
   TYPE, MOCK,
   daysSince, initials, avatarColor, normalizePhone,
-  Chip, PhoneCell, COUNTRY_CODES,
+  Chip, PhoneCell, COUNTRY_CODES, getDeptStages, deptStageLabel,
 } from './crm/contacts/constants';
 import AddContactModal from './crm/contacts/AddContactModal';
 import LogCallModal from './crm/contacts/LogCallModal';
@@ -39,6 +42,8 @@ export default function ContactsPage() {
   const { t, i18n } = useTranslation();
   const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
@@ -82,13 +87,24 @@ export default function ContactsPage() {
   const [batchCallNotes, setBatchCallNotes] = useState('');
   const [batchCallResult, setBatchCallResult] = useState('');
   const [batchCallLog, setBatchCallLog] = useState([]);
+  const [batchTaskOpen, setBatchTaskOpen] = useState(false);
+  const [batchTaskForm, setBatchTaskForm] = useState({ title: '', due: '', priority: 'medium' });
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeTargets, setMergeTargets] = useState([]);
   const [mergePreview, setMergePreview] = useState(null);
+  const [disqualifyModal, setDisqualifyModal] = useState(null); // contact or 'bulk'
+  const [dqReason, setDqReason] = useState('');
+  const [dqNote, setDqNote] = useState('');
+  const [bulkOppModal, setBulkOppModal] = useState(false);
+  const [bulkOppForm, setBulkOppForm] = useState({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' });
+  const [bulkOppSaving, setBulkOppSaving] = useState(false);
+  const [projectsList, setProjectsList] = useState([]);
   const isAdmin = profile?.role === 'admin';
   const { auditFields, applyAuditFilters } = useAuditFilter('contact');
+  const { activityResults: configResults, contactsSettings } = useSystemConfig();
+  const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
+  const MAX_PINS = contactsSettings?.maxPins || 5;
 
-  const MAX_PINS = 4;
   const togglePin = (id) => {
     setPinnedIds(prev => {
       if (prev.includes(id)) {
@@ -103,8 +119,6 @@ export default function ContactsPage() {
     });
   };
   const toggleSelect = (id) => setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-
-  const { activityResults: configResults } = useSystemConfig();
   const QUICK_RESULTS = useMemo(() => {
     if (configResults && Object.keys(configResults).length > 0) return configResults;
     return {
@@ -167,6 +181,8 @@ export default function ContactsPage() {
       if (batchCallMode) { setBatchCallMode(false); return; }
       if (mergePreview) { setMergePreview(null); setMergeTargets([]); setMergeMode(false); return; }
 
+      if (disqualifyModal) { setDisqualifyModal(null); return; }
+      if (bulkOppModal) { setBulkOppModal(false); return; }
       if (bulkSMSModal) { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); return; }
       if (bulkReassignModal) { setBulkReassignModal(false); return; }
       if (confirmAction) { setConfirmAction(null); return; }
@@ -174,7 +190,7 @@ export default function ContactsPage() {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [quickActionTarget, batchCallMode, mergePreview, bulkReassignModal, confirmAction, bulkSMSModal, bulkDropdownOpen]);
+  }, [quickActionTarget, batchCallMode, mergePreview, disqualifyModal, bulkOppModal, bulkReassignModal, confirmAction, bulkSMSModal, bulkDropdownOpen]);
 
   const handleDelete = (id) => {
     const contact = contacts.find(c => c.id === id);
@@ -295,6 +311,15 @@ export default function ContactsPage() {
     { value: 'negotiation', label: isRTL ? 'تفاوض' : 'Negotiation' },
     { value: 'won', label: isRTL ? 'تم الإغلاق' : 'Won' },
     { value: 'lost', label: isRTL ? 'خسارة' : 'Lost' },
+    { value: 'disqualified', label: isRTL ? 'غير مؤهل' : 'Disqualified' },
+  ];
+  const DQ_REASONS = [
+    { value: 'resale', label: isRTL ? 'عايز يبيع وحدته' : 'Wants to sell unit' },
+    { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not interested' },
+    { value: 'no_budget', label: isRTL ? 'ميزانية غير مناسبة' : 'No budget' },
+    { value: 'wrong_audience', label: isRTL ? 'جمهور خاطئ' : 'Wrong audience' },
+    { value: 'duplicate', label: isRTL ? 'مكرر' : 'Duplicate' },
+    { value: 'other', label: isRTL ? 'سبب آخر' : 'Other' },
   ];
 
   // Load contacts
@@ -344,11 +369,12 @@ export default function ContactsPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const counts = { total: contacts.length, blacklisted: 0 };
+    const counts = { total: contacts.length, blacklisted: 0, disqualified: 0 };
     Object.keys(TYPE).forEach(k => { counts[k] = 0; });
     contacts.forEach(c => {
       if (c.contact_type && counts[c.contact_type] !== undefined) counts[c.contact_type]++;
       if (c.is_blacklisted) counts.blacklisted++;
+      if (c.contact_status === 'disqualified') counts.disqualified++;
     });
     return counts;
   }, [contacts]);
@@ -634,7 +660,7 @@ export default function ContactsPage() {
                 const DEPT_LABELS_M = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
                 return (
                   <div key={c.id}
-                    onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < 2 ? [...prev, c.id] : prev) : setSelected(c)}
+                    onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < MERGE_LIMIT ? [...prev, c.id] : prev) : setSelected(c)}
                     className={`px-4 py-3.5 cursor-pointer transition-colors ${selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'active:bg-surface-bg dark:active:bg-brand-500/[0.06]'}`}
                     style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
                   >
@@ -654,7 +680,7 @@ export default function ContactsPage() {
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                           {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
                           {c.department && <span className="text-[10px] px-2 py-px rounded-full bg-brand-500/[0.06] text-[#6B8DB5] font-medium">{DEPT_LABELS_M[c.department] || c.department}</span>}
-                          <span className={`text-[10px] px-2 py-px rounded-full font-medium ${(!c.contact_status || c.contact_status === 'new') ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>{(!c.contact_status || c.contact_status === 'new') ? (isRTL ? 'جديد' : 'New') : (isRTL ? 'تم التواصل' : 'Contacted')}</span>
+                          <span className={`text-[10px] px-2 py-px rounded-full font-medium ${c.contact_status === 'disqualified' ? 'bg-red-500/10 text-red-500' : (!c.contact_status || c.contact_status === 'new') ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>{c.contact_status === 'disqualified' ? (isRTL ? 'غير مؤهل' : 'DQ') : (!c.contact_status || c.contact_status === 'new') ? (isRTL ? 'جديد' : 'New') : (isRTL ? 'تم التواصل' : 'Contacted')}</span>
                           {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
                         </div>
                       </div>
@@ -719,6 +745,29 @@ export default function ContactsPage() {
                         {c.created_at && <><span className="opacity-30">·</span><span>{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span></>}
                       </div>
                     )}
+                    {/* Opps / Sales + Stages on mobile */}
+                    {c.opportunities?.length > 0 && (() => {
+                      const opps = c.opportunities;
+                      const dept = c.department || 'sales';
+                      const stages = getDeptStages(dept);
+                      const byAgent = {};
+                      opps.forEach(o => {
+                        const aid = o.assigned_to || o.assigned_to_name || 'u';
+                        const name = o.users ? (isRTL ? (o.users.full_name_ar || o.users.full_name_en) : (o.users.full_name_en || o.users.full_name_ar)) : (o.assigned_to_name || '?');
+                        const si = stages.findIndex(s => s.id === o.stage);
+                        if (!byAgent[aid] || si > byAgent[aid].si) byAgent[aid] = { name, stage: o.stage, si: si >= 0 ? si : 0 };
+                      });
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5 ms-[52px]">
+                          {Object.values(byAgent).slice(0, 2).map((e, i) => (
+                            <span key={i} className="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">
+                              {e.name}: {deptStageLabel(e.stage, dept, isRTL)}
+                            </span>
+                          ))}
+                          {Object.values(byAgent).length > 2 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{Object.values(byAgent).length - 2}</span>}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -735,14 +784,15 @@ export default function ContactsPage() {
                 <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>
                 <th className={thCls}>{t('contacts.phone')}</th>
                 <th className={thCls}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
+                <th className={thCls}>{isRTL ? 'الفرص / السيلز' : 'Opps / Sales'}</th>
                 <th className={`${thCls} text-center`}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+                <tr><td colSpan={6} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="p-0 border-none">
+                <tr><td colSpan={6} className="p-0 border-none">
                   <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                       <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -759,7 +809,7 @@ export default function ContactsPage() {
                 const DEPT_LABELS = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
                 return (
                 <tr key={c.id}
-                  onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < 2 ? [...prev, c.id] : prev) : setSelected(c)}
+                  onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < MERGE_LIMIT ? [...prev, c.id] : prev) : setSelected(c)}
                   className={`group cursor-pointer transition-colors ${isMergeSelected ? 'bg-brand-800/[0.08]' : selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.04]'}`}
                   style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
                 >
@@ -788,7 +838,6 @@ export default function ContactsPage() {
                           {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
                           {c.department && <span className="text-[10px] px-2 py-px rounded-full bg-brand-500/[0.06] text-[#6B8DB5] font-medium">{DEPT_LABELS[c.department] || c.department}</span>}
                           {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
-                          {c.opportunities?.length > 0 && <span className="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">{c.opportunities.length} {isRTL ? 'فرص' : 'opps'}</span>}
                         </div>
                       </div>
                     </div>
@@ -805,6 +854,45 @@ export default function ContactsPage() {
                     <div className="text-xs text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
                     {c.campaign_name && <div className="text-[10px] text-brand-500/70 dark:text-brand-400/70 mt-0.5 truncate max-w-[160px]" title={c.campaign_name}>{c.campaign_name}</div>}
                     {c.created_at && <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60 mt-0.5">{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
+                  </td>
+
+                  {/* Opps / Sales Assignees + Stages */}
+                  <td className={tdCls}>
+                    {(() => {
+                      const opps = c.opportunities || [];
+                      if (!opps.length) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                      const dept = c.department || 'sales';
+                      const stages = getDeptStages(dept);
+                      // Group by sales agent: { agentId: { name, bestStage, bestIdx } }
+                      const byAgent = {};
+                      opps.forEach(o => {
+                        const aid = o.assigned_to || o.assigned_to_name || 'unassigned';
+                        const name = o.users ? (isRTL ? (o.users.full_name_ar || o.users.full_name_en) : (o.users.full_name_en || o.users.full_name_ar)) : (o.assigned_to_name || (isRTL ? 'غير معين' : 'Unassigned'));
+                        const stageIdx = stages.findIndex(s => s.id === o.stage);
+                        if (!byAgent[aid] || stageIdx > byAgent[aid].bestIdx) {
+                          byAgent[aid] = { name, stage: o.stage, bestIdx: stageIdx >= 0 ? stageIdx : 0, oppCount: (byAgent[aid]?.oppCount || 0) + 1 };
+                        } else {
+                          byAgent[aid].oppCount++;
+                        }
+                      });
+                      const entries = Object.values(byAgent);
+                      const STAGE_COLORS = { closed_won: '#10B981', closed_lost: '#EF4444', contracted: '#10B981', reserved: '#1B3347', negotiation: '#F59E0B', proposal: '#4A7AAB', qualification: '#6B8DB5' };
+                      const getStageColor = (stageId) => STAGE_COLORS[stageId] || stages.find(s => s.id === stageId)?.color || '#6B8DB5';
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          {entries.slice(0, 3).map((e, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1 }}>
+                              <span className="text-[10px] font-semibold text-content dark:text-content-dark truncate max-w-[80px]" title={e.name}>{e.name}</span>
+                              <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: `${getStageColor(e.stage)}18`, border: `1px solid ${getStageColor(e.stage)}30`, color: getStageColor(e.stage), fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                {deptStageLabel(e.stage, dept, isRTL)}
+                              </span>
+                              {e.oppCount > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">×{e.oppCount}</span>}
+                            </div>
+                          ))}
+                          {entries.length > 3 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{entries.length - 3} {isRTL ? 'أخرى' : 'more'}</span>}
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   {/* Actions — 3 visible + menu */}
@@ -848,11 +936,19 @@ export default function ContactsPage() {
                                 <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
                               </button>
                             </div>
-                            {!c.is_blacklisted && (<><div className="h-px bg-edge dark:bg-edge-dark mx-1" /><div className="p-1">
-                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
-                                <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
-                              </button>
-                            </div></>)}
+                            <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
+                            <div className="p-1">
+                              {c.contact_status !== 'disqualified' && (
+                                <button onClick={() => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-amber-600 font-inherit hover:bg-amber-500/[0.05]">
+                                  <X size={13} /> {isRTL ? 'غير مؤهل' : 'Disqualify'}
+                                </button>
+                              )}
+                              {!c.is_blacklisted && (
+                                <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                                  <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -972,8 +1068,62 @@ export default function ContactsPage() {
         const batchContacts = contacts.filter(c => selectedIds.includes(c.id));
         const current = batchContacts[batchCallIndex];
         if (!current) return null;
-        const progress = batchCallLog.length;
+        const progress = batchCallIndex + 1;
         const total = batchContacts.length;
+        const daysAgo = current.last_activity_at ? daysSince(current.last_activity_at) : null;
+        const CALL_RESULTS = [
+          { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
+          { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
+          { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#EF4444' },
+          { value: 'switched_off', label: isRTL ? 'مغلق' : 'Switched Off', color: '#6b7280' },
+          { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong Number', color: '#9333EA' },
+          { value: 'callback', label: isRTL ? 'اتصل لاحقاً' : 'Call Back', color: '#4A7AAB' },
+        ];
+        // Summary view after finishing
+        const showSummary = batchCallIndex >= batchContacts.length && batchCallLog.length > 0;
+        if (showSummary) {
+          const summary = {};
+          batchCallLog.forEach(l => { summary[l.result] = (summary[l.result] || 0) + 1; });
+          return (
+            <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/60 z-[1200] flex items-center justify-center p-5">
+              <div className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[20px] w-full max-w-[520px] overflow-hidden">
+                <div className="bg-gradient-to-br from-[#065F46] to-emerald-500 px-6 py-4 flex justify-between items-center">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 size={18} color="#fff" />
+                    <span className="text-white font-bold text-sm">{isRTL ? 'ملخص المكالمات' : 'Call Summary'}</span>
+                  </div>
+                  <button onClick={() => { setBatchCallMode(false); setSelectedIds([]); }} className="bg-white/15 border-none rounded-md w-7 h-7 flex items-center justify-center cursor-pointer text-white"><X size={14} /></button>
+                </div>
+                <div className="p-6">
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {CALL_RESULTS.filter(r => summary[r.value]).map(r => (
+                      <div key={r.value} style={{ background: r.color + '15', border: `1px solid ${r.color}30`, borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: r.color }}>{summary[r.value]}</div>
+                        <div style={{ fontSize: 10, color: r.color, fontWeight: 600 }}>{r.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 16 }}>
+                    {batchCallLog.map((l, i) => {
+                      const rInfo = CALL_RESULTS.find(r => r.value === l.result);
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid rgba(148,163,184,0.1)' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: rInfo?.color || '#6b7280', flexShrink: 0 }} />
+                          <span className="text-xs font-semibold text-content dark:text-content-dark flex-1">{l.name}</span>
+                          <span style={{ fontSize: 10, color: rInfo?.color, fontWeight: 600 }}>{rInfo?.label}</span>
+                          {l.notes && <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[100px]" title={l.notes}>{l.notes}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <Button className="w-full justify-center" onClick={() => { setBatchCallMode(false); setSelectedIds([]); }}>
+                    {isRTL ? 'إغلاق' : 'Close'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          );
+        }
         return (
           <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/60 z-[1200] flex items-center justify-center p-5">
             <div className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[20px] w-full max-w-[520px] overflow-hidden">
@@ -983,7 +1133,7 @@ export default function ContactsPage() {
                   <span className="text-white font-bold text-sm">{isRTL ? 'وضع الاتصال' : 'Call Mode'}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-white/80 text-xs">{progress}/{total}</span>
+                  <span className="text-white/80 text-xs font-semibold">{progress}/{total}</span>
                   <button onClick={() => setBatchCallMode(false)} className="bg-white/15 border-none rounded-md w-7 h-7 flex items-center justify-center cursor-pointer text-white"><X size={14} /></button>
                 </div>
               </div>
@@ -991,60 +1141,141 @@ export default function ContactsPage() {
                 <div className="h-full bg-emerald-500 transition-[width] duration-300" style={{ width: `${(progress / total) * 100}%` }} />
               </div>
               <div className="p-6">
-                <div className="flex items-center gap-3.5 mb-5">
+                {/* Contact info */}
+                <div className="flex items-center gap-3.5 mb-4">
                   <div className="w-[50px] h-[50px] rounded-xl flex items-center justify-center text-lg font-bold text-white" style={{ background: avatarColor(current.id) }}>
                     {initials(current.full_name)}
                   </div>
                   <div className="flex-1">
                     <div className="font-bold text-base text-content dark:text-content-dark">{current.full_name}</div>
-                    <div className={`text-xs text-content-muted dark:text-content-muted-dark text-start`} dir="ltr">{current.phone}</div>
-                    {current.company && <div className="text-xs text-content-muted dark:text-content-muted-dark">{current.company}</div>}
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark text-start" dir="ltr">{current.phone}</div>
+                    {current.company && <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">{current.company}</div>}
                   </div>
-                  <div className="text-center">
-                    {TYPE[current.contact_type] ? <Chip label={isRTL ? TYPE[current.contact_type].label : TYPE[current.contact_type].labelEn} color={TYPE[current.contact_type].color} bg={TYPE[current.contact_type].bg} /> : <span className="text-xs text-content-muted dark:text-content-muted-dark">—</span>}
+                  <div className="flex flex-col items-end gap-1">
+                    {TYPE[current.contact_type] && <Chip label={isRTL ? TYPE[current.contact_type].label : TYPE[current.contact_type].labelEn} color={TYPE[current.contact_type].color} bg={TYPE[current.contact_type].bg} />}
+                    {daysAgo !== null && (
+                      <span className={`text-[10px] font-semibold ${daysAgo === 0 ? 'text-emerald-500' : daysAgo <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>
+                        {daysAgo === 0 ? (isRTL ? 'تواصل اليوم' : 'Today') : (isRTL ? `آخر تواصل: ${daysAgo} يوم` : `${daysAgo}d ago`)}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <a href={`tel:${normalizePhone(current.phone)}`} className="flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#065F46] to-emerald-500 rounded-xl text-white font-bold text-sm no-underline mb-4">
-                  <Phone size={16} /> {isRTL ? 'اتصل الآن' : 'Call Now'}
-                </a>
+
+                {/* Last activity note if exists */}
+                {current.last_activity_note && (
+                  <div style={{ background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.05)', border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)'}`, borderRadius: 8, padding: '6px 10px', marginBottom: 12, fontSize: 11 }}>
+                    <span className="text-content-muted dark:text-content-muted-dark">{isRTL ? 'آخر ملاحظة: ' : 'Last note: '}</span>
+                    <span className="text-content dark:text-content-dark">{current.last_activity_note}</span>
+                  </div>
+                )}
+
+                {/* Call + WhatsApp buttons */}
+                <div className="flex gap-2 mb-4">
+                  <a href={`tel:${normalizePhone(current.phone)}`} className="flex-1 flex items-center justify-center gap-2 p-3 bg-gradient-to-br from-[#065F46] to-emerald-500 rounded-xl text-white font-bold text-sm no-underline">
+                    <Phone size={16} /> {isRTL ? 'اتصل الآن' : 'Call Now'}
+                  </a>
+                  <a href={`https://wa.me/${normalizePhone(current.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 px-4 py-3 bg-[#25D366]/10 border border-[#25D366]/30 rounded-xl text-[#25D366] font-bold text-sm no-underline">
+                    <MessageCircle size={16} /> {isRTL ? 'واتس' : 'WhatsApp'}
+                  </a>
+                </div>
+
+                {/* Call result */}
                 <div className="mb-3">
                   <div className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نتيجة المكالمة' : 'Call Result'}</div>
                   <div className="flex gap-1.5 flex-wrap">
-                    {[
-                      { value: 'answered', label: isRTL ? 'رد' : 'Answered', color: '#10B981' },
-                      { value: 'no_answer', label: isRTL ? 'لم يرد' : 'No Answer', color: '#F59E0B' },
-                      { value: 'busy', label: isRTL ? 'مشغول' : 'Busy', color: '#EF4444' },
-                      { value: 'switched_off', label: isRTL ? 'مغلق' : 'Switched Off', color: '#6b7280' },
-                      { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong Number', color: '#9333EA' },
-                    ].map(r => (
+                    {CALL_RESULTS.map(r => (
                       <button key={r.value} onClick={() => setBatchCallResult(batchCallResult === r.value ? '' : r.value)}
                         className={`px-3 py-1.5 rounded-2xl text-xs cursor-pointer border ${batchCallResult === r.value ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
                         style={batchCallResult === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>{r.label}</button>
                     ))}
                   </div>
                 </div>
+
+                {/* Notes */}
                 <textarea value={batchCallNotes} onChange={e => setBatchCallNotes(e.target.value)} placeholder={isRTL ? 'ملاحظات سريعة...' : 'Quick notes...'} rows={2}
-                  className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs resize-none box-border font-inherit mb-4" />
+                  className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs resize-none box-border font-inherit mb-3" />
+
+                {/* Add Task */}
+                <div style={{ marginBottom: 12 }}>
+                  <button onClick={() => { setBatchTaskOpen(!batchTaskOpen); if (!batchTaskOpen) setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
+                    className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer bg-transparent border-none text-brand-500 dark:text-brand-400 p-0 mb-1.5">
+                    <ListTodo size={13} />
+                    {isRTL ? (batchTaskOpen ? 'إلغاء التاسك' : '+ إضافة تاسك متابعة') : (batchTaskOpen ? 'Cancel task' : '+ Add follow-up task')}
+                  </button>
+                  {batchTaskOpen && (
+                    <div style={{ background: isDark ? 'rgba(74,122,171,0.06)' : 'rgba(74,122,171,0.04)', border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)'}`, borderRadius: 10, padding: 10 }}>
+                      <input value={batchTaskForm.title} onChange={e => setBatchTaskForm(f => ({ ...f, title: e.target.value }))}
+                        placeholder={isRTL ? 'عنوان التاسك (مثل: متابعة عرض سعر)' : 'Task title (e.g. Follow up proposal)'}
+                        className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs box-border font-inherit mb-2" style={{ outline: 'none' }} />
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-0.5">{isRTL ? 'تاريخ الاستحقاق' : 'Due date'}</label>
+                          <input type="date" value={batchTaskForm.due} onChange={e => setBatchTaskForm(f => ({ ...f, due: e.target.value }))}
+                            className="w-full px-2 py-1.5 rounded-md border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[11px] box-border font-inherit" style={{ outline: 'none' }} />
+                        </div>
+                        <div className="flex-1">
+                          <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-0.5">{isRTL ? 'الأولوية' : 'Priority'}</label>
+                          <select value={batchTaskForm.priority} onChange={e => setBatchTaskForm(f => ({ ...f, priority: e.target.value }))}
+                            className="w-full px-2 py-1.5 rounded-md border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-[11px] box-border font-inherit" style={{ outline: 'none' }}>
+                            <option value="low">{isRTL ? 'منخفضة' : 'Low'}</option>
+                            <option value="medium">{isRTL ? 'متوسطة' : 'Medium'}</option>
+                            <option value="high">{isRTL ? 'عالية' : 'High'}</option>
+                            <option value="urgent">{isRTL ? 'عاجلة' : 'Urgent'}</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Navigation */}
                 <div className="flex gap-2.5 justify-between">
-                  <button disabled={batchCallIndex === 0} onClick={() => { setBatchCallIndex(i => i - 1); setBatchCallNotes(''); setBatchCallResult(''); }}
+                  <button disabled={batchCallIndex === 0} onClick={() => { setBatchCallIndex(i => i - 1); setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
                     className={`flex-1 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs ${batchCallIndex === 0 ? 'text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-40' : 'text-content dark:text-content-dark cursor-pointer'}`}>
                     {isRTL ? 'السابق' : 'Previous'}
                   </button>
+                  <button onClick={() => { setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); if (batchCallIndex < batchContacts.length - 1) setBatchCallIndex(i => i + 1); }}
+                    className="px-3 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs text-content-muted dark:text-content-muted-dark cursor-pointer">
+                    {isRTL ? 'تخطي' : 'Skip'}
+                  </button>
                   <Button size="sm" className="flex-[2] justify-center" onClick={async () => {
                     if (batchCallResult) {
-                      const resultLabel = { answered: isRTL?'رد':'Answered', no_answer: isRTL?'لم يرد':'No Answer', busy: isRTL?'مشغول':'Busy', switched_off: isRTL?'مغلق':'Switched Off', wrong_number: isRTL?'رقم خاطئ':'Wrong Number' }[batchCallResult] || batchCallResult;
-                      const activity = { type: 'call', description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, created_at: new Date().toISOString() };
+                      const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
+                      const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, created_at: new Date().toISOString() };
                       try { await createActivity(activity); } catch { /* optimistic */ }
+                      try { await updateContact(current.id, { last_activity_at: new Date().toISOString() }); } catch { /* ignore */ }
                       setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);
                     }
+                    // Create follow-up task if filled
+                    if (batchTaskOpen && batchTaskForm.title.trim()) {
+                      try {
+                        await createTask({
+                          title: batchTaskForm.title,
+                          description: `${isRTL ? 'متابعة' : 'Follow-up'}: ${current.full_name}${batchCallNotes ? ' — ' + batchCallNotes : ''}`,
+                          priority: batchTaskForm.priority,
+                          due_date: batchTaskForm.due || null,
+                          status: 'pending',
+                          contact_id: current.id,
+                          contact_name: current.full_name,
+                          assigned_to: profile?.id,
+                          assigned_to_name: profile?.full_name_ar || profile?.full_name_en,
+                        });
+                      } catch { /* ignore */ }
+                    }
+                    // Reset task form for next contact
+                    setBatchTaskOpen(false);
+                    setBatchTaskForm({ title: '', due: '', priority: 'medium' });
                     if (batchCallIndex < batchContacts.length - 1) {
                       setBatchCallIndex(i => i + 1);
                       setBatchCallNotes(''); setBatchCallResult('');
                     } else {
+                      // Show summary
                       const finalLog = batchCallResult ? [...batchCallLog, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }] : batchCallLog;
-                      toast.success(isRTL ? `تم الانتهاء من ${finalLog.length} مكالمة` : `Completed ${finalLog.length} calls`);
-                      logAction({ action: 'batch_call', entity: 'contact', entityId: finalLog.map(l => l.id).join(','), description: `Batch called ${finalLog.length} contacts: ${finalLog.map(l => l.name).join(', ')}`, userName: profile?.full_name_ar || '' });
-                      setBatchCallMode(false); setSelectedIds([]);
+                      setBatchCallLog(finalLog);
+                      setBatchCallIndex(batchContacts.length); // trigger summary view
+                      logAction({ action: 'batch_call', entity: 'contact', entityId: finalLog.map(l => l.id).join(','), description: `Batch called ${finalLog.length} contacts: ${finalLog.map(l => `${l.name}(${l.result})`).join(', ')}`, userName: profile?.full_name_ar || '' });
+                      // Refresh contacts
+                      try { const fresh = await fetchContacts({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }); setContacts(fresh); } catch { /* ignore */ }
                     }
                   }}>
                     {batchCallIndex < batchContacts.length - 1 ? (<>{isRTL ? 'التالي' : 'Next'} <SkipForward size={13} /></>) : (isRTL ? 'إنهاء' : 'Finish')}
@@ -1131,6 +1362,64 @@ export default function ContactsPage() {
         </div>
       )}
 
+      {/* ═══ DISQUALIFY MODAL ═══ */}
+      {disqualifyModal && (
+        <div dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setDisqualifyModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: isDark ? '#1a2332' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, boxShadow: isDark ? '0 24px 48px rgba(0,0,0,0.4)' : '0 24px 48px rgba(0,0,0,0.12)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#EF4444' }}>
+                {isRTL ? (disqualifyModal === 'bulk' ? `غير مؤهل (${selectedIds.length})` : `غير مؤهل — ${disqualifyModal?.full_name}`) : (disqualifyModal === 'bulk' ? `Disqualify (${selectedIds.length})` : `Disqualify — ${disqualifyModal?.full_name}`)}
+              </h3>
+              <button onClick={() => setDisqualifyModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#64748b' : '#94a3b8' }}><X size={16} /></button>
+            </div>
+            <div style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 12 }}>{isRTL ? 'اختر سبب الاستبعاد:' : 'Select disqualification reason:'}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+              {DQ_REASONS.map(r => (
+                <button key={r.value} onClick={() => setDqReason(r.value)}
+                  style={{ padding: '10px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left', border: dqReason === r.value ? '1px solid #EF4444' : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, background: dqReason === r.value ? 'rgba(239,68,68,0.08)' : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'), color: dqReason === r.value ? '#EF4444' : (isDark ? '#e2e8f0' : '#1e293b'), fontWeight: dqReason === r.value ? 700 : 400 }}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+            <textarea value={dqNote} onChange={e => setDqNote(e.target.value)} rows={2} placeholder={isRTL ? 'ملاحظات إضافية (اختياري)...' : 'Additional notes (optional)...'}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 16 }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button onClick={() => setDisqualifyModal(null)}
+                style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'none', color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button disabled={!dqReason} onClick={async () => {
+                const reasonLabel = DQ_REASONS.find(r => r.value === dqReason)?.label || dqReason;
+                const updates = { contact_status: 'disqualified', disqualify_reason: dqReason, disqualify_note: dqNote || '' };
+                if (disqualifyModal === 'bulk') {
+                  const ids = [...selectedIds];
+                  const names = contacts.filter(c => ids.includes(c.id)).map(c => c.full_name).join(', ');
+                  const updated = contacts.map(c => ids.includes(c.id) ? { ...c, ...updates } : c);
+                  setContacts(updated);
+                  try { localStorage.setItem('platform_contacts', JSON.stringify(updated)); } catch {}
+                  await Promise.all(ids.map(id => updateContact(id, updates).catch(() => {})));
+                  logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar });
+                  toast.success(isRTL ? `تم استبعاد ${ids.length} جهة اتصال` : `${ids.length} contacts disqualified`);
+                  setSelectedIds([]);
+                } else {
+                  const c = disqualifyModal;
+                  const updated = contacts.map(ct => ct.id === c.id ? { ...ct, ...updates } : ct);
+                  setContacts(updated);
+                  try { localStorage.setItem('platform_contacts', JSON.stringify(updated)); } catch {}
+                  await updateContact(c.id, updates).catch(() => {});
+                  logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar });
+                  toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
+                }
+                setDisqualifyModal(null);
+              }}
+                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: !dqReason ? '#64748b' : '#EF4444', color: '#fff', fontSize: 12, cursor: !dqReason ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
+                {isRTL ? 'تأكيد الاستبعاد' : 'Confirm Disqualify'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bulk Reassign Modal */}
       {bulkReassignModal && (
         <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -1150,6 +1439,139 @@ export default function ContactsPage() {
           </div>
         </div>
       )}
+
+      {/* ═══ BULK CREATE OPPORTUNITIES MODAL ═══ */}
+      {bulkOppModal && (() => {
+        const selContacts = contacts.filter(c => selectedIds.includes(c.id));
+        const agents = [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))];
+        const stages = getDeptStages('sales');
+        const handleCreate = async () => {
+          if (!bulkOppForm.assigned_to_name) { toast.error(isRTL ? 'اختر السيلز المسؤول' : 'Select sales agent'); return; }
+          setBulkOppSaving(true);
+          let created = 0;
+          for (const c of selContacts) {
+            try {
+              await createOpportunity({
+                contact_id: c.id,
+                assigned_to: null,
+                assigned_to_name: bulkOppForm.assigned_to_name,
+                stage: bulkOppForm.stage,
+                priority: bulkOppForm.priority,
+                notes: bulkOppForm.notes,
+                project_id: bulkOppForm.project_id || null,
+                title: c.full_name,
+                source: c.source || 'manual',
+              });
+              created++;
+            } catch { /* skip */ }
+          }
+          logAction({ action: 'bulk_create_opportunities', entity: 'opportunity', description: `Created ${created} opportunities for ${selContacts.map(c => c.full_name).join(', ')} → ${bulkOppForm.assigned_to_name}`, userName: profile?.full_name_ar });
+          // Notify assigned agent
+          const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
+          if (bulkOppForm.assigned_to_name !== selfName) {
+            createNotification({ type: 'opportunity_assigned', title_ar: 'فرص جديدة', title_en: 'New Opportunities Assigned', body_ar: `تم تعيين ${created} فرصة لك بواسطة ${selfName}`, body_en: `${created} opportunities assigned to you by ${selfName}`, for_user_name: bulkOppForm.assigned_to_name, entity_type: 'opportunity', from_user: selfName });
+          }
+          toast.success(isRTL ? `تم إنشاء ${created} فرصة` : `${created} opportunities created`);
+          setBulkOppSaving(false);
+          setBulkOppModal(false);
+          setSelectedIds([]);
+          // Refresh contacts to update opportunity counts
+          try { const fresh = await fetchContacts({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }); setContacts(fresh); } catch { /* ignore */ }
+        };
+        return (
+          <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ background: isDark ? '#1a2332' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 440, boxShadow: isDark ? '0 24px 48px rgba(0,0,0,0.4)' : '0 24px 48px rgba(0,0,0,0.12)' }}>
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Briefcase size={18} color="#10B981" />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>{isRTL ? 'إنشاء فرص' : 'Create Opportunities'}</h3>
+                    <span style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>{isRTL ? `${selContacts.length} جهة اتصال محددة` : `${selContacts.length} contacts selected`}</span>
+                  </div>
+                </div>
+                <button onClick={() => setBulkOppModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#64748b' : '#94a3b8', padding: 4 }}><X size={18} /></button>
+              </div>
+
+              {/* Selected contacts preview */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 16, maxHeight: 60, overflowY: 'auto' }}>
+                {selContacts.slice(0, 8).map(c => (
+                  <span key={c.id} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)', color: isDark ? '#7db4d8' : '#4A7AAB', fontWeight: 600 }}>{c.full_name}</span>
+                ))}
+                {selContacts.length > 8 && <span style={{ fontSize: 10, color: isDark ? '#64748b' : '#94a3b8' }}>+{selContacts.length - 8}</span>}
+              </div>
+
+              {/* Form */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Sales Agent */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
+                  <select value={bulkOppForm.assigned_to_name} onChange={e => setBulkOppForm(f => ({ ...f, assigned_to_name: e.target.value }))}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }}>
+                    <option value="">{isRTL ? '— اختر —' : '— Select —'}</option>
+                    {agents.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+
+                {/* Stage + Priority row */}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'المرحلة' : 'Stage'}</label>
+                    <select value={bulkOppForm.stage} onChange={e => setBulkOppForm(f => ({ ...f, stage: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }}>
+                      {stages.map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'الأولوية' : 'Priority'}</label>
+                    <select value={bulkOppForm.priority} onChange={e => setBulkOppForm(f => ({ ...f, priority: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }}>
+                      <option value="low">{isRTL ? 'منخفضة' : 'Low'}</option>
+                      <option value="medium">{isRTL ? 'متوسطة' : 'Medium'}</option>
+                      <option value="high">{isRTL ? 'عالية' : 'High'}</option>
+                      <option value="urgent">{isRTL ? 'عاجلة' : 'Urgent'}</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Project */}
+                {projectsList.length > 0 && (
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'المشروع' : 'Project'}</label>
+                    <select value={bulkOppForm.project_id} onChange={e => setBulkOppForm(f => ({ ...f, project_id: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }}>
+                      <option value="">{isRTL ? '— بدون مشروع —' : '— No Project —'}</option>
+                      {projectsList.map(p => <option key={p.id} value={p.id}>{isRTL ? p.name_ar : p.name_en}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
+                  <textarea value={bulkOppForm.notes} onChange={e => setBulkOppForm(f => ({ ...f, notes: e.target.value }))} rows={2}
+                    placeholder={isRTL ? 'ملاحظات اختيارية...' : 'Optional notes...'}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none', resize: 'none', fontFamily: 'inherit' }} />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+                <button onClick={() => setBulkOppModal(false)}
+                  style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'none', color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button onClick={handleCreate} disabled={bulkOppSaving || !bulkOppForm.assigned_to_name}
+                  style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: bulkOppSaving || !bulkOppForm.assigned_to_name ? '#64748b' : '#10B981', color: '#fff', fontSize: 12, cursor: bulkOppSaving ? 'wait' : 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {bulkOppSaving ? (isRTL ? 'جاري الإنشاء...' : 'Creating...') : (isRTL ? `إنشاء ${selContacts.length} فرصة` : `Create ${selContacts.length} Opps`)}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ═══ BULK ACTION TOOLBAR ═══ */}
       {selectedIds.length > 0 && (
@@ -1223,6 +1645,12 @@ export default function ContactsPage() {
             <Users size={12} /> {isRTL ? 'إعادة تعيين' : 'Reassign'}
           </button>
 
+          {/* Create Opportunities */}
+          <button onClick={() => { setBulkOppModal(true); setBulkOppForm({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' }); fetchProjects().then(p => setProjectsList(p)); }}
+            style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.08)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+            <Briefcase size={12} /> {isRTL ? 'إنشاء فرص' : 'Create Opps'}
+          </button>
+
           {/* Change Department */}
           <div style={{ position: 'relative' }}>
             <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'dept' ? null : 'dept')}
@@ -1252,8 +1680,11 @@ export default function ContactsPage() {
             {bulkDropdownOpen === 'status' && (
               <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: 150, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
                 {BULK_STATUS_OPTIONS.map(opt => (
-                  <button key={opt.value} onClick={() => handleBulkChangeField('contact_status', opt.value, 'Status Change')}
-                    style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
+                  <button key={opt.value} onClick={() => {
+                    if (opt.value === 'disqualified') { setDisqualifyModal('bulk'); setDqReason(''); setDqNote(''); setBulkDropdownOpen(null); }
+                    else handleBulkChangeField('contact_status', opt.value, 'Status Change');
+                  }}
+                    style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: opt.value === 'disqualified' ? '#EF4444' : '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(74,122,171,0.15)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'none'}>
                     {opt.label}
@@ -1281,8 +1712,8 @@ export default function ContactsPage() {
             <PhoneCall size={12} /> {isRTL ? 'اتصال جماعي' : 'Batch Call'}
           </button>
 
-          {/* Merge (when exactly 2 selected) */}
-          {selectedIds.length === 2 && (
+          {/* Merge (when selected count matches merge limit) */}
+          {selectedIds.length >= 2 && selectedIds.length <= MERGE_LIMIT && (
             <button onClick={() => { setMergePreview(selectedIds); }}
               style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(30,64,175,0.4)', background: 'rgba(30,64,175,0.1)', color: '#93c5fd', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
               <Merge size={12} /> {isRTL ? 'دمج' : 'Merge'}

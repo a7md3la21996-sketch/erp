@@ -8,21 +8,12 @@ import {
 import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
 import { useAuditFilter } from '../hooks/useAuditFilter';
+import { fetchOpportunities } from '../services/opportunitiesService';
+import { fetchActivities } from '../services/activitiesService';
 import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 
-// ── Mock CRM Activity Data ─────────────────────────────────────
-const MOCK_CRM_ACTIVITY = {
-  e1:  { calls: 48, opportunities: 12, deals_closed: 3, leads: 0,  campaigns: 0,  revenue: 285000 },
-  e2:  { calls: 35, opportunities: 8,  deals_closed: 2, leads: 0,  campaigns: 0,  revenue: 195000 },
-  e3:  { calls: 22, opportunities: 5,  deals_closed: 1, leads: 0,  campaigns: 0,  revenue: 95000  },
-  e4:  { calls: 0,  opportunities: 0,  deals_closed: 0, leads: 42, campaigns: 4,  revenue: 0      },
-  e5:  { calls: 41, opportunities: 10, deals_closed: 3, leads: 0,  campaigns: 0,  revenue: 310000 },
-  e6:  { calls: 0,  opportunities: 0,  deals_closed: 0, leads: 28, campaigns: 3,  revenue: 0      },
-  e7:  { calls: 0,  opportunities: 0,  deals_closed: 0, leads: 0,  campaigns: 0,  revenue: 0      },
-  e8:  { calls: 0,  opportunities: 0,  deals_closed: 0, leads: 0,  campaigns: 0,  revenue: 0      },
-  e9:  { calls: 18, opportunities: 4,  deals_closed: 1, leads: 0,  campaigns: 0,  revenue: 75000  },
-  e10: { calls: 29, opportunities: 7,  deals_closed: 2, leads: 0,  campaigns: 0,  revenue: 155000 },
-};
+// ── CRM Activity Data (loaded from real services) ─────────────────────────────
+const EMPTY_CRM = { calls: 0, opportunities: 0, deals_closed: 0, leads: 0, campaigns: 0, revenue: 0 };
 
 // ── Competency scores (consistent with CompetenciesPage) ──────
 function genCompScores(empId) {
@@ -73,11 +64,11 @@ const FREQ_CONFIG = {
 };
 
 // Build employee performance data
-function buildEmpData(emp, attendance) {
+function buildEmpData(emp, attendance, crmData) {
   const att = attendance.filter(r => r.employee_id === emp.id);
   const presentDays = att.filter(r => r.check_in && !r.absent).length;
   const lateDays = att.filter(r => r.check_in && !r.absent).filter(r => { const [h, m] = (r.check_in || '').split(':').map(Number); return h > 10 || (h === 10 && m > 30); }).length;
-  const crm = MOCK_CRM_ACTIVITY[emp.id] || {};
+  const crm = crmData[emp.id] || EMPTY_CRM;
   const kpis = DEPT_KPIS[emp.department] || DEPT_KPIS.hr;
 
   const scores = kpis.map(kpi => {
@@ -137,10 +128,64 @@ export default function PerformancePage() {
 
   const { auditFields, applyAuditFilters } = useAuditFilter('performance');
 
+  // ── Load real CRM data from services ──
+  const [crmData, setCrmData] = useState(() => {
+    // Initialize from localStorage as immediate fallback
+    const map = {};
+    try {
+      const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
+      const acts = JSON.parse(localStorage.getItem('platform_activities') || '[]');
+      MOCK_EMPLOYEES.forEach(emp => {
+        const empOpps = opps.filter(o => o.assigned_to === emp.id);
+        const closedWon = empOpps.filter(o => o.stage === 'closed_won');
+        const empCalls = acts.filter(a => a.type === 'call' && (a.user_id === emp.id || a.assigned_to === emp.id));
+        map[emp.id] = {
+          calls: empCalls.length,
+          opportunities: empOpps.length,
+          deals_closed: closedWon.length,
+          leads: 0,
+          campaigns: 0,
+          revenue: closedWon.reduce((sum, o) => sum + (Number(o.budget) || 0), 0),
+        };
+      });
+    } catch { /* ignore */ }
+    return map;
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadCrmData() {
+      try {
+        const [opps, acts] = await Promise.all([
+          fetchOpportunities(),
+          fetchActivities({ limit: 500 }),
+        ]);
+        if (cancelled) return;
+        const map = {};
+        MOCK_EMPLOYEES.forEach(emp => {
+          const empOpps = opps.filter(o => o.assigned_to === emp.id);
+          const closedWon = empOpps.filter(o => o.stage === 'closed_won');
+          const empCalls = acts.filter(a => a.type === 'call' && (a.user_id === emp.id || a.assigned_to === emp.id));
+          map[emp.id] = {
+            calls: empCalls.length,
+            opportunities: empOpps.length,
+            deals_closed: closedWon.length,
+            leads: 0,
+            campaigns: 0,
+            revenue: closedWon.reduce((sum, o) => sum + (Number(o.budget) || 0), 0),
+          };
+        });
+        setCrmData(map);
+      } catch { /* keep localStorage fallback */ }
+    }
+    loadCrmData();
+    return () => { cancelled = true; };
+  }, []);
+
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const empData = useMemo(() =>
-    MOCK_EMPLOYEES.map(emp => buildEmpData(emp, attendance)),
-    [attendance]
+    MOCK_EMPLOYEES.map(emp => buildEmpData(emp, attendance, crmData)),
+    [attendance, crmData]
   );
 
   const SMART_FIELDS = useMemo(() => [
@@ -204,8 +249,14 @@ export default function PerformancePage() {
     { key: 'bsc',       ar: 'Balanced Scorecard', en: 'Balanced Scorecard' },
   ];
 
-  const MOCK_SALES_BSC = { achieved: 1250000, target: 1500000 };
-  const MOCK_CRM_BSC   = { closedDeals: 11, conversionRate: 7.7 };
+  // Compute BSC from real CRM data
+  const allCrmValues = Object.values(crmData);
+  const totalRevenue = allCrmValues.reduce((s, d) => s + (d.revenue || 0), 0);
+  const totalClosedDeals = allCrmValues.reduce((s, d) => s + (d.deals_closed || 0), 0);
+  const totalOpps = allCrmValues.reduce((s, d) => s + (d.opportunities || 0), 0);
+  const conversionRate = totalOpps > 0 ? Math.round((totalClosedDeals / totalOpps) * 1000) / 10 : 0;
+  const SALES_BSC = { achieved: totalRevenue || 0, target: 1500000 };
+  const CRM_BSC   = { closedDeals: totalClosedDeals, conversionRate };
   const avgAttendance  = Math.round(empData.reduce((s,d) => s + d.presentDays, 0) / empData.length);
   const avgCompScore   = Math.round(empData.reduce((s,d) => s + d.compScore, 0) / empData.length * 10) / 10;
 
@@ -213,15 +264,15 @@ export default function PerformancePage() {
     {
       key: 'financial', icon: '', ar: 'المالي', en: 'Financial', color: '#4A7AAB',
       objectives: [
-        { ar: 'تحقيق التارجت الشهري',  en: 'Monthly target',      actual: MOCK_SALES_BSC.achieved, target: MOCK_SALES_BSC.target, unit: 'EGP' },
+        { ar: 'تحقيق التارجت الشهري',  en: 'Monthly target',      actual: SALES_BSC.achieved, target: SALES_BSC.target, unit: 'EGP' },
         { ar: 'تقليل تكاليف التوظيف', en: 'Reduce hiring costs',  actual: 18000,                   target: 25000,                unit: 'EGP' },
       ],
     },
     {
       key: 'customer', icon: '', ar: 'العملاء', en: 'Customer', color: '#4A7AAB',
       objectives: [
-        { ar: 'معدل تحويل الليدز',   en: 'Lead conversion rate', actual: MOCK_CRM_BSC.conversionRate, target: 10,  unit: '%' },
-        { ar: 'الصفقات المغلقة',      en: 'Deals closed',         actual: MOCK_CRM_BSC.closedDeals,    target: 15,  unit: ''  },
+        { ar: 'معدل تحويل الليدز',   en: 'Lead conversion rate', actual: CRM_BSC.conversionRate, target: 10,  unit: '%' },
+        { ar: 'الصفقات المغلقة',      en: 'Deals closed',         actual: CRM_BSC.closedDeals,    target: 15,  unit: ''  },
       ],
     },
     {
@@ -538,9 +589,9 @@ export default function PerformancePage() {
           {/* Activity Legend */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             {[
-              { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.calls, 0), icon: '', color: '#4A7AAB' },
-              { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.opportunities, 0), icon: '', color: '#4A7AAB' },
-              { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(MOCK_CRM_ACTIVITY).reduce((s,d) => s + d.deals_closed, 0), icon: '', color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(crmData).reduce((s,d) => s + d.calls, 0), icon: '', color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(crmData).reduce((s,d) => s + d.opportunities, 0), icon: '', color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(crmData).reduce((s,d) => s + d.deals_closed, 0), icon: '', color: '#4A7AAB' },
             ].map((s, i) => (
               <Card key={i} className="px-5 py-4">
                 <div className="text-xl mb-1.5">{s.icon}</div>
@@ -665,7 +716,7 @@ export default function PerformancePage() {
             </Card>
           ))}
           <div className={`px-5 py-3.5 rounded-xl bg-brand-500/[0.06] dark:bg-purple-500/[0.08] border border-brand-500/[0.15] dark:border-purple-500/20 text-xs text-brand-800 dark:text-brand-300 text-start`}>
-             {lang === 'ar' ? 'البيانات ستكون حقيقية بعد ربط الـ modules — Finance + CRM + Sales' : 'Data will be live once Finance, CRM & Sales modules are connected.'}
+             {lang === 'ar' ? 'البيانات مبنية على CRM الحقيقي + بيانات الحضور' : 'Data is sourced from live CRM + Attendance data.'}
           </div>
         </div>
       )}

@@ -182,19 +182,46 @@ export function computeRevenueByMonth(deals) {
 }
 
 /**
- * Sales: Top Performers (from deals grouped by agent)
+ * Sales: Top Performers (from deals grouped by agent, with opportunities fallback)
  */
-export function computeTopPerformers(deals) {
+export function computeTopPerformers(deals, opportunities) {
   const agentMap = {};
+
+  // Primary: aggregate from deals
   deals.forEach(d => {
-    const agent = d.agent_ar || d.agent_en || 'Unknown';
-    if (!agentMap[agent]) agentMap[agent] = { name_ar: d.agent_ar || agent, name: d.agent_en || agent, deals: 0, revenue: 0 };
+    const agent = d.agent_ar || d.agent_en || d.agent_name || d.assigned_to || 'Unknown';
+    if (!agentMap[agent]) agentMap[agent] = { name_ar: d.agent_ar || agent, name: d.agent_en || agent, deals: 0, revenue: 0, opps: 0, won: 0, lost: 0, convRate: 0 };
     agentMap[agent].deals++;
     agentMap[agent].revenue += d.deal_value || 0;
   });
-  return Object.values(agentMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10).map(a => ({
-    name: a.name, name_ar: a.name_ar, deals: a.deals, revenue: a.revenue,
-  }));
+
+  // Enrich with opportunities data if available
+  if (opportunities && opportunities.length > 0) {
+    opportunities.forEach(opp => {
+      const agent = opp.agent_name || opp.assigned_to || 'Unknown';
+      if (!agentMap[agent]) agentMap[agent] = { name_ar: agent, name: agent, deals: 0, revenue: 0, opps: 0, won: 0, lost: 0, convRate: 0 };
+      agentMap[agent].opps++;
+      if (opp.stage === 'closed_won') {
+        agentMap[agent].won++;
+        // If no deals data, use opportunity revenue
+        if (deals.length === 0) {
+          agentMap[agent].deals++;
+          agentMap[agent].revenue += (opp.revenue || opp.value || opp.budget || 0);
+        }
+      }
+      if (opp.stage === 'closed_lost') {
+        agentMap[agent].lost++;
+      }
+    });
+  }
+
+  return Object.values(agentMap)
+    .map(a => ({
+      ...a,
+      convRate: a.opps > 0 ? Math.round((a.won / a.opps) * 100) : 0,
+    }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
 }
 
 /**

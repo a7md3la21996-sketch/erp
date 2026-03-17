@@ -1,8 +1,8 @@
 import supabase from '../lib/supabase';
 
 /**
- * Dashboard KPI service — fetches real-time stats from Supabase.
- * Each function returns a safe fallback on error so the UI never breaks.
+ * Dashboard KPI service — fetches real-time stats from localStorage first,
+ * then Supabase. Each function returns a safe fallback so the UI never breaks.
  */
 
 // ── Date range helpers ────────────────────────────────────────────────────────
@@ -34,16 +34,47 @@ export function getDateRange(rangeKey) {
   return { start, end: now };
 }
 
+// ── localStorage helpers ─────────────────────────────────────────────────────
+function getLocalContacts() {
+  try { return JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch { return []; }
+}
+
+function getLocalOpportunities() {
+  try { return JSON.parse(localStorage.getItem('platform_opportunities') || '[]'); } catch { return []; }
+}
+
+function getLocalActivities() {
+  try { return JSON.parse(localStorage.getItem('platform_activities') || '[]'); } catch { return []; }
+}
+
 // ── Contacts KPIs ────────────────────────────────────────────────────────────
 export async function fetchContactStats() {
+  // Try localStorage first (primary data source)
+  const localContacts = getLocalContacts();
+  if (localContacts.length > 0) {
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const totalLeads = localContacts.filter(c =>
+      ['lead', 'cold'].includes(c.contact_type)
+    ).length || localContacts.length; // fallback to all contacts if none match type filter
+
+    const newLeadsThisMonth = localContacts.filter(c => {
+      const created = new Date(c.created_at);
+      return created >= monthStart;
+    }).length;
+
+    return { totalLeads, newLeadsThisMonth };
+  }
+
+  // Fallback to Supabase
   try {
-    // Total contacts
     const { count: totalLeads, error: e1 } = await supabase
       .from('contacts')
       .select('*', { count: 'exact', head: true });
     if (e1) throw e1;
 
-    // New contacts this month
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
@@ -55,43 +86,54 @@ export async function fetchContactStats() {
 
     return { totalLeads: totalLeads || 0, newLeadsThisMonth: newLeadsThisMonth || 0 };
   } catch {
-    return null; // signal to caller to keep mock
+    // Return zeros — no data available
+    return { totalLeads: 0, newLeadsThisMonth: 0 };
   }
 }
 
 // ── Opportunities KPIs ───────────────────────────────────────────────────────
 export async function fetchOpportunityStats() {
+  // Try localStorage first
+  const localOpps = getLocalOpportunities();
+  if (localOpps.length > 0) {
+    return computeOppStats(localOpps);
+  }
+
+  // Fallback to Supabase
   try {
     const { data, error } = await supabase
       .from('opportunities')
-      .select('id, stage, budget, created_at');
+      .select('id, stage, budget, created_at, assigned_to');
     if (error) throw error;
+    if (data?.length) {
+      return computeOppStats(data);
+    }
+  } catch { /* fallback */ }
 
-    const opps = data || [];
-    const activeOpps = opps.filter(o => !['closed_won', 'closed_lost', 'cancelled'].includes(o.stage)).length;
-    const closedDeals = opps.filter(o => o.stage === 'closed_won').length;
-    const revenue = opps
-      .filter(o => o.stage === 'closed_won')
-      .reduce((sum, o) => sum + (parseFloat(o.budget) || 0), 0);
+  // Return zeros — no data available
+  return { activeOpps: 0, closedDeals: 0, revenue: 0, closedThisMonth: 0, stageCounts: {}, totalOpps: 0, rawOpps: [] };
+}
 
-    // New closed deals this month
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const closedThisMonth = opps.filter(o =>
-      o.stage === 'closed_won' && new Date(o.created_at) >= monthStart
-    ).length;
+function computeOppStats(opps) {
+  const activeOpps = opps.filter(o => !['closed_won', 'closed_lost', 'cancelled'].includes(o.stage)).length;
+  const closedDeals = opps.filter(o => o.stage === 'closed_won').length;
+  const revenue = opps
+    .filter(o => o.stage === 'closed_won')
+    .reduce((sum, o) => sum + (parseFloat(o.budget) || 0), 0);
 
-    // Pipeline: group by stage
-    const stageCounts = {};
-    opps.forEach(o => {
-      stageCounts[o.stage] = (stageCounts[o.stage] || 0) + 1;
-    });
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const closedThisMonth = opps.filter(o =>
+    o.stage === 'closed_won' && new Date(o.created_at) >= monthStart
+  ).length;
 
-    return { activeOpps, closedDeals, revenue, closedThisMonth, stageCounts, totalOpps: opps.length, rawOpps: opps };
-  } catch {
-    return null;
-  }
+  const stageCounts = {};
+  opps.forEach(o => {
+    stageCounts[o.stage] = (stageCounts[o.stage] || 0) + 1;
+  });
+
+  return { activeOpps, closedDeals, revenue, closedThisMonth, stageCounts, totalOpps: opps.length, rawOpps: opps };
 }
 
 // ── Tasks KPIs ───────────────────────────────────────────────────────────────
@@ -102,7 +144,6 @@ export async function fetchTaskStats() {
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    // Tasks due today
     const { count: dueToday, error: e1 } = await supabase
       .from('tasks')
       .select('*', { count: 'exact', head: true })
@@ -111,7 +152,6 @@ export async function fetchTaskStats() {
       .neq('status', 'done');
     if (e1) throw e1;
 
-    // Overdue tasks
     const { count: overdue, error: e2 } = await supabase
       .from('tasks')
       .select('*', { count: 'exact', head: true })
@@ -122,16 +162,26 @@ export async function fetchTaskStats() {
 
     return { dueToday: dueToday || 0, overdue: overdue || 0 };
   } catch {
-    return null;
+    return { dueToday: 0, overdue: 0 };
   }
 }
 
 // ── Activities KPIs ──────────────────────────────────────────────────────────
 export async function fetchActivityStats() {
-  try {
-    // Activities this week
+  // Try localStorage first
+  const localActivities = getLocalActivities();
+  if (localActivities.length > 0) {
     const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const thisWeek = localActivities.filter(a => new Date(a.created_at) >= weekStart).length;
+    return { activitiesThisWeek: thisWeek };
+  }
+
+  // Fallback to Supabase
+  try {
+    const weekStart = new Date();
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     weekStart.setHours(0, 0, 0, 0);
 
     const { count: thisWeek, error } = await supabase
@@ -142,7 +192,7 @@ export async function fetchActivityStats() {
 
     return { activitiesThisWeek: thisWeek || 0 };
   } catch {
-    return null;
+    return { activitiesThisWeek: 0 };
   }
 }
 
@@ -156,7 +206,7 @@ export async function fetchEmployeeStats() {
 
     return { totalEmployees: total || 0 };
   } catch {
-    return null;
+    return { totalEmployees: 0 };
   }
 }
 
@@ -174,8 +224,7 @@ const STAGE_LABELS = {
 };
 
 export function buildPipelineData(stageCounts) {
-  if (!stageCounts) return null;
-  // Exclude closed_lost from pipeline visual, keep meaningful stages
+  if (!stageCounts || Object.keys(stageCounts).length === 0) return null;
   const orderedStages = ['new', 'lead', 'contacted', 'interested', 'site_visit', 'negotiation', 'proposal', 'closed_won'];
   return orderedStages
     .filter(s => stageCounts[s] > 0)
@@ -225,8 +274,6 @@ export function buildTopSellers(rawOpps, dateRange) {
     return true;
   });
   if (!won.length) return null;
-  // Group by assigned_to (agent)
-  // We don't have agent names here, just IDs — return IDs & amounts
   const map = {};
   won.forEach(o => {
     const key = o.assigned_to || 'unknown';
@@ -267,6 +314,12 @@ export async function fetchAllDashboardData() {
     ]);
     return { contacts, opportunities, tasks, activities, employees };
   } catch {
-    return { contacts: null, opportunities: null, tasks: null, activities: null, employees: null };
+    return {
+      contacts: { totalLeads: 0, newLeadsThisMonth: 0 },
+      opportunities: { activeOpps: 0, closedDeals: 0, revenue: 0, closedThisMonth: 0, stageCounts: {}, totalOpps: 0, rawOpps: [] },
+      tasks: { dueToday: 0, overdue: 0 },
+      activities: { activitiesThisWeek: 0 },
+      employees: { totalEmployees: 0 },
+    };
   }
 }

@@ -78,12 +78,14 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50 }
     .slice(0, limit);
 }
 
-export async function createActivity({ type, notes, entityType, entityId, dept, userId }) {
+export async function createActivity({ type, notes, entityType, entityId, dept, userId, status = 'completed', scheduled_date }) {
   const payload = {
     type, notes, dept,
     entity_type: entityType,
     [`${entityType}_id`]: entityId,
     user_id: userId,
+    status,
+    ...(scheduled_date ? { scheduled_date } : {}),
     created_at: new Date().toISOString(),
   };
 
@@ -112,6 +114,29 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
     all.unshift(mock);
     saveLocalActivities(all);
     return mock;
+  }
+}
+
+export async function updateActivity(id, updates) {
+  try {
+    const { data, error } = await supabase
+      .from('activities')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data;
+  } catch {
+    // Fallback: update in localStorage
+    const all = getLocalActivities();
+    const idx = all.findIndex(a => String(a.id) === String(id));
+    if (idx > -1) {
+      Object.assign(all[idx], updates);
+      saveLocalActivities(all);
+      return all[idx];
+    }
+    return { id, ...updates };
   }
 }
 

@@ -10,7 +10,7 @@ import { Card, Button, Input, Select, FilterPill } from '../../components/ui';
 import {
   Settings, Users, GitBranch, Building2, Briefcase, Shield,
   GripVertical, Plus, X, Trash2, RotateCcw, Save,
-  ChevronDown, ChevronUp, ThumbsDown, Zap,
+  ChevronDown, ChevronUp, ThumbsDown, Zap, SlidersHorizontal,
 } from 'lucide-react';
 
 // ─── Tab: Contact Types ───────────────────────────────────────────────
@@ -803,6 +803,129 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
   );
 }
 
+// ─── Tab: Contacts Settings ──────────────────────────────────────────
+function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
+  const [settings, setSettings] = useState(() => ({ mergeLimit: 2, maxPins: 5, ...(config.contactsSettings || {}) }));
+
+  const handleSave = () => {
+    updateSection('contactsSettings', settings);
+    toast.success(isRTL ? 'تم الحفظ' : 'Saved');
+  };
+
+  const fields = [
+    { key: 'mergeLimit', label_ar: 'الحد الأقصى لدمج جهات الاتصال', label_en: 'Max contacts to merge at once', min: 2, max: 10, desc_ar: 'عدد جهات الاتصال اللي ممكن تدمجهم مع بعض', desc_en: 'How many contacts can be merged together' },
+    { key: 'maxPins', label_ar: 'الحد الأقصى للتثبيت', label_en: 'Max pinned contacts', min: 1, max: 20, desc_ar: 'عدد جهات الاتصال اللي ممكن تثبتهم فوق', desc_en: 'How many contacts can be pinned at the top' },
+  ];
+
+  return (
+    <Card>
+      <div style={{ padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{isRTL ? 'إعدادات جهات الاتصال' : 'Contacts Settings'}</h3>
+          <Button size="sm" onClick={handleSave}><Save size={13} /> {isRTL ? 'حفظ' : 'Save'}</Button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {fields.map(f => (
+            <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{isRTL ? f.label_ar : f.label_en}</div>
+                <div className="text-content-muted dark:text-content-muted-dark" style={{ fontSize: 11 }}>{isRTL ? f.desc_ar : f.desc_en}</div>
+              </div>
+              <Input
+                type="number"
+                min={f.min}
+                max={f.max}
+                value={settings[f.key]}
+                onChange={e => setSettings(s => ({ ...s, [f.key]: Math.max(f.min, Math.min(f.max, Number(e.target.value) || f.min)) }))}
+                style={{ width: 80, textAlign: 'center' }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+// ─── Tab: Stage Win Rates ─────────────────────────────────────────────
+function StageWinRatesTab({ config, updateSection, isRTL, toast }) {
+  const depts = config.departments || [];
+  const allStages = config.pipelineStages || {};
+  const [rates, setRates] = useState(() => ({ ...(config.stageWinRates || {}) }));
+  const [selectedDept, setSelectedDept] = useState(depts[0]?.key || '');
+
+  const switchDept = (key) => setSelectedDept(key);
+
+  const stages = allStages[selectedDept] || [];
+
+  const handleChange = (stageId, value) => {
+    const num = Math.max(0, Math.min(100, Number(value) || 0));
+    setRates(prev => ({
+      ...prev,
+      [selectedDept]: { ...(prev[selectedDept] || {}), [stageId]: num },
+    }));
+  };
+
+  const handleSave = () => {
+    updateSection('stageWinRates', rates);
+    toast.success(isRTL ? 'تم الحفظ' : 'Saved');
+  };
+
+  const deptRates = rates[selectedDept] || {};
+
+  return (
+    <Card className="p-5">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">
+          {isRTL ? 'نسب الفوز بالمراحل' : 'Stage Win Rates'}
+        </h3>
+        <Button variant="primary" size="sm" onClick={handleSave}>
+          <Save size={13} /> {isRTL ? 'حفظ' : 'Save'}
+        </Button>
+      </div>
+
+      <p className="text-[11px] text-content-muted dark:text-content-muted-dark mb-4 m-0">
+        {isRTL ? 'تُستخدم لحساب التوقع المرجح (الميزانية × نسبة الفوز). أدخل نسبة مئوية (0-100) لكل مرحلة.' : 'Used for Weighted Pipeline Forecast (budget × win rate). Enter a percentage (0-100) for each stage.'}
+      </p>
+
+      {/* Department selector */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {depts.map(d => (
+          <FilterPill
+            key={d.key}
+            label={isRTL ? d.label_ar : d.label_en}
+            active={selectedDept === d.key}
+            onClick={() => switchDept(d.key)}
+          />
+        ))}
+      </div>
+
+      <div className="space-y-2">
+        {stages.map(stage => (
+          <div key={stage.id} className="flex items-center gap-3 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg">
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: stage.color }} />
+            <span className="flex-1 text-xs font-semibold text-content dark:text-content-dark">
+              {isRTL ? stage.label_ar : stage.label_en}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={deptRates[stage.id] ?? ''}
+                onChange={e => handleChange(stage.id, e.target.value)}
+                placeholder="0"
+                className="w-[70px] text-center text-xs font-semibold px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-white dark:bg-surface-card-dark text-content dark:text-content-dark outline-none"
+              />
+              <span className="text-[10px] text-content-muted dark:text-content-muted-dark">%</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────
 const TABS = [
   { key: 'contactTypes', icon: Users, ar: 'أنواع جهات الاتصال', en: 'Contact Types' },
@@ -811,6 +934,8 @@ const TABS = [
   { key: 'departments', icon: Building2, ar: 'الأقسام', en: 'Departments' },
   { key: 'activityTypes', icon: Zap, ar: 'أنواع النشاط', en: 'Activity Types' },
   { key: 'closeReasons', icon: ThumbsDown, ar: 'أسباب الخسارة', en: 'Lost Reasons' },
+  { key: 'stageWinRates', icon: SlidersHorizontal, ar: 'نسب الفوز', en: 'Stage Win Rates' },
+  { key: 'contactsSettings', icon: SlidersHorizontal, ar: 'إعدادات جهات الاتصال', en: 'Contacts Settings' },
   { key: 'company', icon: Briefcase, ar: 'بيانات الشركة', en: 'Company Info' },
   { key: 'roles', icon: Shield, ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' },
 ];
@@ -865,6 +990,10 @@ export default function SystemConfigPage() {
         return <ActivityTypesTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'closeReasons':
         return <CloseReasonsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
+      case 'stageWinRates':
+        return <StageWinRatesTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
+      case 'contactsSettings':
+        return <ContactsSettingsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'company':
         return <CompanyInfoTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'roles':

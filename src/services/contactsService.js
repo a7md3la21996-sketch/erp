@@ -41,6 +41,17 @@ export async function fetchContacts({ role, userId, teamId, filters = {} }) {
     // Fallback to localStorage when Supabase is unreachable
     try {
       const cached = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      // Enrich with opportunities from localStorage
+      const allOpps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
+      if (allOpps.length) {
+        const oppsByContact = {};
+        allOpps.forEach(o => {
+          if (!o.contact_id) return;
+          if (!oppsByContact[o.contact_id]) oppsByContact[o.contact_id] = [];
+          oppsByContact[o.contact_id].push({ id: o.id, stage: o.stage, assigned_to: o.assigned_to, assigned_to_name: o.assigned_to_name, priority: o.priority, users: o.users || null });
+        });
+        cached.forEach(c => { c.opportunities = oppsByContact[c.id] || []; });
+      }
       return cached.slice(0, 200);
     } catch { return []; }
   }
@@ -168,6 +179,31 @@ export async function createActivity(activityData) {
   } catch { /* ignore */ }
 
   return mock;
+}
+
+export async function updateActivity(id, updates) {
+  // Update in localStorage
+  try {
+    const all = JSON.parse(localStorage.getItem('platform_activities') || '[]');
+    const idx = all.findIndex(a => String(a.id) === String(id));
+    if (idx > -1) {
+      Object.assign(all[idx], updates);
+      localStorage.setItem('platform_activities', JSON.stringify(all));
+    }
+  } catch { /* ignore */ }
+
+  // Try Supabase in background
+  try {
+    const { data, error } = await supabase
+      .from('activities')
+      .update(updates)
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (!error && data) return data;
+  } catch { /* ignore */ }
+
+  return { id, ...updates };
 }
 
 export async function fetchContactOpportunities(contactId) {

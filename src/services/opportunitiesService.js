@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
+import { addToSyncQueue } from './syncService';
 
 // ── localStorage helpers ──
 function getLocalOpps() {
@@ -125,7 +126,10 @@ export async function createOpportunity(oppData) {
       logCreate('opportunity', enriched.id, enriched);
       return enriched;
     }
-  } catch { /* ignore */ }
+  } catch {
+    // Queue for later sync
+    addToSyncQueue('opportunities', 'create', localOpp);
+  }
 
   return localOpp;
 }
@@ -150,6 +154,8 @@ export async function updateOpportunity(id, updates) {
     if (idx > -1) {
       Object.assign(all[idx], updates, { updated_at: new Date().toISOString() });
       saveLocalOpps(all);
+      // Queue for later sync
+      addToSyncQueue('opportunities', 'update', { _id: id, ...updates, updated_at: new Date().toISOString() });
       return all[idx];
     }
     return { id, ...updates };
@@ -166,6 +172,8 @@ export async function deleteOpportunity(id) {
   } catch {
     const filtered = getLocalOpps().filter(o => String(o.id) !== String(id));
     saveLocalOpps(filtered);
+    // Queue for later sync
+    addToSyncQueue('opportunities', 'delete', { id });
   }
 }
 

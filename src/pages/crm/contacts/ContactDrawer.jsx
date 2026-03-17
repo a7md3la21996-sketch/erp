@@ -4,14 +4,15 @@ import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
 import { addRecentItem } from '../../../services/recentItemsService';
-import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle } from 'lucide-react';
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
-  fetchContactActivities, createActivity,
+  fetchContactActivities, createActivity, updateActivity,
   fetchContactOpportunities
 } from '../../../services/contactsService';
 import { createOpportunity } from '../../../services/opportunitiesService';
+import { createNotification } from '../../../services/notificationsService';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_STATUSES } from '../../../services/tasksService';
 import EditContactModal from './EditContactModal';
@@ -75,11 +76,14 @@ function TakeActionForm({ contact, onSaveActivity, onSaveTask, onStatusChange, o
     });
   }
 
+  // Activity mode: 'log' (default) or 'schedule'
+  const [actMode, setActMode] = useState('log');
+
   // Activity state
-  const [actForm, setActForm] = useState({ type: 'call', description: '', result: '' });
+  const [actForm, setActForm] = useState({ type: 'call', description: '', result: '', scheduled_date: '' });
   const setAct = (k, v) => setActForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '' } : {}) }));
   const currentResults = ACTIVITY_RESULTS[actForm.type] || [];
-  const resultRequired = currentResults.length > 0;
+  const resultRequired = actMode === 'log' && currentResults.length > 0;
 
   // Task state (optional section)
   const [addTask, setAddTask] = useState(false);
@@ -95,13 +99,16 @@ function TakeActionForm({ contact, onSaveActivity, onSaveTask, onStatusChange, o
   const CONTACT_STATUSES = [
     { id: 'new', ar: 'جديد', en: 'New', color: '#4A7AAB' },
     { id: 'contacted', ar: 'تم التواصل', en: 'Contacted', color: '#10B981' },
+    { id: 'disqualified', ar: 'غير مؤهل', en: 'Disqualified', color: '#EF4444' },
   ];
   const [changeStatus, setChangeStatus] = useState(false);
   const [newStatus, setNewStatus] = useState(contact?.contact_status || '');
 
   const [saving, setSaving] = useState(false);
 
-  const canSave = !resultRequired || actForm.result;
+  const canSave = actMode === 'schedule'
+    ? !!actForm.scheduled_date
+    : (!resultRequired || actForm.result);
 
   const handleSaveAll = async () => {
     if (!canSave) return;
@@ -109,6 +116,10 @@ function TakeActionForm({ contact, onSaveActivity, onSaveTask, onStatusChange, o
 
     // 1. Save activity
     const actData = { ...actForm, created_at: new Date().toISOString() };
+    actData.status = actMode === 'schedule' ? 'scheduled' : 'completed';
+    if (actMode === 'schedule' && actForm.scheduled_date) {
+      actData.scheduled_date = actForm.scheduled_date;
+    }
     if (actForm.result && currentResults.length > 0) {
       const found = currentResults.find(r => r.value === actForm.result);
       const resultLabel = found ? found.label : actForm.result;
@@ -172,6 +183,35 @@ function TakeActionForm({ contact, onSaveActivity, onSaveTask, onStatusChange, o
       {/* ── Section 1: Activity (Required) ── */}
       {sectionHeader(<Phone size={13} className="text-brand-500" />, isRTL ? 'سجل نشاط' : 'Log Activity', '#4A7AAB', true, null, true)}
       <div className="ps-3 mb-3">
+        {/* Schedule vs Log Now toggle */}
+        <div className="flex gap-1.5 mb-2.5">
+          <button onClick={() => setActMode('log')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
+              actMode === 'log'
+                ? 'bg-emerald-500 text-white border-emerald-500'
+                : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-emerald-500/40'
+            }`}>
+            <Check size={11} /> {isRTL ? 'سجل الآن' : 'Log now'}
+          </button>
+          <button onClick={() => setActMode('schedule')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
+              actMode === 'schedule'
+                ? 'bg-blue-500 text-white border-blue-500'
+                : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-blue-500/40'
+            }`}>
+            <Calendar size={11} /> {isRTL ? 'جدول' : 'Schedule'}
+          </button>
+        </div>
+        {/* Scheduled date picker */}
+        {actMode === 'schedule' && (
+          <div className="mb-2.5">
+            <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
+              {isRTL ? 'تاريخ الموعد' : 'Scheduled Date'} <span className="text-red-500">*</span>
+            </div>
+            <input type="datetime-local" value={actForm.scheduled_date} onChange={e => setAct('scheduled_date', e.target.value)}
+              className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+          </div>
+        )}
         {/* Activity type chips */}
         <div className="flex gap-1.5 flex-wrap mb-2.5">
           {activityTypes.map(v => (
@@ -292,9 +332,18 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showActionForm, setShowActionForm] = useState(initialAction);
   const [showOppModal, setShowOppModal] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState('all');
-  const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'qualification', temperature:'warm', priority:'medium', notes:'' });
-
   const { profile } = useAuth();
+  const isSalesAgent = profile?.role === 'sales_agent';
+  const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
+  const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'qualification', temperature:'warm', priority:'medium', notes:'', assigned_to_name: isSalesAgent ? selfName : '' });
+
+  // Get agents list for assignment dropdown
+  const agentsList = useMemo(() => {
+    try {
+      const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      return [...new Set(all.map(c => c.assigned_to_name?.trim()).filter(Boolean))];
+    } catch { return []; }
+  }, []);
 
   // Favorites
   const [isFav, setIsFav] = useState(false);
@@ -397,14 +446,21 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   const handleSaveOpp = async () => {
     if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; }
-    const oppData = { contact_id: contact.id, budget: Number(newOpp.budget) || 0, stage: newOpp.stage, temperature: newOpp.temperature, priority: newOpp.priority, notes: newOpp.notes };
+    if (!newOpp.assigned_to_name?.trim()) { toast.warning(isRTL ? 'اختر السيلز المسؤول' : 'Select sales agent'); return; }
+    const oppData = { contact_id: contact.id, budget: Number(newOpp.budget) || 0, stage: newOpp.stage, temperature: newOpp.temperature, priority: newOpp.priority, notes: newOpp.notes, assigned_to_name: newOpp.assigned_to_name, title: contact.full_name, source: contact.source || 'manual' };
+    const resetForm = () => setNewOpp({ project: '', budget: '', stage: 'qualification', temperature: 'warm', priority: 'medium', notes: '', assigned_to_name: isSalesAgent ? selfName : '' });
     try {
       const saved = await createOpportunity(oppData);
       const opp = { ...saved, contactName: contact.full_name, contacts: { id: contact.id, full_name: contact.full_name, phone: contact.phone, email: contact.email, department: contact.department, contact_type: contact.contact_type }, projects: { name_ar: newOpp.project, name_en: newOpp.project } };
       setOpportunities(prev => [opp, ...prev]);
       setShowOppModal(false);
-      setNewOpp({ project: '', budget: '', stage: 'qualification', temperature: 'warm', priority: 'medium', notes: '' });
+      resetForm();
       toast.success(isRTL ? 'تم إنشاء الفرصة' : 'Opportunity created');
+      // Notify assigned agent (if not self)
+      if (newOpp.assigned_to_name !== selfName) {
+        createNotification({ type: 'opportunity_assigned', title_ar: 'فرصة جديدة', title_en: 'New Opportunity Assigned', body_ar: `تم تعيين فرصة "${contact.full_name}" لك بواسطة ${selfName}`, body_en: `Opportunity "${contact.full_name}" assigned to you by ${selfName}`, for_user_name: newOpp.assigned_to_name, entity_type: 'opportunity', from_user: selfName });
+      }
+      logAction({ action: 'create_opportunity', entity: 'opportunity', entityId: saved.id, description: `Created opportunity for ${contact.full_name} → ${newOpp.assigned_to_name}`, userName: profile?.full_name_ar });
     } catch (err) {
       const localOpp = {
         id: String(Date.now()),
@@ -415,7 +471,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       };
       setOpportunities(prev => [localOpp, ...prev]);
       setShowOppModal(false);
-      setNewOpp({ project: '', budget: '', stage: 'qualification', temperature: 'warm', priority: 'medium', notes: '' });
+      resetForm();
       toast.success(isRTL ? 'تم حفظ الفرصة محلياً' : 'Opportunity saved locally');
     }
   };
@@ -484,6 +540,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     };
   }, [contact?.id]);
 
+  // ── Update activity status (scheduled -> completed/cancelled) ────────────
+  const handleUpdateActivityStatus = async (activityId, newStatus) => {
+    try {
+      await updateActivity(activityId, { status: newStatus });
+      setActivities(prev => prev.map(a => String(a.id) === String(activityId) ? { ...a, status: newStatus } : a));
+      toast.success(isRTL
+        ? (newStatus === 'completed' ? 'تم إكمال النشاط' : 'تم إلغاء النشاط')
+        : (newStatus === 'completed' ? 'Activity completed' : 'Activity cancelled'));
+    } catch {
+      toast.error(isRTL ? 'حدث خطأ' : 'Error updating activity');
+    }
+  };
+
   // ── Unified Timeline ─────────────────────────────────────────────────────
   const timeline = useMemo(() => {
     const items = [];
@@ -541,6 +610,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           return { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name || '—' };
         })(),
         { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
+        ...(contact.contact_status === 'disqualified' ? [
+          { label: isRTL ? 'سبب الاستبعاد' : 'DQ Reason', val: contact.disqualify_reason ? ({ resale: isRTL ? 'عايز يبيع وحدته' : 'Wants to sell unit', not_interested: isRTL ? 'غير مهتم' : 'Not interested', no_budget: isRTL ? 'ميزانية غير مناسبة' : 'No budget', wrong_audience: isRTL ? 'جمهور خاطئ' : 'Wrong audience', duplicate: isRTL ? 'مكرر' : 'Duplicate', other: isRTL ? 'آخر' : 'Other' }[contact.disqualify_reason] || contact.disqualify_reason) : '—', color: '#EF4444' },
+          ...(contact.disqualify_note ? [{ label: isRTL ? 'ملاحظة الاستبعاد' : 'DQ Note', val: contact.disqualify_note }] : []),
+        ] : []),
       ],
     },
     {
@@ -658,10 +731,42 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
     const content = (() => {
       if (item._type === 'activity') {
+        const actStatus = item.status || 'completed';
+        const STATUS_COLORS = { scheduled: '#3B82F6', completed: '#10B981', cancelled: '#EF4444' };
+        const STATUS_LABELS = { scheduled: { ar: 'مجدول', en: 'Scheduled' }, completed: { ar: 'مكتمل', en: 'Completed' }, cancelled: { ar: 'ملغي', en: 'Cancelled' } };
         return (
           <>
-            <div className="text-xs font-semibold text-content dark:text-content-dark leading-snug">{item.description || (isRTL ? 'نشاط' : 'Activity')}</div>
+            <div className="flex items-center gap-2">
+              <div className="text-xs font-semibold text-content dark:text-content-dark leading-snug flex-1">{item.description || (isRTL ? 'نشاط' : 'Activity')}</div>
+              {actStatus !== 'completed' && (
+                <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold shrink-0" style={{ background: STATUS_COLORS[actStatus] + '22', color: STATUS_COLORS[actStatus] }}>
+                  {isRTL ? STATUS_LABELS[actStatus]?.ar : STATUS_LABELS[actStatus]?.en}
+                </span>
+              )}
+            </div>
             {metaLine}
+            {item.scheduled_date && (
+              <div className="mt-1 text-[11px] flex items-center gap-1 text-blue-500">
+                <Calendar size={10} />
+                {new Date(item.scheduled_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                {' · '}
+                {new Date(item.scheduled_date).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+            )}
+            {actStatus === 'scheduled' && (
+              <div className="flex gap-1.5 mt-1.5">
+                <button onClick={(e) => { e.stopPropagation(); handleUpdateActivityStatus(item.id, 'completed'); }}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold cursor-pointer border-0 transition-colors"
+                  style={{ background: '#10B98122', color: '#10B981' }}>
+                  <Check size={10} /> {isRTL ? 'اكتمل' : 'Complete'}
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); handleUpdateActivityStatus(item.id, 'cancelled'); }}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold cursor-pointer border-0 transition-colors"
+                  style={{ background: '#EF444422', color: '#EF4444' }}>
+                  <XCircle size={10} /> {isRTL ? 'إلغاء' : 'Cancel'}
+                </button>
+              </div>
+            )}
             {item.next_action && (
               <div className="mt-1.5 px-2.5 py-1 bg-brand-500/[0.08] rounded-md text-[11px] text-[#6B8DB5] dark:text-[#6B8DB5]">
                 › {item.next_action}{item.next_action_date ? ` — ${item.next_action_date}` : ''}
@@ -1369,6 +1474,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   style={{ textAlign: isRTL ? 'right' : 'left', direction: isRTL ? 'rtl' : 'ltr' }} />
               </div>
             ))}
+            {/* Sales Agent Assignment */}
+            <div>
+              <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
+              {isSalesAgent ? (
+                <Input value={newOpp.assigned_to_name} disabled className="w-full" />
+              ) : (
+                <Select value={newOpp.assigned_to_name} onChange={e => setNewOpp(p => ({ ...p, assigned_to_name: e.target.value }))} className="w-full">
+                  <option value="">{isRTL ? '— اختر السيلز —' : '— Select Agent —'}</option>
+                  {selfName && <option value={selfName}>{selfName} {isRTL ? '(أنا)' : '(Me)'}</option>}
+                  {agentsList.filter(a => a !== selfName).map(a => <option key={a} value={a}>{a}</option>)}
+                </Select>
+              )}
+            </div>
             <div>
               <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? 'المرحلة' : 'Stage'}</label>
               <Select value={newOpp.stage} onChange={e => setNewOpp(p => ({ ...p, stage: e.target.value }))} className="w-full">

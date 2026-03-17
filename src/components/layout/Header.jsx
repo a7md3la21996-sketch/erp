@@ -8,6 +8,7 @@ import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
 import FavoritesDropdown from '../ui/FavoritesDropdown';
 import RecentItemsDropdown from '../ui/RecentItemsDropdown';
+import SyncIndicator from '../ui/SyncIndicator';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { getUnreadCount } from '../../services/notificationService';
 import { getSuggestionsCount } from '../../services/suggestionsService';
@@ -375,6 +376,7 @@ export default function Header({ onMenuClick }) {
           </button>
           <RecentItemsDropdown show={showRecent} onClose={() => setShowRecent(false)} />
         </div>
+        <SyncIndicator />
         <div className="relative">
           <button data-tour="notifications" onClick={() => setShowNotifications(!showNotifications)} aria-label={isRTL ? 'الإشعارات' : 'Notifications'} className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative">
             <Bell size={18} />

@@ -5,13 +5,13 @@ import CommentsSection from '../../components/ui/CommentsSection';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { fetchOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects, searchContacts } from '../../services/opportunitiesService';
+import { fetchOpportunities, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects } from '../../services/opportunitiesService';
 import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../services/favoritesService';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, LayoutGrid, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, List, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 import { logView } from '../../services/viewTrackingService';
@@ -20,618 +20,19 @@ import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { notifyDealWon } from '../../services/notificationsService';
 import { evaluateTriggers } from '../../services/triggerService';
+import {
+  TEMP_CONFIG, PRIORITY_CONFIG, ACTIVITY_ICONS, SORT_OPTIONS, TEMP_ORDER, STAGE_WIN_RATES,
+  calcLeadScore, scoreColor, scoreLabel, fmtBudget, daysSince, daysInStage, actLabel,
+  initials, ACOLORS, avatarColor, getContactName, getAgentName, getProjectName,
+  getSavedFilters, saveSavedFilters, getStageHistory, addStageHistory,
+  getOppNotes, addOppNote, deleteOppNote,
+} from './opportunities/constants';
+import OppCard from './opportunities/OppCard';
+import ContactSearch from './opportunities/ContactSearch';
+import AddModal from './opportunities/AddModal';
+import OpportunityDrawer from './opportunities/OpportunityDrawer';
 
-const DEPT_LABELS = {
-  all:        { ar: 'كل الأقسام', en: 'All Departments' },
-  sales:      { ar: 'المبيعات',   en: 'Sales' },
-  hr:         { ar: 'الموارد البشرية', en: 'HR' },
-  marketing:  { ar: 'التسويق',    en: 'Marketing' },
-  operations: { ar: 'العمليات',    en: 'Operations' },
-  finance:    { ar: 'المالية',     en: 'Finance' },
-};
-const TEMP_CONFIG = {
-  hot:  { label_ar: "ساخن", label_en: "Hot",  color: "#EF4444", bg: "rgba(239,68,68,0.10)" },
-  warm: { label_ar: "دافئ", label_en: "Warm", color: "#F97316", bg: "rgba(249,115,22,0.10)" },
-  cool: { label_ar: "عادي", label_en: "Cool", color: "#8BA8C8", bg: "rgba(139,168,200,0.10)" },
-  cold: { label_ar: "بارد", label_en: "Cold", color: "#4A7AAB", bg: "rgba(74,122,171,0.10)" },
-};
-const PRIORITY_CONFIG = {
-  urgent: { label_ar: "عاجل",  label_en: "Urgent", color: "#EF4444" },
-  high:   { label_ar: "عالي",  label_en: "High",   color: "#4A7AAB" },
-  medium: { label_ar: "متوسط", label_en: "Medium", color: "#6B8DB5" },
-  low:    { label_ar: "منخفض", label_en: "Low",    color: "#8BA8C8" },
-};
-
-const DATE_FILTERS = {
-  all:        { ar: 'كل الأوقات', en: 'All Time' },
-  this_week:  { ar: 'هذا الأسبوع', en: 'This Week' },
-  this_month: { ar: 'هذا الشهر', en: 'This Month' },
-  last_30:    { ar: 'آخر 30 يوم', en: 'Last 30 Days' },
-};
-
-const ACTIVITY_ICONS = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: UsersIcon, note: Clock, site_visit: Star };
-
-const SOURCE_LABELS = {
-  facebook: { ar: 'فيسبوك', en: 'Facebook' }, google: { ar: 'جوجل', en: 'Google' },
-  referral: { ar: 'توصية', en: 'Referral' }, walk_in: { ar: 'زيارة مباشرة', en: 'Walk-in' },
-  phone: { ar: 'اتصال', en: 'Phone' }, website: { ar: 'الموقع', en: 'Website' },
-  instagram: { ar: 'انستجرام', en: 'Instagram' }, tiktok: { ar: 'تيك توك', en: 'TikTok' },
-  other: { ar: 'أخرى', en: 'Other' },
-};
-const CONTACT_TYPE_LABELS = {
-  lead: { ar: 'عميل محتمل', en: 'Lead' }, cold: { ar: 'بارد', en: 'Cold' },
-  client: { ar: 'عميل', en: 'Client' }, supplier: { ar: 'مورد', en: 'Supplier' },
-  developer: { ar: 'مطور', en: 'Developer' }, applicant: { ar: 'متقدم', en: 'Applicant' },
-  partner: { ar: 'شريك', en: 'Partner' },
-};
-
-const SORT_OPTIONS = {
-  newest: { ar: 'الأحدث', en: 'Newest' },
-  oldest: { ar: 'الأقدم', en: 'Oldest' },
-  budget_high: { ar: 'الميزانية (الأعلى)', en: 'Budget (High)' },
-  budget_low: { ar: 'الميزانية (الأقل)', en: 'Budget (Low)' },
-  temp_hot: { ar: 'الأسخن', en: 'Hottest' },
-  lead_score: { ar: 'درجة العميل', en: 'Lead Score' },
-  stale: { ar: 'بدون تواصل', en: 'Stale (No Contact)' },
-};
-
-// LOST_REASONS now loaded from SystemConfigContext (lostReasons array)
-const TEMP_ORDER = { hot: 0, warm: 1, cool: 2, cold: 3 };
-
-// ─── Stage Win Rates for Weighted Pipeline Forecast ───
-const STAGE_WIN_RATES = {
-  new: 0.05, lead: 0.10, contacted: 0.20, qualified: 0.30, interested: 0.40,
-  site_visit: 0.50, negotiation: 0.60, proposal: 0.70, closed_won: 1.0, closed_lost: 0,
-  screening: 0.15, interview: 0.35, offer: 0.65, hired: 1.0, rejected: 0,
-  awareness: 0.10, engagement: 0.25, conversion: 0.50, retention: 0.75,
-  planning: 0.15, execution: 0.40, review: 0.60, completed: 1.0, cancelled: 0,
-  budgeting: 0.15, approval: 0.40, processing: 0.60, paid: 1.0,
-};
-
-// ─── Lead Score calculation ───
-const calcLeadScore = (opp) => {
-  let score = 0;
-  // Temperature (0-30)
-  if (opp.temperature === 'hot') score += 30;
-  else if (opp.temperature === 'warm') score += 20;
-  else if (opp.temperature === 'cool') score += 10;
-  // Budget (0-25)
-  const b = opp.budget || 0;
-  if (b >= 1000000) score += 25;
-  else if (b >= 500000) score += 20;
-  else if (b >= 100000) score += 15;
-  else if (b > 0) score += 5;
-  // Stage progression (0-25)
-  const stagePoints = { qualification: 5, site_visit_scheduled: 10, site_visited: 13, proposal: 16, negotiation: 19, reserved: 21, contracted: 23, closed_won: 25 };
-  score += stagePoints[opp.stage] || 0;
-  // Recency (0-20)
-  const days = Math.floor((Date.now() - new Date(opp.updated_at || opp.created_at || 0).getTime()) / 86400000);
-  if (days <= 1) score += 20;
-  else if (days <= 3) score += 15;
-  else if (days <= 7) score += 10;
-  else if (days <= 14) score += 5;
-  return Math.min(score, 100);
-};
-const scoreColor = (s) => s >= 70 ? '#10B981' : s >= 40 ? '#F59E0B' : '#EF4444';
-const scoreLabel = (s, isRTL) => s >= 70 ? (isRTL ? 'ساخن' : 'Hot') : s >= 40 ? (isRTL ? 'دافئ' : 'Warm') : (isRTL ? 'بارد' : 'Cold');
-
-// ─── Saved Filters (localStorage) ───
-const SAVED_FILTERS_KEY = 'platform_opp_saved_filters';
-const getSavedFilters = () => { try { return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY) || '[]'); } catch { return []; } };
-const saveSavedFilters = (f) => { try { localStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(f)); } catch {} };
-
-// ─── Stage History (localStorage) ───
-const STAGE_HISTORY_KEY = 'platform_opp_stage_history';
-const getStageHistory = (oppId) => { try { const all = JSON.parse(localStorage.getItem(STAGE_HISTORY_KEY) || '{}'); return all[oppId] || []; } catch { return []; } };
-const addStageHistory = (oppId, fromStage, toStage) => {
-  try {
-    const all = JSON.parse(localStorage.getItem(STAGE_HISTORY_KEY) || '{}');
-    if (!all[oppId]) all[oppId] = [];
-    all[oppId].push({ from: fromStage, to: toStage, at: new Date().toISOString() });
-    localStorage.setItem(STAGE_HISTORY_KEY, JSON.stringify(all));
-  } catch {}
-};
-
-// ─── Notes (localStorage) ───
-const NOTES_KEY = 'platform_opp_notes';
-const getOppNotes = (oppId) => { try { const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); return all[oppId] || []; } catch { return []; } };
-const addOppNote = (oppId, text) => {
-  try {
-    const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}');
-    if (!all[oppId]) all[oppId] = [];
-    const note = { id: Date.now().toString(), text, at: new Date().toISOString() };
-    all[oppId].unshift(note);
-    localStorage.setItem(NOTES_KEY, JSON.stringify(all));
-    return note;
-  } catch { return { id: Date.now().toString(), text, at: new Date().toISOString() }; }
-};
-const deleteOppNote = (oppId, noteId) => {
-  try {
-    const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}');
-    if (all[oppId]) all[oppId] = all[oppId].filter(n => n.id !== noteId);
-    localStorage.setItem(NOTES_KEY, JSON.stringify(all));
-  } catch {}
-};
-
-const fmtBudget = (n) => { if (!n) return "-"; if (n >= 1000000) return (n / 1000000).toFixed(1) + "M"; if (n >= 1000) return (n / 1000).toFixed(0) + "K"; return n.toLocaleString(); };
-const daysSince = (date) => date ? Math.floor((Date.now() - new Date(date).getTime()) / 86400000) : 999;
-const daysInStage = (opp) => daysSince(opp.stage_changed_at || opp.updated_at || opp.created_at);
-const initials = (n) => (n || "").trim().split(" ").map(w => w[0]).slice(0, 2).join("") || "?";
-const ACOLORS = ["#1B3347", "#2B4C6F", "#4A7AAB", "#6B8DB5", "#8BA8C8"];
-const avatarColor = (id) => ACOLORS[(id || 0) % ACOLORS.length];
-
-const actLabel = (createdAt, isRTL) => {
-  if (!createdAt) return { text: '—', color: '#8BA8C8' };
-  const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24));
-  if (days === 0) return { text: isRTL ? "اليوم" : "Today", color: "#4A7AAB" };
-  if (days === 1) return { text: isRTL ? "أمس" : "Yesterday", color: "#6B8DB5" };
-  if (days <= 3) return { text: days + (isRTL ? "د" : "d"), color: "#8BA8C8" };
-  return { text: days + (isRTL ? "د" : "d"), color: "#EF4444" };
-};
-
-// ─── Helper to get display name ───
-const getContactName = (opp) => opp.contacts?.full_name || opp.contact_name || '—';
-const getAgentName = (opp, lang) => {
-  if (opp.users) return lang === 'ar' ? opp.users.full_name_ar : (opp.users.full_name_en || opp.users.full_name_ar);
-  return opp.agent_name || '—';
-};
-const getProjectName = (opp, lang) => {
-  if (opp.projects) return lang === 'ar' ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar);
-  return opp.project_name || '';
-};
-
-// ═══════════════════════════════════════════════
-// OppCard — cleaned up, no duplicate stage display
-// ═══════════════════════════════════════════════
-function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, stageConfig, score: preScore, isAdmin }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef(null);
-  const temp = TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold;
-  const prio = PRIORITY_CONFIG[opp.priority] || PRIORITY_CONFIG.medium;
-  const stage = stageConfig.find(s => s.id === opp.stage) || stageConfig[0] || { id: opp.stage, label_ar: opp.stage, label_en: opp.stage, color: '#4A7AAB' };
-  const act = actLabel(opp.updated_at || opp.created_at, isRTL);
-  const contactName = getContactName(opp);
-  const agentName = getAgentName(opp, lang);
-  const projectName = getProjectName(opp, lang);
-
-  useEffect(() => {
-    if (!menuOpen) return;
-    const h = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, [menuOpen]);
-
-  return (
-    <div
-      onClick={() => onSelect(opp)}
-      className="relative overflow-hidden rounded-xl p-4 flex flex-col gap-2.5 cursor-pointer
-        bg-surface-card dark:bg-surface-card-dark
-        border border-edge dark:border-edge-dark
-        shadow-sm dark:shadow-md
-        transition-all duration-200
-        hover:-translate-y-0.5 hover:shadow-lg dark:hover:shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
-    >
-      {/* Color bar */}
-      <div className="absolute top-0 left-0 right-0 h-[3px] rounded-t-xl" style={{ background: stage.color }} />
-
-      {/* Header: Name + Menu */}
-      <div className="flex items-start justify-between gap-2 mt-1">
-        <div className="flex items-center gap-2.5 flex-1 min-w-0">
-          <div
-            className="w-[38px] h-[38px] rounded-full shrink-0 flex items-center justify-center text-xs font-bold text-white"
-            style={{ background: avatarColor(opp.contact_id || opp.id) }}
-          >
-            {initials(contactName)}
-          </div>
-          <div className="min-w-0">
-            <div className="text-sm font-bold text-content dark:text-content-dark truncate">{contactName}</div>
-            {opp.contacts?.phone && (
-              <div className="text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">{opp.contacts?.phone}</div>
-            )}
-          </div>
-        </div>
-        <div ref={menuRef} className="relative shrink-0">
-          <button
-            onClick={e => { e.stopPropagation(); setMenuOpen(m => !m); }}
-            className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md flex hover:bg-gray-100 dark:hover:bg-brand-500/10 transition-colors"
-          >
-            <MoreHorizontal size={15} />
-          </button>
-          {menuOpen && (
-            <div
-              className="absolute top-full z-50 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg min-w-[170px] overflow-hidden"
-              style={{ [isRTL ? 'left' : 'right']: 0 }}
-            >
-              <div className="py-1.5 border-b border-edge dark:border-edge-dark">
-                <div className="px-3 py-1 text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">
-                  {isRTL ? "نقل الى" : "Move to"}
-                </div>
-                {stageConfig.filter(s => {
-                  if (s.id === opp.stage) return false;
-                  if (isAdmin) return true;
-                  const currentIdx = stageConfig.findIndex(st => st.id === opp.stage);
-                  const targetIdx = stageConfig.findIndex(st => st.id === s.id);
-                  return targetIdx > currentIdx;
-                }).slice(0, 5).map(s => (
-                  <button
-                    key={s.id}
-                    onClick={e => { e.stopPropagation(); onMove(opp.id, s.id); setMenuOpen(false); }}
-                    className="flex items-center gap-2 w-full px-3 py-[7px] bg-transparent border-none cursor-pointer text-xs text-content dark:text-content-dark font-cairo hover:bg-gray-100 dark:hover:bg-brand-500/10 transition-colors"
-                    style={{ textAlign: isRTL ? 'right' : 'left' }}
-                  >
-                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
-                    {isRTL ? s.label_ar : s.label_en}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={e => { e.stopPropagation(); onDelete(opp.id); setMenuOpen(false); }}
-                className="flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none cursor-pointer text-xs text-red-500 font-cairo hover:bg-red-500/10 transition-colors"
-              >
-                <Trash2 size={13} />{isRTL ? "حذف" : "Delete"}
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Project */}
-      {projectName && (
-        <div className="flex items-center gap-1.5 text-xs text-content-muted dark:text-content-muted-dark">
-          <Building2 size={12} className="shrink-0" />
-          <span className="truncate">{projectName}</span>
-        </div>
-      )}
-
-      {/* Tags: Budget + Temp + Priority + Score */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <div className="flex items-center gap-1 bg-brand-500/10 rounded-md px-2.5 py-1 text-xs font-bold text-brand-500">
-          <Banknote size={11} />{fmtBudget(opp.budget)} {isRTL ? "ج" : "EGP"}
-        </div>
-        <div
-          className="rounded-md px-2.5 py-1 text-xs font-semibold"
-          style={{ background: temp.bg, color: temp.color }}
-        >
-          {isRTL ? temp.label_ar : temp.label_en}
-        </div>
-        <div
-          className="rounded-md px-2.5 py-1 text-xs font-semibold"
-          style={{ background: `${prio.color}18`, color: prio.color }}
-        >
-          {isRTL ? prio.label_ar : prio.label_en}
-        </div>
-        {(() => {
-          const score = preScore ?? calcLeadScore(opp);
-          return (
-            <div className="rounded-md px-2 py-1 text-[10px] font-bold flex items-center gap-0.5" style={{ background: `${scoreColor(score)}18`, color: scoreColor(score) }}>
-              <Zap size={9} />{score}
-            </div>
-          );
-        })()}
-      </div>
-
-      {/* Source badge */}
-      {(opp.contacts?.source || opp.source) && (() => {
-        const src = opp.contacts?.source || opp.source;
-        const srcLabel = SOURCE_LABELS[src];
-        return srcLabel ? (
-          <div className="flex items-center gap-1 text-[10px] text-content-muted dark:text-content-muted-dark">
-            <ExternalLink size={9} className="shrink-0" />
-            <span>{isRTL ? srcLabel.ar : srcLabel.en}</span>
-          </div>
-        ) : null;
-      })()}
-
-      {/* Stale deal alert */}
-      {(() => {
-        const lastAct = opp.contacts?.last_activity_at || opp.updated_at || opp.created_at;
-        const days = daysSince(lastAct);
-        if (days < 7 || opp.stage === 'closed_won' || opp.stage === 'closed_lost') return null;
-        return (
-          <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md ${days >= 14 ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
-            <AlertTriangle size={9} />
-            {days >= 14
-              ? (isRTL ? `⚠ بدون تواصل ${days} يوم` : `⚠ ${days}d no contact`)
-              : (isRTL ? `${days} يوم بدون نشاط` : `${days}d inactive`)}
-          </div>
-        );
-      })()}
-
-      {/* Expected close date warning */}
-      {opp.expected_close_date && (() => {
-        const diff = Math.ceil((new Date(opp.expected_close_date) - Date.now()) / 86400000);
-        if (diff > 7) return null;
-        return (
-          <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md ${diff < 0 ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
-            <Calendar size={9} />
-            {diff < 0 ? (isRTL ? `متأخر ${Math.abs(diff)} يوم` : `${Math.abs(diff)}d overdue`) : diff === 0 ? (isRTL ? 'اليوم' : 'Due today') : (isRTL ? `${diff} يوم متبقي` : `${diff}d left`)}
-          </div>
-        );
-      })()}
-
-      {/* Footer: Agent + Last Activity + Days in stage */}
-      <div className="flex items-center justify-between pt-2 border-t border-edge dark:border-edge-dark">
-        <div className="flex items-center gap-1.5 text-xs text-content-muted dark:text-content-muted-dark truncate">
-          <User size={11} className="shrink-0" /><span className="truncate">{agentName}</span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {(() => {
-            const days = daysInStage(opp);
-            return days > 0 && (
-              <span className={`text-[10px] px-1.5 py-px rounded-full ${days > 7 ? 'bg-red-500/10 text-red-500' : days > 3 ? 'bg-amber-500/10 text-amber-500' : 'bg-gray-100 dark:bg-white/10 text-content-muted dark:text-content-muted-dark'}`}>
-                <Timer size={8} className="inline -mt-px" /> {days}{isRTL ? 'ي' : 'd'}
-              </span>
-            );
-          })()}
-          <div className="text-xs font-bold" style={{ color: act.color }}>{act.text}</div>
-        </div>
-      </div>
-
-      {/* Notes */}
-      {opp.notes && (
-        <div className="text-xs text-content-muted dark:text-content-muted-dark truncate -mt-1">{opp.notes}</div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════
-// ContactSearch — search & select real contacts
-// ═══════════════════════════════════════════════
-function ContactSearch({ isRTL, value, onSelect }) {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const debounceRef = useRef(null);
-
-  useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  const doSearch = useCallback(async (q) => {
-    if (q.length < 2) { setResults([]); return; }
-    setSearching(true);
-    const data = await searchContacts(q);
-    setResults(data);
-    setSearching(false);
-  }, []);
-
-  const handleChange = (e) => {
-    const v = e.target.value;
-    setQuery(v);
-    setOpen(true);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(v), 300);
-  };
-
-  return (
-    <div ref={ref} className="relative">
-      {value ? (
-        <div className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-sm font-cairo flex items-center justify-between">
-          <span>{value.full_name} {value.phone ? `(${value.phone})` : ''}</span>
-          <button
-            onClick={() => { onSelect(null); setQuery(''); }}
-            className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-0"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ) : (
-        <Input
-          value={query}
-          onChange={handleChange}
-          onFocus={() => query.length >= 2 && setOpen(true)}
-          placeholder={isRTL ? 'ابحث عن جهة اتصال...' : 'Search contacts...'}
-        />
-      )}
-      {open && !value && (query.length >= 2) && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-surface-card dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg z-[60] max-h-[200px] overflow-y-auto">
-          {searching ? (
-            <div className="p-4 text-center text-content-muted dark:text-content-muted-dark text-xs">
-              <Loader2 size={16} className="animate-spin inline-block" />
-            </div>
-          ) : results.length === 0 ? (
-            <div className="p-4 text-center text-content-muted dark:text-content-muted-dark text-xs">
-              {isRTL ? 'لا توجد نتائج' : 'No results'}
-            </div>
-          ) : (
-            results.map(c => (
-              <button
-                key={c.id}
-                onClick={() => { onSelect(c); setOpen(false); setQuery(''); }}
-                className="flex items-center gap-2 w-full px-3 py-2 bg-transparent border-none cursor-pointer text-sm text-content dark:text-content-dark font-cairo hover:bg-gray-100 dark:hover:bg-brand-500/10 transition-colors"
-                style={{ textAlign: isRTL ? 'right' : 'left' }}
-              >
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                  style={{ background: avatarColor(c.id) }}
-                >
-                  {initials(c.full_name)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold truncate">{c.full_name}</div>
-                  <div className="text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">
-                    {c.phone || c.email || ''}
-                  </div>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════
-// AddModal — with real contact search & agent select
-// ═══════════════════════════════════════════════
-function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [], currentUserId }) {
-  const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'qualification', project_id: '', notes: '', expected_close_date: '' });
-  const [saving, setSaving] = useState(false);
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
-  const contactDept = form.contact?.department || 'sales';
-  const stageConfig = getDeptStages(contactDept);
-
-  const handleSave = async () => {
-    if (!form.contact) return;
-    setSaving(true);
-    const payload = {
-      contact_id: form.contact.id,
-      budget: Number(form.budget) || 0,
-      assigned_to: form.assigned_to || null,
-      assigned_by: currentUserId || null,
-      temperature: form.temperature,
-      priority: form.priority,
-      stage: form.stage,
-      project_id: form.project_id || null,
-      notes: form.notes,
-      expected_close_date: form.expected_close_date || null,
-    };
-    const result = await createOpportunity(payload);
-    // Inject joined data so cards render names immediately
-    if (!result.contacts && form.contact) {
-      result.contacts = { id: form.contact.id, full_name: form.contact.full_name, phone: form.contact.phone, email: form.contact.email, company: form.contact.company, contact_type: form.contact.contact_type, department: form.contact.department };
-    }
-    if (!result.projects && form.project_id) {
-      const proj = projects.find(p => p.id === form.project_id);
-      if (proj) result.projects = { id: proj.id, name_ar: proj.name_ar, name_en: proj.name_en };
-    }
-    if (!result.users && form.assigned_to) {
-      const agent = agents.find(a => a.id === form.assigned_to);
-      if (agent) result.users = { id: agent.id, full_name_ar: agent.full_name_ar, full_name_en: agent.full_name_en };
-    }
-    onSave(result);
-    setSaving(false);
-  };
-
-  return (
-    <Modal open={true} onClose={onClose} title={isRTL ? 'إضافة فرصة جديدة' : 'Add New Opportunity'} width="max-w-lg">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 modal-grid">
-        <div className="col-span-2">
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'جهة الاتصال *' : 'Contact *'}
-          </label>
-          <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => { f('contact', c); if (c) { const stages = getDeptStages(c.department || 'sales'); f('stage', stages[0]?.id || 'qualification'); } }} />
-          {form.contact && existingOpps.some(o => o.contact_id === form.contact.id) && (
-            <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-semibold">
-              <AlertTriangle size={12} />
-              {isRTL ? 'تنبيه: يوجد فرصة أخرى لنفس العميل' : 'Warning: This contact already has an opportunity'}
-            </div>
-          )}
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'الميزانية' : 'Budget'}
-          </label>
-          <Input type="number" min="0" value={form.budget} onChange={e => f('budget', Math.max(0, e.target.value))} />
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'المسؤول' : 'Agent'}
-          </label>
-          <Select value={form.assigned_to} onChange={e => f('assigned_to', e.target.value)}>
-            <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-            {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
-          </Select>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'المشروع' : 'Project'}
-          </label>
-          <Select value={form.project_id} onChange={e => f('project_id', e.target.value)}>
-            <option value="">{isRTL ? 'بدون مشروع' : 'No Project'}</option>
-            {projects.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.name_ar : (p.name_en || p.name_ar)}</option>)}
-          </Select>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'المرحلة' : 'Stage'}
-          </label>
-          <Select value={form.stage} onChange={e => f('stage', e.target.value)}>
-            {stageConfig.map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
-          </Select>
-        </div>
-        <div>
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'تاريخ الإغلاق المتوقع' : 'Expected Close'}
-          </label>
-          <Input type="date" value={form.expected_close_date} onChange={e => f('expected_close_date', e.target.value)} />
-        </div>
-        <div className="col-span-2">
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'الحرارة' : 'Temperature'}
-          </label>
-          <div className="flex gap-1.5">
-            {Object.entries(TEMP_CONFIG).map(([k, v]) => {
-              const isActive = form.temperature === k;
-              return (
-                <button
-                  key={k}
-                  onClick={() => f('temperature', k)}
-                  className={`flex-1 py-[7px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${
-                    isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'
-                  }`}
-                  style={isActive ? { borderColor: v.color, background: v.bg, color: v.color } : {}}
-                >
-                  {isRTL ? v.label_ar : v.label_en}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="col-span-2">
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'الأولوية' : 'Priority'}
-          </label>
-          <div className="flex gap-1.5">
-            {Object.entries(PRIORITY_CONFIG).map(([k, v]) => {
-              const isActive = form.priority === k;
-              return (
-                <button
-                  key={k}
-                  onClick={() => f('priority', k)}
-                  className={`flex-1 py-[7px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${
-                    isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'
-                  }`}
-                  style={isActive ? { borderColor: v.color, background: `${v.color}18`, color: v.color } : {}}
-                >
-                  {isRTL ? v.label_ar : v.label_en}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div className="col-span-2">
-          <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
-            {isRTL ? 'ملاحظات' : 'Notes'}
-          </label>
-          <Textarea value={form.notes} onChange={e => f('notes', e.target.value)} />
-        </div>
-      </div>
-      <ModalFooter>
-        <Button
-          variant="primary"
-          size="md"
-          onClick={handleSave}
-          disabled={!form.contact || saving}
-          className="gap-1.5"
-        >
-          {saving && <Loader2 size={14} className="animate-spin" />}
-          {isRTL ? 'حفظ' : 'Save'}
-        </Button>
-        <Button variant="secondary" size="md" onClick={onClose}>
-          {isRTL ? 'إلغاء' : 'Cancel'}
-        </Button>
-      </ModalFooter>
-    </Modal>
-  );
-}
-
+/* OppCard, ContactSearch, AddModal, OpportunityDrawer extracted to ./opportunities/ */
 // ═══════════════════════════════════════════════
 // Main Page
 // ═══════════════════════════════════════════════
@@ -642,12 +43,31 @@ export default function OpportunitiesPage() {
   const { profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { lostReasons: configLostReasons } = useSystemConfig();
+  const { lostReasons: configLostReasons, sources: configSources, sourceLabels: configSourceLabels, contactTypes: configContactTypes, typeMap: configTypeMap, departments: configDepartments, activityTypes: configActivityTypes, activityResults: configActivityResults, stageWinRates: configStageWinRates } = useSystemConfig();
   const lostReasonsMap = useMemo(() => {
     const m = {};
     (configLostReasons || []).forEach(r => { m[r.key] = r; });
     return m;
   }, [configLostReasons]);
+  // Build source labels map from config: { facebook: { ar, en }, ... }
+  const sourceLabelsMap = useMemo(() => {
+    const m = {};
+    (configSources || []).forEach(s => { m[s.key] = { ar: s.label_ar, en: s.label_en }; });
+    return m;
+  }, [configSources]);
+  // Build department labels map from config: { sales: { ar, en }, all: { ar, en }, ... }
+  const deptLabelsMap = useMemo(() => {
+    const m = { all: { ar: 'كل الأقسام', en: 'All Departments' } };
+    (configDepartments || []).forEach(d => { m[d.key] = { ar: d.label_ar, en: d.label_en }; });
+    return m;
+  }, [configDepartments]);
+  // Build activity icon map from config
+  const ACTIVITY_ICON_MAP = useMemo(() => {
+    const iconLookup = { Phone, MessageCircle, Mail, Users: UsersIcon, Star, Clock };
+    const m = {};
+    (configActivityTypes || []).forEach(t => { m[t.key] = iconLookup[t.icon] || Clock; });
+    return m;
+  }, [configActivityTypes]);
   const rawLang = i18n.language || 'ar';
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
@@ -663,32 +83,22 @@ export default function OpportunitiesPage() {
   const [smartFilters, setSmartFilters] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
-  const [editingOpp, setEditingOpp] = useState(false);
-  const [editForm, setEditForm] = useState({});
-  const [editSaving, setEditSaving] = useState(false);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [viewMode, setViewMode] = useState('grid');
-  const [drawerActivities, setDrawerActivities] = useState([]);
-  const [loadingActivities, setLoadingActivities] = useState(false);
+  const [viewMode, setViewMode] = useState('table');
   const [sortBy, setSortBy] = useState('newest');
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState(new Set());
-  const [showAddActivity, setShowAddActivity] = useState(false);
-  const [activityForm, setActivityForm] = useState({ type: 'call', description: '' });
   const [savedFilters, setSavedFilters] = useState(() => getSavedFilters());
   const [showSaveFilter, setShowSaveFilter] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [draggingOpp, setDraggingOpp] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
-  const [drawerNotes, setDrawerNotes] = useState([]);
-  const [newNote, setNewNote] = useState('');
-  const [stageHistory, setStageHistory] = useState([]);
-  const [showNotes, setShowNotes] = useState(false);
   const [lostReasonModal, setLostReasonModal] = useState(null); // { id, toStage }
   const [lostReason, setLostReason] = useState('');
   const [lostReasonCustom, setLostReasonCustom] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [showFunnel, setShowFunnel] = useState(false);
   const [bulkToast, setBulkToast] = useState(null);
   const [moveWarningToast, setMoveWarningToast] = useState(null);
   const isAdmin = profile?.role === 'admin';
@@ -713,7 +123,7 @@ export default function OpportunitiesPage() {
   // ─── SmartFilter field definitions ───
   const SMART_FIELDS = useMemo(() => [
     { id: 'department', label: 'القسم', labelEn: 'Department', type: 'select',
-      options: Object.entries(DEPT_LABELS).filter(([k]) => k !== 'all').map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
+      options: Object.entries(deptLabelsMap).filter(([k]) => k !== 'all').map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'assigned_to', label: 'المسؤول', labelEn: 'Agent', type: 'select',
       options: agents.map(a => ({ value: a.id, label: a.full_name_ar || a.full_name_en, labelEn: a.full_name_en || a.full_name_ar })) },
     { id: 'temperature', label: 'الحرارة', labelEn: 'Temperature', type: 'select',
@@ -721,7 +131,7 @@ export default function OpportunitiesPage() {
     { id: 'priority', label: 'الأولوية', labelEn: 'Priority', type: 'select',
       options: Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: v.label_ar, labelEn: v.label_en })) },
     { id: 'source', label: 'المصدر', labelEn: 'Source', type: 'select',
-      options: Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
+      options: Object.entries(sourceLabelsMap).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'lead_score', label: 'درجة العميل', labelEn: 'Lead Score', type: 'select',
       options: [
         { value: 'hot', label: 'ساخن (70+)', labelEn: 'Hot (70+)' },
@@ -743,7 +153,7 @@ export default function OpportunitiesPage() {
     { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
     { id: 'expected_close_date', label: 'تاريخ الإغلاق المتوقع', labelEn: 'Expected Close', type: 'date' },
     ...auditFields,
-  ], [agents, auditFields]);
+  ], [agents, auditFields, sourceLabelsMap, deptLabelsMap]);
 
   const SMART_SORT_OPTIONS = useMemo(() =>
     Object.entries(SORT_OPTIONS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })),
@@ -755,25 +165,9 @@ export default function OpportunitiesPage() {
     return deptFilter ? deptFilter.value : 'all';
   }, [smartFilters]);
 
-  // Check if edit form has unsaved changes
-  const isEditDirty = editingOpp && selectedOpp && (
-    String(editForm.budget) !== String(selectedOpp.budget || '') ||
-    editForm.temperature !== (selectedOpp.temperature || 'cold') ||
-    editForm.priority !== (selectedOpp.priority || 'medium') ||
-    editForm.assigned_to !== (selectedOpp.assigned_to || '') ||
-    editForm.project_id !== (selectedOpp.project_id || '') ||
-    editForm.notes !== (selectedOpp.notes || '') ||
-    editForm.stage !== (selectedOpp.stage || 'qualification') ||
-    editForm.expected_close_date !== (selectedOpp.expected_close_date || '')
-  );
-
   const closeDrawer = useCallback(() => {
-    if (isEditDirty) {
-      if (!window.confirm(isRTL ? 'يوجد تغييرات لم يتم حفظها. هل تريد الإغلاق؟' : 'You have unsaved changes. Close anyway?')) return;
-    }
     setSelectedOpp(null);
-    setEditingOpp(false);
-  }, [isEditDirty, isRTL]);
+  }, []);
 
   // ESC to close modals/drawer (priority: lost reason > confirm delete > add modal > drawer)
   // Ctrl+N / ⌘+N to open add modal
@@ -794,25 +188,6 @@ export default function OpportunitiesPage() {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [selectedOpp, lostReasonModal, confirmDelete, showModal, closeDrawer]);
-
-  // Fetch activities for drawer
-  useEffect(() => {
-    if (!selectedOpp?.contact_id) { setDrawerActivities([]); return; }
-    let cancelled = false;
-    setLoadingActivities(true);
-    fetchContactActivities(selectedOpp.contact_id)
-      .then(data => { if (!cancelled) setDrawerActivities(data?.slice(0, 5) || []); })
-      .catch(() => { if (!cancelled) setDrawerActivities([]); })
-      .finally(() => { if (!cancelled) setLoadingActivities(false); });
-    return () => { cancelled = true; };
-  }, [selectedOpp?.contact_id]);
-
-  // Load notes & stage history for drawer
-  useEffect(() => {
-    if (!selectedOpp?.id) { setDrawerNotes([]); setStageHistory([]); return; }
-    setDrawerNotes(getOppNotes(selectedOpp.id));
-    setStageHistory(getStageHistory(selectedOpp.id));
-  }, [selectedOpp?.id]);
 
   // Dynamic stage config based on department filter
   const currentStages = filterDept === 'all' ? getDeptStages('sales') : getDeptStages(filterDept);
@@ -913,13 +288,13 @@ export default function OpportunitiesPage() {
 
   // Drawer prev/next navigation
   const selectedOppIdx = selectedOpp ? sortedFiltered.findIndex(o => o.id === selectedOpp.id) : -1;
-  const handleOppPrev = selectedOppIdx > 0 ? () => { selectOpp(sortedFiltered[selectedOppIdx - 1]); setEditingOpp(false); } : null;
-  const handleOppNext = selectedOppIdx >= 0 && selectedOppIdx < sortedFiltered.length - 1 ? () => { selectOpp(sortedFiltered[selectedOppIdx + 1]); setEditingOpp(false); } : null;
+  const handleOppPrev = selectedOppIdx > 0 ? () => { selectOpp(sortedFiltered[selectedOppIdx - 1]); } : null;
+  const handleOppNext = selectedOppIdx >= 0 && selectedOppIdx < sortedFiltered.length - 1 ? () => { selectOpp(sortedFiltered[selectedOppIdx + 1]); } : null;
 
   // Grid pagination
   const gridTotalPages = Math.max(1, Math.ceil(sortedFiltered.length / pageSize));
   const gridSafePage = Math.min(gridPage, gridTotalPages);
-  const gridPaged = viewMode === 'grid' ? sortedFiltered.slice((gridSafePage - 1) * pageSize, gridSafePage * pageSize) : sortedFiltered;
+  const gridPaged = viewMode === 'table' ? sortedFiltered.slice((gridSafePage - 1) * pageSize, gridSafePage * pageSize) : sortedFiltered;
   useEffect(() => { setGridPage(1); }, [search, smartFilters, activeStage, sortBy, pageSize]);
 
   // Export data
@@ -933,7 +308,7 @@ export default function OpportunitiesPage() {
     [isRTL ? 'المسؤول' : 'Agent']: getAgentName(o, lang),
     [isRTL ? 'الأولوية' : 'Priority']: isRTL ? (PRIORITY_CONFIG[o.priority]?.label_ar || '') : (PRIORITY_CONFIG[o.priority]?.label_en || ''),
     [isRTL ? 'درجة العميل' : 'Lead Score']: scoreMap[o.id] ?? calcLeadScore(o),
-    [isRTL ? 'المصدر' : 'Source']: (() => { const src = o.contacts?.source || o.source; return src ? (isRTL ? (SOURCE_LABELS[src]?.ar || src) : (SOURCE_LABELS[src]?.en || src)) : ''; })(),
+    [isRTL ? 'المصدر' : 'Source']: (() => { const src = o.contacts?.source || o.source; return src ? (isRTL ? (sourceLabelsMap[src]?.ar || src) : (sourceLabelsMap[src]?.en || src)) : ''; })(),
     [isRTL ? 'سبب الخسارة' : 'Lost Reason']: o.lost_reason ? (lostReasonsMap[o.lost_reason] ? (isRTL ? lostReasonsMap[o.lost_reason].label_ar : lostReasonsMap[o.lost_reason].label_en) : o.lost_reason) : '',
     [isRTL ? 'الإغلاق المتوقع' : 'Expected Close']: o.expected_close_date || '',
     [isRTL ? 'التاريخ' : 'Date']: o.created_at?.slice(0, 10) || '',
@@ -945,14 +320,72 @@ export default function OpportunitiesPage() {
   const newThisWeek = opps.filter(o => { const d = new Date(o.created_at); const w = new Date(); w.setDate(w.getDate() - 7); return d >= w; }).length;
   const conversionRate = opps.length > 0 ? Math.round((opps.filter(o => o.stage === 'closed_won').length / opps.length) * 100) : 0;
 
+  // Avg Deal Size (closed_won only)
+  const avgDealSize = wonCount > 0 ? Math.round(filtered.filter(o => o.stage === 'closed_won').reduce((s, o) => s + (o.budget || 0), 0) / wonCount) : 0;
+
+  // Avg Time to Close (days from created_at to stage_changed_at for closed_won)
+  const avgCloseTime = useMemo(() => {
+    const wonOpps = opps.filter(o => o.stage === 'closed_won' && o.created_at && o.stage_changed_at);
+    if (!wonOpps.length) return 0;
+    const totalDays = wonOpps.reduce((s, o) => s + Math.max(0, Math.floor((new Date(o.stage_changed_at) - new Date(o.created_at)) / 86400000)), 0);
+    return Math.round(totalDays / wonOpps.length);
+  }, [opps]);
+
+  // Quick Wins: hot + score >= 60 + not closed + expected close within 14 days or in advanced stage
+  const quickWins = useMemo(() => {
+    const advancedStages = ['negotiation', 'proposal', 'reserved', 'contracted', 'offer', 'agreement'];
+    return filtered.filter(o => {
+      if (o.stage === 'closed_won' || o.stage === 'closed_lost') return false;
+      const score = scoreMap[o.id] || 0;
+      const isHotOrWarm = o.temperature === 'hot' || o.temperature === 'warm';
+      const isAdvanced = advancedStages.includes(o.stage);
+      const closesSoon = o.expected_close_date && Math.ceil((new Date(o.expected_close_date) - Date.now()) / 86400000) <= 14;
+      return isHotOrWarm && score >= 60 && (isAdvanced || closesSoon);
+    });
+  }, [filtered, scoreMap]);
+
+  // Build flat win-rate lookup from config (dept-based → flat, using opp's department)
+  const winRateLookup = useMemo(() => {
+    const flat = {};
+    if (configStageWinRates) {
+      Object.entries(configStageWinRates).forEach(([, stages]) => {
+        Object.entries(stages).forEach(([stageId, pct]) => {
+          // First dept wins; later depts don't overwrite (sales takes priority)
+          if (flat[stageId] === undefined) flat[stageId] = pct / 100;
+        });
+      });
+    }
+    // Fallback to hardcoded STAGE_WIN_RATES for any missing
+    Object.entries(STAGE_WIN_RATES).forEach(([k, v]) => {
+      if (flat[k] === undefined) flat[k] = v;
+    });
+    return flat;
+  }, [configStageWinRates]);
+
   // Weighted Pipeline Forecast
   const weightedForecast = useMemo(() => {
     return filtered.reduce((sum, o) => {
       if (o.stage === 'closed_won' || o.stage === 'closed_lost') return sum;
-      const rate = STAGE_WIN_RATES[o.stage] || 0.1;
+      const dept = o.contacts?.department || 'sales';
+      const deptRates = configStageWinRates?.[dept] || {};
+      const rate = deptRates[o.stage] !== undefined ? deptRates[o.stage] / 100 : (winRateLookup[o.stage] || 0.1);
       return sum + (o.budget || 0) * rate;
     }, 0);
-  }, [filtered]);
+  }, [filtered, configStageWinRates, winRateLookup]);
+
+  // Conversion Funnel data
+  const funnelData = useMemo(() => {
+    const stages = currentStages.filter(s => s.id !== 'closed_lost');
+    const counts = {};
+    sortedFiltered.forEach(o => { counts[o.stage] = (counts[o.stage] || 0) + 1; });
+    const maxCount = Math.max(1, ...stages.map(s => counts[s.id] || 0));
+    return stages.map((s, i) => {
+      const count = counts[s.id] || 0;
+      const prevCount = i > 0 ? (counts[stages[i - 1].id] || 0) : null;
+      const dropOff = prevCount !== null && prevCount > 0 ? Math.round(((prevCount - count) / prevCount) * -100) : null;
+      return { ...s, count, width: Math.max(8, (count / maxCount) * 100), dropOff };
+    });
+  }, [currentStages, sortedFiltered]);
 
   // Win/Loss Analysis
   const lostReasonCounts = useMemo(() => {
@@ -1046,27 +479,22 @@ export default function OpportunitiesPage() {
 
     // If triggered from edit form, complete the full edit save with lost_reason
     if (lostReasonModal.fromEdit) {
+      const ef = lostReasonModal.editForm;
       addStageHistory(selectedOpp.id, selectedOpp.stage, 'closed_lost');
       const updates = {
-        budget: Number(editForm.budget) || 0,
-        temperature: editForm.temperature,
-        priority: editForm.priority,
-        assigned_to: editForm.assigned_to || null,
-        project_id: editForm.project_id || null,
-        notes: editForm.notes,
-        expected_close_date: editForm.expected_close_date || null,
+        budget: Number(ef.budget) || 0,
+        temperature: ef.temperature,
+        priority: ef.priority,
+        assigned_to: ef.assigned_to || null,
+        project_id: ef.project_id || null,
+        notes: ef.notes,
+        expected_close_date: ef.expected_close_date || null,
         stage: 'closed_lost',
         stage_changed_at: new Date().toISOString(),
         lost_reason: reason,
       };
       setLostReasonModal(null);
-      setEditSaving(true);
-      const result = await updateOpportunity(selectedOpp.id, updates);
-      setOpps(p => p.map(o => o.id === selectedOpp.id ? { ...o, ...result } : o));
-      setSelectedOpp(prev => ({ ...prev, ...result }));
-      setStageHistory(getStageHistory(selectedOpp.id));
-      setEditingOpp(false);
-      setEditSaving(false);
+      await handleDrawerUpdate(selectedOpp.id, updates);
       return;
     }
 
@@ -1093,70 +521,35 @@ export default function OpportunitiesPage() {
     setShowModal(false);
   };
 
-  const startEdit = () => {
-    setEditForm({
-      budget: selectedOpp.budget || '',
-      temperature: selectedOpp.temperature || 'cold',
-      priority: selectedOpp.priority || 'medium',
-      assigned_to: selectedOpp.assigned_to || '',
-      project_id: selectedOpp.project_id || '',
-      notes: selectedOpp.notes || '',
-      stage: selectedOpp.stage || 'qualification',
-      expected_close_date: selectedOpp.expected_close_date || '',
-    });
-    setEditingOpp(true);
-  };
-
-  const saveEdit = async () => {
-    setEditSaving(true);
-    const stageChanged = editForm.stage !== selectedOpp.stage;
-    if (stageChanged) {
-      // If changing to closed_lost, need reason
-      if (editForm.stage === 'closed_lost') {
-        setLostReasonModal({ id: selectedOpp.id, toStage: 'closed_lost', fromEdit: true });
-        setLostReason('');
-        setLostReasonCustom('');
-        setEditSaving(false);
-        return;
-      }
-      addStageHistory(selectedOpp.id, selectedOpp.stage, editForm.stage);
-    }
-    const assignmentChanged = editForm.assigned_to !== (selectedOpp.assigned_to || '');
-    const updates = {
-      budget: Number(editForm.budget) || 0,
-      temperature: editForm.temperature,
-      priority: editForm.priority,
-      assigned_to: editForm.assigned_to || null,
-      ...(assignmentChanged ? { assigned_by: profile?.id || null } : {}),
-      project_id: editForm.project_id || null,
-      notes: editForm.notes,
-      expected_close_date: editForm.expected_close_date || null,
-      ...(stageChanged ? { stage: editForm.stage, stage_changed_at: new Date().toISOString() } : {}),
-    };
-    const result = await updateOpportunity(selectedOpp.id, updates);
-    setOpps(p => p.map(o => o.id === selectedOpp.id ? { ...o, ...result } : o));
-    setSelectedOpp(prev => ({ ...prev, ...result }));
-    if (stageChanged) setStageHistory(getStageHistory(selectedOpp.id));
-    logAction({ action: 'update', entity: 'opportunity', entityId: selectedOpp.id, entityName: getContactName(selectedOpp), description: isRTL ? 'تحديث فرصة' : 'Opportunity updated', userName: profile?.full_name_ar || profile?.full_name_en || '' });
-    setEditingOpp(false);
-    setEditSaving(false);
+  // Handle drawer edit save — called by OpportunityDrawer's onUpdate
+  const handleDrawerUpdate = async (oppId, updates) => {
+    const result = await updateOpportunity(oppId, updates);
+    setOpps(p => p.map(o => o.id === oppId ? { ...o, ...result } : o));
+    setSelectedOpp(prev => prev?.id === oppId ? { ...prev, ...result } : prev);
+    logAction({ action: 'update', entity: 'opportunity', entityId: oppId, entityName: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}), description: isRTL ? 'تحديث فرصة' : 'Opportunity updated', userName: profile?.full_name_ar || profile?.full_name_en || '' });
 
     // Auto-create deal if moved to closed_won
-    if (stageChanged && editForm.stage === 'closed_won') {
-      // Notify deal won
+    if (updates.stage === 'closed_won') {
       notifyDealWon({
-        dealNumber: selectedOpp.id?.slice(0, 8) || '—',
-        clientName: getContactName(selectedOpp),
-        value: editForm.budget ? `${Number(editForm.budget).toLocaleString()} EGP` : '—',
-        agentId: editForm.assigned_to || selectedOpp.assigned_to || 'all',
+        dealNumber: oppId?.slice(0, 8) || '—',
+        clientName: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}),
+        value: updates.budget ? `${Number(updates.budget).toLocaleString()} EGP` : '—',
+        agentId: updates.assigned_to || selectedOpp?.assigned_to || 'all',
       });
-      const opp = opps.find(o => o.id === selectedOpp.id);
+      const opp = opps.find(o => o.id === oppId);
       if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
         const deal = await createDealFromOpportunity({ ...opp, ...result });
         setDealCreatedToast(deal.deal_number);
         setTimeout(() => setDealCreatedToast(null), 4000);
       }
     }
+  };
+
+  // Handle edit-triggered stage change to closed_lost (drawer delegates to parent for lost reason modal)
+  const handleEditStageLost = (oppId, editForm) => {
+    setLostReasonModal({ id: oppId, toStage: 'closed_lost', fromEdit: true, editForm });
+    setLostReason('');
+    setLostReasonCustom('');
   };
 
   // Bulk operations
@@ -1283,8 +676,10 @@ export default function OpportunitiesPage() {
           { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', icon: Building2, onClick: () => setActiveStage('closed_won') },
           { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame, onClick: () => setSmartFilters([{ field: 'temperature', operator: 'is', value: 'hot' }]) },
           { label: isRTL ? 'التوقع المرجح' : 'Forecast', value: fmtBudget(weightedForecast) + (isRTL ? ' ج' : ' EGP'), color: '#8B5CF6', icon: TrendingUp, title: isRTL ? 'الإيراد المتوقع (الميزانية × نسبة الفوز)' : 'Weighted revenue (budget × win rate)' },
+          { label: isRTL ? 'متوسط الصفقة' : 'Avg Deal', value: fmtBudget(avgDealSize) + (isRTL ? ' ج' : ' EGP'), color: '#6B8DB5', icon: Banknote, title: isRTL ? 'متوسط حجم الصفقة المغلقة' : 'Average closed deal size' },
+          { label: isRTL ? 'وقت الإغلاق' : 'Close Time', value: avgCloseTime + (isRTL ? ' يوم' : 'd'), color: avgCloseTime > 30 ? '#EF4444' : avgCloseTime > 14 ? '#F59E0B' : '#10B981', icon: Timer, title: isRTL ? 'متوسط أيام الإغلاق' : 'Avg days to close' },
           { label: isRTL ? 'التحويل' : 'Conv.', value: conversionRate + '%', color: '#6B8DB5', icon: Zap },
-          { label: isRTL ? 'جديد/أسبوع' : 'New/Wk', value: newThisWeek, color: '#0EA5E9', icon: Plus },
+          { label: isRTL ? 'فرص قريبة' : 'Quick Wins', value: quickWins.length, color: '#8B5CF6', icon: Star, onClick: quickWins.length > 0 ? () => setSmartFilters([{ field: 'temperature', operator: 'is', value: 'hot' }]) : undefined, title: isRTL ? 'فرص ساخنة قريبة من الإغلاق' : 'Hot opps near closing' },
         ].map((s, i) => (
           <div key={i} className={`flex-[1_1_120px] ${s.onClick ? 'cursor-pointer' : ''}`} onClick={s.onClick} title={s.title || ''}>
             <KpiCard icon={s.icon} label={s.label} value={s.value} color={s.color} />
@@ -1309,6 +704,62 @@ export default function OpportunitiesPage() {
           </span>
         </div>
       )}
+
+      {/* Conversion Funnel */}
+      <div className="mb-4">
+        <button
+          onClick={() => setShowFunnel(f => !f)}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark cursor-pointer font-cairo text-xs font-semibold text-content dark:text-content-dark w-full"
+          style={{ direction: isRTL ? 'rtl' : 'ltr' }}
+        >
+          <TrendingUp size={14} className="text-brand-500" />
+          {isRTL ? 'قمع التحويل' : 'Conversion Funnel'}
+          {showFunnel ? <ChevronUp size={14} className="ms-auto text-content-muted dark:text-content-muted-dark" /> : <ChevronDown size={14} className="ms-auto text-content-muted dark:text-content-muted-dark" />}
+          <span className="text-[10px] font-normal text-content-muted dark:text-content-muted-dark">
+            {isRTL ? `${sortedFiltered.length} فرصة` : `${sortedFiltered.length} opps`}
+          </span>
+        </button>
+        {showFunnel && (
+          <Card className="mt-2 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[11px] font-bold text-content-muted dark:text-content-muted-dark">
+                {isRTL ? `الإجمالي: ${sortedFiltered.length}` : `Total: ${sortedFiltered.length}`}
+              </span>
+              <span className="text-[11px] font-bold" style={{ color: '#10B981' }}>
+                {isRTL ? `مغلق: ${sortedFiltered.filter(o => o.stage === 'closed_won').length}` : `Won: ${sortedFiltered.filter(o => o.stage === 'closed_won').length}`}
+              </span>
+            </div>
+            <div className="space-y-1.5">
+              {funnelData.map((stage, i) => (
+                <div key={stage.id} className="flex items-center gap-2" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+                  <span className="text-[10px] font-semibold text-content dark:text-content-dark w-[90px] truncate" style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                    {isRTL ? stage.label_ar : stage.label_en}
+                  </span>
+                  <div className="flex-1 h-[22px] rounded-md overflow-hidden" style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)' }}>
+                    <div
+                      className="h-full rounded-md flex items-center justify-end px-2 transition-all duration-300"
+                      style={{ width: `${stage.width}%`, background: stage.color, minWidth: stage.count > 0 ? 32 : 0 }}
+                    >
+                      {stage.count > 0 && (
+                        <span className="text-[10px] font-bold text-white">{stage.count}</span>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-[10px] w-[48px] text-content-muted dark:text-content-muted-dark" style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                    {stage.count > 0 ? stage.count : '—'}
+                  </span>
+                  {stage.dropOff !== null && (
+                    <span className={`text-[9px] font-bold w-[40px] ${stage.dropOff < 0 ? 'text-red-500' : stage.dropOff > 0 ? 'text-green-500' : 'text-content-muted dark:text-content-muted-dark'}`} style={{ textAlign: isRTL ? 'right' : 'left' }}>
+                      {stage.dropOff > 0 ? '+' : ''}{stage.dropOff}%
+                    </span>
+                  )}
+                  {stage.dropOff === null && <span className="w-[40px]" />}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
 
       {/* Stage Tabs */}
       <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 overflow-x-auto scrollbar-hide">
@@ -1395,7 +846,7 @@ export default function OpportunitiesPage() {
             <CheckSquare size={14} />
           </Button>
           <div className="flex rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
-            <button onClick={() => setViewMode('grid')} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'grid' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><LayoutGrid size={14} /></button>
+            <button onClick={() => setViewMode('table')} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'table' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><List size={14} /></button>
             <button onClick={() => { setViewMode('kanban'); setActiveStage('all'); }} className={`p-1.5 border-none cursor-pointer transition-colors ${viewMode === 'kanban' ? 'bg-brand-500 text-white' : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark'}`}><Columns size={14} /></button>
           </div>
         </>}
@@ -1537,7 +988,7 @@ export default function OpportunitiesPage() {
                           {bulkSelected.has(opp.id) && '✓'}
                         </button>
                       )}
-                      <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : selectOpp} stageConfig={currentStages} score={scoreMap[opp.id]} isAdmin={isAdmin} />
+                      <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : selectOpp} stageConfig={currentStages} score={scoreMap[opp.id]} isAdmin={isAdmin} sourceLabelsMap={sourceLabelsMap} />
                     </div>
                   ))}
                 </div>
@@ -1546,31 +997,211 @@ export default function OpportunitiesPage() {
           })}
         </div>
       </>) : (<>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-          {gridPaged.map(opp => (
-            <div key={opp.id} className="relative">
-              {bulkMode && (
-                <button
-                  onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
-                  className={`absolute top-2 ${isRTL ? 'left-2' : 'right-2'} z-10 w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] cursor-pointer transition-colors ${
-                    bulkSelected.has(opp.id)
-                      ? 'bg-brand-500 border-brand-500 text-white'
-                      : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-600'
-                  }`}
-                >
-                  {bulkSelected.has(opp.id) && '✓'}
-                </button>
-              )}
-              {isDuplicate(opp.contact_id) && (
-                <div className={`absolute top-2 ${isRTL ? 'right-2' : 'left-2'} z-10`} title={isRTL ? 'فرصة مكررة لنفس العميل' : 'Duplicate: same contact has another opportunity'}>
-                  <AlertTriangle size={14} className="text-amber-500" />
-                </div>
-              )}
-              <OppCard opp={opp} isRTL={isRTL} lang={lang} onDelete={handleDelete} onMove={handleMove} onSelect={bulkMode ? () => toggleBulk(opp.id) : selectOpp} stageConfig={getDeptStages(opp.contacts?.department || 'sales')} score={scoreMap[opp.id]} isAdmin={isAdmin} />
+        {/* Table View */}
+        <Card className="overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm" style={{ minWidth: 1100 }}>
+              <thead>
+                <tr className="border-b border-edge dark:border-edge-dark bg-[#F8FAFC] dark:bg-surface-bg-dark">
+                  {bulkMode && (
+                    <th className="px-3 py-3 text-start w-10">
+                      <button
+                        onClick={() => {
+                          const allIds = new Set(gridPaged.map(o => o.id));
+                          const allSelected = gridPaged.every(o => bulkSelected.has(o.id));
+                          setBulkSelected(allSelected ? new Set([...bulkSelected].filter(id => !allIds.has(id))) : new Set([...bulkSelected, ...allIds]));
+                        }}
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] cursor-pointer transition-colors ${
+                          gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id))
+                            ? 'bg-brand-500 border-brand-500 text-white'
+                            : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-600'
+                        }`}
+                      >
+                        {gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id)) && '✓'}
+                      </button>
+                    </th>
+                  )}
+                  {[
+                    { key: 'name', label: isRTL ? 'الاسم' : 'Name', width: 'min-w-[180px]' },
+                    { key: 'project', label: isRTL ? 'المشروع' : 'Project', width: 'min-w-[120px]' },
+                    { key: 'stage', label: isRTL ? 'المرحلة' : 'Stage', width: 'min-w-[110px]' },
+                    { key: 'budget', label: isRTL ? 'الميزانية' : 'Budget', width: 'min-w-[90px]' },
+                    { key: 'temp', label: isRTL ? 'الحرارة' : 'Temp', width: 'min-w-[70px]' },
+                    { key: 'priority', label: isRTL ? 'الأولوية' : 'Priority', width: 'min-w-[80px]' },
+                    { key: 'agent', label: isRTL ? 'المسؤول' : 'Agent', width: 'min-w-[110px]' },
+                    { key: 'score', label: isRTL ? 'النقاط' : 'Score', width: 'min-w-[60px]' },
+                    { key: 'days', label: isRTL ? 'أيام' : 'Days', width: 'min-w-[55px]' },
+                    { key: 'close', label: isRTL ? 'الإغلاق' : 'Close', width: 'min-w-[85px]' },
+                    { key: 'actions', label: '', width: 'w-10' },
+                  ].map(col => (
+                    <th key={col.key} className={`px-3 py-3 text-start text-xs font-semibold text-content-muted dark:text-content-muted-dark ${col.width}`}>
+                      {col.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {gridPaged.map((opp, idx) => {
+                  const contactName = getContactName(opp);
+                  const projectName = getProjectName(opp, lang);
+                  const agentName = getAgentName(opp, lang);
+                  const stageConfig = getDeptStages(opp.contacts?.department || 'sales');
+                  const stage = stageConfig.find(s => s.id === opp.stage) || stageConfig[0] || { id: opp.stage, label_ar: opp.stage, label_en: opp.stage, color: '#4A7AAB' };
+                  const temp = TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold;
+                  const prio = PRIORITY_CONFIG[opp.priority] || PRIORITY_CONFIG.medium;
+                  const score = scoreMap[opp.id] ?? calcLeadScore(opp);
+                  const days = daysInStage(opp);
+                  const closeDate = opp.expected_close_date;
+                  const closeDiff = closeDate ? Math.ceil((new Date(closeDate) - Date.now()) / 86400000) : null;
+                  const duplicate = isDuplicate(opp.contact_id);
+                  const staledays = daysSince(opp.contacts?.last_activity_at || opp.updated_at || opp.created_at);
+                  const isQuickWin = quickWins.some(q => q.id === opp.id);
+
+                  return (
+                    <tr
+                      key={opp.id}
+                      onClick={() => bulkMode ? toggleBulk(opp.id) : selectOpp(opp)}
+                      className={`border-b border-edge dark:border-edge-dark cursor-pointer transition-colors hover:bg-brand-500/[0.04] dark:hover:bg-brand-500/[0.06] ${
+                        bulkSelected.has(opp.id) ? 'bg-brand-500/[0.06] dark:bg-brand-500/[0.08]' : ''
+                      } ${idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-white/[0.015]'}`}
+                    >
+                      {bulkMode && (
+                        <td className="px-3 py-2.5">
+                          <button
+                            onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
+                            className={`w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] cursor-pointer transition-colors ${
+                              bulkSelected.has(opp.id)
+                                ? 'bg-brand-500 border-brand-500 text-white'
+                                : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-600'
+                            }`}
+                          >
+                            {bulkSelected.has(opp.id) && '✓'}
+                          </button>
+                        </td>
+                      )}
+                      {/* Name */}
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className="w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
+                            style={{ background: avatarColor(opp.contact_id || opp.id) }}
+                          >
+                            {initials(contactName)}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-semibold text-content dark:text-content-dark truncate">{contactName}</span>
+                              {duplicate && <AlertTriangle size={11} className="text-amber-500 shrink-0" title={isRTL ? 'مكرر' : 'Duplicate'} />}
+                              {isQuickWin && (
+                                <span className="text-[9px] px-1 py-px rounded bg-purple-500/10 text-purple-500 font-bold shrink-0" title={isRTL ? 'فرصة قريبة من الإغلاق' : 'Quick Win'}>
+                                  <Star size={8} className="inline -mt-px" /> {isRTL ? 'قريبة' : 'Win'}
+                                </span>
+                              )}
+                              {staledays >= 7 && opp.stage !== 'closed_won' && opp.stage !== 'closed_lost' && (
+                                <span className={`text-[9px] px-1 py-px rounded ${staledays >= 14 ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`} title={isRTL ? `${staledays} يوم بدون نشاط` : `${staledays}d inactive`}>
+                                  {staledays}{isRTL ? 'ي' : 'd'}
+                                </span>
+                              )}
+                            </div>
+                            {opp.contacts?.phone && (
+                              <div className="text-[11px] text-content-muted dark:text-content-muted-dark" dir="ltr">{opp.contacts.phone}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      {/* Project */}
+                      <td className="px-3 py-2.5">
+                        {projectName ? (
+                          <span className="text-xs text-content dark:text-content-dark truncate block max-w-[140px]">{projectName}</span>
+                        ) : (
+                          <span className="text-xs text-content-muted dark:text-content-muted-dark">—</span>
+                        )}
+                      </td>
+                      {/* Stage */}
+                      <td className="px-3 py-2.5">
+                        <span
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-md"
+                          style={{ background: `${stage.color}18`, color: stage.color }}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: stage.color }} />
+                          {isRTL ? stage.label_ar : stage.label_en}
+                        </span>
+                      </td>
+                      {/* Budget */}
+                      <td className="px-3 py-2.5">
+                        <span className="text-xs font-bold text-content dark:text-content-dark">
+                          {fmtBudget(opp.budget)}
+                        </span>
+                      </td>
+                      {/* Temperature */}
+                      <td className="px-3 py-2.5">
+                        <span
+                          className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                          style={{ background: temp.bg, color: temp.color }}
+                        >
+                          {isRTL ? temp.label_ar : temp.label_en}
+                        </span>
+                      </td>
+                      {/* Priority */}
+                      <td className="px-3 py-2.5">
+                        <span
+                          className="text-[11px] font-semibold px-2 py-0.5 rounded-md"
+                          style={{ background: `${prio.color}18`, color: prio.color }}
+                        >
+                          {isRTL ? prio.label_ar : prio.label_en}
+                        </span>
+                      </td>
+                      {/* Agent */}
+                      <td className="px-3 py-2.5">
+                        <span className="text-xs text-content dark:text-content-dark truncate block max-w-[120px]">{agentName}</span>
+                      </td>
+                      {/* Lead Score */}
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-8 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full" style={{ width: `${score}%`, background: scoreColor(score) }} />
+                          </div>
+                          <span className="text-[11px] font-bold" style={{ color: scoreColor(score) }}>{score}</span>
+                        </div>
+                      </td>
+                      {/* Days in stage */}
+                      <td className="px-3 py-2.5">
+                        <span className={`text-[11px] font-semibold ${days > 7 ? 'text-red-500' : days > 3 ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                          {days}{isRTL ? 'ي' : 'd'}
+                        </span>
+                      </td>
+                      {/* Expected Close */}
+                      <td className="px-3 py-2.5">
+                        {closeDate ? (
+                          <span className={`text-[11px] font-semibold ${closeDiff !== null && closeDiff < 0 ? 'text-red-500' : closeDiff !== null && closeDiff <= 7 ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                            {new Date(closeDate).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-content-muted dark:text-content-muted-dark">—</span>
+                        )}
+                      </td>
+                      {/* Actions */}
+                      <td className="px-3 py-2.5">
+                        <button
+                          onClick={e => { e.stopPropagation(); handleDelete(opp.id); }}
+                          className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {gridPaged.length === 0 && (
+            <div className="text-center py-10 text-xs text-content-muted dark:text-content-muted-dark">
+              {isRTL ? 'لا توجد نتائج' : 'No results'}
             </div>
-          ))}
-        </div>
-        {/* Grid Pagination */}
+          )}
+        </Card>
+        {/* Table Pagination */}
         <Pagination
           page={gridSafePage}
           totalPages={gridTotalPages}
@@ -1703,55 +1334,33 @@ export default function OpportunitiesPage() {
 
     {/* Drawer */}
     {selectedOpp && (
-      <div
-        role="dialog"
-        dir={isRTL ? 'rtl' : 'ltr'}
-        className={`fixed inset-0 z-[200] bg-black/40 flex ${isRTL ? 'flex-row' : 'flex-row-reverse'}`}
-        onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}
-      >
-        <div className="w-full max-w-[100vw] sm:max-w-[460px] h-full bg-surface-card dark:bg-surface-card-dark shadow-[-8px_0_40px_rgba(0,0,0,0.2)] flex flex-col overflow-y-auto">
-          {/* Drawer Header */}
-          <div className="px-6 py-5 border-b border-edge dark:border-edge-dark flex items-center justify-between bg-[#F8FAFC] dark:bg-surface-bg-dark">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-11 h-11 rounded-full flex items-center justify-center text-sm font-bold text-white"
-                style={{ background: avatarColor(selectedOpp.contact_id || selectedOpp.id) }}
-              >
-                {initials(getContactName(selectedOpp))}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="m-0 text-base font-bold text-content dark:text-content-dark">{selectedOpp.contacts?.prefix ? selectedOpp.contacts.prefix + ' ' : ''}{getContactName(selectedOpp)}</p>
-                  {selectedOpp.contacts?.contact_type && (
-                    <span className="text-[10px] px-1.5 py-px rounded-full bg-brand-500/15 text-brand-600 dark:text-brand-400 font-semibold">
-                      {isRTL ? (CONTACT_TYPE_LABELS[selectedOpp.contacts.contact_type]?.ar || selectedOpp.contacts.contact_type) : (CONTACT_TYPE_LABELS[selectedOpp.contacts.contact_type]?.en || selectedOpp.contacts.contact_type)}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  {selectedOpp.contacts?.company && (
-                    <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500 flex items-center gap-0.5"><Building2 size={9} /> {selectedOpp.contacts.company}</span>
-                  )}
-                  {selectedOpp.contacts?.job_title && (
-                    <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500 flex items-center gap-0.5"><Briefcase size={9} /> {selectedOpp.contacts.job_title}</span>
-                  )}
-                  {selectedOpp.contacts?.department && (
-                    <span className="text-[10px] px-1.5 py-px rounded bg-brand-500/10 text-brand-500">
-                      {isRTL ? (DEPT_LABELS[selectedOpp.contacts.department]?.ar || selectedOpp.contacts.department) : (DEPT_LABELS[selectedOpp.contacts.department]?.en || selectedOpp.contacts.department)}
-                    </span>
-                  )}
-                </div>
-                {selectedOpp.created_at && (
-                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark mt-0.5 block">
-                    {new Date(selectedOpp.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {(() => {
-                const oppFavId = `opp_${selectedOpp.id}`;
-                const oppIsFav = checkFavorite(oppFavId);
+      <OpportunityDrawer
+        selectedOpp={selectedOpp}
+        onClose={closeDrawer}
+        onMove={handleMove}
+        onDelete={handleDelete}
+        onUpdate={handleDrawerUpdate}
+        agents={agents}
+        projects={projects}
+        opps={opps}
+        isAdmin={isAdmin}
+        isRTL={isRTL}
+        lang={lang}
+        isDark={isDark}
+        profile={profile}
+        scoreMap={scoreMap}
+        configActivityResults={configActivityResults}
+        configActivityTypes={configActivityTypes}
+        ACTIVITY_ICON_MAP={ACTIVITY_ICON_MAP}
+        sourceLabelsMap={sourceLabelsMap}
+        configTypeMap={configTypeMap}
+        deptLabelsMap={deptLabelsMap}
+        lostReasonsMap={lostReasonsMap}
+        configLostReasons={configLostReasons}
+        onPrev={handleOppPrev}
+        onNext={handleOppNext}
+        onEditStageLost={handleEditStageLost}
+      />
                 const contactName = selectedOpp.contacts ? (isRTL ? (selectedOpp.contacts.full_name_ar || selectedOpp.contacts.full_name_en) : (selectedOpp.contacts.full_name_en || selectedOpp.contacts.full_name_ar)) : '';
                 return (
                   <button
@@ -1852,7 +1461,7 @@ export default function OpportunitiesPage() {
               <div className="flex gap-2 flex-wrap mt-2">
                 {selectedOpp.contacts.source && (
                   <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                    <ExternalLink size={9} /> {isRTL ? (SOURCE_LABELS[selectedOpp.contacts.source]?.ar || selectedOpp.contacts.source) : (SOURCE_LABELS[selectedOpp.contacts.source]?.en || selectedOpp.contacts.source)}
+                    <ExternalLink size={9} /> {isRTL ? (sourceLabelsMap[selectedOpp.contacts.source]?.ar || selectedOpp.contacts.source) : (sourceLabelsMap[selectedOpp.contacts.source]?.en || selectedOpp.contacts.source)}
                   </span>
                 )}
                 {selectedOpp.contacts.preferred_location && (
@@ -1978,7 +1587,7 @@ export default function OpportunitiesPage() {
                   { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', value: (() => { if (!selectedOpp.assigned_by) return '—'; const a = agents.find(ag => ag.id === selectedOpp.assigned_by); return a ? (lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)) : '—'; })(), color: '#6B8DB5' },
                   { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
                   ...(selectedOpp.expected_close_date ? [{ label: isRTL ? 'الإغلاق المتوقع' : 'Expected Close', value: new Date(selectedOpp.expected_close_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: new Date(selectedOpp.expected_close_date) < new Date() ? '#EF4444' : '#6B8DB5' }] : []),
-                  ...((selectedOpp.contacts?.source || selectedOpp.source) ? [{ label: isRTL ? 'المصدر' : 'Source', value: (() => { const src = selectedOpp.contacts?.source || selectedOpp.source; return isRTL ? (SOURCE_LABELS[src]?.ar || src) : (SOURCE_LABELS[src]?.en || src); })(), color: '#6B8DB5' }] : []),
+                  ...((selectedOpp.contacts?.source || selectedOpp.source) ? [{ label: isRTL ? 'المصدر' : 'Source', value: (() => { const src = selectedOpp.contacts?.source || selectedOpp.source; return isRTL ? (sourceLabelsMap[src]?.ar || src) : (sourceLabelsMap[src]?.en || src); })(), color: '#6B8DB5' }] : []),
                   { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: opps.filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
                 ].map((item, i) => (
                   <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
@@ -2086,21 +1695,47 @@ export default function OpportunitiesPage() {
               </div>
               {showAddActivity && (
                 <div className="bg-brand-500/[0.06] rounded-xl p-3 mb-3 border border-brand-500/10">
+                  {/* Activity Type Buttons (from config) */}
                   <div className="flex gap-1.5 mb-2 flex-wrap">
-                    {Object.entries(ACTIVITY_ICONS).map(([type, Icon]) => (
-                      <button
-                        key={type}
-                        onClick={() => setActivityForm(f => ({ ...f, type }))}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold font-cairo border-none cursor-pointer transition-colors ${
-                          activityForm.type === type
-                            ? 'bg-brand-500 text-white'
-                            : 'bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
-                        }`}
-                      >
-                        <Icon size={10} />{type}
-                      </button>
-                    ))}
+                    {(configActivityTypes || []).map(at => {
+                      const Icon = ACTIVITY_ICON_MAP[at.key] || ACTIVITY_ICONS[at.key] || Clock;
+                      return (
+                        <button
+                          key={at.key}
+                          onClick={() => setActivityForm(f => ({ ...f, type: at.key, result: '' }))}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold font-cairo border-none cursor-pointer transition-colors ${
+                            activityForm.type === at.key
+                              ? 'bg-brand-500 text-white'
+                              : 'bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
+                          }`}
+                        >
+                          <Icon size={10} />{isRTL ? at.label_ar : at.label_en}
+                        </button>
+                      );
+                    })}
                   </div>
+                  {/* Activity Result Buttons (from config) */}
+                  {configActivityResults[activityForm.type] && configActivityResults[activityForm.type].length > 0 && (
+                    <div className="mb-2">
+                      <p className="m-0 mb-1 text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Result'}</p>
+                      <div className="flex gap-1 flex-wrap">
+                        {configActivityResults[activityForm.type].map(r => (
+                          <button
+                            key={r.value}
+                            onClick={() => setActivityForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
+                            className={`px-2 py-1 rounded-md text-[10px] font-semibold font-cairo border-2 cursor-pointer transition-all ${
+                              activityForm.result === r.value
+                                ? ''
+                                : 'border-transparent bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
+                            }`}
+                            style={activityForm.result === r.value ? { borderColor: r.color, background: `${r.color}18`, color: r.color } : {}}
+                          >
+                            {isRTL ? r.label_ar : r.label_en}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <Input
                     value={activityForm.description}
                     onChange={e => setActivityForm(f => ({ ...f, description: e.target.value }))}
@@ -2113,12 +1748,13 @@ export default function OpportunitiesPage() {
                       const act = await createActivity({
                         type: activityForm.type,
                         description: activityForm.description,
+                        result: activityForm.result || null,
                         contact_id: selectedOpp.contact_id,
                         entity_type: 'opportunity',
                         entity_id: selectedOpp.id,
                       });
                       setDrawerActivities(prev => [act, ...prev].slice(0, 5));
-                      setActivityForm({ type: 'call', description: '' });
+                      setActivityForm({ type: 'call', description: '', result: '' });
                       setShowAddActivity(false);
                     }}>
                       {isRTL ? 'حفظ' : 'Save'}
@@ -2137,14 +1773,24 @@ export default function OpportunitiesPage() {
                   <p className="m-0">{isRTL ? 'لا توجد أنشطة' : 'No activities'}</p>
                 </div>
               ) : drawerActivities.map(act => {
-                const ActIcon = ACTIVITY_ICONS[act.type] || Clock;
+                const ActIcon = ACTIVITY_ICON_MAP[act.type] || ACTIVITY_ICONS[act.type] || Clock;
+                const resultConfig = act.result && configActivityResults[act.type]?.find(r => r.value === act.result);
                 return (
                   <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2">
                     <div className="flex items-start gap-2 mb-1">
                       <div className="w-[24px] h-[24px] rounded-[6px] bg-brand-500/10 flex items-center justify-center shrink-0 mt-px">
                         <ActIcon size={12} color="#4A7AAB" />
                       </div>
-                      <span className="text-content dark:text-content-dark text-xs font-semibold flex-1">{act.description}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-content dark:text-content-dark text-xs font-semibold">{act.description}</span>
+                          {resultConfig && (
+                            <span className="text-[9px] font-bold px-1.5 py-px rounded-md" style={{ background: `${resultConfig.color}18`, color: resultConfig.color }}>
+                              {isRTL ? resultConfig.label_ar : resultConfig.label_en}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <div className="flex justify-between text-[10px] text-content-muted dark:text-content-muted-dark ps-8">
                       <span>{isRTL ? (act.users?.full_name_ar || '—') : (act.users?.full_name_en || act.users?.full_name_ar || '—')}</span>

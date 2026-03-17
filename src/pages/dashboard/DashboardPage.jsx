@@ -24,10 +24,7 @@ import { getActivityHeatmap } from '../../services/heatmapService';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
-const MOCK_CRM = { totalLeads: 142, newLeadsThisMonth: 38, activeOpps: 24, closedDeals: 11, revenue: 1250000 };
-const MOCK_SALES = { target: 1500000, achieved: 1250000, topSales: [{ name_ar: 'أحمد محمود', name_en: 'Ahmed Mahmoud', revenue: 310000, pct: 84 }, { name_ar: 'سارة خالد', name_en: 'Sara Khaled', revenue: 285000, pct: 77 }, { name_ar: 'محمد علي', name_en: 'Mohamed Ali', revenue: 195000, pct: 53 }, { name_ar: 'نورا حسن', name_en: 'Nora Hassan', revenue: 175000, pct: 47 }] };
-const REVENUE_TREND = [{ label_ar: 'أكتوبر', label_en: 'Oct', value: 820000 }, { label_ar: 'نوفمبر', label_en: 'Nov', value: 950000 }, { label_ar: 'ديسمبر', label_en: 'Dec', value: 1100000 }, { label_ar: 'يناير', label_en: 'Jan', value: 880000 }, { label_ar: 'فبراير', label_en: 'Feb', value: 1050000 }, { label_ar: 'مارس', label_en: 'Mar', value: 1250000 }];
-const PIPELINE_DATA = [{ stage_ar: 'ليد', stage_en: 'Lead', count: 45 }, { stage_ar: 'تواصل', stage_en: 'Contact', count: 32 }, { stage_ar: 'مهتم', stage_en: 'Interest', count: 24 }, { stage_ar: 'معاينة', stage_en: 'Visit', count: 18 }, { stage_ar: 'تفاوض', stage_en: 'Negot.', count: 12 }, { stage_ar: 'مغلق', stage_en: 'Closed', count: 11 }];
+const EMPTY_CRM = { totalLeads: 0, newLeadsThisMonth: 0, activeOpps: 0, closedDeals: 0, revenue: 0 };
 const EXPENSE_CATS = [{ name_ar: 'رواتب', name_en: 'Salaries', value: 180000, pct: 56 }, { name_ar: 'إعلانات', name_en: 'Marketing', value: 80000, pct: 25 }, { name_ar: 'إيجار', name_en: 'Rent', value: 35000, pct: 11 }, { name_ar: 'أخرى', name_en: 'Other', value: 25000, pct: 8 }];
 const BRAND = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#A8BFD5'];
 
@@ -610,7 +607,7 @@ export default function DashboardPage() {
         closedThisMonth: o.closedThisMonth,
       };
     }
-    return MOCK_CRM;
+    return EMPTY_CRM;
   }, [dashData]);
 
   const taskStats = dashData?.tasks;
@@ -663,11 +660,10 @@ export default function DashboardPage() {
     return arr.map(a => ({ ...a, pct: Math.round((a.revenue / maxRev) * 100) }));
   }, [wonDeals, activeDateRange]);
 
-  const salesData = realTopSellers || MOCK_SALES.topSales;
-  const targetPct = filteredCrm.revenue > 0 && MOCK_SALES.target > 0
-    ? Math.round((filteredCrm.revenue / MOCK_SALES.target) * 100)
-    : Math.round((MOCK_SALES.achieved / MOCK_SALES.target) * 100);
-  const chartData = useMemo(() => (realRevenueTrend || REVENUE_TREND).map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en })), [lang, realRevenueTrend]);
+  const salesData = realTopSellers || [];
+  const salesTarget = filteredCrm.revenue > 0 ? Math.max(filteredCrm.revenue * 1.2, filteredCrm.revenue + 100000) : 0;
+  const targetPct = salesTarget > 0 ? Math.min(Math.round((filteredCrm.revenue / salesTarget) * 100), 100) : 0;
+  const chartData = useMemo(() => (realRevenueTrend || []).map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en })), [lang, realRevenueTrend]);
 
   const realPipeline = useMemo(() => {
     const stageCounts = rangeStats?.stageCounts || dashData?.opportunities?.stageCounts;
@@ -677,7 +673,7 @@ export default function DashboardPage() {
     }
     return null;
   }, [dashData, rangeStats]);
-  const pipeData = useMemo(() => (realPipeline || PIPELINE_DATA).map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en })), [realPipeline, lang]);
+  const pipeData = useMemo(() => (realPipeline || []).map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en })), [realPipeline, lang]);
 
   const employeeCount = dashData?.employees?.totalEmployees ?? hr.total;
 
@@ -746,16 +742,23 @@ export default function DashboardPage() {
         return (
           <div>
             <CardTitle icon={TrendingUp} title={lang === 'ar' ? 'تطور الإيرادات' : 'Revenue Trend'} sub={lang === 'ar' ? DATE_RANGE_OPTIONS.find(o => o.value === dateRange)?.label_ar : DATE_RANGE_OPTIONS.find(o => o.value === dateRange)?.label_en} />
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4A7AAB" stopOpacity={0.25} /><stop offset="95%" stopColor="#4A7AAB" stopOpacity={0} /></linearGradient></defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.1)' : 'rgba(0,0,0,0.06)'} />
-                <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => (v / 1000) + 'K'} />
-                <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ stroke: isDark ? 'rgba(74,122,171,0.3)' : 'rgba(74,122,171,0.2)', strokeWidth: 1 }} />
-                <Area type="monotone" dataKey="value" stroke="#4A7AAB" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#4A7AAB', r: 3 }} activeDot={{ r: 6, stroke: '#4A7AAB', strokeWidth: 2, fill: isDark ? '#1B3347' : '#fff' }} />
-              </AreaChart>
-            </ResponsiveContainer>
+            {chartData.length === 0 ? (
+              <div className="text-center py-8">
+                <TrendingUp size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا بيانات إيرادات حتى الآن' : 'No revenue data yet'}</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4A7AAB" stopOpacity={0.25} /><stop offset="95%" stopColor="#4A7AAB" stopOpacity={0} /></linearGradient></defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.1)' : 'rgba(0,0,0,0.06)'} />
+                  <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 11 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => (v / 1000) + 'K'} />
+                  <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ stroke: isDark ? 'rgba(74,122,171,0.3)' : 'rgba(74,122,171,0.2)', strokeWidth: 1 }} />
+                  <Area type="monotone" dataKey="value" stroke="#4A7AAB" strokeWidth={2.5} fill="url(#revGrad)" dot={{ fill: '#4A7AAB', r: 3 }} activeDot={{ r: 6, stroke: '#4A7AAB', strokeWidth: 2, fill: isDark ? '#1B3347' : '#fff' }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
           </div>
         );
 
@@ -783,16 +786,23 @@ export default function DashboardPage() {
         return (
           <div>
             <CardTitle icon={Activity} title={lang === 'ar' ? 'خط الأنابيب' : 'Sales Pipeline'} sub={lang === 'ar' ? 'فرص لكل مرحلة' : 'Opps per stage'} />
-            <ResponsiveContainer width="100%" height={185}>
-              <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }} style={{ cursor: 'pointer' }}
-                onClick={(e) => { if (e?.activePayload?.[0]?.payload?.stage_key) navigate('/crm/opportunities', { state: { initialStage: e.activePayload[0].payload.stage_key } }); }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
-                <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ fill: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)' }} />
-                <Bar dataKey="count" radius={[6, 6, 0, 0]} className="cursor-pointer">{pipeData.map((_, i) => <Cell key={i} fill={'rgba(74,122,171,' + (0.35 + i * 0.13) + ')'} />)}</Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {pipeData.length === 0 ? (
+              <div className="text-center py-8">
+                <Activity size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا فرص في الأنابيب حتى الآن' : 'No pipeline data yet'}</p>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={185}>
+                <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }} style={{ cursor: 'pointer' }}
+                  onClick={(e) => { if (e?.activePayload?.[0]?.payload?.stage_key) navigate('/crm/opportunities', { state: { initialStage: e.activePayload[0].payload.stage_key } }); }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
+                  <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ fill: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)' }} />
+                  <Bar dataKey="count" radius={[6, 6, 0, 0]} className="cursor-pointer">{pipeData.map((_, i) => <Cell key={i} fill={'rgba(74,122,171,' + (0.35 + i * 0.13) + ')'} />)}</Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         );
 
@@ -801,26 +811,35 @@ export default function DashboardPage() {
         return (
           <div>
             <CardTitle icon={Trophy} title={lang === 'ar' ? 'أفضل البائعين' : 'Top Performers'} sub={lang === 'ar' ? 'حسب الإيرادات' : 'By revenue'} />
-            <div className="flex flex-col gap-2.5">
-              {salesData.map((s, i) => (
-                <div key={i} className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#1B3347' : i === 1 ? '#2B4C6F' : 'rgba(74,122,171,0.15)' }}><span className={`text-xs font-bold ${i < 2 ? 'text-white' : 'text-brand-500'}`}>{i + 1}</span></div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <span className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? s.name_ar : s.name_en}</span>
-                      <span className="text-xs text-brand-500 font-bold">{(s.revenue / 1000).toFixed(0)}K</span>
+            {salesData.length === 0 ? (
+              <div className="text-center py-6">
+                <Trophy size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا بيانات مبيعات حتى الآن' : 'No sales data yet'}</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-2.5">
+                  {salesData.map((s, i) => (
+                    <div key={i} className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                      <div className="w-[26px] h-[26px] rounded-full shrink-0 flex items-center justify-center" style={{ background: i === 0 ? '#1B3347' : i === 1 ? '#2B4C6F' : 'rgba(74,122,171,0.15)' }}><span className={`text-xs font-bold ${i < 2 ? 'text-white' : 'text-brand-500'}`}>{i + 1}</span></div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`flex justify-between mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                          <span className="text-xs font-semibold text-content dark:text-content-dark">{lang === 'ar' ? s.name_ar : s.name_en}</span>
+                          <span className="text-xs text-brand-500 font-bold">{(s.revenue / 1000).toFixed(0)}K</span>
+                        </div>
+                        <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08]"><div className="h-full rounded-sm" style={{ width: s.pct + '%', background: i === 0 ? '#4A7AAB' : i === 1 ? '#6B8DB5' : '#8BA8C8' }} /></div>
+                      </div>
+                      <span className="text-[10px] text-content-muted dark:text-content-muted-dark min-w-[26px] text-center">{s.pct}%</span>
                     </div>
-                    <div className="h-1 rounded-sm bg-gray-200 dark:bg-white/[0.08]"><div className="h-full rounded-sm" style={{ width: s.pct + '%', background: i === 0 ? '#4A7AAB' : i === 1 ? '#6B8DB5' : '#8BA8C8' }} /></div>
-                  </div>
-                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark min-w-[26px] text-center">{s.pct}%</span>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <div className="mt-3.5 pt-3 border-t border-edge dark:border-edge-dark">
-              <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span><span className="text-xs font-bold text-brand-500">{targetPct}%</span></div>
-              <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: targetPct + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
-              <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(filteredCrm.revenue / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(MOCK_SALES.target / 1000).toFixed(0)}K EGP</span></div>
-            </div>
+                <div className="mt-3.5 pt-3 border-t border-edge dark:border-edge-dark">
+                  <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span><span className="text-xs font-bold text-brand-500">{targetPct}%</span></div>
+                  <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: targetPct + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
+                  <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(filteredCrm.revenue / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(salesTarget / 1000).toFixed(0)}K EGP</span></div>
+                </div>
+              </>
+            )}
           </div>
         );
 

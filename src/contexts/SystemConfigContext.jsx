@@ -60,6 +60,8 @@ export function SystemConfigProvider({ children }) {
       lostReasons: config.lostReasons || [],
       activityTypes: config.activityTypes || [],
       activityResults: config.activityResults || {},
+      contactsSettings: config.contactsSettings || { mergeLimit: 2, maxPins: 5 },
+      stageWinRates: config.stageWinRates || {},
       getType,
       getSourceLabel,
       getDeptStages,

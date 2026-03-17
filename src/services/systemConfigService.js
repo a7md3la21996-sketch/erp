@@ -127,6 +127,27 @@ export const DEFAULT_CONFIG = {
       { value: 'no_show',     label_ar: 'لم يحضر',  label_en: 'No Show',     color: '#6b7280' },
     ],
   },
+  contactsSettings: {
+    mergeLimit: 2,
+    maxPins: 5,
+  },
+  stageWinRates: {
+    sales: {
+      qualification: 10, site_visit_scheduled: 20, site_visited: 30, proposal: 50, negotiation: 60, reserved: 75, contracted: 90, closed_won: 100, closed_lost: 0,
+    },
+    hr: {
+      applied: 10, screening: 20, interview_1: 35, interview_2: 50, assessment: 65, offer: 80, closed_won: 100, closed_lost: 0,
+    },
+    marketing: {
+      new: 5, qualified: 20, nurturing: 40, converted: 80, closed_lost: 0,
+    },
+    operations: {
+      request: 10, evaluation: 25, negotiation: 40, agreement: 60, execution: 80, closed_won: 100, closed_lost: 0,
+    },
+    finance: {
+      pending: 15, under_review: 40, approved: 75, closed_won: 100, closed_lost: 0,
+    },
+  },
   companyInfo: {
     name_ar: 'بلاتفورم للعقارات',
     name_en: 'Platform Real Estate',
