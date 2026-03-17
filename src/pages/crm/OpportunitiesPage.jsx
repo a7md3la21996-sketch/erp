@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects } from '../../services/opportunitiesService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { TrendingUp, Plus, Search, X, Grid3X3, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, CheckSquare, AlertTriangle, RefreshCw, Printer } from 'lucide-react';
 import { Button, Card, Input, PageSkeleton, ExportButton } from '../../components/ui';
@@ -33,6 +33,7 @@ import BulkActionsBar from './opportunities/BulkActionsBar';
 import useBulkOps from './opportunities/useBulkOps';
 import useOppData from './opportunities/useOppData';
 import { useResponsive } from '../../hooks/useMediaQuery';
+import { useToast } from '../../contexts/ToastContext';
 
 /* Components extracted to ./opportunities/: OppCard, ContactSearch, AddModal, OpportunityDrawer, OppKPIs, ConversionFunnel, OppTable, OppKanban, OppToolbar, BulkActionsBar */
 // ═══════════════════════════════════════════════
@@ -45,6 +46,8 @@ export default function OpportunitiesPage() {
   const { profile } = useAuth();
   const { isMobile } = useResponsive();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const toast = useToast();
   const { lostReasons: configLostReasons, sources: configSources, typeMap: configTypeMap, departments: configDepartments, activityTypes: configActivityTypes, activityResults: configActivityResults, stageWinRates: configStageWinRates } = useSystemConfig();
   const lostReasonsMap = useMemo(() => {
     const m = {};
@@ -76,16 +79,17 @@ export default function OpportunitiesPage() {
   const [agents, setAgents] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [activeStage, setActiveStage] = useState(location.state?.initialStage || 'all');
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
+  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [activeStage, setActiveStage] = useState(location.state?.initialStage || searchParams.get('stage') || 'all');
   const [smartFilters, setSmartFilters] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [viewMode, setViewMode] = useState('table');
-  const [sortBy, setSortBy] = useState('newest');
+  const [viewMode, setViewMode] = useState(searchParams.get('view') || 'table');
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
+  const [actionLoading, setActionLoading] = useState(false);
   const [bulkMode, setBulkMode] = useState(false);
   const [savedFilters, setSavedFilters] = useState(() => getSavedFilters());
   const [filterName, setFilterName] = useState('');
@@ -106,6 +110,16 @@ export default function OpportunitiesPage() {
     const t = setTimeout(() => setSearch(searchInput), 250);
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  // Sync filters to URL params
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (activeStage !== 'all') params.set('stage', activeStage);
+    if (sortBy !== 'newest') params.set('sort', sortBy);
+    if (viewMode !== 'table') params.set('view', viewMode);
+    setSearchParams(params, { replace: true });
+  }, [search, activeStage, sortBy, viewMode, setSearchParams]);
 
   // SmartFilter field definitions
   const SMART_FIELDS = useMemo(() => [
@@ -160,11 +174,19 @@ export default function OpportunitiesPage() {
   // Load data
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
-    const [oppsData, agentsData, projectsData] = await Promise.all([
-      fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-      fetchSalesAgents(),
-      fetchProjects(),
-    ]);
+    let oppsData, agentsData, projectsData;
+    try {
+      [oppsData, agentsData, projectsData] = await Promise.all([
+        fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
+        fetchSalesAgents(),
+        fetchProjects(),
+      ]);
+    } catch {
+      toast.error(isRTL ? 'فشل تحميل البيانات' : 'Failed to load data');
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     const agentMap = {};
     agentsData.forEach(a => { agentMap[a.id] = a; });
     const projMap = {};
@@ -230,7 +252,7 @@ export default function OpportunitiesPage() {
     opps, setOpps, agents, profile, isRTL, lang, scoreMap,
     sortedFiltered, setBulkMode,
     setLostReasonModal, setLostReason, setLostReasonCustom,
-    viewMode,
+    toast,
   });
 
   // ESC to close modals/drawer; Ctrl+N / ⌘+N to open add modal
@@ -291,15 +313,28 @@ export default function OpportunitiesPage() {
       setLostReasonCustom('');
       return;
     }
-    const fromStage = opps.find(o => o.id === id)?.stage;
+    const opp_ = opps.find(o => o.id === id);
+    const fromStage = opp_?.stage;
     if (fromStage && fromStage !== toStage) addStageHistory(id, fromStage, toStage);
+    // Optimistic update
     setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates } : o));
     if (selectedOpp?.id === id) {
       setSelectedOpp(p => ({ ...p, stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates }));
     }
-    await updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates }).catch(() => {});
-    logAction({ action: 'stage_change', entity: 'opportunity', entityId: id, entityName: getContactName(opps.find(o => o.id === id) || {}), description: isRTL ? 'تغيير مرحلة' : 'Stage changed', oldValue: fromStage, newValue: toStage, userName: profile?.full_name_ar || profile?.full_name_en || '' });
-    evaluateTriggers('opportunity', 'stage_changed', { ...(opps.find(o => o.id === id) || {}), stage: toStage, previous_stage: fromStage });
+    setActionLoading(true);
+    try {
+      await updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates });
+      logAction({ action: 'stage_change', entity: 'opportunity', entityId: id, entityName: getContactName(opp_ || {}), description: isRTL ? 'تغيير مرحلة' : 'Stage changed', oldValue: fromStage, newValue: toStage, userName: profile?.full_name_ar || profile?.full_name_en || '' });
+      evaluateTriggers('opportunity', 'stage_changed', { ...(opp_ || {}), stage: toStage, previous_stage: fromStage });
+    } catch {
+      // Rollback on failure
+      setOpps(p => p.map(o => o.id === id ? { ...o, stage: fromStage, ...Object.fromEntries(Object.keys(extraUpdates).map(k => [k, opp_?.[k]])) } : o));
+      if (selectedOpp?.id === id) setSelectedOpp(p => ({ ...p, stage: fromStage }));
+      toast.error(isRTL ? 'فشل تحديث المرحلة' : 'Failed to update stage');
+      setActionLoading(false);
+      return;
+    }
+    setActionLoading(false);
 
     if (toStage === 'closed_won') {
       const opp = opps.find(o => o.id === id);
@@ -343,10 +378,16 @@ export default function OpportunitiesPage() {
       const ids = lostReasonModal.bulkIds;
       ids.forEach(id => { const opp = opps.find(o => o.id === id); if (opp && opp.stage !== 'closed_lost') addStageHistory(id, opp.stage, 'closed_lost'); });
       setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() } : o));
+      const prevOpps = opps;
       showBulkToast(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
       setBulkSelected(new Set()); setBulkMode(false);
       setLostReasonModal(null);
-      await Promise.all(ids.map(id => updateOpportunity(id, { stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() }).catch(() => {})));
+      try {
+        await Promise.all(ids.map(id => updateOpportunity(id, { stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() })));
+      } catch {
+        setOpps(prevOpps);
+        toast.error(isRTL ? 'فشل نقل بعض الفرص' : 'Failed to move some opportunities');
+      }
       return;
     }
 
@@ -379,11 +420,20 @@ export default function OpportunitiesPage() {
   const confirmDeleteOpp = async () => {
     if (!confirmDelete) return;
     const deletedOpp = opps.find(o => o.id === confirmDelete);
-    logAction({ action: 'delete', entity: 'opportunity', entityId: confirmDelete, entityName: getContactName(deletedOpp || {}), description: isRTL ? 'حذف فرصة' : 'Opportunity deleted', userName: profile?.full_name_ar || profile?.full_name_en || '' });
+    const prevOpps = opps;
     setOpps(p => p.filter(o => o.id !== confirmDelete));
     if (selectedOpp?.id === confirmDelete) setSelectedOpp(null);
-    await deleteOpportunity(confirmDelete).catch(() => {});
     setConfirmDelete(null);
+    setActionLoading(true);
+    try {
+      await deleteOpportunity(confirmDelete);
+      logAction({ action: 'delete', entity: 'opportunity', entityId: confirmDelete, entityName: getContactName(deletedOpp || {}), description: isRTL ? 'حذف فرصة' : 'Opportunity deleted', userName: profile?.full_name_ar || profile?.full_name_en || '' });
+      toast.success(isRTL ? 'تم حذف الفرصة' : 'Opportunity deleted');
+    } catch {
+      setOpps(prevOpps);
+      toast.error(isRTL ? 'فشل حذف الفرصة' : 'Failed to delete opportunity');
+    }
+    setActionLoading(false);
   };
 
   const handleSave = (opp) => {
@@ -392,9 +442,18 @@ export default function OpportunitiesPage() {
   };
 
   const handleDrawerUpdate = async (oppId, updates) => {
-    const result = await updateOpportunity(oppId, updates);
+    setActionLoading(true);
+    let result;
+    try {
+      result = await updateOpportunity(oppId, updates);
+    } catch {
+      toast.error(isRTL ? 'فشل تحديث الفرصة' : 'Failed to update opportunity');
+      setActionLoading(false);
+      return;
+    }
     setOpps(p => p.map(o => o.id === oppId ? { ...o, ...result } : o));
     setSelectedOpp(prev => prev?.id === oppId ? { ...prev, ...result } : prev);
+    toast.success(isRTL ? 'تم تحديث الفرصة' : 'Opportunity updated');
     logAction({ action: 'update', entity: 'opportunity', entityId: oppId, entityName: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}), description: isRTL ? 'تحديث فرصة' : 'Opportunity updated', userName: profile?.full_name_ar || profile?.full_name_en || '' });
 
     if (updates.stage === 'closed_won') {
@@ -427,6 +486,7 @@ export default function OpportunitiesPage() {
         setTimeout(() => setDealCreatedToast(null), 4000);
       }
     }
+    setActionLoading(false);
   };
 
   const handleEditStageLost = (oppId, editForm) => {
@@ -438,6 +498,13 @@ export default function OpportunitiesPage() {
   if (loading) return <PageSkeleton hasKpis kpiCount={6} tableRows={6} tableCols={5} />;
 
   return (<>
+    {/* Action loading bar */}
+    {actionLoading && (
+      <div className="fixed top-0 left-0 right-0 z-[2000] h-1 bg-brand-500/20 overflow-hidden">
+        <div className="h-full bg-brand-500 animate-[indeterminate_1.5s_ease-in-out_infinite]" style={{ width: '30%', animation: 'indeterminate 1.5s ease-in-out infinite' }} />
+        <style>{`@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }`}</style>
+      </div>
+    )}
     <div dir={isRTL ? 'rtl' : 'ltr'} className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark font-cairo px-4 py-4 md:px-7 md:py-6 pb-10">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
@@ -618,7 +685,8 @@ export default function OpportunitiesPage() {
     </div>
 
     {/* Floating Bulk Action Bar + Bulk Delete Confirmation */}
-    {viewMode === 'table' && (
+    {/* Bulk Actions Bar — works in both table and kanban */}
+    {(
       <BulkActionsBar
         isRTL={isRTL} isDark={isDark} lang={lang}
         bulkSelected={bulkSelected} bulkBarVisible={bulkBarVisible}

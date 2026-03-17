@@ -12,7 +12,7 @@ export default function useBulkOps({
   opps, setOpps, agents, profile, isRTL, lang, scoreMap,
   sortedFiltered, setBulkMode,
   setLostReasonModal, setLostReason, setLostReasonCustom,
-  viewMode,
+  toast,
 }) {
   const [bulkSelected, setBulkSelected] = useState(new Set());
   const [bulkToast, setBulkToast] = useState(null);
@@ -31,57 +31,87 @@ export default function useBulkOps({
       return;
     }
     const ids = [...bulkSelected];
+    const prevOpps = opps;
     ids.forEach(id => { const opp = opps.find(o => o.id === id); if (opp && opp.stage !== toStage) addStageHistory(id, opp.stage, toStage); });
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString() } : o));
     showBulkToastMsg(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
     setBulkSelected(new Set()); setBulkMode(false);
-    await Promise.all(ids.map(id => updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString() }).catch(() => {})));
+    try {
+      await Promise.all(ids.map(id => updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString() })));
+    } catch {
+      setOpps(prevOpps);
+      toast?.error(isRTL ? 'فشل نقل بعض الفرص' : 'Failed to move some opportunities');
+    }
   };
 
   const bulkAssign = async (agentId) => {
     const ids = [...bulkSelected];
     const agent = agents.find(a => a.id === agentId);
+    const prevOpps = opps;
     logAction({ action: 'bulk_reassign', entity: 'opportunity', entityId: ids.join(','), entityName: `${ids.length} opportunities`, description: isRTL ? 'إعادة تعيين جماعي' : 'Bulk reassign', newValue: agent?.full_name_ar || agent?.full_name_en || agentId, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, assigned_to: agentId, assigned_by: profile?.id || null, users: agent || o.users } : o));
     showBulkToastMsg(isRTL ? `تم تعيين ${ids.length} فرصة` : `${ids.length} opportunities assigned`);
     setBulkSelected(new Set()); setBulkMode(false);
-    await Promise.all(ids.map(id => updateOpportunity(id, { assigned_to: agentId, assigned_by: profile?.id || null }).catch(() => {})));
+    try {
+      await Promise.all(ids.map(id => updateOpportunity(id, { assigned_to: agentId, assigned_by: profile?.id || null })));
+    } catch {
+      setOpps(prevOpps);
+      toast?.error(isRTL ? 'فشل تعيين بعض الفرص' : 'Failed to assign some opportunities');
+    }
   };
 
   const bulkDeleteAll = async () => {
     const ids = [...bulkSelected];
+    const prevOpps = opps;
     logAction({ action: 'bulk_delete', entity: 'opportunity', entityId: ids.join(','), entityName: `${ids.length} opportunities`, description: isRTL ? 'حذف جماعي' : 'Bulk delete', userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setOpps(p => p.filter(o => !ids.includes(o.id)));
     showBulkToastMsg(isRTL ? `تم حذف ${ids.length} فرصة` : `${ids.length} opportunities deleted`);
     setBulkSelected(new Set()); setBulkMode(false);
-    await Promise.all(ids.map(id => deleteOpportunity(id).catch(() => {})));
+    try {
+      await Promise.all(ids.map(id => deleteOpportunity(id)));
+    } catch {
+      setOpps(prevOpps);
+      toast?.error(isRTL ? 'فشل حذف بعض الفرص' : 'Failed to delete some opportunities');
+    }
   };
 
   const bulkChangeTemp = async (temp) => {
     const ids = [...bulkSelected];
+    const prevOpps = opps;
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, temperature: temp } : o));
     showBulkToastMsg(isRTL ? `تم تحديث ${ids.length} فرصة` : `${ids.length} opportunities updated`);
     setBulkSelected(new Set()); setBulkMode(false);
-    await Promise.all(ids.map(id => updateOpportunity(id, { temperature: temp }).catch(() => {})));
+    try {
+      await Promise.all(ids.map(id => updateOpportunity(id, { temperature: temp })));
+    } catch {
+      setOpps(prevOpps);
+      toast?.error(isRTL ? 'فشل تحديث بعض الفرص' : 'Failed to update some opportunities');
+    }
   };
 
   const bulkChangePriority = async (priority) => {
     const ids = [...bulkSelected];
+    const prevOpps = opps;
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, priority } : o));
     showBulkToastMsg(isRTL ? `تم تحديث ${ids.length} فرصة` : `${ids.length} opportunities updated`);
     setBulkSelected(new Set()); setBulkMode(false);
-    await Promise.all(ids.map(id => updateOpportunity(id, { priority }).catch(() => {})));
+    try {
+      await Promise.all(ids.map(id => updateOpportunity(id, { priority })));
+    } catch {
+      setOpps(prevOpps);
+      toast?.error(isRTL ? 'فشل تحديث بعض الفرص' : 'Failed to update some opportunities');
+    }
   };
 
   // Animate floating bulk bar
   useEffect(() => {
-    if (bulkSelected.size > 0 && viewMode === 'table') {
+    if (bulkSelected.size > 0) {
       const t = setTimeout(() => setBulkBarVisible(true), 10);
       return () => clearTimeout(t);
     } else {
       setBulkBarVisible(false);
     }
-  }, [bulkSelected.size, viewMode]);
+  }, [bulkSelected.size]);
 
   // Bulk CSV export
   const bulkExportCSV = useCallback(() => {
