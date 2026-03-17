@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -329,6 +330,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [waSelectedTpl, setWaSelectedTpl] = useState('');
   const waTemplates = useMemo(() => getWhatsAppTemplates(true), []);
   const recentWAMessages = useMemo(() => getMessagesByContact(contact?.id).slice(0, 5), [contact?.id]);
+  const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -341,6 +343,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showActionForm, setShowActionForm] = useState(initialAction);
   const [showOppModal, setShowOppModal] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState('all');
+  const [activityAgentFilter, setActivityAgentFilter] = useState('all');
   const { profile } = useAuth();
   const isSalesAgent = profile?.role === 'sales_agent';
   const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
@@ -384,6 +387,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   useEffect(() => {
     setTab('activity');
     setTimelineFilter('all');
+    setActivityAgentFilter('all');
     setShowActionForm(false);
   }, [contact.id]);
 
@@ -492,15 +496,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const dept = contact.department || 'sales';
   const deptTab = isSupplier ? DEPT_TABS.finance : (DEPT_TABS[dept] || DEPT_TABS.sales);
 
-  // Agent count — unique users who interacted
-  const agentCount = useMemo(() => {
-    const userIds = new Set();
+  // Unique agents from activities
+  const uniqueAgents = useMemo(() => {
+    const map = new Map();
     activities.forEach(a => {
-      if (a.user_id) userIds.add(a.user_id);
-      else if (a.users?.full_name_ar || a.users?.full_name_en) userIds.add(a.users.full_name_ar || a.users.full_name_en);
+      const id = a.user_id || a.users?.full_name_ar || a.users?.full_name_en;
+      if (!id) return;
+      const name = isRTL ? (a.users?.full_name_ar || a.users?.full_name_en || '—') : (a.users?.full_name_en || a.users?.full_name_ar || '—');
+      if (!map.has(id)) map.set(id, { id, name, count: 0 });
+      map.get(id).count++;
     });
-    return userIds.size;
-  }, [activities]);
+    return Array.from(map.values());
+  }, [activities, isRTL]);
+  const agentCount = uniqueAgents.length;
 
   const actCount = activities.length;
   const oppCount = opportunities.length;
@@ -576,9 +584,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   }, [activities, tasks, opportunities, extraSources]);
 
   const filteredTimeline = useMemo(() => {
-    if (timelineFilter === 'all') return timeline;
-    return timeline.filter(item => item._type === timelineFilter);
-  }, [timeline, timelineFilter]);
+    let items = timeline;
+    if (timelineFilter !== 'all') items = items.filter(item => item._type === timelineFilter);
+    if (activityAgentFilter !== 'all') {
+      items = items.filter(item => {
+        const id = item.user_id || item.users?.full_name_ar || item.users?.full_name_en || item.author_name || item.uploaded_by || item.user_name;
+        return id === activityAgentFilter;
+      });
+    }
+    return items;
+  }, [timeline, timelineFilter, activityAgentFilter]);
 
   // Grouped contact info for data tab
   const dataGroups = [
@@ -1262,6 +1277,27 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </div>
               )}
 
+              {/* Agent Filter Chips */}
+              {!loadingData && uniqueAgents.length > 1 && (
+                <div className="flex gap-1.5 mb-3 flex-wrap">
+                  <button
+                    onClick={() => setActivityAgentFilter('all')}
+                    className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-colors ${activityAgentFilter === 'all' ? 'bg-amber-500 text-white border-amber-500 font-bold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal hover:border-amber-500/40'}`}
+                  >
+                    {isRTL ? 'كل الموظفين' : 'All Agents'}
+                  </button>
+                  {uniqueAgents.map(ag => (
+                    <button
+                      key={ag.id}
+                      onClick={() => setActivityAgentFilter(activityAgentFilter === ag.id ? 'all' : ag.id)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-colors ${activityAgentFilter === ag.id ? 'bg-amber-500 text-white border-amber-500 font-bold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal hover:border-amber-500/40'}`}
+                    >
+                      {ag.name} ({ag.count})
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Full Timeline */}
               {loadingData ? (
                 <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
@@ -1322,7 +1358,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       ) : (
                         <div className="flex flex-col gap-2.5">
                           {opportunities.map(opp => (
-                            <div key={opp.id} className="bg-emerald-500/[0.05] border border-emerald-500/15 rounded-xl p-3.5">
+                            <button
+                              key={opp.id}
+                              onClick={() => navigate(`/crm/opportunities?highlight=${opp.id}`)}
+                              className="w-full text-start bg-emerald-500/[0.05] border border-emerald-500/15 rounded-xl p-3.5 cursor-pointer hover:bg-emerald-500/[0.10] transition-colors"
+                            >
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
                                 <Chip label={deptStageLabel(opp.stage, dept, isRTL)} color="#10B981" bg="rgba(16,185,129,0.1)" />
@@ -1335,7 +1375,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                                 {opp.temperature && <span>{isRTL ? TEMP[opp.temperature]?.labelAr : TEMP[opp.temperature]?.label}</span>}
                                 <span>{opp.created_at?.slice(0, 10)}</span>
                               </div>
-                            </div>
+                            </button>
                           ))}
                         </div>
                       )}
