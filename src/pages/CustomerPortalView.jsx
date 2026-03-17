@@ -30,8 +30,8 @@ export default function CustomerPortalView() {
   const companyInfo = useMemo(() => {
     try {
       const config = JSON.parse(localStorage.getItem('platform_system_config') || '{}');
-      return config.companyInfo || { name_ar: 'بلاتفورم للعقارات', name_en: 'Platform Real Estate' };
-    } catch { return { name_ar: 'بلاتفورم للعقارات', name_en: 'Platform Real Estate' }; }
+      return config.companyInfo || { name_ar: 'الشركة', name_en: 'Company' };
+    } catch { return { name_ar: 'الشركة', name_en: 'Company' }; }
   }, []);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import {
@@ -489,6 +489,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
   const [showContactDropdown, setShowContactDropdown] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const [sending, setSending] = useState(false);
+  const sendTimeoutRef = useRef(null);
 
   const filteredContacts = useMemo(() => {
     if (!contactSearch) return contacts.slice(0, 10);
@@ -518,7 +519,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
   const handleSend = () => {
     if (!to.trim()) return;
     setSending(true);
-    setTimeout(() => {
+    sendTimeoutRef.current = setTimeout(() => {
       sendEmail({
         to, to_name: toName, subject, body,
         contact_id: contactId || null,
@@ -529,6 +530,10 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
       onSent();
     }, 300);
   };
+
+  useEffect(() => {
+    return () => { if (sendTimeoutRef.current) clearTimeout(sendTimeoutRef.current); };
+  }, []);
 
   const handleSaveDraft = () => {
     saveDraft({
@@ -542,9 +547,9 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
 
   // ESC to close
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    const handler = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); onClose(); } };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
   }, [onClose]);
 
   return (
