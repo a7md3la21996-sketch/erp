@@ -16,10 +16,8 @@ class ErrorBoundary extends Component {
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
-    // Log to console in development
-    if (import.meta.env.DEV) {
-      console.error('[ErrorBoundary]', error, errorInfo);
-    }
+    // Always log to console for debugging
+    console.error('[ErrorBoundary]', error, errorInfo);
   }
 
   handleReset = () => {
@@ -106,11 +104,19 @@ class ErrorBoundary extends Component {
             {labels.description}
           </p>
 
-          {import.meta.env.DEV && this.state.error?.message && (
+          {this.state.error?.message && (
             <div className="w-full mt-1 p-3 rounded-lg bg-red-500/5 border border-red-500/10">
               <p className="text-red-500 dark:text-red-400 text-xs m-0 font-mono break-all">
                 {this.state.error.message}
               </p>
+              {this.state.errorInfo?.componentStack && (
+                <details className="mt-2">
+                  <summary className="text-red-400 text-[10px] cursor-pointer">{isAr ? 'تفاصيل' : 'Details'}</summary>
+                  <pre className="text-red-400/70 text-[9px] m-0 mt-1 max-h-[120px] overflow-auto whitespace-pre-wrap">
+                    {this.state.errorInfo.componentStack.slice(0, 500)}
+                  </pre>
+                </details>
+              )}
             </div>
           )}
 
