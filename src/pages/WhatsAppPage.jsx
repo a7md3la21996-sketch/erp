@@ -129,6 +129,10 @@ export default function WhatsAppPage() {
   const handleSendMessage = () => {
     if (!messageText.trim() || !selectedContact) return;
     const phone = selectedContact.contact_phone;
+    if (!phone || !/^\+?\d{7,15}$/.test(phone.replace(/[\s-]/g, ''))) {
+      alert(isRTL ? 'رقم الهاتف غير صالح' : 'Invalid phone number');
+      return;
+    }
     // Log message
     logMessage({
       contact_id: selectedContact.contact_id,
@@ -140,6 +144,10 @@ export default function WhatsAppPage() {
     });
     // Open WhatsApp
     const link = generateWhatsAppLink(phone, messageText.trim());
+    if (!link || !link.startsWith('https://wa.me/')) {
+      alert(isRTL ? 'تعذر إنشاء رابط واتساب' : 'Failed to generate WhatsApp link');
+      return;
+    }
     window.open(link, '_blank');
     setMessageText('');
     refresh();

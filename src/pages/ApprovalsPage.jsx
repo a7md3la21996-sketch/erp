@@ -392,9 +392,14 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
   const isPending = a.status === 'pending' || a.status === 'escalated';
 
   useEffect(() => {
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handler, true);
+    return () => window.removeEventListener('keydown', handler, true);
   }, [onClose]);
 
   return (
@@ -472,6 +477,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
               </h3>
               <div style={{ position: 'relative' }}>
                 {a.chain.map((step, i) => {
+                  if (!step) return null;
                   const stepSc = STATUS_CONFIG[step.status] || STATUS_CONFIG.pending;
                   const StepIcon = stepSc.icon;
                   const isLast = i === a.chain.length - 1;
@@ -500,7 +506,7 @@ function ApprovalDrawer({ approval, onClose, onApprove, onReject, actionComment,
                       {/* Content */}
                       <div style={{ flex: 1, paddingTop: 2 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: textPrimary }}>
-                          {isRTL ? 'المستوى' : 'Level'} {step.level}
+                          {isRTL ? 'المستوى' : 'Level'} {step.level ?? i + 1}
                           <span style={{ fontSize: 11, fontWeight: 400, color: textMuted, marginInlineStart: 8 }}>{step.approver || '--'}</span>
                         </div>
                         <div style={{ fontSize: 11, color: stepSc.color, fontWeight: 600, marginTop: 2 }}>

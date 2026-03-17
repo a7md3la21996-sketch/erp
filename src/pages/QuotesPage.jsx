@@ -184,7 +184,8 @@ function printQuote(quote, isRTL) {
     win.document.write(html);
     win.document.close();
     win.focus();
-    setTimeout(() => win.print(), 400);
+    const timer = setTimeout(() => { if (!win.closed) win.print(); }, 400);
+    win.addEventListener('beforeunload', () => clearTimeout(timer));
   }
 }
 
@@ -235,7 +236,7 @@ export default function QuotesPage() {
           const contactName = opp.contacts?.full_name || opp.contacts?.full_name_ar || opp.contacts?.full_name_en || '';
           setEditingQuote({
             opportunity_id: opp.id,
-            opportunity_name: contactName + (opp.contacts?.company ? ` - ${opp.contacts.company}` : ''),
+            opportunity_name: contactName + (opp.contacts?.company ? ` - ${opp.contacts?.company}` : ''),
             contact_id: opp.contact_id || '',
             contact_name: contactName,
             contact_email: opp.contacts?.email || '',
@@ -689,7 +690,7 @@ function QuoteModal({ quote, isRTL, isDark, t, onSave, onClose, profile }) {
     setForm(prev => ({
       ...prev,
       opportunity_id: opp.id,
-      opportunity_name: name + (opp.contacts?.company ? ` - ${opp.contacts.company}` : ''),
+      opportunity_name: name + (opp.contacts?.company ? ` - ${opp.contacts?.company}` : ''),
       contact_id: prev.contact_id || opp.contact_id || '',
       contact_name: prev.contact_name || name,
       contact_email: prev.contact_email || opp.contacts?.email || '',
