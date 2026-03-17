@@ -155,26 +155,6 @@ export default function OpportunitiesPage() {
     setSelectedOpp(null);
   }, []);
 
-  // ESC to close modals/drawer; Ctrl+N / ⌘+N to open add modal
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.key === 'Escape') {
-        if (confirmBulkDelete) { setConfirmBulkDelete(false); return; }
-        if (lostReasonModal) { setLostReasonModal(null); return; }
-        if (confirmDelete) { setConfirmDelete(null); return; }
-        if (showModal) { setShowModal(false); return; }
-        if (selectedOpp) closeDrawer();
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-        e.preventDefault();
-        if (!showModal && !selectedOpp) setShowModal(true);
-      }
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [selectedOpp, lostReasonModal, confirmDelete, confirmBulkDelete, showModal, closeDrawer]);
-
   // currentStages comes from useOppData hook
 
   // Load data
@@ -252,6 +232,26 @@ export default function OpportunitiesPage() {
     setLostReasonModal, setLostReason, setLostReasonCustom,
     viewMode,
   });
+
+  // ESC to close modals/drawer; Ctrl+N / ⌘+N to open add modal
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (confirmBulkDelete) { setConfirmBulkDelete(false); return; }
+        if (lostReasonModal) { setLostReasonModal(null); return; }
+        if (confirmDelete) { setConfirmDelete(null); return; }
+        if (showModal) { setShowModal(false); return; }
+        if (selectedOpp) closeDrawer();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        if (!showModal && !selectedOpp) setShowModal(true);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [selectedOpp, lostReasonModal, confirmDelete, confirmBulkDelete, showModal, closeDrawer]);
 
   const selectOpp = useCallback((opp) => {
     setSelectedOpp(opp);
