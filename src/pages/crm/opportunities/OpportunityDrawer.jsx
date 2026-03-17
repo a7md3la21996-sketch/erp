@@ -34,6 +34,7 @@ export default function OpportunityDrawer({
   sourceLabelsMap, configTypeMap, deptLabelsMap, lostReasonsMap, configLostReasons,
   onPrev, onNext,
   onEditStageLost,
+  onSelectOpp,
 }) {
   const navigate = useNavigate();
   const toast = useToast();
@@ -57,6 +58,7 @@ export default function OpportunityDrawer({
   const [stageHistory, setStageHistory] = useState([]);
   const [stageConfirm, setStageConfirm] = useState(null);
   const [linkedQuotesCount, setLinkedQuotesCount] = useState(0);
+  const [activityAgentFilter, setActivityAgentFilter] = useState('all');
 
   // Favorites
   const [isFav, setIsFav] = useState(false);
@@ -83,6 +85,7 @@ export default function OpportunityDrawer({
     setTab('activity');
     setShowAddActivity(false);
     setShowDrawerMenu(false);
+    setActivityAgentFilter('all');
   }, [selectedOpp?.id]);
 
   // Fetch activities
@@ -140,6 +143,35 @@ export default function OpportunityDrawer({
   const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
   const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
   const progressPct = stages.length > 1 ? Math.round((Math.max(0, currentIdx) / (stages.length - 1)) * 100) : 0;
+
+  // Unique agents from activities
+  const uniqueAgents = useMemo(() => {
+    const map = new Map();
+    allActivities.forEach(a => {
+      const id = a.user_id || a.users?.full_name_ar || a.users?.full_name_en;
+      if (!id) return;
+      const name = isRTL ? (a.users?.full_name_ar || a.users?.full_name_en || '—') : (a.users?.full_name_en || a.users?.full_name_ar || '—');
+      if (!map.has(id)) map.set(id, { id, name, count: 0 });
+      map.get(id).count++;
+    });
+    return Array.from(map.values());
+  }, [allActivities, isRTL]);
+  const agentCount = uniqueAgents.length;
+
+  // Filtered activities by agent
+  const filteredActivities = useMemo(() => {
+    if (activityAgentFilter === 'all') return drawerActivities;
+    return drawerActivities.filter(a => {
+      const id = a.user_id || a.users?.full_name_ar || a.users?.full_name_en;
+      return id === activityAgentFilter;
+    });
+  }, [drawerActivities, activityAgentFilter]);
+
+  // Client's other opportunities
+  const clientOpps = useMemo(() => {
+    if (!selectedOpp.contact_id) return [];
+    return opps.filter(o => o.contact_id === selectedOpp.contact_id && o.id !== selectedOpp.id);
+  }, [opps, selectedOpp.contact_id, selectedOpp.id]);
 
   // Tabs config
   const tabs = [
@@ -314,6 +346,11 @@ export default function OpportunityDrawer({
                 {daysInStage(selectedOpp)}
               </span>
               <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'يوم' : 'days'}</span>
+            </div>
+            <div className="w-px bg-edge dark:bg-edge-dark" />
+            <div className="flex-1 py-1.5 text-center bg-amber-500/[0.05]">
+              <span className="text-sm font-bold text-amber-500">{loadingActivities ? '…' : agentCount}</span>
+              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'موظف' : 'Agents'}</span>
             </div>
           </div>
 
@@ -492,10 +529,31 @@ export default function OpportunityDrawer({
                 </div>
               )}
 
+              {/* Agent Filter Chips */}
+              {!loadingActivities && uniqueAgents.length > 1 && (
+                <div className="flex gap-1.5 mb-3 flex-wrap">
+                  <button
+                    onClick={() => setActivityAgentFilter('all')}
+                    className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-colors ${activityAgentFilter === 'all' ? 'bg-brand-500 text-white border-brand-500 font-bold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal hover:border-brand-500/40'}`}
+                  >
+                    {isRTL ? 'الكل' : 'All'} ({allActivities.length})
+                  </button>
+                  {uniqueAgents.map(ag => (
+                    <button
+                      key={ag.id}
+                      onClick={() => setActivityAgentFilter(activityAgentFilter === ag.id ? 'all' : ag.id)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-colors ${activityAgentFilter === ag.id ? 'bg-brand-500 text-white border-brand-500 font-bold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal hover:border-brand-500/40'}`}
+                    >
+                      {ag.name} ({ag.count})
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Activities Timeline */}
               {loadingActivities ? (
                 <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark"><Loader2 size={16} className="animate-spin inline-block" /></div>
-              ) : drawerActivities.length === 0 ? (
+              ) : filteredActivities.length === 0 ? (
                 <div className="text-center py-6 text-xs text-content-muted dark:text-content-muted-dark opacity-60">
                   <Clock size={24} className="opacity-30 mb-1.5 mx-auto" />
                   <p className="m-0 mb-2">{isRTL ? 'لا توجد أنشطة' : 'No activities'}</p>
@@ -505,7 +563,7 @@ export default function OpportunityDrawer({
                 </div>
               ) : (
                 <div>
-                  {drawerActivities.map(act => {
+                  {filteredActivities.map(act => {
                     const ActIcon = ACTIVITY_ICON_MAP[act.type] || ACTIVITY_ICONS[act.type] || Clock;
                     const resultConfig = act.result && configActivityResults[act.type]?.find(r => r.value === act.result);
                     return (
@@ -701,6 +759,48 @@ export default function OpportunityDrawer({
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              )}
+
+              {/* Client's Other Opportunities */}
+              {clientOpps.length > 0 && (
+                <div>
+                  <p className="m-0 mb-2 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
+                    {isRTL ? `فرص العميل الأخرى (${clientOpps.length})` : `Other Client Opps (${clientOpps.length})`}
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    {clientOpps.slice(0, 5).map(opp => {
+                      const stg = stages.find(s => s.id === opp.stage);
+                      return (
+                        <button
+                          key={opp.id}
+                          onClick={() => onSelectOpp && onSelectOpp(opp)}
+                          className="w-full flex items-center gap-3 p-2.5 rounded-xl bg-emerald-500/[0.05] border border-emerald-500/15 text-start cursor-pointer hover:bg-emerald-500/[0.10] transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <span className="text-xs font-bold text-content dark:text-content-dark">#{String(opp.id).slice(-4)}</span>
+                              <span className="text-[10px] px-1.5 py-px rounded-full font-semibold" style={{ background: (stg?.color || '#6B8DB5') + '18', color: stg?.color || '#6B8DB5' }}>
+                                {isRTL ? (stg?.label_ar || opp.stage) : (stg?.label_en || opp.stage)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-content-muted dark:text-content-muted-dark">
+                              {opp.budget > 0 && <span>{fmtBudget(opp.budget)}</span>}
+                              {opp.temperature && <><span className="opacity-40">·</span><span style={{ color: (TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold).color }}>{isRTL ? (TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold).label_en}</span></>}
+                              <span className="opacity-40">·</span>
+                              <span>{opp.created_at?.slice(0, 10)}</span>
+                            </div>
+                          </div>
+                          <ChevronDown size={12} className="text-content-muted dark:text-content-muted-dark rotate-[-90deg] shrink-0" />
+                        </button>
+                      );
+                    })}
+                    {clientOpps.length > 5 && (
+                      <p className="m-0 text-[10px] text-brand-500 text-center font-semibold">
+                        {isRTL ? `+${clientOpps.length - 5} فرص أخرى` : `+${clientOpps.length - 5} more`}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

@@ -824,6 +824,7 @@ export default function OpportunitiesPage() {
         onPrev={handleOppPrev}
         onNext={handleOppNext}
         onEditStageLost={handleEditStageLost}
+        onSelectOpp={(opp) => setSelectedOpp(opp)}
       />
     )}
   </>);
