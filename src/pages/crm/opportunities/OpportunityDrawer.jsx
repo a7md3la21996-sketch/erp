@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/favoritesService';
 import { fetchContactActivities, createActivity } from '../../../services/contactsService';
@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getQuotesByOpportunity } from '../../../services/quotesService';
 import { Button, Input, Select, Textarea } from '../../../components/ui';
+import { useToast } from '../../../contexts/ToastContext';
 
 export default function OpportunityDrawer({
   selectedOpp, onClose, onMove, onDelete, onUpdate,
@@ -33,6 +34,7 @@ export default function OpportunityDrawer({
   onEditStageLost,
 }) {
   const navigate = useNavigate();
+  const toast = useToast();
 
   // ─── Drawer-local state ───
   const [editingOpp, setEditingOpp] = useState(false);
@@ -42,14 +44,19 @@ export default function OpportunityDrawer({
   const [activityForm, setActivityForm] = useState({ type: 'call', description: '', result: '' });
   const [drawerActivities, setDrawerActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
+  const [activityLimit, setActivityLimit] = useState(5);
   const [drawerNotes, setDrawerNotes] = useState([]);
   const [newNote, setNewNote] = useState('');
+  const [editingNote, setEditingNote] = useState(null);
+  const [editNoteText, setEditNoteText] = useState('');
   const [stageHistory, setStageHistory] = useState([]);
   const [showNotes, setShowNotes] = useState(false);
+  const [stageConfirm, setStageConfirm] = useState(null);
   // Used for copy-phone toast inside drawer
   const [copyToast, setCopyToast] = useState(null);
   // Linked quotes count
   const [linkedQuotesCount, setLinkedQuotesCount] = useState(0);
+  const drawerRef = useRef(null);
 
   // Check if edit form has unsaved changes
   const isEditDirty = editingOpp && selectedOpp && (
@@ -72,16 +79,22 @@ export default function OpportunityDrawer({
   }, [isEditDirty, isRTL, onClose]);
 
   // Fetch activities for drawer
+  const [allActivities, setAllActivities] = useState([]);
   useEffect(() => {
-    if (!selectedOpp?.contact_id) { setDrawerActivities([]); return; }
+    if (!selectedOpp?.contact_id) { setAllActivities([]); setDrawerActivities([]); return; }
     let cancelled = false;
     setLoadingActivities(true);
+    setActivityLimit(5);
     fetchContactActivities(selectedOpp.contact_id)
-      .then(data => { if (!cancelled) setDrawerActivities(data?.slice(0, 5) || []); })
-      .catch(() => { if (!cancelled) setDrawerActivities([]); })
+      .then(data => { if (!cancelled) { setAllActivities(data || []); setDrawerActivities((data || []).slice(0, 5)); } })
+      .catch(() => { if (!cancelled) { setAllActivities([]); setDrawerActivities([]); } })
       .finally(() => { if (!cancelled) setLoadingActivities(false); });
     return () => { cancelled = true; };
   }, [selectedOpp?.contact_id]);
+
+  useEffect(() => {
+    setDrawerActivities(allActivities.slice(0, activityLimit));
+  }, [activityLimit, allActivities]);
 
   // Load notes & stage history for drawer
   useEffect(() => {
@@ -146,7 +159,20 @@ export default function OpportunityDrawer({
     if (stageChanged) setStageHistory(getStageHistory(selectedOpp.id));
     setEditingOpp(false);
     setEditSaving(false);
+    toast.success(isRTL ? 'تم حفظ التعديلات' : 'Changes saved');
   };
+
+  // Ctrl+S to save in edit mode
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's' && editingOpp) {
+        e.preventDefault();
+        if (!editSaving) saveEdit();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [editingOpp, editSaving, editForm]);
 
   const handlePrev = onPrev ? () => { setEditingOpp(false); onPrev(); } : null;
   const handleNext = onNext ? () => { setEditingOpp(false); onNext(); } : null;
@@ -527,8 +553,8 @@ export default function OpportunityDrawer({
                     return (
                       <div key={s.id} className="flex items-start flex-1 min-w-0">
                         <button
-                          onClick={() => !isBackward && onMove(selectedOpp.id, s.id)}
-                          className={`flex flex-col items-center gap-1 bg-transparent border-none w-full group p-0 ${isBackward ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                          onClick={() => !isBackward && !isCurrent && setStageConfirm(s)}
+                          className={`flex flex-col items-center gap-1 bg-transparent border-none w-full group p-0 ${isBackward ? 'cursor-not-allowed opacity-50' : isCurrent ? 'cursor-default' : 'cursor-pointer'}`}
                         >
                           <div
                             className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
@@ -556,6 +582,28 @@ export default function OpportunityDrawer({
               </>);
             })()}
           </div>
+
+          {/* Stage Change Confirmation */}
+          {stageConfirm && (
+            <div className="bg-brand-500/[0.08] border border-brand-500/20 rounded-xl p-3">
+              <p className="m-0 mb-2 text-xs font-semibold text-content dark:text-content-dark">
+                {isRTL ? 'تأكيد تغيير المرحلة' : 'Confirm Stage Change'}
+              </p>
+              <p className="m-0 mb-3 text-[11px] text-content-muted dark:text-content-muted-dark">
+                {isRTL
+                  ? `نقل من "${deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', true)}" إلى "${stageConfirm.label_ar}"؟`
+                  : `Move from "${deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', false)}" to "${stageConfirm.label_en}"?`}
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" onClick={() => { onMove(selectedOpp.id, stageConfirm.id); setStageConfirm(null); }}>
+                  {isRTL ? 'تأكيد' : 'Confirm'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setStageConfirm(null)}>
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Activities Timeline */}
           <div>
@@ -622,17 +670,22 @@ export default function OpportunityDrawer({
                 <div className="flex gap-2">
                   <Button size="sm" onClick={async () => {
                     if (!activityForm.description.trim()) return;
-                    const act = await createActivity({
-                      type: activityForm.type,
-                      description: activityForm.description,
-                      result: activityForm.result || null,
-                      contact_id: selectedOpp.contact_id,
-                      entity_type: 'opportunity',
-                      entity_id: selectedOpp.id,
-                    });
-                    setDrawerActivities(prev => [act, ...prev].slice(0, 5));
-                    setActivityForm({ type: 'call', description: '', result: '' });
-                    setShowAddActivity(false);
+                    try {
+                      const act = await createActivity({
+                        type: activityForm.type,
+                        description: activityForm.description,
+                        result: activityForm.result || null,
+                        contact_id: selectedOpp.contact_id,
+                        entity_type: 'opportunity',
+                        entity_id: selectedOpp.id,
+                      });
+                      setAllActivities(prev => [act, ...prev]);
+                      setActivityForm({ type: 'call', description: '', result: '' });
+                      setShowAddActivity(false);
+                      toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
+                    } catch {
+                      toast.error(isRTL ? 'فشل حفظ النشاط' : 'Failed to save activity');
+                    }
                   }}>
                     {isRTL ? 'حفظ' : 'Save'}
                   </Button>
@@ -647,13 +700,16 @@ export default function OpportunityDrawer({
             ) : drawerActivities.length === 0 ? (
               <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark opacity-60">
                 <Clock size={20} className="opacity-30 mb-1 mx-auto" />
-                <p className="m-0">{isRTL ? 'لا توجد أنشطة' : 'No activities'}</p>
+                <p className="m-0 mb-2">{isRTL ? 'لا توجد أنشطة' : 'No activities'}</p>
+                <button onClick={() => setShowAddActivity(true)} className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold">
+                  <Plus size={10} className="inline -mt-px" /> {isRTL ? 'سجّل أول نشاط' : 'Log first activity'}
+                </button>
               </div>
             ) : drawerActivities.map(act => {
               const ActIcon = ACTIVITY_ICON_MAP[act.type] || ACTIVITY_ICONS[act.type] || Clock;
               const resultConfig = act.result && configActivityResults[act.type]?.find(r => r.value === act.result);
               return (
-                <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2">
+                <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2 group">
                   <div className="flex items-start gap-2 mb-1">
                     <div className="w-[24px] h-[24px] rounded-[6px] bg-brand-500/10 flex items-center justify-center shrink-0 mt-px">
                       <ActIcon size={12} color="#4A7AAB" />
@@ -668,6 +724,11 @@ export default function OpportunityDrawer({
                         )}
                       </div>
                     </div>
+                    <button
+                      onClick={() => { setAllActivities(prev => prev.filter(a => a.id !== act.id)); toast.success(isRTL ? 'تم حذف النشاط' : 'Activity deleted'); }}
+                      className="bg-transparent border-none cursor-pointer text-red-400 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      title={isRTL ? 'حذف' : 'Delete'}
+                    ><X size={11} /></button>
                   </div>
                   <div className="flex justify-between text-[10px] text-content-muted dark:text-content-muted-dark ps-8">
                     <span>{isRTL ? (act.users?.full_name_ar || '—') : (act.users?.full_name_en || act.users?.full_name_ar || '—')}</span>
@@ -676,12 +737,12 @@ export default function OpportunityDrawer({
                 </div>
               );
             })}
-            {drawerActivities.length > 0 && selectedOpp.contact_id && (
+            {drawerActivities.length > 0 && allActivities.length > activityLimit && (
               <button
-                onClick={() => navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`)}
-                className="text-[10px] text-brand-500 bg-transparent border-none cursor-pointer hover:underline font-cairo font-semibold mt-1 p-0"
+                onClick={() => setActivityLimit(l => l + 10)}
+                className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2.5 py-1.5 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold mt-1 w-full"
               >
-                {isRTL ? 'عرض كل الأنشطة →' : 'View all activities →'}
+                {isRTL ? `عرض المزيد (${allActivities.length - activityLimit} متبقي)` : `Load more (${allActivities.length - activityLimit} remaining)`}
               </button>
             )}
           </div>
@@ -719,11 +780,39 @@ export default function OpportunityDrawer({
                 </div>
                 {drawerNotes.map(n => (
                   <div key={n.id} className="bg-amber-500/[0.06] border border-amber-500/10 rounded-lg p-2.5 mb-1.5 group">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed flex-1">{n.text}</p>
-                      <button onClick={() => { deleteOppNote(selectedOpp.id, n.id); setDrawerNotes(prev => prev.filter(x => x.id !== n.id)); }} className="bg-transparent border-none cursor-pointer text-red-400 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><X size={11} /></button>
-                    </div>
-                    <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">{new Date(n.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    {editingNote === n.id ? (
+                      <div className="flex gap-1.5">
+                        <Input value={editNoteText} onChange={e => setEditNoteText(e.target.value)} className="text-xs flex-1" onKeyDown={e => {
+                          if (e.key === 'Enter' && editNoteText.trim()) {
+                            e.stopPropagation();
+                            deleteOppNote(selectedOpp.id, n.id);
+                            const updated = addOppNote(selectedOpp.id, editNoteText.trim());
+                            setDrawerNotes(prev => prev.map(x => x.id === n.id ? { ...updated, id: updated.id } : x));
+                            setEditingNote(null);
+                          }
+                          if (e.key === 'Escape') setEditingNote(null);
+                        }} autoFocus />
+                        <Button size="sm" onClick={() => {
+                          if (!editNoteText.trim()) return;
+                          deleteOppNote(selectedOpp.id, n.id);
+                          const updated = addOppNote(selectedOpp.id, editNoteText.trim());
+                          setDrawerNotes(prev => prev.map(x => x.id === n.id ? { ...updated, id: updated.id } : x));
+                          setEditingNote(null);
+                        }}>✓</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingNote(null)}>✕</Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed flex-1 cursor-pointer" onClick={() => { setEditingNote(n.id); setEditNoteText(n.text); }}>{n.text}</p>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <button onClick={() => { setEditingNote(n.id); setEditNoteText(n.text); }} className="bg-transparent border-none cursor-pointer text-brand-500 p-0" title={isRTL ? 'تعديل' : 'Edit'}><Pencil size={10} /></button>
+                            <button onClick={() => { deleteOppNote(selectedOpp.id, n.id); setDrawerNotes(prev => prev.filter(x => x.id !== n.id)); }} className="bg-transparent border-none cursor-pointer text-red-400 p-0" title={isRTL ? 'حذف' : 'Delete'}><X size={11} /></button>
+                          </div>
+                        </div>
+                        <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">{new Date(n.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                      </>
+                    )}
                   </div>
                 ))}
               </>
