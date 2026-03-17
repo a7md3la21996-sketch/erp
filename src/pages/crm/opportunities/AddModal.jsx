@@ -9,12 +9,17 @@ import { Button, Input, Select, Textarea, Modal, ModalFooter } from '../../../co
 export default function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [], currentUserId }) {
   const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'qualification', project_id: '', notes: '', expected_close_date: '' });
   const [saving, setSaving] = useState(false);
-  const f = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  const [errors, setErrors] = useState({});
+  const f = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErrors(p => ({ ...p, [k]: '' })); };
   const contactDept = form.contact?.department || 'sales';
   const stageConfig = getDeptStages(contactDept);
 
   const handleSave = async () => {
-    if (!form.contact) return;
+    const errs = {};
+    if (!form.contact) errs.contact = isRTL ? 'جهة الاتصال مطلوبة' : 'Contact is required';
+    if (form.budget && (isNaN(Number(form.budget)) || Number(form.budget) < 0)) errs.budget = isRTL ? 'الميزانية يجب أن تكون رقم موجب' : 'Budget must be a positive number';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setErrors({});
     setSaving(true);
     const payload = {
       contact_id: form.contact.id,
@@ -53,6 +58,7 @@ export default function AddModal({ isRTL, lang, onClose, onSave, agents, project
             {isRTL ? 'جهة الاتصال *' : 'Contact *'}
           </label>
           <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => { f('contact', c); if (c) { const stages = getDeptStages(c.department || 'sales'); f('stage', stages[0]?.id || 'qualification'); } }} />
+          {errors.contact && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.contact}</span>}
           {form.contact && existingOpps.some(o => o.contact_id === form.contact.id) && (
             <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-semibold">
               <AlertTriangle size={12} />
@@ -64,7 +70,8 @@ export default function AddModal({ isRTL, lang, onClose, onSave, agents, project
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
             {isRTL ? 'الميزانية' : 'Budget'}
           </label>
-          <Input type="number" min="0" value={form.budget} onChange={e => f('budget', Math.max(0, e.target.value))} />
+          <Input type="number" min="0" value={form.budget} onChange={e => f('budget', Math.max(0, e.target.value))} style={errors.budget ? { border: '1.5px solid #ef4444' } : {}} />
+          {errors.budget && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.budget}</span>}
         </div>
         <div>
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">

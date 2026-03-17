@@ -44,9 +44,8 @@ export default function OpportunitiesPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
   const { isMobile } = useResponsive();
-  const navigate = useNavigate();
   const location = useLocation();
-  const { lostReasons: configLostReasons, sources: configSources, sourceLabels: configSourceLabels, contactTypes: configContactTypes, typeMap: configTypeMap, departments: configDepartments, activityTypes: configActivityTypes, activityResults: configActivityResults, stageWinRates: configStageWinRates } = useSystemConfig();
+  const { lostReasons: configLostReasons, sources: configSources, typeMap: configTypeMap, departments: configDepartments, activityTypes: configActivityTypes, activityResults: configActivityResults, stageWinRates: configStageWinRates } = useSystemConfig();
   const lostReasonsMap = useMemo(() => {
     const m = {};
     (configLostReasons || []).forEach(r => { m[r.key] = r; });

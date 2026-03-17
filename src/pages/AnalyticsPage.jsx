@@ -8,8 +8,8 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, BarChart3, Users, DollarSign,
-  Target, Award, Clock, ArrowDownRight, Download, Filter,
-  Trophy, Zap, Activity, PieChart as PieIcon, GitBranch, Printer,
+  Target, Award, Clock, ArrowDownRight, Download,
+  Trophy, Zap, Activity, GitBranch, Printer,
 } from 'lucide-react';
 import { Card, CardHeader, KpiCard, ExportButton, Pagination } from '../components/ui';
 import {

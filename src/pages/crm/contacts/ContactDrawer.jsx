@@ -29,7 +29,6 @@ import PrintPreview from '../../../components/ui/PrintPreview';
 import {
   logMessage as logWhatsAppMessage, getTemplates as getWhatsAppTemplates,
   generateWhatsAppLink, fillTemplate, getMessagesByContact,
-  TEMPLATE_CATEGORIES as WA_CATEGORIES,
 } from '../../../services/whatsappService';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,

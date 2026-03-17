@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -93,6 +93,7 @@ export default function KnowledgeBasePage() {
   const isRTL = i18n.language === 'ar';
   const lang = isRTL ? 'ar' : 'en';
 
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
   const [viewingArticle, setViewingArticle] = useState(null);
@@ -131,6 +132,8 @@ export default function KnowledgeBasePage() {
     if (activeCategory !== 'all') return getByCategory(activeCategory);
     return getAll();
   }, [searchQuery, activeCategory, refreshKey]);
+
+  useEffect(() => { setLoading(false); }, []);
 
   // Group by category
   const grouped = useMemo(() => {
@@ -204,6 +207,12 @@ export default function KnowledgeBasePage() {
   }, []);
 
   // ── Render ────────────────────────────────────────────────────────────
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 80 }}>
+      <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#4A7AAB', borderRadius: '50%' }} />
+    </div>
+  );
+
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{
       display: 'flex', flexDirection: 'column', height: '100%',
@@ -321,9 +330,21 @@ export default function KnowledgeBasePage() {
             <p style={{ margin: 0, fontSize: 14 }}>
               {searchQuery
                 ? (isRTL ? 'جرب كلمات بحث مختلفة' : 'Try different search terms')
-                : (isRTL ? 'اضغط "مقال جديد" لإنشاء أول مقال' : 'Click "New Article" to create your first article')
+                : (isRTL ? 'أنشئ أول مقال في قاعدة المعرفة' : 'Create your first knowledge base article')
               }
             </p>
+            {!searchQuery && (
+              <button
+                onClick={handleNew}
+                style={{
+                  marginTop: 16, display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '9px 18px', borderRadius: 8, border: 'none',
+                  background: c.accent, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                <Plus size={15} /> {isRTL ? 'مقال جديد' : 'New Article'}
+              </button>
+            )}
           </div>
         ) : (
           Object.entries(grouped).map(([catId, items]) => {

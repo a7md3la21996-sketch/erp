@@ -15,7 +15,7 @@ import {
   getStageHistory, addStageHistory, getOppNotes, addOppNote, deleteOppNote,
 } from './constants';
 import {
-  Plus, X, Trash2, Building2, Banknote, User, Loader2, Pencil,
+  Plus, X, Trash2, Building2, Banknote, Loader2, Pencil,
   Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star,
   MapPin, Briefcase, Calendar, ExternalLink, StickyNote,
   ChevronUp, ChevronDown, FileText,

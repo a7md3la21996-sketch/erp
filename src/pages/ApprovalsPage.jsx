@@ -3,9 +3,9 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import {
-  CheckCircle, XCircle, Clock, AlertTriangle, Shield, ChevronDown,
-  Search, X, Filter, ChevronRight, User, DollarSign, FileText,
-  MoreHorizontal, CheckSquare, Square,
+  CheckCircle, XCircle, Clock, AlertTriangle, Shield,
+  Search, X, ChevronRight, FileText,
+  CheckSquare, Square,
 } from 'lucide-react';
 import {
   getApprovals, approveRequest, rejectRequest, getApprovalStats,

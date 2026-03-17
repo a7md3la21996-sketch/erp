@@ -6,7 +6,7 @@ import {
   TrendingUp, Calendar, Clock, PieChart, Activity,
   CreditCard, Building2, UserCheck, FileBarChart,
   ArrowDownToLine, Trophy, Target, Award, Star, Medal,
-  ChevronUp, ChevronDown, Minus, Crown, Zap, Download, Printer, FileSpreadsheet
+  ChevronUp, ChevronDown, Minus, Crown, Zap, Download, Printer
 } from 'lucide-react';
 import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { generateReportHTML, getCompanyInfo } from '../services/printService';

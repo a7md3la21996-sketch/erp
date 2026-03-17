@@ -4,8 +4,8 @@ import { useTheme } from '../contexts/ThemeContext';
 import {
   MessageCircle, Send, Search, X, Plus, ChevronDown, Phone,
   FileText, Trash2, ToggleLeft, ToggleRight, ExternalLink,
-  Clock, CheckCheck, Check, AlertCircle, Download, Upload,
-  Users, BarChart3, Pencil, Copy,
+  Clock, CheckCheck, Check, AlertCircle, Download,
+  Users, Pencil,
 } from 'lucide-react';
 import {
   logMessage, getMessages, getConversation, getRecentConversations,
@@ -53,6 +53,7 @@ export default function WhatsAppPage() {
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
 
+  const [loading, setLoading] = useState(true);
   const [conversations, setConversations] = useState([]);
   const [selectedContactId, setSelectedContactId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -88,7 +89,7 @@ export default function WhatsAppPage() {
     }
   }, [selectedContactId]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { refresh(); setLoading(false); }, [refresh]);
 
   useEffect(() => {
     const handler = () => refresh();
@@ -191,6 +192,12 @@ export default function WhatsAppPage() {
   const border = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.08)';
   const cardBg = isDark ? '#1e293b' : '#fff';
   const inputBg = isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)';
+
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 80 }}>
+      <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#25D366', borderRadius: '50%' }} />
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', direction: isRTL ? 'rtl' : 'ltr' }}>

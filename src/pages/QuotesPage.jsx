@@ -1,19 +1,19 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getQuotes, createQuote, updateQuote, deleteQuote, duplicateQuote,
-  getQuoteStats, generateQuoteNumber, calculateTotals, getQuotesByOpportunity,
+  getQuoteStats, generateQuoteNumber, calculateTotals,
 } from '../services/quotesService';
 import { getCompanyInfo } from '../services/printService';
 import {
   FileText, Plus, Search, X, Copy, Trash2, Eye, Pencil, Printer,
-  Send, ChevronDown, ChevronUp, DollarSign, CheckCircle2, Clock, XCircle,
+  Send, ChevronDown, DollarSign, CheckCircle2, Clock, XCircle,
 } from 'lucide-react';
-import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, Pagination } from '../components/ui';
+import { Button, Card, Input, Select, Modal, ModalFooter, KpiCard, Pagination, PageSkeleton } from '../components/ui';
 
 // ═══════════════════════════════════════════════════════════════════
 // Status config
@@ -197,7 +197,6 @@ export default function QuotesPage() {
   const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const { profile } = useAuth();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { companyInfo } = useSystemConfig();
 
@@ -207,6 +206,7 @@ export default function QuotesPage() {
 
   // ── State ──
   const [quotes, setQuotes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState('');
@@ -222,7 +222,7 @@ export default function QuotesPage() {
     setQuotes(getQuotes());
   }, []);
 
-  useEffect(() => { loadQuotes(); }, [loadQuotes]);
+  useEffect(() => { loadQuotes(); setLoading(false); }, [loadQuotes]);
 
   // ── Auto-open modal if navigated from opportunity ──
   useEffect(() => {
@@ -310,6 +310,8 @@ export default function QuotesPage() {
   // ═══════════════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════════════
+  if (loading) return <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={7} />;
+
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} style={{ padding: '24px', minHeight: '100vh' }}>
       {/* ── Header ── */}
@@ -466,8 +468,33 @@ export default function QuotesPage() {
           <tbody>
             {paged.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>
-                  {t('لا توجد عروض أسعار', 'No quotes found')}
+                <td colSpan={8} style={{ textAlign: 'center', padding: '48px 20px', color: isDark ? '#64748b' : '#94a3b8' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <div style={{
+                      width: 56, height: 56, borderRadius: 16,
+                      background: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+                    }}>
+                      <FileText size={24} style={{ color: '#4A7AAB', opacity: 0.5 }} />
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                      {t('لا توجد عروض أسعار', 'No quotes found')}
+                    </div>
+                    <div style={{ fontSize: 12 }}>
+                      {t('أنشئ أول عرض سعر الآن', 'Create your first quote now')}
+                    </div>
+                    <button
+                      onClick={() => { setEditingQuote(null); setShowModal(true); }}
+                      style={{
+                        marginTop: 8, display: 'flex', alignItems: 'center', gap: 6,
+                        padding: '8px 18px', borderRadius: 8, border: 'none',
+                        background: 'linear-gradient(135deg, #4A7AAB, #2B4C6F)',
+                        color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      }}
+                    >
+                      <Plus size={15} /> {t('عرض سعر جديد', 'New Quote')}
+                    </button>
+                  </div>
                 </td>
               </tr>
             ) : paged.map(q => {
@@ -721,10 +748,26 @@ function QuoteModal({ quote, isRTL, isDark, t, onSave, onClose, profile }) {
     }));
   };
 
+  // ── Validation ──
+  const [errors, setErrors] = useState({});
+
   // ── Computed totals ──
   const totals = useMemo(() => calculateTotals(form.items), [form.items]);
 
   const handleSave = (status) => {
+    const errs = {};
+    if (!form.contact_id && !form.contact_name.trim()) errs.contact = isRTL ? 'العميل مطلوب' : 'Contact is required';
+    if (!form.items.length || form.items.every(i => !i.description && !i.description_ar)) errs.items = isRTL ? 'مطلوب بند واحد على الأقل' : 'At least 1 item required';
+    form.items.forEach((item, idx) => {
+      if (Number(item.quantity) <= 0) errs[`item_qty_${idx}`] = isRTL ? 'الكمية يجب أن تكون أكبر من 0' : 'Qty must be > 0';
+      if (Number(item.unit_price) < 0) errs[`item_price_${idx}`] = isRTL ? 'السعر يجب أن يكون 0 أو أكثر' : 'Price must be >= 0';
+    });
+    if (form.valid_until) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (new Date(form.valid_until) < today) errs.valid_until = isRTL ? 'يجب أن يكون التاريخ في المستقبل' : 'Date must be in the future';
+    }
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setErrors({});
     onSave({ ...form, ...totals }, status);
   };
 
@@ -835,10 +878,11 @@ function QuoteModal({ quote, isRTL, isDark, t, onSave, onClose, profile }) {
           )}
         </div>
 
+        {errors.contact && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block', marginBottom: 4 }}>{errors.contact}</span>}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
           <div>
             <label style={labelStyle}>{t('اسم العميل', 'Contact Name')}</label>
-            <input type="text" value={form.contact_name} onChange={e => setForm(p => ({ ...p, contact_name: e.target.value }))} style={inputStyle} />
+            <input type="text" value={form.contact_name} onChange={e => { setForm(p => ({ ...p, contact_name: e.target.value })); setErrors(p => ({ ...p, contact: '' })); }} style={{ ...inputStyle, border: errors.contact ? '1.5px solid #ef4444' : inputStyle.border }} />
           </div>
           <div>
             <label style={labelStyle}>{t('الشركة', 'Company')}</label>
@@ -918,6 +962,7 @@ function QuoteModal({ quote, isRTL, isDark, t, onSave, onClose, profile }) {
 
         {/* ── Items Table ── */}
         {sectionTitle(t('بنود العرض', 'Quote Items'))}
+        {errors.items && <span style={{ color: '#ef4444', fontSize: 12, marginBottom: 6, display: 'block' }}>{errors.items}</span>}
         <div style={{ overflowX: 'auto', marginBottom: 12 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, minWidth: 650 }}>
             <thead>
@@ -958,19 +1003,27 @@ function QuoteModal({ quote, isRTL, isDark, t, onSave, onClose, profile }) {
                 const lineTax = lineAfter * tax / 100;
                 const lineTotal = lineAfter + lineTax;
 
-                const cellInput = (field, value, opts = {}) => (
-                  <input
-                    type={opts.type || 'text'}
-                    value={value}
-                    onChange={e => updateItem(idx, field, opts.type === 'number' ? e.target.value : e.target.value)}
-                    style={{
-                      ...inputStyle,
-                      padding: '6px 8px',
-                      textAlign: opts.align || (isRTL ? 'right' : 'left'),
-                      ...(opts.style || {}),
-                    }}
-                  />
-                );
+                const cellInput = (field, value, opts = {}) => {
+                  const errKey = field === 'quantity' ? `item_qty_${idx}` : field === 'unit_price' ? `item_price_${idx}` : null;
+                  const hasErr = errKey && errors[errKey];
+                  return (
+                    <div>
+                      <input
+                        type={opts.type || 'text'}
+                        value={value}
+                        onChange={e => { updateItem(idx, field, opts.type === 'number' ? e.target.value : e.target.value); if (errKey) setErrors(p => ({ ...p, [errKey]: '' })); }}
+                        style={{
+                          ...inputStyle,
+                          padding: '6px 8px',
+                          textAlign: opts.align || (isRTL ? 'right' : 'left'),
+                          ...(opts.style || {}),
+                          ...(hasErr ? { border: '1.5px solid #ef4444' } : {}),
+                        }}
+                      />
+                      {hasErr && <span style={{ color: '#ef4444', fontSize: 10, marginTop: 1, display: 'block' }}>{errors[errKey]}</span>}
+                    </div>
+                  );
+                };
 
                 return (
                   <tr key={item.id} style={{ borderBottom: `1px solid ${isDark ? '#1e293b' : '#f1f5f9'}` }}>
@@ -1091,7 +1144,8 @@ function QuoteModal({ quote, isRTL, isDark, t, onSave, onClose, profile }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
           <div>
             <label style={labelStyle}>{t('صالح حتى', 'Valid Until')}</label>
-            <input type="date" value={form.valid_until} onChange={e => setForm(p => ({ ...p, valid_until: e.target.value }))} style={inputStyle} />
+            <input type="date" value={form.valid_until} onChange={e => { setForm(p => ({ ...p, valid_until: e.target.value })); setErrors(p => ({ ...p, valid_until: '' })); }} style={{ ...inputStyle, ...(errors.valid_until ? { border: '1.5px solid #ef4444' } : {}) }} />
+            {errors.valid_until && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.valid_until}</span>}
           </div>
           <div>
             <label style={labelStyle}>{t('العملة', 'Currency')}</label>

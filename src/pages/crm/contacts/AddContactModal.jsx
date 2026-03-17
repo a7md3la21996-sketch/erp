@@ -47,10 +47,12 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const [extraDups, setExtraDups] = useState([]);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
   const [customFieldValues, setCustomFieldValues] = useState({});
   const loggedInteractionRef = useRef(null); // track which dup+campaign combo was logged
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
+    setErrors(prev => ({ ...prev, [k]: '' }));
     // Auto-log interaction when campaign_name is typed while duplicate exists
     if (k === 'campaign_name' && v && dupWarning && onAddInteraction) {
       const logKey = `${dupWarning.id}_${v}`;
@@ -107,10 +109,14 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   };
 
   const handleSave = async () => {
-    if (!form.department) { toast.error(isRTL ? 'يرجى اختيار القسم' : 'Please select a department'); return; }
-    if (!form.contact_type) { toast.error(isRTL ? 'يرجى اختيار نوع جهة الاتصال' : 'Please select contact type'); return; }
+    const errs = {};
+    if (!form.department) errs.department = isRTL ? 'يرجى اختيار القسم' : 'Please select a department';
+    if (!form.contact_type) errs.contact_type = isRTL ? 'يرجى اختيار نوع جهة الاتصال' : 'Please select contact type';
     const fullPhone = getFullPhone(form.phone, form.countryCode);
-    if (!fullPhone || !validatePhone(fullPhone)) { toast.error(isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number'); return; }
+    if (!fullPhone || !validatePhone(fullPhone)) errs.phone = isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number';
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format';
+    if (Object.keys(errs).length) { setErrors(errs); if (errs.department || errs.contact_type || errs.phone) setStep(1); return; }
+    setErrors({});
     const invalidExtra = extraPhones.find(p => p && !validatePhone(getFullPhone(p, form.countryCode)));
     if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
     setSaving(true);
@@ -159,7 +165,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               {/* القسم والنوع */}
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'القسم' : 'Department'} <span className="text-red-500">*</span></label>
-                <Select value={form.department} onChange={e => setDept(e.target.value)}>
+                <Select value={form.department} onChange={e => { setDept(e.target.value); setErrors(p => ({ ...p, department: '' })); }} style={errors.department ? { border: '1.5px solid #ef4444' } : {}}>
                   <option value="">{isRTL ? 'اختر القسم...' : 'Select department...'}</option>
                   <option value="sales">{isRTL ? 'المبيعات' : 'Sales'}</option>
                   <option value="hr">{isRTL ? 'الموارد البشرية' : 'HR'}</option>
@@ -167,13 +173,15 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                   <option value="marketing">{isRTL ? 'التسويق' : 'Marketing'}</option>
                   <option value="operations">{isRTL ? 'العمليات' : 'Operations'}</option>
                 </Select>
+                {errors.department && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.department}</span>}
               </div>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'النوع' : 'Type'} <span className="text-red-500">*</span></label>
-                <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department}>
+                <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)} disabled={!form.department} style={errors.contact_type ? { border: '1.5px solid #ef4444' } : {}}>
                   {!form.department && <option value="">{isRTL ? 'اختر القسم أولاً...' : 'Select department first...'}</option>}
                   {availableTypes.map(t => { const ct = (contactTypes || []).find(c => c.key === t); return <option key={t} value={t}>{ct ? (isRTL ? ct.label_ar : ct.label_en) : t}</option>; })}
                 </Select>
+                {errors.contact_type && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.contact_type}</span>}
               </div>
 
               <div className="col-span-full">
@@ -230,6 +238,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                     return <span className="shrink-0 text-xs font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/10 px-2 py-1 rounded-lg whitespace-nowrap">{det.flag} {isRTL ? (cc?.labelAr || det.country) : (cc?.label || det.country)}</span>;
                   })()}
                 </div>
+                {errors.phone && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.phone}</span>}
                 {checking && <p className="text-xs text-content-muted dark:text-content-muted-dark mt-1 mb-0">{isRTL ? 'جاري التحقق...' : 'Checking...'}</p>}
                 {dupWarning && (
                   <div className="mt-2 p-3 bg-red-500/[0.08] border border-red-500/30 rounded-xl text-xs">
@@ -286,9 +295,9 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               </div>
               <div className="col-span-full">
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
-                <Input type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} />
-                {form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) && (
-                  <p className="mt-1 mb-0 text-xs text-orange-500">⚠️ {isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format'}</p>
+                <Input type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} style={errors.email ? { border: '1.5px solid #ef4444' } : {}} />
+                {(errors.email || (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))) && (
+                  <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.email || (isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format')}</span>
                 )}
               </div>
               {['lead','cold','client'].includes(form.contact_type) && (<>

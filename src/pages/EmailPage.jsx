@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import {
-  Mail, Send, Star, Trash2, Edit, Inbox, FileText, Search,
-  Paperclip, Link, Plus, X, ChevronLeft, ChevronRight, MailOpen,
-  CornerUpLeft, Archive,
+  Mail, Send, Star, Trash2, Inbox, FileText, Search,
+  Paperclip, Link, Plus, X, MailOpen,
+  CornerUpLeft,
 } from 'lucide-react';
 import {
   sendEmail, getEmails, markAsRead, starEmail, moveToTrash,
@@ -49,6 +49,7 @@ export default function EmailPage() {
   const lang = rawLang.startsWith('ar') ? 'ar' : 'en';
   const isRTL = lang === 'ar';
 
+  const [loading, setLoading] = useState(true);
   const [activeFolder, setActiveFolder] = useState('inbox');
   const [emails, setEmails] = useState([]);
   const [stats, setStats] = useState({ inbox: 0, unread: 0, sent: 0, drafts: 0 });
@@ -63,7 +64,7 @@ export default function EmailPage() {
     setStats(getEmailStats());
   }, [activeFolder, searchQuery]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => { refresh(); setLoading(false); }, [refresh]);
 
   useEffect(() => {
     const handler = () => refresh();
@@ -103,6 +104,12 @@ export default function EmailPage() {
     draft: stats.drafts,
     trash: 0,
   };
+
+  if (loading) return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 80 }}>
+      <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid #e5e7eb', borderTopColor: '#4A7AAB', borderRadius: '50%' }} />
+    </div>
+  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', direction: isRTL ? 'rtl' : 'ltr' }}>
@@ -489,6 +496,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
   const [showContactDropdown, setShowContactDropdown] = useState(false);
   const [contactSearch, setContactSearch] = useState('');
   const [sending, setSending] = useState(false);
+  const [errors, setErrors] = useState({});
   const sendTimeoutRef = useRef(null);
 
   const filteredContacts = useMemo(() => {
@@ -517,7 +525,12 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
   };
 
   const handleSend = () => {
-    if (!to.trim()) return;
+    const errs = {};
+    if (!to.trim()) errs.to = isRTL ? 'المستلم مطلوب' : 'Recipient is required';
+    if (!subject.trim()) errs.subject = isRTL ? 'الموضوع مطلوب' : 'Subject is required';
+    if (!body.trim()) errs.body = isRTL ? 'المحتوى مطلوب' : 'Body is required';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setErrors({});
     setSending(true);
     sendTimeoutRef.current = setTimeout(() => {
       sendEmail({
@@ -601,7 +614,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '8px 12px', borderRadius: 8,
-              border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+              border: errors.to ? '1.5px solid #ef4444' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
               background: isDark ? 'rgba(148,163,184,0.05)' : 'rgba(0,0,0,0.02)',
             }}>
               {toName && (
@@ -617,6 +630,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
               <input
                 value={toName ? to : contactSearch || to}
                 onChange={e => {
+                  setErrors(p => ({ ...p, to: '' }));
                   if (toName) {
                     setTo(e.target.value);
                   } else {
@@ -674,6 +688,7 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
                 ))}
               </div>
             )}
+            {errors.to && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.to}</span>}
           </div>
 
           {/* Subject */}
@@ -683,16 +698,17 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
             </label>
             <input
               value={subject}
-              onChange={e => setSubject(e.target.value)}
+              onChange={e => { setSubject(e.target.value); setErrors(p => ({ ...p, subject: '' })); }}
               placeholder={isRTL ? 'موضوع الرسالة' : 'Email subject'}
               style={{
                 width: '100%', padding: '8px 12px', borderRadius: 8,
-                border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                border: errors.subject ? '1.5px solid #ef4444' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
                 background: isDark ? 'rgba(148,163,184,0.05)' : 'rgba(0,0,0,0.02)',
                 fontSize: 13, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none',
                 boxSizing: 'border-box',
               }}
             />
+            {errors.subject && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.subject}</span>}
           </div>
 
           {/* Template selector + Opportunity link (row) */}
@@ -750,17 +766,18 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
             </label>
             <textarea
               value={body}
-              onChange={e => setBody(e.target.value)}
+              onChange={e => { setBody(e.target.value); setErrors(p => ({ ...p, body: '' })); }}
               placeholder={isRTL ? 'اكتب رسالتك هنا...' : 'Write your message here...'}
               style={{
                 flex: 1, minHeight: 180, padding: '10px 12px', borderRadius: 8,
-                border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                border: errors.body ? '1.5px solid #ef4444' : `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
                 background: isDark ? 'rgba(148,163,184,0.05)' : 'rgba(0,0,0,0.02)',
                 fontSize: 13, lineHeight: 1.6, color: isDark ? '#e2e8f0' : '#1e293b',
                 outline: 'none', resize: 'vertical', fontFamily: 'inherit',
                 boxSizing: 'border-box',
               }}
             />
+            {errors.body && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.body}</span>}
           </div>
         </div>
 
