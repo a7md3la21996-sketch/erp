@@ -19,6 +19,8 @@ export function AuthProvider({ children }) {
   const [profile, setProfile]         = useState(null);
   const [permissions, setPermissions] = useState([]);
   const [loading, setLoading]         = useState(true);
+  const [isImpersonating, setIsImpersonating] = useState(false);
+  const [originalProfile, setOriginalProfile] = useState(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('platform_mock_user');
@@ -28,6 +30,12 @@ export function AuthProvider({ children }) {
         setUser({ id: u.email, email: u.email });
         setProfile(u);
         setPermissions(ROLE_PERMISSIONS[u.role] || []);
+        // Restore impersonation state
+        const orig = localStorage.getItem('platform_original_user');
+        if (orig) {
+          setOriginalProfile(JSON.parse(orig));
+          setIsImpersonating(true);
+        }
       } catch {}
     }
     setLoading(false);
@@ -66,9 +74,49 @@ export function AuthProvider({ children }) {
     endSession();
     clearInterval(activityInterval.current);
     localStorage.removeItem('platform_mock_user');
+    localStorage.removeItem('platform_original_user');
     setUser(null);
     setProfile(null);
     setPermissions([]);
+    setIsImpersonating(false);
+    setOriginalProfile(null);
+  };
+
+  const impersonate = (role) => {
+    if (!profile) return;
+    // Save original admin profile if not already impersonating
+    if (!isImpersonating) {
+      localStorage.setItem('platform_original_user', JSON.stringify(profile));
+      setOriginalProfile(profile);
+    }
+    // Find mock user with this role
+    const entry = Object.entries(MOCK_USERS).find(([, u]) => u.role === role);
+    if (!entry) return;
+    const [email, mockUser] = entry;
+    const impProfile = {
+      id: email,
+      email,
+      role: mockUser.role,
+      full_name_ar: mockUser.full_name_ar,
+      full_name_en: mockUser.full_name_en,
+    };
+    setUser({ id: email, email });
+    setProfile(impProfile);
+    setPermissions(ROLE_PERMISSIONS[mockUser.role] || []);
+    setIsImpersonating(true);
+    localStorage.setItem('platform_mock_user', JSON.stringify(impProfile));
+  };
+
+  const stopImpersonating = () => {
+    const orig = originalProfile || JSON.parse(localStorage.getItem('platform_original_user') || 'null');
+    if (!orig) return;
+    setUser({ id: orig.email, email: orig.email });
+    setProfile(orig);
+    setPermissions(ROLE_PERMISSIONS[orig.role] || []);
+    setIsImpersonating(false);
+    setOriginalProfile(null);
+    localStorage.setItem('platform_mock_user', JSON.stringify(orig));
+    localStorage.removeItem('platform_original_user');
   };
 
   const hasPermission = useCallback((p) => {
@@ -90,6 +138,8 @@ export function AuthProvider({ children }) {
       hasPermission, hasAnyPermission,
       isAuthenticated: !!user && !!profile,
       isAdmin: profile?.role === 'admin',
+      impersonate, stopImpersonating, isImpersonating, originalProfile,
+      isRealAdmin: isImpersonating ? originalProfile?.role === 'admin' : profile?.role === 'admin',
     }}>
       {children}
     </AuthContext.Provider>

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift, Shield, ArrowLeft } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -18,11 +18,13 @@ import { useNavigate } from 'react-router-dom';
 
 export default function Header({ onMenuClick }) {
   const { t, i18n } = useTranslation();
-  const { profile, logout } = useAuth();
+  const { profile, logout, isRealAdmin, isImpersonating, impersonate, stopImpersonating, originalProfile } = useAuth();
   const { theme, toggleTheme, themeMode, setThemeMode, scheduleStart, setScheduleStart, scheduleEnd, setScheduleEnd } = useTheme();
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const themeMenuRef = useRef(null);
   const [showProfile, setShowProfile] = useState(false);
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
+  const roleSwitcherRef = useRef(null);
   const [showSearch, setShowSearch] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showFavorites, setShowFavorites] = useState(false);
@@ -80,6 +82,12 @@ export default function Header({ onMenuClick }) {
 
   useEffect(() => {
     const handler = (e) => { if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) setShowThemeMenu(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => { if (roleSwitcherRef.current && !roleSwitcherRef.current.contains(e.target)) setShowRoleSwitcher(false); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -388,6 +396,58 @@ export default function Header({ onMenuClick }) {
           </button>
           <NotificationsDropdown show={showNotifications} onClose={() => setShowNotifications(false)} />
         </div>
+        {/* Role Switcher - visible only to admin */}
+        {isRealAdmin && (
+          <div ref={roleSwitcherRef} className="relative">
+            <button
+              onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
+              className={`p-2 rounded-lg border-none cursor-pointer flex items-center gap-1 text-[12px] font-semibold ${
+                isImpersonating
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                  : 'bg-transparent text-content-muted dark:text-content-muted-dark'
+              }`}
+              title={isRTL ? 'تبديل الصلاحيات' : 'Role Switcher'}
+            >
+              <Shield size={16} />
+              <ChevronDown size={12} />
+            </button>
+            {showRoleSwitcher && (
+              <div
+                dir={isRTL ? 'rtl' : 'ltr'}
+                className="absolute top-full mt-2 end-0 w-[220px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-2xl py-1.5 z-[100]"
+              >
+                <div className="px-3 py-2 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark border-b border-edge dark:border-edge-dark/75 mb-1">
+                  {isRTL ? 'عرض كـ...' : 'View as...'}
+                </div>
+                {Object.entries(ROLE_LABELS).map(([role, labels]) => {
+                  const isActive = profile?.role === role && !isImpersonating && role === 'admin';
+                  const isViewing = profile?.role === role;
+                  return (
+                    <button
+                      key={role}
+                      onClick={() => {
+                        if (role === 'admin' || (role === originalProfile?.role && !isImpersonating)) {
+                          stopImpersonating();
+                        } else {
+                          impersonate(role);
+                        }
+                        setShowRoleSwitcher(false);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 border-none cursor-pointer text-[13px] font-[inherit] text-start ${
+                        isViewing
+                          ? 'bg-brand-500/8 text-brand-600 dark:text-brand-400 font-semibold'
+                          : 'bg-transparent text-content dark:text-content-dark hover:bg-surface-bg dark:hover:bg-surface-bg-dark'
+                      }`}
+                    >
+                      <span className="flex-1">{isRTL ? labels.ar : labels.en}</span>
+                      {isViewing && <Check size={14} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
         <div className="w-px h-6 mx-1 bg-edge dark:bg-edge-dark hidden sm:block" />
         <div ref={ref} className="relative">
           <button onClick={() => setShowProfile(!showProfile)} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg border-none cursor-pointer bg-transparent">
@@ -417,6 +477,24 @@ export default function Header({ onMenuClick }) {
         </div>
       </div>
     </header>
+    {isImpersonating && (
+      <div className="h-9 bg-amber-500/15 border-b border-amber-500/25 flex items-center justify-center gap-3 px-4 sticky top-16 z-30">
+        <Shield size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+        <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-300">
+          {isRTL
+            ? `بتشوف كـ ${ROLE_LABELS[profile?.role]?.ar || profile?.role}`
+            : `Viewing as ${ROLE_LABELS[profile?.role]?.en || profile?.role}`
+          }
+        </span>
+        <button
+          onClick={stopImpersonating}
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border-none cursor-pointer bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-semibold transition-colors"
+        >
+          <ArrowLeft size={12} />
+          {isRTL ? 'رجوع للأدمن' : 'Back to Admin'}
+        </button>
+      </div>
+    )}
     {showSearch && <GlobalSearch onClose={() => setShowSearch(false)} />}
     </>
   );
