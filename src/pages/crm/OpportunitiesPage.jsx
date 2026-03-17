@@ -283,6 +283,18 @@ export default function OpportunitiesPage() {
     }
   }, [profile]);
 
+  // Handle highlight query param (deep-link from ContactDrawer)
+  useEffect(() => {
+    const highlightId = searchParams.get('highlight');
+    if (highlightId && opps.length > 0 && !selectedOpp) {
+      const target = opps.find(o => o.id === highlightId);
+      if (target) {
+        selectOpp(target);
+        setSearchParams(prev => { prev.delete('highlight'); return prev; }, { replace: true });
+      }
+    }
+  }, [opps, searchParams, selectedOpp, selectOpp, setSearchParams]);
+
   const selectedOppIdx = selectedOpp ? sortedFiltered.findIndex(o => o.id === selectedOpp.id) : -1;
   const handleOppPrev = selectedOppIdx > 0 ? () => { selectOpp(sortedFiltered[selectedOppIdx - 1]); } : null;
   const handleOppNext = selectedOppIdx >= 0 && selectedOppIdx < sortedFiltered.length - 1 ? () => { selectOpp(sortedFiltered[selectedOppIdx + 1]); } : null;

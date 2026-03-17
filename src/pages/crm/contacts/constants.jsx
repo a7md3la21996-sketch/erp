@@ -225,7 +225,7 @@ export function PhoneCell({ phone, small = false }) {
     navigator.clipboard.writeText(phone).then(() => {
       setCopied(true);
       copyTimer.current = setTimeout(() => setCopied(false), 1500);
-    }).catch(() => {});
+    }).catch(() => { setCopied(false); });
   };
   return (
     <div className="flex items-center gap-1.5 cursor-pointer py-[3px]" dir="ltr"

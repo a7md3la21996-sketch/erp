@@ -59,6 +59,7 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
       onClose();
     } catch (err) {
       toast.error(isRTL ? 'فشل الحفظ' : 'Save failed');
+    } finally {
       setSaving(false);
     }
   };

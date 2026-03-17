@@ -136,7 +136,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               const updated = contacts.map(c => ids.includes(c.id) ? { ...c, ...updates } : c);
               setContacts(updated);
               try { localStorage.setItem('platform_contacts', JSON.stringify(updated)); } catch {}
-              await Promise.all(ids.map(id => updateContact(id, updates).catch(() => {})));
+              await Promise.all(ids.map(id => updateContact(id, updates).catch(err => { console.error('Disqualify failed for', id, err); toast.error(isRTL ? `فشل تحديث جهة اتصال` : `Failed to update a contact`); })));
               logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar });
               toast.success(isRTL ? `تم استبعاد ${ids.length} جهة اتصال` : `${ids.length} contacts disqualified`);
               setSelectedIds([]);
@@ -145,7 +145,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               const updated = contacts.map(ct => ct.id === c.id ? { ...ct, ...updates } : ct);
               setContacts(updated);
               try { localStorage.setItem('platform_contacts', JSON.stringify(updated)); } catch {}
-              await updateContact(c.id, updates).catch(() => {});
+              await updateContact(c.id, updates).catch(err => { console.error('Disqualify failed for', c.id, err); toast.error(isRTL ? 'فشل تحديث جهة الاتصال' : 'Failed to update contact'); });
               logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar });
               toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
             }
