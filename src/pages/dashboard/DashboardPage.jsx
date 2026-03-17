@@ -26,6 +26,12 @@ import { useResponsive } from '../../hooks/useMediaQuery';
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
 const EMPTY_CRM = { totalLeads: 0, newLeadsThisMonth: 0, activeOpps: 0, closedDeals: 0, revenue: 0 };
+const DATE_RANGE_OPTIONS = [
+  { value: 'this_week',     label_ar: 'هذا الأسبوع',    label_en: 'This Week' },
+  { value: 'this_month',    label_ar: 'هذا الشهر',     label_en: 'This Month' },
+  { value: 'last_3_months', label_ar: 'آخر 3 أشهر',    label_en: 'Last 3 Months' },
+  { value: 'this_year',     label_ar: 'هذا العام',     label_en: 'This Year' },
+];
 const EXPENSE_CATS = [{ name_ar: 'رواتب', name_en: 'Salaries', value: 180000, pct: 56 }, { name_ar: 'إعلانات', name_en: 'Marketing', value: 80000, pct: 25 }, { name_ar: 'إيجار', name_en: 'Rent', value: 35000, pct: 11 }, { name_ar: 'أخرى', name_en: 'Other', value: 25000, pct: 8 }];
 const BRAND = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8', '#A8BFD5'];
 
@@ -547,8 +553,8 @@ export default function DashboardPage() {
   const name = isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar);
   const roleLabel = ROLE_LABELS[role]?.[lang] || '';
   const navigate = useNavigate();
-  const sections = getSections(role);
-  const attendance = getAttendanceForMonth(YEAR, MONTH);
+  const sections = useMemo(() => getSections(role), [role]);
+  const attendance = useMemo(() => getAttendanceForMonth(YEAR, MONTH), []);
 
   // ── Widget layout state ────────────────────────────────────────────────
   const [widgetLayout, setWidgetLayout] = useState(() => getLayout(role));
@@ -571,12 +577,6 @@ export default function DashboardPage() {
 
   // ── Date range filter ────────────────────────────────────────────────────
   const [dateRange, setDateRange] = useState('this_year');
-  const DATE_RANGE_OPTIONS = [
-    { value: 'this_week',     label_ar: 'هذا الأسبوع',    label_en: 'This Week' },
-    { value: 'this_month',    label_ar: 'هذا الشهر',     label_en: 'This Month' },
-    { value: 'last_3_months', label_ar: 'آخر 3 أشهر',    label_en: 'Last 3 Months' },
-    { value: 'this_year',     label_ar: 'هذا العام',     label_en: 'This Year' },
-  ];
   const activeDateRange = getDateRange(dateRange);
   const hr = useMemo(() => buildHRStats(attendance), [attendance]);
   const dateStr = new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -1136,9 +1136,9 @@ export default function DashboardPage() {
   if (dashLoading) return <DashboardSkeleton />;
 
   // Build ordered visible widgets
-  const visibleWidgets = widgetLayout.filter(w => w.visible).sort((a, b) => a.order - b.order);
+  const visibleWidgets = useMemo(() => widgetLayout.filter(w => w.visible).sort((a, b) => a.order - b.order), [widgetLayout]);
 
-  const getGridStyle = (size) => {
+  const getGridStyle = useCallback((size) => {
     if (isMobileView) {
       // On mobile, everything is full-width (single column)
       return { gridColumn: 'span 1' };
@@ -1146,7 +1146,7 @@ export default function DashboardPage() {
     const spans = { sm: 1, md: 2, lg: 2, full: 4 };
     const span = spans[size] || 2;
     return { gridColumn: 'span ' + span };
-  };
+  }, [isMobileView]);
 
   // Widgets that contain their own grid of cards (no outer Card wrapper needed)
   const noCardWidgets = ['kpi_overview', 'recent_activities', 'hr_overview'];

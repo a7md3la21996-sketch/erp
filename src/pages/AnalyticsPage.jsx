@@ -108,15 +108,15 @@ export default function AnalyticsPage() {
   const borderColor = isDark ? 'rgba(74,122,171,0.15)' : 'rgba(0,0,0,0.08)';
   const axisColor = isDark ? '#475569' : '#cbd5e1';
 
-  const cardStyle = {
+  const cardStyle = useMemo(() => ({
     background: bgCard,
     border: `1px solid ${borderColor}`,
     borderRadius: 12,
     padding: 20,
     marginBottom: 16,
-  };
+  }), [bgCard, borderColor]);
 
-  const tableHeaderStyle = {
+  const tableHeaderStyle = useMemo(() => ({
     padding: '10px 14px',
     textAlign: isRTL ? 'right' : 'left',
     fontSize: 11,
@@ -125,15 +125,15 @@ export default function AnalyticsPage() {
     borderBottom: `1px solid ${borderColor}`,
     background: bgCardAlt,
     whiteSpace: 'nowrap',
-  };
+  }), [isRTL, textSecondary, borderColor, bgCardAlt]);
 
-  const tableCellStyle = {
+  const tableCellStyle = useMemo(() => ({
     padding: '10px 14px',
     fontSize: 13,
     color: textPrimary,
     borderBottom: `1px solid ${borderColor}`,
     whiteSpace: 'nowrap',
-  };
+  }), [textPrimary, borderColor]);
 
   // ── Export handler ───────────────────────────────────────────
   const handleExport = useCallback(async (format) => {

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -767,9 +767,9 @@ export default function ReportsPage() {
   }, [liveData, dateRange]);
 
   // Get report data — use live if available, fallback to mock
-  const getReportData = (reportKey, mockData) => {
+  const getReportData = useCallback((reportKey, mockData) => {
     return liveReports[reportKey] && liveReports[reportKey].length > 0 ? liveReports[reportKey] : mockData;
-  };
+  }, [liveReports]);
 
   // Apply SmartFilter + audit filters on flat reports
   const smartFiltered = useMemo(() => {
@@ -803,7 +803,7 @@ export default function ReportsPage() {
   const totalFilteredReports = allFilteredReports.length;
   const totalPages = Math.max(1, Math.ceil(totalFilteredReports / pageSize));
   const safePage = Math.min(page, totalPages);
-  const pagedReports = allFilteredReports.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const pagedReports = useMemo(() => allFilteredReports.slice((safePage - 1) * pageSize, safePage * pageSize), [allFilteredReports, safePage, pageSize]);
 
   // Rebuild paged categories from paged reports
   const pagedCategories = useMemo(() => {
@@ -820,15 +820,15 @@ export default function ReportsPage() {
 
   const totalReports = REPORT_CATEGORIES.reduce((s, c) => s + c.reports.length, 0);
 
-  function handleGenerate(report, category) {
+  const handleGenerate = useCallback((report, category) => {
     const data = getReportData(report.key, report.data);
     setActiveReport({ report: { ...report, data }, category, liveData: data });
     setModalOpen(true);
-  }
+  }, [getReportData]);
 
-  const reportTable = activeReport ? renderReportTable(activeReport.report.key, activeReport.liveData || activeReport.report.data, lang) : null;
-  const exportData = reportTable ? reportTable.rows.map(row => { const obj = {}; reportTable.headers.forEach((h, i) => { obj[h] = row[i]; }); return obj; }) : [];
-  const exportColumns = reportTable ? reportTable.headers.map(h => ({ header: h, key: h })) : [];
+  const reportTable = useMemo(() => activeReport ? renderReportTable(activeReport.report.key, activeReport.liveData || activeReport.report.data, lang) : null, [activeReport, lang]);
+  const exportData = useMemo(() => reportTable ? reportTable.rows.map(row => { const obj = {}; reportTable.headers.forEach((h, i) => { obj[h] = row[i]; }); return obj; }) : [], [reportTable]);
+  const exportColumns = useMemo(() => reportTable ? reportTable.headers.map(h => ({ header: h, key: h })) : [], [reportTable]);
 
   return (
     <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
