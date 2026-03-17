@@ -3,16 +3,16 @@ import { logCreate, logUpdate, logDelete } from './auditService';
 const STORAGE_KEY = 'platform_campaigns';
 
 const INITIAL_CAMPAIGNS = [
-  { id: '1', name_en: 'Spring Sale 2026', name_ar: 'تخفيضات الربيع 2026', platform: 'facebook', status: 'active', budget: 25000, spent: 18500, start_date: '2026-02-01', end_date: '2026-03-31', type: 'paid_ads', target_audience: 'new_leads', notes: '' },
-  { id: '2', name_en: 'Brand Awareness Q1', name_ar: 'بناء الوعي Q1', platform: 'google_ads', status: 'active', budget: 40000, spent: 32000, start_date: '2026-01-15', end_date: '2026-03-15', type: 'paid_ads', target_audience: 'awareness', notes: '' },
-  { id: '3', name_en: 'Reels Campaign', name_ar: 'حملة ريلز', platform: 'instagram', status: 'active', budget: 15000, spent: 12000, start_date: '2026-02-10', end_date: '2026-04-10', type: 'content', target_audience: 'new_leads', notes: '' },
-  { id: '4', name_en: 'Retargeting Warm Leads', name_ar: 'إعادة استهداف', platform: 'facebook', status: 'paused', budget: 12000, spent: 9800, start_date: '2026-01-01', end_date: '2026-02-28', type: 'retargeting', target_audience: 'warm_leads', notes: '' },
-  { id: '5', name_en: 'Google Search CRM', name_ar: 'بحث جوجل CRM', platform: 'google_ads', status: 'completed', budget: 30000, spent: 28500, start_date: '2025-11-01', end_date: '2026-01-31', type: 'paid_ads', target_audience: 'new_leads', notes: '' },
-  { id: '6', name_en: 'New Capital Launch', name_ar: 'إطلاق العاصمة الجديدة', platform: 'facebook', status: 'active', budget: 50000, spent: 22000, start_date: '2026-03-01', end_date: '2026-05-31', type: 'paid_ads', target_audience: 'new_leads', notes: '' },
-  { id: '7', name_en: 'North Coast Summer', name_ar: 'الساحل الشمالي صيف', platform: 'instagram', status: 'active', budget: 35000, spent: 8000, start_date: '2026-03-10', end_date: '2026-06-30', type: 'content', target_audience: 'new_leads', notes: '' },
-  { id: '8', name_en: 'Cold Calling Campaign', name_ar: 'حملة كولد كول', platform: 'cold_call', status: 'active', budget: 5000, spent: 3000, start_date: '2026-02-15', end_date: '2026-04-15', type: 'outbound', target_audience: 'cold_leads', notes: '' },
-  { id: '9', name_en: 'Referral Program', name_ar: 'برنامج التوصيات', platform: 'referral', status: 'active', budget: 10000, spent: 4500, start_date: '2026-01-01', end_date: '2026-12-31', type: 'referral', target_audience: 'existing_clients', notes: '' },
-  { id: '10', name_en: 'Walk-in Event', name_ar: 'حدث زيارة مباشرة', platform: 'walk_in', status: 'completed', budget: 20000, spent: 19000, start_date: '2026-02-01', end_date: '2026-02-28', type: 'event', target_audience: 'new_leads', notes: '' },
+  { id: '1', name_en: 'Spring Sale 2026', name_ar: 'تخفيضات الربيع 2026', platform: 'facebook', status: 'active', budget: 25000, spent: 18500, start_date: '2026-02-01', end_date: '2026-03-31', type: 'paid_ads', target_audience: 'new_leads', notes: '', created_by: 'أحمد علاء', created_at: '2026-01-28' },
+  { id: '2', name_en: 'Brand Awareness Q1', name_ar: 'بناء الوعي Q1', platform: 'google_ads', status: 'active', budget: 40000, spent: 32000, start_date: '2026-01-15', end_date: '2026-03-15', type: 'paid_ads', target_audience: 'awareness', notes: '', created_by: 'سارة محمد', created_at: '2026-01-10' },
+  { id: '3', name_en: 'Reels Campaign', name_ar: 'حملة ريلز', platform: 'instagram', status: 'active', budget: 15000, spent: 12000, start_date: '2026-02-10', end_date: '2026-04-10', type: 'content', target_audience: 'new_leads', notes: '', created_by: 'نورهان أحمد', created_at: '2026-02-05' },
+  { id: '4', name_en: 'Retargeting Warm Leads', name_ar: 'إعادة استهداف', platform: 'facebook', status: 'paused', budget: 12000, spent: 9800, start_date: '2026-01-01', end_date: '2026-02-28', type: 'retargeting', target_audience: 'warm_leads', notes: '', created_by: 'أحمد علاء', created_at: '2025-12-25' },
+  { id: '5', name_en: 'Google Search CRM', name_ar: 'بحث جوجل CRM', platform: 'google_ads', status: 'completed', budget: 30000, spent: 28500, start_date: '2025-11-01', end_date: '2026-01-31', type: 'paid_ads', target_audience: 'new_leads', notes: '', created_by: 'سارة محمد', created_at: '2025-10-20' },
+  { id: '6', name_en: 'New Capital Launch', name_ar: 'إطلاق العاصمة الجديدة', platform: 'facebook', status: 'active', budget: 50000, spent: 22000, start_date: '2026-03-01', end_date: '2026-05-31', type: 'paid_ads', target_audience: 'new_leads', notes: '', created_by: 'أحمد علاء', created_at: '2026-02-20' },
+  { id: '7', name_en: 'North Coast Summer', name_ar: 'الساحل الشمالي صيف', platform: 'instagram', status: 'active', budget: 35000, spent: 8000, start_date: '2026-03-10', end_date: '2026-06-30', type: 'content', target_audience: 'new_leads', notes: '', created_by: 'نورهان أحمد', created_at: '2026-03-01' },
+  { id: '8', name_en: 'Cold Calling Campaign', name_ar: 'حملة كولد كول', platform: 'cold_call', status: 'active', budget: 5000, spent: 3000, start_date: '2026-02-15', end_date: '2026-04-15', type: 'outbound', target_audience: 'cold_leads', notes: '', created_by: 'محمد خالد', created_at: '2026-02-10' },
+  { id: '9', name_en: 'Referral Program', name_ar: 'برنامج التوصيات', platform: 'referral', status: 'active', budget: 10000, spent: 4500, start_date: '2026-01-01', end_date: '2026-12-31', type: 'referral', target_audience: 'existing_clients', notes: '', created_by: 'سارة محمد', created_at: '2025-12-28' },
+  { id: '10', name_en: 'Walk-in Event', name_ar: 'حدث زيارة مباشرة', platform: 'walk_in', status: 'completed', budget: 20000, spent: 19000, start_date: '2026-02-01', end_date: '2026-02-28', type: 'event', target_audience: 'new_leads', notes: '', created_by: 'محمد خالد', created_at: '2026-01-25' },
 ];
 
 function loadCampaigns() {
@@ -42,7 +42,7 @@ export async function fetchCampaigns() {
 
 export async function createCampaign(data) {
   const list = loadCampaigns();
-  const campaign = { ...data, id: String(Date.now()) };
+  const campaign = { ...data, id: String(Date.now()), created_at: data.created_at || new Date().toISOString().slice(0, 10) };
   list.unshift(campaign);
   saveCampaigns(list);
   logCreate('campaign', campaign.id, campaign);
