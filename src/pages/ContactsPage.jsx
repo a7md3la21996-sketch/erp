@@ -52,6 +52,8 @@ export default function ContactsPage() {
   const [showBlacklisted, setShowBlacklisted] = useState(searchParams.get('blacklist') === 'true');
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'created');
   const [actionLoading, setActionLoading] = useState(false);
+  const [page, setPage] = useState(() => parseInt(searchParams.get('page')) || 1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Sync filters to URL
   useEffect(() => {
@@ -75,8 +77,6 @@ export default function ContactsPage() {
   const [logCallTarget, setLogCallTarget] = useState(null);
   const [reminderTarget, setReminderTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [page, setPage] = useState(() => parseInt(searchParams.get('page')) || 1);
-  const [pageSize, setPageSize] = useState(25);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
