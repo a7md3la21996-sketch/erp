@@ -42,15 +42,27 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState([]);
   const [campaignsList, setCampaignsList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
+  const [search, setSearch] = useState(searchParams.get('q') || '');
   useEffect(() => {
     const timer = setTimeout(() => setSearch(searchInput), 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
-  const [filterType, setFilterType] = useState('all');
-  const [showBlacklisted, setShowBlacklisted] = useState(false);
-  const [sortBy, setSortBy] = useState('created');
+  const [filterType, setFilterType] = useState(searchParams.get('type') || 'all');
+  const [showBlacklisted, setShowBlacklisted] = useState(searchParams.get('blacklist') === 'true');
+  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'created');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (filterType !== 'all') params.set('type', filterType);
+    if (showBlacklisted) params.set('blacklist', 'true');
+    if (sortBy !== 'created') params.set('sort', sortBy);
+    if (page > 1) params.set('page', String(page));
+    setSearchParams(params, { replace: true });
+  }, [search, filterType, showBlacklisted, sortBy, page, setSearchParams]);
   const [smartFilters, setSmartFilters] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -63,7 +75,7 @@ export default function ContactsPage() {
   const [logCallTarget, setLogCallTarget] = useState(null);
   const [reminderTarget, setReminderTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => parseInt(searchParams.get('page')) || 1);
   const [pageSize, setPageSize] = useState(25);
   const [showBulkMenu, setShowBulkMenu] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -148,7 +160,9 @@ export default function ContactsPage() {
       if (contact.contact_status === 'new' || !contact.contact_status) {
         const updated = { ...contact, contact_status: 'contacted' };
         setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; });
-        updateContact(updated.id, updated).catch(() => {});
+        updateContact(updated.id, updated).catch(() => {
+          toast.error(isRTL ? 'فشل تحديث حالة جهة الاتصال' : 'Failed to update contact status');
+        });
       }
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch {
@@ -218,6 +232,8 @@ export default function ContactsPage() {
   const handleBulkReassign = async (agentName) => {
     const assignedByName = profile?.full_name_ar || '—';
     const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
+    const prevContacts = contacts;
+    const idsToUpdate = [...selectedIds];
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_by_name: assignedByName } : c);
     setContacts(updated);
     localStorage.setItem('platform_contacts', JSON.stringify(updated));
@@ -229,12 +245,20 @@ export default function ContactsPage() {
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
-    await Promise.all(selectedIds.map(id => updateContact(id, { assigned_to_name: agentName, assigned_by_name: assignedByName }).catch(() => {})));
+    try {
+      await Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_by_name: assignedByName })));
+    } catch {
+      setContacts(prevContacts);
+      localStorage.setItem('platform_contacts', JSON.stringify(prevContacts));
+      toast.error(isRTL ? 'فشل تعيين بعض جهات الاتصال' : 'Failed to reassign some contacts');
+    }
   };
 
   const handleBulkChangeField = async (field, value, actionLabel) => {
     const count = selectedIds.length;
     const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
+    const prevContacts = contacts;
+    const idsToUpdate = [...selectedIds];
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, [field]: value } : c);
     setContacts(updated);
     localStorage.setItem('platform_contacts', JSON.stringify(updated));
@@ -244,7 +268,13 @@ export default function ContactsPage() {
     setSelectedIds([]);
     setBulkDropdownOpen(null);
     setShowBulkMenu(false);
-    await Promise.all(selectedIds.map(id => updateContact(id, { [field]: value }).catch(() => {})));
+    try {
+      await Promise.all(idsToUpdate.map(id => updateContact(id, { [field]: value })));
+    } catch {
+      setContacts(prevContacts);
+      localStorage.setItem('platform_contacts', JSON.stringify(prevContacts));
+      toast.error(isRTL ? 'فشل تحديث بعض جهات الاتصال' : 'Failed to update some contacts');
+    }
   };
 
   const handleBulkSMS = async () => {
@@ -519,17 +549,29 @@ export default function ContactsPage() {
   };
 
   const handleBlacklist = async (contact, reason) => {
-    try { await blacklistContact(contact.id, reason); } catch { /* optimistic */ }
     setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c));
-    logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
     if (selected?.id === contact.id) setSelected(null);
+    try {
+      await blacklistContact(contact.id, reason);
+      logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
+      toast.success(isRTL ? 'تم إضافة للقائمة السوداء' : 'Contact blacklisted');
+    } catch {
+      setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: false, blacklist_reason: null } : c));
+      toast.error(isRTL ? 'فشل إضافة للقائمة السوداء' : 'Failed to blacklist contact');
+    }
   };
 
   const tdCls = `px-4 py-3.5 border-b border-edge/50 dark:border-edge-dark/50 align-middle text-xs text-content dark:text-content-dark text-start`;
 
   if (loading) return <PageSkeleton hasKpis={false} tableRows={8} tableCols={7} />;
 
-  return (
+  return (<>
+    {actionLoading && (
+      <div className="fixed top-0 left-0 right-0 z-[2000] h-1 bg-brand-500/20 overflow-hidden">
+        <div className="h-full bg-brand-500" style={{ width: '30%', animation: 'indeterminate 1.5s ease-in-out infinite' }} />
+        <style>{`@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }`}</style>
+      </div>
+    )}
     <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
@@ -653,9 +695,9 @@ export default function ContactsPage() {
         const updated = { ...contact, campaign_interactions: [...existing, interaction] };
         setContacts(prev => prev.map(c => c.id === contact.id ? updated : c));
         localStorage.setItem('platform_contacts', JSON.stringify(contacts.map(c => c.id === contact.id ? updated : c)));
-        updateContact(contact.id, { campaign_interactions: updated.campaign_interactions }).catch(() => {});
+        updateContact(contact.id, { campaign_interactions: updated.campaign_interactions }).catch(() => { toast.error(isRTL ? 'فشل حفظ التفاعل' : 'Failed to save interaction'); });
       }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => { /* optimistic */ }); logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: `Updated contact: ${updated.full_name}`, userName: profile?.full_name_ar || '' }) }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
+      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => { toast.error(isRTL ? 'فشل حفظ التعديلات' : 'Failed to save changes'); }); logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: `Updated contact: ${updated.full_name}`, userName: profile?.full_name_ar || '' }) }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
       {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
@@ -791,5 +833,5 @@ export default function ContactsPage() {
         isRTL={isRTL}
       />
     </div>
-  );
+  </>);
 }

@@ -23,6 +23,7 @@ import HeatmapCalendar from '../../components/ui/HeatmapCalendar';
 import ErrorBoundary from '../../components/ErrorBoundary';
 import { getActivityHeatmap } from '../../services/heatmapService';
 import { useResponsive } from '../../hooks/useMediaQuery';
+import { useToast } from '../../contexts/ToastContext';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -550,6 +551,7 @@ export default function DashboardPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { isMobile: isMobileView } = useResponsive();
+  const toast = useToast();
   const isRTL = i18n.language === 'ar'; const lang = i18n.language;
   const role = profile?.role || 'admin';
   const userId = profile?.id || profile?.email || '';
@@ -596,7 +598,10 @@ export default function DashboardPage() {
     fetchAllDashboardData().then(data => {
       setDashData(data);
       setDashLoading(false);
-    }).catch(() => setDashLoading(false));
+    }).catch(() => {
+      setDashLoading(false);
+      toast.error(lang === 'ar' ? 'فشل تحميل بيانات لوحة التحكم' : 'Failed to load dashboard data');
+    });
   }, []);
 
   const crm = useMemo(() => {
@@ -621,7 +626,9 @@ export default function DashboardPage() {
   const rawOpps = dashData?.opportunities?.rawOpps;
 
   const [wonDeals, setWonDeals] = useState([]);
-  useEffect(() => { getWonDeals().then(d => setWonDeals(d || [])).catch(() => {}); }, []);
+  useEffect(() => { getWonDeals().then(d => setWonDeals(d || [])).catch(() => {
+    toast.error(lang === 'ar' ? 'فشل تحميل الصفقات' : 'Failed to load deals');
+  }); }, []);
 
   const rangeStats = useMemo(() => {
     if (!rawOpps?.length) return null;
