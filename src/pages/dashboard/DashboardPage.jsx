@@ -681,15 +681,16 @@ export default function DashboardPage() {
 
   const mutedColor = isDark ? '#8BA8C8' : '#64748B';
 
+  const safeVal = (v) => (v != null && typeof v === 'object') ? JSON.stringify(v) : v;
   const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB', onClick }) => (
     <Card className={`relative overflow-hidden px-5 py-[18px] ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow duration-200' : ''}`} onClick={onClick}>
       <div className="absolute top-0 start-0 w-1 h-full rounded-s-xl" style={{ background: 'linear-gradient(180deg,' + color + ',transparent)' }} />
       <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="text-start">
-          <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark font-medium">{label}</p>
-          <p className="m-0 text-2xl font-bold text-content dark:text-content-dark leading-none">{value}</p>
-          {sub && <p className="m-0 mt-1 text-xs text-content-muted dark:text-content-muted-dark">{sub}</p>}
-          {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-xs font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{trend}</span></div>}
+          <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark font-medium">{safeVal(label)}</p>
+          <p className="m-0 text-2xl font-bold text-content dark:text-content-dark leading-none">{safeVal(value)}</p>
+          {sub && <p className="m-0 mt-1 text-xs text-content-muted dark:text-content-muted-dark">{safeVal(sub)}</p>}
+          {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-xs font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{safeVal(trend)}</span></div>}
         </div>
         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: color + '18' }}><Icon size={20} color={color} /></div>
       </div>

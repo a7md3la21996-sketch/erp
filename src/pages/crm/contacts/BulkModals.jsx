@@ -3,7 +3,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { updateContact } from '../../../services/contactsService';
-import { createOpportunity, fetchContacts } from '../../../services/opportunitiesService';
+import { createOpportunity } from '../../../services/opportunitiesService';
 import { logAction } from '../../../services/auditService';
 import { createNotification } from '../../../services/notificationsService';
 import { getTemplates, renderBody } from '../../../services/smsTemplateService';
