@@ -59,6 +59,7 @@ const ScheduledReportsPage = lazy(() => import('./pages/settings/ScheduledReport
 const SMSTemplatesPage = lazy(() => import('./pages/settings/SMSTemplatesPage'));
 const PrintSettingsPage = lazy(() => import('./pages/settings/PrintSettingsPage'));
 const ChatInboxPage = lazy(() => import('./pages/ChatInboxPage'));
+const EmailPage = lazy(() => import('./pages/EmailPage'));
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const ChartBuilderPage = lazy(() => import('./pages/ChartBuilderPage'));
 const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'));
@@ -75,7 +76,9 @@ const RolesPage = lazy(() => import('./pages/settings/RolesPage'));
 const SLAManagementPage = lazy(() => import('./pages/settings/SLAManagementPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
+const KnowledgeBasePage = lazy(() => import('./pages/KnowledgeBasePage'));
 const ComparisonReportsPage = lazy(() => import('./pages/ComparisonReportsPage'));
+const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'));
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -184,8 +187,10 @@ export default function App() {
                 <Route path="/marketing/*" element={<Guarded><MarketingPage /></Guarded>} />
                 <Route path="/calendar" element={<Guarded><CalendarPage /></Guarded>} />
                 <Route path="/chat" element={<Guarded><ChatInboxPage /></Guarded>} />
+                <Route path="/email" element={<Guarded><EmailPage /></Guarded>} />
                 <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
                 <Route path="/comparison" element={<Guarded><ComparisonReportsPage /></Guarded>} />
+                <Route path="/approvals" element={<Guarded><ApprovalsPage /></Guarded>} />
                 <Route path="/analytics" element={<Guarded><AnalyticsPage /></Guarded>} />
                 <Route path="/heatmap" element={<Guarded><HeatmapPage /></Guarded>} />
                 <Route path="/chart-builder" element={<Guarded><ChartBuilderPage /></Guarded>} />
@@ -211,6 +216,7 @@ export default function App() {
                 <Route path="/changelog" element={<Guarded><ChangelogPage /></Guarded>} />
                 <Route path="/notifications" element={<Guarded><NotificationsPage /></Guarded>} />
                 <Route path="/help" element={<Guarded><HelpCenterPage /></Guarded>} />
+                <Route path="/knowledge-base" element={<Guarded><KnowledgeBasePage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/profile" element={<Guarded><ProfilePage /></Guarded>} />
               </Route>

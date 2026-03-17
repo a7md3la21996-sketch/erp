@@ -20,9 +20,13 @@ export default function Modal({ open, onClose, title, width = 'max-w-lg', childr
       <div
         dir="auto"
         className={`
-          relative ${width} w-[calc(100%-1.5rem)] md:w-full mx-2 md:mx-4 max-h-[85vh] md:max-h-[90vh] overflow-y-auto
+          relative ${width}
+          w-[calc(100%-1rem)] sm:w-[calc(100%-1.5rem)] md:w-full
+          mx-1 sm:mx-2 md:mx-4
+          max-h-[92vh] sm:max-h-[85vh] md:max-h-[90vh]
+          overflow-y-auto
           bg-surface-card dark:bg-surface-card-dark
-          rounded-2xl shadow-2xl z-[1]
+          rounded-xl sm:rounded-2xl shadow-2xl z-[1]
           animate-in fade-in zoom-in-95 duration-200
         `}
       >

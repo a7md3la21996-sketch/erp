@@ -1,25 +1,22 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import FollowUpReminder from '../../components/ui/FollowUpReminder';
-import DocumentsSection from '../../components/ui/DocumentsSection';
-import CommentsSection from '../../components/ui/CommentsSection';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects } from '../../services/opportunitiesService';
-import { fetchContactActivities, createActivity } from '../../services/contactsService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { isFavorite as checkFavorite, toggleFavorite } from '../../services/favoritesService';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
-import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, List, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
+import { TrendingUp, Plus, Search, X, MoreHorizontal, Trash2, Building2, Banknote, User, Grid3X3, Flame, Loader2, Pencil, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, List, Columns, MapPin, Briefcase, Calendar, ExternalLink, CheckSquare, Square, AlertTriangle, Timer, Bookmark, StickyNote, Zap, RefreshCw, ChevronUp, ChevronDown, Download, Thermometer, Flag, ArrowRight, Printer } from 'lucide-react';
 import { Button, Card, Input, Select, Textarea, Modal, ModalFooter, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 import { DEPT_STAGES, getDeptStages, deptStageLabel } from './contacts/constants';
 import { logView } from '../../services/viewTrackingService';
 import { addRecentItem } from '../../services/recentItemsService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import { exportToCSV as exportReportCSV, exportToPrintableHTML, generateOpportunitiesReport } from '../../services/reportExportService';
 import { notifyDealWon } from '../../services/notificationsService';
 import { evaluateTriggers } from '../../services/triggerService';
+import { createApproval as createApprovalRequest, getApprovalByEntity, getAutoApproveThreshold } from '../../services/approvalService';
 import {
   TEMP_CONFIG, PRIORITY_CONFIG, ACTIVITY_ICONS, SORT_OPTIONS, TEMP_ORDER, STAGE_WIN_RATES,
   calcLeadScore, scoreColor, scoreLabel, fmtBudget, daysSince, daysInStage, actLabel,
@@ -31,6 +28,7 @@ import OppCard from './opportunities/OppCard';
 import ContactSearch from './opportunities/ContactSearch';
 import AddModal from './opportunities/AddModal';
 import OpportunityDrawer from './opportunities/OpportunityDrawer';
+import { useResponsive } from '../../hooks/useMediaQuery';
 
 /* OppCard, ContactSearch, AddModal, OpportunityDrawer extracted to ./opportunities/ */
 // ═══════════════════════════════════════════════
@@ -41,6 +39,7 @@ export default function OpportunitiesPage() {
   const isDark = theme === 'dark';
   const { i18n } = useTranslation();
   const { profile } = useAuth();
+  const { isMobile } = useResponsive();
   const navigate = useNavigate();
   const location = useLocation();
   const { lostReasons: configLostReasons, sources: configSources, sourceLabels: configSourceLabels, contactTypes: configContactTypes, typeMap: configTypeMap, departments: configDepartments, activityTypes: configActivityTypes, activityResults: configActivityResults, stageWinRates: configStageWinRates } = useSystemConfig();
@@ -101,6 +100,8 @@ export default function OpportunitiesPage() {
   const [showFunnel, setShowFunnel] = useState(false);
   const [bulkToast, setBulkToast] = useState(null);
   const [moveWarningToast, setMoveWarningToast] = useState(null);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  const [bulkBarVisible, setBulkBarVisible] = useState(false);
   const isAdmin = profile?.role === 'admin';
   const [gridPage, setGridPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -174,6 +175,7 @@ export default function OpportunitiesPage() {
   useEffect(() => {
     const handler = (e) => {
       if (e.key === 'Escape') {
+        if (confirmBulkDelete) { setConfirmBulkDelete(false); return; }
         if (lostReasonModal) { setLostReasonModal(null); return; }
         if (confirmDelete) { setConfirmDelete(null); return; }
         if (showModal) { setShowModal(false); return; }
@@ -187,7 +189,7 @@ export default function OpportunitiesPage() {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [selectedOpp, lostReasonModal, confirmDelete, showModal, closeDrawer]);
+  }, [selectedOpp, lostReasonModal, confirmDelete, confirmBulkDelete, showModal, closeDrawer]);
 
   // Dynamic stage config based on department filter
   const currentStages = filterDept === 'all' ? getDeptStages('sales') : getDeptStages(filterDept);
@@ -434,7 +436,6 @@ export default function OpportunitiesPage() {
     setOpps(p => p.map(o => o.id === id ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates } : o));
     if (selectedOpp?.id === id) {
       setSelectedOpp(p => ({ ...p, stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates }));
-      setStageHistory(getStageHistory(id));
     }
     await updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString(), ...extraUpdates }).catch(() => {});
     logAction({ action: 'stage_change', entity: 'opportunity', entityId: id, entityName: getContactName(opps.find(o => o.id === id) || {}), description: isRTL ? 'تغيير مرحلة' : 'Stage changed', oldValue: fromStage, newValue: toStage, userName: profile?.full_name_ar || profile?.full_name_en || '' });
@@ -451,6 +452,22 @@ export default function OpportunitiesPage() {
           value: opp.budget ? `${Number(opp.budget).toLocaleString()} EGP` : '—',
           agentId: opp.assigned_to || 'all',
         });
+        // Auto-create approval request if budget exceeds threshold
+        const approvalThreshold = getAutoApproveThreshold();
+        if ((opp.budget || 0) >= approvalThreshold && !getApprovalByEntity('deal', opp.id)) {
+          createApprovalRequest({
+            type: 'deal',
+            entity_id: opp.id,
+            entity_name: getContactName(opp),
+            requesterId: profile?.id || profile?.email || '',
+            requesterName: profile?.full_name_ar || profile?.full_name_en || '',
+            amount: opp.budget,
+            priority: (opp.budget || 0) >= approvalThreshold * 3 ? 'urgent' : 'normal',
+            approverId: 'admin',
+            approverName: 'Admin',
+            notes: `${isRTL ? 'صفقة مغلقة بقيمة' : 'Deal won with value'} ${Number(opp.budget).toLocaleString()} EGP`,
+          });
+        }
       }
       if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
         const deal = await createDealFromOpportunity({ ...opp, stage: toStage });
@@ -536,6 +553,23 @@ export default function OpportunitiesPage() {
         value: updates.budget ? `${Number(updates.budget).toLocaleString()} EGP` : '—',
         agentId: updates.assigned_to || selectedOpp?.assigned_to || 'all',
       });
+      // Auto-create approval request if budget exceeds threshold
+      const budgetVal2 = Number(updates.budget) || Number(selectedOpp?.budget) || 0;
+      const approvalThreshold2 = getAutoApproveThreshold();
+      if (budgetVal2 >= approvalThreshold2 && !getApprovalByEntity('deal', oppId)) {
+        createApprovalRequest({
+          type: 'deal',
+          entity_id: oppId,
+          entity_name: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}),
+          requesterId: profile?.id || profile?.email || '',
+          requesterName: profile?.full_name_ar || profile?.full_name_en || '',
+          amount: budgetVal2,
+          priority: budgetVal2 >= approvalThreshold2 * 3 ? 'urgent' : 'normal',
+          approverId: 'admin',
+          approverName: 'Admin',
+          notes: `${isRTL ? 'صفقة مغلقة بقيمة' : 'Deal won with value'} ${budgetVal2.toLocaleString()} EGP`,
+        });
+      }
       const opp = opps.find(o => o.id === oppId);
       if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
         const deal = await createDealFromOpportunity({ ...opp, ...result });
@@ -610,6 +644,53 @@ export default function OpportunitiesPage() {
 
   const showBulkToast = (msg) => { setBulkToast(msg); setTimeout(() => setBulkToast(null), 3000); };
 
+  // Animate floating bulk bar
+  useEffect(() => {
+    if (bulkSelected.size > 0 && viewMode === 'table') {
+      const t = setTimeout(() => setBulkBarVisible(true), 10);
+      return () => clearTimeout(t);
+    } else {
+      setBulkBarVisible(false);
+    }
+  }, [bulkSelected.size, viewMode]);
+
+  // Bulk CSV export
+  const bulkExportCSV = useCallback(() => {
+    const selectedOpps = sortedFiltered.filter(o => bulkSelected.has(o.id));
+    if (!selectedOpps.length) return;
+    const headers = [
+      isRTL ? 'الاسم' : 'Name',
+      isRTL ? 'المشروع' : 'Project',
+      isRTL ? 'المرحلة' : 'Stage',
+      isRTL ? 'الميزانية' : 'Budget',
+      isRTL ? 'الحرارة' : 'Temperature',
+      isRTL ? 'الأولوية' : 'Priority',
+      isRTL ? 'المسؤول' : 'Agent',
+      isRTL ? 'النقاط' : 'Score',
+      isRTL ? 'التاريخ' : 'Created',
+    ];
+    const rows = selectedOpps.map(o => [
+      getContactName(o),
+      getProjectName(o, lang),
+      deptStageLabel(o.stage, o.contacts?.department || 'sales', isRTL),
+      o.budget || 0,
+      isRTL ? (TEMP_CONFIG[o.temperature]?.label_ar || '') : (TEMP_CONFIG[o.temperature]?.label_en || ''),
+      isRTL ? (PRIORITY_CONFIG[o.priority]?.label_ar || '') : (PRIORITY_CONFIG[o.priority]?.label_en || ''),
+      getAgentName(o, lang),
+      scoreMap[o.id] ?? calcLeadScore(o),
+      o.created_at?.slice(0, 10) || '',
+    ]);
+    const csvContent = '\uFEFF' + [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `opportunities_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showBulkToast(isRTL ? `تم تصدير ${selectedOpps.length} فرصة` : `${selectedOpps.length} opportunities exported`);
+  }, [bulkSelected, sortedFiltered, isRTL, lang, scoreMap]);
+
   // Duplicate detection (memoized Set)
   const duplicateContactIds = useMemo(() => {
     const counts = {};
@@ -662,6 +743,14 @@ export default function OpportunitiesPage() {
             <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
           </Button>
           <ExportButton data={exportData} filename="opportunities" title={isRTL ? 'الفرص' : 'Opportunities'} />
+          <Button variant="ghost" size="sm" onClick={() => {
+            const report = generateOpportunitiesReport(sortedFiltered, {
+              stage: activeStage !== 'all' ? activeStage : null,
+            }, isRTL);
+            exportToPrintableHTML(report.title, report.sections, report.options);
+          }} title={isRTL ? 'طباعة / PDF' : 'Print / PDF'}>
+            <Printer size={15} />
+          </Button>
           <Button size="sm" onClick={() => setShowModal(true)}>
             <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
           </Button>
@@ -681,7 +770,7 @@ export default function OpportunitiesPage() {
           { label: isRTL ? 'التحويل' : 'Conv.', value: conversionRate + '%', color: '#6B8DB5', icon: Zap },
           { label: isRTL ? 'فرص قريبة' : 'Quick Wins', value: quickWins.length, color: '#8B5CF6', icon: Star, onClick: quickWins.length > 0 ? () => setSmartFilters([{ field: 'temperature', operator: 'is', value: 'hot' }]) : undefined, title: isRTL ? 'فرص ساخنة قريبة من الإغلاق' : 'Hot opps near closing' },
         ].map((s, i) => (
-          <div key={i} className={`flex-[1_1_120px] ${s.onClick ? 'cursor-pointer' : ''}`} onClick={s.onClick} title={s.title || ''}>
+          <div key={i} className={`${isMobile ? 'flex-[1_1_calc(50%-6px)]' : 'flex-[1_1_120px]'} ${s.onClick ? 'cursor-pointer' : ''}`} onClick={s.onClick} title={s.title || ''}>
             <KpiCard icon={s.icon} label={s.label} value={s.value} color={s.color} />
           </div>
         ))}
@@ -852,34 +941,7 @@ export default function OpportunitiesPage() {
         </>}
       />
 
-      {/* Bulk Actions Bar */}
-      {bulkMode && bulkSelected.size > 0 && (
-        <div className="mb-4 p-3 rounded-xl bg-brand-500/10 dark:bg-brand-500/15 border border-brand-500/20 flex items-center gap-3 flex-wrap">
-          <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
-            {bulkSelected.size} {isRTL ? 'محدد' : 'selected'}
-          </span>
-          <Select className="!w-auto min-w-[130px] text-xs" onChange={e => { if (e.target.value) bulkMoveAll(e.target.value); e.target.value = ''; }}>
-            <option value="">{isRTL ? 'نقل إلى مرحلة...' : 'Move to stage...'}</option>
-            {currentStages.map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
-          </Select>
-          <Select className="!w-auto min-w-[130px] text-xs" onChange={e => { if (e.target.value) bulkAssign(e.target.value); e.target.value = ''; }}>
-            <option value="">{isRTL ? 'تعيين لمسؤول...' : 'Assign to agent...'}</option>
-            {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
-          </Select>
-          <Select className="!w-auto min-w-[120px] text-xs" onChange={e => { if (e.target.value) bulkChangeTemp(e.target.value); e.target.value = ''; }}>
-            <option value="">{isRTL ? 'تغيير الحرارة...' : 'Change temp...'}</option>
-            {Object.entries(TEMP_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
-          </Select>
-          <Select className="!w-auto min-w-[120px] text-xs" onChange={e => { if (e.target.value) bulkChangePriority(e.target.value); e.target.value = ''; }}>
-            <option value="">{isRTL ? 'تغيير الأولوية...' : 'Change priority...'}</option>
-            {Object.entries(PRIORITY_CONFIG).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.label_ar : v.label_en}</option>)}
-          </Select>
-          <Input type="date" className="!w-auto min-w-[130px] text-xs" onChange={e => { if (e.target.value) bulkSetCloseDate(e.target.value); }} placeholder={isRTL ? 'تاريخ الإغلاق' : 'Close date'} />
-          <Button variant="danger" size="sm" onClick={bulkDeleteAll}><Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}</Button>
-          <Button variant="ghost" size="sm" onClick={() => setBulkSelected(new Set(sortedFiltered.map(o => o.id)))}>{isRTL ? 'تحديد الكل' : 'Select All'}</Button>
-          <Button variant="ghost" size="sm" onClick={() => { setBulkSelected(new Set()); setBulkMode(false); }}><X size={13} /></Button>
-        </div>
-      )}
+      {/* Old bulk bar removed — replaced by floating action bar below */}
 
       {/* Content */}
       {loading ? (
@@ -931,12 +993,12 @@ export default function OpportunitiesPage() {
           <span>•</span>
           <span className="font-bold text-brand-500">{fmtBudget(totalBudget)} {isRTL ? 'ج' : 'EGP'}</span>
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className={isMobile ? "flex flex-col gap-4 pb-4" : "flex gap-4 overflow-x-auto pb-4"}>
           {currentStages.map(stage => {
             const stageOpps = sortedFiltered.filter(o => o.stage === stage.id);
             const isOver = dragOverStage === stage.id;
             return (
-              <div key={stage.id} className="flex-shrink-0 w-[300px]"
+              <div key={stage.id} className={isMobile ? "w-full" : "flex-shrink-0 w-[300px]"}
                 onDragOver={e => { e.preventDefault(); setDragOverStage(stage.id); }}
                 onDragLeave={() => setDragOverStage(null)}
                 onDrop={e => {
@@ -997,30 +1059,68 @@ export default function OpportunitiesPage() {
           })}
         </div>
       </>) : (<>
-        {/* Table View */}
-        <Card className="overflow-hidden">
+        {/* Table View - Mobile Card Layout */}
+        {isMobile && (
+          <div className="flex flex-col gap-3 md:hidden">
+            {gridPaged.length === 0 ? (
+              <Card className="text-center py-10 text-xs text-content-muted dark:text-content-muted-dark">
+                {isRTL ? 'لا توجد نتائج' : 'No results'}
+              </Card>
+            ) : gridPaged.map(opp => {
+              const contactName = getContactName(opp);
+              const projectName = getProjectName(opp, lang);
+              const stageConfig = getDeptStages(opp.contacts?.department || 'sales');
+              const stage = stageConfig.find(s => s.id === opp.stage) || stageConfig[0] || { id: opp.stage, label_ar: opp.stage, label_en: opp.stage, color: '#4A7AAB' };
+              const temp = TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold;
+              const score = scoreMap[opp.id] ?? calcLeadScore(opp);
+              return (
+                <Card key={opp.id} className="p-3.5 cursor-pointer active:bg-brand-500/[0.04]" onClick={() => selectOpp(opp)}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-[10px] font-bold text-white" style={{ background: avatarColor(opp.contact_id || opp.id) }}>
+                      {initials(contactName)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold text-content dark:text-content-dark truncate">{contactName}</div>
+                      {projectName && <div className="text-[11px] text-content-muted dark:text-content-muted-dark truncate">{projectName}</div>}
+                    </div>
+                    {bulkMode && (
+                      <button onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }} className={`w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] cursor-pointer shrink-0 ${bulkSelected.has(opp.id) ? 'bg-brand-500 border-brand-500 text-white' : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-600'}`}>
+                        {bulkSelected.has(opp.id) && '✓'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full text-white" style={{ background: stage.color }}>{isRTL ? stage.label_ar : stage.label_en}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: temp.bg, color: temp.color }}>{isRTL ? temp.label_ar : temp.label_en}</span>
+                    {opp.budget > 0 && <span className="text-[11px] font-bold text-brand-500">{fmtBudget(opp.budget)} {isRTL ? 'ج' : 'EGP'}</span>}
+                    <span className="text-[10px] ms-auto" style={{ color: scoreColor(score) }}>{score} pts</span>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+        {/* Table View - Desktop */}
+        <Card className={`overflow-hidden ${isMobile ? 'hidden' : ''}`}>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm" style={{ minWidth: 1100 }}>
               <thead>
                 <tr className="border-b border-edge dark:border-edge-dark bg-[#F8FAFC] dark:bg-surface-bg-dark">
-                  {bulkMode && (
-                    <th className="px-3 py-3 text-start w-10">
-                      <button
-                        onClick={() => {
-                          const allIds = new Set(gridPaged.map(o => o.id));
-                          const allSelected = gridPaged.every(o => bulkSelected.has(o.id));
-                          setBulkSelected(allSelected ? new Set([...bulkSelected].filter(id => !allIds.has(id))) : new Set([...bulkSelected, ...allIds]));
-                        }}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] cursor-pointer transition-colors ${
-                          gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id))
-                            ? 'bg-brand-500 border-brand-500 text-white'
-                            : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-600'
-                        }`}
-                      >
-                        {gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id)) && '✓'}
-                      </button>
-                    </th>
-                  )}
+                  <th className="px-3 py-3 text-start w-10">
+                    <button
+                      onClick={() => {
+                        const allIds = new Set(gridPaged.map(o => o.id));
+                        const allSelected = gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id));
+                        setBulkSelected(allSelected ? new Set([...bulkSelected].filter(id => !allIds.has(id))) : new Set([...bulkSelected, ...allIds]));
+                      }}
+                      className="bg-transparent border-none cursor-pointer p-0 flex items-center justify-center"
+                    >
+                      {gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id))
+                        ? <CheckSquare size={18} style={{ color: '#4A7AAB' }} />
+                        : <Square size={18} className="text-content-muted dark:text-content-muted-dark" />
+                      }
+                    </button>
+                  </th>
                   {[
                     { key: 'name', label: isRTL ? 'الاسم' : 'Name', width: 'min-w-[180px]' },
                     { key: 'project', label: isRTL ? 'المشروع' : 'Project', width: 'min-w-[120px]' },
@@ -1060,25 +1160,22 @@ export default function OpportunitiesPage() {
                   return (
                     <tr
                       key={opp.id}
-                      onClick={() => bulkMode ? toggleBulk(opp.id) : selectOpp(opp)}
+                      onClick={() => selectOpp(opp)}
                       className={`border-b border-edge dark:border-edge-dark cursor-pointer transition-colors hover:bg-brand-500/[0.04] dark:hover:bg-brand-500/[0.06] ${
                         bulkSelected.has(opp.id) ? 'bg-brand-500/[0.06] dark:bg-brand-500/[0.08]' : ''
                       } ${idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-white/[0.015]'}`}
                     >
-                      {bulkMode && (
-                        <td className="px-3 py-2.5">
-                          <button
-                            onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
-                            className={`w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] cursor-pointer transition-colors ${
-                              bulkSelected.has(opp.id)
-                                ? 'bg-brand-500 border-brand-500 text-white'
-                                : 'bg-white dark:bg-surface-card-dark border-gray-300 dark:border-gray-600'
-                            }`}
-                          >
-                            {bulkSelected.has(opp.id) && '✓'}
-                          </button>
-                        </td>
-                      )}
+                      <td className="px-3 py-2.5">
+                        <button
+                          onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
+                          className="bg-transparent border-none cursor-pointer p-0 flex items-center justify-center"
+                        >
+                          {bulkSelected.has(opp.id)
+                            ? <CheckSquare size={18} style={{ color: '#4A7AAB' }} />
+                            : <Square size={18} className="text-content-muted dark:text-content-muted-dark" />
+                          }
+                        </button>
+                      </td>
                       {/* Name */}
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2.5">
@@ -1102,6 +1199,11 @@ export default function OpportunitiesPage() {
                                   {staledays}{isRTL ? 'ي' : 'd'}
                                 </span>
                               )}
+                              {(() => { const apr = getApprovalByEntity('deal', opp.id); return apr && apr.status === 'pending' ? (
+                                <span className="text-[9px] px-1.5 py-px rounded bg-amber-500/10 text-amber-600 font-bold shrink-0" title={isRTL ? 'بانتظار الموافقة' : 'Pending Approval'}>
+                                  {isRTL ? 'موافقة' : 'Approval'}
+                                </span>
+                              ) : null; })()}
                             </div>
                             {opp.contacts?.phone && (
                               <div className="text-[11px] text-content-muted dark:text-content-muted-dark" dir="ltr">{opp.contacts.phone}</div>
@@ -1235,6 +1337,126 @@ export default function OpportunitiesPage() {
       )}
     </div>
 
+    {/* Floating Bulk Action Bar */}
+    {bulkSelected.size > 0 && viewMode === 'table' && (
+      <div
+        dir={isRTL ? 'rtl' : 'ltr'}
+        style={{
+          position: 'fixed',
+          bottom: bulkBarVisible ? 24 : -80,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1200,
+          background: 'rgba(30,30,30,0.95)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRadius: 12,
+          padding: '12px 20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+          transition: 'bottom 0.3s cubic-bezier(0.4,0,0.2,1)',
+          flexWrap: 'wrap',
+          maxWidth: 'calc(100vw - 48px)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#fff', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap' }}>
+          <CheckSquare size={16} style={{ color: '#60A5FA' }} />
+          <span>{bulkSelected.size} {isRTL ? 'محدد' : 'selected'}</span>
+        </div>
+        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+        {[
+          { label: isRTL ? 'نقل مرحلة' : 'Move Stage', handler: bulkMoveAll, options: currentStages.map(s => ({ value: s.id, label: isRTL ? s.label_ar : s.label_en })) },
+          { label: isRTL ? 'تعيين مسؤول' : 'Assign Agent', handler: bulkAssign, options: agents.map(a => ({ value: a.id, label: lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar) })) },
+          { label: isRTL ? 'الأولوية' : 'Priority', handler: bulkChangePriority, options: Object.entries(PRIORITY_CONFIG).map(([k, v]) => ({ value: k, label: isRTL ? v.label_ar : v.label_en })) },
+          { label: isRTL ? 'الحرارة' : 'Temp', handler: bulkChangeTemp, options: Object.entries(TEMP_CONFIG).map(([k, v]) => ({ value: k, label: isRTL ? v.label_ar : v.label_en })) },
+        ].map((action, i) => (
+          <select
+            key={i}
+            onChange={e => { if (e.target.value) action.handler(e.target.value); e.target.value = ''; }}
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 8,
+              color: '#fff',
+              fontSize: 12,
+              padding: '6px 10px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              minWidth: 110,
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              paddingRight: isRTL ? 10 : 24,
+              paddingLeft: isRTL ? 24 : 10,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: isRTL ? '8px center' : 'calc(100% - 8px) center',
+            }}
+          >
+            <option value="" style={{ background: '#1e1e1e' }}>{action.label}</option>
+            {action.options.map(o => <option key={o.value} value={o.value} style={{ background: '#1e1e1e' }}>{o.label}</option>)}
+          </select>
+        ))}
+        <button
+          onClick={bulkExportCSV}
+          style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: 12, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+        >
+          <Download size={14} />
+          {isRTL ? 'تصدير' : 'Export'}
+        </button>
+        <button
+          onClick={() => setConfirmBulkDelete(true)}
+          style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#FCA5A5', fontSize: 12, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.35)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; }}
+        >
+          <Trash2 size={14} />
+          {isRTL ? 'حذف' : 'Delete'}
+        </button>
+        <button
+          onClick={() => { setBulkSelected(new Set()); setBulkMode(false); }}
+          style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}
+          onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.9)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
+        >
+          <X size={16} />
+        </button>
+      </div>
+    )}
+
+    {/* Bulk Delete Confirmation Modal */}
+    {confirmBulkDelete && (
+      <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setConfirmBulkDelete(false)}>
+        <div
+          style={{ background: isDark ? '#1E293B' : '#fff', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420, textAlign: 'center' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Trash2 size={20} style={{ color: '#EF4444' }} />
+          </div>
+          <h3 style={{ margin: '0 0 8px', color: isDark ? '#F1F5F9' : '#1E293B', fontSize: 16, fontWeight: 700 }}>
+            {isRTL ? 'حذف فرص' : 'Delete Opportunities'}
+          </h3>
+          <p style={{ margin: '0 0 20px', color: isDark ? '#94A3B8' : '#64748B', fontSize: 13 }}>
+            {isRTL
+              ? `هل أنت متأكد من حذف ${bulkSelected.size} فرصة؟ لا يمكن التراجع عن هذا الإجراء.`
+              : `Are you sure you want to delete ${bulkSelected.size} opportunities? This action cannot be undone.`}
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+            <Button variant="secondary" size="sm" onClick={() => setConfirmBulkDelete(false)}>
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => { setConfirmBulkDelete(false); bulkDeleteAll(); }}>
+              <Trash2 size={13} /> {isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+
     {/* Deal Created Toast */}
     {dealCreatedToast && (
       <div
@@ -1361,561 +1583,6 @@ export default function OpportunitiesPage() {
         onNext={handleOppNext}
         onEditStageLost={handleEditStageLost}
       />
-                const contactName = selectedOpp.contacts ? (isRTL ? (selectedOpp.contacts.full_name_ar || selectedOpp.contacts.full_name_en) : (selectedOpp.contacts.full_name_en || selectedOpp.contacts.full_name_ar)) : '';
-                return (
-                  <button
-                    onClick={() => {
-                      toggleFavorite({
-                        id: oppFavId,
-                        type: 'opportunity',
-                        name: contactName || `Opportunity #${selectedOpp.id}`,
-                        nameAr: (selectedOpp.contacts?.full_name_ar || selectedOpp.contacts?.full_name_en || `فرصة #${selectedOpp.id}`),
-                        path: `/crm/opportunities?highlight=${selectedOpp.id}`,
-                      });
-                    }}
-                    className="bg-transparent border-none cursor-pointer p-1 rounded-md hover:bg-brand-500/10 transition-colors"
-                    style={{ color: oppIsFav ? '#F59E0B' : undefined }}
-                    title={oppIsFav ? (isRTL ? 'إزالة من المفضلة' : 'Remove from Favorites') : (isRTL ? 'إضافة للمفضلة' : 'Add to Favorites')}
-                  >
-                    <Star size={15} fill={oppIsFav ? '#F59E0B' : 'none'} />
-                  </button>
-                );
-              })()}
-              {selectedOpp.contact_id && (
-                <button
-                  onClick={() => navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`)}
-                  className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
-                  title={isRTL ? 'عرض بيانات العميل' : 'View Contact'}
-                >
-                  <ExternalLink size={15} />
-                </button>
-              )}
-              <button
-                onClick={() => editingOpp ? setEditingOpp(false) : startEdit()}
-                className="bg-transparent border-none cursor-pointer text-brand-500 p-1 rounded-md hover:bg-brand-500/10 transition-colors"
-                title={isRTL ? 'تعديل' : 'Edit'}
-              >
-                <Pencil size={16} />
-              </button>
-              <button
-                onClick={() => { setConfirmDelete(selectedOpp.id); }}
-                className="bg-transparent border-none cursor-pointer text-red-400 p-1 rounded-md hover:bg-red-500/10 transition-colors"
-                title={isRTL ? 'حذف' : 'Delete'}
-              >
-                <Trash2 size={15} />
-              </button>
-              {handleOppPrev && (
-                <button onClick={handleOppPrev} title={isRTL ? 'السابق' : 'Previous'}
-                  className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md hover:bg-brand-500/10 transition-colors">
-                  <ChevronUp size={16} />
-                </button>
-              )}
-              {handleOppNext && (
-                <button onClick={handleOppNext} title={isRTL ? 'التالي' : 'Next'}
-                  className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md hover:bg-brand-500/10 transition-colors">
-                  <ChevronDown size={16} />
-                </button>
-              )}
-              <button
-                onClick={closeDrawer}
-                className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xl leading-none p-1 hover:text-content dark:hover:text-content-dark transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-
-          {/* Contact Quick Actions */}
-          {!editingOpp && selectedOpp.contacts && (
-            <div className="px-6 py-3 border-b border-edge dark:border-edge-dark">
-              <div className="flex gap-2 flex-wrap">
-                {selectedOpp.contacts.phone && (
-                  <a href={`tel:${selectedOpp.contacts.phone}`} dir="ltr" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline hover:bg-brand-500/20 transition-colors font-semibold">
-                    <Phone size={13} /> {selectedOpp.contacts.phone}
-                  </a>
-                )}
-                {selectedOpp.contacts.phone2 && (
-                  <a href={`tel:${selectedOpp.contacts.phone2}`} dir="ltr" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 no-underline hover:bg-brand-500/20 transition-colors font-semibold">
-                    <Phone size={13} /> {selectedOpp.contacts.phone2}
-                  </a>
-                )}
-                {selectedOpp.contacts.phone && (<>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(selectedOpp.contacts.phone); setBulkToast(isRTL ? 'تم نسخ الرقم' : 'Phone copied'); setTimeout(() => setBulkToast(null), 2000); }}
-                    className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-content-muted dark:text-content-muted-dark border-none cursor-pointer hover:bg-gray-200 dark:hover:bg-white/15 transition-colors font-semibold font-cairo"
-                    title={isRTL ? 'نسخ الرقم' : 'Copy phone'}
-                  >
-                    📋
-                  </button>
-                  <a href={`https://wa.me/${(selectedOpp.contacts.phone || '').replace(/[^0-9]/g, '')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 no-underline hover:bg-emerald-500/20 transition-colors font-semibold">
-                    <MessageCircle size={13} /> WhatsApp
-                  </a>
-                </>)}
-                {selectedOpp.contacts.email && (
-                  <a href={`mailto:${selectedOpp.contacts.email}`} className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 no-underline hover:bg-blue-500/20 transition-colors font-semibold">
-                    <Mail size={13} /> {selectedOpp.contacts.email}
-                  </a>
-                )}
-              </div>
-              {/* Extra info row */}
-              <div className="flex gap-2 flex-wrap mt-2">
-                {selectedOpp.contacts.source && (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                    <ExternalLink size={9} /> {isRTL ? (sourceLabelsMap[selectedOpp.contacts.source]?.ar || selectedOpp.contacts.source) : (sourceLabelsMap[selectedOpp.contacts.source]?.en || selectedOpp.contacts.source)}
-                  </span>
-                )}
-                {selectedOpp.contacts.preferred_location && (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                    <MapPin size={9} /> {selectedOpp.contacts.preferred_location}
-                  </span>
-                )}
-                {selectedOpp.contacts.nationality && (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                    {isRTL ? ({egyptian:'مصري',saudi:'سعودي',emirati:'إماراتي',kuwaiti:'كويتي',qatari:'قطري',libyan:'ليبي',other:'أخرى'}[selectedOpp.contacts.nationality] || selectedOpp.contacts.nationality) : selectedOpp.contacts.nationality}
-                  </span>
-                )}
-                {selectedOpp.contacts.gender && (
-                  <span className="text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                    {isRTL ? (selectedOpp.contacts.gender === 'male' ? 'ذكر' : 'أنثى') : selectedOpp.contacts.gender}
-                  </span>
-                )}
-                {selectedOpp.contacts.birth_date && (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                    <Calendar size={9} /> {new Date(selectedOpp.contacts.birth_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                  </span>
-                )}
-                {selectedOpp.contacts.budget_min && (
-                  <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                    <Banknote size={9} /> {fmtBudget(selectedOpp.contacts.budget_min)} - {fmtBudget(selectedOpp.contacts.budget_max)}
-                  </span>
-                )}
-                {selectedOpp.contacts.interested_in_type && (
-                  <span className="text-[10px] px-2 py-1 rounded-md bg-gray-100 dark:bg-white/5 text-content-muted dark:text-content-muted-dark">
-                    {isRTL ? ({residential:'سكني',commercial:'تجاري',administrative:'إداري'}[selectedOpp.contacts.interested_in_type] || selectedOpp.contacts.interested_in_type) : selectedOpp.contacts.interested_in_type}
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Drawer Details */}
-          <div className="px-6 py-5 flex flex-col gap-4">
-            {editingOpp ? (<>
-              {/* Edit Mode */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الميزانية' : 'Budget'}</label>
-                  <Input type="number" min="0" value={editForm.budget} onChange={e => setEditForm(f => ({ ...f, budget: Math.max(0, e.target.value) }))} />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المسؤول' : 'Agent'}</label>
-                  <Select value={editForm.assigned_to} onChange={e => setEditForm(f => ({ ...f, assigned_to: e.target.value }))}>
-                    <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-                    {agents.map(a => <option key={a.id} value={a.id}>{lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)}</option>)}
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المرحلة' : 'Stage'}</label>
-                  <Select value={editForm.stage} onChange={e => setEditForm(f => ({ ...f, stage: e.target.value }))}>
-                    {getDeptStages(selectedOpp.contacts?.department || 'sales').map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الإغلاق المتوقع' : 'Expected Close'}</label>
-                  <Input type="date" value={editForm.expected_close_date} onChange={e => setEditForm(f => ({ ...f, expected_close_date: e.target.value }))} />
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المشروع' : 'Project'}</label>
-                <Select value={editForm.project_id} onChange={e => setEditForm(f => ({ ...f, project_id: e.target.value }))}>
-                  <option value="">{isRTL ? 'بدون مشروع' : 'No Project'}</option>
-                  {projects.map(p => <option key={p.id} value={p.id}>{lang === 'ar' ? p.name_ar : (p.name_en || p.name_ar)}</option>)}
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الحرارة' : 'Temperature'}</label>
-                <div className="flex gap-1.5">
-                  {Object.entries(TEMP_CONFIG).map(([k, v]) => {
-                    const isActive = editForm.temperature === k;
-                    return (
-                      <button key={k} onClick={() => setEditForm(f => ({ ...f, temperature: k }))}
-                        className={`flex-1 py-[6px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'}`}
-                        style={isActive ? { borderColor: v.color, background: v.bg, color: v.color } : {}}
-                      >{isRTL ? v.label_ar : v.label_en}</button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الأولوية' : 'Priority'}</label>
-                <div className="flex gap-1.5">
-                  {Object.entries(PRIORITY_CONFIG).map(([k, v]) => {
-                    const isActive = editForm.priority === k;
-                    return (
-                      <button key={k} onClick={() => setEditForm(f => ({ ...f, priority: k }))}
-                        className={`flex-1 py-[6px] rounded-[7px] cursor-pointer text-xs font-semibold font-cairo transition-all duration-150 border-2 ${isActive ? '' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark border-transparent'}`}
-                        style={isActive ? { borderColor: v.color, background: `${v.color}18`, color: v.color } : {}}
-                      >{isRTL ? v.label_ar : v.label_en}</button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'ملاحظات' : 'Notes'}</label>
-                <Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} />
-              </div>
-              <div className="flex gap-2">
-                <Button variant="primary" size="sm" onClick={saveEdit} disabled={editSaving} className="flex-1 gap-1.5">
-                  {editSaving && <Loader2 size={13} className="animate-spin" />}
-                  {isRTL ? 'حفظ' : 'Save'}
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => setEditingOpp(false)} className="flex-1">
-                  {isRTL ? 'إلغاء' : 'Cancel'}
-                </Button>
-              </div>
-            </>) : (<>
-              {/* View Mode */}
-              <div className="grid grid-cols-2 gap-2.5">
-                {[
-                  { label: isRTL ? 'المرحلة' : 'Stage', value: deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', isRTL), color: (getDeptStages(selectedOpp.contacts?.department || 'sales').find(s => s.id === selectedOpp.stage)?.color || '#4A7AAB') },
-                  { label: isRTL ? 'الميزانية' : 'Budget', value: fmtBudget(selectedOpp.budget) + ' ' + (isRTL ? 'ج' : 'EGP'), color: '#4A7AAB' },
-                  { label: isRTL ? 'الحرارة' : 'Temperature', value: isRTL ? (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_en, color: (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).color },
-                  { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
-                  { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
-                  { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', value: (() => { if (!selectedOpp.assigned_by) return '—'; const a = agents.find(ag => ag.id === selectedOpp.assigned_by); return a ? (lang === 'ar' ? a.full_name_ar : (a.full_name_en || a.full_name_ar)) : '—'; })(), color: '#6B8DB5' },
-                  { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
-                  ...(selectedOpp.expected_close_date ? [{ label: isRTL ? 'الإغلاق المتوقع' : 'Expected Close', value: new Date(selectedOpp.expected_close_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: new Date(selectedOpp.expected_close_date) < new Date() ? '#EF4444' : '#6B8DB5' }] : []),
-                  ...((selectedOpp.contacts?.source || selectedOpp.source) ? [{ label: isRTL ? 'المصدر' : 'Source', value: (() => { const src = selectedOpp.contacts?.source || selectedOpp.source; return isRTL ? (sourceLabelsMap[src]?.ar || src) : (sourceLabelsMap[src]?.en || src); })(), color: '#6B8DB5' }] : []),
-                  { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: opps.filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
-                ].map((item, i) => (
-                  <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                    <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{item.label}</p>
-                    <p className="m-0 text-sm font-bold" style={{ color: item.color }}>{item.value}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Project */}
-              {getProjectName(selectedOpp, lang) && (
-                <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'المشروع' : 'Project'}</p>
-                  <p className="m-0 text-sm font-semibold text-content dark:text-content-dark">{getProjectName(selectedOpp, lang)}</p>
-                </div>
-              )}
-
-              {/* Lost Reason */}
-              {selectedOpp.lost_reason && selectedOpp.stage === 'closed_lost' && (
-                <div className="bg-red-500/[0.08] rounded-xl px-3.5 py-3">
-                  <p className="m-0 mb-1 text-xs text-red-500 font-semibold">{isRTL ? 'سبب الخسارة' : 'Lost Reason'}</p>
-                  <p className="m-0 text-xs text-content dark:text-content-dark">
-                    {lostReasonsMap[selectedOpp.lost_reason]
-                      ? (isRTL ? lostReasonsMap[selectedOpp.lost_reason].label_ar : lostReasonsMap[selectedOpp.lost_reason].label_en)
-                      : selectedOpp.lost_reason}
-                  </p>
-                </div>
-              )}
-
-              {/* Notes */}
-              {selectedOpp.notes && (
-                <div className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                  <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'ملاحظات' : 'Notes'}</p>
-                  <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed">{selectedOpp.notes}</p>
-                </div>
-              )}
-            </>)}
-
-            {/* Pipeline Stepper */}
-            <div>
-              {(() => {
-                const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
-                const currentIdx = stages.findIndex(st => st.id === selectedOpp.stage);
-                const progressPct = stages.length > 1 ? Math.round((Math.max(0, currentIdx) / (stages.length - 1)) * 100) : 0;
-                const isLost = selectedOpp.stage === 'closed_lost';
-                return (<>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                      {isRTL ? 'مراحل التقدم' : 'Pipeline Progress'}
-                    </p>
-                    <span className="text-xs font-bold" style={{ color: progressPct >= 80 ? '#10B981' : progressPct >= 40 ? '#F59E0B' : '#6B8DB5' }}>
-                      {progressPct}%
-                    </span>
-                  </div>
-                  <div className="flex items-start">
-                    {stages.map((s, i) => {
-                      const isPast = i < currentIdx;
-                      const isCurrent = i === currentIdx;
-                      const isBackward = !isAdmin && i < currentIdx;
-                      return (
-                        <div key={s.id} className="flex items-start flex-1 min-w-0">
-                          <button
-                            onClick={() => !isBackward && handleMove(selectedOpp.id, s.id)}
-                            className={`flex flex-col items-center gap-1 bg-transparent border-none w-full group p-0 ${isBackward ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-                          >
-                            <div
-                              className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold transition-all ${
-                                isCurrent ? 'ring-2 ring-offset-1 ring-offset-surface-card dark:ring-offset-surface-card-dark' : ''
-                              } ${
-                                isPast || isCurrent
-                                  ? isLost && isCurrent ? 'bg-red-500 text-white ring-red-500' : 'text-white'
-                                  : 'bg-gray-100 dark:bg-white/10 text-content-muted dark:text-content-muted-dark group-hover:bg-brand-500/20'
-                              }`}
-                              style={(isPast || isCurrent) && !(isLost && isCurrent) ? { background: s.color, '--tw-ring-color': s.color } : {}}
-                            >
-                              {isPast ? '✓' : i + 1}
-                            </div>
-                            <span className={`text-[8px] text-center leading-tight max-w-full ${isCurrent ? 'font-bold text-content dark:text-content-dark' : 'text-content-muted dark:text-content-muted-dark'}`}>
-                              {isRTL ? s.label_ar : s.label_en}
-                            </span>
-                          </button>
-                          {i < stages.length - 1 && (
-                            <div className={`h-[2px] flex-1 min-w-[4px] mt-[13px] -mx-0.5 ${i < currentIdx ? 'bg-brand-500' : 'bg-gray-200 dark:bg-white/10'}`} />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>);
-              })()}
-            </div>
-
-            {/* Activities Timeline */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                  {isRTL ? 'آخر الأنشطة' : 'Recent Activities'}
-                </p>
-                <button
-                  onClick={() => setShowAddActivity(a => !a)}
-                  className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2 py-1 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold"
-                >
-                  <Plus size={10} className="inline -mt-px" /> {isRTL ? 'سجّل نشاط' : 'Log Activity'}
-                </button>
-              </div>
-              {showAddActivity && (
-                <div className="bg-brand-500/[0.06] rounded-xl p-3 mb-3 border border-brand-500/10">
-                  {/* Activity Type Buttons (from config) */}
-                  <div className="flex gap-1.5 mb-2 flex-wrap">
-                    {(configActivityTypes || []).map(at => {
-                      const Icon = ACTIVITY_ICON_MAP[at.key] || ACTIVITY_ICONS[at.key] || Clock;
-                      return (
-                        <button
-                          key={at.key}
-                          onClick={() => setActivityForm(f => ({ ...f, type: at.key, result: '' }))}
-                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold font-cairo border-none cursor-pointer transition-colors ${
-                            activityForm.type === at.key
-                              ? 'bg-brand-500 text-white'
-                              : 'bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
-                          }`}
-                        >
-                          <Icon size={10} />{isRTL ? at.label_ar : at.label_en}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {/* Activity Result Buttons (from config) */}
-                  {configActivityResults[activityForm.type] && configActivityResults[activityForm.type].length > 0 && (
-                    <div className="mb-2">
-                      <p className="m-0 mb-1 text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Result'}</p>
-                      <div className="flex gap-1 flex-wrap">
-                        {configActivityResults[activityForm.type].map(r => (
-                          <button
-                            key={r.value}
-                            onClick={() => setActivityForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
-                            className={`px-2 py-1 rounded-md text-[10px] font-semibold font-cairo border-2 cursor-pointer transition-all ${
-                              activityForm.result === r.value
-                                ? ''
-                                : 'border-transparent bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
-                            }`}
-                            style={activityForm.result === r.value ? { borderColor: r.color, background: `${r.color}18`, color: r.color } : {}}
-                          >
-                            {isRTL ? r.label_ar : r.label_en}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <Input
-                    value={activityForm.description}
-                    onChange={e => setActivityForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
-                    className="mb-2 text-xs"
-                  />
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={async () => {
-                      if (!activityForm.description.trim()) return;
-                      const act = await createActivity({
-                        type: activityForm.type,
-                        description: activityForm.description,
-                        result: activityForm.result || null,
-                        contact_id: selectedOpp.contact_id,
-                        entity_type: 'opportunity',
-                        entity_id: selectedOpp.id,
-                      });
-                      setDrawerActivities(prev => [act, ...prev].slice(0, 5));
-                      setActivityForm({ type: 'call', description: '', result: '' });
-                      setShowAddActivity(false);
-                    }}>
-                      {isRTL ? 'حفظ' : 'Save'}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setShowAddActivity(false)}>
-                      {isRTL ? 'إلغاء' : 'Cancel'}
-                    </Button>
-                  </div>
-                </div>
-              )}
-              {loadingActivities ? (
-                <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark"><Loader2 size={16} className="animate-spin inline-block" /></div>
-              ) : drawerActivities.length === 0 ? (
-                <div className="text-center py-4 text-xs text-content-muted dark:text-content-muted-dark opacity-60">
-                  <Clock size={20} className="opacity-30 mb-1 mx-auto" />
-                  <p className="m-0">{isRTL ? 'لا توجد أنشطة' : 'No activities'}</p>
-                </div>
-              ) : drawerActivities.map(act => {
-                const ActIcon = ACTIVITY_ICON_MAP[act.type] || ACTIVITY_ICONS[act.type] || Clock;
-                const resultConfig = act.result && configActivityResults[act.type]?.find(r => r.value === act.result);
-                return (
-                  <div key={act.id} className="bg-brand-500/[0.06] border border-brand-500/[0.12] rounded-xl p-3 mb-2">
-                    <div className="flex items-start gap-2 mb-1">
-                      <div className="w-[24px] h-[24px] rounded-[6px] bg-brand-500/10 flex items-center justify-center shrink-0 mt-px">
-                        <ActIcon size={12} color="#4A7AAB" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-content dark:text-content-dark text-xs font-semibold">{act.description}</span>
-                          {resultConfig && (
-                            <span className="text-[9px] font-bold px-1.5 py-px rounded-md" style={{ background: `${resultConfig.color}18`, color: resultConfig.color }}>
-                              {isRTL ? resultConfig.label_ar : resultConfig.label_en}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex justify-between text-[10px] text-content-muted dark:text-content-muted-dark ps-8">
-                      <span>{isRTL ? (act.users?.full_name_ar || '—') : (act.users?.full_name_en || act.users?.full_name_ar || '—')}</span>
-                      <span>{act.created_at?.slice(0, 10)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-              {drawerActivities.length > 0 && selectedOpp.contact_id && (
-                <button
-                  onClick={() => navigate(`/crm/contacts?highlight=${selectedOpp.contact_id}`)}
-                  className="text-[10px] text-brand-500 bg-transparent border-none cursor-pointer hover:underline font-cairo font-semibold mt-1 p-0"
-                >
-                  {isRTL ? 'عرض كل الأنشطة →' : 'View all activities →'}
-                </button>
-              )}
-            </div>
-
-            {/* Notes Timeline */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="m-0 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                  <StickyNote size={12} className="inline -mt-px" /> {isRTL ? 'الملاحظات' : 'Notes'}
-                </p>
-                <button
-                  onClick={() => setShowNotes(n => !n)}
-                  className="text-[10px] text-brand-500 bg-brand-500/10 border-none rounded-md px-2 py-1 cursor-pointer hover:bg-brand-500/20 transition-colors font-cairo font-semibold"
-                >
-                  {showNotes ? (isRTL ? 'إخفاء' : 'Hide') : (isRTL ? 'عرض' : 'Show')} ({drawerNotes.length})
-                </button>
-              </div>
-              {showNotes && (
-                <>
-                  <div className="flex gap-1.5 mb-2">
-                    <Input value={newNote} onChange={e => setNewNote(e.target.value)} placeholder={isRTL ? 'أضف ملاحظة...' : 'Add note...'} className="text-xs flex-1" onKeyDown={e => {
-                      if (e.key === 'Enter' && newNote.trim()) {
-                        e.stopPropagation();
-                        const note = addOppNote(selectedOpp.id, newNote.trim());
-                        setDrawerNotes(prev => [note, ...prev]);
-                        setNewNote('');
-                      }
-                    }} />
-                    <Button size="sm" onClick={() => {
-                      if (!newNote.trim()) return;
-                      const note = addOppNote(selectedOpp.id, newNote.trim());
-                      setDrawerNotes(prev => [note, ...prev]);
-                      setNewNote('');
-                    }}><Plus size={12} /></Button>
-                  </div>
-                  {drawerNotes.map(n => (
-                    <div key={n.id} className="bg-amber-500/[0.06] border border-amber-500/10 rounded-lg p-2.5 mb-1.5 group">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="m-0 text-xs text-content dark:text-content-dark leading-relaxed flex-1">{n.text}</p>
-                        <button onClick={() => { deleteOppNote(selectedOpp.id, n.id); setDrawerNotes(prev => prev.filter(x => x.id !== n.id)); }} className="bg-transparent border-none cursor-pointer text-red-400 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"><X size={11} /></button>
-                      </div>
-                      <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">{new Date(n.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-
-            {/* Stage History */}
-            {stageHistory.length > 0 && (
-              <div>
-                <p className="m-0 mb-2 text-xs font-semibold text-content-muted dark:text-content-muted-dark">
-                  {isRTL ? 'سجل المراحل' : 'Stage History'}
-                </p>
-                <div className="space-y-1">
-                  {stageHistory.slice(0, 5).map((h, i) => {
-                    const stages = getDeptStages(selectedOpp.contacts?.department || 'sales');
-                    const fromLabel = stages.find(s => s.id === h.from);
-                    const toLabel = stages.find(s => s.id === h.to);
-                    return (
-                      <div key={i} className="flex items-center gap-2 text-[10px] text-content-muted dark:text-content-muted-dark bg-gray-50 dark:bg-white/[0.03] rounded-lg px-2.5 py-1.5">
-                        <span className="font-semibold" style={{ color: fromLabel?.color || '#6B8DB5' }}>{isRTL ? (fromLabel?.label_ar || h.from) : (fromLabel?.label_en || h.from)}</span>
-                        <span>→</span>
-                        <span className="font-semibold" style={{ color: toLabel?.color || '#6B8DB5' }}>{isRTL ? (toLabel?.label_ar || h.to) : (toLabel?.label_en || h.to)}</span>
-                        <span className="ms-auto">{new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Lead Score */}
-            {!editingOpp && (
-              <div className="bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
-                <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'درجة العميل' : 'Lead Score'}</p>
-                {(() => {
-                  const score = scoreMap[selectedOpp.id] ?? calcLeadScore(selectedOpp);
-                  return (
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 h-2 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${score}%`, background: scoreColor(score) }} />
-                      </div>
-                      <span className="text-sm font-bold" style={{ color: scoreColor(score) }}>{score}</span>
-                      <span className="text-[10px] font-semibold" style={{ color: scoreColor(score) }}>{scoreLabel(score, isRTL)}</span>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Documents */}
-            <DocumentsSection
-              entity="opportunity"
-              entityId={selectedOpp.id}
-              entityName={getContactName(selectedOpp)}
-            />
-
-            {/* Comments */}
-            <CommentsSection
-              entity="opportunity"
-              entityId={selectedOpp.id}
-              entityName={getContactName(selectedOpp)}
-            />
-
-            {/* Follow Up Reminder */}
-            <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={getContactName(selectedOpp)} />
-          </div>
-        </div>
-        <div className="flex-1" onClick={closeDrawer} />
-      </div>
     )}
   </>);
 }

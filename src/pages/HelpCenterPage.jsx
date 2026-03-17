@@ -828,6 +828,44 @@ const HELP_DATA = [
     tips: { ar: 'فعّل المصادقة الثنائية لجميع الحسابات الإدارية.', en: 'Enable two-factor authentication for all admin accounts.' },
     relatedSettings: { ar: 'المستخدمين، الأدوار', en: 'Users, Roles' },
   },
+  // ── Knowledge Base ──
+  {
+    id: 'knowledge-base',
+    category: 'general',
+    icon: BookOpen,
+    title: { ar: 'قاعدة المعرفة', en: 'Knowledge Base' },
+    overview: {
+      ar: 'قاعدة المعرفة هي مكتبة مركزية للمقالات والأدلة والوثائق التي يشاركها الفريق. يمكن لأي عضو في الفريق إنشاء مقالات تغطي عمليات المبيعات ومعلومات المنتجات ومعالجة الاعتراضات وسياسات الشركة والأسئلة الشائعة.',
+      en: 'The Knowledge Base is a centralized library of articles, guides, and documentation shared by the team. Any team member can create articles covering sales processes, product information, objection handling, company policies, and frequently asked questions.',
+    },
+    features: {
+      ar: ['إنشاء وتعديل وحذف المقالات', 'دعم ثنائي اللغة (عربي/إنجليزي)', 'تصنيفات متعددة (مبيعات، منتجات، سياسات، إلخ)', 'بحث في العناوين والمحتوى', 'تثبيت المقالات المهمة في الأعلى', 'عدّاد المشاهدات لكل مقال', 'وسوم لتنظيم المحتوى', 'عرض المحتوى بتنسيق Markdown'],
+      en: ['Create, edit, and delete articles', 'Bilingual support (Arabic/English)', 'Multiple categories (sales, products, policies, etc.)', 'Search across titles and content', 'Pin important articles to top', 'View count for each article', 'Tags for content organization', 'Markdown-formatted content rendering'],
+    },
+    howTo: {
+      ar: [
+        'لإنشاء مقال جديد: اضغط "مقال جديد" واملأ العنوان والمحتوى بالعربية والإنجليزية.',
+        'للبحث: استخدم شريط البحث في أعلى الصفحة للبحث في العناوين والمحتوى والوسوم.',
+        'لتصفية حسب التصنيف: اضغط على تبويب التصنيف المطلوب.',
+        'لتثبيت مقال: افتح المقال واضغط على أيقونة التثبيت.',
+        'لتعديل مقال: افتح المقال واضغط على أيقونة التعديل.',
+        'لحذف مقال: افتح المقال واضغط على أيقونة الحذف وأكد العملية.',
+      ],
+      en: [
+        'To create a new article: Click "New Article" and fill in the title and content in both Arabic and English.',
+        'To search: Use the search bar at the top of the page to search titles, content, and tags.',
+        'To filter by category: Click on the desired category tab.',
+        'To pin an article: Open the article and click the pin icon.',
+        'To edit an article: Open the article and click the edit icon.',
+        'To delete an article: Open the article, click the delete icon, and confirm.',
+      ],
+    },
+    tips: {
+      ar: 'أنشئ مقالات لأكثر الأسئلة شيوعًا في فريقك لتوفير الوقت وتسهيل تأهيل الموظفين الجدد.',
+      en: 'Create articles for your team\'s most common questions to save time and streamline new employee onboarding.',
+    },
+    relatedSettings: { ar: 'لا يوجد', en: 'None' },
+  },
 ];
 
 const CATEGORIES = [

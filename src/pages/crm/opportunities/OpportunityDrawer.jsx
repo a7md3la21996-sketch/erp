@@ -5,6 +5,7 @@ import { fetchContactActivities, createActivity } from '../../../services/contac
 import FollowUpReminder from '../../../components/ui/FollowUpReminder';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
+import { getEmailsByOpportunity, sendEmail } from '../../../services/emailService';
 import { getDeptStages, deptStageLabel } from '../contacts/constants';
 import {
   TEMP_CONFIG, PRIORITY_CONFIG, ACTIVITY_ICONS,
@@ -83,7 +84,7 @@ export default function OpportunityDrawer({
     if (!selectedOpp?.id) { setDrawerNotes([]); setStageHistory([]); return; }
     setDrawerNotes(getOppNotes(selectedOpp.id));
     setStageHistory(getStageHistory(selectedOpp.id));
-  }, [selectedOpp?.id]);
+  }, [selectedOpp?.id, selectedOpp?.stage]);
 
   // Reset edit mode when selectedOpp changes (e.g. prev/next navigation)
   useEffect(() => {
@@ -724,6 +725,9 @@ export default function OpportunityDrawer({
             </div>
           )}
 
+          {/* Emails Section */}
+          <OppEmailsSection oppId={selectedOpp.id} contactName={getContactName(selectedOpp)} contactId={selectedOpp.contact_id} isRTL={isRTL} isDark={isDark} />
+
           {/* Documents */}
           <DocumentsSection
             entity="opportunity"
@@ -749,6 +753,176 @@ export default function OpportunityDrawer({
         <div className="fixed bottom-6 z-[300] bg-gradient-to-br from-brand-500 to-brand-600 text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 text-sm font-semibold animate-[slideUp_0.3s_ease-out]"
           style={{ [isRTL ? 'right' : 'left']: 24 }}>
           {copyToast}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Opportunity Emails Section ─────────────────────────────────
+function OppEmailsSection({ oppId, contactName, contactId, isRTL, isDark }) {
+  const [emails, setEmails] = useState([]);
+  const [expanded, setExpanded] = useState(false);
+  const [showCompose, setShowCompose] = useState(false);
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+
+  const refresh = useCallback(() => {
+    setEmails(getEmailsByOpportunity(oppId));
+  }, [oppId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    const handler = () => refresh();
+    window.addEventListener('platform_emails_changed', handler);
+    return () => window.removeEventListener('platform_emails_changed', handler);
+  }, [refresh]);
+
+  const handleSend = () => {
+    if (!subject.trim() && !body.trim()) return;
+    sendEmail({
+      to: contactName || '',
+      to_name: contactName || '',
+      subject,
+      body,
+      contact_id: contactId || null,
+      opportunity_id: oppId,
+    });
+    setSubject('');
+    setBody('');
+    setShowCompose(false);
+  };
+
+  return (
+    <div style={{
+      background: isDark ? 'rgba(74,122,171,0.06)' : 'rgba(74,122,171,0.04)',
+      borderRadius: 12, padding: '12px 14px',
+    }}>
+      <div
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Mail size={15} style={{ color: '#4A7AAB' }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+            {isRTL ? 'الرسائل' : 'Emails'}
+          </span>
+          {emails.length > 0 && (
+            <span style={{
+              minWidth: 18, height: 18, borderRadius: 9,
+              background: isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.1)',
+              color: '#4A7AAB', fontSize: 10, fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0 5px',
+            }}>
+              {emails.length}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowCompose(!showCompose); setExpanded(true); }}
+            style={{
+              width: 24, height: 24, borderRadius: 6, border: 'none', cursor: 'pointer',
+              background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <Plus size={13} style={{ color: '#4A7AAB' }} />
+          </button>
+          {expanded ? <ChevronUp size={14} style={{ color: isDark ? '#64748b' : '#94a3b8' }} /> : <ChevronDown size={14} style={{ color: isDark ? '#64748b' : '#94a3b8' }} />}
+        </div>
+      </div>
+
+      {expanded && (
+        <div style={{ marginTop: 10 }}>
+          {/* Quick compose */}
+          {showCompose && (
+            <div style={{
+              padding: 10, borderRadius: 8, marginBottom: 10,
+              background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.8)',
+              border: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`,
+            }}>
+              <input
+                value={subject}
+                onChange={e => setSubject(e.target.value)}
+                placeholder={isRTL ? 'الموضوع' : 'Subject'}
+                style={{
+                  width: '100%', padding: '6px 8px', borderRadius: 6, marginBottom: 6,
+                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                  background: 'transparent', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b',
+                  outline: 'none', boxSizing: 'border-box',
+                }}
+              />
+              <textarea
+                value={body}
+                onChange={e => setBody(e.target.value)}
+                placeholder={isRTL ? 'محتوى الرسالة...' : 'Message body...'}
+                rows={3}
+                style={{
+                  width: '100%', padding: '6px 8px', borderRadius: 6, marginBottom: 6,
+                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
+                  background: 'transparent', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b',
+                  outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowCompose(false)} style={{
+                  padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  background: isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.05)',
+                  color: isDark ? '#94a3b8' : '#64748b', fontSize: 11, fontWeight: 600,
+                }}>
+                  {isRTL ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button onClick={handleSend} style={{
+                  padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  background: '#4A7AAB', color: '#fff', fontSize: 11, fontWeight: 600,
+                }}>
+                  {isRTL ? 'إرسال' : 'Send'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Email list */}
+          {emails.length === 0 ? (
+            <p style={{ margin: 0, fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', textAlign: 'center', padding: '8px 0' }}>
+              {isRTL ? 'لا توجد رسائل مرتبطة' : 'No linked emails'}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {emails.slice(0, 5).map(email => (
+                <div key={email.id} style={{
+                  padding: '8px 10px', borderRadius: 8,
+                  background: isDark ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.6)',
+                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.06)' : 'rgba(0,0,0,0.04)'}`,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                      {email.subject || (isRTL ? '(بدون موضوع)' : '(No subject)')}
+                    </span>
+                    <span style={{ fontSize: 10, color: isDark ? '#64748b' : '#94a3b8' }}>
+                      {new Date(email.sent_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  <p style={{
+                    margin: 0, fontSize: 10, color: isDark ? '#64748b' : '#94a3b8',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {email.body?.slice(0, 60)}
+                  </p>
+                </div>
+              ))}
+              {emails.length > 5 && (
+                <p style={{ margin: 0, fontSize: 10, color: '#4A7AAB', textAlign: 'center', padding: '4px 0', fontWeight: 600 }}>
+                  {isRTL ? `+${emails.length - 5} رسائل أخرى` : `+${emails.length - 5} more`}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

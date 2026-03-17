@@ -6,10 +6,11 @@ import {
   TrendingUp, Calendar, Clock, PieChart, Activity,
   CreditCard, Building2, UserCheck, FileBarChart,
   ArrowDownToLine, Trophy, Target, Award, Star, Medal,
-  ChevronUp, ChevronDown, Minus, Crown, Zap
+  ChevronUp, ChevronDown, Minus, Crown, Zap, Download, Printer, FileSpreadsheet
 } from 'lucide-react';
 import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { generateReportHTML, getCompanyInfo } from '../services/printService';
+import { exportToCSV as exportReportCSV, exportToPrintableHTML } from '../services/reportExportService';
 import PrintPreview from '../components/ui/PrintPreview';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { MOCK_EMPLOYEES } from '../data/hr_mock_data';
@@ -993,19 +994,46 @@ export default function ReportsPage() {
                 onClick={() => {
                   if (!reportTable) return;
                   const title = lang === 'ar' ? activeReport?.report.ar : activeReport?.report.en;
-                  const cols = reportTable.headers.map(h => ({ key: h, header: h }));
+                  const cols = reportTable.headers.map((h, i) => ({ key: h, label: h }));
                   const rows = reportTable.rows.map(row => {
                     const obj = {};
                     reportTable.headers.forEach((h, i) => { obj[h] = row[i]; });
                     return obj;
                   });
-                  setPrintHTML(generateReportHTML(title, rows, cols, getCompanyInfo(), lang));
+                  exportReportCSV(rows, cols, activeReport?.report.key || 'report');
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border border-brand-500/20 bg-brand-500/[0.08] text-brand-500 hover:bg-brand-500/[0.15]"
                 style={{ fontFamily: 'inherit' }}
               >
-                <FileText size={13} />
-                {lang === 'ar' ? 'طباعة' : 'Print'}
+                <Download size={13} />
+                CSV
+              </button>
+              <button
+                onClick={() => {
+                  if (!reportTable) return;
+                  const title = lang === 'ar' ? activeReport?.report.ar : activeReport?.report.en;
+                  const cols = reportTable.headers.map(h => ({ key: h, label: h }));
+                  const rows = reportTable.rows.map(row => {
+                    const obj = {};
+                    reportTable.headers.forEach((h, i) => { obj[h] = row[i]; });
+                    return obj;
+                  });
+                  exportToPrintableHTML(title, [
+                    { type: 'table', columns: cols, data: rows },
+                  ], {
+                    isRTL,
+                    filters: (dateRange !== 'all' || dateFrom || dateTo) ? [
+                      dateRange !== 'all'
+                        ? (lang === 'ar' ? DATE_RANGES.find(d => d.id === dateRange)?.ar : DATE_RANGES.find(d => d.id === dateRange)?.en)
+                        : `${dateFrom || '—'} → ${dateTo || '—'}`
+                    ] : [],
+                  });
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer border border-brand-500/20 bg-brand-500/[0.08] text-brand-500 hover:bg-brand-500/[0.15]"
+                style={{ fontFamily: 'inherit' }}
+              >
+                <Printer size={13} />
+                {lang === 'ar' ? 'طباعة / PDF' : 'Print / PDF'}
               </button>
               <ExportButton data={exportData} filename={activeReport?.report.key || 'report'} title={lang === 'ar' ? activeReport?.report.ar : activeReport?.report.en} columns={exportColumns} />
             </div>

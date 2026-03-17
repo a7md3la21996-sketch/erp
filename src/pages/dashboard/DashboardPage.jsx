@@ -21,6 +21,7 @@ import { getQuarterSummary, computeObjectiveProgress, getObjectives, STATUS_COLO
 import { getAnnouncements, isRead as isAnnRead, markAsRead as markAnnRead, CATEGORIES as ANN_CATEGORIES, PRIORITIES as ANN_PRIORITIES } from '../../services/announcementService';
 import HeatmapCalendar from '../../components/ui/HeatmapCalendar';
 import { getActivityHeatmap } from '../../services/heatmapService';
+import { useResponsive } from '../../hooks/useMediaQuery';
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -539,6 +540,7 @@ export default function DashboardPage() {
   const { profile } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const { isMobile: isMobileView } = useResponsive();
   const isRTL = i18n.language === 'ar'; const lang = i18n.language;
   const role = profile?.role || 'admin';
   const userId = profile?.id || profile?.email || '';
@@ -1137,6 +1139,10 @@ export default function DashboardPage() {
   const visibleWidgets = widgetLayout.filter(w => w.visible).sort((a, b) => a.order - b.order);
 
   const getGridStyle = (size) => {
+    if (isMobileView) {
+      // On mobile, everything is full-width (single column)
+      return { gridColumn: 'span 1' };
+    }
     const spans = { sm: 1, md: 2, lg: 2, full: 4 };
     const span = spans[size] || 2;
     return { gridColumn: 'span ' + span };
@@ -1276,8 +1282,8 @@ export default function DashboardPage() {
       {/* Widget grid */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: 16,
+        gridTemplateColumns: isMobileView ? '1fr' : 'repeat(4, 1fr)',
+        gap: isMobileView ? 12 : 16,
       }}>
         {visibleWidgets.map((item) => {
           const meta = getWidgetMeta(item.widgetId);

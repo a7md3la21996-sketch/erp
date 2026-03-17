@@ -4,7 +4,7 @@ import {
   DollarSign, Megaphone, UserCog, CalendarDays,
   ClipboardList, MessageSquare, Settings, BarChart3, Wallet, ClipboardCheck,
   TrendingUp, PieChart, Volume2, Crosshair, Grid3x3, Shield, Gift, Bell, HelpCircle,
-  GitCompareArrows,
+  GitCompareArrows, Mail, BookOpen,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -24,6 +24,7 @@ export const NAV_ITEMS = [
     { id: 'commissions', label: { ar: 'العمولات', en: 'Commissions' }, path: '/sales/commissions', permission: P.COMM_VIEW_OWN },
     { id: 'forecast', label: { ar: 'توقعات المبيعات', en: 'Sales Forecast' }, path: '/sales/forecast', permission: P.DEALS_VIEW_OWN },
   ]},
+  { id: 'approvals', label: { ar: 'الموافقات', en: 'Approvals' }, icon: Shield, path: '/approvals', permission: P.DEALS_VIEW_OWN },
   { id: 'operations', label: { ar: 'العمليات', en: 'Operations' }, icon: ClipboardCheck, permission: P.OPS_VIEW, children: [
     { id: 'ops-overview',    label: { ar: 'نظرة عامة',         en: 'Overview' },          path: '/operations',              permission: P.OPS_VIEW },
     { id: 'ops-deals',       label: { ar: 'معالجة الصفقات',     en: 'Deal Processing' },   path: '/operations/deals',        permission: P.OPS_MANAGE },
@@ -67,6 +68,7 @@ export const NAV_ITEMS = [
   { id: 'calendar', label: { ar: 'التقويم', en: 'Calendar' }, icon: CalendarDays, path: '/calendar', permission: P.CALENDAR },
   { id: 'announcements', label: { ar: 'الإعلانات', en: 'Announcements' }, icon: Volume2, path: '/announcements', permission: P.DASHBOARD },
   { id: 'chat', label: { ar: 'المحادثات', en: 'Chat' }, icon: MessageSquare, path: '/chat', permission: P.CHAT_USE },
+  { id: 'email', label: { ar: 'البريد الإلكتروني', en: 'Email' }, icon: Mail, path: '/email', permission: P.CHAT_USE },
   { id: 'reports', label: { ar: 'التقارير', en: 'Reports' }, icon: BarChart3, path: '/reports', permission: P.RPT_SALES },
   { id: 'comparison', label: { ar: 'تقارير المقارنة', en: 'Comparison Reports' }, icon: GitCompareArrows, path: '/comparison', permission: P.RPT_SALES },
   { id: 'heatmap', label: { ar: 'خريطة النشاط', en: 'Activity Map' }, icon: Grid3x3, path: '/heatmap', permission: P.RPT_SALES },
@@ -95,4 +97,5 @@ export const NAV_ITEMS = [
   { id: 'notifications', label: { ar: 'الإشعارات', en: 'Notifications' }, icon: Bell, path: '/notifications', permission: P.DASHBOARD },
   { id: 'changelog', label: { ar: 'ما الجديد', en: "What's New" }, icon: Gift, path: '/changelog', permission: P.DASHBOARD },
   { id: 'help-center', label: { ar: 'دليل الاستخدام', en: 'Help Center' }, icon: HelpCircle, path: '/help', permission: P.DASHBOARD },
+  { id: 'knowledge-base', label: { ar: 'قاعدة المعرفة', en: 'Knowledge Base' }, icon: BookOpen, path: '/knowledge-base', permission: P.DASHBOARD },
 ];

@@ -9,7 +9,7 @@ import {
 import {
   TrendingUp, TrendingDown, BarChart3, Users, DollarSign,
   Target, Award, Clock, ArrowDownRight, Download, Filter,
-  Trophy, Zap, Activity, PieChart as PieIcon, GitBranch,
+  Trophy, Zap, Activity, PieChart as PieIcon, GitBranch, Printer,
 } from 'lucide-react';
 import { Card, CardHeader, KpiCard, ExportButton, Pagination } from '../components/ui';
 import {
@@ -19,6 +19,7 @@ import {
   computeWinLossAnalysis, computeTrendAnalysis,
 } from '../services/analyticsService';
 import { exportToExcel, exportToCSV } from '../utils/exportUtils';
+import { exportToPrintableHTML } from '../services/reportExportService';
 
 // ── Constants ────────────────────────────────────────────────────
 const ACCENT = '#4A7AAB';
@@ -204,6 +205,112 @@ export default function AnalyticsPage() {
     else exportToCSV(data, filename);
   }, [activeTab, funnelData, roiData, cycleData, winLossData, agentData]);
 
+  // ── Print / PDF handler ────────────────────────────────────────
+  const handlePrint = useCallback(() => {
+    let title = '';
+    let sections = [];
+
+    const tabLabel = TABS.find(t => t.id === activeTab);
+    const tabTitle = isRTL ? (tabLabel?.ar || '') : (tabLabel?.en || '');
+    const rangeLabel = DATE_RANGES.find(r => r.id === dateRange);
+    const periodStr = isRTL ? (rangeLabel?.ar || '') : (rangeLabel?.en || '');
+
+    switch (activeTab) {
+      case 'funnel':
+        title = isRTL ? 'تقرير قمع التحويل' : 'Conversion Funnel Report';
+        sections = [{
+          type: 'table',
+          columns: [
+            { key: 'stage', label: isRTL ? 'المرحلة' : 'Stage' },
+            { key: 'count', label: isRTL ? 'العدد' : 'Count' },
+            { key: 'convRate', label: isRTL ? 'معدل التحويل' : 'Conv. Rate' },
+            { key: 'overallRate', label: isRTL ? 'المعدل الكلي' : 'Overall Rate' },
+            { key: 'dropOff', label: isRTL ? 'الفاقد' : 'Drop Off' },
+          ],
+          data: funnelData.map(f => ({
+            stage: isRTL ? f.label.ar : f.label.en,
+            count: f.count,
+            convRate: f.conversionRate + '%',
+            overallRate: f.overallRate + '%',
+            dropOff: f.dropOff,
+          })),
+        }];
+        break;
+      case 'roi':
+        title = isRTL ? 'تقرير عائد مصادر الليدز' : 'Lead Source ROI Report';
+        sections = [{
+          type: 'table',
+          columns: [
+            { key: 'source', label: isRTL ? 'المصدر' : 'Source' },
+            { key: 'leads', label: isRTL ? 'ليدز' : 'Leads' },
+            { key: 'opps', label: isRTL ? 'فرص' : 'Opps' },
+            { key: 'deals', label: isRTL ? 'صفقات' : 'Deals' },
+            { key: 'revenue', label: isRTL ? 'الإيراد' : 'Revenue' },
+            { key: 'roi', label: 'ROI %' },
+          ],
+          data: roiData.map(r => ({ ...r, roi: r.roi + '%', revenue: Number(r.revenue).toLocaleString() })),
+        }];
+        break;
+      case 'cycle':
+        title = isRTL ? 'تقرير دورة المبيعات' : 'Sales Cycle Report';
+        sections = [{
+          type: 'table',
+          columns: [
+            { key: 'agent', label: isRTL ? 'الوكيل' : 'Agent' },
+            { key: 'avgDays', label: isRTL ? 'متوسط الأيام' : 'Avg Days' },
+            { key: 'minDays', label: isRTL ? 'أقل' : 'Min' },
+            { key: 'maxDays', label: isRTL ? 'أكثر' : 'Max' },
+            { key: 'totalDeals', label: isRTL ? 'الصفقات' : 'Deals' },
+          ],
+          data: cycleData.agentAvg || [],
+        }];
+        break;
+      case 'winloss':
+        title = isRTL ? 'تقرير الربح والخسارة' : 'Win/Loss Analysis Report';
+        sections = [{
+          type: 'kpi',
+          data: [
+            { label: isRTL ? 'ناجحة' : 'Won', value: winLossData.totalWon || 0 },
+            { label: isRTL ? 'خاسرة' : 'Lost', value: winLossData.totalLost || 0 },
+            { label: isRTL ? 'معدل الفوز' : 'Win Rate', value: (winLossData.overallWinRate || 0) + '%' },
+          ],
+        }, {
+          title: isRTL ? 'حسب المصدر' : 'By Source',
+          type: 'table',
+          columns: [
+            { key: 'source', label: isRTL ? 'المصدر' : 'Source' },
+            { key: 'won', label: isRTL ? 'ناجحة' : 'Won' },
+            { key: 'lost', label: isRTL ? 'خاسرة' : 'Lost' },
+            { key: 'winRate', label: isRTL ? 'معدل الفوز' : 'Win Rate' },
+          ],
+          data: (winLossData.winRateBySource || []).map(s => ({ ...s, winRate: s.winRate + '%' })),
+        }];
+        break;
+      case 'agents':
+        title = isRTL ? 'تقرير أداء الوكلاء' : 'Agent Performance Report';
+        sections = [{
+          type: 'table',
+          columns: [
+            { key: 'agent', label: isRTL ? 'الوكيل' : 'Agent' },
+            { key: 'opps', label: isRTL ? 'الفرص' : 'Opps' },
+            { key: 'deals', label: isRTL ? 'ناجحة' : 'Won' },
+            { key: 'conversionRate', label: isRTL ? 'التحويل' : 'Conv %' },
+            { key: 'revenue', label: isRTL ? 'الإيراد' : 'Revenue' },
+            { key: 'avgCycleDays', label: isRTL ? 'أيام الإغلاق' : 'Avg Days' },
+            { key: 'totalActivities', label: isRTL ? 'النشاطات' : 'Activities' },
+          ],
+          data: agentData.map(a => ({ ...a, conversionRate: a.conversionRate + '%', revenue: Number(a.revenue).toLocaleString() })),
+        }];
+        break;
+    }
+
+    exportToPrintableHTML(title, sections, {
+      isRTL,
+      filters: periodStr ? [periodStr] : [],
+      subtitle: tabTitle,
+    });
+  }, [activeTab, funnelData, roiData, cycleData, winLossData, agentData, isRTL, dateRange]);
+
   // ══════════════════════════════════════════════════════════════
   // RENDER
   // ══════════════════════════════════════════════════════════════
@@ -269,6 +376,18 @@ export default function AnalyticsPage() {
               }}
             >
               <Download size={13} /> CSV
+            </button>
+            <button
+              onClick={handlePrint}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 4,
+                padding: '6px 12px', borderRadius: 6,
+                border: `1px solid ${borderColor}`,
+                background: bgCard, color: textSecondary,
+                fontSize: 12, cursor: 'pointer',
+              }}
+            >
+              <Printer size={13} /> {isRTL ? 'طباعة' : 'Print'}
             </button>
           </div>
         </div>

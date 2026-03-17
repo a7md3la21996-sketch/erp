@@ -7,6 +7,8 @@ import { NAV_ITEMS } from '../../config/navigation';
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star } from 'lucide-react';
 import { getFavorites, toggleFavorite, isFavorite as checkFavorite } from '../../services/favoritesService';
 import { getUnreadCount as getAnnouncementUnread } from '../../services/announcementService';
+import { getEmailStats } from '../../services/emailService';
+import { getPendingCount as getApprovalPendingCount } from '../../services/approvalService';
 
 export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose }) {
   const { i18n } = useTranslation();
@@ -60,6 +62,26 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     const userId = profile?.id || profile?.email || '';
     if (userId) setAnnUnread(getAnnouncementUnread(userId));
   }, [location.pathname, profile]);
+
+  // Approval pending count
+  const [approvalPending, setApprovalPending] = useState(0);
+  useEffect(() => {
+    setApprovalPending(getApprovalPendingCount());
+    const handler = () => setApprovalPending(getApprovalPendingCount());
+    window.addEventListener('platform_approval_change', handler);
+    return () => window.removeEventListener('platform_approval_change', handler);
+  }, []);
+  useEffect(() => { setApprovalPending(getApprovalPendingCount()); }, [location.pathname]);
+
+  // Email unread count
+  const [emailUnread, setEmailUnread] = useState(0);
+  useEffect(() => {
+    setEmailUnread(getEmailStats().unread);
+    const handler = () => setEmailUnread(getEmailStats().unread);
+    window.addEventListener('platform_emails_changed', handler);
+    return () => window.removeEventListener('platform_emails_changed', handler);
+  }, []);
+  useEffect(() => { setEmailUnread(getEmailStats().unread); }, [location.pathname]);
 
   const toggleMenu = (id) => setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
   const isActive = (path) => location.pathname === path;
@@ -189,10 +211,22 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                       {!showLabels && item.id === 'announcements' && annUnread > 0 && (
                         <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#EF4444', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{annUnread > 9 ? '9+' : annUnread}</span>
                       )}
+                      {!showLabels && item.id === 'approvals' && approvalPending > 0 && (
+                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#F59E0B', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{approvalPending > 9 ? '9+' : approvalPending}</span>
+                      )}
+                      {!showLabels && item.id === 'email' && emailUnread > 0 && (
+                        <span style={{ position: 'absolute', top: -4, [isRTL ? 'left' : 'right']: -6, minWidth: 16, height: 16, borderRadius: 8, background: '#4A7AAB', color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', lineHeight: 1 }}>{emailUnread > 9 ? '9+' : emailUnread}</span>
+                      )}
                     </span>
                     {showLabels && <span className={`flex-1 text-start`}>{item.label[lang]}</span>}
                     {showLabels && item.id === 'announcements' && annUnread > 0 && (
                       <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{annUnread > 99 ? '99+' : annUnread}</span>
+                    )}
+                    {showLabels && item.id === 'approvals' && approvalPending > 0 && (
+                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#F59E0B', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{approvalPending > 99 ? '99+' : approvalPending}</span>
+                    )}
+                    {showLabels && item.id === 'email' && emailUnread > 0 && (
+                      <span style={{ minWidth: 18, height: 18, borderRadius: 9, background: '#4A7AAB', color: '#fff', fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px', lineHeight: 1, flexShrink: 0 }}>{emailUnread > 99 ? '99+' : emailUnread}</span>
                     )}
                     {showLabels && (
                       <span
