@@ -25,122 +25,21 @@ import {
 
 // ── Mock report data generators ──────────────────────────────────
 
-const MOCK_CONTACTS_BY_SOURCE = [
-  { source: 'Facebook', source_ar: 'فيسبوك', count: 142, pct: 35 },
-  { source: 'Google Ads', source_ar: 'إعلانات جوجل', count: 98, pct: 24 },
-  { source: 'Referral', source_ar: 'إحالة', count: 67, pct: 17 },
-  { source: 'Walk-in', source_ar: 'زيارة مباشرة', count: 51, pct: 13 },
-  { source: 'Website', source_ar: 'الموقع', count: 45, pct: 11 },
-];
-
-const MOCK_LEADS_CONVERSION = [
-  { stage: 'New Leads', stage_ar: 'ليدز جديدة', count: 403, rate: '100%' },
-  { stage: 'Contacted', stage_ar: 'تم التواصل', count: 312, rate: '77.4%' },
-  { stage: 'Qualified', stage_ar: 'مؤهل', count: 189, rate: '46.9%' },
-  { stage: 'Proposal', stage_ar: 'عرض سعر', count: 87, rate: '21.6%' },
-  { stage: 'Closed Won', stage_ar: 'تم الإغلاق', count: 34, rate: '8.4%' },
-];
-
-const MOCK_PIPELINE = [
-  { stage: 'Discovery', stage_ar: 'استكشاف', deals: 18, value: 540000 },
-  { stage: 'Proposal', stage_ar: 'عرض سعر', deals: 12, value: 960000 },
-  { stage: 'Negotiation', stage_ar: 'تفاوض', deals: 7, value: 1120000 },
-  { stage: 'Closing', stage_ar: 'إغلاق', deals: 4, value: 680000 },
-];
-
-const MOCK_ACTIVITY_SUMMARY = [
-  { type: 'Calls', type_ar: 'مكالمات', count: 234, trend: '+12%' },
-  { type: 'Meetings', type_ar: 'اجتماعات', count: 56, trend: '+5%' },
-  { type: 'Emails', type_ar: 'بريد إلكتروني', count: 189, trend: '-3%' },
-  { type: 'Follow-ups', type_ar: 'متابعات', count: 145, trend: '+18%' },
-];
-
-const MOCK_REVENUE_BY_MONTH = [
-  { month: 'Jan', month_ar: 'يناير', revenue: 385000, target: 400000 },
-  { month: 'Feb', month_ar: 'فبراير', revenue: 420000, target: 400000 },
-  { month: 'Mar', month_ar: 'مارس', revenue: 510000, target: 450000 },
-  { month: 'Apr', month_ar: 'أبريل', revenue: 390000, target: 450000 },
-  { month: 'May', month_ar: 'مايو', revenue: 475000, target: 500000 },
-  { month: 'Jun', month_ar: 'يونيو', revenue: 530000, target: 500000 },
-];
-
-const MOCK_TOP_PERFORMERS = [
-  { name: 'Ahmed Hassan', name_ar: 'أحمد حسن', deals: 8, revenue: 640000 },
-  { name: 'Sara Ali', name_ar: 'سارة علي', deals: 6, revenue: 510000 },
-  { name: 'Omar Khalil', name_ar: 'عمر خليل', deals: 5, revenue: 425000 },
-  { name: 'Mona Ibrahim', name_ar: 'منى إبراهيم', deals: 4, revenue: 380000 },
-];
-
-const MOCK_DEAL_CYCLE = [
-  { range: '0-15 days', range_ar: '0-15 يوم', count: 12, pct: 26 },
-  { range: '16-30 days', range_ar: '16-30 يوم', count: 18, pct: 39 },
-  { range: '31-60 days', range_ar: '31-60 يوم', count: 11, pct: 24 },
-  { range: '60+ days', range_ar: '60+ يوم', count: 5, pct: 11 },
-];
-
-const MOCK_ATTENDANCE = [
-  { dept: 'Sales', dept_ar: 'المبيعات', present: 22, absent: 2, late: 3 },
-  { dept: 'Marketing', dept_ar: 'التسويق', present: 20, absent: 1, late: 2 },
-  { dept: 'HR', dept_ar: 'الموارد البشرية', present: 18, absent: 0, late: 1 },
-  { dept: 'Finance', dept_ar: 'المالية', present: 19, absent: 1, late: 2 },
-];
-
-const MOCK_LEAVE_BALANCE = [
-  { name: 'Ahmed Hassan', name_ar: 'أحمد حسن', annual: 12, sick: 5, used: 8 },
-  { name: 'Sara Ali', name_ar: 'سارة علي', annual: 15, sick: 5, used: 3 },
-  { name: 'Omar Khalil', name_ar: 'عمر خليل', annual: 10, sick: 5, used: 10 },
-  { name: 'Mona Ibrahim', name_ar: 'منى إبراهيم', annual: 14, sick: 5, used: 6 },
-];
-
-const MOCK_PAYROLL = [
-  { dept: 'Sales', dept_ar: 'المبيعات', gross: 285000, deductions: 42000, net: 243000 },
-  { dept: 'Marketing', dept_ar: 'التسويق', gross: 195000, deductions: 28000, net: 167000 },
-  { dept: 'HR', dept_ar: 'الموارد البشرية', gross: 165000, deductions: 24000, net: 141000 },
-  { dept: 'Finance', dept_ar: 'المالية', gross: 210000, deductions: 31000, net: 179000 },
-];
-
-const MOCK_HEADCOUNT = [
-  { dept: 'Sales', dept_ar: 'المبيعات', count: 24, male: 15, female: 9 },
-  { dept: 'Marketing', dept_ar: 'التسويق', count: 12, male: 5, female: 7 },
-  { dept: 'HR', dept_ar: 'الموارد البشرية', count: 8, male: 3, female: 5 },
-  { dept: 'Finance', dept_ar: 'المالية', count: 10, male: 6, female: 4 },
-  { dept: 'Operations', dept_ar: 'العمليات', count: 16, male: 11, female: 5 },
-];
-
-const MOCK_PNL = [
-  { item: 'Revenue', item_ar: 'الإيرادات', amount: 3_210_000, type: 'income' },
-  { item: 'Cost of Sales', item_ar: 'تكلفة المبيعات', amount: 1_284_000, type: 'expense' },
-  { item: 'Gross Profit', item_ar: 'مجمل الربح', amount: 1_926_000, type: 'subtotal' },
-  { item: 'Salaries', item_ar: 'الرواتب', amount: 855_000, type: 'expense' },
-  { item: 'Marketing', item_ar: 'التسويق', amount: 210_000, type: 'expense' },
-  { item: 'Rent & Utilities', item_ar: 'إيجار ومرافق', amount: 180_000, type: 'expense' },
-  { item: 'Net Profit', item_ar: 'صافي الربح', amount: 681_000, type: 'total' },
-];
-
-const MOCK_EXPENSES = [
-  { category: 'Salaries', category_ar: 'الرواتب', amount: 855_000, pct: 56 },
-  { category: 'Marketing', category_ar: 'التسويق', amount: 210_000, pct: 14 },
-  { category: 'Rent', category_ar: 'الإيجار', amount: 180_000, pct: 12 },
-  { category: 'IT & Software', category_ar: 'تكنولوجيا', amount: 95_000, pct: 6 },
-  { category: 'Travel', category_ar: 'السفر', amount: 75_000, pct: 5 },
-  { category: 'Other', category_ar: 'أخرى', amount: 110_000, pct: 7 },
-];
-
-const MOCK_INVOICE_AGING = [
-  { range: '0-30 days', range_ar: '0-30 يوم', count: 45, amount: 890_000 },
-  { range: '31-60 days', range_ar: '31-60 يوم', count: 18, amount: 420_000 },
-  { range: '61-90 days', range_ar: '61-90 يوم', count: 8, amount: 195_000 },
-  { range: '90+ days', range_ar: '90+ يوم', count: 5, amount: 310_000 },
-];
-
-const MOCK_CASHFLOW = [
-  { month: 'Jan', month_ar: 'يناير', inflow: 410_000, outflow: 320_000 },
-  { month: 'Feb', month_ar: 'فبراير', inflow: 380_000, outflow: 350_000 },
-  { month: 'Mar', month_ar: 'مارس', inflow: 520_000, outflow: 390_000 },
-  { month: 'Apr', month_ar: 'أبريل', inflow: 450_000, outflow: 410_000 },
-  { month: 'May', month_ar: 'مايو', inflow: 490_000, outflow: 370_000 },
-  { month: 'Jun', month_ar: 'يونيو', inflow: 560_000, outflow: 420_000 },
-];
+const MOCK_CONTACTS_BY_SOURCE = [];
+const MOCK_LEADS_CONVERSION = [];
+const MOCK_PIPELINE = [];
+const MOCK_ACTIVITY_SUMMARY = [];
+const MOCK_REVENUE_BY_MONTH = [];
+const MOCK_TOP_PERFORMERS = [];
+const MOCK_DEAL_CYCLE = [];
+const MOCK_ATTENDANCE = [];
+const MOCK_LEAVE_BALANCE = [];
+const MOCK_PAYROLL = [];
+const MOCK_HEADCOUNT = [];
+const MOCK_PNL = [];
+const MOCK_EXPENSES = [];
+const MOCK_INVOICE_AGING = [];
+const MOCK_CASHFLOW = [];
 
 // ── Report definitions ───────────────────────────────────────────
 
@@ -235,23 +134,7 @@ const MONTHS = [
   { id: 'jun', ar: 'يونيو', en: 'June' },
 ];
 
-const MOCK_TARGETS = [
-  { emp_id: 'e1', dept: 'sales', month: 'mar', target: 1500000, achieved: 1250000, deals: 8, units: 3 },
-  { emp_id: 'e3', dept: 'sales', month: 'mar', target: 800000,  achieved: 790000,  deals: 5, units: 2 },
-  { emp_id: 'e5', dept: 'sales', month: 'mar', target: 600000,  achieved: 480000,  deals: 3, units: 1 },
-  { emp_id: 'e6', dept: 'sales', month: 'mar', target: 500000,  achieved: 520000,  deals: 4, units: 2 },
-  { emp_id: 'e8', dept: 'sales', month: 'mar', target: 400000,  achieved: 210000,  deals: 2, units: 1 },
-  { emp_id: 'e1', dept: 'sales', month: 'feb', target: 1500000, achieved: 1380000, deals: 9, units: 4 },
-  { emp_id: 'e3', dept: 'sales', month: 'feb', target: 800000,  achieved: 650000,  deals: 4, units: 2 },
-  { emp_id: 'e5', dept: 'sales', month: 'feb', target: 600000,  achieved: 600000,  deals: 4, units: 1 },
-  { emp_id: 'e6', dept: 'sales', month: 'feb', target: 500000,  achieved: 390000,  deals: 3, units: 1 },
-  { emp_id: 'e8', dept: 'sales', month: 'feb', target: 400000,  achieved: 440000,  deals: 3, units: 2 },
-  { emp_id: 'e1', dept: 'sales', month: 'jan', target: 1200000, achieved: 1100000, deals: 7, units: 3 },
-  { emp_id: 'e3', dept: 'sales', month: 'jan', target: 700000,  achieved: 720000,  deals: 5, units: 2 },
-  { emp_id: 'e5', dept: 'sales', month: 'jan', target: 500000,  achieved: 310000,  deals: 2, units: 1 },
-  { emp_id: 'e6', dept: 'sales', month: 'jan', target: 400000,  achieved: 450000,  deals: 4, units: 2 },
-  { emp_id: 'e8', dept: 'sales', month: 'jan', target: 350000,  achieved: 180000,  deals: 1, units: 0 },
-];
+const MOCK_TARGETS = [];
 
 const fmt = (n) => { if (n >= 1000000) return (n/1000000).toFixed(1)+'M'; if (n >= 1000) return (n/1000).toFixed(0)+'K'; return n; };
 const getRankIcon = (rank) => {

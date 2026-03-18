@@ -19,28 +19,13 @@ export const ACTIVITY_TYPES = {
   task:          { ar: 'مهمة',          en: 'Task',          icon: 'CheckSquare',  color: '#6B8DB5', dept: ['crm','sales','hr','finance'] },
 };
 
-// ── SEED DATA ──────────────────────────────────────────────────────────────
-const SEED_ACTIVITIES = [
-  { id: '1', type: 'call', notes: 'العميل مهتم بوحدة في الشيخ زايد، طلب موعد معاينة', result: 'answered', contact_id: '1', entity_type: 'contact', entity_name: 'أحمد محمد علي', user_name_ar: 'سارة علي', user_name_en: 'Sara Ali', dept: 'crm', created_at: new Date(Date.now() - 2*60*60*1000).toISOString() },
-  { id: '2', type: 'whatsapp', notes: 'تم إرسال بروشور المشروع', result: 'sent', contact_id: '1', entity_type: 'contact', entity_name: 'أحمد محمد علي', user_name_ar: 'سارة علي', user_name_en: 'Sara Ali', dept: 'crm', created_at: new Date(Date.now() - 5*60*60*1000).toISOString() },
-  { id: '3', type: 'meeting', notes: 'اجتماع مراجعة الأداء الشهري مع الفريق', result: 'completed', entity_type: 'internal', entity_name: 'داخلي', user_name_ar: 'أحمد علاء', user_name_en: 'Ahmed Alaa', dept: 'hr', created_at: new Date(Date.now() - 24*60*60*1000).toISOString() },
-  { id: '4', type: 'call', notes: 'لا يرد — سيتم التواصل غداً', result: 'no_answer', contact_id: '2', entity_type: 'contact', entity_name: 'محمد حسن', user_name_ar: 'محمد خالد', user_name_en: 'Mohamed Khaled', dept: 'crm', created_at: new Date(Date.now() - 3*60*60*1000).toISOString() },
-  { id: '5', type: 'note', notes: 'العميل طلب تأجيل حتى نهاية الشهر', contact_id: '7', entity_type: 'contact', entity_name: 'يوسف رمضان', user_name_ar: 'ريم أحمد', user_name_en: 'Reem Ahmed', dept: 'crm', created_at: new Date(Date.now() - 48*60*60*1000).toISOString() },
-  { id: '6', type: 'invoice', notes: 'فاتورة مورد الكهرباء — 15,000 جنيه', result: 'completed', entity_type: 'internal', entity_name: 'داخلي', user_name_ar: 'نورا أحمد', user_name_en: 'Noura Ahmed', dept: 'finance', created_at: new Date(Date.now() - 6*60*60*1000).toISOString() },
-  { id: '7', type: 'interview', notes: 'مقابلة مرشح لوظيفة سيلز — مستوى جيد', result: 'completed', entity_type: 'internal', entity_name: 'داخلي', user_name_ar: 'أحمد علاء', user_name_en: 'Ahmed Alaa', dept: 'hr', created_at: new Date(Date.now() - 72*60*60*1000).toISOString() },
-  { id: '8', type: 'site_visit', notes: 'العميل زار موقع مشروع جرين سكوير وأعجبه', result: 'interested', contact_id: '8', entity_type: 'contact', entity_name: 'كريم سعيد', user_name_ar: 'علي حسن', user_name_en: 'Ali Hassan', dept: 'crm', created_at: new Date(Date.now() - 30*60*1000).toISOString() },
-  { id: '9', type: 'email', notes: 'تم إرسال عرض السعر الرسمي للعميل', result: 'sent', contact_id: '4', entity_type: 'contact', entity_name: 'سمير عادل', user_name_ar: 'سارة علي', user_name_en: 'Sara Ali', dept: 'crm', created_at: new Date(Date.now() - 90*60*60*1000).toISOString() },
-  { id: '10', type: 'status_change', notes: 'تم تحويل الليد من "مهتم" إلى "موعد معاينة"', contact_id: '7', entity_type: 'contact', entity_name: 'يوسف رمضان', user_name_ar: 'ريم أحمد', user_name_en: 'Reem Ahmed', dept: 'crm', created_at: new Date(Date.now() - 4*60*60*1000).toISOString() },
-];
-
 // ── localStorage helpers (shared key with contactsService) ──
 function getLocalActivities() {
   try {
     const saved = localStorage.getItem('platform_activities');
     if (saved) return JSON.parse(saved);
   } catch { /* ignore */ }
-  localStorage.setItem('platform_activities', JSON.stringify(SEED_ACTIVITIES));
-  return [...SEED_ACTIVITIES];
+  return [];
 }
 function saveLocalActivities(acts) {
   try { localStorage.setItem('platform_activities', JSON.stringify(acts)); } catch { /* ignore */ }

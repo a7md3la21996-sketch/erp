@@ -92,12 +92,7 @@ export function createWorkflow(workflow) {
 }
 
 export function getWorkflows() {
-  const list = load();
-  if (list.length === 0) {
-    seedSampleWorkflows();
-    return load();
-  }
-  return list;
+  return load();
 }
 
 export function updateWorkflow(id, updates) {
@@ -186,58 +181,3 @@ export function testWorkflow(workflow) {
   return results;
 }
 
-// ── Seed sample workflows ───────────────────────────────────────────────
-function seedSampleWorkflows() {
-  const samples = [
-    {
-      id: 'wf_sample_1',
-      name: 'Notify on new contact',
-      nameAr: 'إشعار عند جهة اتصال جديدة',
-      description: 'Send notification when a new contact is created',
-      trigger: { entity: 'contact', event: 'created' },
-      conditions: [],
-      actions: [
-        { type: 'send_notification', config: { title: 'New Contact Created', message: 'A new contact has been added to the system' } },
-      ],
-      enabled: true,
-      created_at: '2026-03-01T10:00:00.000Z',
-      updated_at: '2026-03-01T10:00:00.000Z',
-    },
-    {
-      id: 'wf_sample_2',
-      name: 'High-value deal alert',
-      nameAr: 'تنبيه صفقة عالية القيمة',
-      description: 'Notify when deal value exceeds 1M',
-      trigger: { entity: 'deal', event: 'created' },
-      conditions: [
-        { field: 'value', operator: 'greater_than', value: '1000000', connector: 'and' },
-      ],
-      actions: [
-        { type: 'send_notification', config: { title: 'High-Value Deal', message: 'A deal over 1M has been created' } },
-        { type: 'assign_to', config: { assign_to: 'Sales Director', reason: 'High value deal requires director oversight' } },
-      ],
-      enabled: true,
-      created_at: '2026-03-05T14:00:00.000Z',
-      updated_at: '2026-03-05T14:00:00.000Z',
-    },
-    {
-      id: 'wf_sample_3',
-      name: 'Task overdue follow-up',
-      nameAr: 'متابعة المهام المتأخرة',
-      description: 'Create follow-up task when a task status changes to overdue',
-      trigger: { entity: 'task', event: 'status_changed' },
-      conditions: [
-        { field: 'status', operator: 'equals', value: 'overdue', connector: 'and' },
-        { field: 'priority', operator: 'equals', value: 'high', connector: 'and' },
-      ],
-      actions: [
-        { type: 'create_task', config: { title: 'Follow up on overdue task', priority: 'urgent' } },
-        { type: 'send_notification', config: { title: 'Overdue High Priority Task', message: 'A high priority task is now overdue' } },
-      ],
-      enabled: false,
-      created_at: '2026-03-10T09:00:00.000Z',
-      updated_at: '2026-03-10T09:00:00.000Z',
-    },
-  ];
-  save(samples);
-}

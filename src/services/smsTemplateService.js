@@ -57,58 +57,9 @@ function uid() {
   return 'sms_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
 }
 
-// ── Seed default templates ─────────────────────────────────────────────
-function seedDefaults() {
-  const existing = getAll();
-  if (existing.length > 0) return existing;
-
-  const now = new Date().toISOString();
-  const defaults = [
-    {
-      id: uid(), name: 'Welcome Message', nameAr: 'رسالة ترحيب',
-      body: 'Welcome {client_name}! Thank you for choosing {company_name}. We are excited to assist you with {project_name}.',
-      bodyAr: 'أهلاً {client_name}! شكراً لاختيارك {company_name}. نحن متحمسون لمساعدتك في {project_name}.',
-      category: 'welcome', variables: ['client_name', 'company_name', 'project_name'],
-      created_at: now, updated_at: now, send_count: 12,
-    },
-    {
-      id: uid(), name: 'Follow Up', nameAr: 'متابعة',
-      body: 'Hi {client_name}, this is {agent_name} from {company_name}. I wanted to follow up on your interest in {project_name}. Please let me know if you have any questions!',
-      bodyAr: 'مرحباً {client_name}، معك {agent_name} من {company_name}. أردت المتابعة معك بخصوص اهتمامك بـ {project_name}. لا تتردد في التواصل معنا!',
-      category: 'followup', variables: ['client_name', 'agent_name', 'company_name', 'project_name'],
-      created_at: now, updated_at: now, send_count: 28,
-    },
-    {
-      id: uid(), name: 'Appointment Reminder', nameAr: 'تذكير بالموعد',
-      body: 'Reminder: Dear {client_name}, your appointment with {agent_name} is scheduled for {date}. See you at {project_name}!',
-      bodyAr: 'تذكير: عزيزي {client_name}، موعدك مع {agent_name} في {date}. نراك في {project_name}!',
-      category: 'reminder', variables: ['client_name', 'agent_name', 'date', 'project_name'],
-      created_at: now, updated_at: now, send_count: 45,
-    },
-    {
-      id: uid(), name: 'Payment Confirmation', nameAr: 'تأكيد دفعة',
-      body: 'Dear {client_name}, we confirm receiving your payment of {amount} for {project_name}. Thank you! — {company_name}',
-      bodyAr: 'عزيزي {client_name}، نؤكد استلام دفعتكم بقيمة {amount} لمشروع {project_name}. شكراً لكم! — {company_name}',
-      category: 'confirmation', variables: ['client_name', 'amount', 'project_name', 'company_name'],
-      created_at: now, updated_at: now, send_count: 8,
-    },
-    {
-      id: uid(), name: 'Special Offer', nameAr: 'عرض خاص',
-      body: 'Exclusive for you, {client_name}! Limited-time offer on {project_name}. Contact {agent_name} at {company_name} for details.',
-      bodyAr: 'حصرياً لك {client_name}! عرض لفترة محدودة على {project_name}. تواصل مع {agent_name} في {company_name} للتفاصيل.',
-      category: 'promotion', variables: ['client_name', 'project_name', 'agent_name', 'company_name'],
-      created_at: now, updated_at: now, send_count: 19,
-    },
-  ];
-
-  saveAll(defaults);
-  return defaults;
-}
-
 // ── CRUD ───────────────────────────────────────────────────────────────
 export function getTemplates(filters = {}) {
   let templates = getAll();
-  if (templates.length === 0) templates = seedDefaults();
   if (filters.category) templates = templates.filter(t => t.category === filters.category);
   if (filters.search) {
     const q = filters.search.toLowerCase();
@@ -123,12 +74,11 @@ export function getTemplates(filters = {}) {
 }
 
 export function getTemplateById(id) {
-  const all = getAll().length ? getAll() : seedDefaults();
-  return all.find(t => t.id === id) || null;
+  return getAll().find(t => t.id === id) || null;
 }
 
 export function createTemplate({ name, nameAr, body, bodyAr, category, variables = [] }) {
-  const all = getAll().length ? getAll() : seedDefaults();
+  const all = getAll();
   const now = new Date().toISOString();
   const template = {
     id: uid(), name, nameAr, body, bodyAr, category, variables,

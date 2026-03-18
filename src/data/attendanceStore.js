@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from 'react';
-import { MOCK_EMPLOYEES, MOCK_HR_POLICIES } from './hr_mock_data';
+import { MOCK_HR_POLICIES } from './hr_mock_data';
 
 // ── Helpers ────────────────────────────────────────────────────
 function getPol(key) {
@@ -29,59 +29,6 @@ function calcOTHours(checkIn, checkOut) {
   return Math.max(0, Math.round((worked - expected) / 60 * 10) / 10);
 }
 
-// ── Generate deterministic mock data (no Math.random — seed-based) ─
-function seededRand(seed) {
-  const x = Math.sin(seed + 1) * 10000;
-  return x - Math.floor(x);
-}
-
-function generateMockMonth(employees, year, month) {
-  const records = [];
-  const daysInMonth = new Date(year, month, 0).getDate();
-  const workModes   = ['normal', 'normal', 'normal', 'remote', 'field', 'normal', 'normal'];
-
-  employees.forEach((emp, empIdx) => {
-    for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(year, month - 1, d);
-      const dow  = date.getDay();
-      if (dow === 5 || dow === 6) continue;
-
-      const seed = empIdx * 1000 + d;
-      const mode = workModes[d % 7];
-      let checkIn = null, checkOut = null, absent = false, absentNotice = false;
-
-      if (mode === 'normal') {
-        const rand = seededRand(seed);
-        if (rand < 0.05) {
-          absent      = true;
-          absentNotice = seededRand(seed + 500) > 0.5;
-        } else {
-          const lateMin = Math.floor(seededRand(seed + 100) * 55);
-          checkIn  = `10:${String(lateMin).padStart(2,'0')}`;
-          const outH = 18 + Math.floor(seededRand(seed + 200) * 2);
-          const outM = Math.floor(seededRand(seed + 300) * 60);
-          checkOut = `${String(outH).padStart(2,'0')}:${String(outM).padStart(2,'0')}`;
-        }
-      }
-
-      records.push({
-        id: `${emp.id}-${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`,
-        employee_id:       emp.id,
-        date:              `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`,
-        work_mode:         mode,
-        check_in:          checkIn,
-        check_out:         checkOut,
-        absent,
-        absent_with_notice: absentNotice,
-        ot_hours:          checkIn && checkOut ? calcOTHours(checkIn, checkOut) : 0,
-        note:              '',
-        source:            seededRand(seed + 700) > 0.7 ? 'fingerprint' : 'manual',
-      });
-    }
-  });
-  return records;
-}
-
 // ── In-memory store (singleton) ────────────────────────────────
 // خزّن بيانات الشهور اللي اتفتحت عشان مش نعيد generate كل مرة
 const _cache = {};
@@ -93,7 +40,7 @@ export function getMonthKey(year, month) {
 export function getAttendanceForMonth(year, month) {
   const key = getMonthKey(year, month);
   if (!_cache[key]) {
-    _cache[key] = generateMockMonth(MOCK_EMPLOYEES, year, month);
+    _cache[key] = [];
   }
   return _cache[key];
 }
@@ -101,7 +48,7 @@ export function getAttendanceForMonth(year, month) {
 export function updateAttendanceRecord(year, month, updatedRecord) {
   const key = getMonthKey(year, month);
   if (!_cache[key]) {
-    _cache[key] = generateMockMonth(MOCK_EMPLOYEES, year, month);
+    _cache[key] = [];
   }
   const idx = _cache[key].findIndex(r => r.id === updatedRecord.id);
   if (idx >= 0) {
@@ -114,7 +61,7 @@ export function updateAttendanceRecord(year, month, updatedRecord) {
 export function addAttendanceRecord(year, month, record) {
   const key = getMonthKey(year, month);
   if (!_cache[key]) {
-    _cache[key] = generateMockMonth(MOCK_EMPLOYEES, year, month);
+    _cache[key] = [];
   }
   const existing = _cache[key].findIndex(r => r.id === record.id);
   if (existing >= 0) {

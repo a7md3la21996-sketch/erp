@@ -54,91 +54,9 @@ function genId() {
   return 'okr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
 }
 
-// ── Mock data (Q1 2026) ───────────────────────────────────────────────
-function ensureMockData() {
-  const existing = getAll();
-  if (existing.length > 0) return existing;
-
-  const mockData = [
-    {
-      id: genId(),
-      title: 'Increase Sales Revenue',
-      titleAr: 'زيادة إيرادات المبيعات',
-      description: 'Drive Q1 revenue growth through new deals and upselling',
-      quarter: 'Q1',
-      year: 2026,
-      owner_id: 'e1',
-      owner_name: 'Ahmed Alaa Eldin',
-      department: 'sales',
-      status: 'active',
-      created_at: '2026-01-02T08:00:00Z',
-      keyResults: [
-        { id: genId(), title: 'Close 15 new deals', titleAr: 'إغلاق 15 صفقة جديدة', target: 15, current: 9, unit: 'number', progress: 60, status: 'on_track', dueDate: '2026-03-31' },
-        { id: genId(), title: 'Achieve 1.5M revenue', titleAr: 'تحقيق 1.5 مليون إيرادات', target: 1500000, current: 1050000, unit: 'currency', progress: 70, status: 'on_track', dueDate: '2026-03-31' },
-        { id: genId(), title: 'Increase average deal size by 20%', titleAr: 'زيادة متوسط حجم الصفقة 20%', target: 20, current: 12, unit: 'percentage', progress: 60, status: 'at_risk', dueDate: '2026-03-31' },
-      ],
-    },
-    {
-      id: genId(),
-      title: 'Improve Customer Satisfaction',
-      titleAr: 'تحسين رضا العملاء',
-      description: 'Enhance customer experience and reduce churn',
-      quarter: 'Q1',
-      year: 2026,
-      owner_id: 'e2',
-      owner_name: 'Sara Khaled',
-      department: 'sales',
-      status: 'active',
-      created_at: '2026-01-03T09:00:00Z',
-      keyResults: [
-        { id: genId(), title: 'Achieve NPS score of 75+', titleAr: 'تحقيق NPS 75+', target: 75, current: 68, unit: 'number', progress: 91, status: 'on_track', dueDate: '2026-03-31' },
-        { id: genId(), title: 'Reduce churn rate to 3%', titleAr: 'تقليل معدل المغادرة إلى 3%', target: 3, current: 4.2, unit: 'percentage', progress: 55, status: 'at_risk', dueDate: '2026-03-31' },
-      ],
-    },
-    {
-      id: genId(),
-      title: 'Launch Marketing Campaigns',
-      titleAr: 'إطلاق حملات تسويقية',
-      description: 'Execute brand awareness and lead generation campaigns',
-      quarter: 'Q1',
-      year: 2026,
-      owner_id: 'e3',
-      owner_name: 'Mohamed Ali',
-      department: 'marketing',
-      status: 'active',
-      created_at: '2026-01-05T10:00:00Z',
-      keyResults: [
-        { id: genId(), title: 'Generate 500 qualified leads', titleAr: 'توليد 500 عميل محتمل', target: 500, current: 320, unit: 'number', progress: 64, status: 'at_risk', dueDate: '2026-03-31' },
-        { id: genId(), title: 'Achieve 50K website visits', titleAr: 'تحقيق 50K زيارة', target: 50000, current: 38000, unit: 'number', progress: 76, status: 'on_track', dueDate: '2026-03-31' },
-        { id: genId(), title: 'Social media engagement +30%', titleAr: 'زيادة التفاعل 30%', target: 30, current: 15, unit: 'percentage', progress: 50, status: 'behind', dueDate: '2026-03-31' },
-      ],
-    },
-    {
-      id: genId(),
-      title: 'Enhance HR Processes',
-      titleAr: 'تطوير عمليات الموارد البشرية',
-      description: 'Streamline hiring and improve employee engagement',
-      quarter: 'Q1',
-      year: 2026,
-      owner_id: 'e4',
-      owner_name: 'Nora Hassan',
-      department: 'hr',
-      status: 'active',
-      created_at: '2026-01-04T11:00:00Z',
-      keyResults: [
-        { id: genId(), title: 'Hire 8 new employees', titleAr: 'توظيف 8 موظفين', target: 8, current: 3, unit: 'number', progress: 38, status: 'behind', dueDate: '2026-03-31' },
-        { id: genId(), title: 'Employee satisfaction 85%+', titleAr: 'رضا الموظفين 85%+', target: 85, current: 79, unit: 'percentage', progress: 93, status: 'on_track', dueDate: '2026-03-31' },
-      ],
-    },
-  ];
-
-  saveAll(mockData);
-  return mockData;
-}
-
 // ── CRUD ───────────────────────────────────────────────────────────────
 export function getObjectives(filters = {}) {
-  let data = ensureMockData();
+  let data = getAll();
   if (filters.quarter) data = data.filter(o => o.quarter === filters.quarter);
   if (filters.year) data = data.filter(o => o.year === Number(filters.year));
   if (filters.department) data = data.filter(o => o.department === filters.department);
@@ -147,11 +65,11 @@ export function getObjectives(filters = {}) {
 }
 
 export function getObjectiveById(id) {
-  return ensureMockData().find(o => o.id === id) || null;
+  return getAll().find(o => o.id === id) || null;
 }
 
 export function createObjective({ title, titleAr, description, quarter, year, owner_id, owner_name, department, keyResults = [] }) {
-  const all = ensureMockData();
+  const all = getAll();
   const obj = {
     id: genId(),
     title,
@@ -182,7 +100,7 @@ export function createObjective({ title, titleAr, description, quarter, year, ow
 }
 
 export function updateObjective(id, updates) {
-  const all = ensureMockData();
+  const all = getAll();
   const idx = all.findIndex(o => o.id === id);
   if (idx === -1) return null;
   const old = { ...all[idx] };
@@ -192,7 +110,7 @@ export function updateObjective(id, updates) {
 }
 
 export function deleteObjective(id) {
-  const all = ensureMockData();
+  const all = getAll();
   const idx = all.findIndex(o => o.id === id);
   if (idx === -1) return null;
   const removed = all.splice(idx, 1)[0];
@@ -202,7 +120,7 @@ export function deleteObjective(id) {
 
 // ── Key Results ────────────────────────────────────────────────────────
 export function addKeyResult(objectiveId, keyResult) {
-  const all = ensureMockData();
+  const all = getAll();
   const obj = all.find(o => o.id === objectiveId);
   if (!obj) return null;
   const kr = {
@@ -222,7 +140,7 @@ export function addKeyResult(objectiveId, keyResult) {
 }
 
 export function updateKeyResult(objectiveId, krId, updates) {
-  const all = ensureMockData();
+  const all = getAll();
   const obj = all.find(o => o.id === objectiveId);
   if (!obj) return null;
   const kr = obj.keyResults.find(k => k.id === krId);
@@ -237,7 +155,7 @@ export function updateKeyResult(objectiveId, krId, updates) {
 }
 
 export function deleteKeyResult(objectiveId, krId) {
-  const all = ensureMockData();
+  const all = getAll();
   const obj = all.find(o => o.id === objectiveId);
   if (!obj) return null;
   obj.keyResults = obj.keyResults.filter(k => k.id !== krId);

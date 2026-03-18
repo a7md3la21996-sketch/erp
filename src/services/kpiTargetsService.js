@@ -35,35 +35,6 @@ const ROLE_DEFAULTS = {
   sales_agent:     { calls: 80,  new_opportunities: 12, closed_deals: 4,  revenue: 400000,  meetings: 10, site_visits: 12 },
 };
 
-// ── Mock actuals by employee & month — simulates data from activities/opps/deals ──
-const MOCK_ACTUALS = {
-  e1: {
-    '2026-3': { calls: 28, new_opportunities: 18, closed_deals: 9, revenue: 1250000, meetings: 18, site_visits: 8 },
-    '2026-2': { calls: 32, new_opportunities: 22, closed_deals: 11, revenue: 1380000, meetings: 21, site_visits: 9 },
-    '2026-1': { calls: 25, new_opportunities: 16, closed_deals: 7, revenue: 1100000, meetings: 15, site_visits: 7 },
-  },
-  e3: {
-    '2026-3': { calls: 45, new_opportunities: 14, closed_deals: 5, revenue: 790000, meetings: 12, site_visits: 7 },
-    '2026-2': { calls: 38, new_opportunities: 11, closed_deals: 4, revenue: 650000, meetings: 10, site_visits: 6 },
-    '2026-1': { calls: 42, new_opportunities: 15, closed_deals: 5, revenue: 720000, meetings: 13, site_visits: 8 },
-  },
-  e5: {
-    '2026-3': { calls: 52, new_opportunities: 10, closed_deals: 3, revenue: 480000, meetings: 9, site_visits: 6 },
-    '2026-2': { calls: 60, new_opportunities: 15, closed_deals: 4, revenue: 600000, meetings: 12, site_visits: 8 },
-    '2026-1': { calls: 35, new_opportunities: 8, closed_deals: 2, revenue: 310000, meetings: 7, site_visits: 4 },
-  },
-  e6: {
-    '2026-3': { calls: 72, new_opportunities: 11, closed_deals: 4, revenue: 520000, meetings: 8, site_visits: 10 },
-    '2026-2': { calls: 55, new_opportunities: 8, closed_deals: 3, revenue: 390000, meetings: 7, site_visits: 8 },
-    '2026-1': { calls: 78, new_opportunities: 13, closed_deals: 4, revenue: 450000, meetings: 10, site_visits: 11 },
-  },
-  e8: {
-    '2026-3': { calls: 65, new_opportunities: 6, closed_deals: 2, revenue: 210000, meetings: 5, site_visits: 9 },
-    '2026-2': { calls: 70, new_opportunities: 9, closed_deals: 3, revenue: 440000, meetings: 8, site_visits: 11 },
-    '2026-1': { calls: 40, new_opportunities: 4, closed_deals: 1, revenue: 180000, meetings: 3, site_visits: 5 },
-  },
-};
-
 // ── Helpers ───────────────────────────────────────────────────────
 function loadAll() {
   try {
@@ -134,10 +105,7 @@ export function setTargets(employeeId, month, year, targets) {
  * Compute actuals for an employee from mock data (simulating Supabase queries on activities, opps, deals)
  */
 export function computeActuals(employeeId, month, year) {
-  const key = `${year}-${month}`;
-  return MOCK_ACTUALS[employeeId]?.[key] || {
-    calls: 0, new_opportunities: 0, closed_deals: 0, revenue: 0, meetings: 0, site_visits: 0,
-  };
+  return { calls: 0, new_opportunities: 0, closed_deals: 0, revenue: 0, meetings: 0, site_visits: 0 };
 }
 
 /**
