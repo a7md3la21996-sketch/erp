@@ -181,188 +181,6 @@ export default function Header({ onMenuClick }) {
             <span className="hidden sm:inline">{isRTL ? 'تمت المزامنة' : 'Synced'}</span>
           </div>
         )}
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative flex items-center"
-          title={isRTL ? 'اقتراحات ذكية' : 'Smart Suggestions'}
-        >
-          <Lightbulb size={18} />
-          {suggestionsCount > 0 && (
-            <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-[16px] bg-amber-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
-              {suggestionsCount > 99 ? '99+' : suggestionsCount}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => { setChangelogUnseen(0); navigate('/changelog'); }}
-          className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark relative flex items-center"
-          title={isRTL ? 'ما الجديد' : "What's New"}
-        >
-          <Gift size={18} />
-          {changelogUnseen > 0 && (
-            <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-[16px] bg-emerald-500 rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1 leading-none">
-              {changelogUnseen > 99 ? '99+' : changelogUnseen}
-            </span>
-          )}
-        </button>
-        <button
-          data-tour="shortcuts"
-          onClick={() => setShowHelp(true)}
-          className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark hidden sm:flex items-center"
-          title={isRTL ? 'اختصارات لوحة المفاتيح' : 'Keyboard Shortcuts'}
-        >
-          <Keyboard size={18} />
-        </button>
-        <button onClick={handleLangToggle} className="p-2 px-3 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark flex items-center gap-1 text-[13px] font-semibold">
-          <Globe size={18} /><span className="hidden sm:inline">{i18n.language === 'ar' ? 'EN' : 'عربي'}</span>
-        </button>
-        <div ref={themeMenuRef} className="relative">
-          <button
-            data-tour="theme"
-            onClick={() => setShowThemeMenu(!showThemeMenu)}
-            className="p-2 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark flex items-center gap-0.5"
-            title={isRTL ? 'وضع المظهر' : 'Theme Mode'}
-          >
-            {themeMode === 'auto' ? <Monitor size={18} /> : themeMode === 'schedule' ? <Clock size={18} /> : theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            <ChevronDown size={12} />
-          </button>
-          {showThemeMenu && (() => {
-            const isDark = theme === 'dark';
-            const modes = [
-              { id: 'manual', icon: theme === 'dark' ? Sun : Moon, label: isRTL ? 'يدوي' : 'Manual' },
-              { id: 'auto', icon: Monitor, label: isRTL ? 'تلقائي (النظام)' : 'Auto (System)' },
-              { id: 'schedule', icon: Clock, label: isRTL ? 'جدول زمني' : 'Schedule' },
-            ];
-            const hours = Array.from({ length: 24 }, (_, i) => i);
-            const formatHour = (h) => {
-              if (h === 0) return '12 AM';
-              if (h < 12) return `${h} AM`;
-              if (h === 12) return '12 PM';
-              return `${h - 12} PM`;
-            };
-            const selectStyle = {
-              appearance: 'none',
-              WebkitAppearance: 'none',
-              background: isDark ? '#1e293b' : '#f1f5f9',
-              color: isDark ? '#e2e8f0' : '#334155',
-              border: `1px solid ${isDark ? 'rgba(148,163,184,0.2)' : 'rgba(100,116,139,0.25)'}`,
-              borderRadius: 6,
-              padding: '4px 22px 4px 8px',
-              fontSize: 12,
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' fill='none' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: `${isRTL ? '8px' : 'calc(100% - 6px)'} center`,
-            };
-            return (
-              <div
-                dir={isRTL ? 'rtl' : 'ltr'}
-                className={`absolute top-full mt-2 end-0 rounded-xl shadow-lg dark:shadow-2xl z-[100]`}
-                style={{
-                  width: 220,
-                  background: isDark ? '#1a1f2e' : '#fff',
-                  border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
-                  padding: '6px 0',
-                }}
-              >
-                {modes.map((m) => {
-                  const Icon = m.icon;
-                  const active = themeMode === m.id;
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        setThemeMode(m.id);
-                        if (m.id === 'manual') {
-                          // keep current theme, allow toggling
-                        }
-                        if (m.id !== 'schedule') setShowThemeMenu(false);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                        width: '100%',
-                        padding: '9px 14px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 13,
-                        fontFamily: 'inherit',
-                        color: active
-                          ? (isDark ? '#818cf8' : '#6366f1')
-                          : (isDark ? '#cbd5e1' : '#475569'),
-                        background: active
-                          ? (isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.06)')
-                          : 'transparent',
-                        fontWeight: active ? 600 : 400,
-                        textAlign: 'start',
-                      }}
-                    >
-                      <Icon size={16} />
-                      <span style={{ flex: 1 }}>{m.label}</span>
-                      {active && <Check size={14} />}
-                    </button>
-                  );
-                })}
-                {themeMode === 'manual' && (
-                  <div style={{ padding: '6px 14px 8px', borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.07)'}`, marginTop: 4 }}>
-                    <button
-                      onClick={() => { toggleTheme(); setShowThemeMenu(false); }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                        width: '100%',
-                        padding: '7px 10px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontSize: 12,
-                        fontFamily: 'inherit',
-                        borderRadius: 8,
-                        color: isDark ? '#94a3b8' : '#64748b',
-                        background: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.04)',
-                      }}
-                    >
-                      {isDark ? <Sun size={14} /> : <Moon size={14} />}
-                      {isDark ? (isRTL ? 'تبديل للفاتح' : 'Switch to Light') : (isRTL ? 'تبديل للداكن' : 'Switch to Dark')}
-                    </button>
-                  </div>
-                )}
-                {themeMode === 'schedule' && (
-                  <div style={{ padding: '8px 14px 10px', borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.12)' : 'rgba(0,0,0,0.07)'}`, marginTop: 4 }}>
-                    <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 8, fontWeight: 500 }}>
-                      {isRTL ? 'الوضع الداكن من:' : 'Dark mode from:'}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <select
-                        value={scheduleStart}
-                        onChange={(e) => setScheduleStart(Number(e.target.value))}
-                        style={selectStyle}
-                      >
-                        {hours.map(h => <option key={h} value={h}>{formatHour(h)}</option>)}
-                      </select>
-                      <span style={{ fontSize: 12, color: isDark ? '#64748b' : '#94a3b8' }}>→</span>
-                      <select
-                        value={scheduleEnd}
-                        onChange={(e) => setScheduleEnd(Number(e.target.value))}
-                        style={selectStyle}
-                      >
-                        {hours.map(h => <option key={h} value={h}>{formatHour(h)}</option>)}
-                      </select>
-                    </div>
-                    <div style={{ fontSize: 10, color: isDark ? '#64748b' : '#94a3b8', marginTop: 6 }}>
-                      {isDark
-                        ? (isRTL ? '🌙 الوضع الداكن مفعّل الآن' : '🌙 Dark mode is active now')
-                        : (isRTL ? '☀️ الوضع الفاتح مفعّل الآن' : '☀️ Light mode is active now')
-                      }
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
         <div ref={favRef} className="relative">
           <button
             data-tour="favorites"
@@ -461,16 +279,30 @@ export default function Header({ onMenuClick }) {
             </div>
           </button>
           {showProfile && (
-            <div className={`absolute top-full mt-2 end-0 w-[220px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-2xl py-2 z-[100]`}>
+            <div dir={isRTL ? 'rtl' : 'ltr'} className={`absolute top-full mt-2 end-0 w-[240px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg dark:shadow-2xl py-2 z-[100]`}>
               <div className="px-4 py-2.5 border-b border-edge dark:border-edge-dark/75">
                 <div className="text-sm font-semibold text-content dark:text-content-dark">{isRTL ? profile?.full_name_ar : (profile?.full_name_en || profile?.full_name_ar)}</div>
                 <div className="text-xs text-content-muted dark:text-content-muted-dark mt-0.5">{profile?.email}</div>
               </div>
-              <button onClick={() => { setShowProfile(false); navigate('/profile'); }} className="w-full flex items-center gap-2 px-4 py-2.5 border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark text-sm hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
-                <User size={16} />{isRTL ? 'الملف الشخصي' : 'My Profile'}
+              <button onClick={() => { setShowProfile(false); navigate('/profile'); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
+                <User size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />{isRTL ? 'الملف الشخصي' : 'My Profile'}
               </button>
-              <button onClick={logout} className="w-full flex items-center gap-2 px-4 py-2.5 border-none cursor-pointer bg-transparent text-red-500 text-sm">
-                <LogOut size={16} />{t('auth.logout')}
+              <div className="border-t border-edge dark:border-edge-dark/50 my-1" />
+              <button onClick={() => { toggleTheme(); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
+                {theme === 'dark' ? <Sun size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" /> : <Moon size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />}
+                {theme === 'dark' ? (isRTL ? 'الوضع الفاتح' : 'Light Mode') : (isRTL ? 'الوضع الداكن' : 'Dark Mode')}
+              </button>
+              <button onClick={() => { handleLangToggle(); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
+                <Globe size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />
+                {i18n.language === 'ar' ? 'English' : 'العربية'}
+              </button>
+              <button onClick={() => { setShowHelp(true); setShowProfile(false); }} className="w-full flex items-center gap-2.5 px-4 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
+                <Keyboard size={16} className="text-content-muted dark:text-content-muted-dark shrink-0" />
+                {isRTL ? 'اختصارات لوحة المفاتيح' : 'Keyboard Shortcuts'}
+              </button>
+              <div className="border-t border-edge dark:border-edge-dark/50 my-1" />
+              <button onClick={logout} className="w-full flex items-center gap-2.5 px-4 py-2.5 border-none cursor-pointer bg-transparent text-red-500 text-[13px] text-start">
+                <LogOut size={16} className="shrink-0" />{t('auth.logout')}
               </button>
             </div>
           )}
