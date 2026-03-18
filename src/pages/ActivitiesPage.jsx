@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
   UserCheck, AlertTriangle, Star, Receipt, Banknote,
-  RefreshCw, CheckSquare, Plus, X,
+  RefreshCw, CheckSquare, Plus, X, User, Link2,
   Clock, Activity, TrendingUp, CloudOff
 } from 'lucide-react';
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
@@ -15,6 +16,20 @@ const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
   UserCheck, AlertTriangle, Star, Receipt, Banknote,
   RefreshCw, CheckSquare,
+};
+
+const RESULT_LABELS = {
+  answered:     { ar: 'رد',          en: 'Answered',       color: '#10B981' },
+  no_answer:    { ar: 'لم يرد',      en: 'No Answer',      color: '#F59E0B' },
+  busy:         { ar: 'مشغول',       en: 'Busy',           color: '#EF4444' },
+  switched_off: { ar: 'مغلق',        en: 'Switched Off',   color: '#6b7280' },
+  wrong_number: { ar: 'رقم خاطئ',    en: 'Wrong Number',   color: '#8B5CF6' },
+  interested:   { ar: 'مهتم',        en: 'Interested',     color: '#10B981' },
+  not_interested:{ ar: 'غير مهتم',   en: 'Not Interested', color: '#EF4444' },
+  sent:         { ar: 'تم الإرسال',   en: 'Sent',           color: '#4A7AAB' },
+  completed:    { ar: 'مكتمل',       en: 'Completed',      color: '#10B981' },
+  cancelled:    { ar: 'ملغي',        en: 'Cancelled',      color: '#EF4444' },
+  rescheduled:  { ar: 'تم التأجيل',  en: 'Rescheduled',    color: '#F59E0B' },
 };
 
 const DEPT_LABELS = {
@@ -37,6 +52,7 @@ function timeAgo(dateStr, lang) {
 export default function ActivitiesPage() {
   const { i18n } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const lang  = i18n.language;
   const isRTL  = lang === 'ar';
 
@@ -79,6 +95,7 @@ export default function ActivitiesPage() {
       { value: 'finance', label: 'المالية', labelEn: 'Finance' },
     ]},
     { id: 'entity_name', label: 'الجهة', labelEn: 'Related Entity', type: 'select', options: uniqueEntities },
+    { id: 'result', label: 'النتيجة', labelEn: 'Result', type: 'select', options: Object.entries(RESULT_LABELS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
     { id: 'notes', label: 'الملاحظات', labelEn: 'Notes', type: 'text' },
     ...auditFields,
@@ -110,7 +127,9 @@ export default function ActivitiesPage() {
       list = list.filter(a =>
         a.notes?.toLowerCase().includes(s) ||
         a.user_name_ar?.includes(search) ||
-        a.user_name_en?.toLowerCase().includes(s)
+        a.user_name_en?.toLowerCase().includes(s) ||
+        a.entity_name?.toLowerCase().includes(s) ||
+        a.entity_name?.includes(search)
       );
     }
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
@@ -178,6 +197,9 @@ export default function ActivitiesPage() {
             title={isRTL ? 'سجل الأنشطة' : 'Activity Log'}
             columns={[
               { header: isRTL ? 'النوع' : 'Type', key: r => isRTL ? ACTIVITY_TYPES[r.type]?.ar : ACTIVITY_TYPES[r.type]?.en },
+              { header: isRTL ? 'الجهة' : 'Related To', key: 'entity_name' },
+              { header: isRTL ? 'بواسطة' : 'By', key: r => isRTL ? (r.user_name_ar || r.user_name_en) : (r.user_name_en || r.user_name_ar) },
+              { header: isRTL ? 'النتيجة' : 'Result', key: r => r.result ? (isRTL ? RESULT_LABELS[r.result]?.ar : RESULT_LABELS[r.result]?.en) || r.result : '' },
               { header: isRTL ? 'القسم' : 'Department', key: r => isRTL ? DEPT_LABELS[r.dept]?.ar : DEPT_LABELS[r.dept]?.en },
               { header: isRTL ? 'الملاحظات' : 'Notes', key: 'notes' },
               { header: isRTL ? 'التاريخ' : 'Date', key: 'created_at' },
@@ -330,7 +352,8 @@ export default function ActivitiesPage() {
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className={`flex items-center gap-2 flex-wrap mb-[3px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                  {/* Row 1: Type + Entity + Result + Time */}
+                  <div className={`flex items-center gap-2 flex-wrap mb-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <span className="text-xs font-semibold" style={{ color: typeDef.color }}>
                       {lang === 'ar' ? typeDef.ar : typeDef.en}
                     </span>
@@ -339,20 +362,43 @@ export default function ActivitiesPage() {
                         {lang === 'ar' ? deptDef.ar : deptDef.en}
                       </Badge>
                     )}
+                    {act.result && RESULT_LABELS[act.result] && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ background: RESULT_LABELS[act.result].color + '18', color: RESULT_LABELS[act.result].color }}>
+                        {lang === 'ar' ? RESULT_LABELS[act.result].ar : RESULT_LABELS[act.result].en}
+                      </span>
+                    )}
                     {act._offline && (
                       <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
                         <CloudOff size={9} /> {lang === 'ar' ? 'غير متزامن' : 'Offline'}
                       </Badge>
                     )}
-                    <span className="text-xs text-content-muted dark:text-content-muted-dark">
-                      {act.user_name_ar && lang === 'ar' ? act.user_name_ar : act.user_name_en || ''}
-                    </span>
-                    <span className={`text-xs text-content-muted dark:text-content-muted-dark ms-auto`}>
+                    <span className={`text-[11px] text-content-muted dark:text-content-muted-dark ms-auto`}>
                       {timeAgo(act.created_at, lang)}
                     </span>
                   </div>
-                  {act.notes && (
+                  {/* Row 2: Entity (Related To) + User (By) */}
+                  <div className={`flex items-center gap-3 flex-wrap mb-1 text-[11px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    {act.entity_name && (
+                      <span className={`flex items-center gap-1 ${act.contact_id ? 'text-brand-500 cursor-pointer hover:underline' : 'text-content-muted dark:text-content-muted-dark'}`}
+                        onClick={act.contact_id ? () => navigate(`/contacts?highlight=${act.contact_id}`) : undefined}
+                      >
+                        <Link2 size={10} />
+                        {act.entity_name}
+                      </span>
+                    )}
+                    {(act.user_name_ar || act.user_name_en) && (
+                      <span className="flex items-center gap-1 text-content-muted dark:text-content-muted-dark">
+                        <User size={10} />
+                        {lang === 'ar' ? (act.user_name_ar || act.user_name_en) : (act.user_name_en || act.user_name_ar)}
+                      </span>
+                    )}
+                  </div>
+                  {/* Row 3: Notes + Description */}
+                  {(act.notes || act.description) && (
                     <div className="text-xs text-content dark:text-content-dark leading-relaxed" dir={isRTL ? 'rtl' : 'ltr'}>
+                      {act.description && act.description !== act.notes && (
+                        <span className="font-semibold">{act.description} — </span>
+                      )}
                       {act.notes}
                     </div>
                   )}
