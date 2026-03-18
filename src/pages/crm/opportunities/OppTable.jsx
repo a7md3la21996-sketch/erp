@@ -1,4 +1,5 @@
-import { Trash2, CheckSquare, Square, AlertTriangle, Star } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Trash2, CheckSquare, Square, AlertTriangle, Star, Phone, MessageCircle, MoreVertical } from 'lucide-react';
 import { Card, Pagination } from '../../../components/ui';
 import {
   TEMP_CONFIG, PRIORITY_CONFIG,
@@ -6,6 +7,7 @@ import {
   initials, avatarColor, fmtBudget, calcLeadScore, scoreColor, daysInStage, daysSince,
 } from './constants';
 import { getDeptStages } from '../contacts/constants';
+import { normalizePhone } from '../contacts/constants';
 import { getApprovalByEntity } from '../../../services/approvalService';
 
 export default function OppTable({
@@ -15,6 +17,15 @@ export default function OppTable({
   scoreMap, quickWins, bulkMode, bulkSelected, toggleBulk, setBulkSelected,
   selectOpp, handleDelete, isDuplicate,
 }) {
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = (e) => { if (menuRef.current && !menuRef.current.contains(e.target)) setOpenMenuId(null); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openMenuId]);
   return (<>
     {/* Table View - Mobile Card Layout */}
     {isMobile && (
@@ -52,6 +63,16 @@ export default function OppTable({
                 {opp.budget > 0 && <span className="text-[11px] font-bold text-brand-500">{fmtBudget(opp.budget)} {isRTL ? '\u062C' : 'EGP'}</span>}
                 <span className="text-[10px] ms-auto" style={{ color: scoreColor(score) }}>{score} pts</span>
               </div>
+              {opp.contacts?.phone && (
+                <div className="flex gap-1.5 mt-2" onClick={e => e.stopPropagation()}>
+                  <a href={`tel:${normalizePhone(opp.contacts.phone)}`} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-500 no-underline text-[11px] font-semibold">
+                    <Phone size={12} /> {isRTL ? 'اتصال' : 'Call'}
+                  </a>
+                  <a href={`https://wa.me/${normalizePhone(opp.contacts.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-[#25D366]/[0.08] border border-[#25D366]/20 text-[#25D366] no-underline text-[11px] font-semibold">
+                    <MessageCircle size={12} /> WhatsApp
+                  </a>
+                </div>
+              )}
             </Card>
           );
         })}
@@ -89,7 +110,7 @@ export default function OppTable({
                 { key: 'score', label: isRTL ? '\u0627\u0644\u0646\u0642\u0627\u0637' : 'Score', width: 'min-w-[60px]' },
                 { key: 'days', label: isRTL ? '\u0623\u064A\u0627\u0645' : 'Days', width: 'min-w-[55px]' },
                 { key: 'close', label: isRTL ? '\u0627\u0644\u0625\u063A\u0644\u0627\u0642' : 'Close', width: 'min-w-[85px]' },
-                { key: 'actions', label: '', width: 'w-10' },
+                { key: 'actions', label: isRTL ? 'إجراءات' : 'Actions', width: 'min-w-[100px]' },
               ].map(col => (
                 <th key={col.key} className={`px-3 py-3 text-start text-xs font-semibold text-content-muted dark:text-content-muted-dark ${col.width}`}>
                   {col.label}
@@ -240,13 +261,37 @@ export default function OppTable({
                     )}
                   </td>
                   {/* Actions */}
-                  <td className="px-3 py-2.5">
-                    <button
-                      onClick={e => { e.stopPropagation(); handleDelete(opp.id); }}
-                      className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-md hover:bg-red-500/10 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                  <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                    <div className="flex gap-1 items-center">
+                      {opp.contacts?.phone && (
+                        <a href={`tel:${normalizePhone(opp.contacts.phone)}`} title={isRTL ? 'اتصال' : 'Call'} className="w-7 h-7 flex items-center justify-center bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg text-emerald-500 no-underline hover:bg-emerald-500/[0.15] transition-colors">
+                          <Phone size={13} />
+                        </a>
+                      )}
+                      {opp.contacts?.phone && (
+                        <a href={`https://wa.me/${normalizePhone(opp.contacts.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-7 h-7 flex items-center justify-center bg-[#25D366]/[0.08] border border-[#25D366]/20 rounded-lg text-[#25D366] no-underline hover:bg-[#25D366]/[0.15] transition-colors">
+                          <MessageCircle size={13} />
+                        </a>
+                      )}
+                      <div className="relative" ref={openMenuId === opp.id ? menuRef : undefined}>
+                        <button onClick={() => setOpenMenuId(openMenuId === opp.id ? null : opp.id)}
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${openMenuId === opp.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
+                          <MoreVertical size={13} />
+                        </button>
+                        {openMenuId === opp.id && (
+                          <div className={`absolute top-[32px] ${isRTL ? 'start-0' : 'end-0'} bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[160px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden`}>
+                            <div className="p-1">
+                              <button onClick={() => { selectOpp(opp); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                                {isRTL ? 'فتح التفاصيل' : 'View Details'}
+                              </button>
+                              <button onClick={() => { handleDelete(opp.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                                <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </td>
                 </tr>
               );
