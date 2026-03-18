@@ -211,7 +211,7 @@ export default function ContactsTable({
             <tr>
               <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
               <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>
-              <th className={thCls}>{t('contacts.phone')}</th>
+              <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>
               <th className={thCls}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
               <th className={thCls}>{isRTL ? 'الفرص / السيلز' : 'Opps / Sales'}</th>
               <th className={`${thCls} text-center`}>{t('common.actions')}</th>
