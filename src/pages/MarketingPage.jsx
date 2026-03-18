@@ -286,7 +286,7 @@ export default function MarketingPage() {
       setCampaigns(prev => prev.map(c => c.id === editTarget.id ? updated : c));
       toast.success(isRTL ? 'تم التحديث' : 'Updated');
     } else {
-      const created = await createCampaign({ ...form, created_by: isRTL ? (profile?.full_name_ar || profile?.full_name_en) : (profile?.full_name_en || profile?.full_name_ar) });
+      const created = await createCampaign({ ...form, created_by: profile?.id || null, created_by_name: profile?.full_name_ar || profile?.full_name_en || null });
       setCampaigns(prev => [created, ...prev]);
       toast.success(isRTL ? 'تم الإضافة' : 'Created');
     }
@@ -344,7 +344,7 @@ export default function MarketingPage() {
         {activeTab === 'campaigns' && (
           <div className="flex gap-2">
             <ExportButton
-              data={filtered.map(c => ({ name: isRTL ? c.name_ar : c.name_en, platform: c.platform, status: c.status, type: c.type, budget: c.budget, spent: c.spent, leads: campaignStats[c.id]?.leads || 0, cpl: campaignStats[c.id]?.cpl || 0, created_by: c.created_by || '', start: c.start_date, end: c.end_date }))}
+              data={filtered.map(c => ({ name: isRTL ? c.name_ar : c.name_en, platform: c.platform, status: c.status, type: c.type, budget: c.budget, spent: c.spent, leads: campaignStats[c.id]?.leads || 0, cpl: campaignStats[c.id]?.cpl || 0, created_by: c.created_by_name || '', start: c.start_date, end: c.end_date }))}
               filename="campaigns"
               title={isRTL ? 'الحملات' : 'Campaigns'}
               columns={[{ header: 'Name', key: 'name' }, { header: 'Platform', key: 'platform' }, { header: 'Status', key: 'status' }, { header: 'Budget', key: 'budget' }, { header: 'Spent', key: 'spent' }, { header: 'Leads', key: 'leads' }, { header: 'CPL', key: 'cpl' }, { header: 'Created By', key: 'created_by' }]}
@@ -567,7 +567,7 @@ export default function MarketingPage() {
                 <span className="font-bold text-brand-500">{stats.leads || 0} {isRTL ? 'ليد' : 'leads'}</span>
                 {stats.repeats > 0 && <span className="text-amber-500">{stats.repeats} {isRTL ? 'تكرار' : 'repeat'}</span>}
                 {stats.cpl > 0 && <span className={stats.cpl > 300 ? 'text-red-500' : stats.cpl > 200 ? 'text-amber-500' : 'text-emerald-500'}>CPL: {stats.cpl}</span>}
-                {camp.created_by && <span className="text-content-muted dark:text-content-muted-dark">{camp.created_by}</span>}
+                {camp.created_by_name && <span className="text-content-muted dark:text-content-muted-dark">{camp.created_by_name}</span>}
               </div>
             </div>
           );
@@ -639,7 +639,7 @@ export default function MarketingPage() {
                       {stats.conversionRate}%
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-[11px] text-content dark:text-content-dark">{camp.created_by || '—'}</td>
+                  <td className="px-4 py-3 text-[11px] text-content dark:text-content-dark">{camp.created_by_name || '—'}</td>
                   <td className="px-4 py-3 text-[10px] text-content-muted dark:text-content-muted-dark whitespace-nowrap">
                     {camp.start_date && new Date(camp.start_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
                     {camp.end_date && (' → ' + new Date(camp.end_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' }))}
@@ -941,7 +941,7 @@ export default function MarketingPage() {
                 {/* Campaign Details */}
                 <div className="space-y-1.5">
                   {[
-                    { label: isRTL ? 'أنشأها' : 'Created by', val: camp.created_by || '—' },
+                    { label: isRTL ? 'أنشأها' : 'Created by', val: camp.created_by_name || '—' },
                     { label: isRTL ? 'تاريخ الإنشاء' : 'Created', val: camp.created_at ? new Date(camp.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
                     { label: isRTL ? 'النوع' : 'Type', val: isRTL ? type?.ar : type?.en },
                     { label: isRTL ? 'البداية' : 'Start', val: camp.start_date || '—' },

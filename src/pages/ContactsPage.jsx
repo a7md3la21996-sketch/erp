@@ -442,6 +442,7 @@ export default function ContactsPage() {
     { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
     { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: [...new Set(contacts.map(c => c.assigned_to_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set(contacts.map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
+    { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set(contacts.map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     ...auditFields,
   ], [contacts, auditFields]);
 
@@ -524,6 +525,8 @@ export default function ContactsPage() {
       is_blacklisted: false,
       assigned_to_name: profile?.full_name_ar || '—',
       assigned_by_name: profile?.full_name_ar || '—',
+      created_by: profile?.id || null,
+      created_by_name: profile?.full_name_ar || profile?.full_name_en || '—',
       campaign_interactions,
       created_at: new Date().toISOString(),
       last_activity_at: new Date().toISOString(),

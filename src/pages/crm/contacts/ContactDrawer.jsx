@@ -460,7 +460,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const handleSaveOpp = async () => {
     if (!newOpp.project.trim()) { toast.warning(isRTL ? 'اسم المشروع مطلوب' : 'Project name is required'); return; }
     if (!newOpp.assigned_to_name?.trim()) { toast.warning(isRTL ? 'اختر السيلز المسؤول' : 'Select sales agent'); return; }
-    const oppData = { contact_id: contact.id, budget: Number(newOpp.budget) || 0, stage: newOpp.stage, temperature: newOpp.temperature, priority: newOpp.priority, notes: newOpp.notes, assigned_to_name: newOpp.assigned_to_name, title: contact.full_name, source: contact.source || 'manual' };
+    const oppData = { contact_id: contact.id, budget: Number(newOpp.budget) || 0, stage: newOpp.stage, temperature: newOpp.temperature, priority: newOpp.priority, notes: newOpp.notes, assigned_to_name: newOpp.assigned_to_name, title: contact.full_name, source: contact.source || 'manual', created_by: profile?.id || null, created_by_name: profile?.full_name_ar || profile?.full_name_en || null };
     const resetForm = () => setNewOpp({ project: '', budget: '', stage: 'qualification', temperature: 'warm', priority: 'medium', notes: '', assigned_to_name: isSalesAgent ? selfName : '' });
     try {
       const saved = await createOpportunity(oppData);
@@ -626,6 +626,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       rows: [
         { label: isRTL ? 'المسؤول' : 'Assigned', val: contact.assigned_to_name || '—' },
         { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', val: contact.assigned_by_name || '—' },
+        { label: isRTL ? 'أنشأها' : 'Created By', val: contact.created_by_name || '—' },
         { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
         (() => {
           const interactions = contact.campaign_interactions || [];

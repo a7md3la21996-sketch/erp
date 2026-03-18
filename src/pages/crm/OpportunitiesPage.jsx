@@ -674,7 +674,7 @@ export default function OpportunitiesPage() {
         />
       </>)}
 
-      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} existingOpps={opps} currentUserId={profile?.id} />}
+      {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} existingOpps={opps} currentUserId={profile?.id} currentUserName={profile?.full_name_ar || profile?.full_name_en} />}
 
       {/* Delete Confirmation */}
       {confirmDelete && (

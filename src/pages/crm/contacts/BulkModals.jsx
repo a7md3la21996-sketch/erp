@@ -212,6 +212,8 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
           project_id: bulkOppForm.project_id || null,
           title: c.full_name,
           source: c.source || 'manual',
+          created_by: profile?.id || null,
+          created_by_name: profile?.full_name_ar || profile?.full_name_en || null,
         });
         created++;
       } catch { /* skip */ }

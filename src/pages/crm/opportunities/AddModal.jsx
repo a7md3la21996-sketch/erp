@@ -6,7 +6,7 @@ import { TEMP_CONFIG, PRIORITY_CONFIG } from './constants';
 import ContactSearch from './ContactSearch';
 import { Button, Input, Select, Textarea, Modal, ModalFooter } from '../../../components/ui';
 
-export default function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [], currentUserId }) {
+export default function AddModal({ isRTL, lang, onClose, onSave, agents, projects, existingOpps = [], currentUserId, currentUserName }) {
   const [form, setForm] = useState({ contact: null, budget: '', assigned_to: '', temperature: 'hot', priority: 'medium', stage: 'qualification', project_id: '', notes: '', expected_close_date: '' });
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
@@ -26,6 +26,8 @@ export default function AddModal({ isRTL, lang, onClose, onSave, agents, project
       budget: Number(form.budget) || 0,
       assigned_to: form.assigned_to || null,
       assigned_by: currentUserId || null,
+      created_by: currentUserId || null,
+      created_by_name: currentUserName || null,
       temperature: form.temperature,
       priority: form.priority,
       stage: form.stage,
