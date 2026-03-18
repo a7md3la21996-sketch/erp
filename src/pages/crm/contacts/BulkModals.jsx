@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { X, Merge, Briefcase, CheckCircle2, Send } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -75,19 +76,37 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
   );
 }
 
-// ── Confirm Delete Modal ─────────────────────────────────────────────
+// ── Confirm Delete Modal (requires typing confirmation) ──────────────
 export function ConfirmModal({ confirmAction, setConfirmAction, isRTL }) {
+  const [confirmText, setConfirmText] = useState('');
+
   if (!confirmAction) return null;
 
+  const requiredWord = isRTL ? 'حذف' : 'DELETE';
+  const isConfirmed = confirmText.trim() === requiredWord;
+
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5">
-      <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-red-500/30 dark:border-red-500/30 rounded-2xl p-7 w-full max-w-[400px] text-center">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => { setConfirmAction(null); setConfirmText(''); }}>
+      <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-red-500/30 dark:border-red-500/30 rounded-2xl p-7 w-full max-w-[420px] text-center" onClick={e => e.stopPropagation()}>
         <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4 text-xl">⚠️</div>
         <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">{confirmAction.title}</h3>
-        <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-xs">{confirmAction.message}</p>
+        <p className="m-0 mb-4 text-content-muted dark:text-content-muted-dark text-xs">{confirmAction.message}</p>
+        <p className="m-0 mb-2 text-xs text-red-500 font-semibold">
+          {isRTL ? `اكتب "${requiredWord}" للتأكيد` : `Type "${requiredWord}" to confirm`}
+        </p>
+        <input
+          type="text"
+          value={confirmText}
+          onChange={e => setConfirmText(e.target.value)}
+          placeholder={requiredWord}
+          autoFocus
+          className="w-full px-3 py-2.5 mb-4 text-sm text-center rounded-lg border-2 border-red-500/30 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark font-cairo focus:outline-none focus:border-red-500 transition-colors"
+          dir="auto"
+          onKeyDown={e => { if (e.key === 'Enter' && isConfirmed) { confirmAction.onConfirm(); setConfirmText(''); } }}
+        />
         <div className="flex gap-2.5 justify-center">
-          <button onClick={() => setConfirmAction(null)} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
-          <Button variant="danger" size="sm" onClick={confirmAction.onConfirm}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</Button>
+          <button onClick={() => { setConfirmAction(null); setConfirmText(''); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
+          <Button variant="danger" size="sm" disabled={!isConfirmed} onClick={() => { confirmAction.onConfirm(); setConfirmText(''); }}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</Button>
         </div>
       </div>
     </div>
