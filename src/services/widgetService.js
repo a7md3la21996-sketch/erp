@@ -133,15 +133,6 @@ export const AVAILABLE_WIDGETS = [
     defaultSize: 'lg',
   },
   {
-    id: 'quick_links',
-    title_ar: 'روابط سريعة',
-    title_en: 'Quick Links',
-    description_ar: 'روابط للصفحات الرئيسية',
-    description_en: 'Quick navigation links',
-    category: 'general',
-    defaultSize: 'full',
-  },
-  {
     id: 'announcements',
     title_ar: 'الإعلانات',
     title_en: 'Announcements',

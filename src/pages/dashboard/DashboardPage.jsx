@@ -1030,16 +1030,6 @@ export default function DashboardPage() {
           </div>
         );
 
-      case 'quick_links':
-        return (
-          <div>
-            <CardTitle icon={BarChart2} title={lang === 'ar' ? 'روابط سريعة' : 'Quick Links'} />
-            <div className={`flex flex-wrap gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-              {[{ l_ar: 'الموظفين', l_en: 'Employees', path: '/hr/employees', show: sections.showHR, icon: Users }, { l_ar: 'الحضور', l_en: 'Attendance', path: '/hr/attendance', show: sections.showHR, icon: CalendarCheck }, { l_ar: 'الرواتب', l_en: 'Payroll', path: '/hr/payroll', show: sections.showHR, icon: DollarSign }, { l_ar: 'التوظيف', l_en: 'Recruitment', path: '/hr/recruitment', show: sections.showHR, icon: Briefcase }, { l_ar: 'الفرص', l_en: 'Opportunities', path: '/crm/opportunities', show: sections.showCRM, icon: Star }, { l_ar: 'ليد بول', l_en: 'Lead Pool', path: '/crm/lead-pool', show: sections.showCRM, icon: Users }, { l_ar: 'الأداء', l_en: 'Performance', path: '/performance', show: true, icon: TrendingUp }, { l_ar: 'بوابة الموظف', l_en: 'Self-Service', path: '/hr/self-service', show: true, icon: UserCheck }, { l_ar: 'المالية', l_en: 'Finance', path: '/finance', show: sections.showFinance, icon: Wallet }, { l_ar: 'التارجت', l_en: 'Targets', path: '/sales/targets', show: sections.showSales, icon: Target }].filter(l => l.show).map((l, i) => { const LI = l.icon; return <Link key={i} to={l.path} className={`flex items-center gap-[7px] px-3.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-bg dark:bg-brand-500/[0.08] no-underline text-content-muted dark:text-content-muted-dark text-xs font-medium transition-all duration-150 hover:border-brand-500 hover:text-brand-500 hover:bg-brand-500/[0.08] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><LI size={13} /><span>{lang === 'ar' ? l.l_ar : l.l_en}</span></Link>; })}
-            </div>
-          </div>
-        );
-
       case 'announcements': {
         const annList = getAnnouncements().slice(0, 3);
         if (annList.length === 0) return null;
