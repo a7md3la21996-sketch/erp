@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +6,7 @@ import { fetchOpportunities, updateOpportunity, deleteOpportunity, fetchSalesAge
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
-import { TrendingUp, Plus, Search, X, Grid3X3, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, CheckSquare, AlertTriangle, RefreshCw, Printer } from 'lucide-react';
+import { TrendingUp, Plus, Search, X, Grid3X3, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, CheckSquare, AlertTriangle, RefreshCw, Printer, MoreHorizontal } from 'lucide-react';
 import { Button, Card, Input, PageSkeleton, ExportButton } from '../../components/ui';
 import { getDeptStages } from './contacts/constants';
 import { logView } from '../../services/viewTrackingService';
@@ -100,6 +100,8 @@ export default function OpportunitiesPage() {
   const [lostReasonCustom, setLostReasonCustom] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [showFunnel, setShowFunnel] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
+  const moreActionsRef = useRef(null);
   const [moveWarningToast, setMoveWarningToast] = useState(null);
   const isAdmin = profile?.role === 'admin';
   const [gridPage, setGridPage] = useState(1);
@@ -120,6 +122,14 @@ export default function OpportunitiesPage() {
     if (viewMode !== 'table') params.set('view', viewMode);
     setSearchParams(params, { replace: true });
   }, [search, activeStage, sortBy, viewMode, setSearchParams]);
+
+  // Close more-actions dropdown on outside click
+  useEffect(() => {
+    if (!showMoreActions) return;
+    const handler = (e) => { if (moreActionsRef.current && !moreActionsRef.current.contains(e.target)) setShowMoreActions(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMoreActions]);
 
   // SmartFilter field definitions
   const SMART_FIELDS = useMemo(() => [
@@ -534,20 +544,30 @@ export default function OpportunitiesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => loadData(true)} disabled={refreshing} title={isRTL ? 'تحديث' : 'Refresh'}>
-            <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} />
-          </Button>
+          <div className="relative" ref={moreActionsRef}>
+            <Button variant="ghost" size="sm" onClick={() => setShowMoreActions(s => !s)} title={isRTL ? 'المزيد' : 'More'}>
+              <MoreHorizontal size={16} />
+            </Button>
+            {showMoreActions && (
+              <div dir={isRTL ? 'rtl' : 'ltr'} className="absolute top-full mt-1 end-0 w-[180px] rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark shadow-lg z-50 py-1.5"
+                onClick={() => setShowMoreActions(false)}>
+                <button onClick={() => loadData(true)} disabled={refreshing} className="w-full flex items-center gap-2.5 px-4 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start disabled:opacity-40">
+                  <RefreshCw size={14} className={`text-content-muted dark:text-content-muted-dark shrink-0 ${refreshing ? 'animate-spin' : ''}`} />
+                  {isRTL ? 'تحديث' : 'Refresh'}
+                </button>
+                <button onClick={() => {
+                  const report = generateOpportunitiesReport(sortedFiltered, { stage: activeStage !== 'all' ? activeStage : null }, isRTL);
+                  exportToPrintableHTML(report.title, report.sections, report.options);
+                }} className="w-full flex items-center gap-2.5 px-4 py-2 border-none cursor-pointer bg-transparent text-content dark:text-content-dark text-[13px] hover:bg-surface-bg dark:hover:bg-surface-bg-dark text-start">
+                  <Printer size={14} className="text-content-muted dark:text-content-muted-dark shrink-0" />
+                  {isRTL ? 'طباعة / PDF' : 'Print / PDF'}
+                </button>
+              </div>
+            )}
+          </div>
           <ExportButton data={exportData} filename="opportunities" title={isRTL ? 'الفرص' : 'Opportunities'} />
-          <Button variant="ghost" size="sm" onClick={() => {
-            const report = generateOpportunitiesReport(sortedFiltered, {
-              stage: activeStage !== 'all' ? activeStage : null,
-            }, isRTL);
-            exportToPrintableHTML(report.title, report.sections, report.options);
-          }} title={isRTL ? 'طباعة / PDF' : 'Print / PDF'}>
-            <Printer size={15} />
-          </Button>
           <Button size="sm" onClick={() => setShowModal(true)}>
-            <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add Opportunity'}
+            <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add'}
           </Button>
         </div>
       </div>

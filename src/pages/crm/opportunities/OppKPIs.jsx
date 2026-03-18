@@ -1,30 +1,46 @@
-import { Grid3X3, Banknote, Building2, Flame, TrendingUp, Timer, Zap, Star, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+import { Grid3X3, Banknote, Building2, Flame, TrendingUp, Timer, Zap, Star, AlertTriangle, ChevronDown } from 'lucide-react';
 import { KpiCard } from '../../../components/ui';
-import { TEMP_CONFIG, fmtBudget } from './constants';
+import { fmtBudget } from './constants';
 
 export default function OppKPIs({
   isRTL, isMobile, filtered, totalBudget, wonCount, hotCount, weightedForecast, avgDealSize, avgCloseTime, conversionRate, quickWins,
   setSmartFilters, setActiveStage, lostReasonCounts, topLostReason, lostReasonsMap,
 }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const allKpis = [
+    { label: isRTL ? 'إجمالي الفرص' : 'Total', value: filtered.length, color: '#4A7AAB', icon: Grid3X3, onClick: () => { setSmartFilters([]); setActiveStage('all'); } },
+    { label: isRTL ? 'الميزانيات' : 'Budget', value: fmtBudget(totalBudget) + (isRTL ? ' ج' : ' EGP'), color: '#4A7AAB', icon: Banknote },
+    { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', icon: Building2, onClick: () => setActiveStage('closed_won') },
+    { label: isRTL ? 'التحويل' : 'Conv.', value: conversionRate + '%', color: '#6B8DB5', icon: Zap },
+    // Extended KPIs (hidden by default)
+    { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame, onClick: () => setSmartFilters([{ field: 'temperature', operator: 'is', value: 'hot' }]) },
+    { label: isRTL ? 'التوقع المرجح' : 'Forecast', value: fmtBudget(weightedForecast) + (isRTL ? ' ج' : ' EGP'), color: '#8B5CF6', icon: TrendingUp, title: isRTL ? 'الإيراد المتوقع (الميزانية × نسبة الفوز)' : 'Weighted revenue (budget × win rate)' },
+    { label: isRTL ? 'متوسط الصفقة' : 'Avg Deal', value: fmtBudget(avgDealSize) + (isRTL ? ' ج' : ' EGP'), color: '#6B8DB5', icon: Banknote, title: isRTL ? 'متوسط حجم الصفقة المغلقة' : 'Average closed deal size' },
+    { label: isRTL ? 'وقت الإغلاق' : 'Close Time', value: avgCloseTime + (isRTL ? ' يوم' : 'd'), color: avgCloseTime > 30 ? '#EF4444' : avgCloseTime > 14 ? '#F59E0B' : '#10B981', icon: Timer, title: isRTL ? 'متوسط أيام الإغلاق' : 'Avg days to close' },
+    { label: isRTL ? 'فرص قريبة' : 'Quick Wins', value: quickWins.length, color: '#8B5CF6', icon: Star, onClick: quickWins.length > 0 ? () => setSmartFilters([{ field: 'temperature', operator: 'is', value: 'hot' }]) : undefined, title: isRTL ? 'فرص ساخنة قريبة من الإغلاق' : 'Hot opps near closing' },
+  ];
+
+  const visibleKpis = expanded ? allKpis : allKpis.slice(0, 4);
+
   return (<>
-    {/* KPI Cards */}
-    <div className="flex gap-3 mb-5 flex-wrap">
-      {[
-        { label: isRTL ? 'إجمالي الفرص' : 'Total', value: filtered.length, color: '#4A7AAB', icon: Grid3X3, onClick: () => { setSmartFilters([]); setActiveStage('all'); } },
-        { label: isRTL ? 'الميزانيات' : 'Budget', value: fmtBudget(totalBudget) + (isRTL ? ' ج' : ' EGP'), color: '#4A7AAB', icon: Banknote },
-        { label: isRTL ? 'صفقات مغلقة' : 'Won', value: wonCount, color: '#10B981', icon: Building2, onClick: () => setActiveStage('closed_won') },
-        { label: isRTL ? 'فرص ساخنة' : 'Hot', value: hotCount, color: '#EF4444', icon: Flame, onClick: () => setSmartFilters([{ field: 'temperature', operator: 'is', value: 'hot' }]) },
-        { label: isRTL ? 'التوقع المرجح' : 'Forecast', value: fmtBudget(weightedForecast) + (isRTL ? ' ج' : ' EGP'), color: '#8B5CF6', icon: TrendingUp, title: isRTL ? 'الإيراد المتوقع (الميزانية × نسبة الفوز)' : 'Weighted revenue (budget × win rate)' },
-        { label: isRTL ? 'متوسط الصفقة' : 'Avg Deal', value: fmtBudget(avgDealSize) + (isRTL ? ' ج' : ' EGP'), color: '#6B8DB5', icon: Banknote, title: isRTL ? 'متوسط حجم الصفقة المغلقة' : 'Average closed deal size' },
-        { label: isRTL ? 'وقت الإغلاق' : 'Close Time', value: avgCloseTime + (isRTL ? ' يوم' : 'd'), color: avgCloseTime > 30 ? '#EF4444' : avgCloseTime > 14 ? '#F59E0B' : '#10B981', icon: Timer, title: isRTL ? 'متوسط أيام الإغلاق' : 'Avg days to close' },
-        { label: isRTL ? 'التحويل' : 'Conv.', value: conversionRate + '%', color: '#6B8DB5', icon: Zap },
-        { label: isRTL ? 'فرص قريبة' : 'Quick Wins', value: quickWins.length, color: '#8B5CF6', icon: Star, onClick: quickWins.length > 0 ? () => setSmartFilters([{ field: 'temperature', operator: 'is', value: 'hot' }]) : undefined, title: isRTL ? 'فرص ساخنة قريبة من الإغلاق' : 'Hot opps near closing' },
-      ].map((s, i) => (
+    <div className="flex gap-3 mb-2 flex-wrap">
+      {visibleKpis.map((s, i) => (
         <div key={i} className={`${isMobile ? 'flex-[1_1_calc(50%-6px)]' : 'flex-[1_1_120px]'} ${s.onClick ? 'cursor-pointer' : ''}`} onClick={s.onClick} title={s.title || ''}>
           <KpiCard icon={s.icon} label={s.label} value={s.value} color={s.color} />
         </div>
       ))}
     </div>
+    {allKpis.length > 4 && (
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="flex items-center gap-1.5 mx-auto mb-4 px-3 py-1 rounded-lg border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark text-[11px] font-semibold hover:text-brand-500 transition-colors"
+      >
+        {expanded ? (isRTL ? 'عرض أقل' : 'Show less') : (isRTL ? 'عرض المزيد' : 'Show more')}
+        <ChevronDown size={12} className={`transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+    )}
 
     {/* Win/Loss Analysis */}
     {Object.keys(lostReasonCounts).length > 0 && (
