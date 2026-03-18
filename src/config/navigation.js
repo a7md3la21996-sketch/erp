@@ -9,13 +9,13 @@ import {
 
 export const NAV_ITEMS = [
   { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD },
+  { id: 'contacts', label: { ar: 'جهات الاتصال', en: 'Contacts' }, icon: BookUser, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
+  { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.DASHBOARD },
   { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
-    { id: 'contacts', label: { ar: 'جهات الاتصال', en: 'Contacts' }, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
     { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
     { id: 'lead-pool', label: { ar: 'بركة الليدز', en: 'Lead Pool' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
     { id: 'customer-portal', label: { ar: 'بوابة العملاء', en: 'Customer Portal' }, path: '/customer-portal', permission: P.CONTACTS_VIEW_OWN },
   ]},
-  { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.DASHBOARD },
   { id: 'real-estate', label: { ar: 'العقارات', en: 'Real Estate' }, icon: Building2, permission: P.PROJECTS_VIEW, children: [
     { id: 'projects', label: { ar: 'المشاريع', en: 'Projects' }, path: '/real-estate/projects', permission: P.PROJECTS_VIEW },
     { id: 'units', label: { ar: 'الوحدات', en: 'Units' }, path: '/real-estate/units', permission: P.UNITS_VIEW },
