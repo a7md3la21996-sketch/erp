@@ -31,28 +31,14 @@ const LEVELS = {
 
 const SLA_MINUTES = { google: 15, tiktok: 20, meta: 30, organic: 60, cold_call: 1440 };
 
-// ── Mock Sales Team ────────────────────────────────────────────────────────
-const MOCK_AGENTS = [
-  { id: 'a1', name_ar: 'سارة علي',     name_en: 'Sara Ali',      level: 'senior',     team: 'team1', today_count: 3 },
-  { id: 'a2', name_ar: 'محمد خالد',    name_en: 'Mohamed Khaled',level: 'mid_senior', team: 'team1', today_count: 2 },
-  { id: 'a3', name_ar: 'علي حسن',      name_en: 'Ali Hassan',    level: 'junior',     team: 'team2', today_count: 1 },
-  { id: 'a4', name_ar: 'ريم أحمد',     name_en: 'Reem Ahmed',    level: 'mid_junior', team: 'team2', today_count: 1 },
-  { id: 'a5', name_ar: 'كريم مصطفى',   name_en: 'Karim Mostafa', level: 'top_senior', team: 'team1', today_count: 5 },
-];
+// ── Sales Team (loaded from localStorage employees) ──────────────────────
+const MOCK_AGENTS = [];
 
-// ── Mock Pool Data ─────────────────────────────────────────────────────────
-function makeMockLeads() {
-  const now = Date.now();
-  return [
-    { id: 'l1', name: 'أحمد محمد السيد',   phone: '01012345678', source: 'google',    type: 'fresh',     score: 90, created_at: new Date(now - 8*60*1000).toISOString(),   assigned_to: null, team: 'team1', reserved_by: null, reserved_until: null },
-    { id: 'l2', name: 'منى عبدالله حسن',   phone: '01123456789', source: 'meta',      type: 'fresh',     score: 72, created_at: new Date(now - 45*60*1000).toISOString(),  assigned_to: null, team: 'team1', reserved_by: null, reserved_until: null },
-    { id: 'l3', name: 'خالد إبراهيم عمر',  phone: '01234567890', source: 'cold_call', type: 'cold_call', score: 30, created_at: new Date(now - 3*60*60*1000).toISOString(), assigned_to: null, team: 'team2', reserved_by: null, reserved_until: null },
-    { id: 'l4', name: 'هدى محمود طه',      phone: '01087654321', source: 'tiktok',    type: 'fresh',     score: 65, created_at: new Date(now - 2*60*60*1000).toISOString(), assigned_to: null, team: 'team1', reserved_by: null, reserved_until: null },
-    { id: 'l5', name: 'يوسف رمضان علي',    phone: '01099887766', source: 'organic',   type: 'fresh',     score: 45, created_at: new Date(now - 26*60*60*1000).toISOString(),assigned_to: null, team: 'team2', reserved_by: null, reserved_until: null },
-    { id: 'l6', name: 'نادية سامي عيسى',   phone: '01144556677', source: 'cold_call', type: 'cold_call', score: 20, created_at: new Date(now - 5*60*1000).toISOString(),   assigned_to: null, team: 'team2', reserved_by: null, reserved_until: null },
-    { id: 'l7', name: 'طارق جمال حلمي',    phone: '01277889900', source: 'meta',      type: 'fresh',     score: 78, created_at: new Date(now - 90*60*1000).toISOString(),  assigned_to: null, team: 'team1', reserved_by: null, reserved_until: null },
-    { id: 'l8', name: 'إيمان حسين فوزي',   phone: '01055443322', source: 'google',    type: 'fresh',     score: 88, created_at: new Date(now - 12*60*1000).toISOString(),  assigned_to: null, team: 'team1', reserved_by: null, reserved_until: null },
-  ];
+// ── Pool Data (localStorage) ──────────────────────────────────────────────
+function loadLeads() {
+  try {
+    return JSON.parse(localStorage.getItem('platform_lead_pool') || '[]');
+  } catch { return []; }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -114,7 +100,7 @@ export default function LeadPoolPage() {
   const canManage      = hasPermission(P.POOL_MANAGE);
   const canViewAll     = canManage; // managers/directors see all teams
 
-  const [leads, setLeads]             = useState(() => makeMockLeads());
+  const [leads, setLeads]             = useState(() => loadLeads());
 
   const assignedToOptions = useMemo(() =>
     [...new Set(leads.map(l => l.assigned_to).filter(Boolean))].map(name => ({ value: name, label: name, labelEn: name })),
@@ -279,7 +265,7 @@ export default function LeadPoolPage() {
             <Zap size={20} className="text-brand-500" />
           </div>
           <div>
-            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'بركة الليدز' : 'Lead Pool'}</h1>
+            <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'توزيع الليدز' : 'Lead Distribution'}</h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'إدارة وتوزيع الليدز' : 'Manage & distribute leads'}</p>
           </div>
         </div>
