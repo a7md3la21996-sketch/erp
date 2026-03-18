@@ -34,6 +34,7 @@ import useBulkOps from './opportunities/useBulkOps';
 import useOppData from './opportunities/useOppData';
 import { useResponsive } from '../../hooks/useMediaQuery';
 import { useToast } from '../../contexts/ToastContext';
+import useCrmPermissions from '../../hooks/useCrmPermissions';
 
 /* Components extracted to ./opportunities/: OppCard, ContactSearch, AddModal, OpportunityDrawer, OppKPIs, ConversionFunnel, OppTable, OppKanban, OppToolbar, BulkActionsBar */
 // ═══════════════════════════════════════════════
@@ -45,6 +46,7 @@ export default function OpportunitiesPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
   const { isMobile } = useResponsive();
+  const perms = useCrmPermissions();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
@@ -565,7 +567,7 @@ export default function OpportunitiesPage() {
               </div>
             )}
           </div>
-          <ExportButton data={exportData} filename="opportunities" title={isRTL ? 'الفرص' : 'Opportunities'} />
+          {perms.canExportOpps && <ExportButton data={exportData} filename="opportunities" title={isRTL ? 'الفرص' : 'Opportunities'} />}
           <Button size="sm" onClick={() => setShowModal(true)}>
             <Plus size={15} />{isRTL ? 'إضافة فرصة' : 'Add'}
           </Button>
@@ -691,6 +693,7 @@ export default function OpportunitiesPage() {
           scoreMap={scoreMap} quickWins={quickWins}
           bulkMode={bulkMode} bulkSelected={bulkSelected} toggleBulk={toggleBulk} setBulkSelected={setBulkSelected}
           selectOpp={selectOpp} handleDelete={handleDelete} isDuplicate={isDuplicate}
+          perms={perms}
         />
       </>)}
 
@@ -729,6 +732,7 @@ export default function OpportunitiesPage() {
         setConfirmBulkDelete={setConfirmBulkDelete} confirmBulkDelete={confirmBulkDelete}
         bulkDeleteAll={bulkDeleteAll}
         currentStages={currentStages} agents={agents}
+        canDelete={perms.canDeleteOpps} canExport={perms.canExportOpps}
       />
     )}
 

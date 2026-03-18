@@ -8,6 +8,7 @@ export default function BulkActionsBar({
   bulkMoveAll, bulkAssign, bulkChangePriority, bulkChangeTemp, bulkExportCSV,
   setConfirmBulkDelete, confirmBulkDelete, bulkDeleteAll,
   currentStages, agents,
+  canDelete = true, canExport = true,
 }) {
   return (<>
     {/* Floating Bulk Action Bar */}
@@ -71,24 +72,28 @@ export default function BulkActionsBar({
             {action.options.map(o => <option key={o.value} value={o.value} style={{ background: '#1e1e1e' }}>{o.label}</option>)}
           </select>
         ))}
-        <button
-          onClick={bulkExportCSV}
-          style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: 12, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-        >
-          <Download size={14} />
-          {isRTL ? '\u062A\u0635\u062F\u064A\u0631' : 'Export'}
-        </button>
-        <button
-          onClick={() => setConfirmBulkDelete(true)}
-          style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#FCA5A5', fontSize: 12, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
-          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.35)'; }}
-          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; }}
-        >
-          <Trash2 size={14} />
-          {isRTL ? '\u062D\u0630\u0641' : 'Delete'}
-        </button>
+        {canExport && (
+          <button
+            onClick={bulkExportCSV}
+            style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#fff', fontSize: 12, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.18)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+          >
+            <Download size={14} />
+            {isRTL ? '\u062A\u0635\u062F\u064A\u0631' : 'Export'}
+          </button>
+        )}
+        {canDelete && (
+          <button
+            onClick={() => setConfirmBulkDelete(true)}
+            style={{ background: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#FCA5A5', fontSize: 12, padding: '6px 12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.35)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; }}
+          >
+            <Trash2 size={14} />
+            {isRTL ? '\u062D\u0630\u0641' : 'Delete'}
+          </button>
+        )}
         <button
           onClick={() => { setBulkSelected(new Set()); setBulkMode(false); }}
           style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center' }}

@@ -19,6 +19,7 @@ import { evaluateTriggers } from '../services/triggerService';
 import ImportModal from './crm/ImportModal';
 import { PageSkeleton, Button, SmartFilter, applySmartFilters } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
+import useCrmPermissions from '../hooks/useCrmPermissions';
 
 import { SOURCE_LABELS, SOURCE_EN, TYPE, MOCK, normalizePhone, COUNTRY_CODES } from './crm/contacts/constants';
 import AddContactModal from './crm/contacts/AddContactModal';
@@ -36,6 +37,7 @@ export default function ContactsPage() {
   const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
+  const perms = useCrmPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
 
@@ -585,12 +587,16 @@ export default function ContactsPage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={() => exportCSV(filtered)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
-            <Download size={14} /> <span className="hidden sm:inline">{isRTL ? 'تصدير' : 'Export'}</span>
-          </button>
-          <button onClick={() => setShowImportModal(true)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
-            <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
-          </button>
+          {perms.canExportContacts && (
+            <button onClick={() => exportCSV(filtered)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
+              <Download size={14} /> <span className="hidden sm:inline">{isRTL ? 'تصدير' : 'Export'}</span>
+            </button>
+          )}
+          {perms.canImportContacts && (
+            <button onClick={() => setShowImportModal(true)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
+              <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
+            </button>
+          )}
           <Button size="sm" onClick={() => setShowAddModal(true)}>
             <Plus size={14} /> {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
           </Button>
@@ -671,6 +677,7 @@ export default function ContactsPage() {
         setDqNote={setDqNote}
         handleDelete={handleDelete}
         setMergePreview={setMergePreview}
+        perms={perms}
         tdCls={tdCls}
         safePage={safePage}
         totalPages={totalPages}

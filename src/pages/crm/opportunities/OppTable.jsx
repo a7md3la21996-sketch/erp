@@ -16,6 +16,7 @@ export default function OppTable({
   gridSafePage, gridTotalPages, setGridPage, pageSize, setPageSize,
   scoreMap, quickWins, bulkMode, bulkSelected, toggleBulk, setBulkSelected,
   selectOpp, handleDelete, isDuplicate,
+  perms = {},
 }) {
   const [openMenuId, setOpenMenuId] = useState(null);
   const menuRef = useRef(null);
@@ -84,21 +85,23 @@ export default function OppTable({
         <table className="w-full border-collapse text-sm" style={{ minWidth: 1100 }}>
           <thead>
             <tr className="border-b border-edge dark:border-edge-dark bg-[#F8FAFC] dark:bg-surface-bg-dark">
-              <th className="px-3 py-3 text-start w-10">
-                <button
-                  onClick={() => {
-                    const allIds = new Set(gridPaged.map(o => o.id));
-                    const allSelected = gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id));
-                    setBulkSelected(allSelected ? new Set([...bulkSelected].filter(id => !allIds.has(id))) : new Set([...bulkSelected, ...allIds]));
-                  }}
-                  className="bg-transparent border-none cursor-pointer p-0 flex items-center justify-center"
-                >
-                  {gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id))
-                    ? <CheckSquare size={18} style={{ color: '#4A7AAB' }} />
-                    : <Square size={18} className="text-content-muted dark:text-content-muted-dark" />
-                  }
-                </button>
-              </th>
+              {perms.canBulkOpps && (
+                <th className="px-3 py-3 text-start w-10">
+                  <button
+                    onClick={() => {
+                      const allIds = new Set(gridPaged.map(o => o.id));
+                      const allSelected = gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id));
+                      setBulkSelected(allSelected ? new Set([...bulkSelected].filter(id => !allIds.has(id))) : new Set([...bulkSelected, ...allIds]));
+                    }}
+                    className="bg-transparent border-none cursor-pointer p-0 flex items-center justify-center"
+                  >
+                    {gridPaged.length > 0 && gridPaged.every(o => bulkSelected.has(o.id))
+                      ? <CheckSquare size={18} style={{ color: '#4A7AAB' }} />
+                      : <Square size={18} className="text-content-muted dark:text-content-muted-dark" />
+                    }
+                  </button>
+                </th>
+              )}
               {[
                 { key: 'name', label: isRTL ? '\u0627\u0644\u0627\u0633\u0645' : 'Name', width: 'min-w-[180px]' },
                 { key: 'project', label: isRTL ? '\u0627\u0644\u0645\u0634\u0631\u0648\u0639' : 'Project', width: 'min-w-[120px]' },
@@ -143,17 +146,19 @@ export default function OppTable({
                     bulkSelected.has(opp.id) ? 'bg-brand-500/[0.06] dark:bg-brand-500/[0.08]' : ''
                   } ${idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-white/[0.015]'}`}
                 >
-                  <td className="px-3 py-2.5">
-                    <button
-                      onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
-                      className="bg-transparent border-none cursor-pointer p-0 flex items-center justify-center"
-                    >
-                      {bulkSelected.has(opp.id)
-                        ? <CheckSquare size={18} style={{ color: '#4A7AAB' }} />
-                        : <Square size={18} className="text-content-muted dark:text-content-muted-dark" />
-                      }
-                    </button>
-                  </td>
+                  {perms.canBulkOpps && (
+                    <td className="px-3 py-2.5">
+                      <button
+                        onClick={e => { e.stopPropagation(); toggleBulk(opp.id); }}
+                        className="bg-transparent border-none cursor-pointer p-0 flex items-center justify-center"
+                      >
+                        {bulkSelected.has(opp.id)
+                          ? <CheckSquare size={18} style={{ color: '#4A7AAB' }} />
+                          : <Square size={18} className="text-content-muted dark:text-content-muted-dark" />
+                        }
+                      </button>
+                    </td>
+                  )}
                   {/* Name */}
                   <td className="px-3 py-2.5">
                     <div className="flex items-center gap-2.5">
@@ -284,9 +289,11 @@ export default function OppTable({
                               <button onClick={() => { selectOpp(opp); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                                 {isRTL ? 'فتح التفاصيل' : 'View Details'}
                               </button>
-                              <button onClick={() => { handleDelete(opp.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
-                                <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
-                              </button>
+                              {perms.canDeleteOpps && (
+                                <button onClick={() => { handleDelete(opp.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                                  <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}
