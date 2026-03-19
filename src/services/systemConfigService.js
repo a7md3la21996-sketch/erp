@@ -3,7 +3,6 @@ const STORAGE_KEY = 'platform_system_config';
 export const DEFAULT_CONFIG = {
   contactTypes: [
     { key: 'lead',      label_ar: 'ليد',       label_en: 'Lead',       color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)',  departments: ['sales', 'marketing'] },
-    { key: 'cold',      label_ar: 'كولد',      label_en: 'Cold',       color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)', departments: ['sales', 'marketing'] },
     { key: 'client',    label_ar: 'عميل',      label_en: 'Client',     color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)',   departments: [] },
     { key: 'supplier',  label_ar: 'مورد',      label_en: 'Supplier',   color: '#0F766E', bg: 'rgba(15,118,110,0.12)',  departments: ['finance', 'operations'] },
     { key: 'developer', label_ar: 'مطور',      label_en: 'Developer',  color: '#B45309', bg: 'rgba(180,83,9,0.12)',    departments: ['sales'] },
