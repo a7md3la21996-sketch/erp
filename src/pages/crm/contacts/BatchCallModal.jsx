@@ -238,10 +238,13 @@ export default function BatchCallModal({
                     priority: batchTaskForm.priority,
                     due_date: batchTaskForm.due || null,
                     status: 'pending',
+                    dept: 'crm',
                     contact_id: current.id,
                     contact_name: current.full_name,
-                    assigned_to: profile?.id,
-                    assigned_to_name: profile?.full_name_ar || profile?.full_name_en,
+                    assigned_to: profile?.id || null,
+                    assigned_to_name: profile?.full_name_ar || profile?.full_name_en || '',
+                    assigned_to_name_ar: profile?.full_name_ar || '',
+                    assigned_to_name_en: profile?.full_name_en || '',
                   });
                 } catch { /* ignore */ }
               }

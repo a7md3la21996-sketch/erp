@@ -157,7 +157,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               setContacts(updated);
               try { localStorage.setItem('platform_contacts', JSON.stringify(updated)); } catch {}
               await Promise.all(ids.map(id => updateContact(id, updates).catch(() => {})));
-              logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar }).catch(() => {});
+              logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
               toast.success(isRTL ? `تم استبعاد ${ids.length} جهة اتصال` : `${ids.length} contacts disqualified`);
               setSelectedIds([]);
             } else {
@@ -166,7 +166,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               setContacts(updated);
               try { localStorage.setItem('platform_contacts', JSON.stringify(updated)); } catch {}
               await updateContact(c.id, updates).catch(() => {});
-              logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar }).catch(() => {});
+              logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
               toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
             }
             setDisqualifyModal(null);
@@ -224,7 +224,6 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
       try {
         await createOpportunity({
           contact_id: c.id,
-          assigned_to: null,
           assigned_to_name: bulkOppForm.assigned_to_name,
           stage: bulkOppForm.stage,
           priority: bulkOppForm.priority,
@@ -238,7 +237,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
         created++;
       } catch { /* skip */ }
     }
-    logAction({ action: 'bulk_create_opportunities', entity: 'opportunity', description: `Created ${created} opportunities for ${selContacts.map(c => c.full_name).join(', ')} → ${bulkOppForm.assigned_to_name}`, userName: profile?.full_name_ar });
+    logAction({ action: 'bulk_create_opportunities', entity: 'opportunity', description: `Created ${created} opportunities for ${selContacts.map(c => c.full_name).join(', ')} → ${bulkOppForm.assigned_to_name}`, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
     if (bulkOppForm.assigned_to_name !== selfName) {
       createNotification({ type: 'opportunity_assigned', title_ar: 'فرص جديدة', title_en: 'New Opportunities Assigned', body_ar: `تم تعيين ${created} فرصة لك بواسطة ${selfName}`, body_en: `${created} opportunities assigned to you by ${selfName}`, for_user_name: bulkOppForm.assigned_to_name, entity_type: 'opportunity', from_user: selfName });

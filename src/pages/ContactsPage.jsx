@@ -108,6 +108,7 @@ export default function ContactsPage() {
   const { activityResults: configResults, contactsSettings } = useSystemConfig();
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
+  const saveContactsLocal = (data) => { try { localStorage.setItem('platform_contacts', JSON.stringify(data)); } catch { /* quota */ } };
 
   const togglePin = (id) => {
     setPinnedIds(prev => {
@@ -161,7 +162,7 @@ export default function ContactsPage() {
       });
       if (contact.contact_status === 'new' || !contact.contact_status) {
         const updated = { ...contact, contact_status: 'contacted' };
-        setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; });
+        setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); saveContactsLocal(next); return next; });
         updateContact(updated.id, updated).catch(() => {});
       }
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
@@ -203,7 +204,7 @@ export default function ContactsPage() {
       onConfirm: () => {
         const updated = contacts.filter(c => c.id !== id);
         setContacts(updated);
-        localStorage.setItem('platform_contacts', JSON.stringify(updated));
+        saveContactsLocal(updated);
         logAction({ action: 'delete', entity: 'contact', entityId: id, entityName: contact?.full_name, description: `Deleted contact: ${contact?.full_name}`, userName: profile?.full_name_ar });
         toast.success(isRTL ? 'تم الحذف بنجاح' : 'Deleted successfully');
         setConfirmAction(null);
@@ -220,7 +221,7 @@ export default function ContactsPage() {
         const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
         const updated = contacts.filter(c => !selectedIds.includes(c.id));
         setContacts(updated);
-        localStorage.setItem('platform_contacts', JSON.stringify(updated));
+        saveContactsLocal(updated);
         logAction({ action: 'bulk_delete', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk deleted ${count} contacts: ${names}`, userName: profile?.full_name_ar });
         setSelectedIds([]);
         toast.success(isRTL ? `تم حذف ${count} جهة اتصال` : `${count} contacts deleted`);
@@ -235,7 +236,7 @@ export default function ContactsPage() {
     const idsToUpdate = [...selectedIds];
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_by_name: assignedByName } : c);
     setContacts(updated);
-    localStorage.setItem('platform_contacts', JSON.stringify(updated));
+    saveContactsLocal(updated);
     logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
     updated.filter(c => selectedIds.includes(c.id)).forEach(c => {
       notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', agentId: agentName, agentName, assignedBy: assignedByName });
@@ -253,7 +254,7 @@ export default function ContactsPage() {
     const idsToUpdate = [...selectedIds];
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, [field]: value } : c);
     setContacts(updated);
-    localStorage.setItem('platform_contacts', JSON.stringify(updated));
+    saveContactsLocal(updated);
     logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: selectedIds.join(','), description: `Bulk changed ${field} to "${value}" for ${count} contacts: ${names}`, newValue: value, userName: profile?.full_name_ar });
     createNotification({ type: 'system', title_en: `Bulk ${actionLabel}`, title_ar: `تغيير جماعي — ${actionLabel}`, body_en: `Changed ${field} to "${value}" for ${count} contacts`, body_ar: `تم تغيير ${field} إلى "${value}" لـ ${count} جهة اتصال`, for_user_id: 'all' });
     toast.success(isRTL ? `تم تحديث ${count} جهة اتصال` : `${count} contacts updated`);
@@ -535,14 +536,14 @@ export default function ContactsPage() {
       const saved = await createContact(cleanForm);
       const updated = [saved, ...contacts];
       setContacts(updated);
-      localStorage.setItem('platform_contacts', JSON.stringify(updated));
+      saveContactsLocal(updated);
       if (cfValues) setCFValues('contact', saved.id, cfValues);
       logAction({ action: 'create', entity: 'contact', entityId: saved.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
       evaluateTriggers('contact', 'created', saved);
     } catch {
       const updated = [newContact, ...contacts];
       setContacts(updated);
-      localStorage.setItem('platform_contacts', JSON.stringify(updated));
+      saveContactsLocal(updated);
       if (cfValues) setCFValues('contact', newContact.id, cfValues);
       logAction({ action: 'create', entity: 'contact', entityId: newContact.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
       evaluateTriggers('contact', 'created', newContact);
@@ -552,7 +553,7 @@ export default function ContactsPage() {
   const handleBlacklist = async (contact, reason) => {
     setContacts(prev => {
       const next = prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c);
-      localStorage.setItem('platform_contacts', JSON.stringify(next));
+      saveContactsLocal(next);
       return next;
     });
     if (selected?.id === contact.id) setSelected(null);
@@ -701,16 +702,16 @@ export default function ContactsPage() {
         const updatedContact = { ...contact, campaign_interactions: [...existing, interaction] };
         setContacts(prev => {
           const next = prev.map(c => c.id === contact.id ? updatedContact : c);
-          localStorage.setItem('platform_contacts', JSON.stringify(next));
+          saveContactsLocal(next);
           return next;
         });
         updateContact(contact.id, { campaign_interactions: updatedContact.campaign_interactions }).catch(() => {});
       }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { const old = contacts.find(c => c.id === updated.id); setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => {}); const changedFields = old ? Object.keys(updated).filter(k => JSON.stringify(old[k]) !== JSON.stringify(updated[k]) && !['updated_at'].includes(k)) : []; const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${updated[k] || ''}"`).join(', ') : `Updated contact: ${updated.full_name}`; logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: desc, oldValue: old || null, newValue: updated, userName: profile?.full_name_ar || '' }).catch(() => {}) }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
-      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onUpdate={(updated) => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); updateContact(updated.id, updated).catch(() => {}); }} />}
+      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { const old = contacts.find(c => c.id === updated.id); setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); saveContactsLocal(next); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => {}); const changedFields = old ? Object.keys(updated).filter(k => JSON.stringify(old[k]) !== JSON.stringify(updated[k]) && !['updated_at'].includes(k)) : []; const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${updated[k] || ''}"`).join(', ') : `Updated contact: ${updated.full_name}`; logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: desc, oldValue: old || null, newValue: updated, userName: profile?.full_name_ar || '' }).catch(() => {}) }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
+      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onUpdate={(updated) => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); saveContactsLocal(next); return next; }); updateContact(updated.id, updated).catch(() => {}); }} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
       {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
-      {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={(newContacts) => { setContacts(prev => { const updated = [...prev, ...newContacts]; localStorage.setItem('platform_contacts', JSON.stringify(updated)); return updated; }); setShowImportModal(false); }} />}
+      {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={(newContacts) => { setContacts(prev => { const updated = [...prev, ...newContacts]; saveContactsLocal(updated); return updated; }); setShowImportModal(false); }} />}
 
       {/* Batch Call Mode */}
       <BatchCallModal
