@@ -232,13 +232,12 @@ export default function ContactsPage() {
   const handleBulkReassign = async (agentName) => {
     const assignedByName = profile?.full_name_ar || '—';
     const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
-    const prevContacts = contacts;
     const idsToUpdate = [...selectedIds];
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_by_name: assignedByName } : c);
     setContacts(updated);
     localStorage.setItem('platform_contacts', JSON.stringify(updated));
     logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
-    contacts.filter(c => selectedIds.includes(c.id)).forEach(c => {
+    updated.filter(c => selectedIds.includes(c.id)).forEach(c => {
       notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', agentId: agentName, agentName, assignedBy: assignedByName });
     });
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
@@ -251,7 +250,6 @@ export default function ContactsPage() {
   const handleBulkChangeField = async (field, value, actionLabel) => {
     const count = selectedIds.length;
     const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
-    const prevContacts = contacts;
     const idsToUpdate = [...selectedIds];
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, [field]: value } : c);
     setContacts(updated);
@@ -516,7 +514,7 @@ export default function ContactsPage() {
       : [];
     const newContact = {
       ...form,
-      id: String(Math.max(0, ...contacts.map(c => parseInt(c.id) || 0)) + 1),
+      id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       lead_score: 0,
       temperature: 'hot',
       temperature_auto: true,
@@ -698,10 +696,13 @@ export default function ContactsPage() {
       {/* Modals */}
       {showAddModal && <AddContactModal campaigns={campaignsList} onCreateCampaign={async (data) => { const created = await createCampaign(data); setCampaignsList(prev => [created, ...prev]); }} onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const np = normalizePhone(phone); const found = contacts.find(c => normalizePhone(c.phone) === np || normalizePhone(c.phone2) === np || (c.extra_phones || []).some(p => normalizePhone(p) === np)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} onAddInteraction={(contact, interaction) => {
         const existing = contact.campaign_interactions || [];
-        const updated = { ...contact, campaign_interactions: [...existing, interaction] };
-        setContacts(prev => prev.map(c => c.id === contact.id ? updated : c));
-        localStorage.setItem('platform_contacts', JSON.stringify(contacts.map(c => c.id === contact.id ? updated : c)));
-        updateContact(contact.id, { campaign_interactions: updated.campaign_interactions }).catch(() => {});
+        const updatedContact = { ...contact, campaign_interactions: [...existing, interaction] };
+        setContacts(prev => {
+          const next = prev.map(c => c.id === contact.id ? updatedContact : c);
+          localStorage.setItem('platform_contacts', JSON.stringify(next));
+          return next;
+        });
+        updateContact(contact.id, { campaign_interactions: updatedContact.campaign_interactions }).catch(() => {});
       }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { const old = contacts.find(c => c.id === updated.id); setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => {}); const changedFields = old ? Object.keys(updated).filter(k => JSON.stringify(old[k]) !== JSON.stringify(updated[k]) && !['updated_at'].includes(k)) : []; const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${updated[k] || ''}"`).join(', ') : `Updated contact: ${updated.full_name}`; logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: desc, oldValue: old || null, newValue: updated, userName: profile?.full_name_ar || '' }).catch(() => {}) }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
