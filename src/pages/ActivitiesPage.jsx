@@ -126,10 +126,9 @@ export default function ActivitiesPage() {
       const s = search.toLowerCase();
       list = list.filter(a =>
         a.notes?.toLowerCase().includes(s) ||
-        a.user_name_ar?.includes(search) ||
+        a.user_name_ar?.toLowerCase().includes(s) ||
         a.user_name_en?.toLowerCase().includes(s) ||
-        a.entity_name?.toLowerCase().includes(s) ||
-        a.entity_name?.includes(search)
+        a.entity_name?.toLowerCase().includes(s)
       );
     }
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
@@ -148,7 +147,7 @@ export default function ActivitiesPage() {
     const today = activities.filter(a => new Date(a.created_at) > new Date(Date.now() - 86400000));
     const byType = {};
     activities.forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
-    const topType = Object.entries(byType).sort((a,b) => b[1]-a[1])[0];
+    const topType = Object.entries(byType).sort((a,b) => b[1]-a[1])[0] || null;
     return { total: activities.length, today: today.length, topType };
   }, [activities]);
 
@@ -156,12 +155,15 @@ export default function ActivitiesPage() {
     if (!form.notes.trim()) return;
     setSaving(true);
     try {
-      await createActivity({ type: form.type, notes: form.notes, entityType: 'internal', dept: form.dept, userId: user?.id });
+      await createActivity({ type: form.type, notes: form.notes, entityType: 'internal', dept: form.dept, userId: user?.id || null });
       await load();
       setForm({ type: 'call', notes: '', dept: 'crm' });
-      setSaving(false);
       setAdding(false);
     } catch {
+      // Activity saved locally even if server fails
+      await load();
+      setAdding(false);
+    } finally {
       setSaving(false);
     }
   };
@@ -407,7 +409,7 @@ export default function ActivitiesPage() {
                 {/* Delete */}
                 {confirmDeleteId === act.id ? (
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={() => { deleteActivity(act.id); setActivities(prev => prev.filter(a => a.id !== act.id)); setConfirmDeleteId(null); }}
+                    <button onClick={async () => { try { await deleteActivity(act.id); setActivities(prev => prev.filter(a => a.id !== act.id)); } catch { /* deleted locally */ setActivities(prev => prev.filter(a => a.id !== act.id)); } setConfirmDeleteId(null); }}
                       className="bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 text-[10px] text-red-500 cursor-pointer font-semibold">{isRTL ? 'تأكيد' : 'Confirm'}</button>
                     <button onClick={() => setConfirmDeleteId(null)}
                       className="bg-transparent border border-edge dark:border-edge-dark rounded px-1.5 py-0.5 text-[10px] text-content-muted dark:text-content-muted-dark cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>

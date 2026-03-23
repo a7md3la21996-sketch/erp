@@ -88,17 +88,13 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
     }
     return data;
   } catch {
-    if (!navigator.onLine) {
-      const tempId = 'temp_' + Date.now();
-      const tempActivity = { ...payload, id: tempId, user_name_ar: 'أنت', user_name_en: 'You', _offline: true };
-      enqueue('activity', 'create', tempActivity);
-      return tempActivity;
-    }
-    const mock = { ...payload, id: Date.now().toString(), user_name_ar: 'أنت', user_name_en: 'You' };
+    const tempId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const tempActivity = { ...payload, id: tempId, user_name_ar: 'أنت', user_name_en: 'You', _offline: true };
     const all = getLocalActivities();
-    all.unshift(mock);
+    all.unshift(tempActivity);
     saveLocalActivities(all);
-    return mock;
+    enqueue('activity', 'create', tempActivity);
+    return tempActivity;
   }
 }
 
