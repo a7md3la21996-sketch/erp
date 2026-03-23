@@ -80,6 +80,10 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     const fullPhone = getFullPhone(form.phone, form.countryCode);
     if (!validatePhone(fullPhone)) { toast.warning(isRTL ? 'رقم الهاتف غير صحيح' : 'Invalid phone number'); return; }
     if (form.email && !emailValid) { toast.warning(isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email'); return; }
+    if (form.phone2) {
+      const fullPhone2 = getFullPhone(form.phone2, form.countryCode2);
+      if (!validatePhone(fullPhone2)) { toast.warning(isRTL ? 'رقم الهاتف الثاني غير صحيح' : 'Invalid secondary phone number'); return; }
+    }
     const invalidExtra = extraPhones.find((p, i) => p && !validatePhone(getFullPhone(p, extraCodes[i])));
     if (invalidExtra) { toast.warning(isRTL ? 'رقم إضافي غير صحيح' : 'Invalid extra phone number'); return; }
     setSaving(true);
