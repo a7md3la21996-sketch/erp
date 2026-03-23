@@ -533,8 +533,8 @@ export default function ContactsPage() {
     const cfValues = form._customFieldValues;
     const { _customFieldValues, ...cleanForm } = form;
     try {
-      const saved = await createContact(cleanForm);
-      const updated = [saved, ...contacts];
+      const saved = await createContact({ ...cleanForm, campaign_interactions });
+      const updated = [{ ...saved, campaign_interactions }, ...contacts];
       setContacts(updated);
       saveContactsLocal(updated);
       if (cfValues) setCFValues('contact', saved.id, cfValues);
