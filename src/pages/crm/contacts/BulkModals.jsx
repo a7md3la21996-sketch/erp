@@ -17,8 +17,9 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
 
   if (!mergePreview) return null;
 
-  const [c1, c2] = mergePreview.map(id => contacts.find(c => c.id === id)).filter(Boolean);
-  if (!c1 || !c2) return null;
+  const mergedPair = mergePreview.map(id => contacts.find(c => c.id === id)).filter(Boolean);
+  if (mergedPair.length !== 2) return null;
+  const [c1, c2] = mergedPair;
   // Merge: prefer c1 values, but fall back to c2 when c1 value is empty/null
   const merged = { ...c2 };
   Object.keys(c1).forEach(k => {

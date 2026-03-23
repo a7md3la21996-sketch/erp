@@ -230,7 +230,7 @@ export default function BatchCallModal({
                 setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);
               }
               // Create follow-up task if filled
-              if (batchTaskOpen && batchTaskForm.title.trim()) {
+              if (batchTaskOpen && batchTaskForm.title.trim() && batchTaskForm.due) {
                 try {
                   await createTask({
                     title: batchTaskForm.title,

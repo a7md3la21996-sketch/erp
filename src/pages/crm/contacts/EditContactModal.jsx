@@ -85,7 +85,10 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     setSaving(true);
     try {
       const { countryCode, countryCode2, ...formData } = form;
-      const validExtras = extraPhones.filter((p, i) => p).map((p, i) => getFullPhone(p, extraCodes[i])).filter(p => validatePhone(p));
+      const validExtras = extraPhones.reduce((acc, p, idx) => {
+        if (p && validatePhone(getFullPhone(p, extraCodes[idx]))) acc.push(getFullPhone(p, extraCodes[idx]));
+        return acc;
+      }, []);
       await onSave({ ...contact, ...formData,
         phone: fullPhone,
         phone2: getFullPhone(form.phone2, countryCode2),

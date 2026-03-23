@@ -120,7 +120,7 @@ export default function QuickTaskModal({ contact, onClose }) {
         </div>
         <div className="px-5 py-3.5 border-t border-edge dark:border-edge-dark flex gap-2 justify-end">
           <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-          <Button onClick={handleSave} disabled={saving || !(selectedPreset && (selectedPreset !== 'custom' || customDate))}>{saving ? '...' : (isRTL ? 'إنشاء مهمة' : 'Create Task')}</Button>
+          <Button onClick={handleSave} disabled={saving || !selectedPreset || !customDate}>{saving ? '...' : (isRTL ? 'إنشاء مهمة' : 'Create Task')}</Button>
         </div>
       </div>
     </div>
