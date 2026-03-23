@@ -50,16 +50,6 @@ export default function ContactsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // Sync filters to URL
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (search) params.set('q', search);
-    if (filterType !== 'all') params.set('type', filterType);
-    if (showBlacklisted) params.set('blacklist', 'true');
-    if (sortBy !== 'created') params.set('sort', sortBy);
-    if (page > 1) params.set('page', String(page));
-    setSearchParams(params, { replace: true });
-  }, [search, filterType, showBlacklisted, sortBy, page, setSearchParams]);
   const [savedFilters, setSavedFilters] = useState(() => JSON.parse(localStorage.getItem('platform_saved_filters_contacts') || '[]'));
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -116,6 +106,18 @@ export default function ContactsPage() {
     initialSortBy: searchParams.get('sort') || 'created',
     initialPage: parseInt(searchParams.get('page')) || 1,
   });
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (filterType !== 'all') params.set('type', filterType);
+    if (showBlacklisted) params.set('blacklist', 'true');
+    if (sortBy !== 'created') params.set('sort', sortBy);
+    if (page > 1) params.set('page', String(page));
+    setSearchParams(params, { replace: true });
+  }, [search, filterType, showBlacklisted, sortBy, page, setSearchParams]);
+
   const { activityResults: configResults, contactsSettings } = useSystemConfig();
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
