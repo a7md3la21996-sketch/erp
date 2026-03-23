@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { Ban } from 'lucide-react';
 import { Button, Input } from '../../../components/ui/';
-import { useEscClose } from './constants';
+import { useEscClose, contactPropType } from './constants';
 
 export default function BlacklistModal({ contact, onClose, onConfirm }) {
   const { i18n } = useTranslation();
@@ -36,3 +37,9 @@ export default function BlacklistModal({ contact, onClose, onConfirm }) {
     </div>
   );
 }
+
+BlacklistModal.propTypes = {
+  contact: contactPropType.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onConfirm: PropTypes.func.isRequired,
+};

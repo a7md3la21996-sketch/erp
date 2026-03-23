@@ -1,11 +1,12 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { Clock } from 'lucide-react';
 import { Button, Input, Select } from '../../../components/ui/';
 import { createTask } from '../../../services/tasksService';
-import { useEscClose } from './constants';
+import { useEscClose, contactPropType } from './constants';
 
 const QUICK_TASK_PRESETS = [
   { key: 'tomorrow', ar: 'غداً', en: 'Tomorrow', days: 1 },
@@ -126,3 +127,8 @@ export default function QuickTaskModal({ contact, onClose }) {
     </div>
   );
 }
+
+QuickTaskModal.propTypes = {
+  contact: contactPropType.isRequired,
+  onClose: PropTypes.func.isRequired,
+};

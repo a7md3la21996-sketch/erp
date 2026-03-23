@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
 import { addRecentItem } from '../../../services/recentItemsService';
 import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle, ExternalLink, Download } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
@@ -1620,6 +1621,71 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
               {/* Custom Fields */}
               <CustomFieldsRenderer entity="contact" entityId={contact.id} mode="edit" defaultCollapsed={false} />
+
+              {/* ── Campaign History Analytics ── */}
+              {(() => {
+                const interactions = contact.campaign_interactions || [];
+                if (interactions.length === 0) return null;
+
+                const campaignMap = {};
+                interactions.forEach(i => {
+                  if (!campaignMap[i.campaign]) campaignMap[i.campaign] = { name: i.campaign, count: 0, dates: [] };
+                  campaignMap[i.campaign].count++;
+                  if (i.date) campaignMap[i.campaign].dates.push(i.date);
+                });
+                const chartData = Object.values(campaignMap).map(c => ({
+                  name: c.name.length > 18 ? c.name.slice(0, 16) + '…' : c.name,
+                  fullName: c.name,
+                  [isRTL ? 'تفاعلات' : 'Interactions']: c.count,
+                }));
+                const campaignList = Object.values(campaignMap).sort((a, b) => {
+                  const aLast = a.dates.length ? a.dates.sort().pop() : '';
+                  const bLast = b.dates.length ? b.dates.sort().pop() : '';
+                  return bLast.localeCompare(aLast);
+                });
+
+                return (
+                  <div className="mt-3 rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
+                    <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-input/50 dark:bg-surface-input-dark/50 border-b border-edge dark:border-edge-dark">
+                      <Megaphone size={13} style={{ color: '#4A7AAB' }} />
+                      <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wide">
+                        {isRTL ? 'سجل الحملات' : 'Campaign History'}
+                      </span>
+                      <span className="text-[9px] text-content-muted dark:text-content-muted-dark ms-auto">
+                        {interactions.length} {isRTL ? 'تفاعل' : 'interactions'}
+                      </span>
+                    </div>
+                    <div className="px-3.5 py-3">
+                      {/* Bar Chart */}
+                      <div style={{ width: '100%', height: Math.max(120, chartData.length * 36) }} dir="ltr">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                            <XAxis type="number" hide allowDecimals={false} />
+                            <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10, fill: '#6B8DB5' }} />
+                            <Tooltip
+                              contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                              formatter={(value, name, props) => [value, props.payload.fullName]}
+                            />
+                            <Bar dataKey={isRTL ? 'تفاعلات' : 'Interactions'} fill="#4A7AAB" radius={[0, 4, 4, 0]} barSize={16} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      {/* Campaign List */}
+                      <div className="mt-2 border-t border-edge dark:border-edge-dark pt-2">
+                        {campaignList.map(c => (
+                          <div key={c.name} className="flex items-center justify-between py-1.5 border-b border-brand-500/[0.06] last:border-b-0 text-[11px]">
+                            <span className="text-content dark:text-content-dark font-medium truncate max-w-[60%]">{c.name}</span>
+                            <span className="text-content-muted dark:text-content-muted-dark whitespace-nowrap">
+                              {c.count}x
+                              {c.dates.length > 0 && ` · ${new Date(c.dates.sort().pop()).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

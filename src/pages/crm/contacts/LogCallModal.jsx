@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
@@ -6,7 +7,7 @@ import { Phone, Clock } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import { createActivity } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
-import { useEscClose } from './constants';
+import { useEscClose, contactPropType } from './constants';
 
 const CALL_RESULTS = [
   { key: 'answered', ar: 'رد', en: 'Answered', color: '#10B981' },
@@ -206,3 +207,9 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
     </div>
   );
 }
+
+LogCallModal.propTypes = {
+  contact: contactPropType.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onUpdate: PropTypes.func,
+};

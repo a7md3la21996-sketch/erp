@@ -1,3 +1,4 @@
+import PropTypes from 'prop-types';
 import { Zap } from 'lucide-react';
 
 export default function QuickActionPopover({
@@ -89,3 +90,14 @@ export default function QuickActionPopover({
     </div>
   );
 }
+
+QuickActionPopover.propTypes = {
+  quickActionTarget: PropTypes.object,
+  setQuickActionTarget: PropTypes.func.isRequired,
+  quickActionForm: PropTypes.object.isRequired,
+  setQuickActionForm: PropTypes.func.isRequired,
+  QUICK_RESULTS: PropTypes.object.isRequired,
+  handleQuickAction: PropTypes.func.isRequired,
+  savingQuickAction: PropTypes.bool,
+  isRTL: PropTypes.bool,
+};

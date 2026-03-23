@@ -19,7 +19,8 @@
     "react-i18next": "^13.5.0",
     "react-router-dom": "^6.21.0",
     "recharts": "^2.10.0",
-    "exceljs": "^4.4.0"
+    "exceljs": "^4.4.0",
+    "prop-types": "^15.8.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

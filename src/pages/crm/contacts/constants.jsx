@@ -1,7 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { Flame, Wind, Snowflake, Thermometer } from 'lucide-react';
+
+// ── Shared PropTypes ─────────────────────────────────────────────────────
+export const contactPropType = PropTypes.shape({
+  id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  full_name: PropTypes.string,
+  phone: PropTypes.string,
+  email: PropTypes.string,
+  contact_type: PropTypes.string,
+  source: PropTypes.string,
+  department: PropTypes.string,
+  is_blacklisted: PropTypes.bool,
+});
 
 // ── Hooks (re-export from shared) ────────────────────────────────────────
 export { useEscClose } from '../../../utils/hooks';
