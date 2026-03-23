@@ -20,6 +20,7 @@ import ImportModal from './crm/ImportModal';
 import { PageSkeleton, Button, SmartFilter, applySmartFilters } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import useCrmPermissions from '../hooks/useCrmPermissions';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 import { SOURCE_LABELS, SOURCE_EN, TYPE, MOCK, normalizePhone, COUNTRY_CODES } from './crm/contacts/constants';
 import AddContactModal from './crm/contacts/AddContactModal';
@@ -212,10 +213,12 @@ export default function ContactsPage() {
     });
   };
 
+  const BULK_WARN_THRESHOLD = 50;
   const handleDeleteSelected = () => {
+    const warnMsg = selectedIds.length > BULK_WARN_THRESHOLD ? (isRTL ? `\n⚠️ أنت على وشك حذف ${selectedIds.length} جهة اتصال دفعة واحدة!` : `\n⚠️ You are about to delete ${selectedIds.length} contacts at once!`) : '';
     setConfirmAction({
       title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
-      message: isRTL ? `حذف ${selectedIds.length} جهة اتصال؟ لا يمكن التراجع.` : `Delete ${selectedIds.length} contacts? This cannot be undone.`,
+      message: (isRTL ? `حذف ${selectedIds.length} جهة اتصال؟ لا يمكن التراجع.` : `Delete ${selectedIds.length} contacts? This cannot be undone.`) + warnMsg,
       onConfirm: () => {
         const count = selectedIds.length;
         const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
@@ -279,6 +282,7 @@ export default function ContactsPage() {
   const exportSelectedCSV = () => {
     const list = contacts.filter(c => selectedIds.includes(c.id));
     exportCSVList(list);
+    logAction({ action: 'export', entity: 'contact', description: `Exported ${list.length} selected contacts`, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     toast.success(isRTL ? `تم تصدير ${list.length} جهة اتصال` : `${list.length} contacts exported`);
     setBulkDropdownOpen(null);
     setShowBulkMenu(false);
@@ -501,13 +505,26 @@ export default function ContactsPage() {
   } : null;
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const [allPagesSelected, setAllPagesSelected] = useState(false);
   const toggleSelectAll = () => {
     const pageIds = paged.map(c => c.id);
     const allSelected = pageIds.every(id => selectedIdSet.has(id));
-    setSelectedIds(allSelected ? selectedIds.filter(id => !pageIds.includes(id)) : [...new Set([...selectedIds, ...pageIds])]);
+    if (allSelected) {
+      setSelectedIds(selectedIds.filter(id => !pageIds.includes(id)));
+      setAllPagesSelected(false);
+    } else {
+      setSelectedIds([...new Set([...selectedIds, ...pageIds])]);
+    }
+  };
+  const selectAllPages = () => {
+    setSelectedIds(filtered.map(c => c.id));
+    setAllPagesSelected(true);
   };
 
-  const exportCSV = (list) => { exportCSVList(list); };
+  const exportCSV = (list) => {
+    exportCSVList(list);
+    logAction({ action: 'export', entity: 'contact', description: `Exported ${list.length} contacts`, userName: profile?.full_name_ar || profile?.full_name_en || '' });
+  };
 
   const handleSave = async (form) => {
     const matchedCampaign = form.campaign_name ? campaignsList.find(c => c.name_en?.toLowerCase() === form.campaign_name.toLowerCase() || c.name_ar?.toLowerCase() === form.campaign_name.toLowerCase()) : null;
@@ -549,6 +566,13 @@ export default function ContactsPage() {
       evaluateTriggers('contact', 'created', newContact);
     }
   };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    { key: 'n', action: () => setShowAddModal(true) },
+    { key: 'e', action: () => { if (selected) setSelected(prev => prev ? { ...prev, _triggerEdit: true } : prev); } },
+    { key: '/', action: () => { const el = document.querySelector('[data-search-input]'); if (el) el.focus(); } },
+  ]);
 
   const handleBlacklist = async (contact, reason) => {
     setContacts(prev => {
@@ -642,6 +666,25 @@ export default function ContactsPage() {
           { label: 'موردين', labelEn: 'Suppliers', filters: [{ field: 'contact_type', operator: 'is', value: 'supplier' }] },
         ]}
       />
+
+      {/* Select All Pages Banner */}
+      {selectedIds.length > 0 && selectedIds.length === paged.length && !allPagesSelected && filtered.length > paged.length && (
+        <div className="bg-brand-500/[0.08] border border-brand-500/20 rounded-xl px-4 py-2.5 mb-2 text-center">
+          <span className="text-xs text-content dark:text-content-dark">
+            {isRTL ? `تم تحديد ${selectedIds.length} في هذه الصفحة.` : `${selectedIds.length} selected on this page.`}
+          </span>{' '}
+          <button onClick={selectAllPages} className="text-xs font-bold text-brand-500 bg-transparent border-none cursor-pointer underline">
+            {isRTL ? `تحديد كل ${filtered.length} نتيجة` : `Select all ${filtered.length} results`}
+          </button>
+        </div>
+      )}
+      {allPagesSelected && (
+        <div className="bg-brand-500/[0.08] border border-brand-500/20 rounded-xl px-4 py-2.5 mb-2 text-center">
+          <span className="text-xs font-bold text-brand-500">
+            {isRTL ? `تم تحديد كل ${selectedIds.length} نتيجة` : `All ${selectedIds.length} results selected`}
+          </span>
+        </div>
+      )}
 
       {/* Table */}
       <ContactsTable

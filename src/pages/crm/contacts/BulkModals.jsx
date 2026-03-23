@@ -14,6 +14,7 @@ import { Button } from '../../../components/ui';
 // ── Merge Preview Modal ──────────────────────────────────────────────
 export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTargets, setMergeMode, contacts, setContacts, setSelectedIds, isRTL }) {
   const toast = useToast();
+  const { profile } = useAuth();
 
   if (!mergePreview) return null;
 
@@ -66,6 +67,13 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
             const updatedContacts = contacts.map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
             setContacts(updatedContacts);
             localStorage.setItem('platform_contacts', JSON.stringify(updatedContacts));
+            logAction({ action: 'merge', entity: 'contact', entityId: c1.id, entityName: c1.full_name, description: `Merged "${c2.full_name}" (ID:${c2.id}) into "${c1.full_name}" (ID:${c1.id})`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
+            try {
+              const history = JSON.parse(localStorage.getItem('platform_merge_history') || '[]');
+              history.unshift({ date: new Date().toISOString(), kept: { id: c1.id, name: c1.full_name }, removed: { id: c2.id, name: c2.full_name } });
+              if (history.length > 100) history.length = 100;
+              localStorage.setItem('platform_merge_history', JSON.stringify(history));
+            } catch { /* ignore */ }
             toast.success(isRTL ? 'تم دمج جهتي الاتصال بنجاح' : 'Contacts merged successfully');
             setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
           }}>

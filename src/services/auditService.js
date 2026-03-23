@@ -22,6 +22,7 @@ export const ACTION_TYPES = {
   assign:           { ar: 'تعيين',           en: 'Assigned' },
   batch_call:       { ar: 'اتصال جماعي',     en: 'Batch Call' },
   note:             { ar: 'ملاحظة',          en: 'Note' },
+  export:           { ar: 'تصدير',           en: 'Export' },
 };
 
 // ── localStorage helpers ────────────────────────────────────────────────

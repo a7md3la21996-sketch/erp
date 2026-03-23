@@ -415,6 +415,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     return () => { cancelled = true; };
   }, [contact.id]);
 
+  // Arrow key navigation between contacts
+  useEffect(() => {
+    const handler = (e) => {
+      if (showEdit || showOppModal || showSMSModal || showWAPopup || showPrintPreview) return;
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+      if (e.key === 'ArrowLeft' && onNext) { e.preventDefault(); onNext(); }
+      if (e.key === 'ArrowRight' && onPrev) { e.preventDefault(); onPrev(); }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onPrev, onNext, showEdit, showOppModal, showSMSModal, showWAPopup, showPrintPreview]);
+
   useEffect(() => {
     if (!showOppModal) return;
     const handler = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); setShowOppModal(false); } };
