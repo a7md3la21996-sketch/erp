@@ -128,10 +128,8 @@ export async function deleteActivity(id) {
     if (error) throw error;
     logDelete('activity', id, oldData);
   } catch {
-    if (!navigator.onLine) {
-      enqueue('activity', 'delete', { id });
-      return;
-    }
+    // Queue for retry and delete locally
+    enqueue('activity', 'delete', { id });
     const filtered = getLocalActivities().filter(a => String(a.id) !== String(id));
     saveLocalActivities(filtered);
   }

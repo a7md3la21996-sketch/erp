@@ -114,7 +114,10 @@ export default function ActivitiesPage() {
     setLoading(true);
     try {
       const data = await fetchActivities({ limit: 200 });
-      setActivities(data);
+      setActivities(data || []);
+    } catch {
+      // fetchActivities handles fallback internally, but guard against unexpected errors
+      setActivities([]);
     } finally { setLoading(false); }
   };
 
@@ -144,7 +147,7 @@ export default function ActivitiesPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const today = activities.filter(a => new Date(a.created_at) > new Date(Date.now() - 86400000));
+    const today = activities.filter(a => a.created_at && new Date(a.created_at) > new Date(Date.now() - 86400000));
     const byType = {};
     activities.forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
     const topType = Object.entries(byType).sort((a,b) => b[1]-a[1])[0] || null;
@@ -382,7 +385,7 @@ export default function ActivitiesPage() {
                   <div className={`flex items-center gap-3 flex-wrap mb-1 text-[11px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     {act.entity_name && (
                       <span className={`flex items-center gap-1 ${act.contact_id ? 'text-brand-500 cursor-pointer hover:underline' : 'text-content-muted dark:text-content-muted-dark'}`}
-                        onClick={act.contact_id ? () => navigate(`/contacts?highlight=${act.contact_id}`) : undefined}
+                        onClick={act.contact_id && act.contact_id !== 'null' ? () => navigate(`/contacts?highlight=${act.contact_id}`) : undefined}
                       >
                         <Link2 size={10} />
                         {act.entity_name}
