@@ -97,13 +97,38 @@ export async function blacklistContact(id, reason) {
   return updateContact(id, { is_blacklisted: true, blacklist_reason: reason });
 }
 
+/**
+ * Strip all non-digit characters and compare last 9 digits.
+ * 9 digits covers the local number without country code for most regions.
+ */
+function fuzzyPhoneMatch(stored, input) {
+  if (!stored || !input) return false;
+  const a = stored.replace(/\D/g, '');
+  const b = input.replace(/\D/g, '');
+  if (a.length < 9 || b.length < 9) return a === b;
+  return a.slice(-9) === b.slice(-9);
+}
+
+/** Normalize phone: convert leading 00 to +, and Egyptian 01x to +201x */
+function normalizePhoneLocal(p) {
+  if (!p) return p;
+  if (p.startsWith('00')) return '+' + p.slice(2);
+  if (p.startsWith('0') && p.length === 11 && p.startsWith('01')) return '+20' + p.slice(1);
+  return p;
+}
+
 export async function checkDuplicate(phone) {
+  const normalized = normalizePhoneLocal(phone);
+  const digits = normalized ? normalized.replace(/\D/g, '') : '';
+  const last9 = digits.length >= 9 ? digits.slice(-9) : digits;
+
   // Try Supabase first
   try {
     const { data } = await supabase
       .from('contacts')
-      .select('id, full_name, phone, contact_type')
-      .eq('phone', phone)
+      .select('id, full_name, phone, phone2, extra_phones, contact_type')
+      .or(`phone.eq.${normalized},phone.ilike.%${last9},phone2.eq.${normalized},phone2.ilike.%${last9},extra_phones.ilike.%${last9}`)
+      .limit(1)
       .maybeSingle();
     if (data) return data;
   } catch { /* fall through to localStorage */ }
@@ -113,7 +138,18 @@ export async function checkDuplicate(phone) {
     const cached = localStorage.getItem('platform_contacts');
     if (cached) {
       const contacts = JSON.parse(cached);
-      const found = contacts.find(c => c.phone === phone || c.phone2 === phone);
+      const found = contacts.find(c => {
+        if (fuzzyPhoneMatch(c.phone, normalized)) return true;
+        if (fuzzyPhoneMatch(c.phone2, normalized)) return true;
+        // extra_phones can be a comma-separated string or an array
+        if (c.extra_phones) {
+          const extras = Array.isArray(c.extra_phones)
+            ? c.extra_phones
+            : String(c.extra_phones).split(',').map(s => s.trim());
+          if (extras.some(ep => fuzzyPhoneMatch(ep, normalized))) return true;
+        }
+        return false;
+      });
       return found || null;
     }
   } catch { /* ignore */ }

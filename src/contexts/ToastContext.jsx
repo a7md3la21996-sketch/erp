@@ -42,6 +42,15 @@ function ToastItem({ toast, onRemove }) {
           <p className="m-0 mb-0.5 text-[13px] font-semibold text-content dark:text-content-dark">{toast.title}</p>
         )}
         <p className="m-0 text-[13px] text-content-muted dark:text-content-muted-dark leading-snug">{toast.message}</p>
+        {toast.action && (
+          <button
+            onClick={() => { toast.action.onClick(); onRemove(toast.id); }}
+            className="bg-transparent border-none cursor-pointer p-0 text-[13px] font-medium underline mt-1"
+            style={{ color: colors.icon }}
+          >
+            {toast.action.label}
+          </button>
+        )}
       </div>
       {toast.type !== 'loading' && (
         <button onClick={() => onRemove(toast.id)}
@@ -60,10 +69,10 @@ export function ToastProvider({ children }) {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const show = useCallback(({ type = 'info', message, title, duration }) => {
+  const show = useCallback(({ type = 'info', message, title, duration, action }) => {
     const id = ++_toastId;
     const autoDismiss = type !== 'loading' ? (duration ?? 3500) : 0;
-    setToasts(prev => [...prev.slice(-4), { id, type, message, title }]);
+    setToasts(prev => [...prev.slice(-4), { id, type, message, title, action }]);
     if (autoDismiss > 0) setTimeout(() => remove(id), autoDismiss);
     return id;
   }, [remove]);

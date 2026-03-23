@@ -1,10 +1,10 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef as useReactRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
-import { Plus, Upload, Download, Ban } from 'lucide-react';
+import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact,
   blacklistContact, createActivity,
@@ -69,6 +69,7 @@ export default function ContactsPage() {
     setSearchParams(params, { replace: true });
   }, [search, filterType, showBlacklisted, sortBy, page, setSearchParams]);
   const [smartFilters, setSmartFilters] = useState([]);
+  const [savedFilters, setSavedFilters] = useState(() => JSON.parse(localStorage.getItem('platform_saved_filters_contacts') || '[]'));
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [blacklistTarget, setBlacklistTarget] = useState(null);
@@ -110,6 +111,16 @@ export default function ContactsPage() {
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
   const saveContactsLocal = (data) => { try { localStorage.setItem('platform_contacts', JSON.stringify(data)); } catch { /* quota */ } };
+
+  const deletedContactsRef = useReactRef(null);
+  const restoreContacts = useCallback((deletedItems) => {
+    setContacts(prev => {
+      const next = [...prev, ...deletedItems];
+      saveContactsLocal(next);
+      return next;
+    });
+    toast.success(isRTL ? 'تم التراجع عن الحذف' : 'Delete undone');
+  }, [isRTL]);
 
   const togglePin = (id) => {
     setPinnedIds(prev => {
@@ -203,11 +214,13 @@ export default function ContactsPage() {
       title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
       message: isRTL ? `هل أنت متأكد من حذف "${contact?.full_name || ''}"؟` : `Are you sure you want to delete "${contact?.full_name || ''}"?`,
       onConfirm: () => {
+        const deletedItems = [contact];
         const updated = contacts.filter(c => c.id !== id);
         setContacts(updated);
         saveContactsLocal(updated);
         logAction({ action: 'delete', entity: 'contact', entityId: id, entityName: contact?.full_name, description: `Deleted contact: ${contact?.full_name}`, userName: profile?.full_name_ar });
-        toast.success(isRTL ? 'تم الحذف بنجاح' : 'Deleted successfully');
+        deletedContactsRef.current = deletedItems;
+        toast.show({ type: 'success', message: isRTL ? 'تم الحذف بنجاح' : 'Deleted successfully', duration: 5000, action: { label: isRTL ? 'تراجع' : 'Undo', onClick: () => restoreContacts(deletedItems) } });
         setConfirmAction(null);
       }
     });
@@ -218,16 +231,18 @@ export default function ContactsPage() {
     const warnMsg = selectedIds.length > BULK_WARN_THRESHOLD ? (isRTL ? `\n⚠️ أنت على وشك حذف ${selectedIds.length} جهة اتصال دفعة واحدة!` : `\n⚠️ You are about to delete ${selectedIds.length} contacts at once!`) : '';
     setConfirmAction({
       title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
-      message: (isRTL ? `حذف ${selectedIds.length} جهة اتصال؟ لا يمكن التراجع.` : `Delete ${selectedIds.length} contacts? This cannot be undone.`) + warnMsg,
+      message: (isRTL ? `حذف ${selectedIds.length} جهة اتصال؟` : `Delete ${selectedIds.length} contacts?`) + warnMsg,
       onConfirm: () => {
         const count = selectedIds.length;
-        const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
+        const deletedItems = contacts.filter(c => selectedIds.includes(c.id));
+        const names = deletedItems.map(c => c.full_name).join(', ');
         const updated = contacts.filter(c => !selectedIds.includes(c.id));
         setContacts(updated);
         saveContactsLocal(updated);
         logAction({ action: 'bulk_delete', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk deleted ${count} contacts: ${names}`, userName: profile?.full_name_ar });
         setSelectedIds([]);
-        toast.success(isRTL ? `تم حذف ${count} جهة اتصال` : `${count} contacts deleted`);
+        deletedContactsRef.current = deletedItems;
+        toast.show({ type: 'success', message: isRTL ? `تم حذف ${count} جهة اتصال` : `${count} contacts deleted`, duration: 5000, action: { label: isRTL ? 'تراجع' : 'Undo', onClick: () => restoreContacts(deletedItems) } });
         setConfirmAction(null);
       }
     });
@@ -666,6 +681,69 @@ export default function ContactsPage() {
           { label: 'موردين', labelEn: 'Suppliers', filters: [{ field: 'contact_type', operator: 'is', value: 'supplier' }] },
         ]}
       />
+
+      {/* Saved Filters */}
+      {(savedFilters.length > 0 || smartFilters.length > 0) && (
+        <div className="flex gap-2 items-center flex-wrap mt-2 px-1">
+          {smartFilters.length > 0 && (
+            <button
+              onClick={() => {
+                const name = prompt(isRTL ? 'اسم الفلتر المحفوظ:' : 'Saved filter name:');
+                if (!name || !name.trim()) return;
+                const newFilter = { id: Date.now(), name: name.trim(), filters: smartFilters, filterType, showBlacklisted, sortBy };
+                const updated = [...savedFilters, newFilter];
+                setSavedFilters(updated);
+                localStorage.setItem('platform_saved_filters_contacts', JSON.stringify(updated));
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border border-brand-500/30 bg-brand-500/[0.06] text-brand-500 cursor-pointer hover:bg-brand-500/[0.12] transition-colors font-medium"
+            >
+              <Save size={11} />
+              {isRTL ? 'حفظ الفلتر' : 'Save Filter'}
+            </button>
+          )}
+          {savedFilters.length > 0 && (
+            <>
+              <Bookmark size={12} className="text-[#6B8DB5] shrink-0" />
+              {savedFilters.map((sf) => {
+                const isActive = JSON.stringify(smartFilters) === JSON.stringify(sf.filters) && filterType === sf.filterType && showBlacklisted === sf.showBlacklisted && sortBy === sf.sortBy;
+                return (
+                  <span
+                    key={sf.id}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border cursor-pointer transition-colors ${
+                      isActive
+                        ? 'border-brand-500 bg-brand-500/10 text-brand-500 font-semibold'
+                        : 'border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'
+                    }`}
+                  >
+                    <button
+                      onClick={() => {
+                        setSmartFilters(sf.filters);
+                        setFilterType(sf.filterType);
+                        setShowBlacklisted(sf.showBlacklisted);
+                        setSortBy(sf.sortBy);
+                      }}
+                      className="bg-transparent border-none p-0 cursor-pointer text-inherit font-inherit text-[11px]"
+                    >
+                      {sf.name}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const updated = savedFilters.filter(f => f.id !== sf.id);
+                        setSavedFilters(updated);
+                        localStorage.setItem('platform_saved_filters_contacts', JSON.stringify(updated));
+                      }}
+                      className={`bg-transparent border-none p-0 cursor-pointer leading-none ${isActive ? 'text-brand-500 hover:text-red-500' : 'text-content-muted dark:text-content-muted-dark hover:text-red-500'}`}
+                    >
+                      <XIcon size={10} />
+                    </button>
+                  </span>
+                );
+              })}
+            </>
+          )}
+        </div>
+      )}
 
       {/* Select All Pages Banner */}
       {selectedIds.length > 0 && selectedIds.length === paged.length && !allPagesSelected && filtered.length > paged.length && (
