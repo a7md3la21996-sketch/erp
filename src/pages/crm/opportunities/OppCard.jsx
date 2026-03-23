@@ -108,7 +108,7 @@ export default function OppCard({ opp, isRTL, lang, onDelete, onMove, onSelect, 
       {/* Tags: Budget + Temp + Priority + Score */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <div className="flex items-center gap-1 bg-brand-500/10 rounded-md px-2.5 py-1 text-xs font-bold text-brand-500">
-          <Banknote size={11} />{fmtBudget(opp.budget)} {isRTL ? "ج" : "EGP"}
+          <Banknote size={11} />{fmtBudget(opp.budget)} {isRTL ? "ج.م" : "EGP"}
         </div>
         <div
           className="rounded-md px-2.5 py-1 text-xs font-semibold"

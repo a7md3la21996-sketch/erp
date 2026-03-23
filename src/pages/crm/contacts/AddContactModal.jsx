@@ -11,8 +11,124 @@ import {
   SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES,
 } from './constants';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
+import { Plus } from 'lucide-react';
 
-export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity, onAddInteraction }) {
+function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCampaign }) {
+  const [search, setSearch] = useState('');
+  const [open, setOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newCamp, setNewCamp] = useState({ name_ar: '', name_en: '', target_location: '', target_property_type: '' });
+  const [saving, setSaving] = useState(false);
+  const ref = useRef(null);
+
+  const sourceCampaigns = campaigns.filter(c => c.platform === source || !source);
+  const displayList = (sourceCampaigns.length > 0 ? sourceCampaigns : campaigns)
+    .filter(c => !search || (c.name_ar || '').includes(search) || (c.name_en || '').toLowerCase().includes(search.toLowerCase()));
+  const noMatch = search && displayList.length === 0;
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="flex gap-1.5">
+        <Input
+          value={value || search}
+          onChange={e => { setSearch(e.target.value); onChange(''); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder={isRTL ? 'ابحث أو اختر حملة...' : 'Search or select campaign...'}
+          className="flex-1"
+        />
+        {value && <button onClick={() => { onChange(''); setSearch(''); }} className="px-2 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark cursor-pointer text-sm">×</button>}
+      </div>
+
+      {open && (
+        <div className="absolute top-full mt-1 inset-x-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg z-50 max-h-[200px] overflow-y-auto">
+          {displayList.map(c => (
+            <button key={c.id} onClick={() => { onChange(isRTL ? c.name_ar : c.name_en); setSearch(''); setOpen(false); }}
+              className="w-full text-start px-3 py-2 text-xs text-content dark:text-content-dark hover:bg-brand-500/[0.08] cursor-pointer border-none bg-transparent">
+              <span className="font-semibold">{isRTL ? c.name_ar : c.name_en}</span>
+              {c.target_location && <span className="text-content-muted dark:text-content-muted-dark ms-1.5">— {c.target_location}</span>}
+            </button>
+          ))}
+          {noMatch && (
+            <div className="px-3 py-2 text-xs text-content-muted dark:text-content-muted-dark">
+              {isRTL ? 'لا توجد نتائج' : 'No results'}
+            </div>
+          )}
+          <button onClick={() => { setShowCreate(true); setOpen(false); }}
+            className="w-full flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold text-brand-500 hover:bg-brand-500/[0.08] cursor-pointer border-none bg-transparent border-t border-edge dark:border-edge-dark">
+            <Plus size={13} /> {isRTL ? 'إنشاء حملة جديدة' : 'Create new campaign'}
+          </button>
+        </div>
+      )}
+
+      {/* Backdrop */}
+      {open && <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />}
+
+      {/* Mini create campaign modal */}
+      {showCreate && (
+        <div className="fixed inset-0 bg-black/40 z-[1100] flex items-center justify-center p-5" onClick={() => setShowCreate(false)}>
+          <div onClick={e => e.stopPropagation()} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[420px] p-5" dir={isRTL ? 'rtl' : 'ltr'}>
+            <h3 className="m-0 mb-4 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'إنشاء حملة جديدة' : 'Create New Campaign'}</h3>
+            <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'اسم الحملة (عربي)' : 'Campaign Name (AR)'}</label>
+                  <Input value={newCamp.name_ar} onChange={e => setNewCamp(p => ({ ...p, name_ar: e.target.value }))} placeholder={isRTL ? 'حملة الشيخ زايد' : 'Arabic name'} />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'اسم الحملة (إنجليزي)' : 'Campaign Name (EN)'}</label>
+                  <Input value={newCamp.name_en} onChange={e => setNewCamp(p => ({ ...p, name_en: e.target.value }))} placeholder="Sheikh Zayed Campaign" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الموقع المستهدف' : 'Target Location'}</label>
+                <Input value={newCamp.target_location} onChange={e => setNewCamp(p => ({ ...p, target_location: e.target.value }))} placeholder={isRTL ? 'الشيخ زايد، التجمع...' : 'Sheikh Zayed, New Cairo...'} />
+              </div>
+              <div>
+                <label className="block text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'نوع العقار' : 'Property Type'}</label>
+                <Select value={newCamp.target_property_type} onChange={e => setNewCamp(p => ({ ...p, target_property_type: e.target.value }))}>
+                  <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                  <option value="residential">{isRTL ? 'سكني' : 'Residential'}</option>
+                  <option value="commercial">{isRTL ? 'تجاري' : 'Commercial'}</option>
+                  <option value="administrative">{isRTL ? 'إداري' : 'Administrative'}</option>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="secondary" size="sm" onClick={() => setShowCreate(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+              <Button size="sm" disabled={saving || (!newCamp.name_ar && !newCamp.name_en)} onClick={async () => {
+                setSaving(true);
+                const camp = {
+                  name_ar: newCamp.name_ar || newCamp.name_en,
+                  name_en: newCamp.name_en || newCamp.name_ar,
+                  platform: source,
+                  status: 'active',
+                  budget: 0, spent: 0,
+                  start_date: new Date().toISOString().slice(0, 10),
+                  end_date: '',
+                  type: 'paid_ads',
+                  target_audience: 'new_leads',
+                  target_location: newCamp.target_location,
+                  target_property_type: newCamp.target_property_type,
+                  notes: '',
+                };
+                if (onCreateCampaign) await onCreateCampaign(camp);
+                const name = isRTL ? camp.name_ar : camp.name_en;
+                onChange(name, camp);
+                setSaving(false);
+                setShowCreate(false);
+                setNewCamp({ name_ar: '', name_en: '', target_location: '', target_property_type: '' });
+              }}>
+                {saving ? (isRTL ? 'جاري...' : 'Saving...') : (isRTL ? 'إنشاء' : 'Create')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity, onAddInteraction, campaigns = [], onCreateCampaign }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -313,8 +429,22 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               </div>
               {AD_SOURCES.includes(form.source) && (
               <div className="col-span-full">
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'اسم الحملة الإعلانية' : 'Ad Campaign Name'}</label>
-                <Input placeholder={isRTL ? 'مثال: حملة الشيخ زايد Q1' : 'e.g. Sheikh Zayed Q1 Campaign'} value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} />
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الحملة الإعلانية' : 'Ad Campaign'}</label>
+                <CampaignCombo
+                  campaigns={campaigns}
+                  source={form.source}
+                  value={form.campaign_name}
+                  isRTL={isRTL}
+                  onChange={(campName, campData) => {
+                    set('campaign_name', campName);
+                    const camp = campData || campaigns.find(c => (c.name_ar === campName || c.name_en === campName));
+                    if (camp) {
+                      if (camp.target_location) set('preferred_location', camp.target_location);
+                      if (camp.target_property_type) set('interested_in_type', camp.target_property_type);
+                    }
+                  }}
+                  onCreateCampaign={onCreateCampaign}
+                />
               </div>
               )}
               </>)}

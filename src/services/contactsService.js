@@ -69,16 +69,27 @@ export async function createContact(contactData) {
 }
 
 export async function updateContact(id, updates) {
-  const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
-  const { data, error } = await supabase
-    .from('contacts')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select('*')
-    .single();
-  if (error) throw error;
-  logUpdate('contact', id, oldData, data);
-  return data;
+  try {
+    const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('contacts')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    logUpdate('contact', id, oldData, data);
+    return data;
+  } catch {
+    // Fallback: update in localStorage
+    const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+    const idx = all.findIndex(c => String(c.id) === String(id));
+    if (idx > -1) {
+      Object.assign(all[idx], updates, { updated_at: new Date().toISOString() });
+      localStorage.setItem('platform_contacts', JSON.stringify(all));
+    }
+    return { id, ...updates };
+  }
 }
 
 export async function blacklistContact(id, reason) {

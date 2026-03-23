@@ -60,13 +60,18 @@ export function getLocalAuditLogs({ limit = 50, offset = 0, action, entity, sear
 // ── Main audit function ─────────────────────────────────────────────────
 export async function logAudit({ action, entity, entityId, entityName = '', oldData = null, newData = null, description = '', userName = '' }) {
   // Build changes diff
+  const SKIP_FIELDS = ['id','created_at','updated_at','opportunities','activities','campaign_interactions','extra_phones','_country','users','lead_score_history'];
   let changes = null;
   if (oldData && newData) {
     changes = {};
     const keys = new Set([...Object.keys(oldData || {}), ...Object.keys(newData || {})]);
     keys.forEach(k => {
-      if (JSON.stringify(oldData[k]) !== JSON.stringify(newData[k])) {
-        changes[k] = { from: oldData[k], to: newData[k] };
+      if (SKIP_FIELDS.includes(k)) return;
+      const oldVal = oldData[k];
+      const newVal = newData[k];
+      if (typeof oldVal === 'object' && oldVal !== null && typeof newVal === 'object' && newVal !== null) return;
+      if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+        changes[k] = { from: oldVal, to: newVal };
       }
     });
     if (Object.keys(changes).length === 0) changes = null;
@@ -126,8 +131,8 @@ export const logAction = ({ action, entity, entityId, entityName, description, o
     entity,
     entityId,
     entityName,
-    oldData: oldValue != null ? { value: oldValue } : null,
-    newData: newValue != null ? { value: newValue } : null,
+    oldData: oldValue != null ? (typeof oldValue === 'object' && !Array.isArray(oldValue) ? oldValue : { value: oldValue }) : null,
+    newData: newValue != null ? (typeof newValue === 'object' && !Array.isArray(newValue) ? newValue : { value: newValue }) : null,
     description,
     userName,
   });

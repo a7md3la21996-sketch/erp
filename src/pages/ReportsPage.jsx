@@ -17,15 +17,20 @@ import { MOCK_EMPLOYEES } from '../data/hr_mock_data';
 import { getTeamKPIs, setTargets, METRIC_CONFIG, METRICS } from '../services/kpiTargetsService';
 import {
   fetchReportsData, filterByDateRange,
-  computeContactsBySource, computeLeadsConversion, computePipeline,
+  computeContactsBySource, computeDisqualifiedBySource, computeSourcePerformance,
+  computeCampaignPerformance, computeLeadsConversion, computePipeline,
   computeActivitySummary, computeRevenueByMonth, computeTopPerformers, computeDealCycle,
   computeAttendance, computeLeaveBalance, computePayroll, computeHeadcount,
   computePnl, computeExpenseBreakdown, computeInvoiceAging, computeCashflow,
+  computeDealPipeline, computePaymentsSummary, computeHandoverStatus, computeTicketsSummary,
 } from '../services/reportsDataService';
 
 // ── Mock report data generators ──────────────────────────────────
 
 const MOCK_CONTACTS_BY_SOURCE = [];
+const MOCK_DQ_BY_SOURCE = [];
+const MOCK_SOURCE_PERFORMANCE = [];
+const MOCK_CAMPAIGN_PERFORMANCE = [];
 const MOCK_LEADS_CONVERSION = [];
 const MOCK_PIPELINE = [];
 const MOCK_ACTIVITY_SUMMARY = [];
@@ -40,6 +45,10 @@ const MOCK_PNL = [];
 const MOCK_EXPENSES = [];
 const MOCK_INVOICE_AGING = [];
 const MOCK_CASHFLOW = [];
+const MOCK_DEAL_PIPELINE = [];
+const MOCK_PAYMENTS_SUMMARY = [];
+const MOCK_HANDOVER_STATUS = [];
+const MOCK_TICKETS_SUMMARY = [];
 
 // ── Report definitions ───────────────────────────────────────────
 
@@ -48,6 +57,9 @@ const REPORT_CATEGORIES = [
     key: 'crm', ar: 'تقارير CRM', en: 'CRM Reports', icon: Users, color: '#4A7AAB',
     reports: [
       { key: 'contacts_by_source', ar: 'جهات الاتصال حسب المصدر', en: 'Contacts by Source', desc_ar: 'توزيع جهات الاتصال على مصادر الاستقطاب', desc_en: 'Distribution of contacts across acquisition sources', icon: PieChart, data: MOCK_CONTACTS_BY_SOURCE },
+      { key: 'dq_by_source', ar: 'نسبة الاستبعاد حسب المصدر', en: 'Disqualified by Source', desc_ar: 'نسبة جهات الاتصال المستبعدة من كل مصدر وأسباب الاستبعاد', desc_en: 'Disqualification rate per source with top reasons', icon: Target, data: MOCK_DQ_BY_SOURCE },
+      { key: 'source_performance', ar: 'أداء المصادر', en: 'Source Performance', desc_ar: 'تحويل كل مصدر: جهات اتصال → فرص → صفقات', desc_en: 'Source funnel: contacts → opportunities → won deals', icon: TrendingUp, data: MOCK_SOURCE_PERFORMANCE },
+      { key: 'campaign_performance', ar: 'أداء الحملات', en: 'Campaign Performance', desc_ar: 'تقرير مجمع لكل حملة: ليدز، استبعاد، فرص، صفقات، إيرادات', desc_en: 'Per-campaign report: leads, DQ, opps, deals, revenue', icon: Award, data: MOCK_CAMPAIGN_PERFORMANCE },
       { key: 'leads_conversion', ar: 'معدل تحويل الليدز', en: 'Leads Conversion Rate', desc_ar: 'تتبع تحويل الليدز عبر مراحل البيع', desc_en: 'Track lead conversion through sales stages', icon: TrendingUp, data: MOCK_LEADS_CONVERSION },
       { key: 'pipeline', ar: 'تحليل خط الأنابيب', en: 'Pipeline Analysis', desc_ar: 'قيمة وعدد الصفقات في كل مرحلة', desc_en: 'Deal count and value at each pipeline stage', icon: BarChart3, data: MOCK_PIPELINE },
       { key: 'activity_summary', ar: 'ملخص النشاط', en: 'Activity Summary', desc_ar: 'إجمالي الأنشطة: مكالمات، اجتماعات، متابعات', desc_en: 'Total activities: calls, meetings, follow-ups', icon: Activity, data: MOCK_ACTIVITY_SUMMARY },
@@ -80,6 +92,15 @@ const REPORT_CATEGORIES = [
       { key: 'cashflow', ar: 'التدفق النقدي', en: 'Cash Flow', desc_ar: 'التدفقات النقدية الداخلة والخارجة', desc_en: 'Cash inflows and outflows by month', icon: TrendingUp, data: MOCK_CASHFLOW },
     ],
   },
+  {
+    key: 'operations', ar: 'تقارير العمليات', en: 'Operations Reports', icon: Briefcase, color: '#1B3347',
+    reports: [
+      { key: 'deal_pipeline', ar: 'خط سير الصفقات', en: 'Deal Pipeline', desc_ar: 'حالة الصفقات وقيمتها في كل مرحلة', desc_en: 'Deal status and value at each stage', icon: BarChart3, data: MOCK_DEAL_PIPELINE },
+      { key: 'payments_summary', ar: 'ملخص المدفوعات', en: 'Payments Summary', desc_ar: 'إجمالي المدفوع والمستحق والمتأخر', desc_en: 'Total paid, due and overdue payments', icon: CreditCard, data: MOCK_PAYMENTS_SUMMARY },
+      { key: 'handover_status', ar: 'حالة التسليمات', en: 'Handover Status', desc_ar: 'توزيع التسليمات حسب الحالة', desc_en: 'Handover distribution by status', icon: Building2, data: MOCK_HANDOVER_STATUS },
+      { key: 'tickets_summary', ar: 'ملخص التذاكر', en: 'Tickets Summary', desc_ar: 'التذاكر المفتوحة والمحلولة حسب النوع', desc_en: 'Open and resolved tickets by type', icon: Activity, data: MOCK_TICKETS_SUMMARY },
+    ],
+  },
 ];
 
 function renderReportTable(reportKey, data, lang) {
@@ -87,6 +108,9 @@ function renderReportTable(reportKey, data, lang) {
   const fmt = (v) => typeof v === 'number' && v >= 1000 ? v.toLocaleString() : v;
   switch (reportKey) {
     case 'contacts_by_source': return { headers: [isAr?'المصدر':'Source',isAr?'العدد':'Count',isAr?'النسبة':'%'], rows: data.map(d=>[isAr?d.source_ar:d.source,d.count,d.pct+'%']) };
+    case 'dq_by_source': return { headers: [isAr?'المصدر':'Source',isAr?'الإجمالي':'Total',isAr?'مستبعد':'DQ',isAr?'النسبة':'Rate',isAr?'أكثر سبب':'Top Reason'], rows: data.map(d=>[isAr?d.source_ar:d.source,d.total,d.dq,d.rate+'%',d.top_reason]) };
+    case 'source_performance': return { headers: [isAr?'المصدر':'Source',isAr?'جهات اتصال':'Contacts',isAr?'فرص':'Opps',isAr?'% تحويل':'Opp%',isAr?'فاز':'Won',isAr?'% فوز':'Win%',isAr?'الإيرادات':'Revenue'], rows: data.map(d=>[isAr?d.source_ar:d.source,d.contacts,d.opps,d.opp_rate+'%',d.won,d.win_rate+'%',fmt(d.revenue)]) };
+    case 'campaign_performance': return { headers: [isAr?'الحملة':'Campaign',isAr?'المصدر':'Source',isAr?'ليدز':'Leads',isAr?'تم التواصل':'Contacted',isAr?'مستبعد':'DQ',isAr?'%DQ':'DQ%',isAr?'فرص':'Opps',isAr?'%تحويل':'Opp%',isAr?'فاز':'Won',isAr?'%فوز':'Win%',isAr?'الإيرادات':'Revenue'], rows: data.map(d=>[d.campaign,d.source,d.contacts,d.contacted,d.dq,d.dq_rate+'%',d.opps,d.opp_rate+'%',d.won,d.win_rate+'%',fmt(d.revenue)]) };
     case 'leads_conversion': return { headers: [isAr?'المرحلة':'Stage',isAr?'العدد':'Count',isAr?'المعدل':'Rate'], rows: data.map(d=>[isAr?d.stage_ar:d.stage,d.count,d.rate]) };
     case 'pipeline': return { headers: [isAr?'المرحلة':'Stage',isAr?'الصفقات':'Deals',isAr?'القيمة':'Value (EGP)'], rows: data.map(d=>[isAr?d.stage_ar:d.stage,d.deals,fmt(d.value)]) };
     case 'activity_summary': return { headers: [isAr?'النوع':'Type',isAr?'العدد':'Count',isAr?'الاتجاه':'Trend'], rows: data.map(d=>[isAr?d.type_ar:d.type,d.count,d.trend]) };
@@ -101,6 +125,10 @@ function renderReportTable(reportKey, data, lang) {
     case 'expense_breakdown': return { headers: [isAr?'الفئة':'Category',isAr?'المبلغ':'Amount (EGP)',isAr?'النسبة':'%'], rows: data.map(d=>[isAr?d.category_ar:d.category,fmt(d.amount),d.pct+'%']) };
     case 'invoice_aging': return { headers: [isAr?'الفترة':'Period',isAr?'العدد':'Count',isAr?'المبلغ':'Amount (EGP)'], rows: data.map(d=>[isAr?d.range_ar:d.range,d.count,fmt(d.amount)]) };
     case 'cashflow': return { headers: [isAr?'الشهر':'Month',isAr?'وارد':'Inflow',isAr?'صادر':'Outflow',isAr?'صافي':'Net'], rows: data.map(d=>[isAr?d.month_ar:d.month,fmt(d.inflow),fmt(d.outflow),fmt(d.inflow-d.outflow)]) };
+    case 'deal_pipeline': return { headers: [isAr?'الحالة':'Status',isAr?'العدد':'Count',isAr?'القيمة (ج.م)':'Value (EGP)'], rows: data.map(d=>[isAr?d.status_ar:d.status_en,d.count,fmt(d.value)]) };
+    case 'payments_summary': return { headers: [isAr?'الحالة':'Status',isAr?'العدد':'Count',isAr?'الإجمالي (ج.م)':'Total (EGP)'], rows: data.map(d=>[isAr?d.status_ar:d.status_en,d.count,fmt(d.total)]) };
+    case 'handover_status': return { headers: [isAr?'الحالة':'Status',isAr?'العدد':'Count'], rows: data.map(d=>[isAr?d.status_ar:d.status_en,d.count]) };
+    case 'tickets_summary': return { headers: [isAr?'النوع':'Type',isAr?'مفتوح':'Open',isAr?'محلول':'Resolved',isAr?'الإجمالي':'Total',isAr?'% الحل':'Resolve%'], rows: data.map(d=>[isAr?d.type_ar:d.type_en,d.open,d.resolved,d.total,d.resolve_rate+'%']) };
     default: return { headers: [], rows: [] };
   }
 }
@@ -113,7 +141,7 @@ const DEPARTMENTS = [
   { id: 'finance', ar: 'المالية', en: 'Finance' },
 ];
 
-const DEPT_TO_CATEGORY = { sales: 'sales', marketing: 'crm', hr: 'hr', finance: 'finance' };
+const DEPT_TO_CATEGORY = { sales: 'sales', marketing: 'crm', hr: 'hr', finance: 'finance', operations: 'operations' };
 
 const DATE_RANGES = [
   { id: 'all', ar: 'كل الوقت', en: 'All Time' },
@@ -628,6 +656,9 @@ export default function ReportsPage() {
     return {
       // CRM
       contacts_by_source: computeContactsBySource(contacts),
+      dq_by_source: computeDisqualifiedBySource(contacts),
+      source_performance: computeSourcePerformance(contacts, opportunities),
+      campaign_performance: computeCampaignPerformance(contacts, opportunities),
       leads_conversion: computeLeadsConversion(contacts, opportunities, deals),
       pipeline: computePipeline(opportunities),
       activity_summary: computeActivitySummary(activities),
@@ -646,6 +677,11 @@ export default function ReportsPage() {
       expense_breakdown: computeExpenseBreakdown(expenses),
       invoice_aging: computeInvoiceAging(invoices),
       cashflow: computeCashflow(invoices, expenses),
+      // Operations
+      deal_pipeline: computeDealPipeline(liveData.opsDeals || []),
+      payments_summary: computePaymentsSummary(liveData.opsInstallments || []),
+      handover_status: computeHandoverStatus(liveData.opsHandovers || []),
+      tickets_summary: computeTicketsSummary(liveData.opsTickets || []),
     };
   }, [liveData, dateRange]);
 

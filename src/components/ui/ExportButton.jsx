@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileSpreadsheet, FileText, Printer, ChevronDown } from 'lucide-react';
 import { exportToExcel, exportToCSV, printTable } from '../../utils/exportUtils';
+import { logExport } from '../../services/exportImportHistoryService';
 import { useClickOutside } from '../../utils/hooks';
 
 export default function ExportButton({ data, filename = 'export', title = '', columns }) {
@@ -12,10 +13,14 @@ export default function ExportButton({ data, filename = 'export', title = '', co
   const closeMenu = useCallback(() => setOpen(false), []);
   useClickOutside(ref, closeMenu, open);
 
+  const log = (format) => {
+    try { logExport({ entity: title || filename, format, fileName: `${filename}.${format}`, recordCount: Array.isArray(data) ? data.length : 0 }); } catch {}
+  };
+
   const items = [
-    { icon: FileSpreadsheet, label: isRTL ? 'تصدير Excel' : 'Export Excel', action: () => exportToExcel(data, filename) },
-    { icon: FileText, label: isRTL ? 'تصدير CSV' : 'Export CSV', action: () => exportToCSV(data, filename) },
-    { icon: Printer, label: isRTL ? 'طباعة' : 'Print', action: () => printTable(data, title, columns) },
+    { icon: FileSpreadsheet, label: isRTL ? 'تصدير Excel' : 'Export Excel', action: () => { exportToExcel(data, filename); log('xlsx'); } },
+    { icon: FileText, label: isRTL ? 'تصدير CSV' : 'Export CSV', action: () => { exportToCSV(data, filename); log('csv'); } },
+    { icon: Printer, label: isRTL ? 'طباعة' : 'Print', action: () => { printTable(data, title, columns); log('print'); } },
   ];
 
   return (

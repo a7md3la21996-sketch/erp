@@ -941,7 +941,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   return (
     <>
-    {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); setShowEdit(false); }} />}
+    {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); }} />}
     <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
       <div onClick={onClose} className="flex-1 bg-black/45" />
       <div className={`contact-drawer w-[440px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
@@ -1371,8 +1371,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                               {opp.projects?.name_ar && (
                                 <div className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</div>
                               )}
+                              {(opp.users || opp.assigned_to_name) && (
+                                <div className="text-[11px] font-semibold text-brand-500 mb-1">
+                                  {opp.users ? (isRTL ? (opp.users.full_name_ar || opp.users.full_name_en) : (opp.users.full_name_en || opp.users.full_name_ar)) : opp.assigned_to_name}
+                                </div>
+                              )}
                               <div className="flex gap-3 text-[11px] text-content-muted dark:text-content-muted-dark">
-                                {opp.budget > 0 && <span>{fmtBudget(opp.budget, null, isRTL)}</span>}
+                                {opp.budget > 0 && <span>{fmtBudget(opp.budget, null, isRTL)} {isRTL ? 'ج.م' : 'EGP'}</span>}
                                 {opp.temperature && <span>{isRTL ? TEMP[opp.temperature]?.labelAr : TEMP[opp.temperature]?.label}</span>}
                                 <span>{opp.created_at?.slice(0, 10)}</span>
                               </div>

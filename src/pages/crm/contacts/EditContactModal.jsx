@@ -55,9 +55,11 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     countryCode2: initCode(contact.phone2),
     platform: SOURCE_PLATFORM[contact.source] || 'other',
   });
+  const [extraPhones, setExtraPhones] = useState(() => (contact.extra_phones || []).map(p => initPhone(p)));
+  const [extraCodes, setExtraCodes] = useState(() => (contact.extra_phones || []).map(p => initCode(p)));
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const isSalesType = ['lead','cold','client'].includes(form.contact_type);
+  const isSalesType = ['lead','client'].includes(form.contact_type);
   const isSalesDept = form.department === 'sales';
   const emailValid = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
 
@@ -78,15 +80,20 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     const fullPhone = getFullPhone(form.phone, form.countryCode);
     if (!validatePhone(fullPhone)) { toast.warning(isRTL ? 'رقم الهاتف غير صحيح' : 'Invalid phone number'); return; }
     if (form.email && !emailValid) { toast.warning(isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email'); return; }
+    const invalidExtra = extraPhones.find((p, i) => p && !validatePhone(getFullPhone(p, extraCodes[i])));
+    if (invalidExtra) { toast.warning(isRTL ? 'رقم إضافي غير صحيح' : 'Invalid extra phone number'); return; }
     setSaving(true);
     try {
       const { countryCode, countryCode2, ...formData } = form;
+      const validExtras = extraPhones.filter((p, i) => p).map((p, i) => getFullPhone(p, extraCodes[i])).filter(p => validatePhone(p));
       await onSave({ ...contact, ...formData,
         phone: fullPhone,
         phone2: getFullPhone(form.phone2, countryCode2),
+        extra_phones: validExtras.length > 0 ? validExtras : null,
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
       });
+      toast.success(isRTL ? 'تم حفظ التعديلات' : 'Changes saved');
       onClose();
     } catch (err) {
       toast.error((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
@@ -131,7 +138,6 @@ export default function EditContactModal({ contact, onClose, onSave }) {
               <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النوع' : 'Type'}</label>
               <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
                 <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
-                <option value="cold">{isRTL ? 'كولد كول' : 'Cold Call'}</option>
                 <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
                 <option value="supplier">{isRTL ? 'مورد' : 'Supplier'}</option>
                 <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
@@ -178,6 +184,25 @@ export default function EditContactModal({ contact, onClose, onSave }) {
               </div>
             </div>
           </div>
+
+          {/* أرقام إضافية */}
+          {extraPhones.length > 0 && extraPhones.map((ph, i) => (
+            <div key={i} className="flex gap-1.5 items-start">
+              <Select value={extraCodes[i] || '+20'} onChange={e => { const nc = [...extraCodes]; nc[i] = e.target.value; setExtraCodes(nc); }} className="!w-[90px] shrink-0">
+                {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
+              </Select>
+              <div className="flex-1">
+                <Input value={ph} onChange={e => { const np = [...extraPhones]; np[i] = e.target.value; setExtraPhones(np); }} placeholder="10xxxxxxxx" />
+                {ph && (() => { const fp = getFullPhone(ph, extraCodes[i]); if (!validatePhone(fp)) return <span className="text-[10px] text-orange-500 mt-0.5 block">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-[10px] text-emerald-500 mt-0.5 block">{info.flag} {info.country}</span> : null; })()}
+              </div>
+              <button onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraCodes(extraCodes.filter((_, j) => j !== i)); }}
+                className="mt-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-sm leading-none shrink-0">×</button>
+            </div>
+          ))}
+          <button onClick={() => { setExtraPhones([...extraPhones, '']); setExtraCodes([...extraCodes, '+20']); }}
+            className="text-xs text-brand-500 bg-brand-500/[0.08] border border-brand-500/20 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-brand-500/[0.15] transition-colors w-fit">
+            + {isRTL ? 'إضافة رقم' : 'Add Phone'}
+          </button>
 
           {/* الإيميل */}
           <div>

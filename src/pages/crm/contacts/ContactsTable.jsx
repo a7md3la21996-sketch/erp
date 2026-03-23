@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Phone, MessageCircle, Search, Ban, Pin, PhoneCall, Merge, MoreVertical, Bell, FileDown, Trash2, Zap, X } from 'lucide-react';
 import {
   SOURCE_LABELS, SOURCE_EN,
@@ -8,6 +10,34 @@ import {
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
+
+function FixedDropdown({ btnRef, isOpen, isRTL, children }) {
+  const [pos, setPos] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen || !btnRef?.current) { setPos(null); return; }
+    const rect = btnRef.current.getBoundingClientRect();
+    // Skip if element is hidden (display:none gives 0-size rect)
+    if (rect.width === 0 && rect.height === 0) { setPos(null); return; }
+    const menuW = 200;
+    let left = isRTL ? rect.left : rect.right - menuW;
+    if (left < 8) left = 8;
+    if (left + menuW > window.innerWidth - 8) left = window.innerWidth - menuW - 8;
+    let top = rect.bottom + 4;
+    if (top + 240 > window.innerHeight) top = Math.max(8, rect.top - 240);
+    setPos({ top, left });
+  }, [isOpen, btnRef, isRTL]);
+
+  if (!isOpen || !pos) return null;
+
+  return createPortal(
+    <div data-menu-dropdown="true" onMouseDown={e => e.stopPropagation()} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+      className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden">
+      {children}
+    </div>,
+    document.body
+  );
+}
 
 export default function ContactsTable({
   loading,
@@ -49,6 +79,24 @@ export default function ContactsTable({
   isRTL,
 }) {
   const { t } = useTranslation();
+  const menuBtnRefs = useRef({});
+  const getMenuBtnRef = useCallback((id) => (el) => { if (el) menuBtnRefs.current[id] = el; else delete menuBtnRefs.current[id]; }, []);
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handler = (e) => {
+      // Don't close if clicking the toggle button itself
+      const mKey = `m-${openMenuId}`;
+      const dKey = `d-${openMenuId}`;
+      if (menuBtnRefs.current[mKey]?.contains(e.target) || menuBtnRefs.current[dKey]?.contains(e.target)) return;
+      // Don't close if clicking inside the dropdown menu (portal)
+      if (e.target.closest?.('[data-menu-dropdown]')) return;
+      setOpenMenuId(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openMenuId, setOpenMenuId]);
 
   return (
     <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
@@ -103,7 +151,7 @@ export default function ContactsTable({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
-                          {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                          {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
                         {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
                       </div>
@@ -134,34 +182,32 @@ export default function ContactsTable({
                         className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${isPinned ? 'bg-amber-500/[0.15] border border-amber-500/30 text-amber-500' : !isPinned && pinnedIds.length >= MAX_PINS ? 'bg-transparent border border-edge dark:border-edge-dark text-content-muted/30 cursor-not-allowed' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
                         <Pin size={14} />
                       </button>
-                      <div className="relative">
-                        <button onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                      <div>
+                        <button ref={getMenuBtnRef(`m-${c.id}`)} onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
                           className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${openMenuId === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
                           <MoreVertical size={14} />
                         </button>
-                        {openMenuId === c.id && (
-                          <div className={`absolute top-[36px] ${isRTL ? 'start-0' : 'end-0'} bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden`}>
-                            <div className="p-1">
-                              <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                                <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
-                              </button>
-                              <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                                <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
-                              </button>
-                              <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر'] : ['Name','Phone','Type','Source']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                                <FileDown size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'تصدير' : 'Export'}
-                              </button>
-                              <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                                <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
-                              </button>
-                            </div>
-                            {!c.is_blacklisted && (<><div className="h-px bg-edge dark:bg-edge-dark mx-1" /><div className="p-1">
-                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
-                                <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
-                              </button>
-                            </div></>)}
+                        <FixedDropdown btnRef={{ current: menuBtnRefs.current[`m-${c.id}`] }} isOpen={openMenuId === c.id} isRTL={isRTL}>
+                          <div className="p-1">
+                            <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                              <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
+                            </button>
+                            <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                              <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
+                            </button>
+                            <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر'] : ['Name','Phone','Type','Source']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                              <FileDown size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'تصدير' : 'Export'}
+                            </button>
+                            <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                              <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
+                            </button>
                           </div>
-                        )}
+                          {!c.is_blacklisted && (<><div className="h-px bg-edge dark:bg-edge-dark mx-1" /><div className="p-1">
+                            <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                              <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
+                            </button>
+                          </div></>)}
+                        </FixedDropdown>
                       </div>
                     </div>
                   </div>
@@ -175,26 +221,21 @@ export default function ContactsTable({
                       {c.created_at && <><span className="opacity-30">·</span><span>{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span></>}
                     </div>
                   )}
-                  {/* Opps / Sales + Stages on mobile */}
+                  {/* Opps / Sales — highest stage on mobile */}
                   {c.opportunities?.length > 0 && (() => {
                     const opps = c.opportunities;
                     const dept = c.department || 'sales';
                     const stages = getDeptStages(dept);
-                    const byAgent = {};
-                    opps.forEach(o => {
-                      const aid = o.assigned_to || o.assigned_to_name || 'u';
-                      const name = o.users ? (isRTL ? (o.users.full_name_ar || o.users.full_name_en) : (o.users.full_name_en || o.users.full_name_ar)) : (o.assigned_to_name || '?');
-                      const si = stages.findIndex(s => s.id === o.stage);
-                      if (!byAgent[aid] || si > byAgent[aid].si) byAgent[aid] = { name, stage: o.stage, si: si >= 0 ? si : 0 };
-                    });
+                    let best = null; let bestIdx = -1;
+                    opps.forEach(o => { const si = stages.findIndex(s => s.id === o.stage); if (si > bestIdx) { bestIdx = si; best = o; } });
+                    if (!best) return null;
+                    const name = best.users ? (isRTL ? (best.users.full_name_ar || best.users.full_name_en) : (best.users.full_name_en || best.users.full_name_ar)) : (best.assigned_to_name || '?');
                     return (
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5 ms-[52px]">
-                        {Object.values(byAgent).slice(0, 2).map((e, i) => (
-                          <span key={i} className="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">
-                            {e.name}: {deptStageLabel(e.stage, dept, isRTL)}
-                          </span>
-                        ))}
-                        {Object.values(byAgent).length > 2 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{Object.values(byAgent).length - 2}</span>}
+                        <span className="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">
+                          {name}: {deptStageLabel(best.stage, dept, isRTL)}
+                        </span>
+                        {opps.length > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{opps.length - 1}</span>}
                       </div>
                     );
                   })()}
@@ -260,7 +301,7 @@ export default function ContactsTable({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
-                          {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                          {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
                         {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
                       </div>
@@ -286,40 +327,30 @@ export default function ContactsTable({
                   {c.created_at && <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60 mt-0.5">{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
                 </td>
 
-                {/* Opps / Sales Assignees + Stages */}
+                {/* Opps / Sales — highest stage only */}
                 <td className={tdCls}>
                   {(() => {
                     const opps = c.opportunities || [];
                     if (!opps.length) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
                     const dept = c.department || 'sales';
                     const stages = getDeptStages(dept);
-                    // Group by sales agent: { agentId: { name, bestStage, bestIdx } }
-                    const byAgent = {};
-                    opps.forEach(o => {
-                      const aid = o.assigned_to || o.assigned_to_name || 'unassigned';
-                      const name = o.users ? (isRTL ? (o.users.full_name_ar || o.users.full_name_en) : (o.users.full_name_en || o.users.full_name_ar)) : (o.assigned_to_name || (isRTL ? 'غير معين' : 'Unassigned'));
-                      const stageIdx = stages.findIndex(s => s.id === o.stage);
-                      if (!byAgent[aid] || stageIdx > byAgent[aid].bestIdx) {
-                        byAgent[aid] = { name, stage: o.stage, bestIdx: stageIdx >= 0 ? stageIdx : 0, oppCount: (byAgent[aid]?.oppCount || 0) + 1 };
-                      } else {
-                        byAgent[aid].oppCount++;
-                      }
-                    });
-                    const entries = Object.values(byAgent);
                     const STAGE_COLORS = { closed_won: '#10B981', closed_lost: '#EF4444', contracted: '#10B981', reserved: '#1B3347', negotiation: '#F59E0B', proposal: '#4A7AAB', qualification: '#6B8DB5' };
                     const getStageColor = (stageId) => STAGE_COLORS[stageId] || stages.find(s => s.id === stageId)?.color || '#6B8DB5';
+                    // Find the opportunity with the highest stage
+                    let best = null; let bestIdx = -1;
+                    opps.forEach(o => {
+                      const si = stages.findIndex(s => s.id === o.stage);
+                      if (si > bestIdx) { bestIdx = si; best = o; }
+                    });
+                    if (!best) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                    const name = best.users ? (isRTL ? (best.users.full_name_ar || best.users.full_name_en) : (best.users.full_name_en || best.users.full_name_ar)) : (best.assigned_to_name || (isRTL ? 'غير معين' : 'Unassigned'));
                     return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                        {entries.slice(0, 3).map((e, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1 }}>
-                            <span className="text-[10px] font-semibold text-content dark:text-content-dark truncate max-w-[80px]" title={e.name}>{e.name}</span>
-                            <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: `${getStageColor(e.stage)}18`, border: `1px solid ${getStageColor(e.stage)}30`, color: getStageColor(e.stage), fontWeight: 600, whiteSpace: 'nowrap' }}>
-                              {deptStageLabel(e.stage, dept, isRTL)}
-                            </span>
-                            {e.oppCount > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">×{e.oppCount}</span>}
-                          </div>
-                        ))}
-                        {entries.length > 3 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{entries.length - 3} {isRTL ? 'أخرى' : 'more'}</span>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1 }}>
+                        <span className="text-[10px] font-semibold text-content dark:text-content-dark truncate max-w-[80px]" title={name}>{name}</span>
+                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: `${getStageColor(best.stage)}18`, border: `1px solid ${getStageColor(best.stage)}30`, color: getStageColor(best.stage), fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {deptStageLabel(best.stage, dept, isRTL)}
+                        </span>
+                        {opps.length > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{opps.length - 1}</span>}
                       </div>
                     );
                   })()}
@@ -345,48 +376,46 @@ export default function ContactsTable({
                     <button onClick={() => togglePin(c.id)} title={isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : pinnedIds.length >= MAX_PINS ? (isRTL ? `الحد الأقصى ${MAX_PINS} مثبتين` : `Max ${MAX_PINS} pins`) : (isRTL ? 'تثبيت' : 'Pin')} disabled={!isPinned && pinnedIds.length >= MAX_PINS} className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${isPinned ? 'bg-amber-500/[0.15] border border-amber-500/30 text-amber-500' : !isPinned && pinnedIds.length >= MAX_PINS ? 'bg-transparent border border-edge dark:border-edge-dark text-content-muted/30 dark:text-content-muted-dark/30 cursor-not-allowed' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
                       <Pin size={13} />
                     </button>
-                    <div className="relative" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                    <div onClick={e => e.stopPropagation()}>
+                      <button ref={getMenuBtnRef(`d-${c.id}`)} onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
                         className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${openMenuId === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
                         <MoreVertical size={13} />
                       </button>
-                      {openMenuId === c.id && (
-                        <div className={`absolute top-[32px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden`}>
-                          <div className="p-1">
-                            <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                              <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
+                      <FixedDropdown btnRef={{ current: menuBtnRefs.current[`d-${c.id}`] }} isOpen={openMenuId === c.id} isRTL={isRTL}>
+                        <div className="p-1">
+                          <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                            <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
+                          </button>
+                          <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                            <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
+                          </button>
+                          {perms.canExportContacts && (
+                            <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                              <FileDown size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'تصدير' : 'Export'}
                             </button>
-                            <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                              <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
+                          )}
+                          {perms.canDeleteContacts && (
+                            <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                              <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
                             </button>
-                            {perms.canExportContacts && (
-                              <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                                <FileDown size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'تصدير' : 'Export'}
-                              </button>
-                            )}
-                            {perms.canDeleteContacts && (
-                              <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                                <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
-                              </button>
-                            )}
-                          </div>
-                          {(perms.canDeleteContacts || perms.canEditContact?.(c)) && <>
-                          <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
-                          <div className="p-1">
-                            {perms.canEditContact?.(c) && c.contact_status !== 'disqualified' && (
-                              <button onClick={() => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-amber-600 font-inherit hover:bg-amber-500/[0.05]">
-                                <X size={13} /> {isRTL ? 'غير مؤهل' : 'Disqualify'}
-                              </button>
-                            )}
-                            {perms.canDeleteContacts && !c.is_blacklisted && (
-                              <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
-                                <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
-                              </button>
-                            )}
-                          </div>
-                          </>}
+                          )}
                         </div>
-                      )}
+                        {(perms.canDeleteContacts || perms.canEditContact?.(c)) && <>
+                        <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
+                        <div className="p-1">
+                          {perms.canEditContact?.(c) && c.contact_status !== 'disqualified' && (
+                            <button onClick={() => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-amber-600 font-inherit hover:bg-amber-500/[0.05]">
+                              <X size={13} /> {isRTL ? 'غير مؤهل' : 'Disqualify'}
+                            </button>
+                          )}
+                          {perms.canDeleteContacts && !c.is_blacklisted && (
+                            <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                              <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
+                            </button>
+                          )}
+                        </div>
+                        </>}
+                      </FixedDropdown>
                     </div>
                   </div>
                 </td>

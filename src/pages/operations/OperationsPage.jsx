@@ -2,17 +2,17 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  BarChart2, FileCheck, Banknote, KeyRound, Headphones,
+  BarChart2, Banknote,
   AlertTriangle, Clock, CheckCircle, Plus, Search,
   DollarSign, TrendingUp, PieChart, Building2,
   Star, Phone, MessageSquare, FileText, Eye, ArrowRight,
   X, ClipboardCheck, Wrench, HelpCircle,
-  Edit3, AlertCircle,
+  Edit3, AlertCircle, KeyRound,
 } from 'lucide-react';
 import {
   DEAL_STATUS_CONFIG, PAYMENT_STATUS_CONFIG, HANDOVER_STATUS_CONFIG,
   TICKET_STATUS_CONFIG, TICKET_TYPE_CONFIG, PRIORITY_CONFIG, DOCUMENT_CHECKLIST,
-  MOCK_OPS_ACTIVITY, fmtMoney, fmtMoneyShort, daysSince, daysUntil,
+  fmtMoney, fmtMoneyShort, daysSince, daysUntil,
 } from '../../data/operations_mock_data';
 import { getWonDeals } from '../../services/dealsService';
 import {
@@ -30,17 +30,6 @@ import {
 } from '../../services/operationsService';
 import { useTheme } from '../../contexts/ThemeContext';
 import { KpiCard, Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, FilterPill, ExportButton } from '../../components/ui';
-
-// ── Activity type icons & colors ────────────────────────────────────────
-const ACT_TYPE = {
-  deal_created:       { icon: Plus,         color: '#4A7AAB' },
-  deal_status_change: { icon: ArrowRight,   color: '#2B4C6F' },
-  payment_received:   { icon: DollarSign,   color: '#1B3347' },
-  ticket_opened:      { icon: AlertCircle,  color: '#EF4444' },
-  ticket_resolved:    { icon: CheckCircle,  color: '#4A7AAB' },
-  handover_update:    { icon: KeyRound,     color: '#6B8DB5' },
-  document_uploaded:  { icon: FileText,     color: '#8BA8C8' },
-};
 
 const TICKET_TYPE_ICONS = { complaint: AlertTriangle, maintenance: Wrench, inquiry: HelpCircle, modification: Edit3 };
 
@@ -127,11 +116,10 @@ export default function OperationsPage() {
   const location = useLocation();
   const activeTab = useMemo(() => {
     const path = location.pathname;
-    if (path.includes('/operations/deals')) return 'deals';
     if (path.includes('/operations/payments')) return 'payments';
     if (path.includes('/operations/handover')) return 'handover';
     if (path.includes('/operations/after-sales')) return 'after_sales';
-    return 'overview';
+    return 'deals';
   }, [location.pathname]);
   const [dealFilter, setDealFilter] = useState('all');
   const [payFilter, setPayFilter] = useState('all');
@@ -428,68 +416,6 @@ export default function OperationsPage() {
           )}
         </div>
       </div>
-    );
-  }
-
-  // ── OVERVIEW TAB ────────────────────────────────────────────────────
-  function renderOverview() {
-    const sortedActivity = [...MOCK_OPS_ACTIVITY].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    const pipelineCounts = Object.entries(DEAL_STATUS_CONFIG).filter(([k]) => k !== 'cancelled').map(([key, cfg]) => ({
-      key, label: isRTL ? cfg.ar : cfg.en, color: cfg.color, count: deals.filter(d => d.status === key).length,
-    }));
-    const totalPipeline = Math.max(pipelineCounts.reduce((s, p) => s + p.count, 0), 1);
-    return (
-      <>
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-          <KpiCard icon={FileCheck} label={isRTL ? 'صفقات نشطة' : 'Active Deals'} value={activeDeals} sub={isRTL ? `${newDeals} جديدة` : `${newDeals} new`} color="#4A7AAB" />
-          <KpiCard icon={AlertTriangle} label={isRTL ? 'أقساط متأخرة' : 'Overdue Payments'} value={overduePayments.length} sub={fmtMoney(overdueSum)} color="#EF4444" />
-          <KpiCard icon={KeyRound} label={isRTL ? 'تسليمات قريبة' : 'Upcoming Handovers'} value={handoverThisMonth} color="#2B4C6F" />
-          <KpiCard icon={Headphones} label={isRTL ? 'تذاكر مفتوحة' : 'Open Tickets'} value={openTickets} sub={isRTL ? `${complaints} شكوى` : `${complaints} complaints`} color="#F97316" />
-        </div>
-        {/* Pipeline bar */}
-        <Card className="p-5 mb-6">
-          <h3 className={`m-0 mb-4 text-sm font-bold text-content dark:text-content-dark text-start`}>{isRTL ? 'خط سير الصفقات' : 'Deal Pipeline'}</h3>
-          <div className="flex rounded-lg overflow-hidden h-7">
-            {pipelineCounts.filter(p => p.count > 0).map(p => (
-              <div key={p.key} title={`${p.label}: ${p.count}`} className="flex items-center justify-center transition-all duration-300" style={{ flex: p.count, background: p.color, minWidth: p.count > 0 ? 32 : 0 }}>
-                <span className="text-xs font-bold text-white">{p.count}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-4 flex-wrap mt-3">
-            {pipelineCounts.filter(p => p.count > 0).map(p => (
-              <div key={p.key} className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-                <span className="text-xs text-content-muted dark:text-content-muted-dark">{p.label} ({p.count})</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-        {/* Activity timeline */}
-        <Card className="p-5">
-          <h3 className={`m-0 mb-4 text-sm font-bold text-content dark:text-content-dark text-start`}>{isRTL ? 'آخر الأنشطة' : 'Recent Activity'}</h3>
-          <div className="flex flex-col">
-            {sortedActivity.map((act, idx) => {
-              const actCfg = ACT_TYPE[act.type] || { icon: Clock, color: '#8BA8C8' };
-              const ActIcon = actCfg.icon;
-              const time = new Date(act.timestamp);
-              const timeStr = `${time.getDate()}/${time.getMonth() + 1} ${time.getHours()}:${String(time.getMinutes()).padStart(2, '0')}`;
-              return (
-                <div key={act.id} className={`flex gap-3.5 py-3 ${idx < sortedActivity.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''} ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className="w-[34px] h-[34px] rounded-xl flex items-center justify-center shrink-0" style={{ background: actCfg.color + '18' }}>
-                    <ActIcon size={16} color={actCfg.color} />
-                  </div>
-                  <div className={`flex-1 min-w-0 text-start`}>
-                    <p className="m-0 text-xs text-content dark:text-content-dark leading-normal">{isRTL ? act.description_ar : act.description_en}</p>
-                    <p className="m-0 mt-0.5 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? act.user_ar : act.user_en} — {timeStr}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      </>
     );
   }
 
@@ -906,7 +832,6 @@ export default function OperationsPage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'overview' && renderOverview()}
       {activeTab === 'deals' && renderDeals()}
       {activeTab === 'payments' && renderPayments()}
       {activeTab === 'handover' && renderHandover()}

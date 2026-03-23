@@ -215,7 +215,7 @@ export default function OppTable({
                   {/* Budget */}
                   <td className="px-3 py-2.5">
                     <span className="text-xs font-bold text-content dark:text-content-dark">
-                      {fmtBudget(opp.budget)}
+                      {fmtBudget(opp.budget)} {opp.budget ? (isRTL ? 'ج.م' : 'EGP') : ''}
                     </span>
                   </td>
                   {/* Temperature */}

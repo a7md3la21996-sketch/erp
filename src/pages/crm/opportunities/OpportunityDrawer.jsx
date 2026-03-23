@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/favoritesService';
 import { fetchContactActivities, createActivity } from '../../../services/contactsService';
+import { createTask, TASK_PRIORITIES } from '../../../services/tasksService';
+import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import FollowUpReminder from '../../../components/ui/FollowUpReminder';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
@@ -21,10 +23,233 @@ import {
   Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star,
   MapPin, Briefcase, Calendar, ExternalLink, StickyNote,
   ChevronUp, ChevronDown, FileText, MoreVertical, MessageSquare, Zap,
+  Check, CheckSquare, Target,
 } from 'lucide-react';
-import { getQuotesByOpportunity } from '../../../services/quotesService';
 import { Button, Input, Select, Textarea } from '../../../components/ui';
 import { useToast } from '../../../contexts/ToastContext';
+
+// ─── Take Action Form (matches ContactDrawer pattern) ───
+function OppTakeActionForm({ selectedOpp, isRTL, configActivityTypes, configActivityResults, ACTIVITY_ICON_MAP, stages, profile, onSaveActivity, onSaveTask, onStageChange, onCancel }) {
+  const [actMode, setActMode] = useState('log');
+  const [actForm, setActForm] = useState({ type: 'call', description: '', result: '', scheduled_date: '' });
+  const setAct = (k, v) => setActForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '' } : {}) }));
+
+  const currentResults = (configActivityResults?.[actForm.type] || []).map(r => ({
+    value: r.value, label: isRTL ? r.label_ar : r.label_en, color: r.color,
+  }));
+  const resultRequired = actMode === 'log' && currentResults.length > 0;
+
+  // Task section
+  const [addTask, setAddTask] = useState(false);
+  const TASK_TYPES = [
+    { key: 'followup', ar: 'متابعة', en: 'Follow Up' },
+    { key: 'callback', ar: 'معاودة اتصال', en: 'Callback' },
+    { key: 'send_info', ar: 'إرسال معلومات', en: 'Send Info' },
+    { key: 'note', ar: 'ملاحظة', en: 'Note' },
+  ];
+  const [taskForm, setTaskForm] = useState({ type: 'followup', notes: '', priority: 'medium', due_date: '' });
+
+  // Stage section
+  const [changeStage, setChangeStage] = useState(false);
+  const [newStage, setNewStage] = useState(selectedOpp?.stage || '');
+
+  const [saving, setSaving] = useState(false);
+
+  const canSave = actMode === 'schedule' ? !!actForm.scheduled_date : (!resultRequired || actForm.result);
+
+  const RESULT_TITLES = {
+    call: isRTL ? 'نتيجة المكالمة' : 'Call Result',
+    whatsapp: isRTL ? 'نتيجة الرسالة' : 'Message Result',
+    email: isRTL ? 'نتيجة الإيميل' : 'Email Result',
+    meeting: isRTL ? 'نتيجة الاجتماع' : 'Meeting Result',
+    site_visit: isRTL ? 'نتيجة الزيارة' : 'Visit Result',
+  };
+
+  const handleSaveAll = async () => {
+    if (!canSave) return;
+    setSaving(true);
+
+    // 1. Save activity
+    const actData = { type: actForm.type, description: actForm.description, result: actForm.result || null, created_at: new Date().toISOString() };
+    actData.status = actMode === 'schedule' ? 'scheduled' : 'completed';
+    if (actMode === 'schedule' && actForm.scheduled_date) actData.scheduled_date = actForm.scheduled_date;
+    if (actForm.result && currentResults.length > 0) {
+      const found = currentResults.find(r => r.value === actForm.result);
+      const resultLabel = found ? found.label : actForm.result;
+      actData.description = `${resultLabel}${actForm.description ? ' — ' + actForm.description : ''}`;
+    }
+    await onSaveActivity(actData);
+
+    // 2. Save task if enabled
+    if (addTask && taskForm.type && taskForm.due_date) {
+      const selectedType = TASK_TYPES.find(t => t.key === taskForm.type);
+      const title = selectedType ? (isRTL ? selectedType.ar : selectedType.en) : taskForm.type;
+      await onSaveTask({ ...taskForm, title, contact_id: selectedOpp.contact_id, contact_name: getContactName(selectedOpp), entity_type: 'opportunity', entity_id: selectedOpp.id, dept: 'crm', created_by: profile?.id, created_by_name: profile?.full_name_ar || profile?.full_name_en });
+    }
+
+    // 3. Change stage if enabled
+    if (changeStage && newStage && newStage !== selectedOpp.stage) {
+      onStageChange(newStage);
+    }
+
+    setSaving(false);
+    onCancel();
+  };
+
+  const sectionHeader = (icon, label, enabled, onToggle, required) => (
+    <button
+      onClick={required ? undefined : onToggle}
+      className={`w-full flex items-center gap-2 py-2 px-3 rounded-lg text-xs font-bold border-0 font-cairo transition-colors ${
+        required ? 'bg-transparent cursor-default' : 'cursor-pointer hover:bg-surface-input/50 dark:hover:bg-surface-input-dark/50 bg-transparent'
+      } ${enabled ? 'text-content dark:text-content-dark' : 'text-content-muted dark:text-content-muted-dark'}`}
+    >
+      {icon}
+      <span>{label}</span>
+      {required && <span className="text-red-500 text-[10px]">*</span>}
+      <span className="flex-1" />
+      {!required && (
+        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${enabled ? 'bg-brand-500/15 text-brand-500' : 'bg-surface-input dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'}`}>
+          {enabled ? (isRTL ? 'مفعل' : 'ON') : (isRTL ? 'اختياري' : 'OFF')}
+        </span>
+      )}
+    </button>
+  );
+
+  const activityTypes = (configActivityTypes || []).map(t => ({ key: t.key, label: t.label_en, labelAr: t.label_ar, Icon: ACTIVITY_ICON_MAP?.[t.key] || ACTIVITY_ICONS[t.key] || Clock }));
+
+  return (
+    <div className="bg-gradient-to-b from-brand-500/[0.06] to-transparent border border-brand-500/20 rounded-xl p-3.5 mb-4">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-7 h-7 rounded-lg bg-brand-500/15 flex items-center justify-center">
+          <Zap size={14} className="text-brand-500" />
+        </div>
+        <span className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'اتخذ إجراء' : 'Take Action'}</span>
+      </div>
+
+      {/* ── Section 1: Activity (Required) ── */}
+      {sectionHeader(<Phone size={13} className="text-brand-500" />, isRTL ? 'سجل نشاط' : 'Log Activity', true, null, true)}
+      <div className="ps-3 mb-3">
+        {/* Log now / Schedule toggle */}
+        <div className="flex gap-1.5 mb-2.5">
+          <button onClick={() => setActMode('log')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
+              actMode === 'log' ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-emerald-500/40'
+            }`}>
+            <Check size={11} /> {isRTL ? 'سجل الآن' : 'Log now'}
+          </button>
+          <button onClick={() => setActMode('schedule')}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
+              actMode === 'schedule' ? 'bg-blue-500 text-white border-blue-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-blue-500/40'
+            }`}>
+            <Calendar size={11} /> {isRTL ? 'جدول' : 'Schedule'}
+          </button>
+        </div>
+        {/* Scheduled date */}
+        {actMode === 'schedule' && (
+          <div className="mb-2.5">
+            <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
+              {isRTL ? 'تاريخ الموعد' : 'Scheduled Date'} <span className="text-red-500">*</span>
+            </div>
+            <input type="datetime-local" value={actForm.scheduled_date} onChange={e => setAct('scheduled_date', e.target.value)}
+              className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+          </div>
+        )}
+        {/* Activity type chips */}
+        <div className="flex gap-1.5 flex-wrap mb-2.5">
+          {activityTypes.map(v => (
+            <button key={v.key} onClick={() => setAct('type', v.key)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
+                actForm.type === v.key ? 'bg-brand-500 text-white border-brand-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/40'
+              }`}>
+              <v.Icon size={11} /> {isRTL ? v.labelAr : v.label}
+            </button>
+          ))}
+        </div>
+        {/* Result buttons */}
+        {currentResults.length > 0 && (
+          <div className="mb-2.5">
+            <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">
+              {RESULT_TITLES[actForm.type] || (isRTL ? 'النتيجة' : 'Result')} <span className="text-red-500">*</span>
+            </div>
+            <div className="flex gap-1.5 flex-wrap">
+              {currentResults.map(r => (
+                <button key={r.value} onClick={() => setActForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] cursor-pointer border font-cairo ${actForm.result === r.value ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                  style={actForm.result === r.value ? { background: r.color + '18', border: `1px solid ${r.color}`, color: r.color } : undefined}>
+                  {r.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <Textarea size="sm" rows={2}
+          placeholder={isRTL ? 'وصف / ملاحظات...' : 'Description / notes...'}
+          value={actForm.description} onChange={e => setAct('description', e.target.value)} />
+      </div>
+
+      <div className="border-t border-brand-500/10 my-2" />
+
+      {/* ── Section 2: Task (Optional) ── */}
+      {sectionHeader(<CheckSquare size={13} className="text-amber-500" />, isRTL ? 'أضف مهمة' : 'Add Task', addTask, () => setAddTask(p => !p))}
+      {addTask && (
+        <div className="ps-3 mb-3 mt-1">
+          <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نوع المهمة' : 'Task Type'}</div>
+          <div className="flex gap-1.5 flex-wrap mb-2.5">
+            {TASK_TYPES.map(ft => (
+              <button key={ft.key} onClick={() => setTaskForm(f => ({ ...f, type: ft.key }))}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
+                  taskForm.type === ft.key ? 'bg-amber-500 text-white border-amber-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-amber-500/40'
+                }`}>
+                {isRTL ? ft.ar : ft.en}
+              </button>
+            ))}
+          </div>
+          <Textarea size="sm" rows={2}
+            placeholder={isRTL ? 'وصف / تفاصيل...' : 'Description / details...'}
+            value={taskForm.notes} onChange={e => setTaskForm(f => ({ ...f, notes: e.target.value }))}
+            className="mb-2" />
+          <div className="flex gap-2">
+            <Select value={taskForm.priority} onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value }))} className="flex-1" size="sm">
+              {Object.entries(TASK_PRIORITIES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
+            </Select>
+            <input type="datetime-local" value={taskForm.due_date} onChange={e => setTaskForm(f => ({ ...f, due_date: e.target.value }))}
+              className="flex-1 px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+          </div>
+        </div>
+      )}
+
+      <div className="border-t border-brand-500/10 my-2" />
+
+      {/* ── Section 3: Stage Change (Optional) ── */}
+      {sectionHeader(<Target size={13} className="text-emerald-500" />, isRTL ? 'تغيير المرحلة' : 'Change Stage', changeStage, () => setChangeStage(p => !p))}
+      {changeStage && (
+        <div className="ps-3 mb-3 mt-1">
+          <div className="flex gap-1.5 flex-wrap">
+            {stages.map(s => (
+              <button key={s.id} onClick={() => setNewStage(s.id)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
+                  newStage === s.id ? '' : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark hover:border-emerald-500/40'
+                }`}
+                style={newStage === s.id ? { background: (s.color || '#10B981') + '18', border: `1px solid ${s.color || '#10B981'}`, color: s.color || '#10B981' } : undefined}>
+                {isRTL ? s.label_ar : s.label_en}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Save / Cancel ── */}
+      <div className="flex gap-2 justify-end mt-3 pt-3 border-t border-brand-500/10">
+        <Button variant="secondary" size="sm" onClick={onCancel}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+        <Button size="sm" onClick={handleSaveAll} disabled={!canSave || saving} className={!canSave ? 'opacity-50 cursor-not-allowed' : ''}>
+          <Zap size={12} />
+          {saving ? '...' : (isRTL ? 'حفظ الكل' : 'Save All')}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function OpportunityDrawer({
   selectedOpp, onClose, onMove, onDelete, onUpdate,
@@ -46,7 +271,6 @@ export default function OpportunityDrawer({
   const [showEdit, setShowEdit] = useState(false);
   const [showDrawerMenu, setShowDrawerMenu] = useState(false);
   const [showAddActivity, setShowAddActivity] = useState(false);
-  const [activityForm, setActivityForm] = useState({ type: 'call', description: '', result: '' });
   const [allActivities, setAllActivities] = useState([]);
   const [drawerActivities, setDrawerActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
@@ -57,7 +281,6 @@ export default function OpportunityDrawer({
   const [editNoteText, setEditNoteText] = useState('');
   const [stageHistory, setStageHistory] = useState([]);
   const [stageConfirm, setStageConfirm] = useState(null);
-  const [linkedQuotesCount, setLinkedQuotesCount] = useState(0);
   const [activityAgentFilter, setActivityAgentFilter] = useState('all');
 
   // Favorites
@@ -111,12 +334,6 @@ export default function OpportunityDrawer({
     setDrawerNotes(getOppNotes(selectedOpp.id));
     setStageHistory(getStageHistory(selectedOpp.id));
   }, [selectedOpp?.id, selectedOpp?.stage]);
-
-  // Quotes count
-  useEffect(() => {
-    if (!selectedOpp?.id) { setLinkedQuotesCount(0); return; }
-    try { setLinkedQuotesCount(getQuotesByOpportunity(selectedOpp.id).length); } catch { setLinkedQuotesCount(0); }
-  }, [selectedOpp?.id]);
 
   // Close outside click on menu
   const menuRef = useRef(null);
@@ -231,11 +448,6 @@ export default function OpportunityDrawer({
                           <ExternalLink size={13} className="text-brand-500" /> {isRTL ? 'عرض العميل' : 'View Contact'}
                         </button>
                       )}
-                      <button onClick={() => { navigate(`/quotes?opportunity_id=${selectedOpp.id}`); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                        <FileText size={13} className="text-brand-500" />
-                        {isRTL ? 'عروض الأسعار' : 'Quotes'}
-                        {linkedQuotesCount > 0 && <span className="ms-auto text-[10px] bg-brand-500/15 text-brand-500 px-1.5 py-px rounded-full font-bold">{linkedQuotesCount}</span>}
-                      </button>
                       <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
                       <button onClick={() => { onDelete(selectedOpp.id); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
                         <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
@@ -338,7 +550,7 @@ export default function OpportunityDrawer({
             <div className="w-px bg-edge dark:bg-edge-dark" />
             <div className="flex-1 py-1.5 text-center bg-brand-500/[0.05]">
               <span className="text-sm font-bold text-brand-500">{fmtBudget(selectedOpp.budget)}</span>
-              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'ج' : 'EGP'}</span>
+              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'ج.م' : 'EGP'}</span>
             </div>
             <div className="w-px bg-edge dark:bg-edge-dark" />
             <div className="flex-1 py-1.5 text-center bg-brand-500/[0.05]">
@@ -380,84 +592,50 @@ export default function OpportunityDrawer({
               <div className="mb-4">
                 <button onClick={() => setShowAddActivity(p => !p)}
                   className={`w-full py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showAddActivity ? 'bg-brand-500 text-white border-brand-500' : 'bg-brand-500/[0.08] border-brand-500/25 text-brand-500'}`}>
-                  <Zap size={13} /> {isRTL ? 'سجّل نشاط' : 'Log Activity'}
+                  <Zap size={13} /> {isRTL ? 'اتخذ إجراء' : 'Take Action'}
                 </button>
               </div>
 
-              {/* Add Activity Form */}
+              {/* Take Action Form */}
               {showAddActivity && (
-                <div className="bg-gradient-to-b from-brand-500/[0.06] to-transparent border border-brand-500/20 rounded-xl p-3.5 mb-4">
-                  <div className="flex gap-1.5 mb-2 flex-wrap">
-                    {(configActivityTypes || []).map(at => {
-                      const Icon = ACTIVITY_ICON_MAP[at.key] || ACTIVITY_ICONS[at.key] || Clock;
-                      return (
-                        <button
-                          key={at.key}
-                          onClick={() => setActivityForm(f => ({ ...f, type: at.key, result: '' }))}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold font-cairo border-none cursor-pointer transition-colors ${
-                            activityForm.type === at.key
-                              ? 'bg-brand-500 text-white'
-                              : 'bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
-                          }`}
-                        >
-                          <Icon size={11} />{isRTL ? at.label_ar : at.label_en}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  {configActivityResults[activityForm.type]?.length > 0 && (
-                    <div className="mb-2">
-                      <p className="m-0 mb-1 text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'النتيجة' : 'Result'}</p>
-                      <div className="flex gap-1.5 flex-wrap">
-                        {configActivityResults[activityForm.type].map(r => (
-                          <button
-                            key={r.value}
-                            onClick={() => setActivityForm(f => ({ ...f, result: f.result === r.value ? '' : r.value }))}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold font-cairo border-2 cursor-pointer transition-all ${
-                              activityForm.result === r.value
-                                ? ''
-                                : 'border-transparent bg-white dark:bg-surface-input-dark text-content-muted dark:text-content-muted-dark'
-                            }`}
-                            style={activityForm.result === r.value ? { borderColor: r.color, background: `${r.color}18`, color: r.color } : {}}
-                          >
-                            {isRTL ? r.label_ar : r.label_en}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  <Textarea
-                    value={activityForm.description}
-                    onChange={e => setActivityForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder={isRTL ? 'وصف النشاط...' : 'Activity description...'}
-                    rows={2}
-                    className="mb-2 text-xs"
-                  />
-                  <div className="flex gap-2 justify-end">
-                    <Button variant="ghost" size="sm" onClick={() => setShowAddActivity(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-                    <Button size="sm" onClick={async () => {
-                      if (!activityForm.description.trim()) return;
-                      try {
-                        const act = await createActivity({
-                          type: activityForm.type,
-                          description: activityForm.description,
-                          result: activityForm.result || null,
-                          contact_id: selectedOpp.contact_id,
-                          entity_type: 'opportunity',
-                          entity_id: selectedOpp.id,
-                        });
-                        setAllActivities(prev => [act, ...prev]);
-                        setActivityForm({ type: 'call', description: '', result: '' });
-                        setShowAddActivity(false);
-                        toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
-                      } catch {
-                        toast.error(isRTL ? 'فشل حفظ النشاط' : 'Failed to save activity');
-                      }
-                    }}>
-                      <Zap size={12} /> {isRTL ? 'حفظ' : 'Save'}
-                    </Button>
-                  </div>
-                </div>
+                <OppTakeActionForm
+                  selectedOpp={selectedOpp}
+                  isRTL={isRTL}
+                  configActivityTypes={configActivityTypes}
+                  configActivityResults={configActivityResults}
+                  ACTIVITY_ICON_MAP={ACTIVITY_ICON_MAP}
+                  stages={stages}
+                  profile={profile}
+                  onSaveActivity={async (actData) => {
+                    try {
+                      const act = await createActivity({
+                        ...actData,
+                        contact_id: selectedOpp.contact_id,
+                        entity_type: 'opportunity',
+                        entity_id: selectedOpp.id,
+                      });
+                      setAllActivities(prev => [act, ...prev]);
+                      toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
+                    } catch {
+                      toast.error(isRTL ? 'فشل حفظ النشاط' : 'Failed to save activity');
+                    }
+                  }}
+                  onSaveTask={async (taskData) => {
+                    try {
+                      await createTask(taskData);
+                      toast.success(isRTL ? 'تم إنشاء المهمة' : 'Task created');
+                    } catch {
+                      toast.error(isRTL ? 'فشل إنشاء المهمة' : 'Failed to create task');
+                    }
+                  }}
+                  onStageChange={(newStage) => {
+                    if (newStage !== selectedOpp.stage) {
+                      addStageHistory(selectedOpp.id, selectedOpp.stage, newStage);
+                      onMove(selectedOpp.id, newStage);
+                    }
+                  }}
+                  onCancel={() => setShowAddActivity(false)}
+                />
               )}
 
               {/* Pipeline Stepper */}
@@ -621,7 +799,7 @@ export default function OpportunityDrawer({
               <div className="grid grid-cols-2 gap-2.5">
                 {[
                   { label: isRTL ? 'المرحلة' : 'Stage', value: deptStageLabel(selectedOpp.stage, selectedOpp.contacts?.department || 'sales', isRTL), color: (stages.find(s => s.id === selectedOpp.stage)?.color || '#4A7AAB') },
-                  { label: isRTL ? 'الميزانية' : 'Budget', value: fmtBudget(selectedOpp.budget) + ' ' + (isRTL ? 'ج' : 'EGP'), color: '#4A7AAB' },
+                  { label: isRTL ? 'الميزانية' : 'Budget', value: fmtBudget(selectedOpp.budget) + ' ' + (isRTL ? 'ج.م' : 'EGP'), color: '#4A7AAB' },
                   { label: isRTL ? 'الحرارة' : 'Temperature', value: isRTL ? (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).label_en, color: (TEMP_CONFIG[selectedOpp.temperature] || TEMP_CONFIG.cold).color },
                   { label: isRTL ? 'الأولوية' : 'Priority', value: isRTL ? (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_ar : (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).label_en, color: (PRIORITY_CONFIG[selectedOpp.priority] || PRIORITY_CONFIG.medium).color },
                   { label: isRTL ? 'المسؤول' : 'Agent', value: getAgentName(selectedOpp, lang), color: isDark ? '#E2EAF4' : '#1B3347' },
@@ -787,7 +965,7 @@ export default function OpportunityDrawer({
                               </span>
                             </div>
                             <div className="flex items-center gap-2 text-[10px] text-content-muted dark:text-content-muted-dark">
-                              {opp.budget > 0 && <span>{fmtBudget(opp.budget)}</span>}
+                              {opp.budget > 0 && <span>{fmtBudget(opp.budget)} {isRTL ? 'ج.م' : 'EGP'}</span>}
                               {opp.temperature && <><span className="opacity-40">·</span><span style={{ color: (TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold).color }}>{isRTL ? (TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold).label_ar : (TEMP_CONFIG[opp.temperature] || TEMP_CONFIG.cold).label_en}</span></>}
                               <span className="opacity-40">·</span>
                               <span>{opp.created_at?.slice(0, 10)}</span>

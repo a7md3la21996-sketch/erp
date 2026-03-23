@@ -80,9 +80,7 @@ const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
 const KnowledgeBasePage = lazy(() => import('./pages/KnowledgeBasePage'));
 const ComparisonReportsPage = lazy(() => import('./pages/ComparisonReportsPage'));
 const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'));
-const CustomerPortalPage = lazy(() => import('./pages/CustomerPortalPage'));
-const CustomerPortalView = lazy(() => import('./pages/CustomerPortalView'));
-const QuotesPage = lazy(() => import('./pages/QuotesPage'));
+
 
 function PageLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -152,7 +150,6 @@ export default function App() {
             <Routes>
               <Route path="/login" element={<AuthRedirect />} />
               <Route path="/" element={<AuthRedirect />} />
-              <Route path="/portal/:token" element={<Guarded><CustomerPortalView /></Guarded>} />
               <Route element={<ProtectedRoute permission={P.DASHBOARD}><MainLayout /></ProtectedRoute>}>
                 <Route path="/dashboard" element={<Guarded><DashboardPage /></Guarded>} />
                 <Route path="/contacts" element={<Guarded><ContactsPage /></Guarded>} />
@@ -162,7 +159,6 @@ export default function App() {
                 <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
                 <Route path="/performance" element={<Guarded><PerformancePage /></Guarded>} />
                 <Route path="/goals" element={<Guarded><GoalsPage /></Guarded>} />
-                <Route path="/quotes" element={<Guarded><QuotesPage /></Guarded>} />
                 <Route path="/sales/deals" element={<Guarded><DealsPage /></Guarded>} />
                 <Route path="/sales/commissions" element={<Guarded><CommissionsPage /></Guarded>} />
                 <Route path="/sales/forecast" element={<Guarded><SalesForecastPage /></Guarded>} />
@@ -224,7 +220,6 @@ export default function App() {
                 <Route path="/notifications" element={<Guarded><NotificationsPage /></Guarded>} />
                 <Route path="/help" element={<Guarded><HelpCenterPage /></Guarded>} />
                 <Route path="/knowledge-base" element={<Guarded><KnowledgeBasePage /></Guarded>} />
-                <Route path="/customer-portal" element={<Guarded><CustomerPortalPage /></Guarded>} />
                 <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/profile" element={<Guarded><ProfilePage /></Guarded>} />
               </Route>

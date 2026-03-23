@@ -89,7 +89,13 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الميزانية' : 'Budget'}</label>
-              <Input type="number" min="0" value={form.budget} onChange={e => set('budget', Math.max(0, e.target.value))} />
+              <div className="relative">
+                <Input type="number" min="0" value={form.budget} onChange={e => set('budget', Math.max(0, e.target.value))} style={{ paddingInlineEnd: 48 }} />
+                <span className="absolute top-1/2 -translate-y-1/2 end-3 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark pointer-events-none">{isRTL ? 'ج.م' : 'EGP'}</span>
+              </div>
+              {form.budget && Number(form.budget) > 0 && (
+                <span className="text-[10px] text-brand-500 mt-0.5 block">{Number(form.budget).toLocaleString(isRTL ? 'ar-EG' : 'en-US')} {isRTL ? 'ج.م' : 'EGP'}</span>
+              )}
             </div>
             <div>
               <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'المسؤول' : 'Agent'}</label>

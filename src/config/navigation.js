@@ -14,7 +14,6 @@ export const NAV_ITEMS = [
   { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
     { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
     { id: 'lead-pool', label: { ar: 'توزيع الليدز', en: 'Lead Distribution' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
-    { id: 'customer-portal', label: { ar: 'بوابة العملاء', en: 'Customer Portal' }, path: '/customer-portal', permission: P.CONTACTS_VIEW_OWN },
   ]},
   { id: 'real-estate', label: { ar: 'العقارات', en: 'Real Estate' }, icon: Building2, permission: P.PROJECTS_VIEW, children: [
     { id: 'projects', label: { ar: 'المشاريع', en: 'Projects' }, path: '/real-estate/projects', permission: P.PROJECTS_VIEW },
@@ -24,12 +23,10 @@ export const NAV_ITEMS = [
     { id: 'deals', label: { ar: 'الصفقات', en: 'Deals' }, path: '/sales/deals', permission: P.DEALS_VIEW_OWN },
     { id: 'commissions', label: { ar: 'العمولات', en: 'Commissions' }, path: '/sales/commissions', permission: P.COMM_VIEW_OWN },
     { id: 'forecast', label: { ar: 'توقعات المبيعات', en: 'Sales Forecast' }, path: '/sales/forecast', permission: P.DEALS_VIEW_OWN },
-    { id: 'quotes', label: { ar: 'عروض الأسعار', en: 'Quotes' }, icon: FileText, path: '/quotes', permission: P.DEALS_VIEW_OWN },
     { id: 'approvals', label: { ar: 'الموافقات', en: 'Approvals' }, path: '/approvals', permission: P.DEALS_VIEW_OWN },
   ]},
   { id: 'operations', label: { ar: 'العمليات', en: 'Operations' }, icon: ClipboardCheck, permission: P.OPS_VIEW, children: [
-    { id: 'ops-overview',    label: { ar: 'نظرة عامة',         en: 'Overview' },          path: '/operations',              permission: P.OPS_VIEW },
-    { id: 'ops-deals',       label: { ar: 'معالجة الصفقات',     en: 'Deal Processing' },   path: '/operations/deals',        permission: P.OPS_MANAGE },
+    { id: 'ops-deals',       label: { ar: 'معالجة الصفقات',     en: 'Deal Processing' },   path: '/operations',              permission: P.OPS_MANAGE },
     { id: 'ops-payments',    label: { ar: 'المدفوعات',          en: 'Payments' },          path: '/operations/payments',     permission: P.OPS_PAYMENTS },
     { id: 'ops-handover',    label: { ar: 'التسليمات',          en: 'Handover' },          path: '/operations/handover',     permission: P.OPS_HANDOVER },
     { id: 'ops-after-sales', label: { ar: 'خدمة ما بعد البيع',  en: 'After-Sales' },       path: '/operations/after-sales',  permission: P.OPS_AFTERSALES },

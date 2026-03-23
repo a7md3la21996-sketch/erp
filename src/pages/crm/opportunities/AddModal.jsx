@@ -59,12 +59,12 @@ export default function AddModal({ isRTL, lang, onClose, onSave, agents, project
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
             {isRTL ? 'جهة الاتصال *' : 'Contact *'}
           </label>
-          <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => { f('contact', c); if (c) { const stages = getDeptStages(c.department || 'sales'); f('stage', stages[0]?.id || 'qualification'); } }} />
+          <ContactSearch isRTL={isRTL} value={form.contact} onSelect={c => { f('contact', c); if (c) { const stages = getDeptStages(c.department || 'sales'); f('stage', stages[0]?.id || 'qualification'); if (c.budget_min && !form.budget) f('budget', String(c.budget_min)); } }} />
           {errors.contact && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.contact}</span>}
-          {form.contact && existingOpps.some(o => o.contact_id === form.contact.id) && (
+          {form.contact && existingOpps.some(o => o.contact_id === form.contact.id && (o.assigned_to === currentUserId || o.created_by === currentUserId)) && (
             <div className="flex items-center gap-1.5 mt-1.5 px-2 py-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[11px] font-semibold">
               <AlertTriangle size={12} />
-              {isRTL ? 'تنبيه: يوجد فرصة أخرى لنفس العميل' : 'Warning: This contact already has an opportunity'}
+              {isRTL ? 'تنبيه: عندك فرصة أخرى لنفس العميل' : 'Warning: You already have an opportunity for this contact'}
             </div>
           )}
         </div>
@@ -72,7 +72,13 @@ export default function AddModal({ isRTL, lang, onClose, onSave, agents, project
           <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
             {isRTL ? 'الميزانية' : 'Budget'}
           </label>
-          <Input type="number" min="0" value={form.budget} onChange={e => f('budget', Math.max(0, e.target.value))} style={errors.budget ? { border: '1.5px solid #ef4444' } : {}} />
+          <div className="relative">
+            <Input type="number" min="0" value={form.budget} onChange={e => f('budget', Math.max(0, e.target.value))} style={{ ...(errors.budget ? { border: '1.5px solid #ef4444' } : {}), paddingInlineEnd: 48 }} />
+            <span className="absolute top-1/2 -translate-y-1/2 end-3 text-[11px] font-semibold text-content-muted dark:text-content-muted-dark pointer-events-none">{isRTL ? 'ج.م' : 'EGP'}</span>
+          </div>
+          {form.budget && Number(form.budget) > 0 && (
+            <span className="text-[10px] text-brand-500 mt-0.5 block">{Number(form.budget).toLocaleString(isRTL ? 'ar-EG' : 'en-US')} {isRTL ? 'ج.م' : 'EGP'}</span>
+          )}
           {errors.budget && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.budget}</span>}
         </div>
         <div>

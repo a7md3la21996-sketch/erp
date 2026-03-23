@@ -10,13 +10,14 @@ import { fetchCampaigns } from './marketingService';
 import { fetchEmployees } from './employeesService';
 import { fetchAttendance } from './attendanceService';
 import { fetchInvoices, fetchExpenses } from './financeService';
+import { fetchDeals, fetchInstallments, fetchHandovers, fetchTickets } from './operationsService';
 
 /**
  * Fetch all data needed for reports
  */
 export async function fetchReportsData(profile) {
   const opts = { role: profile?.role, userId: profile?.id };
-  const [contacts, opportunities, deals, activities, campaigns, employees, attendance, invoices, expenses] = await Promise.all([
+  const [contacts, opportunities, deals, activities, campaigns, employees, attendance, invoices, expenses, opsDeals, opsInstallments, opsHandovers, opsTickets] = await Promise.all([
     fetchContacts(opts).catch(() => JSON.parse(localStorage.getItem('platform_contacts') || '[]')),
     fetchOpportunities(opts).catch(() => JSON.parse(localStorage.getItem('platform_opportunities') || '[]')),
     getWonDeals().catch(() => []),
@@ -26,8 +27,12 @@ export async function fetchReportsData(profile) {
     fetchAttendance().catch(() => []),
     fetchInvoices().catch(() => []),
     fetchExpenses().catch(() => []),
+    fetchDeals().catch(() => []),
+    fetchInstallments().catch(() => []),
+    fetchHandovers().catch(() => []),
+    fetchTickets().catch(() => []),
   ]);
-  return { contacts, opportunities, deals, activities, campaigns, employees, attendance, invoices, expenses };
+  return { contacts, opportunities, deals, activities, campaigns, employees, attendance, invoices, expenses, opsDeals, opsInstallments, opsHandovers, opsTickets };
 }
 
 /**
@@ -90,6 +95,154 @@ export function computeContactsBySource(contacts) {
       count,
       pct: Math.round((count / total) * 100),
     }));
+}
+
+/**
+ * CRM: Disqualified by Source — shows DQ count & rate per source + top DQ reasons
+ */
+export function computeDisqualifiedBySource(contacts) {
+  const SOURCE_LABELS = {
+    facebook: { en: 'Facebook', ar: 'فيسبوك' },
+    instagram: { en: 'Instagram', ar: 'انستغرام' },
+    google: { en: 'Google Ads', ar: 'إعلانات جوجل' },
+    referral: { en: 'Referral', ar: 'إحالة' },
+    walk_in: { en: 'Walk-in', ar: 'زيارة مباشرة' },
+    website: { en: 'Website', ar: 'الموقع' },
+    cold_call: { en: 'Cold Call', ar: 'كولد كول' },
+    tiktok: { en: 'TikTok', ar: 'تيك توك' },
+    snapchat: { en: 'Snapchat', ar: 'سناب شات' },
+    linkedin: { en: 'LinkedIn', ar: 'لينكدإن' },
+    other: { en: 'Other', ar: 'أخرى' },
+  };
+  const map = {};
+  contacts.forEach(c => {
+    const src = c.source || 'other';
+    if (!map[src]) map[src] = { total: 0, dq: 0, reasons: {} };
+    map[src].total++;
+    if (c.contact_status === 'disqualified') {
+      map[src].dq++;
+      const reason = c.disqualify_reason || 'unknown';
+      map[src].reasons[reason] = (map[src].reasons[reason] || 0) + 1;
+    }
+  });
+  return Object.entries(map)
+    .filter(([, v]) => v.total > 0)
+    .sort((a, b) => b[1].dq - a[1].dq)
+    .map(([src, v]) => {
+      const topReason = Object.entries(v.reasons).sort((a, b) => b[1] - a[1])[0];
+      return {
+        source: SOURCE_LABELS[src]?.en || src,
+        source_ar: SOURCE_LABELS[src]?.ar || src,
+        total: v.total,
+        dq: v.dq,
+        rate: v.total > 0 ? Math.round((v.dq / v.total) * 100) : 0,
+        top_reason: topReason ? topReason[0] : '—',
+        top_reason_count: topReason ? topReason[1] : 0,
+      };
+    });
+}
+
+/**
+ * CRM: Source Performance — contacts → opportunities → won per source
+ */
+export function computeSourcePerformance(contacts, opportunities) {
+  const SOURCE_LABELS = {
+    facebook: { en: 'Facebook', ar: 'فيسبوك' },
+    instagram: { en: 'Instagram', ar: 'انستغرام' },
+    google: { en: 'Google Ads', ar: 'إعلانات جوجل' },
+    referral: { en: 'Referral', ar: 'إحالة' },
+    walk_in: { en: 'Walk-in', ar: 'زيارة مباشرة' },
+    website: { en: 'Website', ar: 'الموقع' },
+    cold_call: { en: 'Cold Call', ar: 'كولد كول' },
+    tiktok: { en: 'TikTok', ar: 'تيك توك' },
+    snapchat: { en: 'Snapchat', ar: 'سناب شات' },
+    linkedin: { en: 'LinkedIn', ar: 'لينكدإن' },
+    other: { en: 'Other', ar: 'أخرى' },
+  };
+
+  // Map contact_id → source
+  const contactSourceMap = {};
+  contacts.forEach(c => { contactSourceMap[c.id] = c.source || 'other'; });
+
+  const map = {};
+  contacts.forEach(c => {
+    const src = c.source || 'other';
+    if (!map[src]) map[src] = { contacts: 0, opps: 0, won: 0, lost: 0, revenue: 0 };
+    map[src].contacts++;
+  });
+
+  opportunities.forEach(o => {
+    const src = o.source || contactSourceMap[o.contact_id] || 'other';
+    if (!map[src]) map[src] = { contacts: 0, opps: 0, won: 0, lost: 0, revenue: 0 };
+    map[src].opps++;
+    if (o.stage === 'closed_won') {
+      map[src].won++;
+      map[src].revenue += o.budget || o.deal_value || o.revenue || 0;
+    }
+    if (o.stage === 'closed_lost') map[src].lost++;
+  });
+
+  return Object.entries(map)
+    .filter(([, v]) => v.contacts > 0)
+    .sort((a, b) => b[1].contacts - a[1].contacts)
+    .map(([src, v]) => ({
+      source: SOURCE_LABELS[src]?.en || src,
+      source_ar: SOURCE_LABELS[src]?.ar || src,
+      contacts: v.contacts,
+      opps: v.opps,
+      won: v.won,
+      lost: v.lost,
+      revenue: v.revenue,
+      opp_rate: v.contacts > 0 ? Math.round((v.opps / v.contacts) * 100) : 0,
+      win_rate: v.opps > 0 ? Math.round((v.won / v.opps) * 100) : 0,
+    }));
+}
+
+/**
+ * CRM: Campaign Performance — aggregated stats per campaign
+ */
+export function computeCampaignPerformance(contacts, opportunities) {
+  const contactsByCampaign = {};
+  contacts.forEach(c => {
+    const camp = c.campaign_name;
+    if (!camp) return;
+    if (!contactsByCampaign[camp]) contactsByCampaign[camp] = { contacts: 0, dq: 0, contacted: 0, source: c.source || 'other', contactIds: new Set() };
+    contactsByCampaign[camp].contacts++;
+    contactsByCampaign[camp].contactIds.add(c.id);
+    if (c.contact_status === 'disqualified') contactsByCampaign[camp].dq++;
+    if (c.contact_status === 'contacted' || c.last_activity_at) contactsByCampaign[camp].contacted++;
+    if (!contactsByCampaign[camp].source || contactsByCampaign[camp].source === 'other') contactsByCampaign[camp].source = c.source || 'other';
+  });
+
+  const SOURCE_LABELS = {
+    facebook: 'Facebook', instagram: 'Instagram', google: 'Google Ads',
+    tiktok: 'TikTok', snapchat: 'Snapchat', linkedin: 'LinkedIn',
+    referral: 'Referral', walk_in: 'Walk-in', website: 'Website',
+    cold_call: 'Cold Call', other: 'Other',
+  };
+
+  const results = Object.entries(contactsByCampaign).map(([name, v]) => {
+    const campOpps = opportunities.filter(o => v.contactIds.has(o.contact_id));
+    const won = campOpps.filter(o => o.stage === 'closed_won');
+    const lost = campOpps.filter(o => o.stage === 'closed_lost');
+    const revenue = won.reduce((s, o) => s + (o.budget || o.deal_value || o.revenue || 0), 0);
+    return {
+      campaign: name,
+      source: SOURCE_LABELS[v.source] || v.source,
+      contacts: v.contacts,
+      contacted: v.contacted,
+      dq: v.dq,
+      dq_rate: v.contacts > 0 ? Math.round((v.dq / v.contacts) * 100) : 0,
+      opps: campOpps.length,
+      opp_rate: v.contacts > 0 ? Math.round((campOpps.length / v.contacts) * 100) : 0,
+      won: won.length,
+      lost: lost.length,
+      win_rate: campOpps.length > 0 ? Math.round((won.length / campOpps.length) * 100) : 0,
+      revenue,
+    };
+  });
+
+  return results.sort((a, b) => b.contacts - a.contacts);
 }
 
 /**
@@ -497,5 +650,71 @@ export function computeCashflow(invoices, expenses) {
     month_ar: MONTH_AR[m],
     inflow: monthMap[m].inflow,
     outflow: monthMap[m].outflow,
+  }));
+}
+
+// ─── OPERATIONS REPORTS ──────────────────────────────────────────
+
+const DEAL_STATUS_AR = { new_deal: 'جديدة', under_review: 'قيد المراجعة', docs_collection: 'جمع المستندات', contract_prep: 'تحضير العقد', contract_signed: 'تم التوقيع', completed: 'مكتملة', cancelled: 'ملغاة' };
+const DEAL_STATUS_EN = { new_deal: 'New Deal', under_review: 'Under Review', docs_collection: 'Docs Collection', contract_prep: 'Contract Prep', contract_signed: 'Contract Signed', completed: 'Completed', cancelled: 'Cancelled' };
+
+export function computeDealPipeline(opsDeals) {
+  if (!opsDeals?.length) return [];
+  const counts = {};
+  opsDeals.forEach(d => {
+    const s = d.status || 'new_deal';
+    if (!counts[s]) counts[s] = { count: 0, value: 0 };
+    counts[s].count++;
+    counts[s].value += d.deal_value || 0;
+  });
+  return Object.entries(counts).map(([status, v]) => ({
+    status, status_ar: DEAL_STATUS_AR[status] || status, status_en: DEAL_STATUS_EN[status] || status,
+    count: v.count, value: v.value,
+  }));
+}
+
+export function computePaymentsSummary(opsInstallments) {
+  if (!opsInstallments?.length) return [];
+  const paid = opsInstallments.filter(i => i.status === 'paid');
+  const overdue = opsInstallments.filter(i => i.status === 'overdue');
+  const due = opsInstallments.filter(i => i.status === 'due');
+  return [
+    { status: 'paid', status_ar: 'مدفوع', status_en: 'Paid', count: paid.length, total: paid.reduce((s, i) => s + (i.amount || 0), 0) },
+    { status: 'due', status_ar: 'مستحق', status_en: 'Due', count: due.length, total: due.reduce((s, i) => s + (i.amount || 0), 0) },
+    { status: 'overdue', status_ar: 'متأخر', status_en: 'Overdue', count: overdue.length, total: overdue.reduce((s, i) => s + (i.amount || 0), 0) },
+  ];
+}
+
+export function computeHandoverStatus(opsHandovers) {
+  if (!opsHandovers?.length) return [];
+  const counts = {};
+  opsHandovers.forEach(h => {
+    const s = h.status || 'pending';
+    if (!counts[s]) counts[s] = 0;
+    counts[s]++;
+  });
+  const STATUS_AR = { pending: 'قيد الانتظار', scheduled: 'مجدول', in_progress: 'جاري', completed: 'مكتمل', delayed: 'متأخر' };
+  const STATUS_EN = { pending: 'Pending', scheduled: 'Scheduled', in_progress: 'In Progress', completed: 'Completed', delayed: 'Delayed' };
+  return Object.entries(counts).map(([status, count]) => ({
+    status, status_ar: STATUS_AR[status] || status, status_en: STATUS_EN[status] || status, count,
+  }));
+}
+
+export function computeTicketsSummary(opsTickets) {
+  if (!opsTickets?.length) return [];
+  const byType = {};
+  opsTickets.forEach(t => {
+    const type = t.type || 'general';
+    if (!byType[type]) byType[type] = { open: 0, resolved: 0, total: 0 };
+    byType[type].total++;
+    if (['open', 'in_progress'].includes(t.status)) byType[type].open++;
+    else byType[type].resolved++;
+  });
+  const TYPE_AR = { complaint: 'شكوى', inquiry: 'استفسار', maintenance: 'صيانة', general: 'عام' };
+  const TYPE_EN = { complaint: 'Complaint', inquiry: 'Inquiry', maintenance: 'Maintenance', general: 'General' };
+  return Object.entries(byType).map(([type, v]) => ({
+    type, type_ar: TYPE_AR[type] || type, type_en: TYPE_EN[type] || type,
+    open: v.open, resolved: v.resolved, total: v.total,
+    resolve_rate: v.total > 0 ? Math.round((v.resolved / v.total) * 100) : 0,
   }));
 }

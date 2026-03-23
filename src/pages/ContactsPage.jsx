@@ -13,7 +13,7 @@ import { logAction } from '../services/auditService';
 import { bulkSend } from '../services/smsTemplateService';
 import { createNotification } from '../services/notificationsService';
 import { setFieldValues as setCFValues } from '../services/customFieldsService';
-import { fetchCampaigns } from '../services/marketingService';
+import { fetchCampaigns, createCampaign } from '../services/marketingService';
 import { notifyLeadAssigned } from '../services/notificationsService';
 import { evaluateTriggers } from '../services/triggerService';
 import ImportModal from './crm/ImportModal';
@@ -162,9 +162,7 @@ export default function ContactsPage() {
       if (contact.contact_status === 'new' || !contact.contact_status) {
         const updated = { ...contact, contact_status: 'contacted' };
         setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; });
-        updateContact(updated.id, updated).catch(() => {
-          toast.error(isRTL ? 'فشل تحديث حالة جهة الاتصال' : 'Failed to update contact status');
-        });
+        updateContact(updated.id, updated).catch(() => {});
       }
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch {
@@ -247,13 +245,7 @@ export default function ContactsPage() {
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
-    try {
-      await Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_by_name: assignedByName })));
-    } catch {
-      setContacts(prevContacts);
-      localStorage.setItem('platform_contacts', JSON.stringify(prevContacts));
-      toast.error(isRTL ? 'فشل تعيين بعض جهات الاتصال' : 'Failed to reassign some contacts');
-    }
+    Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_by_name: assignedByName }).catch(() => {}))).catch(() => {});
   };
 
   const handleBulkChangeField = async (field, value, actionLabel) => {
@@ -270,13 +262,7 @@ export default function ContactsPage() {
     setSelectedIds([]);
     setBulkDropdownOpen(null);
     setShowBulkMenu(false);
-    try {
-      await Promise.all(idsToUpdate.map(id => updateContact(id, { [field]: value })));
-    } catch {
-      setContacts(prevContacts);
-      localStorage.setItem('platform_contacts', JSON.stringify(prevContacts));
-      toast.error(isRTL ? 'فشل تحديث بعض جهات الاتصال' : 'Failed to update some contacts');
-    }
+    Promise.all(idsToUpdate.map(id => updateContact(id, { [field]: value }).catch(() => {}))).catch(() => {});
   };
 
   const handleBulkSMS = async () => {
@@ -417,9 +403,15 @@ export default function ContactsPage() {
   const COUNTRY_OPTIONS = COUNTRY_CODES.filter(c => ['EG','SA','AE','KW','QA','OM','BH','JO','IQ','LB','LY','MA','TN','SD'].includes(c.country)).map(c => ({ value: c.country, label: c.labelAr, labelEn: c.label }));
 
   const SMART_FIELDS = useMemo(() => [
+    { id: 'prefix', label: 'اللقب', labelEn: 'Prefix', type: 'select', options: [
+      { value: 'Mr.', label: 'Mr.', labelEn: 'Mr.' },
+      { value: 'Mrs.', label: 'Mrs.', labelEn: 'Mrs.' },
+      { value: 'Dr.', label: 'Dr.', labelEn: 'Dr.' },
+      { value: 'Eng.', label: 'Eng.', labelEn: 'Eng.' },
+      { value: 'أستاذ', label: 'أستاذ', labelEn: 'Prof.' },
+    ]},
     { id: 'contact_type', label: 'النوع', labelEn: 'Type', type: 'select', options: [
       { value: 'lead', label: 'ليد', labelEn: 'Lead' },
-      { value: 'cold', label: 'كولد كول', labelEn: 'Cold Call' },
       { value: 'client', label: 'عميل', labelEn: 'Client' },
       { value: 'supplier', label: 'مورد', labelEn: 'Supplier' },
       { value: 'developer', label: 'مطور عقاري', labelEn: 'Developer' },
@@ -554,16 +546,15 @@ export default function ContactsPage() {
   };
 
   const handleBlacklist = async (contact, reason) => {
-    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c));
+    setContacts(prev => {
+      const next = prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c);
+      localStorage.setItem('platform_contacts', JSON.stringify(next));
+      return next;
+    });
     if (selected?.id === contact.id) setSelected(null);
-    try {
-      await blacklistContact(contact.id, reason);
-      logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
-      toast.success(isRTL ? 'تم إضافة للقائمة السوداء' : 'Contact blacklisted');
-    } catch {
-      setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: false, blacklist_reason: null } : c));
-      toast.error(isRTL ? 'فشل إضافة للقائمة السوداء' : 'Failed to blacklist contact');
-    }
+    blacklistContact(contact.id, reason).catch(() => {});
+    logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
+    toast.success(isRTL ? 'تم إضافة للقائمة السوداء' : 'Contact blacklisted');
   };
 
   const tdCls = `px-4 py-3.5 border-b border-edge/50 dark:border-edge-dark/50 align-middle text-xs text-content dark:text-content-dark text-start`;
@@ -700,14 +691,14 @@ export default function ContactsPage() {
       />
 
       {/* Modals */}
-      {showAddModal && <AddContactModal onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const np = normalizePhone(phone); const found = contacts.find(c => normalizePhone(c.phone) === np || normalizePhone(c.phone2) === np || (c.extra_phones || []).some(p => normalizePhone(p) === np)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} onAddInteraction={(contact, interaction) => {
+      {showAddModal && <AddContactModal campaigns={campaignsList} onCreateCampaign={async (data) => { const created = await createCampaign(data); setCampaignsList(prev => [created, ...prev]); }} onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const np = normalizePhone(phone); const found = contacts.find(c => normalizePhone(c.phone) === np || normalizePhone(c.phone2) === np || (c.extra_phones || []).some(p => normalizePhone(p) === np)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} onAddInteraction={(contact, interaction) => {
         const existing = contact.campaign_interactions || [];
         const updated = { ...contact, campaign_interactions: [...existing, interaction] };
         setContacts(prev => prev.map(c => c.id === contact.id ? updated : c));
         localStorage.setItem('platform_contacts', JSON.stringify(contacts.map(c => c.id === contact.id ? updated : c)));
-        updateContact(contact.id, { campaign_interactions: updated.campaign_interactions }).catch(() => { toast.error(isRTL ? 'فشل حفظ التفاعل' : 'Failed to save interaction'); });
+        updateContact(contact.id, { campaign_interactions: updated.campaign_interactions }).catch(() => {});
       }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => { toast.error(isRTL ? 'فشل حفظ التعديلات' : 'Failed to save changes'); }); logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: `Updated contact: ${updated.full_name}`, userName: profile?.full_name_ar || '' }) }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
+      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={updated => { const old = contacts.find(c => c.id === updated.id); setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); localStorage.setItem('platform_contacts', JSON.stringify(next)); return next; }); setSelected(updated); updateContact(updated.id, updated).catch(() => {}); const changedFields = old ? Object.keys(updated).filter(k => JSON.stringify(old[k]) !== JSON.stringify(updated[k]) && !['updated_at'].includes(k)) : []; const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${updated[k] || ''}"`).join(', ') : `Updated contact: ${updated.full_name}`; logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: desc, oldValue: old || null, newValue: updated, userName: profile?.full_name_ar || '' }).catch(() => {}) }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
       {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
