@@ -26,7 +26,8 @@ export async function fetchContacts({ role, userId, teamId, filters = {} }) {
     }
 
     if (filters.search) {
-      query = query.or(`full_name.ilike.%${filters.search}%,phone.ilike.%${filters.search}%,email.ilike.%${filters.search}%,campaign_name.ilike.%${filters.search}%`);
+      const s = filters.search.replace(/[%_]/g, '');
+      query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%`);
     }
     if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
     if (filters.source) query = query.eq('source', filters.source);
@@ -34,7 +35,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {} }) {
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
 
-    const { data, error } = await query.limit(200);
+    const { data, error } = await query.limit(1000);
     if (error) throw error;
     return data || [];
   } catch {
@@ -52,7 +53,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {} }) {
         });
         cached.forEach(c => { c.opportunities = oppsByContact[c.id] || []; });
       }
-      return cached.slice(0, 200);
+      return cached.slice(0, 1000);
     } catch { return []; }
   }
 }

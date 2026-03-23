@@ -112,7 +112,11 @@ export const fmtBudget = (min, max, isRTL = true) => {
 export const daysSince = d => Math.floor((Date.now() - new Date(d)) / 86400000);
 export const initials = name => name ? name.trim().charAt(0) : '?';
 export const AVATAR_COLORS = ['#2B4C6F','#4A7AAB','#065F46','#92400E','#1E40AF','#6B21A8','#B45309','#0F766E'];
-export const avatarColor = (id) => AVATAR_COLORS[parseInt(id) % AVATAR_COLORS.length];
+export const avatarColor = (id) => {
+  if (!id) return AVATAR_COLORS[0];
+  const num = typeof id === 'number' ? id : [...String(id)].reduce((s, c) => s + c.charCodeAt(0), 0);
+  return AVATAR_COLORS[num % AVATAR_COLORS.length];
+};
 export const normalizePhone = (p) => {
   if (!p) return p;
   if (p.startsWith('00')) return '+' + p.slice(2);

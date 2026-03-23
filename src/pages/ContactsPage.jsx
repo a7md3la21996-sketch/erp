@@ -410,6 +410,7 @@ export default function ContactsPage() {
     ]},
     { id: 'contact_type', label: 'النوع', labelEn: 'Type', type: 'select', options: [
       { value: 'lead', label: 'ليد', labelEn: 'Lead' },
+      { value: 'cold', label: 'كولد', labelEn: 'Cold' },
       { value: 'client', label: 'عميل', labelEn: 'Client' },
       { value: 'supplier', label: 'مورد', labelEn: 'Supplier' },
       { value: 'developer', label: 'مطور عقاري', labelEn: 'Developer' },
