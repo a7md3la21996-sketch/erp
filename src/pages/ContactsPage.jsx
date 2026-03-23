@@ -17,13 +17,14 @@ import { fetchCampaigns, createCampaign } from '../services/marketingService';
 import { notifyLeadAssigned } from '../services/notificationsService';
 import { evaluateTriggers } from '../services/triggerService';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton, Button, SmartFilter, applySmartFilters } from '../components/ui';
+import { PageSkeleton, Button, SmartFilter } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
+import { useContactsFilters } from '../hooks/useContactsFilters';
 import useCrmPermissions from '../hooks/useCrmPermissions';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 
-import { SOURCE_LABELS, SOURCE_EN, TYPE, MOCK, normalizePhone, COUNTRY_CODES } from './crm/contacts/constants';
+import { SOURCE_LABELS, SOURCE_EN, TYPE, MOCK, normalizePhone } from './crm/contacts/constants';
 import AddContactModal from './crm/contacts/AddContactModal';
 import LogCallModal from './crm/contacts/LogCallModal';
 import QuickTaskModal from './crm/contacts/QuickTaskModal';
@@ -47,18 +48,7 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState([]);
   const [campaignsList, setCampaignsList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
-  const [search, setSearch] = useState(searchParams.get('q') || '');
-  useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput), 300);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
-  const [filterType, setFilterType] = useState(searchParams.get('type') || 'all');
-  const [showBlacklisted, setShowBlacklisted] = useState(searchParams.get('blacklist') === 'true');
-  const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'created');
   const [actionLoading, setActionLoading] = useState(false);
-  const [page, setPage] = useState(() => parseInt(searchParams.get('page')) || 1);
-  const [pageSize, setPageSize] = useState(25);
 
   // Sync filters to URL
   useEffect(() => {
@@ -70,7 +60,6 @@ export default function ContactsPage() {
     if (page > 1) params.set('page', String(page));
     setSearchParams(params, { replace: true });
   }, [search, filterType, showBlacklisted, sortBy, page, setSearchParams]);
-  const [smartFilters, setSmartFilters] = useState([]);
   const [savedFilters, setSavedFilters] = useState(() => JSON.parse(localStorage.getItem('platform_saved_filters_contacts') || '[]'));
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -109,6 +98,24 @@ export default function ContactsPage() {
   const [bulkOppSaving, setBulkOppSaving] = useState(false);
   const [projectsList, setProjectsList] = useState([]);
   const { auditFields, applyAuditFilters } = useAuditFilter('contact');
+  const {
+    filtered, paged, safePage, totalPages,
+    SMART_FIELDS, SORT_OPTIONS,
+    search, setSearch, searchInput, setSearchInput,
+    filterType, setFilterType, showBlacklisted, setShowBlacklisted,
+    sortBy, setSortBy, smartFilters, setSmartFilters,
+    page, setPage, pageSize, setPageSize,
+  } = useContactsFilters({
+    contacts,
+    pinnedIds,
+    auditFields,
+    applyAuditFilters,
+    initialSearch: searchParams.get('q') || '',
+    initialFilterType: searchParams.get('type') || 'all',
+    initialShowBlacklisted: searchParams.get('blacklist') === 'true',
+    initialSortBy: searchParams.get('sort') || 'created',
+    initialPage: parseInt(searchParams.get('page')) || 1,
+  });
   const { activityResults: configResults, contactsSettings } = useSystemConfig();
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
@@ -399,115 +406,8 @@ export default function ContactsPage() {
     return counts;
   }, [contacts]);
 
-  // Smart filter field definitions
-  const detectCountry = (phone) => {
-    if (!phone) return '';
-    const p = phone.replace(/\s+/g, '');
-    if (p.startsWith('+20') || (p.startsWith('01') && ['0','1','2','5'].includes(p[2]))) return 'EG';
-    if (p.startsWith('+966') || p.startsWith('05')) return 'SA';
-    if (p.startsWith('+971')) return 'AE';
-    if (p.startsWith('+965')) return 'KW';
-    if (p.startsWith('+974')) return 'QA';
-    if (p.startsWith('+968')) return 'OM';
-    if (p.startsWith('+973')) return 'BH';
-    if (p.startsWith('+962') || p.startsWith('07')) return 'JO';
-    if (p.startsWith('+964') || p.startsWith('09')) return 'IQ';
-    if (p.startsWith('+961')) return 'LB';
-    if (p.startsWith('+218')) return 'LY';
-    if (p.startsWith('+212')) return 'MA';
-    if (p.startsWith('+216')) return 'TN';
-    if (p.startsWith('+249')) return 'SD';
-    return '';
-  };
-
-  const COUNTRY_OPTIONS = COUNTRY_CODES.filter(c => ['EG','SA','AE','KW','QA','OM','BH','JO','IQ','LB','LY','MA','TN','SD'].includes(c.country)).map(c => ({ value: c.country, label: c.labelAr, labelEn: c.label }));
-
-  const SMART_FIELDS = useMemo(() => [
-    { id: 'prefix', label: 'اللقب', labelEn: 'Prefix', type: 'select', options: [
-      { value: 'Mr.', label: 'Mr.', labelEn: 'Mr.' },
-      { value: 'Mrs.', label: 'Mrs.', labelEn: 'Mrs.' },
-      { value: 'Dr.', label: 'Dr.', labelEn: 'Dr.' },
-      { value: 'Eng.', label: 'Eng.', labelEn: 'Eng.' },
-      { value: 'أستاذ', label: 'أستاذ', labelEn: 'Prof.' },
-    ]},
-    { id: 'contact_type', label: 'النوع', labelEn: 'Type', type: 'select', options: [
-      { value: 'lead', label: 'ليد', labelEn: 'Lead' },
-      { value: 'cold', label: 'كولد', labelEn: 'Cold' },
-      { value: 'client', label: 'عميل', labelEn: 'Client' },
-      { value: 'supplier', label: 'مورد', labelEn: 'Supplier' },
-      { value: 'developer', label: 'مطور عقاري', labelEn: 'Developer' },
-      { value: 'applicant', label: 'متقدم لوظيفة', labelEn: 'Applicant' },
-      { value: 'partner', label: 'شريك', labelEn: 'Partner' },
-    ]},
-    { id: 'source', label: 'المصدر', labelEn: 'Source', type: 'select', options: Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: v, labelEn: SOURCE_EN[k] || v })) },
-    { id: 'department', label: 'القسم', labelEn: 'Department', type: 'select', options: [
-      { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
-      { value: 'hr', label: 'HR', labelEn: 'HR' },
-      { value: 'finance', label: 'المالية', labelEn: 'Finance' },
-      { value: 'marketing', label: 'التسويق', labelEn: 'Marketing' },
-      { value: 'operations', label: 'العمليات', labelEn: 'Operations' },
-    ]},
-    { id: 'full_name', label: 'الاسم', labelEn: 'Name', type: 'text' },
-    { id: 'email', label: 'الإيميل', labelEn: 'Email', type: 'text' },
-    { id: 'phone', label: 'الهاتف', labelEn: 'Phone', type: 'text' },
-    { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
-    { id: 'last_activity_at', label: 'آخر نشاط', labelEn: 'Last Activity', type: 'date' },
-    { id: 'lead_score', label: 'Lead Score', labelEn: 'Lead Score', type: 'number' },
-    { id: 'campaign_name', label: 'الحملة', labelEn: 'Campaign', type: 'text' },
-    { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
-    { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: [...new Set(contacts.map(c => c.assigned_to_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
-    { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set(contacts.map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
-    { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set(contacts.map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
-    { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
-    ...auditFields,
-  ], [contacts, auditFields]);
-
-  const SORT_OPTIONS = useMemo(() => [
-    { value: 'created', label: 'ترتيب: الأحدث', labelEn: 'Sort: Newest' },
-    { value: 'last_activity', label: 'ترتيب: آخر نشاط', labelEn: 'Sort: Last Activity' },
-    { value: 'score', label: 'ترتيب: Lead Score', labelEn: 'Sort: Lead Score' },
-    { value: 'name', label: 'ترتيب: الاسم', labelEn: 'Sort: Name' },
-    { value: 'stale', label: 'ترتيب: يحتاج متابعة', labelEn: 'Sort: Needs Follow-up' },
-  ], []);
-
-  // Filter + Sort
-  const filtered = useMemo(() => {
-    let list = contacts.filter(c => {
-      if (!showBlacklisted && c.is_blacklisted) return false;
-      if (filterType !== 'all' && c.contact_type !== filterType) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        return (c.full_name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q) || c.campaign_name?.toLowerCase().includes(q) || String(c.id).toLowerCase().includes(q));
-      }
-      return true;
-    });
-    list = list.map(c => ({
-      ...c,
-      _country: c._country || detectCountry(c.phone),
-      _campaign_count: (c.campaign_interactions || []).length,
-    }));
-    list = applySmartFilters(list, smartFilters, SMART_FIELDS);
-    list = applyAuditFilters(list, smartFilters);
-    list.sort((a, b) => {
-      const aPinned = pinnedIds.includes(a.id) ? 0 : 1;
-      const bPinned = pinnedIds.includes(b.id) ? 0 : 1;
-      if (aPinned !== bPinned) return aPinned - bPinned;
-      if (sortBy === 'last_activity') return new Date(b.last_activity_at || 0) - new Date(a.last_activity_at || 0);
-      if (sortBy === 'score') return (b.lead_score || 0) - (a.lead_score || 0);
-      if (sortBy === 'name') return (a.full_name || '').localeCompare(b.full_name || '', 'ar');
-      if (sortBy === 'created') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-      if (sortBy === 'stale') return new Date(a.last_activity_at || 0) - new Date(b.last_activity_at || 0);
-      return 0;
-    });
-    return list;
-  }, [contacts, filterType, search, showBlacklisted, sortBy, pinnedIds, smartFilters, SMART_FIELDS]);
-
-  useEffect(() => { setPage(1); setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
-  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  // Clear selection when filters change
+  useEffect(() => { setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);
 
   const selectedIdx = selected ? filtered.findIndex(c => c.id === selected.id) : -1;
   const handlePrev = selectedIdx > 0 ? () => {
