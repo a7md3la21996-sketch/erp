@@ -437,6 +437,7 @@ export default function ContactsPage() {
     { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: [...new Set(contacts.map(c => c.assigned_to_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set(contacts.map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set(contacts.map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
+    { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
     ...auditFields,
   ], [contacts, auditFields]);
 
@@ -459,7 +460,11 @@ export default function ContactsPage() {
       }
       return true;
     });
-    list = list.map(c => c._country ? c : { ...c, _country: detectCountry(c.phone) });
+    list = list.map(c => ({
+      ...c,
+      _country: c._country || detectCountry(c.phone),
+      _campaign_count: (c.campaign_interactions || []).length,
+    }));
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
     list.sort((a, b) => {
