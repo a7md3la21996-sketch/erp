@@ -19,13 +19,13 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
 
   const [c1, c2] = mergePreview.map(id => contacts.find(c => c.id === id)).filter(Boolean);
   if (!c1 || !c2) return null;
-  const merged = { ...c2, ...c1 };
-  if (!c1.email && c2.email) merged.email = c2.email;
-  if (!c1.phone2 && c2.phone2) merged.phone2 = c2.phone2;
-  if (!c1.phone2 && c2.phone !== c1.phone) merged.phone2 = c2.phone;
+  // Merge: prefer c1 values, but fall back to c2 when c1 value is empty/null
+  const merged = { ...c2 };
+  Object.keys(c1).forEach(k => {
+    if (c1[k] !== null && c1[k] !== undefined && c1[k] !== '') merged[k] = c1[k];
+  });
+  if (!merged.phone2 && c2.phone !== c1.phone) merged.phone2 = c2.phone;
   if ((c2.lead_score || 0) > (c1.lead_score || 0)) merged.lead_score = c2.lead_score;
-  if (!c1.company && c2.company) merged.company = c2.company;
-  if (!c1.preferred_location && c2.preferred_location) merged.preferred_location = c2.preferred_location;
   const fields = ['full_name','phone','phone2','email','contact_type','source','department','temperature','company','preferred_location'];
 
   return (

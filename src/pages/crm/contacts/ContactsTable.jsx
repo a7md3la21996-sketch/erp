@@ -47,6 +47,7 @@ export default function ContactsTable({
   selectedIds,
   selectedIdSet,
   mergeMode,
+  setMergeMode,
   mergeTargets,
   setMergeTargets,
   MERGE_LIMIT,
@@ -81,6 +82,7 @@ export default function ContactsTable({
   const { t } = useTranslation();
   const menuBtnRefs = useRef({});
   const getMenuBtnRef = useCallback((id) => (el) => { if (el) menuBtnRefs.current[id] = el; else delete menuBtnRefs.current[id]; }, []);
+  const DEPT_LABELS = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
 
   // Close menu on outside click
   useEffect(() => {
@@ -112,7 +114,7 @@ export default function ContactsTable({
                 {isRTL ? 'معاينة الدمج' : 'Preview Merge'}
               </Button>
             )}
-            <button onClick={() => { /* handled by parent */ }} className="px-3.5 py-1.5 bg-transparent border border-edge dark:border-edge-dark rounded-md text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
+            <button onClick={() => { setMergeTargets([]); setMergeMode(false); }} className="px-3.5 py-1.5 bg-transparent border border-edge dark:border-edge-dark rounded-md text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
               {isRTL ? 'إلغاء' : 'Cancel'}
             </button>
           </div>
@@ -135,7 +137,6 @@ export default function ContactsTable({
               const isPinned = pinnedIds.includes(c.id);
               const typeInfo = TYPE[c.contact_type];
               const typeBorderColor = typeInfo?.color || '#4A7AAB';
-              const DEPT_LABELS_M = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
               return (
                 <div key={c.id}
                   onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < MERGE_LIMIT ? [...prev, c.id] : prev) : setSelected(c)}
@@ -157,7 +158,7 @@ export default function ContactsTable({
                       </div>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
-                        {c.department && <span className="text-[10px] px-2 py-px rounded-full bg-brand-500/[0.06] text-[#6B8DB5] font-medium">{DEPT_LABELS_M[c.department] || c.department}</span>}
+                        {c.department && <span className="text-[10px] px-2 py-px rounded-full bg-brand-500/[0.06] text-[#6B8DB5] font-medium">{DEPT_LABELS[c.department] || c.department}</span>}
                         <span className={`text-[10px] px-2 py-px rounded-full font-medium ${c.contact_status === 'disqualified' ? 'bg-red-500/10 text-red-500' : (!c.contact_status || c.contact_status === 'new') ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>{c.contact_status === 'disqualified' ? (isRTL ? 'غير مؤهل' : 'DQ') : (!c.contact_status || c.contact_status === 'new') ? (isRTL ? 'جديد' : 'New') : (isRTL ? 'تم التواصل' : 'Contacted')}</span>
                         {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
                       </div>
@@ -277,7 +278,6 @@ export default function ContactsTable({
               const isMergeSelected = mergeTargets.includes(c.id);
               const typeInfo = TYPE[c.contact_type];
               const typeBorderColor = typeInfo?.color || '#4A7AAB';
-              const DEPT_LABELS = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
               return (
               <tr key={c.id}
                 onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < MERGE_LIMIT ? [...prev, c.id] : prev) : setSelected(c)}

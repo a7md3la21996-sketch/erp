@@ -651,6 +651,7 @@ export default function ContactsPage() {
         selectedIds={selectedIds}
         selectedIdSet={selectedIdSet}
         mergeMode={mergeMode}
+        setMergeMode={setMergeMode}
         mergeTargets={mergeTargets}
         setMergeTargets={setMergeTargets}
         MERGE_LIMIT={MERGE_LIMIT}
