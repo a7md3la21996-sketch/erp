@@ -1,9 +1,7 @@
 import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { createActivity } from '../../../services/contactsService';
-import { updateContact } from '../../../services/contactsService';
+import { createActivity, updateContact, fetchContacts } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
-import { fetchContacts } from '../../../services/contactsService';
 import { logAction } from '../../../services/auditService';
 import {
   TYPE,
@@ -215,7 +213,7 @@ export default function BatchCallModal({
               className={`flex-1 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs ${batchCallIndex === 0 ? 'text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-40' : 'text-content dark:text-content-dark cursor-pointer'}`}>
               {isRTL ? 'السابق' : 'Previous'}
             </button>
-            <button onClick={() => { setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); if (batchCallIndex < batchContacts.length - 1) setBatchCallIndex(i => i + 1); }}
+            <button onClick={() => { setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); if (batchCallIndex < batchContacts.length - 1) { setBatchCallIndex(i => i + 1); } else { setBatchCallIndex(batchContacts.length); } }}
               className="px-3 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs text-content-muted dark:text-content-muted-dark cursor-pointer">
               {isRTL ? 'تخطي' : 'Skip'}
             </button>
@@ -224,7 +222,11 @@ export default function BatchCallModal({
                 const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
                 const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, created_at: new Date().toISOString() };
                 try { await createActivity(activity); } catch { /* optimistic */ }
-                try { await updateContact(current.id, { last_activity_at: new Date().toISOString() }); } catch { /* ignore */ }
+                const statusUpdate = (current.contact_status === 'new' || !current.contact_status)
+                  ? { last_activity_at: new Date().toISOString(), contact_status: 'contacted' }
+                  : { last_activity_at: new Date().toISOString() };
+                try { await updateContact(current.id, statusUpdate); } catch { /* ignore */ }
+                setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
                 setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);
               }
               // Create follow-up task if filled
