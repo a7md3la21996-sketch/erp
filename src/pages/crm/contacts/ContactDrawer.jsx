@@ -351,10 +351,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   // Get agents list for assignment dropdown
   const agentsList = useMemo(() => {
+    const names = new Set();
     try {
-      const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
-      return [...new Set(all.map(c => c.assigned_to_name?.trim()).filter(Boolean))];
-    } catch { return []; }
+      const allContacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      allContacts.forEach(c => { if (c.assigned_to_name?.trim()) names.add(c.assigned_to_name.trim()); });
+    } catch { /* ignore */ }
+    try {
+      const allOpps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
+      allOpps.forEach(o => { if (o.assigned_to_name?.trim()) names.add(o.assigned_to_name.trim()); });
+    } catch { /* ignore */ }
+    return [...names].sort();
   }, []);
 
   // Favorites

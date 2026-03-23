@@ -181,14 +181,15 @@ export const COUNTRY_CODES = [
 ];
 
 export const getCountryFromPhone = (phone) => {
-  if (!phone) return '+20';
+  const fallback = COUNTRY_CODES.find(c => c.code === '+20') || { code: '+20', country: 'EG' };
+  if (!phone) return fallback;
   const normalized = normalizePhone(phone);
   const info = getPhoneInfo(normalized);
   if (info) {
     const found = COUNTRY_CODES.find(c => c.country === info.country);
-    if (found) return found.code;
+    if (found) return found;
   }
-  return '+20';
+  return fallback;
 };
 
 // ── Sub-components ─────────────────────────────────────────────────────────

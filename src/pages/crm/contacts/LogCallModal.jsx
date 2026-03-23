@@ -28,7 +28,7 @@ const FOLLOWUP_TYPES = [
   { value: 'email', ar: 'إيميل', en: 'Email' },
 ];
 
-export default function LogCallModal({ contact, onClose }) {
+export default function LogCallModal({ contact, onClose, onUpdate }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -85,6 +85,11 @@ export default function LogCallModal({ contact, onClose }) {
       created_at: new Date().toISOString(),
     };
     try { await createActivity(activity); } catch { /* saved optimistically */ }
+
+    // Auto-change status from 'new' to 'contacted' on first call
+    if (onUpdate && (contact.contact_status === 'new' || !contact.contact_status)) {
+      onUpdate({ ...contact, contact_status: 'contacted' });
+    }
 
     if (addFollowup && followupDate) {
       const followupTypeLabel = FOLLOWUP_TYPES.find(t => t.value === followupType)?.[isRTL ? 'ar' : 'en'] || followupType;

@@ -332,9 +332,8 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                       // Auto-detect country from number
                       if (v.startsWith('+')) {
                         const detected = getCountryFromPhone(v);
-                        set('countryCode', detected);
-                        const match = COUNTRY_CODES.find(c => c.code === detected);
-                        if (match) set('country', match.country);
+                        set('countryCode', detected.code);
+                        set('country', detected.country);
                       } else {
                         const detected = detectCountryFromLocal(v);
                         if (detected) {

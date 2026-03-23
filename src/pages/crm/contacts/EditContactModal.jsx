@@ -67,7 +67,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     set(field, val);
     if (val.startsWith('0')) {
       const detected = getCountryFromPhone(normalizePhone(val));
-      if (detected) set(codeField, detected.code);
+      set(codeField, detected.code);
     }
   };
 
