@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
@@ -135,6 +135,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const { contactTypes } = useSystemConfig();
   useEscClose(onClose);
   const dupTimer = useRef(null);
+  useEffect(() => () => clearTimeout(dupTimer.current), []);
   const [step, setStep] = useState(1);
   // Build DEPT_TYPES from system config — each type has a departments array
   const DEPT_TYPES = (() => {
@@ -233,11 +234,15 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format';
     if (Object.keys(errs).length) { setErrors(errs); if (errs.department || errs.contact_type || errs.phone) setStep(1); return; }
     setErrors({});
-    const invalidExtra = extraPhones.find(p => p && !validatePhone(getFullPhone(p, form.countryCode)));
+    const invalidExtra = extraPhones.find((p, i) => p && !validatePhone(getFullPhone(p, extraCountryCodes[i] || form.countryCode)));
     if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
     setSaving(true);
     try {
-      const validExtras = extraPhones.filter(p => p && validatePhone(getFullPhone(p, form.countryCode))).map(p => getFullPhone(p, form.countryCode));
+      const validExtras = extraPhones.reduce((acc, p, idx) => {
+        const code = extraCountryCodes[idx] || form.countryCode;
+        if (p && validatePhone(getFullPhone(p, code))) acc.push(getFullPhone(p, code));
+        return acc;
+      }, []);
       const { countryCode, ...formData } = form;
       await onSave({
         ...formData,
@@ -387,7 +392,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                           setExtraDups(d => { const nd = [...d]; nd[i] = null; return nd; });
                           if (validatePhone(v)) { checkDup(v).then(dup => { setExtraDups(d => { const nd = [...d]; nd[i] = dup || null; return nd; }); }).catch(() => {}); }
                         }} />
-                      <button type="button" onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraDups(d => d.filter((_, j) => j !== i)); }}
+                      <button type="button" onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraCountryCodes(prev => prev.filter((_, j) => j !== i)); setExtraDups(d => d.filter((_, j) => j !== i)); }}
                         className="px-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-lg leading-none">×</button>
                     </div>
                     {ph && (<div className="mt-1">
@@ -404,7 +409,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                     )}
                   </div>
                 ))}
-                <Button variant="secondary" size="sm" onClick={() => { setExtraPhones([...extraPhones, '']); setExtraDups([...extraDups, null]); }}>
+                <Button variant="secondary" size="sm" onClick={() => { setExtraPhones([...extraPhones, '']); setExtraCountryCodes([...extraCountryCodes, form.countryCode]); setExtraDups([...extraDups, null]); }}>
                   + {isRTL ? 'إضافة رقم' : 'Add Phone'}
                 </Button>
               </div>
