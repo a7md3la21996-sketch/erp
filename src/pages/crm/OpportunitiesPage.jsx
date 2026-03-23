@@ -299,7 +299,7 @@ export default function OpportunitiesPage() {
   useEffect(() => {
     const highlightId = searchParams.get('highlight');
     if (highlightId && opps.length > 0 && !selectedOpp) {
-      const target = opps.find(o => o.id === highlightId);
+      const target = opps.find(o => String(o.id) === String(highlightId));
       if (target) {
         selectOpp(target);
         setSearchParams(prev => { prev.delete('highlight'); return prev; }, { replace: true });
@@ -307,7 +307,7 @@ export default function OpportunitiesPage() {
     }
   }, [opps, searchParams, selectedOpp, selectOpp, setSearchParams]);
 
-  const selectedOppIdx = selectedOpp ? sortedFiltered.findIndex(o => o.id === selectedOpp.id) : -1;
+  const selectedOppIdx = selectedOpp ? sortedFiltered.findIndex(o => String(o.id) === String(selectedOpp.id)) : -1;
   const handleOppPrev = selectedOppIdx > 0 ? () => { selectOpp(sortedFiltered[selectedOppIdx - 1]); } : null;
   const handleOppNext = selectedOppIdx >= 0 && selectedOppIdx < sortedFiltered.length - 1 ? () => { selectOpp(sortedFiltered[selectedOppIdx + 1]); } : null;
 
@@ -337,7 +337,7 @@ export default function OpportunitiesPage() {
       setLostReasonCustom('');
       return;
     }
-    const opp_ = opps.find(o => o.id === id);
+    const opp_ = opps.find(o => String(o.id) === String(id));
     const fromStage = opp_?.stage;
     if (fromStage && fromStage !== toStage) addStageHistory(id, fromStage, toStage);
     // Optimistic update
@@ -361,7 +361,7 @@ export default function OpportunitiesPage() {
     setActionLoading(false);
 
     if (toStage === 'closed_won') {
-      const opp = opps.find(o => o.id === id);
+      const opp = opp_ ? { ...opp_, stage: toStage, ...extraUpdates } : null;
       if (opp) {
         notifyDealWon({
           dealNumber: opp.id?.slice(0, 8) || '—',
@@ -400,22 +400,22 @@ export default function OpportunitiesPage() {
 
     if (lostReasonModal.bulkIds) {
       const ids = lostReasonModal.bulkIds;
-      ids.forEach(id => { const opp = opps.find(o => o.id === id); if (opp && opp.stage !== 'closed_lost') addStageHistory(id, opp.stage, 'closed_lost'); });
+      const prevOpps = [...opps];
+      ids.forEach(id => { const opp = opps.find(o => String(o.id) === String(id)); if (opp && opp.stage !== 'closed_lost') addStageHistory(id, opp.stage, 'closed_lost'); });
       setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() } : o));
-      const prevOpps = opps;
       showBulkToast(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
       setBulkSelected(new Set()); setBulkMode(false);
       setLostReasonModal(null);
-      try {
-        await Promise.all(ids.map(id => updateOpportunity(id, { stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() })));
-      } catch {
-        setOpps(prevOpps);
-        toast.error(isRTL ? 'فشل نقل بعض الفرص' : 'Failed to move some opportunities');
+      const results = await Promise.allSettled(ids.map(id => updateOpportunity(id, { stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() })));
+      const failed = results.filter(r => r.status === 'rejected').length;
+      if (failed > 0) {
+        toast.warning(isRTL ? `فشل تحديث ${failed} من ${ids.length} فرصة` : `${failed} of ${ids.length} updates failed`);
       }
       return;
     }
 
     if (lostReasonModal.fromEdit) {
+      if (!selectedOpp) { setLostReasonModal(null); return; }
       const ef = lostReasonModal.editForm;
       addStageHistory(selectedOpp.id, selectedOpp.stage, 'closed_lost');
       const updates = {

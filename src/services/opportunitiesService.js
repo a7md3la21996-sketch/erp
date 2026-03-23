@@ -169,11 +169,13 @@ export async function deleteOpportunity(id) {
     const { error } = await supabase.from('opportunities').delete().eq('id', id);
     if (error) throw error;
     logDelete('opportunity', id, oldData);
-  } catch {
+    // Also remove from localStorage on success
     const filtered = getLocalOpps().filter(o => String(o.id) !== String(id));
     saveLocalOpps(filtered);
-    // Queue for later sync
+  } catch {
+    // Queue for later sync but don't delete from localStorage yet
     addToSyncQueue('opportunities', 'delete', { id });
+    throw new Error('Delete failed - queued for retry');
   }
 }
 
