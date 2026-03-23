@@ -21,6 +21,7 @@ import { PageSkeleton, Button, SmartFilter, applySmartFilters } from '../compone
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import useCrmPermissions from '../hooks/useCrmPermissions';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 
 import { SOURCE_LABELS, SOURCE_EN, TYPE, MOCK, normalizePhone, COUNTRY_CODES } from './crm/contacts/constants';
 import AddContactModal from './crm/contacts/AddContactModal';
@@ -39,6 +40,7 @@ export default function ContactsPage() {
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   const perms = useCrmPermissions();
+  const { isOnline, pendingCount, isSyncing } = useOfflineSync();
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
 
@@ -613,6 +615,17 @@ export default function ContactsPage() {
       </div>
     )}
     <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+      {/* Offline Indicator */}
+      {(!isOnline || pendingCount > 0) && (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 mb-3 text-xs text-amber-600 font-semibold">
+          {!isOnline
+            ? (isRTL ? `غير متصل - سيتم المزامنة عند عودة الاتصال (${pendingCount} معلّق)` : `Offline - changes will sync when connection returns (${pendingCount} pending)`)
+            : isSyncing
+              ? (isRTL ? 'جاري المزامنة...' : 'Syncing...')
+              : (isRTL ? `${pendingCount} عملية معلّقة للمزامنة` : `${pendingCount} pending operation${pendingCount !== 1 ? 's' : ''} to sync`)
+          }
+        </div>
+      )}
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>

@@ -1,7 +1,9 @@
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
+import { enqueue } from '../lib/offlineQueue';
 
-export async function fetchContacts({ role, userId, teamId, filters = {} }) {
+export async function fetchContacts({ role, userId, teamId, filters = {}, page, pageSize }) {
+  const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
   try {
     let query = supabase
       .from('contacts')
@@ -11,7 +13,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {} }) {
           id, stage, assigned_to, priority,
           users!opportunities_assigned_to_fkey (full_name_ar, full_name_en)
         )
-      `)
+      `, isServerPaginated ? { count: 'exact' } : {})
       .order('last_activity_at', { ascending: false });
 
     if (role === 'sales_agent') {
@@ -34,6 +36,17 @@ export async function fetchContacts({ role, userId, teamId, filters = {} }) {
     if (filters.temperature) query = query.eq('temperature', filters.temperature);
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
+    if (filters.department) query = query.eq('department', filters.department);
+    if (filters.assigned_to_name) query = query.eq('assigned_to_name', filters.assigned_to_name);
+
+    if (isServerPaginated) {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return { data: data || [], count: count || 0 };
+    }
 
     const { data, error } = await query.limit(1000);
     if (error) throw error;
@@ -53,20 +66,33 @@ export async function fetchContacts({ role, userId, teamId, filters = {} }) {
         });
         cached.forEach(c => { c.opportunities = oppsByContact[c.id] || []; });
       }
-      return cached.slice(0, 1000);
-    } catch { return []; }
+      return isServerPaginated ? { data: cached.slice(0, 1000), count: cached.length } : cached.slice(0, 1000);
+    } catch { return isServerPaginated ? { data: [], count: 0 } : []; }
   }
 }
 
 export async function createContact(contactData) {
-  const { data, error } = await supabase
-    .from('contacts')
-    .insert([{ ...contactData, last_activity_at: new Date().toISOString() }])
-    .select('*')
-    .single();
-  if (error) throw error;
-  logCreate('contact', data.id, data);
-  return data;
+  try {
+    const { data, error } = await supabase
+      .from('contacts')
+      .insert([{ ...contactData, last_activity_at: new Date().toISOString() }])
+      .select('*')
+      .single();
+    if (error) throw error;
+    logCreate('contact', data.id, data);
+    return data;
+  } catch (err) {
+    // Save to localStorage and enqueue for retry
+    const tempId = 'temp_' + Date.now();
+    const offlineContact = { ...contactData, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };
+    try {
+      const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      all.unshift(offlineContact);
+      localStorage.setItem('platform_contacts', JSON.stringify(all));
+    } catch { /* ignore quota */ }
+    enqueue('contact', 'create', offlineContact);
+    return offlineContact;
+  }
 }
 
 export async function updateContact(id, updates) {
@@ -82,13 +108,14 @@ export async function updateContact(id, updates) {
     logUpdate('contact', id, oldData, data);
     return data;
   } catch {
-    // Fallback: update in localStorage
+    // Fallback: update in localStorage and enqueue for retry
     const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
     const idx = all.findIndex(c => String(c.id) === String(id));
     if (idx > -1) {
       Object.assign(all[idx], updates, { updated_at: new Date().toISOString() });
       localStorage.setItem('platform_contacts', JSON.stringify(all));
     }
+    enqueue('contact', 'update', { id, ...updates });
     return { id, ...updates };
   }
 }
