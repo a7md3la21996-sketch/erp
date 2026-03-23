@@ -145,7 +145,7 @@ const HELP_DATA = [
     id: 'lead-pool',
     category: 'crm',
     icon: Target,
-    title: { ar: 'بركة الليدز', en: 'Lead Pool' },
+    title: { ar: 'توزيع الليدز', en: 'Lead Distribution' },
     overview: {
       ar: 'العملاء المحتملون غير المعينين في انتظار التوزيع على فريق المبيعات. يمكن للوكلاء المطالبة بالليدز أو يمكن للمدير توزيعها.',
       en: 'Unassigned leads waiting to be distributed to the sales team. Agents can claim leads or managers can assign them.',
@@ -163,8 +163,8 @@ const HELP_DATA = [
       ],
     },
     tips: {
-      ar: 'تحقق من بركة الليدز بانتظام لضمان عدم ترك أي عميل محتمل دون متابعة لفترة طويلة.',
-      en: 'Check the lead pool regularly to ensure no lead is left without follow-up for too long.',
+      ar: 'تحقق من توزيع الليدز بانتظام لضمان عدم ترك أي عميل محتمل دون متابعة لفترة طويلة.',
+      en: 'Check lead distribution regularly to ensure no lead is left without follow-up for too long.',
     },
     relatedSettings: { ar: 'إعدادات النظام > قواعد التوزيع', en: 'System Config > Distribution Rules' },
   },
