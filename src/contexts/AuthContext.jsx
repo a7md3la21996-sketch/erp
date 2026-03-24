@@ -45,8 +45,22 @@ export function AuthProvider({ children }) {
 
   // ── Initialise session on mount ───────────────────────────────────────────
   useEffect(() => {
+    // Always check localStorage first for immediate session restore
+    const restoreMockSession = () => {
+      const saved = localStorage.getItem('platform_mock_user');
+      if (saved) {
+        try {
+          const u = JSON.parse(saved);
+          setUser({ id: u.id || u.email, email: u.email });
+          setProfile(u);
+          setPermissions(ROLE_PERMISSIONS[u.role] || []);
+          return true;
+        } catch {}
+      }
+      return false;
+    };
+
     if (USE_SUPABASE_AUTH) {
-      // Supabase mode: check existing session then listen for changes
       let isMounted = true;
 
       const initSession = async () => {
@@ -60,20 +74,9 @@ export function AuthProvider({ children }) {
             setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
             hasSession = true;
           }
-        } catch (err) {
-          console.error('Failed to restore Supabase session:', err);
-        }
-        // If no Supabase session, try mock session from localStorage
+        } catch {}
         if (isMounted && !hasSession) {
-          const saved = localStorage.getItem('platform_mock_user');
-          if (saved) {
-            try {
-              const u = JSON.parse(saved);
-              setUser({ id: u.id || u.email, email: u.email });
-              setProfile(u);
-              setPermissions(ROLE_PERMISSIONS[u.role] || []);
-            } catch {}
-          }
+          restoreMockSession();
         }
         if (isMounted) setLoading(false);
       };
@@ -113,21 +116,7 @@ export function AuthProvider({ children }) {
       };
     } else {
       // Mock mode: restore from localStorage
-      const saved = localStorage.getItem('platform_mock_user');
-      if (saved) {
-        try {
-          const u = JSON.parse(saved);
-          setUser({ id: u.email, email: u.email });
-          setProfile(u);
-          setPermissions(ROLE_PERMISSIONS[u.role] || []);
-          // Restore impersonation state
-          const orig = localStorage.getItem('platform_original_user');
-          if (orig) {
-            setOriginalProfile(JSON.parse(orig));
-            setIsImpersonating(true);
-          }
-        } catch {}
-      }
+      restoreMockSession();
       setLoading(false);
     }
   }, []);
