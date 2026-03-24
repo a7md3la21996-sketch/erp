@@ -66,6 +66,7 @@ export default function ActivitiesPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [deleting, setDeleting] = useState(false);
   const { auditFields, applyAuditFilters } = useAuditFilter('activity');
 
   const uniqueUsers = useMemo(() => {
@@ -256,7 +257,7 @@ export default function ActivitiesPage() {
               <Select
                 size="sm"
                 value={form.dept}
-                onChange={e => setForm(f => ({ ...f, dept: e.target.value, type: 'call' }))}
+                onChange={e => { const d = e.target.value; const firstType = Object.entries(ACTIVITY_TYPES).find(([, v]) => v.dept.includes(d)); setForm(f => ({ ...f, dept: d, type: firstType ? firstType[0] : 'call' })); }}
               >
                 {Object.entries(DEPT_LABELS).filter(([k]) => k !== 'all').map(([k, v]) => (
                   <option key={k} value={k}>{lang === 'ar' ? v.ar : v.en}</option>
@@ -412,8 +413,8 @@ export default function ActivitiesPage() {
                 {/* Delete */}
                 {confirmDeleteId === act.id ? (
                   <div className="flex items-center gap-1 shrink-0">
-                    <button onClick={async () => { try { await deleteActivity(act.id); setActivities(prev => prev.filter(a => a.id !== act.id)); } catch { /* deleted locally */ setActivities(prev => prev.filter(a => a.id !== act.id)); } setConfirmDeleteId(null); }}
-                      className="bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 text-[10px] text-red-500 cursor-pointer font-semibold">{isRTL ? 'تأكيد' : 'Confirm'}</button>
+                    <button disabled={deleting} onClick={async () => { if (deleting) return; setDeleting(true); const id = act.id; try { await deleteActivity(id); setActivities(prev => prev.filter(a => a.id !== id)); } catch { setActivities(prev => prev.filter(a => a.id !== id)); } setConfirmDeleteId(null); setDeleting(false); }}
+                      className={`bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 text-[10px] text-red-500 font-semibold ${deleting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>{deleting ? '...' : (isRTL ? 'تأكيد' : 'Confirm')}</button>
                     <button onClick={() => setConfirmDeleteId(null)}
                       className="bg-transparent border border-edge dark:border-edge-dark rounded px-1.5 py-0.5 text-[10px] text-content-muted dark:text-content-muted-dark cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
                   </div>
