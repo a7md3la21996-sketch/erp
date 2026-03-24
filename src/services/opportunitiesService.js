@@ -10,6 +10,29 @@ function saveLocalOpps(opps) {
   try { localStorage.setItem('platform_opportunities', JSON.stringify(opps)); } catch { /* ignore */ }
 }
 
+// ── Unit blocking helpers ──
+export function checkUnitAvailability(unitId) {
+  if (!unitId) return { available: true };
+  const units = JSON.parse(localStorage.getItem('platform_re_units') || '[]');
+  const unit = units.find(u => u.id === unitId);
+  if (!unit) return { available: true };
+  if (unit.status === 'sold') return { available: false, reason: 'sold', unit };
+  if (unit.status === 'reserved') return { available: false, reason: 'reserved', unit };
+  return { available: true, unit };
+}
+
+function updateUnitStatus(unitId, newStatus) {
+  if (!unitId) return;
+  try {
+    const units = JSON.parse(localStorage.getItem('platform_re_units') || '[]');
+    const idx = units.findIndex(u => u.id === unitId);
+    if (idx > -1) {
+      units[idx].status = newStatus;
+      localStorage.setItem('platform_re_units', JSON.stringify(units));
+    }
+  } catch { /* ignore */ }
+}
+
 // ── Helper: enrich opps with contacts/users/projects data ──
 async function enrichOpps(opps) {
   if (!opps.length) return opps;
@@ -100,8 +123,24 @@ export async function fetchOpportunities({ role, userId, teamId } = {}) {
 
 // ─── Create opportunity ───
 export async function createOpportunity(oppData) {
+  // Block if unit is already reserved or sold
+  if (oppData.unit_id) {
+    const availability = checkUnitAvailability(oppData.unit_id);
+    if (!availability.available) {
+      throw new Error(`Unit is already ${availability.reason}. Cannot create opportunity for this unit.`);
+    }
+  }
+
   const now = new Date().toISOString();
   const localOpp = { ...oppData, id: Date.now().toString(), created_at: now };
+
+  // If opportunity starts at reserved/contracted stage, block the unit immediately
+  if (oppData.unit_id && (oppData.stage === 'reserved' || oppData.stage === 'contracted')) {
+    updateUnitStatus(oppData.unit_id, 'reserved');
+  }
+  if (oppData.unit_id && oppData.stage === 'closed_won') {
+    updateUnitStatus(oppData.unit_id, 'sold');
+  }
 
   // Always save to localStorage first
   const all = getLocalOpps();
@@ -136,6 +175,40 @@ export async function createOpportunity(oppData) {
 
 // ─── Update opportunity ───
 export async function updateOpportunity(id, updates) {
+  // If stage is changing, handle unit blocking
+  if (updates.stage) {
+    // Find the opportunity to get its unit_id
+    const allOpps = getLocalOpps();
+    const opp = allOpps.find(o => String(o.id) === String(id));
+    const unitId = updates.unit_id || opp?.unit_id;
+
+    if (unitId) {
+      // When moving TO reserved/contracted, check availability first then block
+      if (updates.stage === 'reserved' || updates.stage === 'contracted') {
+        const availability = checkUnitAvailability(unitId);
+        // Allow if unit is already held by this same opportunity (re-saving same stage)
+        if (!availability.available) {
+          // Check if this opp already owns the reservation
+          const currentOpp = opp || {};
+          const alreadyOwns = (currentOpp.unit_id === unitId) &&
+            (currentOpp.stage === 'reserved' || currentOpp.stage === 'contracted' || currentOpp.stage === 'closed_won');
+          if (!alreadyOwns) {
+            throw new Error(`Unit is already ${availability.reason}. Cannot reserve this unit.`);
+          }
+        }
+        updateUnitStatus(unitId, 'reserved');
+      }
+      // When closed_won, mark unit as sold
+      else if (updates.stage === 'closed_won') {
+        updateUnitStatus(unitId, 'sold');
+      }
+      // When closed_lost, release the unit back to available
+      else if (updates.stage === 'closed_lost') {
+        updateUnitStatus(unitId, 'available');
+      }
+    }
+  }
+
   try {
     const { data: oldData } = await supabase.from('opportunities').select('*').eq('id', id).single();
     const { data, error } = await supabase

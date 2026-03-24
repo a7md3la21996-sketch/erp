@@ -103,7 +103,7 @@ export async function fetchOpportunityStats() {
   try {
     const { data, error } = await supabase
       .from('opportunities')
-      .select('id, stage, budget, created_at, assigned_to');
+      .select('id, stage, budget, created_at, stage_changed_at, assigned_to');
     if (error) throw error;
     if (data?.length) {
       return computeOppStats(data);
@@ -125,7 +125,7 @@ function computeOppStats(opps) {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
   const closedThisMonth = opps.filter(o =>
-    o.stage === 'closed_won' && new Date(o.created_at) >= monthStart
+    o.stage === 'closed_won' && new Date(o.stage_changed_at || o.created_at) >= monthStart
   ).length;
 
   const stageCounts = {};
@@ -212,20 +212,20 @@ export async function fetchEmployeeStats() {
 
 // ── Pipeline data for chart ──────────────────────────────────────────────────
 const STAGE_LABELS = {
-  new:          { ar: 'جديد',    en: 'New' },
-  lead:         { ar: 'ليد',     en: 'Lead' },
-  contacted:    { ar: 'تواصل',   en: 'Contacted' },
-  interested:   { ar: 'مهتم',    en: 'Interested' },
-  site_visit:   { ar: 'معاينة',  en: 'Site Visit' },
-  negotiation:  { ar: 'تفاوض',   en: 'Negotiation' },
-  proposal:     { ar: 'عرض سعر', en: 'Proposal' },
-  closed_won:   { ar: 'مغلق ربح',en: 'Closed Won' },
-  closed_lost:  { ar: 'مغلق خسر',en: 'Closed Lost' },
+  qualification:        { ar: 'تأهيل',          en: 'Qualification' },
+  site_visit_scheduled: { ar: 'موعد معاينة',    en: 'Visit Scheduled' },
+  site_visited:         { ar: 'تمت المعاينة',   en: 'Site Visited' },
+  proposal:             { ar: 'عرض سعر',        en: 'Proposal' },
+  negotiation:          { ar: 'تفاوض',          en: 'Negotiation' },
+  reserved:             { ar: 'محجوز',          en: 'Reserved' },
+  contracted:           { ar: 'تعاقد',          en: 'Contracted' },
+  closed_won:           { ar: 'تم الإغلاق',     en: 'Closed Won' },
+  closed_lost:          { ar: 'خسارة',          en: 'Closed Lost' },
 };
 
 export function buildPipelineData(stageCounts) {
   if (!stageCounts || Object.keys(stageCounts).length === 0) return null;
-  const orderedStages = ['new', 'lead', 'contacted', 'interested', 'site_visit', 'negotiation', 'proposal', 'closed_won'];
+  const orderedStages = ['qualification', 'site_visit_scheduled', 'site_visited', 'proposal', 'negotiation', 'reserved', 'contracted', 'closed_won'];
   return orderedStages
     .filter(s => stageCounts[s] > 0)
     .map(s => ({

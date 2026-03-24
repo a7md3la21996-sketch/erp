@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -82,6 +82,44 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
     return () => window.removeEventListener('platform_emails_changed', handler);
   }, []);
   useEffect(() => { setEmailUnread(getEmailStats().unread); }, [location.pathname]);
+
+  // Flyout menu for collapsed sidebar
+  const [flyoutMenu, setFlyoutMenu] = useState(null);
+  const [flyoutPos, setFlyoutPos] = useState({ top: 0, left: 0 });
+  const flyoutRef = useRef(null);
+
+  // Close flyout on click outside
+  useEffect(() => {
+    if (!flyoutMenu) return;
+    const handleClickOutside = (e) => {
+      if (flyoutRef.current && !flyoutRef.current.contains(e.target)) {
+        setFlyoutMenu(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [flyoutMenu]);
+
+  // Close flyout on route change
+  useEffect(() => {
+    setFlyoutMenu(null);
+  }, [location.pathname]);
+
+  const handleParentClick = (e, item) => {
+    if (collapsed && !mobileOpen) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      if (isRTL) {
+        // Sidebar on right, flyout opens to the left
+        setFlyoutPos({ top: rect.top, right: window.innerWidth - rect.left + 4 });
+      } else {
+        // Sidebar on left, flyout opens to the right
+        setFlyoutPos({ top: rect.top, left: rect.right + 4 });
+      }
+      setFlyoutMenu(flyoutMenu === item.id ? null : item.id);
+    } else {
+      toggleMenu(item.id);
+    }
+  };
 
   const toggleMenu = (id) => setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
   const isActive = (path) => location.pathname === path;
@@ -237,7 +275,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   </Link>
                   </div>
                 ) : (
-                  <button onClick={() => toggleMenu(item.id)} className={`w-full flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg border-none cursor-pointer text-sm font-medium ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'} text-start`}>
+                  <button onClick={(e) => handleParentClick(e, item)} className={`w-full flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg border-none cursor-pointer text-sm font-medium ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'} text-start`}>
                     <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                       <Icon size={20} />
                       {(() => { const bc = getBadgeCount(item); return !showLabels && bc > 0 ? (
@@ -258,6 +296,41 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                         {child.label[lang]}
                       </Link>
                     ))}
+                  </div>
+                )}
+                {/* Flyout menu for collapsed sidebar */}
+                {collapsed && !mobileOpen && hasChildren && flyoutMenu === item.id && visibleChildren.length > 0 && (
+                  <div
+                    ref={flyoutRef}
+                    style={{
+                      position: 'fixed',
+                      top: flyoutPos.top,
+                      ...(flyoutPos.left != null ? { left: flyoutPos.left } : {}),
+                      ...(flyoutPos.right != null ? { right: flyoutPos.right } : {}),
+                      zIndex: 9999,
+                      minWidth: 200,
+                      maxHeight: 400,
+                      overflowY: 'auto',
+                    }}
+                    className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg"
+                  >
+                    <div className="px-3 py-2 border-b border-edge dark:border-edge-dark">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                        {item.label[lang]}
+                      </span>
+                    </div>
+                    <div className="p-1.5">
+                      {visibleChildren.map(child => (
+                        <Link
+                          key={child.id}
+                          to={child.path}
+                          onClick={() => { setFlyoutMenu(null); handleNavClick(); }}
+                          className={`block py-2 px-3 rounded-lg no-underline text-[13px] text-start transition-colors ${isActive(child.path) ? 'font-semibold text-brand-800 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15' : 'font-normal text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 bg-transparent'}`}
+                        >
+                          {child.label[lang]}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

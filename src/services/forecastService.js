@@ -36,11 +36,10 @@ function getStageProbability(stage) {
 // ── Load opportunities from localStorage ───────────────────────────
 export function loadOpportunities() {
   try {
-    const data = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
-    if (data.length > 0) return data;
+    return JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
   } catch { /* ignore */ }
-  // Generate mock data if empty
-  return generateMockOpportunities();
+  // Return empty array when no real data exists — never generate fake data
+  return [];
 }
 
 // ── Mock Data Generator ────────────────────────────────────────────

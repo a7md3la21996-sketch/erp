@@ -155,21 +155,16 @@ function generateMockActivities(count = 500) {
   return activities;
 }
 
-// ── Data loading (with mock fallback) ────────────────────────────
+// ── Data loading (real data only — no mock fallback) ─────────────
 export function loadAnalyticsData() {
-  let opportunities = readLS(KEYS.opportunities);
-  let contacts = readLS(KEYS.contacts);
-  let deals = readLS(KEYS.deals);
-  let activities = readLS(KEYS.activities);
+  const opportunities = readLS(KEYS.opportunities);
+  const contacts = readLS(KEYS.contacts);
+  const deals = readLS(KEYS.deals);
+  const activities = readLS(KEYS.activities);
 
-  const useMock = opportunities.length === 0;
+  const hasData = opportunities.length > 0 || contacts.length > 0 || deals.length > 0 || activities.length > 0;
 
-  if (opportunities.length === 0) opportunities = generateMockOpportunities();
-  if (contacts.length === 0) contacts = generateMockContacts();
-  if (deals.length === 0) deals = generateMockDeals();
-  if (activities.length === 0) activities = generateMockActivities();
-
-  return { opportunities, contacts, deals, activities, useMock };
+  return { opportunities, contacts, deals, activities, useMock: false, hasData };
 }
 
 // ── Date range filter helper ─────────────────────────────────────
@@ -272,7 +267,7 @@ export function computeLeadSourceROI(contacts, opportunities, deals) {
   };
 
   return Object.values(sources).map(s => {
-    const cost = costEstimates[s.source] || randomInt(3000, 20000);
+    const cost = costEstimates[s.source] || 0;
     s.cost = cost;
     s.roi = cost > 0 ? Math.round(((s.revenue - cost) / cost) * 100) : 0;
     s.conversionRate = s.leads > 0 ? Math.round((s.deals / s.leads) * 100) : 0;

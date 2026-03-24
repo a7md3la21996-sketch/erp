@@ -724,10 +724,11 @@ export default function ReportsPage() {
     };
   }, [liveData, dateRange]);
 
-  // Get report data — use live if available, fallback to mock
+  // Get report data — use live data when loaded, return empty array if no data (never fake data)
   const getReportData = useCallback((reportKey, mockData) => {
-    return liveReports[reportKey] && liveReports[reportKey].length > 0 ? liveReports[reportKey] : mockData;
-  }, [liveReports]);
+    if (liveData && liveReports[reportKey] !== undefined) return liveReports[reportKey];
+    return liveData ? [] : mockData;
+  }, [liveReports, liveData]);
 
   // Apply SmartFilter + audit filters on flat reports
   const smartFiltered = useMemo(() => {
@@ -1074,13 +1075,13 @@ export default function ReportsPage() {
               <thead><tr>{reportTable.headers.map((h, i) => <Th key={i}>{h}</Th>)}</tr></thead>
               <tbody>{reportTable.rows.map((row, ri) => <Tr key={ri}>{row.map((cell, ci) => <Td key={ci} className={ci === 0 ? 'font-semibold' : ''}>{cell}</Td>)}</Tr>)}</tbody>
             </Table>
-            {activeReport && liveReports[activeReport.report.key]?.length > 0 ? (
+            {activeReport && reportTable && reportTable.rows.length > 0 ? (
               <div className="mt-4 px-4 py-3 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/[0.15] text-xs text-emerald-700 dark:text-emerald-400 text-start">
                 {lang === 'ar' ? 'بيانات حقيقية من النظام' : 'Live data from system'}
               </div>
             ) : (
               <div className="mt-4 px-4 py-3 rounded-lg bg-amber-500/[0.08] border border-amber-500/[0.15] text-xs text-amber-700 dark:text-amber-400 text-start">
-                {lang === 'ar' ? 'بيانات تجريبية — لا توجد بيانات حقيقية كافية' : 'Sample data — not enough live data available'}
+                {lang === 'ar' ? 'لا توجد بيانات — أضف بيانات حقيقية لعرض التقرير' : 'No data available — add real data to view this report'}
               </div>
             )}
           </div>
