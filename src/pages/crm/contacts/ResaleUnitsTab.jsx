@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, Building2, X, Save, Home } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Pencil, Trash2, Building2, X, Save, Home, ImagePlus } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchUnitsByContact, createUnit, updateUnit, deleteUnit,
@@ -205,6 +205,40 @@ export default function ResaleUnitsTab({ contact, isRTL }) {
           <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} size="sm" rows={2} />
         </div>
 
+        {/* Images */}
+        <div>
+          <label className="text-xs text-content-muted dark:text-content-muted-dark mb-1 block">{label('صور الوحدة', 'Unit Photos')}</label>
+          <div className="flex gap-2 flex-wrap mb-2">
+            {(form.images || []).map((img, idx) => (
+              <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border border-edge dark:border-edge-dark group">
+                <img src={img} alt="" className="w-full h-full object-cover" />
+                <button onClick={() => set('images', form.images.filter((_, i) => i !== idx))}
+                  className="absolute top-0.5 right-0.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity border-none cursor-pointer">
+                  <X size={8} color="#fff" />
+                </button>
+              </div>
+            ))}
+            <label className="w-16 h-16 rounded-lg border-2 border-dashed border-edge dark:border-edge-dark flex items-center justify-center cursor-pointer hover:border-brand-500/50 transition-colors">
+              <ImagePlus size={18} className="text-content-muted dark:text-content-muted-dark" />
+              <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                if (files.length === 0) return;
+                const maxSize = 500 * 1024; // 500KB per image
+                files.forEach(file => {
+                  if (file.size > maxSize) return;
+                  const reader = new FileReader();
+                  reader.onload = (ev) => {
+                    setForm(prev => ({ ...prev, images: [...(prev.images || []), ev.target.result] }));
+                  };
+                  reader.readAsDataURL(file);
+                });
+                e.target.value = '';
+              }} />
+            </label>
+          </div>
+          <p className="text-[10px] text-content-muted dark:text-content-muted-dark m-0">{label('حد أقصى 500KB لكل صورة', 'Max 500KB per image')}</p>
+        </div>
+
         {/* Actions */}
         <div className="flex gap-2 mt-1">
           <Button variant="primary" size="sm" onClick={handleSave} className="flex-1">
@@ -299,6 +333,15 @@ export default function ResaleUnitsTab({ contact, isRTL }) {
                   )}
                 </div>
               </div>
+
+              {/* Images */}
+              {unit.images?.length > 0 && (
+                <div className="flex gap-1.5 mt-2 overflow-x-auto">
+                  {unit.images.map((img, idx) => (
+                    <img key={idx} src={img} alt="" className="w-12 h-12 rounded-lg object-cover border border-edge dark:border-edge-dark shrink-0" />
+                  ))}
+                </div>
+              )}
 
               {/* Notes */}
               {unit.notes && (
