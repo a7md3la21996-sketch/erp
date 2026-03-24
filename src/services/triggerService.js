@@ -1,9 +1,7 @@
 import { createNotification } from './notificationsService';
-import supabase from '../lib/supabase';
 
 const STORAGE_KEY = 'platform_triggers';
 const MAX_TRIGGERS = 100;
-const SUPABASE_TABLE = 'triggers';
 
 // ── localStorage helpers ────────────────────────────────────────────────
 function load() {
@@ -68,7 +66,7 @@ export const CONDITION_OPERATORS = {
 };
 
 // ── CRUD ────────────────────────────────────────────────────────────────
-export async function createTrigger(trigger) {
+export function createTrigger(trigger) {
   const list = load();
   const newTrigger = {
     id: 'trig_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -84,76 +82,34 @@ export async function createTrigger(trigger) {
   };
   list.unshift(newTrigger);
   save(list);
-  try {
-    const { error } = await supabase.from(SUPABASE_TABLE).insert(newTrigger);
-    if (error) console.warn('Supabase createTrigger failed:', error);
-  } catch (err) {
-    console.warn('Supabase createTrigger failed:', err);
-  }
   return newTrigger;
 }
 
-export async function getTriggers() {
-  try {
-    const { data, error } = await supabase
-      .from(SUPABASE_TABLE)
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (!error && data) {
-      save(data);
-      return data;
-    }
-  } catch (err) {
-    console.warn('Supabase getTriggers failed, falling back to localStorage:', err);
-  }
+export function getTriggers() {
   return load();
 }
 
-export async function updateTrigger(id, updates) {
+export function updateTrigger(id, updates) {
   const list = load();
   const idx = list.findIndex(t => t.id === id);
   if (idx === -1) return null;
   list[idx] = { ...list[idx], ...updates, updated_at: new Date().toISOString() };
   save(list);
-  try {
-    const { error } = await supabase
-      .from(SUPABASE_TABLE)
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) console.warn('Supabase updateTrigger failed:', error);
-  } catch (err) {
-    console.warn('Supabase updateTrigger failed:', err);
-  }
   return list[idx];
 }
 
-export async function deleteTrigger(id) {
+export function deleteTrigger(id) {
   const list = load().filter(t => t.id !== id);
   save(list);
-  try {
-    const { error } = await supabase.from(SUPABASE_TABLE).delete().eq('id', id);
-    if (error) console.warn('Supabase deleteTrigger failed:', error);
-  } catch (err) {
-    console.warn('Supabase deleteTrigger failed:', err);
-  }
 }
 
-export async function toggleTrigger(id) {
+export function toggleTrigger(id) {
   const list = load();
   const idx = list.findIndex(t => t.id === id);
   if (idx === -1) return null;
   list[idx].enabled = !list[idx].enabled;
   list[idx].updated_at = new Date().toISOString();
   save(list);
-  try {
-    const { error } = await supabase
-      .from(SUPABASE_TABLE)
-      .update({ enabled: list[idx].enabled, updated_at: list[idx].updated_at })
-      .eq('id', id);
-    if (error) console.warn('Supabase toggleTrigger failed:', error);
-  } catch (err) {
-    console.warn('Supabase toggleTrigger failed:', err);
-  }
   return list[idx];
 }
 

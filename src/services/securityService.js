@@ -1,25 +1,4 @@
-import supabase from '../lib/supabase';
-
 const STORAGE_KEY = 'platform_security_config';
-const SUPABASE_TABLE = 'security_settings';
-
-async function getConfigFromSupabase() {
-  try {
-    const { data, error } = await supabase
-      .from(SUPABASE_TABLE)
-      .select('key, value')
-      .order('key');
-    if (!error && data && data.length > 0) {
-      const config = {};
-      data.forEach(row => { config[row.key] = row.value; });
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(config)); } catch { /* ignore */ }
-      return config;
-    }
-  } catch (err) {
-    console.warn('Supabase getConfig failed, falling back to localStorage:', err);
-  }
-  return null;
-}
 
 function getConfig() {
   try {
@@ -27,12 +6,6 @@ function getConfig() {
   } catch {
     return {};
   }
-}
-
-async function getConfigAsync() {
-  const remote = await getConfigFromSupabase();
-  if (remote) return remote;
-  return getConfig();
 }
 
 function saveConfig(config) {
@@ -45,32 +18,15 @@ function saveConfig(config) {
   }
 }
 
-async function saveConfigToSupabase(config) {
-  try {
-    const rows = Object.entries(config).map(([key, value]) => ({
-      key,
-      value,
-      updated_at: new Date().toISOString(),
-    }));
-    if (rows.length === 0) return;
-    const { error } = await supabase
-      .from(SUPABASE_TABLE)
-      .upsert(rows, { onConflict: 'key' });
-    if (error) console.warn('Supabase saveConfig failed:', error);
-  } catch (err) {
-    console.warn('Supabase saveConfig failed:', err);
-  }
-}
-
 // ── IP Whitelist ──────────────────────────────────────────────────────────
 
-export async function getIPWhitelist() {
-  const config = await getConfigAsync();
+export function getIPWhitelist() {
+  const config = getConfig();
   return config.ipWhitelist || [];
 }
 
-export async function addIP(ip, label) {
-  const config = await getConfigAsync();
+export function addIP(ip, label) {
+  const config = getConfig();
   if (!config.ipWhitelist) config.ipWhitelist = [];
   const entry = {
     id: 'ip_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -81,27 +37,24 @@ export async function addIP(ip, label) {
   };
   config.ipWhitelist.push(entry);
   saveConfig(config);
-  await saveConfigToSupabase(config);
   return entry;
 }
 
-export async function removeIP(id) {
-  const config = await getConfigAsync();
+export function removeIP(id) {
+  const config = getConfig();
   config.ipWhitelist = (config.ipWhitelist || []).filter(e => e.id !== id);
   saveConfig(config);
-  await saveConfigToSupabase(config);
 }
 
-export async function isIPWhitelistEnabled() {
-  const config = await getConfigAsync();
+export function isIPWhitelistEnabled() {
+  const config = getConfig();
   return config.ipWhitelistEnabled === true;
 }
 
-export async function toggleIPWhitelist() {
-  const config = await getConfigAsync();
+export function toggleIPWhitelist() {
+  const config = getConfig();
   config.ipWhitelistEnabled = !config.ipWhitelistEnabled;
   saveConfig(config);
-  await saveConfigToSupabase(config);
   return config.ipWhitelistEnabled;
 }
 
@@ -124,23 +77,20 @@ const DEFAULT_PASSWORD_POLICY = {
   maxAttempts: 0,
 };
 
-export async function getPasswordPolicy() {
-  const config = await getConfigAsync();
+export function getPasswordPolicy() {
+  const config = getConfig();
   return { ...DEFAULT_PASSWORD_POLICY, ...(config.passwordPolicy || {}) };
 }
 
-export async function savePasswordPolicy(policy) {
-  const config = await getConfigAsync();
+export function savePasswordPolicy(policy) {
+  const config = getConfig();
   config.passwordPolicy = { ...DEFAULT_PASSWORD_POLICY, ...policy };
   saveConfig(config);
-  await saveConfigToSupabase(config);
   return config.passwordPolicy;
 }
 
 export function validatePassword(password) {
-  // Uses sync localStorage for immediate validation (no await needed)
-  const config = getConfig();
-  const policy = { ...DEFAULT_PASSWORD_POLICY, ...(config.passwordPolicy || {}) };
+  const policy = getPasswordPolicy();
   const errors = [];
 
   if (password.length < policy.minLength) {
@@ -172,21 +122,20 @@ const DEFAULT_EXPORT_RESTRICTIONS = {
   logExports: true,
 };
 
-export async function getExportRestrictions() {
-  const config = await getConfigAsync();
+export function getExportRestrictions() {
+  const config = getConfig();
   return { ...DEFAULT_EXPORT_RESTRICTIONS, ...(config.exportRestrictions || {}) };
 }
 
-export async function saveExportRestrictions(restrictionsConfig) {
-  const config = await getConfigAsync();
+export function saveExportRestrictions(restrictionsConfig) {
+  const config = getConfig();
   config.exportRestrictions = { ...DEFAULT_EXPORT_RESTRICTIONS, ...restrictionsConfig };
   saveConfig(config);
-  await saveConfigToSupabase(config);
   return config.exportRestrictions;
 }
 
-export async function canExport(role, format) {
-  const restrictions = await getExportRestrictions();
+export function canExport(role, format) {
+  const restrictions = getExportRestrictions();
   if (restrictions.restrictedRoles.includes(role)) return false;
   if (!restrictions.allowedFormats.includes(format)) return false;
   return true;

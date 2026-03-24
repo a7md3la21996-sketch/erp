@@ -1,8 +1,5 @@
-import supabase from '../lib/supabase';
-
 const STORAGE_KEY = 'platform_workflows';
 const MAX_WORKFLOWS = 50;
-const SUPABASE_TABLE = 'workflows';
 
 // ── localStorage helpers ────────────────────────────────────────────────
 function load() {
@@ -75,7 +72,7 @@ export const ENTITY_FIELDS = {
 };
 
 // ── CRUD ────────────────────────────────────────────────────────────────
-export async function createWorkflow(workflow) {
+export function createWorkflow(workflow) {
   const list = load();
   const newWorkflow = {
     id: 'wf_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -91,76 +88,34 @@ export async function createWorkflow(workflow) {
   };
   list.unshift(newWorkflow);
   save(list);
-  try {
-    const { error } = await supabase.from(SUPABASE_TABLE).insert(newWorkflow);
-    if (error) console.warn('Supabase createWorkflow failed:', error);
-  } catch (err) {
-    console.warn('Supabase createWorkflow failed:', err);
-  }
   return newWorkflow;
 }
 
-export async function getWorkflows() {
-  try {
-    const { data, error } = await supabase
-      .from(SUPABASE_TABLE)
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (!error && data) {
-      save(data);
-      return data;
-    }
-  } catch (err) {
-    console.warn('Supabase getWorkflows failed, falling back to localStorage:', err);
-  }
+export function getWorkflows() {
   return load();
 }
 
-export async function updateWorkflow(id, updates) {
+export function updateWorkflow(id, updates) {
   const list = load();
   const idx = list.findIndex(w => w.id === id);
   if (idx === -1) return null;
   list[idx] = { ...list[idx], ...updates, updated_at: new Date().toISOString() };
   save(list);
-  try {
-    const { error } = await supabase
-      .from(SUPABASE_TABLE)
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) console.warn('Supabase updateWorkflow failed:', error);
-  } catch (err) {
-    console.warn('Supabase updateWorkflow failed:', err);
-  }
   return list[idx];
 }
 
-export async function deleteWorkflow(id) {
+export function deleteWorkflow(id) {
   const list = load().filter(w => w.id !== id);
   save(list);
-  try {
-    const { error } = await supabase.from(SUPABASE_TABLE).delete().eq('id', id);
-    if (error) console.warn('Supabase deleteWorkflow failed:', error);
-  } catch (err) {
-    console.warn('Supabase deleteWorkflow failed:', err);
-  }
 }
 
-export async function toggleWorkflow(id) {
+export function toggleWorkflow(id) {
   const list = load();
   const idx = list.findIndex(w => w.id === id);
   if (idx === -1) return null;
   list[idx].enabled = !list[idx].enabled;
   list[idx].updated_at = new Date().toISOString();
   save(list);
-  try {
-    const { error } = await supabase
-      .from(SUPABASE_TABLE)
-      .update({ enabled: list[idx].enabled, updated_at: list[idx].updated_at })
-      .eq('id', id);
-    if (error) console.warn('Supabase toggleWorkflow failed:', error);
-  } catch (err) {
-    console.warn('Supabase toggleWorkflow failed:', err);
-  }
   return list[idx];
 }
 

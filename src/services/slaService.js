@@ -1,9 +1,5 @@
-import supabase from '../lib/supabase';
-
 const POLICIES_KEY = 'platform_sla_policies';
 const TICKETS_KEY = 'platform_sla_tickets';
-const SUPABASE_POLICIES_TABLE = 'sla_policies';
-const SUPABASE_TICKETS_TABLE = 'sla_tickets';
 const MAX_TICKETS = 500;
 const EVENT_NAME = 'platform_sla_changed';
 
@@ -121,48 +117,15 @@ function ensureDefaults() {
 }
 
 // ── Policies CRUD ─────────────────────────────────────────────────────
-export async function getPolicies() {
-  try {
-    const { data, error } = await supabase
-      .from(SUPABASE_POLICIES_TABLE)
-      .select('*')
-      .order('created_at');
-    if (!error && data && data.length > 0) {
-      // Ensure built-in defaults exist
-      const ids = new Set(data.map(p => p.id));
-      const merged = [...data];
-      for (const dp of DEFAULT_POLICIES) {
-        if (!ids.has(dp.id)) merged.push(dp);
-      }
-      writeJSON(POLICIES_KEY, merged);
-      return merged;
-    }
-  } catch (err) {
-    console.warn('Supabase getPolicies failed, falling back to localStorage:', err);
-  }
+export function getPolicies() {
   return ensureDefaults();
 }
 
-export async function getPolicy(id) {
-  try {
-    const { data, error } = await supabase
-      .from(SUPABASE_POLICIES_TABLE)
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (!error && data) return data;
-  } catch (err) {
-    console.warn('Supabase getPolicy failed, falling back to localStorage:', err);
-  }
+export function getPolicy(id) {
   return ensureDefaults().find(p => p.id === id) || null;
 }
 
-/** Sync version for internal use (tickets, breaches) that need synchronous policy lookup */
-function getPolicySync(id) {
-  return ensureDefaults().find(p => p.id === id) || null;
-}
-
-export async function createPolicy(data) {
+export function createPolicy(data) {
   const policies = ensureDefaults();
   const policy = {
     ...data,
@@ -173,43 +136,25 @@ export async function createPolicy(data) {
   policies.push(policy);
   writeJSON(POLICIES_KEY, policies);
   dispatch();
-  try {
-    const { error } = await supabase.from(SUPABASE_POLICIES_TABLE).insert(policy);
-    if (error) console.warn('Supabase createPolicy failed:', error);
-  } catch (err) {
-    console.warn('Supabase createPolicy failed:', err);
-  }
   return policy;
 }
 
-export async function updatePolicy(id, data) {
+export function updatePolicy(id, data) {
   const policies = ensureDefaults();
   const idx = policies.findIndex(p => p.id === id);
   if (idx === -1) return null;
   policies[idx] = { ...policies[idx], ...data, id, builtIn: policies[idx].builtIn };
   writeJSON(POLICIES_KEY, policies);
   dispatch();
-  try {
-    const { error } = await supabase.from(SUPABASE_POLICIES_TABLE).update(data).eq('id', id);
-    if (error) console.warn('Supabase updatePolicy failed:', error);
-  } catch (err) {
-    console.warn('Supabase updatePolicy failed:', err);
-  }
   return policies[idx];
 }
 
-export async function deletePolicy(id) {
+export function deletePolicy(id) {
   const policies = ensureDefaults();
   const policy = policies.find(p => p.id === id);
   if (!policy || policy.builtIn) return false;
   writeJSON(POLICIES_KEY, policies.filter(p => p.id !== id));
   dispatch();
-  try {
-    const { error } = await supabase.from(SUPABASE_POLICIES_TABLE).delete().eq('id', id);
-    if (error) console.warn('Supabase deletePolicy failed:', error);
-  } catch (err) {
-    console.warn('Supabase deletePolicy failed:', err);
-  }
   return true;
 }
 
@@ -223,22 +168,9 @@ function saveTickets(tickets) {
   writeJSON(TICKETS_KEY, tickets);
 }
 
-export async function getTickets({ limit = 15, offset = 0, status, priority, entity, breached, search } = {}) {
-  try {
-    let query = supabase.from(SUPABASE_TICKETS_TABLE).select('*', { count: 'exact' });
-    if (status) query = query.eq('status', status);
-    if (priority) query = query.eq('priority', priority);
-    if (entity) query = query.eq('entityType', entity);
-    if (breached === true || breached === 'true') query = query.eq('breached', true);
-    if (search) query = query.or(`entityName.ilike.%${search}%,assignedTo.ilike.%${search}%`);
-    query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
-    const { data, count, error } = await query;
-    if (!error && data) return { data, total: count || data.length };
-  } catch (err) {
-    console.warn('Supabase getTickets failed, falling back to localStorage:', err);
-  }
-  // Fallback: existing localStorage logic
+export function getTickets({ limit = 15, offset = 0, status, priority, entity, breached, search } = {}) {
   let tickets = getAllTickets();
+
   if (status) tickets = tickets.filter(t => t.status === status);
   if (priority) tickets = tickets.filter(t => t.priority === priority);
   if (entity) tickets = tickets.filter(t => t.entityType === entity);
@@ -250,12 +182,15 @@ export async function getTickets({ limit = 15, offset = 0, status, priority, ent
       (t.assignedTo || '').toLowerCase().includes(q)
     );
   }
+
+  // Sort newest first
   tickets.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
   return { data: tickets.slice(offset, offset + limit), total: tickets.length };
 }
 
-export async function createTicket({ policyId, entityType, entityId, entityName, assignedTo, priority }) {
-  const policy = await getPolicy(policyId);
+export function createTicket({ policyId, entityType, entityId, entityName, assignedTo, priority }) {
+  const policy = getPolicy(policyId);
   if (!policy) return null;
 
   const now = new Date();
@@ -282,17 +217,10 @@ export async function createTicket({ policyId, entityType, entityId, entityName,
   tickets.unshift(ticket);
   saveTickets(tickets);
   dispatch();
-  try {
-    supabase.from(SUPABASE_TICKETS_TABLE).insert(ticket).then(({ error }) => {
-      if (error) console.warn('Supabase createTicket failed:', error);
-    });
-  } catch (err) {
-    console.warn('Supabase createTicket failed:', err);
-  }
   return ticket;
 }
 
-export async function respondToTicket(id) {
+export function respondToTicket(id) {
   const tickets = getAllTickets();
   const ticket = tickets.find(t => t.id === id);
   if (!ticket || ticket.firstResponseAt) return null;
@@ -302,19 +230,10 @@ export async function respondToTicket(id) {
   ticket.updated_at = new Date().toISOString();
   saveTickets(tickets);
   dispatch();
-  try {
-    supabase.from(SUPABASE_TICKETS_TABLE)
-      .update({ firstResponseAt: ticket.firstResponseAt, status: ticket.status, updated_at: ticket.updated_at })
-      .eq('id', id).then(({ error }) => {
-        if (error) console.warn('Supabase respondToTicket failed:', error);
-      });
-  } catch (err) {
-    console.warn('Supabase respondToTicket failed:', err);
-  }
   return ticket;
 }
 
-export async function resolveTicket(id) {
+export function resolveTicket(id) {
   const tickets = getAllTickets();
   const ticket = tickets.find(t => t.id === id);
   if (!ticket || ticket.status === 'resolved') return null;
@@ -324,15 +243,6 @@ export async function resolveTicket(id) {
   ticket.updated_at = new Date().toISOString();
   saveTickets(tickets);
   dispatch();
-  try {
-    supabase.from(SUPABASE_TICKETS_TABLE)
-      .update({ resolvedAt: ticket.resolvedAt, status: ticket.status, updated_at: ticket.updated_at })
-      .eq('id', id).then(({ error }) => {
-        if (error) console.warn('Supabase resolveTicket failed:', error);
-      });
-  } catch (err) {
-    console.warn('Supabase resolveTicket failed:', err);
-  }
   return ticket;
 }
 
@@ -365,7 +275,7 @@ export function checkBreaches() {
     }
 
     // Check escalation
-    const policy = getPolicySync(ticket.policyId);
+    const policy = getPolicy(ticket.policyId);
     if (policy && policy.escalationLevels) {
       const elapsedMinutes = (now - new Date(ticket.created_at)) / 60000;
       for (const esc of policy.escalationLevels) {
@@ -441,16 +351,6 @@ export function getSLAPerformance(days = 30) {
   return result;
 }
 
-export async function getTicketById(id) {
-  try {
-    const { data, error } = await supabase
-      .from(SUPABASE_TICKETS_TABLE)
-      .select('*')
-      .eq('id', id)
-      .single();
-    if (!error && data) return data;
-  } catch (err) {
-    console.warn('Supabase getTicketById failed, falling back to localStorage:', err);
-  }
+export function getTicketById(id) {
   return getAllTickets().find(t => t.id === id) || null;
 }
