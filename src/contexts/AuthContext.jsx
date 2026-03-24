@@ -120,40 +120,47 @@ export function AuthProvider({ children }) {
   }, []);
 
   // ── Login ─────────────────────────────────────────────────────────────────
-  const login = async (email, password) => {
-    if (USE_SUPABASE_AUTH) {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase().trim(),
-        password,
-      });
-      if (error) throw new Error(error.message);
-
-      const profileData = await fetchSupabaseProfile(data.user.id);
-      setUser({ id: data.user.id, email: data.user.email });
-      setProfile(profileData);
-      setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
-      logSession(profileData);
-      return profileData;
-    } else {
-      // Mock mode
-      const mockUser = MOCK_USERS[email.toLowerCase().trim()];
-      if (!mockUser || mockUser.password !== password) {
-        throw new Error('بيانات الدخول غير صحيحة');
-      }
-      const profileData = {
-        id: email,
-        email,
-        role: mockUser.role,
-        full_name_ar: mockUser.full_name_ar,
-        full_name_en: mockUser.full_name_en,
-      };
-      setUser({ id: email, email });
-      setProfile(profileData);
-      setPermissions(ROLE_PERMISSIONS[mockUser.role] || []);
-      localStorage.setItem('platform_mock_user', JSON.stringify(profileData));
-      logSession(profileData);
-      return profileData;
+  const loginWithMock = (email, password) => {
+    const mockUser = MOCK_USERS[email.toLowerCase().trim()];
+    if (!mockUser || mockUser.password !== password) {
+      throw new Error('بيانات الدخول غير صحيحة');
     }
+    const profileData = {
+      id: email,
+      email,
+      role: mockUser.role,
+      full_name_ar: mockUser.full_name_ar,
+      full_name_en: mockUser.full_name_en,
+    };
+    setUser({ id: email, email });
+    setProfile(profileData);
+    setPermissions(ROLE_PERMISSIONS[mockUser.role] || []);
+    localStorage.setItem('platform_mock_user', JSON.stringify(profileData));
+    logSession(profileData);
+    return profileData;
+  };
+
+  const login = async (email, password) => {
+    // Try Supabase Auth first, fallback to mock
+    if (USE_SUPABASE_AUTH) {
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.toLowerCase().trim(),
+          password,
+        });
+        if (error) throw error;
+        const profileData = await fetchSupabaseProfile(data.user.id);
+        setUser({ id: data.user.id, email: data.user.email });
+        setProfile(profileData);
+        setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
+        logSession(profileData);
+        return profileData;
+      } catch {
+        // Supabase failed - fallback to mock users
+        return loginWithMock(email, password);
+      }
+    }
+    return loginWithMock(email, password);
   };
 
   // ── Register (admin creates new users) ────────────────────────────────────
