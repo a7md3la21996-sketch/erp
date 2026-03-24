@@ -151,6 +151,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState(null); // null = add mode, object = edit mode
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [saving, setSaving] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [formErrors, setFormErrors] = useState({});
 
   const { auditFields, applyAuditFilters } = useAuditFilter('user');
@@ -617,13 +618,19 @@ export default function UsersPage() {
           {/* Password - only for add */}
           {!isEdit && (
             <Field label={lang === 'ar' ? 'كلمة المرور' : 'Password'} required>
-              <Input
-                type="password"
-                placeholder={lang === 'ar' ? '٦ أحرف على الأقل' : 'Min 6 characters'}
-                value={form.password}
-                onChange={(e) => setField('password', e.target.value)}
-                className={errClass('password')}
-              />
+              <div className="relative">
+                <Input
+                  type={showPass ? 'text' : 'password'}
+                  placeholder={lang === 'ar' ? '٦ أحرف على الأقل' : 'Min 6 characters'}
+                  value={form.password}
+                  onChange={(e) => setField('password', e.target.value)}
+                  className={errClass('password')}
+                />
+                <button type="button" onClick={() => setShowPass(p => !p)}
+                  className="absolute top-1/2 -translate-y-1/2 end-2 bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xs p-1">
+                  {showPass ? (lang === 'ar' ? 'إخفاء' : 'Hide') : (lang === 'ar' ? 'عرض' : 'Show')}
+                </button>
+              </div>
             </Field>
           )}
 
