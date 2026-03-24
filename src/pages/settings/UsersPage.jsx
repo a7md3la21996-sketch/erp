@@ -237,6 +237,22 @@ export default function UsersPage() {
   useEffect(() => { setPage(1); }, [search, smartFilters]);
 
   /* ── Toggle Status ── */
+  const resetUserPassword = async (userId, userEmail) => {
+    const newPass = prompt(lang === 'ar' ? 'أدخل كلمة المرور الجديدة (6 أحرف على الأقل):' : 'Enter new password (min 6 characters):');
+    if (!newPass || newPass.length < 6) {
+      if (newPass) toast.error(lang === 'ar' ? 'كلمة المرور لازم 6 أحرف على الأقل' : 'Password must be at least 6 characters');
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPass });
+      if (error) throw error;
+      toast.success(lang === 'ar' ? `تم تغيير كلمة المرور لـ ${userEmail}` : `Password reset for ${userEmail}`);
+    } catch {
+      // If admin API not available, try via service role or show manual instructions
+      toast.warning(lang === 'ar' ? 'غيّر الباسورد من Supabase Dashboard → Authentication → Users' : 'Change password from Supabase Dashboard → Authentication → Users');
+    }
+  };
+
   const toggleStatus = async (userId) => {
     setUsers(prev => prev.map(u => {
       if (u.id === userId) {
@@ -555,6 +571,13 @@ export default function UsersPage() {
                         ? <ToggleRight size={16} className="text-green-500" />
                         : <ToggleLeft size={16} className="text-content-muted dark:text-content-muted-dark" />
                       }
+                    </button>
+                    <button
+                      title={lang === 'ar' ? 'تغيير كلمة المرور' : 'Reset Password'}
+                      onClick={(e) => { e.stopPropagation(); resetUserPassword(user.id, user.email); }}
+                      className="w-8 h-8 rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150"
+                    >
+                      <span className="text-amber-500 text-xs font-bold">🔑</span>
                     </button>
                   </div>
                 </Td>
