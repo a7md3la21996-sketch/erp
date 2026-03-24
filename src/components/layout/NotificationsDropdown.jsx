@@ -70,24 +70,31 @@ export default function NotificationsDropdown({ show, onClose }) {
   const [loading, setLoading] = useState(true);
   const [hoveredId, setHoveredId] = useState(null);
 
-  const refresh = () => {
+  const refresh = async () => {
     const filter = activeTab === 'unread' ? { unreadOnly: true, limit: 30 }
       : activeTab === 'urgent' ? { priority: 'urgent', limit: 30 }
       : { limit: 30 };
-    const { data } = getNotifications(filter);
-    setNotifications(data);
+    try {
+      const result = await getNotifications(filter);
+      const data = result?.data || result;
+      setNotifications(Array.isArray(data) ? data : []);
+    } catch {
+      setNotifications([]);
+    }
   };
 
   useEffect(() => {
     if (!show) return;
     setLoading(true);
-    Promise.all([
-      fetchTodayReminders(profile?.id).catch(() => []),
-    ]).then(([rem]) => {
-      setReminders(rem || []);
-      refresh();
+    const load = async () => {
+      try {
+        const rem = await fetchTodayReminders(profile?.id).catch(() => []);
+        setReminders(Array.isArray(rem) ? rem : []);
+        await refresh();
+      } catch {}
       setLoading(false);
-    });
+    };
+    load();
   }, [show, profile?.id, profile?.email]);
 
   // Refresh on tab change

@@ -312,7 +312,7 @@ export default function Header({ onMenuClick }) {
         )}
         <div className="w-px h-6 mx-1 bg-edge dark:bg-edge-dark hidden sm:block" />
         <div ref={ref} className="relative">
-          <button onClick={() => setShowProfile(!showProfile)} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg border-none cursor-pointer bg-transparent">
+          <button onClick={() => setOpenDropdown(openDropdown === 'profile' ? null : 'profile')} className="flex items-center gap-2.5 py-1.5 px-2 rounded-lg border-none cursor-pointer bg-transparent">
             <div className="w-[34px] h-[34px] rounded-full bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center shrink-0">
               <User size={16} color="#fff" />
             </div>
