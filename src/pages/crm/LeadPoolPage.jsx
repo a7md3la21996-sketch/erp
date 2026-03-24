@@ -57,7 +57,9 @@ function loadLeads() {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function getAging(dateStr) {
+  if (!dateStr) return { label: '—', color: '#6B8DB5', dot: 'warn', level: 'warn' };
   const mins = Math.floor((Date.now() - new Date(dateStr)) / 60000);
+  if (isNaN(mins)) return { label: '—', color: '#6B8DB5', dot: 'warn', level: 'warn' };
   if (mins < 60)    return { label: `${mins}د`,           color: '#4A7AAB', dot: 'fresh', level: 'fresh' };
   if (mins < 1440)  return { label: `${Math.floor(mins / 60)}س`, color: '#6B8DB5', dot: 'warn',  level: 'warn'  };
   return              { label: `${Math.floor(mins / 1440)}ي`, color: '#EF4444', dot: 'old',   level: 'old'   };
@@ -65,7 +67,8 @@ function getAging(dateStr) {
 
 function getSLAStatus(lead) {
   const sla = SLA_MINUTES[lead.source] || 60;
-  const elapsed = Math.floor((Date.now() - new Date(lead.created_at)) / 60000);
+  const elapsed = lead.created_at ? Math.floor((Date.now() - new Date(lead.created_at)) / 60000) : 0;
+  if (isNaN(elapsed)) return { pct: 0, remaining: sla, breached: false, elapsed: 0 };
   const pct = Math.min((elapsed / sla) * 100, 100);
   const remaining = Math.max(sla - elapsed, 0);
   return { pct, remaining, breached: elapsed > sla, elapsed };
@@ -207,20 +210,26 @@ export default function LeadPoolPage() {
   };
 
   const handleAssign = (leadIds, agentId) => {
+    // Filter out reserved leads from bulk assignment
+    const idsToAssign = (Array.isArray(leadIds) ? leadIds : [leadIds]).filter(id => {
+      const lead = leads.find(l => l.id === id);
+      return !lead?.reserved_by || new Date(lead.reserved_until) <= new Date();
+    });
+    if (idsToAssign.length === 0) return;
     const agent = agentsList.find(a => a.id === agentId);
     const agentName = agent ? (lang === 'ar' ? agent.name_ar : agent.name_en) : agentId;
     const userName = profile?.full_name_ar || profile?.full_name_en || '';
-    const isBulk = Array.isArray(leadIds) && leadIds.length > 1;
+    const isBulk = idsToAssign.length > 1;
 
     if (isBulk) {
-      logAction({ action: 'bulk_reassign', entity: 'lead', entityId: leadIds.join(','), entityName: `${leadIds.length} leads`, description: `Bulk assigned ${leadIds.length} leads to ${agentName}`, userName });
+      logAction({ action: 'bulk_reassign', entity: 'lead', entityId: idsToAssign.join(','), entityName: `${idsToAssign.length} leads`, description: `Bulk assigned ${idsToAssign.length} leads to ${agentName}`, userName });
     } else {
-      const leadId = Array.isArray(leadIds) ? leadIds[0] : leadIds;
+      const leadId = idsToAssign[0];
       const lead = leads.find(l => l.id === leadId);
       logAction({ action: 'assign', entity: 'lead', entityId: leadId, entityName: lead?.name || '', description: `Assigned lead to ${agentName}`, userName });
     }
 
-    setLeads(prev => prev.filter(l => !leadIds.includes(l.id)));
+    setLeads(prev => prev.filter(l => !idsToAssign.includes(l.id)));
     setSelected([]);
     setAssignModal(null);
   };
@@ -228,7 +237,7 @@ export default function LeadPoolPage() {
   const handleAddCold = () => {
     if (!newLead.name || !newLead.phone || newLead.phone.replace(/\D/g, '').length < 8) return;
     const lead = {
-      id: Date.now().toString(),
+      id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: newLead.name,
       phone: newLead.phone,
       source: 'cold_call',
