@@ -25,7 +25,13 @@ export default function DocumentsSection({ entity, entityId, entityName }) {
 
   // Load documents
   useEffect(() => {
-    setDocuments(getDocumentsByEntity(entity, entityId));
+    const load = async () => {
+      try {
+        const docs = await getDocumentsByEntity(entity, entityId);
+        setDocuments(Array.isArray(docs) ? docs : []);
+      } catch { setDocuments([]); }
+    };
+    load();
     setShowAddForm(false);
     setConfirmDeleteId(null);
     setForm({ name: '', type: 'other', notes: '', fileName: '', fileSize: 0, fileType: '' });

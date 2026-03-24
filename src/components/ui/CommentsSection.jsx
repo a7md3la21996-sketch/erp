@@ -72,9 +72,12 @@ export default function CommentsSection({ entity, entityId, entityName }) {
 
   const teamMembers = getTeamMembers();
 
-  const refreshComments = useCallback(() => {
+  const refreshComments = useCallback(async () => {
     if (entity && entityId) {
-      setComments(getComments(entity, entityId));
+      try {
+        const result = await getComments(entity, entityId);
+        setComments(Array.isArray(result) ? result : []);
+      } catch { setComments([]); }
     }
   }, [entity, entityId]);
 
