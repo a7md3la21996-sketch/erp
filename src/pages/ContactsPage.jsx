@@ -594,6 +594,7 @@ export default function ContactsPage() {
           { label: 'بدون نشاط', labelEn: 'No Activity 30d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) }] },
           { label: 'عملاء مبيعات', labelEn: 'Sales Clients', filters: [{ field: 'contact_type', operator: 'is', value: 'client' }, { field: 'department', operator: 'is', value: 'sales' }] },
           { label: 'موردين', labelEn: 'Suppliers', filters: [{ field: 'contact_type', operator: 'is', value: 'supplier' }] },
+          { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: '_opp_count', operator: 'eq', value: '0' }] },
         ]}
       />
 

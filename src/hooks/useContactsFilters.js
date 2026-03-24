@@ -78,6 +78,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set(contacts.map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set(contacts.map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
+    { id: '_opp_count', label: 'عدد الفرص', labelEn: 'Opportunities Count', type: 'number' },
     ...auditFields,
   ], [contacts, auditFields]);
 
@@ -104,6 +105,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       ...c,
       _country: c._country || detectCountry(c.phone),
       _campaign_count: (c.campaign_interactions || []).length,
+      _opp_count: (c.opportunities || []).length,
     }));
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
