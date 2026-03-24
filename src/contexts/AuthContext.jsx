@@ -60,9 +60,20 @@ export function AuthProvider({ children }) {
           }
         } catch (err) {
           console.error('Failed to restore Supabase session:', err);
-        } finally {
-          if (isMounted) setLoading(false);
         }
+        // If no Supabase session, try mock session from localStorage
+        if (isMounted && !profile) {
+          const saved = localStorage.getItem('platform_mock_user');
+          if (saved) {
+            try {
+              const u = JSON.parse(saved);
+              setUser({ id: u.id || u.email, email: u.email });
+              setProfile(u);
+              setPermissions(ROLE_PERMISSIONS[u.role] || []);
+            } catch {}
+          }
+        }
+        if (isMounted) setLoading(false);
       };
 
       initSession();
