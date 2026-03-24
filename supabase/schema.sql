@@ -617,6 +617,46 @@ drop index if exists idx_tickets_deal; create index idx_tickets_deal     on tick
 
 
 -- ============================================================
+-- Add missing columns to existing tables (safe - skip if exists)
+-- ============================================================
+
+DO $$ BEGIN ALTER TABLE contacts ADD COLUMN assigned_to uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE contacts ADD COLUMN assigned_to_name text; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE contacts ADD COLUMN assigned_by_name text; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE contacts ADD COLUMN created_by uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE contacts ADD COLUMN created_by_name text; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE contacts ADD COLUMN campaign_interactions jsonb default '[]'; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE contacts ADD COLUMN extra_phones jsonb; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE contacts ADD COLUMN contact_status text default 'new'; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE opportunities ADD COLUMN assigned_to uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE opportunities ADD COLUMN assigned_to_name text; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE opportunities ADD COLUMN contact_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE opportunities ADD COLUMN project_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE opportunities ADD COLUMN stage_changed_at timestamptz; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE opportunities ADD COLUMN deal_value numeric; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE opportunities ADD COLUMN lost_reason text; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE opportunities ADD COLUMN expected_close_date date; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE activities ADD COLUMN contact_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE activities ADD COLUMN opportunity_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE activities ADD COLUMN user_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE activities ADD COLUMN meeting_subtype text; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE deals ADD COLUMN contact_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE deals ADD COLUMN opportunity_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE deals ADD COLUMN project_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE deals ADD COLUMN assigned_to uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE deals ADD COLUMN deal_value numeric; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE deals ADD COLUMN client_budget numeric; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE tasks ADD COLUMN assigned_to uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE tasks ADD COLUMN contact_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE employees ADD COLUMN is_active boolean default true; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE employees ADD COLUMN deleted_at timestamptz; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+-- ============================================================
 -- Foreign Key Constraints (safe - skip if already exists)
 -- ============================================================
 
