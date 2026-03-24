@@ -7,8 +7,7 @@ export const ACTIVITY_TYPES = {
   call:          { ar: 'مكالمة',        en: 'Call',          icon: 'Phone',        color: '#4A7AAB', dept: ['crm','sales','finance'] },
   whatsapp:      { ar: 'واتساب',        en: 'WhatsApp',      icon: 'MessageCircle',color: '#2B4C6F', dept: ['crm','sales'] },
   email:         { ar: 'إيميل',         en: 'Email',         icon: 'Mail',         color: '#6B8DB5', dept: ['crm','sales','hr','finance'] },
-  meeting:       { ar: 'اجتماع',        en: 'Meeting',       icon: 'Users',        color: '#2B4C6F', dept: ['crm','sales','hr','finance'] },
-  site_visit:    { ar: 'زيارة موقع',    en: 'Site Visit',    icon: 'MapPin',       color: '#4A7AAB', dept: ['crm','sales'] },
+  meeting:       { ar: 'مقابلة',        en: 'Meeting',       icon: 'Users',        color: '#2B4C6F', dept: ['crm','sales','hr','finance'] },
   note:          { ar: 'ملاحظة',        en: 'Note',          icon: 'FileText',     color: '#8BA8C8', dept: ['crm','sales','hr','finance'] },
   interview:     { ar: 'مقابلة',        en: 'Interview',     icon: 'UserCheck',    color: '#4A7AAB', dept: ['hr'] },
   warning:       { ar: 'إنذار',         en: 'Warning',       icon: 'AlertTriangle',color: '#EF4444', dept: ['hr'] },
@@ -17,6 +16,14 @@ export const ACTIVITY_TYPES = {
   payment:       { ar: 'دفعة',          en: 'Payment',       icon: 'Banknote',     color: '#2B4C6F', dept: ['finance'] },
   status_change: { ar: 'تغيير حالة',    en: 'Status Change', icon: 'RefreshCw',   color: '#8BA8C8', dept: ['crm','sales','hr','finance'] },
   task:          { ar: 'مهمة',          en: 'Task',          icon: 'CheckSquare',  color: '#6B8DB5', dept: ['crm','sales','hr','finance'] },
+};
+
+// ── Meeting Subtypes ──────────────────────────────────────────────────────
+export const MEETING_SUBTYPES = {
+  online:    { ar: 'أونلاين',         en: 'Online Meeting' },
+  site:      { ar: 'زيارة موقع',      en: 'Site Visit' },
+  developer: { ar: 'مقابلة مطور',     en: 'Developer Meeting' },
+  office:    { ar: 'في الشركة',       en: 'Office Meeting' },
 };
 
 // ── localStorage helpers (shared key with contactsService) ──

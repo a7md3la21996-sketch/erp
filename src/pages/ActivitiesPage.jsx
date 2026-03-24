@@ -107,8 +107,7 @@ export default function ActivitiesPage() {
     { label: 'هذا الأسبوع', labelEn: 'This Week', filters: [{ field: 'created_at', operator: 'this_week', value: '' }] },
     { label: 'هذا الشهر', labelEn: 'This Month', filters: [{ field: 'created_at', operator: 'this_month', value: '' }] },
     { label: 'مكالمات', labelEn: 'Calls', filters: [{ field: 'type', operator: 'is', value: 'call' }] },
-    { label: 'اجتماعات', labelEn: 'Meetings', filters: [{ field: 'type', operator: 'is', value: 'meeting' }] },
-    { label: 'زيارات', labelEn: 'Visits', filters: [{ field: 'type', operator: 'is', value: 'site_visit' }] },
+    { label: 'مقابلات', labelEn: 'Meetings', filters: [{ field: 'type', operator: 'is', value: 'meeting' }] },
   ], []);
 
   const load = async () => {

@@ -4,6 +4,7 @@ import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { Phone, CheckSquare, Target, Zap, Check, Calendar } from 'lucide-react';
 import { Button, Select, Textarea } from '../../../components/ui/';
 import { TASK_PRIORITIES } from '../../../services/tasksService';
+import { MEETING_SUBTYPES } from '../../../services/activitiesService';
 
 // ── Unified Take Action Form ──────────────────────────────────────────────
 export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, onStatusChange, onCancel }) {
@@ -16,8 +17,7 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
     { key: 'call', label: 'Call', labelAr: 'مكالمة' },
     { key: 'whatsapp', label: 'WhatsApp', labelAr: 'واتساب' },
     { key: 'email', label: 'Email', labelAr: 'إيميل' },
-    { key: 'meeting', label: 'Meeting', labelAr: 'اجتماع' },
-    { key: 'site_visit', label: 'Site Visit', labelAr: 'زيارة موقع' },
+    { key: 'meeting', label: 'Meeting', labelAr: 'مقابلة' },
     { key: 'note', label: 'Note', labelAr: 'ملاحظة' },
   ];
 
@@ -32,8 +32,8 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
   const [actMode, setActMode] = useState('log');
 
   // Activity state
-  const [actForm, setActForm] = useState({ type: 'call', description: '', result: '', scheduled_date: '' });
-  const setAct = (k, v) => setActForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '' } : {}) }));
+  const [actForm, setActForm] = useState({ type: 'call', description: '', result: '', scheduled_date: '', meeting_subtype: '' });
+  const setAct = (k, v) => setActForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '', meeting_subtype: '' } : {}) }));
   const currentResults = ACTIVITY_RESULTS[actForm.type] || [];
   const resultRequired = actMode === 'log' && currentResults.length > 0;
 
@@ -58,9 +58,10 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
 
   const [saving, setSaving] = useState(false);
 
+  const meetingSubRequired = actForm.type === 'meeting';
   const canSave = actMode === 'schedule'
-    ? !!actForm.scheduled_date
-    : (!resultRequired || actForm.result);
+    ? !!actForm.scheduled_date && (!meetingSubRequired || actForm.meeting_subtype)
+    : (!resultRequired || actForm.result) && (!meetingSubRequired || actForm.meeting_subtype);
 
   const handleSaveAll = async () => {
     if (!canSave) return;
@@ -72,10 +73,15 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
     if (actMode === 'schedule' && actForm.scheduled_date) {
       actData.scheduled_date = actForm.scheduled_date;
     }
+    // Add meeting subtype label to description
+    if (actForm.type === 'meeting' && actForm.meeting_subtype && MEETING_SUBTYPES[actForm.meeting_subtype]) {
+      const subtypeLabel = isRTL ? MEETING_SUBTYPES[actForm.meeting_subtype].ar : MEETING_SUBTYPES[actForm.meeting_subtype].en;
+      actData.description = `[${subtypeLabel}]${actForm.description ? ' ' + actForm.description : ''}`;
+    }
     if (actForm.result && currentResults.length > 0) {
       const found = currentResults.find(r => r.value === actForm.result);
       const resultLabel = found ? found.label : actForm.result;
-      actData.description = `${resultLabel}${actForm.description ? ' — ' + actForm.description : ''}`;
+      actData.description = `${resultLabel}${actData.description ? ' — ' + actData.description : ''}`;
     }
     await onSaveActivity(actData);
 
@@ -99,8 +105,7 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
     call: isRTL ? 'نتيجة المكالمة' : 'Call Result',
     whatsapp: isRTL ? 'نتيجة الرسالة' : 'Message Result',
     email: isRTL ? 'نتيجة الإيميل' : 'Email Result',
-    meeting: isRTL ? 'نتيجة الاجتماع' : 'Meeting Result',
-    site_visit: isRTL ? 'نتيجة الزيارة' : 'Visit Result',
+    meeting: isRTL ? 'نتيجة المقابلة' : 'Meeting Result',
   };
 
   const sectionHeader = (icon, label, color, enabled, onToggle, required) => (
@@ -177,6 +182,24 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
             </button>
           ))}
         </div>
+        {/* Meeting subtype */}
+        {actForm.type === 'meeting' && (
+          <div className="mb-2.5">
+            <div className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نوع المقابلة' : 'Meeting Type'} <span className="text-red-500">*</span></div>
+            <div className="flex gap-1.5 flex-wrap">
+              {Object.entries(MEETING_SUBTYPES).map(([k, v]) => (
+                <button key={k} onClick={() => setActForm(f => ({ ...f, meeting_subtype: f.meeting_subtype === k ? '' : k }))}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
+                    actForm.meeting_subtype === k
+                      ? 'bg-[#2B4C6F] text-white border-[#2B4C6F]'
+                      : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-[#2B4C6F]/40'
+                  }`}>
+                  {isRTL ? v.ar : v.en}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Result buttons */}
         {currentResults.length > 0 && (
           <div className="mb-2.5">

@@ -40,7 +40,7 @@ import {
   Chip, ScorePill, getDeptStages, deptStageLabel,
 } from './constants';
 
-const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock, site_visit: Star };
+const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock };
 
 const TIMELINE_CONFIG = {
   activity:    { color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  defaultIcon: Clock },

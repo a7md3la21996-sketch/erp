@@ -13,7 +13,7 @@ import { fetchActivities } from '../services/activitiesService';
 import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 
 // ── CRM Activity Data (loaded from real services) ─────────────────────────────
-const EMPTY_CRM = { calls: 0, calls_answered: 0, calls_no_answer: 0, calls_busy: 0, visits: 0, meetings_scheduled: 0, whatsapp_sent: 0, opportunities: 0, deals_closed: 0, leads: 0, campaigns: 0, revenue: 0 };
+const EMPTY_CRM = { calls: 0, calls_answered: 0, calls_no_answer: 0, calls_busy: 0, meetings_total: 0, meetings_online: 0, meetings_site: 0, meetings_developer: 0, meetings_office: 0, whatsapp_sent: 0, opportunities: 0, deals_closed: 0, leads: 0, campaigns: 0, revenue: 0 };
 
 // ── Competency scores (consistent with CompetenciesPage) ──────
 function genCompScores(empId) {
@@ -41,8 +41,9 @@ const DEPT_KPIS = {
     { key: 'calls_answered',   ar: 'مكالمات ناجحة',   en: 'Answered Calls',  freq: 'daily',   target: 30,     unit: '',      source: 'crm' },
     { key: 'opportunities',    ar: 'الفرص',           en: 'Opportunities',   freq: 'weekly',  target: 10,     unit: '',      source: 'crm' },
     { key: 'deals_closed',     ar: 'الصفقات',         en: 'Deals Closed',    freq: 'monthly', target: 3,      unit: '',      source: 'crm' },
-    { key: 'visits',           ar: 'زيارات',          en: 'Site Visits',     freq: 'weekly',  target: 5,      unit: '',      source: 'crm' },
-    { key: 'meetings_scheduled', ar: 'اجتماعات',      en: 'Meetings',        freq: 'weekly',  target: 3,      unit: '',      source: 'crm' },
+    { key: 'meetings_total',    ar: 'إجمالي المقابلات', en: 'Total Meetings',  freq: 'weekly',  target: 8,      unit: '',      source: 'crm' },
+    { key: 'meetings_site',     ar: 'زيارات موقع',     en: 'Site Visits',     freq: 'weekly',  target: 3,      unit: '',      source: 'crm' },
+    { key: 'meetings_developer',ar: 'مقابلات مطورين',  en: 'Developer Meetings', freq: 'weekly', target: 2,    unit: '',      source: 'crm' },
     { key: 'revenue',          ar: 'الإيرادات',       en: 'Revenue',         freq: 'monthly', target: 250000, unit: 'EGP',   source: 'crm' },
     { key: 'attendance',       ar: 'الحضور',          en: 'Attendance',      freq: 'daily',   target: 22,     unit: 'days',  source: 'hr'  },
   ],
@@ -173,8 +174,11 @@ export default function PerformancePage() {
         calls_answered: empCalls.filter(a => /answered|رد/i.test(desc(a))).length,
         calls_no_answer: empCalls.filter(a => /no answer|لم يرد/i.test(desc(a))).length,
         calls_busy: empCalls.filter(a => /busy|مشغول/i.test(desc(a))).length,
-        visits: empActs.filter(a => a.type === 'site_visit').length,
-        meetings_scheduled: empActs.filter(a => a.type === 'meeting').length,
+        meetings_total: empActs.filter(a => a.type === 'meeting').length,
+        meetings_online: empActs.filter(a => a.type === 'meeting' && a.meeting_subtype === 'online').length,
+        meetings_site: empActs.filter(a => a.type === 'meeting' && a.meeting_subtype === 'site').length,
+        meetings_developer: empActs.filter(a => a.type === 'meeting' && a.meeting_subtype === 'developer').length,
+        meetings_office: empActs.filter(a => a.type === 'meeting' && a.meeting_subtype === 'office').length,
         whatsapp_sent: empActs.filter(a => a.type === 'whatsapp').length,
         opportunities: empOpps.length,
         deals_closed: closedWon.length,
