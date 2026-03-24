@@ -82,9 +82,16 @@ export default function ResaleUnitsTab({ contact, isRTL }) {
     setShowForm(true);
   };
 
+  const generateUnitCode = () => {
+    const prefix = { apartment: 'APT', villa: 'VIL', duplex: 'DPX', townhouse: 'TWN', commercial: 'COM', administrative: 'ADM' }[form.unit_type] || 'UNT';
+    const num = String(Date.now()).slice(-5);
+    return `${prefix}-${num}`;
+  };
+
   const handleSave = async () => {
     const payload = {
       ...form,
+      unit_code: form.unit_code || generateUnitCode(),
       area: Number(form.area) || 0,
       rooms: Number(form.rooms) || 0,
       asking_price: Number(form.asking_price) || 0,
