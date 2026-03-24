@@ -148,12 +148,14 @@ export default function OperationsPage() {
         svcFetchTickets(),
       ]);
       // Merge won deals with service deals, avoid duplicates
-      const svcIds = new Set(svcDeals.map(d => d.opportunity_id).filter(Boolean));
-      const uniqueWon = wonDeals.filter(d => !svcIds.has(d.opportunity_id));
-      setDeals([...uniqueWon, ...svcDeals]);
-      setInstallments(svcInstallments);
-      setHandovers(svcHandovers);
-      setTickets(svcTickets);
+      const safeWon = Array.isArray(wonDeals) ? wonDeals : [];
+      const safeSvcDeals = Array.isArray(svcDeals) ? svcDeals : [];
+      const svcIds = new Set(safeSvcDeals.map(d => d.opportunity_id).filter(Boolean));
+      const uniqueWon = safeWon.filter(d => !svcIds.has(d.opportunity_id));
+      setDeals([...uniqueWon, ...safeSvcDeals]);
+      setInstallments(Array.isArray(svcInstallments) ? svcInstallments : []);
+      setHandovers(Array.isArray(svcHandovers) ? svcHandovers : []);
+      setTickets(Array.isArray(svcTickets) ? svcTickets : []);
     }
     loadData();
   }, []);

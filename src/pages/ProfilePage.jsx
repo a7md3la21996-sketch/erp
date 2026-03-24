@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -81,18 +81,24 @@ export default function ProfilePage() {
   const [pwSuccess, setPwSuccess] = useState(false);
 
   // KPI Targets
-  const kpiData = useMemo(() => {
-    ensureTargets(employee.id, employee.role, CURRENT_MONTH, CURRENT_YEAR);
-    const actuals = computeActuals(employee.id, CURRENT_MONTH, CURRENT_YEAR);
-    return METRICS.map(metric => {
-      const cfg = METRIC_CONFIG[metric];
-      const targets = ensureTargets(employee.id, employee.role, CURRENT_MONTH, CURRENT_YEAR);
-      const tgt = targets.find(t => t.metric === metric);
-      const targetVal = tgt?.target_value || 0;
-      const actualVal = actuals[metric] || 0;
-      const pct = targetVal > 0 ? Math.round((actualVal / targetVal) * 100) : 0;
-      return { metric, label: cfg[i18n.language] || cfg.en, color: cfg.color, target: targetVal, actual: actualVal, pct };
-    });
+  const [kpiData, setKpiData] = useState([]);
+  useEffect(() => {
+    const loadKpi = async () => {
+      await ensureTargets(employee.id, employee.role, CURRENT_MONTH, CURRENT_YEAR);
+      const actuals = computeActuals(employee.id, CURRENT_MONTH, CURRENT_YEAR);
+      const targets = await ensureTargets(employee.id, employee.role, CURRENT_MONTH, CURRENT_YEAR);
+      const targetsArr = Array.isArray(targets) ? targets : [];
+      const result = METRICS.map(metric => {
+        const cfg = METRIC_CONFIG[metric];
+        const tgt = targetsArr.find(t => t.metric === metric);
+        const targetVal = tgt?.target_value || 0;
+        const actualVal = actuals[metric] || 0;
+        const pct = targetVal > 0 ? Math.round((actualVal / targetVal) * 100) : 0;
+        return { metric, label: cfg[i18n.language] || cfg.en, color: cfg.color, target: targetVal, actual: actualVal, pct };
+      });
+      setKpiData(result);
+    };
+    loadKpi();
   }, [employee, i18n.language]);
 
   // Stats
@@ -107,10 +113,14 @@ export default function ProfilePage() {
   }, [employee]);
 
   // OKRs
-  const objectives = useMemo(() => {
-    return getObjectives({ quarter: CURRENT_QUARTER, year: CURRENT_YEAR }).filter(
-      o => o.owner_id === employee.id
-    );
+  const [objectives, setObjectives] = useState([]);
+  useEffect(() => {
+    const loadOkrs = async () => {
+      const result = await getObjectives({ quarter: CURRENT_QUARTER, year: CURRENT_YEAR });
+      const arr = Array.isArray(result) ? result : [];
+      setObjectives(arr.filter(o => o.owner_id === employee.id));
+    };
+    loadOkrs();
   }, [employee]);
 
   // Achievements / Badges

@@ -590,6 +590,22 @@ export default function DashboardPage() {
     ? (hour < 12 ? 'صباح الخير' : 'مساء الخير')
     : (hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening');
 
+  // ── Pre-loaded async data for widgets ──────────────────────────────────
+  const [dashAnnouncements, setDashAnnouncements] = useState([]);
+  const [dashQuarterSummary, setDashQuarterSummary] = useState({ total: 0, avgProgress: 0, onTrack: 0, atRisk: 0, behind: 0 });
+  useEffect(() => {
+    const loadAsync = async () => {
+      const annResult = await getAnnouncements();
+      setDashAnnouncements(Array.isArray(annResult) ? annResult.slice(0, 3) : []);
+      const currentMonth = new Date().getMonth();
+      const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
+      const cy = new Date().getFullYear();
+      const gsResult = await getQuarterSummary(cq, cy);
+      setDashQuarterSummary(gsResult && typeof gsResult === 'object' ? gsResult : { total: 0, avgProgress: 0, onTrack: 0, atRisk: 0, behind: 0 });
+    };
+    loadAsync();
+  }, []);
+
   // ── Real Supabase data ──────────────────────────────────────────────────
   const [dashData, setDashData] = useState(null);
   const [dashLoading, setDashLoading] = useState(true);
@@ -1031,7 +1047,7 @@ export default function DashboardPage() {
         );
 
       case 'announcements': {
-        const annList = getAnnouncements().slice(0, 3);
+        const annList = dashAnnouncements;
         if (annList.length === 0) return null;
         return (
           <div>
@@ -1231,7 +1247,7 @@ export default function DashboardPage() {
         const currentMonth = new Date().getMonth();
         const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
         const cy = new Date().getFullYear();
-        const gs = getQuarterSummary(cq, cy);
+        const gs = dashQuarterSummary;
         if (gs.total === 0) return null;
         const pColor = gs.avgProgress >= 70 ? '#10B981' : gs.avgProgress >= 40 ? '#F59E0B' : '#EF4444';
         return (

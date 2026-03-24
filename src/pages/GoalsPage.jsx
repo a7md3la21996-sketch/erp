@@ -510,14 +510,21 @@ export default function GoalsPage() {
     ...auditFields,
   ], [auditFields]);
 
-  const loadData = useCallback(() => {
-    const data = getObjectives({ quarter, year });
-    setObjectives(data);
+  const loadData = useCallback(async () => {
+    const data = await getObjectives({ quarter, year });
+    setObjectives(Array.isArray(data) ? data : []);
   }, [quarter, year]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const summary = useMemo(() => getQuarterSummary(quarter, year), [objectives, quarter, year]);
+  const [summary, setSummary] = useState({ total: 0, avgProgress: 0, onTrack: 0, atRisk: 0, behind: 0 });
+  useEffect(() => {
+    const loadSummary = async () => {
+      const result = await getQuarterSummary(quarter, year);
+      setSummary(result && typeof result === 'object' ? result : { total: 0, avgProgress: 0, onTrack: 0, atRisk: 0, behind: 0 });
+    };
+    loadSummary();
+  }, [objectives, quarter, year]);
 
   // Apply filters
   const filtered = useMemo(() => {
@@ -545,30 +552,30 @@ export default function GoalsPage() {
   const safePage = Math.min(page, totalPages);
   const paginatedData = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  const handleSave = (formData) => {
+  const handleSave = async (formData) => {
     if (editObj) {
-      const result = updateObjective(editObj.id, formData);
+      const result = await updateObjective(editObj.id, formData);
       if (result) {
         logAction({ action: 'update', entity: 'okr', entityId: editObj.id, entityName: formData.title, description: `Updated objective: ${formData.title}`, userName: profile?.full_name_en || 'System' });
       }
     } else {
-      const obj = createObjective(formData);
-      logAction({ action: 'create', entity: 'okr', entityId: obj.id, entityName: formData.title, description: `Created objective: ${formData.title}`, userName: profile?.full_name_en || 'System' });
+      const obj = await createObjective(formData);
+      logAction({ action: 'create', entity: 'okr', entityId: obj?.id, entityName: formData.title, description: `Created objective: ${formData.title}`, userName: profile?.full_name_en || 'System' });
     }
     setEditObj(null);
     loadData();
   };
 
-  const handleDelete = (id) => {
-    const obj = deleteObjective(id);
+  const handleDelete = async (id) => {
+    const obj = await deleteObjective(id);
     if (obj) {
       logAction({ action: 'delete', entity: 'okr', entityId: id, entityName: obj.title, description: `Deleted objective: ${obj.title}`, userName: profile?.full_name_en || 'System' });
     }
     loadData();
   };
 
-  const handleUpdateKR = (objId, krId, updates) => {
-    updateKeyResult(objId, krId, updates);
+  const handleUpdateKR = async (objId, krId, updates) => {
+    await updateKeyResult(objId, krId, updates);
     loadData();
   };
 

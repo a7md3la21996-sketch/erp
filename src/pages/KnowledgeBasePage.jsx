@@ -126,14 +126,22 @@ export default function KnowledgeBasePage() {
   };
 
   // Fetch articles
-  const articles = useMemo(() => {
-    void refreshKey; // dependency trigger
-    if (searchQuery.trim()) return searchArticles(searchQuery);
-    if (activeCategory !== 'all') return getByCategory(activeCategory);
-    return getAll();
+  const [articles, setArticles] = useState([]);
+  useEffect(() => {
+    const loadArticles = async () => {
+      let result;
+      if (searchQuery.trim()) {
+        result = await searchArticles(searchQuery);
+      } else if (activeCategory !== 'all') {
+        result = await getByCategory(activeCategory);
+      } else {
+        result = await getAll();
+      }
+      setArticles(Array.isArray(result) ? result : []);
+      setLoading(false);
+    };
+    loadArticles();
   }, [searchQuery, activeCategory, refreshKey]);
-
-  useEffect(() => { setLoading(false); }, []);
 
   // Group by category
   const grouped = useMemo(() => {
@@ -152,8 +160,8 @@ export default function KnowledgeBasePage() {
   ];
 
   // ── Handlers ──────────────────────────────────────────────────────────
-  const handleView = useCallback((article) => {
-    incrementViews(article.id);
+  const handleView = useCallback(async (article) => {
+    await incrementViews(article.id);
     setViewingArticle({ ...article, views: (article.views || 0) + 1 });
     refresh();
   }, []);
@@ -178,31 +186,31 @@ export default function KnowledgeBasePage() {
     setShowEditor(true);
   }, []);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     const data = {
       ...formData,
       tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
       author: profile?.full_name_en || profile?.full_name_ar || 'Unknown',
     };
     if (editingArticle) {
-      update(editingArticle.id, data);
+      await update(editingArticle.id, data);
     } else {
-      create(data);
+      await create(data);
     }
     setShowEditor(false);
     setEditingArticle(null);
     refresh();
   }, [formData, editingArticle, profile]);
 
-  const handleDelete = useCallback((id) => {
-    remove(id);
+  const handleDelete = useCallback(async (id) => {
+    await remove(id);
     setDeleteConfirm(null);
     if (viewingArticle?.id === id) setViewingArticle(null);
     refresh();
   }, [viewingArticle]);
 
-  const handleTogglePin = useCallback((id) => {
-    togglePin(id);
+  const handleTogglePin = useCallback(async (id) => {
+    await togglePin(id);
     refresh();
   }, []);
 

@@ -95,21 +95,26 @@ export default function SLAManagementPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [showCreateTicket, setShowCreateTicket] = useState(false);
 
-  const loadData = useCallback(() => {
-    checkBreaches();
-    setStats(getStats());
-    setPerfData(getSLAPerformance(30));
-    setPolicies(getPolicies());
+  const loadData = useCallback(async () => {
+    await checkBreaches();
+    const statsResult = await getStats();
+    setStats(statsResult && typeof statsResult === 'object' ? statsResult : { complianceRate: 100, avgResponseTime: 0, avgResolutionTime: 0, totalBreached: 0, activeTickets: 0 });
+    const perfResult = await getSLAPerformance(30);
+    setPerfData(Array.isArray(perfResult) ? perfResult : []);
+    const policiesResult = await getPolicies();
+    setPolicies(Array.isArray(policiesResult) ? policiesResult : []);
     const offset = (page - 1) * pageSize;
-    const result = getTickets({
+    const result = await getTickets({
       limit: pageSize, offset,
       status: filters.status || undefined,
       priority: filters.priority || undefined,
       entity: filters.entity || undefined,
       search: filters.search || undefined,
     });
-    setTickets(result.data);
-    setTicketTotal(result.total);
+    if (result && typeof result === 'object') {
+      setTickets(Array.isArray(result.data) ? result.data : []);
+      setTicketTotal(result.total || 0);
+    }
   }, [page, pageSize, filters]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -122,7 +127,7 @@ export default function SLAManagementPage() {
 
   // Periodic breach check
   useEffect(() => {
-    const interval = setInterval(() => { checkBreaches(); loadData(); }, 60000);
+    const interval = setInterval(() => { checkBreaches().then(() => loadData()); }, 60000);
     return () => clearInterval(interval);
   }, [loadData]);
 
@@ -404,7 +409,7 @@ function DashboardTab({
                           <div style={{ display: 'flex', gap: 6 }}>
                             {!ticket.firstResponseAt && ticket.status !== 'resolved' && (
                               <button
-                                onClick={() => { respondToTicket(ticket.id); loadData(); }}
+                                onClick={async () => { await respondToTicket(ticket.id); loadData(); }}
                                 title={isRTL ? 'استجابة' : 'Respond'}
                                 style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, color: '#3b82f6', borderColor: '#3b82f620' }}
                               >
@@ -413,7 +418,7 @@ function DashboardTab({
                             )}
                             {ticket.status !== 'resolved' && (
                               <button
-                                onClick={() => { resolveTicket(ticket.id); loadData(); }}
+                                onClick={async () => { await resolveTicket(ticket.id); loadData(); }}
                                 title={isRTL ? 'حل' : 'Resolve'}
                                 style={{ ...btnSecondary, padding: '4px 8px', fontSize: 11, color: '#22c55e', borderColor: '#22c55e20' }}
                               >
@@ -450,8 +455,8 @@ function PoliciesTab({
   editingPolicy, setEditingPolicy, showDeleteConfirm, setShowDeleteConfirm,
   loadData, surfaceBg, inputBg,
 }) {
-  const handleDelete = (id) => {
-    deletePolicy(id);
+  const handleDelete = async (id) => {
+    await deletePolicy(id);
     setShowDeleteConfirm(null);
     loadData();
   };
@@ -558,7 +563,7 @@ function PoliciesTab({
                 )}
                 <div style={{ flex: 1 }} />
                 <button
-                  onClick={() => { updatePolicy(policy.id, { active: !policy.active }); loadData(); }}
+                  onClick={async () => { await updatePolicy(policy.id, { active: !policy.active }); loadData(); }}
                   style={{
                     background: policy.active ? '#22c55e20' : (isDark ? '#33415520' : '#f1f5f9'),
                     border: 'none', cursor: 'pointer', borderRadius: 20, width: 44, height: 24,
@@ -666,7 +671,7 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
 
   const labelStyle = { display: 'block', fontSize: 12, fontWeight: 500, color: textSecondary, marginBottom: 4 };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const firstResponseTime = form.firstResponseUnit === 'hours' ? form.firstResponseValue * 60 : Number(form.firstResponseValue);
     const resolutionTime = form.resolutionUnit === 'hours' ? form.resolutionValue * 60 : Number(form.resolutionValue);
 
@@ -683,9 +688,9 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
     };
 
     if (isEditing) {
-      updatePolicy(policy.id, data);
+      await updatePolicy(policy.id, data);
     } else {
-      createPolicy(data);
+      await createPolicy(data);
     }
     onSaved();
     onClose();
@@ -898,15 +903,28 @@ function PolicyModal({ policy, onClose, onSaved, isDark, isRTL, cardBg, borderCo
 
 // ── Create Ticket Modal ───────────────────────────────────────────────
 function CreateTicketModal({ onClose, onCreated, isDark, isRTL, cardBg, borderColor, textPrimary, textSecondary, inputBg, btnPrimary }) {
-  const policies = getPolicies().filter(p => p.active);
+  const [policies, setPoliciesLocal] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      const result = await getPolicies();
+      const arr = Array.isArray(result) ? result.filter(p => p.active) : [];
+      setPoliciesLocal(arr);
+    };
+    load();
+  }, []);
   const [form, setForm] = useState({
-    policyId: policies[0]?.id || '',
+    policyId: '',
     entityType: 'ticket',
     entityId: 'entity_' + Date.now(),
     entityName: '',
     assignedTo: '',
     priority: '',
   });
+  useEffect(() => {
+    if (policies.length > 0 && !form.policyId) {
+      setForm(prev => ({ ...prev, policyId: policies[0]?.id || '' }));
+    }
+  }, [policies]);
 
   const inputStyle = {
     width: '100%', padding: '8px 12px', borderRadius: 8,
@@ -916,9 +934,9 @@ function CreateTicketModal({ onClose, onCreated, isDark, isRTL, cardBg, borderCo
 
   const labelStyle = { display: 'block', fontSize: 12, fontWeight: 500, color: textSecondary, marginBottom: 4 };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!form.entityName || !form.policyId) return;
-    createTicket(form);
+    await createTicket(form);
     onCreated();
     onClose();
   };

@@ -161,10 +161,10 @@ export default function SelfServicePage() {
   const [employees, setEmployees] = useState([]);
   const [approvals, setApprovals] = useState([]);
 
-  const loadApprovals = useCallback(() => {
+  const loadApprovals = useCallback(async () => {
     // Load approvals for the current user (simulated as first employee)
-    const allApprovals = getApprovals({});
-    setApprovals(allApprovals);
+    const allApprovals = await getApprovals({});
+    setApprovals(Array.isArray(allApprovals) ? allApprovals : []);
   }, []);
 
   useEffect(() => { fetchEmployees().then(data => setEmployees(data)); loadApprovals(); }, [loadApprovals]);
@@ -180,6 +180,42 @@ export default function SelfServicePage() {
   const emp = employees[0];
   const name = (isRTL ? emp?.full_name_ar : emp?.full_name_en) || emp?.full_name_ar || (isRTL ? 'أحمد محمد' : 'Ahmed Mohamed');
   const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+
+  // ── Pre-loaded async KPI targets ──
+  const [ssTargets, setSsTargets] = useState([]);
+  const [ssPrevTargets, setSsPrevTargets] = useState([]);
+  useEffect(() => {
+    const loadTargets = async () => {
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+      const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+      const empId = emp?.id || 'e1';
+      const empRole = emp?.role || 'sales_agent';
+      await ensureTargets(empId, empRole, currentMonth, currentYear);
+      const tgts = await getEmployeeTargets(empId, currentMonth, currentYear);
+      setSsTargets(Array.isArray(tgts) ? tgts : []);
+      await ensureTargets(empId, empRole, prevMonth, prevYear);
+      const prevTgts = await getEmployeeTargets(empId, prevMonth, prevYear);
+      setSsPrevTargets(Array.isArray(prevTgts) ? prevTgts : []);
+    };
+    if (emp) loadTargets();
+  }, [emp]);
+
+  // ── Pre-loaded async OKR objectives ──
+  const [ssObjectives, setSsObjectives] = useState([]);
+  useEffect(() => {
+    const loadOkrs = async () => {
+      const currentMonth = new Date().getMonth();
+      const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
+      const cy = new Date().getFullYear();
+      const empId = emp?.id || 'e1';
+      const result = await getObjectives({ quarter: cq, year: cy });
+      const arr = Array.isArray(result) ? result : [];
+      setSsObjectives(arr.filter(o => o.owner_id === empId));
+    };
+    if (emp) loadOkrs();
+  }, [emp]);
 
   // Enrich MY_REQUESTS with approval data
   const getRequestApproval = (req) => {
@@ -442,16 +478,11 @@ export default function SelfServicePage() {
         const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
         const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
         const empId = emp?.id || 'e1';
-        const empRole = emp?.role || 'sales_agent';
 
-        // Ensure targets exist
-        ensureTargets(empId, empRole, currentMonth, currentYear);
-        const targets = getEmployeeTargets(empId, currentMonth, currentYear);
+        const targets = ssTargets;
         const actuals = computeActuals(empId, currentMonth, currentYear);
 
-        // Previous month for trend
-        ensureTargets(empId, empRole, prevMonth, prevYear);
-        const prevTargets = getEmployeeTargets(empId, prevMonth, prevYear);
+        const prevTargets = ssPrevTargets;
         const prevActuals = computeActuals(empId, prevMonth, prevYear);
 
         const getPctColor = (pct) => pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444';
@@ -640,8 +671,7 @@ export default function SelfServicePage() {
         const currentMonth = new Date().getMonth();
         const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
         const cy = new Date().getFullYear();
-        const empId = emp?.id || 'e1';
-        const myObjectives = getObjectives({ quarter: cq, year: cy }).filter(o => o.owner_id === empId);
+        const myObjectives = ssObjectives;
 
         if (myObjectives.length === 0) return null;
 

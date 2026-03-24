@@ -43,8 +43,9 @@ export default function AnnouncementsPage() {
 
   const { auditFields, applyAuditFilters } = useAuditFilter('announcement');
 
-  const reload = useCallback(() => {
-    setAnnouncements(getAnnouncements());
+  const reload = useCallback(async () => {
+    const result = await getAnnouncements();
+    setAnnouncements(Array.isArray(result) ? result : []);
     setTick(t => t + 1);
   }, []);
 
@@ -120,14 +121,14 @@ export default function AnnouncementsPage() {
     }
   };
 
-  const handlePin = (ann) => {
-    togglePin(ann.id);
+  const handlePin = async (ann) => {
+    await togglePin(ann.id);
     logAction({ action: ann.pinned === 'true' ? 'update' : 'update', entity: 'announcement', entityId: ann.id, entityName: ann.title, description: ann.pinned === 'true' ? 'Unpinned announcement' : 'Pinned announcement', userName: profile?.full_name_en || '' });
     reload();
   };
 
-  const handleDelete = (ann) => {
-    deleteAnnouncement(ann.id);
+  const handleDelete = async (ann) => {
+    await deleteAnnouncement(ann.id);
     logAction({ action: 'delete', entity: 'announcement', entityId: ann.id, entityName: ann.title, description: 'Deleted announcement', userName: profile?.full_name_en || '' });
     setDeleteConfirm(null);
     reload();
@@ -426,13 +427,13 @@ export default function AnnouncementsPage() {
         <AnnForm
           existing={editingAnn}
           onClose={() => { setShowModal(false); setEditingAnn(null); }}
-          onSave={(data) => {
+          onSave={async (data) => {
             if (editingAnn) {
-              updateAnnouncement(editingAnn.id, data);
+              await updateAnnouncement(editingAnn.id, data);
               logAction({ action: 'update', entity: 'announcement', entityId: editingAnn.id, entityName: data.title, description: 'Updated announcement', userName: profile?.full_name_en || '' });
             } else {
-              const created = createAnnouncement({ ...data, author: { id: userId, name: profile?.full_name_en || profile?.full_name_ar || 'Unknown' } });
-              logAction({ action: 'create', entity: 'announcement', entityId: created.id, entityName: data.title, description: 'Created announcement', userName: profile?.full_name_en || '' });
+              const created = await createAnnouncement({ ...data, author: { id: userId, name: profile?.full_name_en || profile?.full_name_ar || 'Unknown' } });
+              logAction({ action: 'create', entity: 'announcement', entityId: created?.id, entityName: data.title, description: 'Created announcement', userName: profile?.full_name_en || '' });
               createNotification({
                 type: 'system',
                 title_ar: 'إعلان جديد: ' + (data.titleAr || data.title),
@@ -441,7 +442,7 @@ export default function AnnouncementsPage() {
                 body_en: data.body,
                 for_user_id: 'all',
                 entity_type: 'announcement',
-                entity_id: created.id,
+                entity_id: created?.id,
                 from_user: profile?.full_name_en || '',
               });
             }

@@ -65,7 +65,10 @@ export default function CustomFieldsPage() {
   // Option builder state
   const [optionDraft, setOptionDraft] = useState({ label: '', label_ar: '' });
 
-  const loadFields = () => setFields(getFields());
+  const loadFields = async () => {
+    const result = await getFields();
+    setFields(Array.isArray(result) ? result : []);
+  };
   useEffect(() => { loadFields(); }, []);
 
   const allSmartFields = useMemo(() => [...SMART_FIELDS, ...auditFields], [auditFields]);
@@ -117,24 +120,24 @@ export default function CustomFieldsPage() {
   };
   const closeModal = () => { setShowModal(false); setEditingField(null); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.field_name.trim()) return;
     setSaving(true);
     try {
       if (editingField) {
-        updateField(editingField.id, form);
+        await updateField(editingField.id, form);
         logAction({ action: 'update', entity: 'custom_field', entityId: editingField.id, entityName: form.field_name, description: `Updated custom field: ${form.field_name}` });
       } else {
-        const created = addField(form);
-        logAction({ action: 'create', entity: 'custom_field', entityId: created.id, entityName: form.field_name, description: `Created custom field: ${form.field_name}` });
+        const created = await addField(form);
+        logAction({ action: 'create', entity: 'custom_field', entityId: created?.id, entityName: form.field_name, description: `Created custom field: ${form.field_name}` });
       }
       loadFields();
       closeModal();
     } finally { setSaving(false); }
   };
 
-  const handleDelete = (f) => {
-    deleteField(f.id);
+  const handleDelete = async (f) => {
+    await deleteField(f.id);
     logAction({ action: 'delete', entity: 'custom_field', entityId: f.id, entityName: f.field_name, description: `Deleted custom field: ${f.field_name}` });
     loadFields();
     setDeleteConfirm(null);
@@ -151,15 +154,15 @@ export default function CustomFieldsPage() {
     setForm(f => ({ ...f, options: f.options.filter((_, i) => i !== idx) }));
   };
 
-  const moveField = (fieldObj, direction) => {
+  const moveField = async (fieldObj, direction) => {
     const entityFields = fields.filter(f => f.entity === fieldObj.entity).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
     const idx = entityFields.findIndex(f => f.id === fieldObj.id);
     const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= entityFields.length) return;
     const currentOrder = entityFields[idx].sort_order ?? idx;
     const swapOrder = entityFields[swapIdx].sort_order ?? swapIdx;
-    updateField(entityFields[idx].id, { sort_order: swapOrder });
-    updateField(entityFields[swapIdx].id, { sort_order: currentOrder });
+    await updateField(entityFields[idx].id, { sort_order: swapOrder });
+    await updateField(entityFields[swapIdx].id, { sort_order: currentOrder });
     loadFields();
   };
 

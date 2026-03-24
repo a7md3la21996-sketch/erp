@@ -57,10 +57,12 @@ export default function ExpenseClaimsPage() {
   const [form, setForm] = useState(emptyForm);
 
   // ── Load ──
-  const reload = useCallback(() => {
+  const reload = useCallback(async () => {
     seedExpenseClaims();
-    setClaims(getClaims());
-    setStats(getClaimStats());
+    const claimsResult = await getClaims();
+    setClaims(Array.isArray(claimsResult) ? claimsResult : []);
+    const statsResult = await getClaimStats();
+    setStats(statsResult && typeof statsResult === 'object' ? statsResult : {});
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
@@ -137,40 +139,40 @@ export default function ExpenseClaimsPage() {
 
   const totalAmount = form.items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!form.title.trim()) return;
     const cleanItems = form.items.filter(it => it.description.trim() && Number(it.amount) > 0).map(it => ({ description: it.description, amount: Number(it.amount) }));
     const amt = cleanItems.length ? cleanItems.reduce((s, it) => s + it.amount, 0) : totalAmount;
 
     if (editingClaim) {
-      updateClaim(editingClaim.id, { title: form.title, category: form.category, date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, amount: amt });
+      await updateClaim(editingClaim.id, { title: form.title, category: form.category, date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, amount: amt });
     } else {
-      createClaim({ title: form.title, category: form.category, amount: amt, currency: 'EGP', date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, employee_id: 'e1', employee_name: 'Ahmed Mohamed' });
+      await createClaim({ title: form.title, category: form.category, amount: amt, currency: 'EGP', date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, employee_id: 'e1', employee_name: 'Ahmed Mohamed' });
     }
     setShowModal(false);
     reload();
   };
 
-  const handleDelete = (id) => { deleteClaim(id); reload(); };
+  const handleDelete = async (id) => { await deleteClaim(id); reload(); };
 
-  const handleApprove = (claim) => {
-    approveClaim(claim.id, 'Manager');
-    const approval = getApprovalByEntity('expense', claim.id);
-    if (approval) approveRequest(approval.id, 'Manager');
+  const handleApprove = async (claim) => {
+    await approveClaim(claim.id, 'Manager');
+    const approval = await getApprovalByEntity('expense', claim.id);
+    if (approval) await approveRequest(approval.id, 'Manager');
     reload();
   };
 
-  const handleReject = (claim) => {
-    rejectClaim(claim.id, 'Manager', rejectReason);
-    const approval = getApprovalByEntity('expense', claim.id);
-    if (approval) rejectRequest(approval.id, 'Manager', rejectReason);
+  const handleReject = async (claim) => {
+    await rejectClaim(claim.id, 'Manager', rejectReason);
+    const approval = await getApprovalByEntity('expense', claim.id);
+    if (approval) await rejectRequest(approval.id, 'Manager', rejectReason);
     setRejectingId(null);
     setRejectReason('');
     reload();
   };
 
-  const handleMarkPaid = (claim) => {
-    markClaimPaid(claim.id, 'Finance');
+  const handleMarkPaid = async (claim) => {
+    await markClaimPaid(claim.id, 'Finance');
     logAction({ action: 'update', entity: 'expense', entityId: claim.id, entityName: claim.title, description: `Marked claim as paid: ${claim.title}`, userName: 'Finance' });
     reload();
   };

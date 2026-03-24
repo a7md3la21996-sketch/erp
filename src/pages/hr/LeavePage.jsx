@@ -57,8 +57,9 @@ export default function LeavePage() {
 
   const { auditFields, applyAuditFilters } = useAuditFilter('leave');
 
-  const loadApprovals = useCallback(() => {
-    setApprovals(getApprovals({ type: 'leave' }));
+  const loadApprovals = useCallback(async () => {
+    const result = await getApprovals({ type: 'leave' });
+    setApprovals(Array.isArray(result) ? result : []);
   }, []);
 
   useEffect(() => {
@@ -94,7 +95,7 @@ export default function LeavePage() {
     const approval = getLeaveApproval(leaveId);
     if (approval) {
       // Approve via approval workflow
-      approveRequest(approval.id, lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager', '');
+      await approveRequest(approval.id, lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager', '');
       loadApprovals();
     }
     // Also update the leave request itself
@@ -106,7 +107,7 @@ export default function LeavePage() {
     const approval = getLeaveApproval(leaveId);
     const comment = rejectCommentId === leaveId ? rejectComment : '';
     if (approval) {
-      rejectRequest(approval.id, lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager', comment);
+      await rejectRequest(approval.id, lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager', comment);
       loadApprovals();
     }
     await rejectLeaveRequest(leaveId, comment);
@@ -118,21 +119,24 @@ export default function LeavePage() {
   // Ensure existing pending leaves have approval records (migration for mock data)
   useEffect(() => {
     if (leaves.length && employees.length) {
-      leaves.forEach(lv => {
-        if (lv.status === 'pending' && !getLeaveApproval(lv.id)) {
-          const emp = employees.find(e => e.id === lv.employee_id || e.employee_id === lv.emp_id);
-          const name = emp ? ((lang === 'ar' ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar) : (lv.employee_id || 'Employee');
-          createApproval({
-            type: 'leave',
-            requesterId: lv.employee_id || lv.emp_id || '',
-            requesterName: name,
-            data: { entity_id: lv.id, leave_type: lv.type, start_date: lv.start_date, end_date: lv.end_date, days: lv.days, reason: lv.reason },
-            approverId: 'e1',
-            approverName: lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager',
-          });
+      const createMissing = async () => {
+        for (const lv of leaves) {
+          if (lv.status === 'pending' && !getLeaveApproval(lv.id)) {
+            const emp = employees.find(e => e.id === lv.employee_id || e.employee_id === lv.emp_id);
+            const name = emp ? ((lang === 'ar' ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar) : (lv.employee_id || 'Employee');
+            await createApproval({
+              type: 'leave',
+              requesterId: lv.employee_id || lv.emp_id || '',
+              requesterName: name,
+              data: { entity_id: lv.id, leave_type: lv.type, start_date: lv.start_date, end_date: lv.end_date, days: lv.days, reason: lv.reason },
+              approverId: 'e1',
+              approverName: lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager',
+            });
+          }
         }
-      });
-      loadApprovals();
+        loadApprovals();
+      };
+      createMissing();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leaves.length, employees.length]);

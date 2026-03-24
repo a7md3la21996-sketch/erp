@@ -408,8 +408,9 @@ export default function ScheduledReportsPage() {
 
   const { auditFields, applyAuditFilters } = useAuditFilter('scheduled_report');
 
-  const reload = useCallback(() => {
-    setSchedules(getSchedules());
+  const reload = useCallback(async () => {
+    const result = await getSchedules();
+    setSchedules(Array.isArray(result) ? result : []);
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
@@ -493,14 +494,14 @@ export default function ScheduledReportsPage() {
   }, [schedules]);
 
   // ── Handlers ───────────────────────────────────────────────────────
-  const handleSave = (form) => {
+  const handleSave = async (form) => {
     if (editSchedule?.id) {
-      updateSchedule(editSchedule.id, form);
+      await updateSchedule(editSchedule.id, form);
       logAction({ action: 'update', entity: 'scheduled_report', entityId: editSchedule.id, entityName: form.name, description: `Updated scheduled report: ${form.name}`, userName: profile?.full_name || 'User' });
       showToast(isRTL ? 'تم تحديث الجدول' : 'Schedule updated');
     } else {
-      const created = createSchedule({ ...form, created_by: profile?.full_name || 'User' });
-      logAction({ action: 'create', entity: 'scheduled_report', entityId: created.id, entityName: form.name, description: `Created scheduled report: ${form.name}`, userName: profile?.full_name || 'User' });
+      const created = await createSchedule({ ...form, created_by: profile?.full_name || 'User' });
+      logAction({ action: 'create', entity: 'scheduled_report', entityId: created?.id, entityName: form.name, description: `Created scheduled report: ${form.name}`, userName: profile?.full_name || 'User' });
       showToast(isRTL ? 'تم إنشاء الجدول' : 'Schedule created');
     }
     setModalOpen(false);
@@ -508,17 +509,17 @@ export default function ScheduledReportsPage() {
     reload();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
     logAction({ action: 'delete', entity: 'scheduled_report', entityId: deleteTarget.id, entityName: deleteTarget.name, description: `Deleted scheduled report: ${deleteTarget.name}`, userName: profile?.full_name || 'User' });
-    deleteSchedule(deleteTarget.id);
+    await deleteSchedule(deleteTarget.id);
     setDeleteTarget(null);
     showToast(isRTL ? 'تم حذف الجدول' : 'Schedule deleted');
     reload();
   };
 
-  const handleToggle = (id) => {
-    const result = toggleSchedule(id);
+  const handleToggle = async (id) => {
+    const result = await toggleSchedule(id);
     if (result) {
       logAction({ action: 'update', entity: 'scheduled_report', entityId: id, entityName: result.name, description: `${result.enabled ? 'Enabled' : 'Disabled'} scheduled report: ${result.name}`, userName: profile?.full_name || 'User' });
     }

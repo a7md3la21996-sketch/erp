@@ -121,12 +121,14 @@ export default function CommissionsPage() {
   const [instFormErrors, setInstFormErrors] = useState({});
 
   // ── Load installments ──
-  const refreshInstallments = useCallback(() => {
+  const refreshInstallments = useCallback(async () => {
     const filters = {};
     if (instFilterStatus) filters.status = instFilterStatus;
     if (instFilterDev) filters.developer_name = instFilterDev;
-    setInstallments(fetchInstallments(filters));
-    setInstStats(getInstallmentStats());
+    const instResult = await fetchInstallments(filters);
+    setInstallments(Array.isArray(instResult) ? instResult : []);
+    const statsResult = await getInstallmentStats();
+    setInstStats(statsResult && typeof statsResult === 'object' ? statsResult : { totalDue: 0, totalPaid: 0, totalOverdue: 0, upcomingThisMonth: 0 });
   }, [instFilterStatus, instFilterDev]);
 
   useEffect(() => { refreshInstallments(); }, [refreshInstallments]);
@@ -148,9 +150,14 @@ export default function CommissionsPage() {
 
   useEffect(() => { setInstPage(1); }, [instFilterStatus, instFilterDev, instSearch]);
 
-  const instDevelopers = useMemo(() => {
-    const all = fetchInstallments({});
-    return [...new Set(all.map(i => i.developer_name).filter(Boolean))];
+  const [instDevelopers, setInstDevelopers] = useState([]);
+  useEffect(() => {
+    const loadDevs = async () => {
+      const all = await fetchInstallments({});
+      const arr = Array.isArray(all) ? all : [];
+      setInstDevelopers([...new Set(arr.map(i => i.developer_name).filter(Boolean))]);
+    };
+    loadDevs();
   }, [installments]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openInstForm = () => { setInstForm({ ...EMPTY_INST_FORM }); setInstFormErrors({}); setShowInstForm(true); };
@@ -170,16 +177,16 @@ export default function CommissionsPage() {
     return Object.keys(errs).length === 0;
   };
 
-  const submitInstForm = () => {
+  const submitInstForm = async () => {
     if (!validateInstForm()) return;
-    createInstallment({ ...instForm, amount: Number(instForm.amount), total_commission: Number(instForm.total_commission) || 0, installment_number: Number(instForm.installment_number) || 1, installments_total: Number(instForm.installments_total) || 1 });
+    await createInstallment({ ...instForm, amount: Number(instForm.amount), total_commission: Number(instForm.total_commission) || 0, installment_number: Number(instForm.installment_number) || 1, installments_total: Number(instForm.installments_total) || 1 });
     setShowInstForm(false);
     refreshInstallments();
   };
 
-  const markInstPaid = (id) => { updateInstallment(id, { status: 'paid', paid_date: new Date().toISOString().slice(0, 10) }); refreshInstallments(); };
-  const cancelInst = (id) => { updateInstallment(id, { status: 'cancelled' }); refreshInstallments(); };
-  const removeInst = (id) => { deleteInstallment(id); refreshInstallments(); };
+  const markInstPaid = async (id) => { await updateInstallment(id, { status: 'paid', paid_date: new Date().toISOString().slice(0, 10) }); refreshInstallments(); };
+  const cancelInst = async (id) => { await updateInstallment(id, { status: 'cancelled' }); refreshInstallments(); };
+  const removeInst = async (id) => { await deleteInstallment(id); refreshInstallments(); };
 
   // ── Developer summary (computed from company commissions) ──
   const devSummary = useMemo(() => {

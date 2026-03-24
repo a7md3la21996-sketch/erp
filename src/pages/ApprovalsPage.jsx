@@ -68,18 +68,19 @@ export default function ApprovalsPage() {
   const [bulkMode, setBulkMode] = useState(false);
   const [bulkSelected, setBulkSelected] = useState(new Set());
 
-  const refresh = useCallback(() => {
-    escalateStaleApprovals();
+  const refresh = useCallback(async () => {
+    await escalateStaleApprovals();
     const filters = {};
     if (statusFilter !== 'all') filters.status = statusFilter;
     if (typeFilter !== 'all') filters.type = typeFilter;
-    setApprovals(getApprovals(filters));
-    setStats(getApprovalStats());
+    const approvalResult = await getApprovals(filters);
+    setApprovals(Array.isArray(approvalResult) ? approvalResult : []);
+    const statsResult = await getApprovalStats();
+    setStats(statsResult && typeof statsResult === 'object' ? statsResult : {});
   }, [statusFilter, typeFilter]);
 
   useEffect(() => {
-    refresh();
-    setLoading(false);
+    refresh().then(() => setLoading(false));
     const handler = () => refresh();
     window.addEventListener('platform_approval_change', handler);
     return () => window.removeEventListener('platform_approval_change', handler);
@@ -104,8 +105,8 @@ export default function ApprovalsPage() {
   const safePage = Math.min(page, totalPages);
   const pageData = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  const handleApprove = (id, comment) => {
-    approveRequest(id, userName, comment || actionComment);
+  const handleApprove = async (id, comment) => {
+    await approveRequest(id, userName, comment || actionComment);
     setActionComment('');
     if (selectedApproval?.id === id) {
       setSelectedApproval(prev => ({ ...prev, status: 'approved', resolved_at: new Date().toISOString(), comments: comment || actionComment }));
@@ -113,8 +114,8 @@ export default function ApprovalsPage() {
     refresh();
   };
 
-  const handleReject = (id, comment) => {
-    rejectRequest(id, userName, comment || actionComment);
+  const handleReject = async (id, comment) => {
+    await rejectRequest(id, userName, comment || actionComment);
     setActionComment('');
     if (selectedApproval?.id === id) {
       setSelectedApproval(prev => ({ ...prev, status: 'rejected', resolved_at: new Date().toISOString(), comments: comment || actionComment }));
@@ -122,15 +123,15 @@ export default function ApprovalsPage() {
     refresh();
   };
 
-  const handleBulkApprove = () => {
-    bulkSelected.forEach(id => approveRequest(id, userName, ''));
+  const handleBulkApprove = async () => {
+    await Promise.all([...bulkSelected].map(id => approveRequest(id, userName, '')));
     setBulkSelected(new Set());
     setBulkMode(false);
     refresh();
   };
 
-  const handleBulkReject = () => {
-    bulkSelected.forEach(id => rejectRequest(id, userName, ''));
+  const handleBulkReject = async () => {
+    await Promise.all([...bulkSelected].map(id => rejectRequest(id, userName, '')));
     setBulkSelected(new Set());
     setBulkMode(false);
     refresh();
