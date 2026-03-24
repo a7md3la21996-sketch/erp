@@ -728,7 +728,7 @@ export default function DashboardPage() {
             <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/crm/contacts')} />
             <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
             <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities')} />
-            <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue / 1000).toFixed(0) + 'K'} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
+            <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue ? (filteredCrm.revenue / 1000).toFixed(0) + 'K' : '0')} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
           </div>
         );
 
@@ -848,7 +848,7 @@ export default function DashboardPage() {
                 <div className="mt-3.5 pt-3 border-t border-edge dark:border-edge-dark">
                   <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span><span className="text-xs font-bold text-brand-500">{targetPct}%</span></div>
                   <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: targetPct + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
-                  <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(filteredCrm.revenue / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{(salesTarget / 1000).toFixed(0)}K EGP</span></div>
+                  <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{((filteredCrm.revenue || 0) / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{((salesTarget || 0) / 1000).toFixed(0)}K EGP</span></div>
                 </div>
               </>
             )}

@@ -6,7 +6,7 @@ import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
 import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save } from 'lucide-react';
 import {
-  fetchContacts, createContact, updateContact,
+  fetchContacts, createContact, updateContact, deleteContact,
   blacklistContact, createActivity,
 } from '../services/contactsService';
 import { logAction } from '../services/auditService';
@@ -229,6 +229,7 @@ export default function ContactsPage() {
         const updated = contacts.filter(c => c.id !== id);
         setContacts(updated);
         saveContactsLocal(updated);
+        deleteContact(id).catch(() => {});
         logAction({ action: 'delete', entity: 'contact', entityId: id, entityName: contact?.full_name, description: `Deleted contact: ${contact?.full_name}`, userName: profile?.full_name_ar });
         deletedContactsRef.current = deletedItems;
         toast.show({ type: 'success', message: isRTL ? 'تم الحذف بنجاح' : 'Deleted successfully', duration: 5000, action: { label: isRTL ? 'تراجع' : 'Undo', onClick: () => restoreContacts(deletedItems) } });
@@ -250,6 +251,7 @@ export default function ContactsPage() {
         const updated = contacts.filter(c => !selectedIds.includes(c.id));
         setContacts(updated);
         saveContactsLocal(updated);
+        selectedIds.forEach(sid => deleteContact(sid).catch(() => {}));
         logAction({ action: 'bulk_delete', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk deleted ${count} contacts: ${names}`, userName: profile?.full_name_ar });
         setSelectedIds([]);
         deletedContactsRef.current = deletedItems;
@@ -425,6 +427,7 @@ export default function ContactsPage() {
 
   const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const [allPagesSelected, setAllPagesSelected] = useState(false);
+  useEffect(() => { setAllPagesSelected(false); }, [filterType, smartFilters, showBlacklisted, search, sortBy]);
   const toggleSelectAll = () => {
     const pageIds = paged.map(c => c.id);
     const allSelected = pageIds.every(id => selectedIdSet.has(id));

@@ -1,5 +1,6 @@
 import { createNotification } from './notificationsService';
 import { logAction } from './auditService';
+import supabase from '../lib/supabase';
 
 const STORAGE_KEY = 'platform_comments';
 const MAX_COMMENTS = 500;
@@ -51,7 +52,7 @@ export function parseMentions(text, teamMembers) {
 }
 
 // ── Add Comment ────────────────────────────────────────────────
-export function addComment({ entity, entityId, entityName, text, authorId, authorName, mentions }) {
+export async function addComment({ entity, entityId, entityName, text, authorId, authorName, mentions }) {
   const resolvedMentions = mentions || parseMentions(text, TEAM_MEMBERS);
   const comment = {
     id: 'cmt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -100,18 +101,51 @@ export function addComment({ entity, entityId, entityName, text, authorId, autho
   // Dispatch custom event for real-time UI update
   window.dispatchEvent(new CustomEvent('platform_comment', { detail: comment }));
 
+  // Sync to Supabase
+  try {
+    await supabase.from('chat_messages').insert([comment]);
+  } catch (err) {
+    console.warn('Supabase insert (chat_messages) failed, localStorage used as fallback:', err);
+  }
+
   return comment;
 }
 
 // ── Get Comments for entity ────────────────────────────────────
-export function getComments(entity, entityId) {
+export async function getComments(entity, entityId) {
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('entity', entity)
+      .eq('entity_id', entityId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (data && data.length > 0) return data;
+    // Fall through to localStorage if Supabase returns empty
+  } catch (err) {
+    console.warn('Supabase fetch (chat_messages by entity) failed, falling back to localStorage:', err);
+  }
+
   initMockComments();
   return load().filter(c => c.entity === entity && c.entity_id === entityId)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
 
 // ── Get Recent Comments ────────────────────────────────────────
-export function getRecentComments(limit = 50) {
+export async function getRecentComments(limit = 50) {
+  try {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    if (data && data.length > 0) return data;
+  } catch (err) {
+    console.warn('Supabase fetch (recent chat_messages) failed, falling back to localStorage:', err);
+  }
+
   initMockComments();
   return load()
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -119,7 +153,20 @@ export function getRecentComments(limit = 50) {
 }
 
 // ── Get Mentions for user ──────────────────────────────────────
-export function getMentions(userId) {
+export async function getMentions(userId) {
+  try {
+    // Supabase: filter mentions containing the userId (jsonb contains)
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .contains('mentions', [{ id: userId }])
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (data && data.length > 0) return data;
+  } catch (err) {
+    console.warn('Supabase fetch (mentions) failed, falling back to localStorage:', err);
+  }
+
   initMockComments();
   return load()
     .filter(c => c.mentions?.some(m => m.id === userId))
@@ -127,14 +174,21 @@ export function getMentions(userId) {
 }
 
 // ── Delete Comment ─────────────────────────────────────────────
-export function deleteComment(commentId) {
+export async function deleteComment(commentId) {
   const list = load().filter(c => c.id !== commentId);
   save(list);
   window.dispatchEvent(new CustomEvent('platform_comment', { detail: { id: commentId, deleted: true } }));
+
+  try {
+    const { error } = await supabase.from('chat_messages').delete().eq('id', commentId);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase delete (chat_messages) failed, localStorage used as fallback:', err);
+  }
 }
 
 // ── Edit Comment ───────────────────────────────────────────────
-export function editComment(commentId, newText) {
+export async function editComment(commentId, newText) {
   const list = load();
   const idx = list.findIndex(c => c.id === commentId);
   if (idx !== -1) {
@@ -143,6 +197,18 @@ export function editComment(commentId, newText) {
     list[idx].mentions = parseMentions(newText, TEAM_MEMBERS);
     save(list);
     window.dispatchEvent(new CustomEvent('platform_comment', { detail: list[idx] }));
+
+    try {
+      const { error } = await supabase.from('chat_messages').update({
+        text: newText,
+        edited_at: list[idx].edited_at,
+        mentions: list[idx].mentions,
+      }).eq('id', commentId);
+      if (error) throw error;
+    } catch (err) {
+      console.warn('Supabase update (chat_messages) failed, localStorage used as fallback:', err);
+    }
+
     return list[idx];
   }
   return null;

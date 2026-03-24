@@ -1,3 +1,4 @@
+import supabase from '../lib/supabase';
 import { createNotification } from './notificationsService';
 import { logAction } from './auditService';
 
@@ -64,7 +65,7 @@ export const TYPE_LABELS = {
 /**
  * Create an approval request
  */
-export function createApproval({ type, requesterId, requesterName, data, approverId, approverName, entity_id, entity_name, amount, priority, notes, chain }) {
+export async function createApproval({ type, requesterId, requesterName, data, approverId, approverName, entity_id, entity_name, amount, priority, notes, chain }) {
   const threshold = getAutoApproveThreshold();
   const numAmount = Number(amount) || 0;
   const shouldAutoApprove = numAmount > 0 && numAmount < threshold && ['deal', 'quote', 'discount'].includes(type);
@@ -89,9 +90,20 @@ export function createApproval({ type, requesterId, requesterName, data, approve
     resolved_at: shouldAutoApprove ? new Date().toISOString() : null,
   };
 
+  // Optimistic localStorage save
   const list = load();
   list.unshift(approval);
   save(list);
+
+  // Try Supabase
+  try {
+    const { error } = await supabase
+      .from('approvals')
+      .insert([approval]);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
 
   const tl = TYPE_LABELS[type] || { ar: type, en: type };
 
@@ -129,13 +141,24 @@ export function createApproval({ type, requesterId, requesterName, data, approve
 /**
  * Update an approval record with arbitrary fields
  */
-export function updateApproval(id, updates) {
+export async function updateApproval(id, updates) {
+  // Optimistic localStorage update
   const list = load();
   const idx = list.findIndex(a => a.id === id);
   if (idx === -1) return null;
-  const old = { ...list[idx] };
   Object.assign(list[idx], updates);
   save(list);
+
+  try {
+    const { error } = await supabase
+      .from('approvals')
+      .update(updates)
+      .eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
+
   window.dispatchEvent(new CustomEvent('platform_approval_change', { detail: list[idx] }));
   return list[idx];
 }
@@ -143,7 +166,29 @@ export function updateApproval(id, updates) {
 /**
  * Get approvals with optional filters
  */
-export function getApprovals(filters = {}) {
+export async function getApprovals(filters = {}) {
+  try {
+    let query = supabase
+      .from('approvals')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (filters.status)      query = query.eq('status', filters.status);
+    if (filters.type)        query = query.eq('type', filters.type);
+    if (filters.priority)    query = query.eq('priority', filters.priority);
+    if (filters.approverId)  query = query.eq('approver_id', filters.approverId);
+    if (filters.requesterId) query = query.eq('requester_id', filters.requesterId);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    if (data) {
+      save(data); // sync to localStorage
+      return data;
+    }
+  } catch {
+    // fallback to localStorage
+  }
+
   let list = load();
   if (filters.status)      list = list.filter(a => a.status === filters.status);
   if (filters.type)        list = list.filter(a => a.type === filters.type);
@@ -156,7 +201,20 @@ export function getApprovals(filters = {}) {
 /**
  * Find the approval linked to a specific entity
  */
-export function getApprovalByEntity(type, entityId) {
+export async function getApprovalByEntity(type, entityId) {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('*')
+      .eq('type', type)
+      .eq('entity_id', entityId)
+      .limit(1)
+      .single();
+    if (error) throw error;
+    return data || null;
+  } catch {
+    // fallback to localStorage
+  }
   const list = load();
   return list.find(a => a.type === type && (a.entity_id === entityId || a.data?.entity_id === entityId));
 }
@@ -164,7 +222,18 @@ export function getApprovalByEntity(type, entityId) {
 /**
  * Get all approvals for a specific entity (there may be multiple)
  */
-export function getApprovalsByEntity(entityId) {
+export async function getApprovalsByEntity(entityId) {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('*')
+      .eq('entity_id', entityId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (data) return data;
+  } catch {
+    // fallback to localStorage
+  }
   const list = load();
   return list.filter(a => a.entity_id === entityId || a.data?.entity_id === entityId);
 }
@@ -172,7 +241,19 @@ export function getApprovalsByEntity(entityId) {
 /**
  * Get pending approvals for a given approver
  */
-export function getPendingByApprover(approverId) {
+export async function getPendingByApprover(approverId) {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('*')
+      .eq('status', 'pending')
+      .eq('approver_id', approverId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (data) return data;
+  } catch {
+    // fallback to localStorage
+  }
   const list = load();
   return list.filter(a => a.status === 'pending' && a.approver_id === approverId);
 }
@@ -180,7 +261,7 @@ export function getPendingByApprover(approverId) {
 /**
  * Approve a request
  */
-export function approveRequest(id, approverName, comments) {
+export async function approveRequest(id, approverName, comments) {
   const list = load();
   const idx = list.findIndex(a => a.id === id);
   if (idx === -1) return null;
@@ -198,6 +279,23 @@ export function approveRequest(id, approverName, comments) {
   save(list);
 
   const approval = list[idx];
+
+  // Try Supabase
+  try {
+    const { error } = await supabase
+      .from('approvals')
+      .update({
+        status: 'approved',
+        approver_name: approval.approver_name,
+        comments: approval.comments,
+        resolved_at: approval.resolved_at,
+        chain: approval.chain,
+      })
+      .eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
 
   createNotification({
     type: 'system',
@@ -229,7 +327,7 @@ export function approveRequest(id, approverName, comments) {
 /**
  * Reject a request
  */
-export function rejectRequest(id, approverName, comments) {
+export async function rejectRequest(id, approverName, comments) {
   const list = load();
   const idx = list.findIndex(a => a.id === id);
   if (idx === -1) return null;
@@ -246,6 +344,23 @@ export function rejectRequest(id, approverName, comments) {
   save(list);
 
   const approval = list[idx];
+
+  // Try Supabase
+  try {
+    const { error } = await supabase
+      .from('approvals')
+      .update({
+        status: 'rejected',
+        approver_name: approval.approver_name,
+        comments: approval.comments,
+        resolved_at: approval.resolved_at,
+        chain: approval.chain,
+      })
+      .eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
 
   createNotification({
     type: 'system',
@@ -277,11 +392,12 @@ export function rejectRequest(id, approverName, comments) {
 /**
  * Escalate stale pending approvals (pending > escalation hours)
  */
-export function escalateStaleApprovals() {
+export async function escalateStaleApprovals() {
   const list = load();
   const hours = getEscalationHours();
   const cutoff = Date.now() - hours * 3600000;
   let changed = false;
+  const escalatedIds = [];
   list.forEach(a => {
     if (a.status === 'pending' && new Date(a.created_at).getTime() < cutoff) {
       a.status = 'escalated';
@@ -289,11 +405,26 @@ export function escalateStaleApprovals() {
         const pendingStep = a.chain.find(s => s.status === 'pending');
         if (pendingStep) { pendingStep.status = 'escalated'; pendingStep.date = new Date().toISOString(); }
       }
+      escalatedIds.push(a.id);
       changed = true;
     }
   });
   if (changed) {
     save(list);
+
+    // Try Supabase for each escalated approval
+    for (const id of escalatedIds) {
+      const item = list.find(a => a.id === id);
+      try {
+        await supabase
+          .from('approvals')
+          .update({ status: 'escalated', chain: item?.chain })
+          .eq('id', id);
+      } catch {
+        // localStorage already saved
+      }
+    }
+
     window.dispatchEvent(new CustomEvent('platform_approval_change'));
   }
 }
@@ -301,7 +432,19 @@ export function escalateStaleApprovals() {
 /**
  * Get count of pending approvals (optionally for a specific approver)
  */
-export function getPendingCount(approverId) {
+export async function getPendingCount(approverId) {
+  try {
+    let query = supabase
+      .from('approvals')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    if (approverId) query = query.eq('approver_id', approverId);
+    const { count, error } = await query;
+    if (error) throw error;
+    if (count !== null) return count;
+  } catch {
+    // fallback to localStorage
+  }
   const list = load();
   if (approverId) return list.filter(a => a.status === 'pending' && a.approver_id === approverId).length;
   return list.filter(a => a.status === 'pending').length;
@@ -310,8 +453,23 @@ export function getPendingCount(approverId) {
 /**
  * Get approval statistics
  */
-export function getApprovalStats() {
-  const list = load();
+export async function getApprovalStats() {
+  try {
+    const { data, error } = await supabase
+      .from('approvals')
+      .select('*');
+    if (error) throw error;
+    if (data) {
+      save(data); // sync to localStorage
+      return computeStats(data);
+    }
+  } catch {
+    // fallback to localStorage
+  }
+  return computeStats(load());
+}
+
+function computeStats(list) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
 

@@ -1,3 +1,5 @@
+import supabase from '../lib/supabase';
+
 const STORAGE_KEY = 'platform_emails';
 const TEMPLATES_KEY = 'platform_email_templates';
 const MAX_EMAILS = 1000;
@@ -33,7 +35,7 @@ function genId() {
 
 // ── CRUD ───────────────────────────────────────────────────────
 
-export function sendEmail(data) {
+export async function sendEmail(data) {
   const emails = load();
   const email = {
     id: genId(),
@@ -54,36 +56,82 @@ export function sendEmail(data) {
   emails.unshift(email);
   save(emails);
   window.dispatchEvent(new Event('platform_emails_changed'));
+
+  // Sync to Supabase
+  try {
+    await supabase.from('emails').insert([email]);
+  } catch (err) {
+    console.warn('Supabase insert (emails) failed, localStorage used as fallback:', err);
+  }
+
   return email;
 }
 
-export function getEmails(folder, filters = {}) {
-  let emails = load();
-  if (folder) emails = emails.filter(e => e.folder === folder);
-  if (filters.search) {
-    const q = filters.search.toLowerCase();
-    emails = emails.filter(e =>
-      (e.subject || '').toLowerCase().includes(q) ||
-      (e.body || '').toLowerCase().includes(q) ||
-      (e.to || '').toLowerCase().includes(q) ||
-      (e.to_name || '').toLowerCase().includes(q) ||
-      (e.from || '').toLowerCase().includes(q)
-    );
+export async function getEmails(folder, filters = {}) {
+  try {
+    let query = supabase.from('emails').select('*');
+    if (folder) query = query.eq('folder', folder);
+    if (filters.starred) query = query.eq('starred', true);
+    if (filters.unread) query = query.eq('read', false);
+    query = query.order('sent_at', { ascending: false });
+    const { data, error } = await query;
+    if (error) throw error;
+    let emails = data || [];
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      emails = emails.filter(e =>
+        (e.subject || '').toLowerCase().includes(q) ||
+        (e.body || '').toLowerCase().includes(q) ||
+        (e.to || '').toLowerCase().includes(q) ||
+        (e.to_name || '').toLowerCase().includes(q) ||
+        (e.from || '').toLowerCase().includes(q)
+      );
+    }
+    return emails;
+  } catch (err) {
+    console.warn('Supabase fetch (emails) failed, falling back to localStorage:', err);
+    // Existing localStorage logic
+    let emails = load();
+    if (folder) emails = emails.filter(e => e.folder === folder);
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      emails = emails.filter(e =>
+        (e.subject || '').toLowerCase().includes(q) ||
+        (e.body || '').toLowerCase().includes(q) ||
+        (e.to || '').toLowerCase().includes(q) ||
+        (e.to_name || '').toLowerCase().includes(q) ||
+        (e.from || '').toLowerCase().includes(q)
+      );
+    }
+    if (filters.starred) emails = emails.filter(e => e.starred);
+    if (filters.unread) emails = emails.filter(e => !e.read);
+    return emails;
   }
-  if (filters.starred) emails = emails.filter(e => e.starred);
-  if (filters.unread) emails = emails.filter(e => !e.read);
-  return emails;
 }
 
-export function getEmailsByContact(contactId) {
-  return load().filter(e => e.contact_id === contactId);
+export async function getEmailsByContact(contactId) {
+  try {
+    const { data, error } = await supabase.from('emails').select('*').eq('contact_id', contactId).order('sent_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Supabase fetch (emails by contact) failed, falling back to localStorage:', err);
+    return load().filter(e => e.contact_id === contactId);
+  }
 }
 
-export function getEmailsByOpportunity(oppId) {
-  return load().filter(e => e.opportunity_id === oppId);
+export async function getEmailsByOpportunity(oppId) {
+  try {
+    const { data, error } = await supabase.from('emails').select('*').eq('opportunity_id', oppId).order('sent_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Supabase fetch (emails by opportunity) failed, falling back to localStorage:', err);
+    return load().filter(e => e.opportunity_id === oppId);
+  }
 }
 
-export function markAsRead(id) {
+export async function markAsRead(id) {
   const emails = load();
   const idx = emails.findIndex(e => e.id === id);
   if (idx >= 0) {
@@ -91,47 +139,93 @@ export function markAsRead(id) {
     save(emails);
     window.dispatchEvent(new Event('platform_emails_changed'));
   }
+
+  try {
+    const { error } = await supabase.from('emails').update({ read: true }).eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase update (markAsRead) failed, localStorage used as fallback:', err);
+  }
 }
 
-export function toggleReadStatus(id) {
+export async function toggleReadStatus(id) {
   const emails = load();
   const idx = emails.findIndex(e => e.id === id);
+  let newRead = false;
   if (idx >= 0) {
     emails[idx].read = !emails[idx].read;
+    newRead = emails[idx].read;
     save(emails);
     window.dispatchEvent(new Event('platform_emails_changed'));
   }
+
+  try {
+    const { error } = await supabase.from('emails').update({ read: newRead }).eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase update (toggleReadStatus) failed, localStorage used as fallback:', err);
+  }
 }
 
-export function starEmail(id) {
+export async function starEmail(id) {
   const emails = load();
   const idx = emails.findIndex(e => e.id === id);
+  let newStarred = false;
   if (idx >= 0) {
     emails[idx].starred = !emails[idx].starred;
+    newStarred = emails[idx].starred;
     save(emails);
     window.dispatchEvent(new Event('platform_emails_changed'));
   }
+
+  try {
+    const { error } = await supabase.from('emails').update({ starred: newStarred }).eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase update (starEmail) failed, localStorage used as fallback:', err);
+  }
 }
 
-export function moveToTrash(id) {
+export async function moveToTrash(id) {
   const emails = load();
   const idx = emails.findIndex(e => e.id === id);
+  let permanentDelete = false;
   if (idx >= 0) {
     if (emails[idx].folder === 'trash') {
       emails.splice(idx, 1); // permanent delete
+      permanentDelete = true;
     } else {
       emails[idx].folder = 'trash';
     }
     save(emails);
     window.dispatchEvent(new Event('platform_emails_changed'));
   }
+
+  try {
+    if (permanentDelete) {
+      const { error } = await supabase.from('emails').delete().eq('id', id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from('emails').update({ folder: 'trash' }).eq('id', id);
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.warn('Supabase update (moveToTrash) failed, localStorage used as fallback:', err);
+  }
 }
 
-export function getDrafts() {
-  return load().filter(e => e.folder === 'draft');
+export async function getDrafts() {
+  try {
+    const { data, error } = await supabase.from('emails').select('*').eq('folder', 'draft').order('sent_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Supabase fetch (drafts) failed, falling back to localStorage:', err);
+    return load().filter(e => e.folder === 'draft');
+  }
 }
 
-export function saveDraft(data) {
+export async function saveDraft(data) {
   const emails = load();
   // If updating existing draft
   if (data.id) {
@@ -140,6 +234,14 @@ export function saveDraft(data) {
       emails[idx] = { ...emails[idx], ...data, folder: 'draft' };
       save(emails);
       window.dispatchEvent(new Event('platform_emails_changed'));
+
+      try {
+        const { error } = await supabase.from('emails').update({ ...data, folder: 'draft' }).eq('id', data.id);
+        if (error) throw error;
+      } catch (err) {
+        console.warn('Supabase update (saveDraft) failed, localStorage used as fallback:', err);
+      }
+
       return emails[idx];
     }
   }
@@ -162,22 +264,52 @@ export function saveDraft(data) {
   emails.unshift(draft);
   save(emails);
   window.dispatchEvent(new Event('platform_emails_changed'));
+
+  try {
+    await supabase.from('emails').insert([draft]);
+  } catch (err) {
+    console.warn('Supabase insert (saveDraft) failed, localStorage used as fallback:', err);
+  }
+
   return draft;
 }
 
-export function getEmailStats() {
-  const emails = load();
-  return {
-    inbox: emails.filter(e => e.folder === 'inbox').length,
-    unread: emails.filter(e => e.folder === 'inbox' && !e.read).length,
-    sent: emails.filter(e => e.folder === 'sent').length,
-    drafts: emails.filter(e => e.folder === 'draft').length,
-  };
+export async function getEmailStats() {
+  try {
+    const { data, error } = await supabase.from('emails').select('folder, read');
+    if (error) throw error;
+    const emails = data || [];
+    return {
+      inbox: emails.filter(e => e.folder === 'inbox').length,
+      unread: emails.filter(e => e.folder === 'inbox' && !e.read).length,
+      sent: emails.filter(e => e.folder === 'sent').length,
+      drafts: emails.filter(e => e.folder === 'draft').length,
+    };
+  } catch (err) {
+    console.warn('Supabase fetch (emailStats) failed, falling back to localStorage:', err);
+    const emails = load();
+    return {
+      inbox: emails.filter(e => e.folder === 'inbox').length,
+      unread: emails.filter(e => e.folder === 'inbox' && !e.read).length,
+      sent: emails.filter(e => e.folder === 'sent').length,
+      drafts: emails.filter(e => e.folder === 'draft').length,
+    };
+  }
 }
 
 // ── Templates ──────────────────────────────────────────────────
 
-export function getTemplates() {
+export async function getTemplates() {
+  try {
+    const { data, error } = await supabase.from('email_templates').select('*');
+    if (error) throw error;
+    if (data && data.length > 0) return data;
+    // If Supabase is empty, fall through to localStorage/seed logic
+  } catch (err) {
+    console.warn('Supabase fetch (email templates) failed, falling back to localStorage:', err);
+  }
+
+  // Existing localStorage logic
   const templates = loadTemplates();
   if (templates.length === 0) {
     // Seed default templates
@@ -219,13 +351,21 @@ export function getTemplates() {
   return templates;
 }
 
-export function saveTemplate(data) {
+export async function saveTemplate(data) {
   const templates = loadTemplates();
   if (data.id) {
     const idx = templates.findIndex(t => t.id === data.id);
     if (idx >= 0) {
       templates[idx] = { ...templates[idx], ...data };
       saveTemplates(templates);
+
+      try {
+        const { error } = await supabase.from('email_templates').update(data).eq('id', data.id);
+        if (error) throw error;
+      } catch (err) {
+        console.warn('Supabase update (email template) failed, localStorage used as fallback:', err);
+      }
+
       return templates[idx];
     }
   }
@@ -241,10 +381,24 @@ export function saveTemplate(data) {
   };
   templates.push(tpl);
   saveTemplates(templates);
+
+  try {
+    await supabase.from('email_templates').insert([tpl]);
+  } catch (err) {
+    console.warn('Supabase insert (email template) failed, localStorage used as fallback:', err);
+  }
+
   return tpl;
 }
 
-export function deleteTemplate(id) {
+export async function deleteTemplate(id) {
   const templates = loadTemplates().filter(t => t.id !== id);
   saveTemplates(templates);
+
+  try {
+    const { error } = await supabase.from('email_templates').delete().eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase delete (email template) failed, localStorage used as fallback:', err);
+  }
 }

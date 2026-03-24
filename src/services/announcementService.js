@@ -1,3 +1,5 @@
+import supabase from '../lib/supabase';
+
 const STORAGE_KEY = 'platform_announcements';
 const READ_KEY = 'platform_announcements_read';
 const MAX_ANNOUNCEMENTS = 200;
@@ -130,8 +132,7 @@ function seedIfEmpty() {
 
 // ── CRUD ───────────────────────────────────────────────────────────────
 
-export function createAnnouncement({ title, titleAr, body, bodyAr, category, priority, pinned, expiresAt, author }) {
-  const list = load();
+export async function createAnnouncement({ title, titleAr, body, bodyAr, category, priority, pinned, expiresAt, author }) {
   const announcement = {
     id: 'ann_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: title || '',
@@ -147,13 +148,65 @@ export function createAnnouncement({ title, titleAr, body, bodyAr, category, pri
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
+
+  // Optimistic localStorage save
+  const list = load();
   list.unshift(announcement);
   save(list);
+
+  try {
+    const { data, error } = await supabase
+      .from('announcements')
+      .insert([announcement])
+      .select('*')
+      .single();
+    if (error) throw error;
+    if (data) {
+      window.dispatchEvent(new CustomEvent('platform_announcement', { detail: data }));
+      return data;
+    }
+  } catch {
+    // localStorage already saved
+  }
+
   window.dispatchEvent(new CustomEvent('platform_announcement', { detail: announcement }));
   return announcement;
 }
 
-export function getAnnouncements(filters = {}) {
+export async function getAnnouncements(filters = {}) {
+  try {
+    let query = supabase
+      .from('announcements')
+      .select('*')
+      .order('pinned', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (filters.category) query = query.eq('category', filters.category);
+    if (filters.priority) query = query.eq('priority', filters.priority);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    if (data) {
+      save(data); // sync to localStorage
+      let list = data;
+      // Filter out expired
+      const now = new Date();
+      list = list.filter(a => !a.expiresAt || new Date(a.expiresAt) > now);
+      if (filters.search) {
+        const q = filters.search.toLowerCase();
+        list = list.filter(a =>
+          (a.title || '').toLowerCase().includes(q) ||
+          (a.titleAr || '').toLowerCase().includes(q) ||
+          (a.body || '').toLowerCase().includes(q) ||
+          (a.bodyAr || '').toLowerCase().includes(q)
+        );
+      }
+      return list;
+    }
+  } catch {
+    // fallback to localStorage
+  }
+
   let list = seedIfEmpty();
 
   // Filter out expired
@@ -183,31 +236,70 @@ export function getAnnouncements(filters = {}) {
   return list;
 }
 
-export function updateAnnouncement(id, updates) {
+export async function updateAnnouncement(id, updates) {
+  // Optimistic localStorage update
   const list = load();
   const idx = list.findIndex(a => a.id === id);
   if (idx === -1) return null;
   list[idx] = { ...list[idx], ...updates, updated_at: new Date().toISOString() };
   save(list);
+
+  try {
+    const { data, error } = await supabase
+      .from('announcements')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    if (data) return data;
+  } catch {
+    // localStorage already saved
+  }
   return list[idx];
 }
 
-export function deleteAnnouncement(id) {
+export async function deleteAnnouncement(id) {
+  // Optimistic localStorage delete
   const list = load().filter(a => a.id !== id);
   save(list);
   // Clean read tracking too
   const readData = loadRead();
   delete readData[id];
   saveRead(readData);
+
+  try {
+    const { error } = await supabase
+      .from('announcements')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
 }
 
-export function togglePin(id) {
+export async function togglePin(id) {
+  // Optimistic localStorage update
   const list = load();
   const idx = list.findIndex(a => a.id === id);
   if (idx === -1) return null;
   list[idx].pinned = !list[idx].pinned;
   list[idx].updated_at = new Date().toISOString();
   save(list);
+
+  try {
+    const { data, error } = await supabase
+      .from('announcements')
+      .update({ pinned: list[idx].pinned, updated_at: list[idx].updated_at })
+      .eq('id', id)
+      .select('*')
+      .single();
+    if (error) throw error;
+    if (data) return data;
+  } catch {
+    // localStorage already saved
+  }
   return list[idx];
 }
 
@@ -223,9 +315,9 @@ export function markAsRead(announcementId, userId) {
   }
 }
 
-export function getUnreadCount(userId) {
+export async function getUnreadCount(userId) {
   if (!userId) return 0;
-  const announcements = getAnnouncements();
+  const announcements = await getAnnouncements();
   const data = loadRead();
   return announcements.filter(a => !(data[a.id] || []).includes(userId)).length;
 }

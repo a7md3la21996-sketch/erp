@@ -1,8 +1,9 @@
 /**
- * Scheduled Report Service — localStorage-based
+ * Scheduled Report Service — localStorage-based with Supabase sync
  * Key: platform_scheduled_reports
  * History Key: platform_report_history
  */
+import supabase from '../lib/supabase';
 import { createNotification } from './notificationsService';
 import {
   fetchReportsData, filterByDateRange,
@@ -147,7 +148,7 @@ function seedIfEmpty() {
 }
 
 // ── CRUD ─────────────────────────────────────────────────────────────
-export function createSchedule(data) {
+export async function createSchedule(data) {
   seedIfEmpty();
   const schedule = {
     id: genId(),
@@ -167,18 +168,46 @@ export function createSchedule(data) {
     created_by: data.created_by || 'System',
   };
   schedule.nextRun = computeNextRun(schedule);
+
+  // Optimistic localStorage save
   const list = load();
   list.unshift(schedule);
   save(list);
+
+  try {
+    const { error } = await supabase
+      .from('scheduled_reports')
+      .insert([schedule]);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
+
   return schedule;
 }
 
-export function getSchedules() {
+export async function getSchedules() {
   seedIfEmpty();
+
+  try {
+    const { data, error } = await supabase
+      .from('scheduled_reports')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    if (data && data.length > 0) {
+      save(data); // sync to localStorage
+      return data;
+    }
+  } catch {
+    // fallback to localStorage
+  }
+
   return load();
 }
 
-export function updateSchedule(id, updates) {
+export async function updateSchedule(id, updates) {
+  // Optimistic localStorage update
   const list = load();
   const idx = list.findIndex(s => s.id === id);
   if (idx === -1) return null;
@@ -188,18 +217,43 @@ export function updateSchedule(id, updates) {
   }
   list[idx] = updated;
   save(list);
+
+  try {
+    const { error } = await supabase
+      .from('scheduled_reports')
+      .update(updates.frequency || updates.dayOfWeek !== undefined || updates.dayOfMonth !== undefined || updates.time
+        ? { ...updates, nextRun: updated.nextRun }
+        : updates)
+      .eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
+
   return updated;
 }
 
-export function deleteSchedule(id) {
+export async function deleteSchedule(id) {
+  // Optimistic localStorage delete
   const list = load().filter(s => s.id !== id);
   save(list);
   // Also clean up history
   const history = loadHistory().filter(h => h.scheduleId !== id);
   saveHistory(history);
+
+  try {
+    const { error } = await supabase
+      .from('scheduled_reports')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
 }
 
-export function toggleSchedule(id) {
+export async function toggleSchedule(id) {
+  // Optimistic localStorage update
   const list = load();
   const idx = list.findIndex(s => s.id === id);
   if (idx === -1) return null;
@@ -208,6 +262,17 @@ export function toggleSchedule(id) {
     list[idx].nextRun = computeNextRun(list[idx]);
   }
   save(list);
+
+  try {
+    const { error } = await supabase
+      .from('scheduled_reports')
+      .update({ enabled: list[idx].enabled, nextRun: list[idx].nextRun })
+      .eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already saved
+  }
+
   return list[idx];
 }
 
@@ -293,6 +358,16 @@ export async function generateReport(scheduleId) {
     list[idx].lastRun = new Date().toISOString();
     list[idx].nextRun = computeNextRun(list[idx]);
     save(list);
+
+    // Sync schedule update to Supabase
+    try {
+      await supabase
+        .from('scheduled_reports')
+        .update({ lastRun: list[idx].lastRun, nextRun: list[idx].nextRun })
+        .eq('id', scheduleId);
+    } catch {
+      // localStorage already saved
+    }
   }
 
   // Create notification

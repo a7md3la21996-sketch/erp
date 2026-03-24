@@ -1,10 +1,14 @@
 /**
  * RBAC Service — Role-Based Access Control
- * localStorage-first with optional Supabase sync
+ * localStorage-first with Supabase sync
  */
+
+import supabase from '../lib/supabase';
 
 const ROLES_KEY = 'platform_rbac_roles';
 const USER_ROLES_KEY = 'platform_rbac_user_roles';
+const SUPABASE_ROLES_TABLE = 'rbac_roles';
+const SUPABASE_USER_ROLES_TABLE = 'rbac_user_roles';
 
 /* ─── Modules ─── */
 const MODULES = [
@@ -176,16 +180,35 @@ function initRoles() {
 }
 
 /* ─── Public API ─── */
-export function getRoles() {
+export async function getRoles() {
+  try {
+    const { data, error } = await supabase
+      .from(SUPABASE_ROLES_TABLE)
+      .select('*')
+      .order('id');
+    if (!error && data && data.length > 0) {
+      // Ensure built-in roles exist
+      const ids = data.map(r => r.id);
+      const merged = [...data];
+      DEFAULT_ROLES.forEach(def => {
+        if (!ids.includes(def.id)) merged.push(def);
+      });
+      safeSet(ROLES_KEY, merged);
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Supabase getRoles failed, falling back to localStorage:', err);
+  }
   return initRoles();
 }
 
-export function getRole(id) {
-  return getRoles().find(r => r.id === id) || null;
+export async function getRole(id) {
+  const roles = await getRoles();
+  return roles.find(r => r.id === id) || null;
 }
 
-export function createRole({ name, nameEn, permissions, description, descriptionEn }) {
-  const roles = getRoles();
+export async function createRole({ name, nameEn, permissions, description, descriptionEn }) {
+  const roles = await getRoles();
   const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const newRole = {
     id,
@@ -199,11 +222,17 @@ export function createRole({ name, nameEn, permissions, description, description
   };
   roles.push(newRole);
   safeSet(ROLES_KEY, roles);
+  try {
+    const { error } = await supabase.from(SUPABASE_ROLES_TABLE).insert(newRole);
+    if (error) console.warn('Supabase createRole failed:', error);
+  } catch (err) {
+    console.warn('Supabase createRole failed:', err);
+  }
   return newRole;
 }
 
-export function updateRole(id, updates) {
-  const roles = getRoles();
+export async function updateRole(id, updates) {
+  const roles = await getRoles();
   const idx = roles.findIndex(r => r.id === id);
   if (idx === -1) return null;
   const role = roles[idx];
@@ -216,11 +245,17 @@ export function updateRole(id, updates) {
   }
   roles[idx] = role;
   safeSet(ROLES_KEY, roles);
+  try {
+    const { error } = await supabase.from(SUPABASE_ROLES_TABLE).update(role).eq('id', id);
+    if (error) console.warn('Supabase updateRole failed:', error);
+  } catch (err) {
+    console.warn('Supabase updateRole failed:', err);
+  }
   return role;
 }
 
-export function deleteRole(id) {
-  const roles = getRoles();
+export async function deleteRole(id) {
+  const roles = await getRoles();
   const role = roles.find(r => r.id === id);
   if (!role || role.builtIn) return false;
   const filtered = roles.filter(r => r.id !== id);
@@ -231,24 +266,49 @@ export function deleteRole(id) {
     if (userRoles[uid] === id) userRoles[uid] = 'viewer';
   });
   safeSet(USER_ROLES_KEY, userRoles);
+  try {
+    await supabase.from(SUPABASE_USER_ROLES_TABLE).update({ role_id: 'viewer' }).eq('role_id', id);
+    const { error } = await supabase.from(SUPABASE_ROLES_TABLE).delete().eq('id', id);
+    if (error) console.warn('Supabase deleteRole failed:', error);
+  } catch (err) {
+    console.warn('Supabase deleteRole failed:', err);
+  }
   return true;
 }
 
-export function getUserRole(userId) {
+export async function getUserRole(userId) {
+  try {
+    const { data, error } = await supabase
+      .from(SUPABASE_USER_ROLES_TABLE)
+      .select('role_id')
+      .eq('user_id', userId)
+      .single();
+    if (!error && data) return data.role_id;
+  } catch (err) {
+    console.warn('Supabase getUserRole failed, falling back to localStorage:', err);
+  }
   const userRoles = safeGet(USER_ROLES_KEY, {});
   return userRoles[userId] || 'admin'; // default to admin for current user
 }
 
-export function setUserRole(userId, roleId) {
+export async function setUserRole(userId, roleId) {
   const userRoles = safeGet(USER_ROLES_KEY, {});
   userRoles[userId] = roleId;
   safeSet(USER_ROLES_KEY, userRoles);
+  try {
+    const { error } = await supabase
+      .from(SUPABASE_USER_ROLES_TABLE)
+      .upsert({ user_id: userId, role_id: roleId }, { onConflict: 'user_id' });
+    if (error) console.warn('Supabase setUserRole failed:', error);
+  } catch (err) {
+    console.warn('Supabase setUserRole failed:', err);
+  }
   return true;
 }
 
-export function hasPermission(userId, module, action) {
-  const roleId = getUserRole(userId);
-  const role = getRole(roleId);
+export async function hasPermission(userId, module, action) {
+  const roleId = await getUserRole(userId);
+  const role = await getRole(roleId);
   if (!role) return false;
   if (role.id === 'admin') return true;
   return role.permissions?.[module]?.[action] === true;

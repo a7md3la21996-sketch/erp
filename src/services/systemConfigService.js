@@ -1,4 +1,7 @@
+import supabase from '../lib/supabase';
+
 const STORAGE_KEY = 'platform_system_config';
+const SUPABASE_TABLE = 'system_config';
 
 export const DEFAULT_CONFIG = {
   contactTypes: [
@@ -179,7 +182,25 @@ function deepMerge(target, source) {
   return result;
 }
 
-export function loadConfig() {
+export async function loadConfig() {
+  try {
+    const { data, error } = await supabase
+      .from(SUPABASE_TABLE)
+      .select('key, value')
+      .order('key');
+    if (!error && data && data.length > 0) {
+      // Rebuild config object from key-value rows
+      const remote = {};
+      data.forEach(row => { remote[row.key] = row.value; });
+      const merged = deepMerge(DEFAULT_CONFIG, remote);
+      // Sync to localStorage
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch { /* ignore */ }
+      return merged;
+    }
+  } catch (err) {
+    console.warn('Supabase loadConfig failed, falling back to localStorage:', err);
+  }
+  // Fallback: existing localStorage logic
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_CONFIG };
@@ -190,34 +211,56 @@ export function loadConfig() {
   }
 }
 
-export function saveConfig(config) {
+export async function saveConfig(config) {
+  // Optimistic: save to localStorage first
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   } catch (e) {
-    console.error('Failed to save system config:', e);
+    console.error('Failed to save system config to localStorage:', e);
+  }
+  // Persist each top-level key as a row in Supabase
+  try {
+    const rows = Object.entries(config).map(([key, value]) => ({
+      key,
+      value,
+      updated_at: new Date().toISOString(),
+    }));
+    const { error } = await supabase
+      .from(SUPABASE_TABLE)
+      .upsert(rows, { onConflict: 'key' });
+    if (error) console.warn('Supabase saveConfig failed:', error);
+  } catch (err) {
+    console.warn('Supabase saveConfig failed:', err);
   }
 }
 
-export function saveSection(key, data) {
-  const current = loadConfig();
+export async function saveSection(key, data) {
+  const current = await loadConfig();
   current[key] = data;
-  saveConfig(current);
+  await saveConfig(current);
 }
 
-export function resetConfig() {
+export async function resetConfig() {
   localStorage.removeItem(STORAGE_KEY);
+  try {
+    const { error } = await supabase.from(SUPABASE_TABLE).delete().neq('key', '');
+    if (error) console.warn('Supabase resetConfig failed:', error);
+  } catch (err) {
+    console.warn('Supabase resetConfig failed:', err);
+  }
   return { ...DEFAULT_CONFIG };
 }
 
-export function exportConfig() {
-  return JSON.stringify(loadConfig(), null, 2);
+export async function exportConfig() {
+  const config = await loadConfig();
+  return JSON.stringify(config, null, 2);
 }
 
-export function importConfig(jsonString) {
+export async function importConfig(jsonString) {
   try {
     const parsed = JSON.parse(jsonString);
     const merged = deepMerge(DEFAULT_CONFIG, parsed);
-    saveConfig(merged);
+    await saveConfig(merged);
     return merged;
   } catch (e) {
     console.error('Failed to import config:', e);

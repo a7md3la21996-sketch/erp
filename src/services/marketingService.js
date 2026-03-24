@@ -1,3 +1,4 @@
+import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 
 const STORAGE_KEY = 'platform_campaigns';
@@ -37,34 +38,65 @@ function saveCampaigns(list) {
 }
 
 export async function fetchCampaigns() {
-  return loadCampaigns();
+  try {
+    const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch {
+    // Fallback to localStorage
+    return loadCampaigns();
+  }
 }
 
 export async function createCampaign(data) {
-  const list = loadCampaigns();
-  const campaign = { ...data, id: String(Date.now()), created_at: data.created_at || new Date().toISOString().slice(0, 10) };
-  list.unshift(campaign);
-  saveCampaigns(list);
-  logCreate('campaign', campaign.id, campaign);
-  return campaign;
+  const campaign = { ...data, id: data.id || String(Date.now()), created_at: data.created_at || new Date().toISOString().slice(0, 10) };
+  // Save to localStorage first (optimistic)
+  try { const list = loadCampaigns(); list.unshift(campaign); saveCampaigns(list); } catch {}
+  // Try Supabase
+  try {
+    const { data: sbData, error } = await supabase.from('campaigns').insert([campaign]).select('*').single();
+    if (error) throw error;
+    logCreate('campaign', sbData.id, sbData);
+    return sbData;
+  } catch {
+    logCreate('campaign', campaign.id, campaign);
+    return campaign;
+  }
 }
 
 export async function updateCampaign(id, updates) {
+  // Update localStorage (optimistic)
   const list = loadCampaigns();
   const idx = list.findIndex(c => c.id === id);
   if (idx === -1) throw new Error('Campaign not found');
   const old = { ...list[idx] };
   list[idx] = { ...list[idx], ...updates };
   saveCampaigns(list);
-  logUpdate('campaign', id, old, list[idx]);
-  return list[idx];
+  // Try Supabase
+  try {
+    const { data, error } = await supabase.from('campaigns').update(updates).eq('id', id).select('*').single();
+    if (error) throw error;
+    logUpdate('campaign', id, old, data);
+    return data;
+  } catch {
+    logUpdate('campaign', id, old, list[idx]);
+    return list[idx];
+  }
 }
 
 export async function deleteCampaign(id) {
+  // Delete from localStorage (optimistic)
   const list = loadCampaigns();
   const campaign = list.find(c => c.id === id);
   const filtered = list.filter(c => c.id !== id);
   saveCampaigns(filtered);
+  // Try Supabase
+  try {
+    const { error } = await supabase.from('campaigns').delete().eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already updated as fallback
+  }
   if (campaign) logDelete('campaign', id, campaign);
   return true;
 }

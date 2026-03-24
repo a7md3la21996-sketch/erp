@@ -330,7 +330,7 @@ export default function OperationsPage() {
             [isRTL ? 'قيمة الصفقة' : 'Deal Value', fmtMoney(deal.deal_value)],
             [isRTL ? 'المقدم' : 'Down Payment', fmtMoney(deal.down_payment)],
             [isRTL ? 'عدد الأقساط' : 'Installments', deal.installments_count],
-            [isRTL ? 'قيمة القسط' : 'Per Installment', fmtMoney(Math.round((deal.deal_value - deal.down_payment) / deal.installments_count))],
+            [isRTL ? 'قيمة القسط' : 'Per Installment', fmtMoney(deal.installments_count ? Math.round((deal.deal_value - deal.down_payment) / deal.installments_count) : 0)],
           ].map(([label, val], i) => (
             <div key={i} className="flex justify-between py-2 border-b border-edge dark:border-edge-dark">
               <span className="text-xs text-content-muted dark:text-content-muted-dark">{label}</span>

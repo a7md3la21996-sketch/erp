@@ -38,7 +38,7 @@ export default function Pagination({ page, totalPages, onPageChange, pageSize, o
             onClick={() => onPageChange(current - 1)}
             className={`px-3 py-1 rounded-md border border-edge dark:border-edge-dark text-xs ${current === 1 ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}
           >
-            {isRTL ? '← السابق' : '← Prev'}
+            {isRTL ? 'السابق →' : '← Prev'}
           </button>
           <span className="text-xs text-content-muted dark:text-content-muted-dark">
             {isRTL ? `${current} من ${totalPages}` : `${current} of ${totalPages}`}
@@ -48,7 +48,7 @@ export default function Pagination({ page, totalPages, onPageChange, pageSize, o
             onClick={() => onPageChange(current + 1)}
             className={`px-3 py-1 rounded-md border border-edge dark:border-edge-dark text-xs ${current === totalPages ? 'bg-transparent text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-50' : 'bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark cursor-pointer'}`}
           >
-            {isRTL ? 'التالي →' : 'Next →'}
+            {isRTL ? '← التالي' : 'Next →'}
           </button>
         </div>
       )}

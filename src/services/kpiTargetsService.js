@@ -3,6 +3,8 @@
  * Key: platform_kpi_targets
  */
 
+import supabase from '../lib/supabase';
+
 const STORAGE_KEY = 'platform_kpi_targets';
 
 // ── Metric Configuration ─────────────────────────────────────────
@@ -57,26 +59,40 @@ function generateId() {
 /**
  * Get all targets for a given month/year (all employees)
  */
-export function getTargets(month, year) {
-  const all = loadAll();
-  return all.filter(t => t.month === month && t.year === year);
+export async function getTargets(month, year) {
+  try {
+    const { data, error } = await supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year);
+    if (error) throw error;
+    return data || [];
+  } catch {
+    const all = loadAll();
+    return all.filter(t => t.month === month && t.year === year);
+  }
 }
 
 /**
  * Get targets for a specific employee in a specific month
  */
-export function getEmployeeTargets(employeeId, month, year) {
-  const all = loadAll();
-  return all.filter(t => t.employee_id === employeeId && t.month === month && t.year === year);
+export async function getEmployeeTargets(employeeId, month, year) {
+  try {
+    const { data, error } = await supabase.from('kpi_targets').select('*').eq('employee_id', employeeId).eq('month', month).eq('year', year);
+    if (error) throw error;
+    return data || [];
+  } catch {
+    const all = loadAll();
+    return all.filter(t => t.employee_id === employeeId && t.month === month && t.year === year);
+  }
 }
 
 /**
  * Set targets for an employee in a given month.
  * targets is an object { calls: 60, ... } — only non-null values will be set.
  */
-export function setTargets(employeeId, month, year, targets) {
+export async function setTargets(employeeId, month, year, targets) {
+  // Update localStorage (optimistic)
   const all = loadAll();
 
+  const upsertItems = [];
   METRICS.forEach(metric => {
     if (targets[metric] === undefined) return;
     const idx = all.findIndex(t =>
@@ -84,8 +100,9 @@ export function setTargets(employeeId, month, year, targets) {
     );
     if (idx >= 0) {
       all[idx].target_value = Number(targets[metric]);
+      upsertItems.push(all[idx]);
     } else {
-      all.push({
+      const item = {
         id: generateId(),
         employee_id: employeeId,
         month,
@@ -93,11 +110,24 @@ export function setTargets(employeeId, month, year, targets) {
         metric,
         target_value: Number(targets[metric]),
         current_value: 0,
-      });
+      };
+      all.push(item);
+      upsertItems.push(item);
     }
   });
 
   saveAll(all);
+
+  // Try Supabase
+  try {
+    if (upsertItems.length > 0) {
+      const { error } = await supabase.from('kpi_targets').upsert(upsertItems, { onConflict: 'id' });
+      if (error) throw error;
+    }
+  } catch {
+    // localStorage already updated
+  }
+
   return getEmployeeTargets(employeeId, month, year);
 }
 
@@ -118,8 +148,8 @@ export function getDefaultTargets(role) {
 /**
  * Ensure targets exist for an employee for a given month — create from defaults if missing
  */
-export function ensureTargets(employeeId, role, month, year) {
-  const existing = getEmployeeTargets(employeeId, month, year);
+export async function ensureTargets(employeeId, role, month, year) {
+  const existing = await getEmployeeTargets(employeeId, month, year);
   if (existing.length > 0) return existing;
 
   const defaults = getDefaultTargets(role);
@@ -130,10 +160,10 @@ export function ensureTargets(employeeId, role, month, year) {
  * Get full KPI summary for all sales employees in a given month.
  * Returns array of { employee, metrics: [{ metric, target, actual, pct }], overallPct }
  */
-export function getTeamKPIs(employees, month, year) {
-  return employees.map(emp => {
-    ensureTargets(emp.id, emp.role, month, year);
-    const targets = getEmployeeTargets(emp.id, month, year);
+export async function getTeamKPIs(employees, month, year) {
+  const results = await Promise.all(employees.map(async emp => {
+    await ensureTargets(emp.id, emp.role, month, year);
+    const targets = await getEmployeeTargets(emp.id, month, year);
     const actuals = computeActuals(emp.id, month, year);
 
     const metrics = METRICS.map(metric => {
@@ -149,21 +179,23 @@ export function getTeamKPIs(employees, month, year) {
       : 0;
 
     return { employee: emp, metrics, overallPct: avgPct };
-  }).sort((a, b) => b.overallPct - a.overallPct);
+  }));
+  return results.sort((a, b) => b.overallPct - a.overallPct);
 }
 
 /**
  * Get top N performers for a given month
  */
-export function getTopPerformers(employees, month, year, count = 3) {
-  return getTeamKPIs(employees, month, year).slice(0, count);
+export async function getTopPerformers(employees, month, year, count = 3) {
+  const kpis = await getTeamKPIs(employees, month, year);
+  return kpis.slice(0, count);
 }
 
 /**
  * Get team overall achievement % for a month
  */
-export function getTeamOverallPct(employees, month, year) {
-  const kpis = getTeamKPIs(employees, month, year);
+export async function getTeamOverallPct(employees, month, year) {
+  const kpis = await getTeamKPIs(employees, month, year);
   if (kpis.length === 0) return 0;
   return Math.round(kpis.reduce((s, k) => s + k.overallPct, 0) / kpis.length);
 }

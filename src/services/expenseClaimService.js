@@ -1,3 +1,4 @@
+import supabase from '../lib/supabase';
 import { createApproval, getApprovalByEntity } from './approvalService';
 import { logAction } from './auditService';
 
@@ -61,7 +62,7 @@ function syncWithApprovals(claims) {
 
 // ── CRUD ────────────────────────────────────────────────────────────────
 
-export function createClaim({ title, category, amount, currency, date, description, receipt_ref, items, employee_id, employee_name }) {
+export async function createClaim({ title, category, amount, currency, date, description, receipt_ref, items, employee_id, employee_name }) {
   const claim = {
     id: 'exp-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
     title: title || '',
@@ -81,16 +82,25 @@ export function createClaim({ title, category, amount, currency, date, descripti
     created_at: new Date().toISOString(),
   };
 
-  const list = load();
-  list.unshift(claim);
-  save(list);
+  // Save to localStorage first (optimistic)
+  try { const list = load(); list.unshift(claim); save(list); } catch {}
+
+  let result = claim;
+  // Try Supabase
+  try {
+    const { data: sbData, error } = await supabase.from('expense_claims').insert([claim]).select('*').single();
+    if (error) throw error;
+    result = sbData;
+  } catch {
+    // localStorage already has it
+  }
 
   // Create approval request
   createApproval({
     type: 'expense',
     requesterId: employee_id,
     requesterName: employee_name,
-    data: { entity_id: claim.id, title, category, amount: claim.amount, currency: claim.currency },
+    data: { entity_id: result.id, title, category, amount: result.amount, currency: result.currency },
     approverId: 'manager_1',
     approverName: 'Manager',
   });
@@ -98,34 +108,52 @@ export function createClaim({ title, category, amount, currency, date, descripti
   logAction({
     action: 'create',
     entity: 'expense',
-    entityId: claim.id,
+    entityId: result.id,
     entityName: title,
-    description: `${employee_name} submitted expense claim: ${title} (${claim.amount} ${claim.currency})`,
-    newValue: claim,
+    description: `${employee_name} submitted expense claim: ${title} (${result.amount} ${result.currency})`,
+    newValue: result,
     userName: employee_name,
   });
 
-  return claim;
+  return result;
 }
 
-export function getClaims(filters = {}) {
-  let list = syncWithApprovals(load());
-
-  if (filters.status)    list = list.filter(c => c.status === filters.status);
-  if (filters.employee)  list = list.filter(c => c.employee_id === filters.employee || c.employee_name === filters.employee);
-  if (filters.category)  list = list.filter(c => c.category === filters.category);
-  if (filters.dateFrom)  list = list.filter(c => c.date >= filters.dateFrom);
-  if (filters.dateTo)    list = list.filter(c => c.date <= filters.dateTo);
-
-  return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+export async function getClaims(filters = {}) {
+  try {
+    let query = supabase.from('expense_claims').select('*').order('created_at', { ascending: false });
+    if (filters.status) query = query.eq('status', filters.status);
+    if (filters.employee) query = query.or(`employee_id.eq.${filters.employee},employee_name.eq.${filters.employee}`);
+    if (filters.category) query = query.eq('category', filters.category);
+    if (filters.dateFrom) query = query.gte('date', filters.dateFrom);
+    if (filters.dateTo) query = query.lte('date', filters.dateTo);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  } catch {
+    // Fallback to localStorage
+    let list = syncWithApprovals(load());
+    if (filters.status)    list = list.filter(c => c.status === filters.status);
+    if (filters.employee)  list = list.filter(c => c.employee_id === filters.employee || c.employee_name === filters.employee);
+    if (filters.category)  list = list.filter(c => c.category === filters.category);
+    if (filters.dateFrom)  list = list.filter(c => c.date >= filters.dateFrom);
+    if (filters.dateTo)    list = list.filter(c => c.date <= filters.dateTo);
+    return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }
 }
 
-export function getClaimById(id) {
-  const list = syncWithApprovals(load());
-  return list.find(c => c.id === id) || null;
+export async function getClaimById(id) {
+  try {
+    const { data, error } = await supabase.from('expense_claims').select('*').eq('id', id).single();
+    if (error) throw error;
+    return data || null;
+  } catch {
+    const list = syncWithApprovals(load());
+    return list.find(c => c.id === id) || null;
+  }
 }
 
-export function updateClaim(id, updates) {
+export async function updateClaim(id, updates) {
+  // Update localStorage (optimistic)
   const list = load();
   const idx = list.findIndex(c => c.id === id);
   if (idx === -1) return null;
@@ -135,21 +163,35 @@ export function updateClaim(id, updates) {
   Object.assign(list[idx], updates, { id: old.id, created_at: old.created_at, status: old.status });
   save(list);
 
+  let result = list[idx];
+  // Try Supabase
+  try {
+    const safeUpdates = { ...updates };
+    delete safeUpdates.id;
+    delete safeUpdates.created_at;
+    delete safeUpdates.status;
+    const { data, error } = await supabase.from('expense_claims').update(safeUpdates).eq('id', id).select('*').single();
+    if (error) throw error;
+    result = data;
+  } catch {
+    // localStorage already updated
+  }
+
   logAction({
     action: 'update',
     entity: 'expense',
     entityId: id,
-    entityName: list[idx].title,
-    description: `Updated expense claim: ${list[idx].title}`,
+    entityName: result.title,
+    description: `Updated expense claim: ${result.title}`,
     oldValue: old,
-    newValue: list[idx],
-    userName: list[idx].employee_name,
+    newValue: result,
+    userName: result.employee_name,
   });
 
-  return list[idx];
+  return result;
 }
 
-export function deleteClaim(id) {
+export async function deleteClaim(id) {
   const list = load();
   const idx = list.findIndex(c => c.id === id);
   if (idx === -1) return false;
@@ -158,6 +200,14 @@ export function deleteClaim(id) {
   const removed = list[idx];
   list.splice(idx, 1);
   save(list);
+
+  // Try Supabase
+  try {
+    const { error } = await supabase.from('expense_claims').delete().eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already updated
+  }
 
   logAction({
     action: 'delete',
@@ -172,7 +222,7 @@ export function deleteClaim(id) {
   return true;
 }
 
-export function approveClaim(id, approverName) {
+export async function approveClaim(id, approverName) {
   const list = load();
   const idx = list.findIndex(c => c.id === id);
   if (idx === -1) return null;
@@ -183,21 +233,31 @@ export function approveClaim(id, approverName) {
   list[idx].approved_at = new Date().toISOString();
   save(list);
 
+  let result = list[idx];
+  // Try Supabase
+  try {
+    const { data, error } = await supabase.from('expense_claims').update({ status: 'approved', approver_name: approverName, approved_at: list[idx].approved_at }).eq('id', id).select('*').single();
+    if (error) throw error;
+    result = data;
+  } catch {
+    // localStorage already updated
+  }
+
   logAction({
     action: 'update',
     entity: 'expense',
     entityId: id,
-    entityName: list[idx].title,
-    description: `${approverName} approved expense claim: ${list[idx].title} (${list[idx].amount} ${list[idx].currency})`,
+    entityName: result.title,
+    description: `${approverName} approved expense claim: ${result.title} (${result.amount} ${result.currency})`,
     oldValue: old,
-    newValue: list[idx],
+    newValue: result,
     userName: approverName,
   });
 
-  return list[idx];
+  return result;
 }
 
-export function rejectClaim(id, approverName, reason) {
+export async function rejectClaim(id, approverName, reason) {
   const list = load();
   const idx = list.findIndex(c => c.id === id);
   if (idx === -1) return null;
@@ -208,21 +268,31 @@ export function rejectClaim(id, approverName, reason) {
   list[idx].rejected_reason = reason || '';
   save(list);
 
+  let result = list[idx];
+  // Try Supabase
+  try {
+    const { data, error } = await supabase.from('expense_claims').update({ status: 'rejected', approver_name: approverName, rejected_reason: reason || '' }).eq('id', id).select('*').single();
+    if (error) throw error;
+    result = data;
+  } catch {
+    // localStorage already updated
+  }
+
   logAction({
     action: 'update',
     entity: 'expense',
     entityId: id,
-    entityName: list[idx].title,
-    description: `${approverName} rejected expense claim: ${list[idx].title}${reason ? ' — ' + reason : ''}`,
+    entityName: result.title,
+    description: `${approverName} rejected expense claim: ${result.title}${reason ? ' — ' + reason : ''}`,
     oldValue: old,
-    newValue: list[idx],
+    newValue: result,
     userName: approverName,
   });
 
-  return list[idx];
+  return result;
 }
 
-export function markClaimPaid(id, userName) {
+export async function markClaimPaid(id, userName) {
   const list = load();
   const idx = list.findIndex(c => c.id === id);
   if (idx === -1 || list[idx].status !== 'approved') return null;
@@ -231,22 +301,39 @@ export function markClaimPaid(id, userName) {
   list[idx].status = 'paid';
   save(list);
 
+  let result = list[idx];
+  // Try Supabase
+  try {
+    const { data, error } = await supabase.from('expense_claims').update({ status: 'paid' }).eq('id', id).select('*').single();
+    if (error) throw error;
+    result = data;
+  } catch {
+    // localStorage already updated
+  }
+
   logAction({
     action: 'update',
     entity: 'expense',
     entityId: id,
-    entityName: list[idx].title,
-    description: `Marked expense claim as paid: ${list[idx].title} (${list[idx].amount} ${list[idx].currency})`,
+    entityName: result.title,
+    description: `Marked expense claim as paid: ${result.title} (${result.amount} ${result.currency})`,
     oldValue: old,
-    newValue: list[idx],
+    newValue: result,
     userName: userName,
   });
 
-  return list[idx];
+  return result;
 }
 
-export function getClaimStats() {
-  const list = syncWithApprovals(load());
+export async function getClaimStats() {
+  let list;
+  try {
+    const { data, error } = await supabase.from('expense_claims').select('*');
+    if (error) throw error;
+    list = data || [];
+  } catch {
+    list = syncWithApprovals(load());
+  }
   const now = new Date();
   const thisMonth = list.filter(c => {
     const d = new Date(c.date);
@@ -269,7 +356,7 @@ export function getClaimStats() {
   };
 }
 
-export function getEmployeeClaims(employeeId) {
+export async function getEmployeeClaims(employeeId) {
   return getClaims({ employee: employeeId });
 }
 

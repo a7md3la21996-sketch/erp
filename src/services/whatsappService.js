@@ -1,3 +1,5 @@
+import supabase from '../lib/supabase';
+
 const MESSAGES_KEY = 'platform_whatsapp_messages';
 const TEMPLATES_KEY = 'platform_whatsapp_templates';
 const MAX_MESSAGES = 1000;
@@ -102,7 +104,7 @@ function getDefaultTemplates() {
 }
 
 // ── Message CRUD ───────────────────────────────────────────────
-export function logMessage({ contact_id, contact_name, contact_phone, direction = 'outgoing', message, template_id = null, type = 'text' }) {
+export async function logMessage({ contact_id, contact_name, contact_phone, direction = 'outgoing', message, template_id = null, type = 'text' }) {
   const list = loadMessages();
   const msg = {
     id: genId(),
@@ -119,36 +121,89 @@ export function logMessage({ contact_id, contact_name, contact_phone, direction 
   list.unshift(msg);
   saveMessages(list);
   window.dispatchEvent(new Event('platform_whatsapp_changed'));
+
+  try {
+    await supabase.from('whatsapp_messages').insert([msg]);
+  } catch (err) {
+    console.warn('Supabase insert (whatsapp_messages) failed, localStorage used as fallback:', err);
+  }
+
   return msg;
 }
 
-export function getMessages(filters = {}) {
-  let list = loadMessages();
-  if (filters.search) {
-    const q = filters.search.toLowerCase();
-    list = list.filter(m =>
-      (m.contact_name || '').toLowerCase().includes(q) ||
-      (m.contact_phone || '').toLowerCase().includes(q) ||
-      (m.message || '').toLowerCase().includes(q)
-    );
+export async function getMessages(filters = {}) {
+  try {
+    let query = supabase.from('whatsapp_messages').select('*');
+    if (filters.direction) query = query.eq('direction', filters.direction);
+    if (filters.contact_id) query = query.eq('contact_id', String(filters.contact_id));
+    query = query.order('sent_at', { ascending: false });
+    const { data, error } = await query;
+    if (error) throw error;
+    let list = data || [];
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      list = list.filter(m =>
+        (m.contact_name || '').toLowerCase().includes(q) ||
+        (m.contact_phone || '').toLowerCase().includes(q) ||
+        (m.message || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  } catch (err) {
+    console.warn('Supabase fetch (whatsapp_messages) failed, falling back to localStorage:', err);
+    let list = loadMessages();
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      list = list.filter(m =>
+        (m.contact_name || '').toLowerCase().includes(q) ||
+        (m.contact_phone || '').toLowerCase().includes(q) ||
+        (m.message || '').toLowerCase().includes(q)
+      );
+    }
+    if (filters.direction) list = list.filter(m => m.direction === filters.direction);
+    if (filters.contact_id) list = list.filter(m => String(m.contact_id) === String(filters.contact_id));
+    return list;
   }
-  if (filters.direction) list = list.filter(m => m.direction === filters.direction);
-  if (filters.contact_id) list = list.filter(m => String(m.contact_id) === String(filters.contact_id));
-  return list;
 }
 
-export function getMessagesByContact(contactId) {
-  return loadMessages().filter(m => String(m.contact_id) === String(contactId));
+export async function getMessagesByContact(contactId) {
+  try {
+    const { data, error } = await supabase.from('whatsapp_messages').select('*').eq('contact_id', String(contactId)).order('sent_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Supabase fetch (whatsapp by contact) failed, falling back to localStorage:', err);
+    return loadMessages().filter(m => String(m.contact_id) === String(contactId));
+  }
 }
 
-export function getConversation(contactId) {
-  return loadMessages()
-    .filter(m => String(m.contact_id) === String(contactId))
-    .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at));
+export async function getConversation(contactId) {
+  try {
+    const { data, error } = await supabase.from('whatsapp_messages').select('*').eq('contact_id', String(contactId)).order('sent_at', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.warn('Supabase fetch (whatsapp conversation) failed, falling back to localStorage:', err);
+    return loadMessages()
+      .filter(m => String(m.contact_id) === String(contactId))
+      .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at));
+  }
 }
 
-export function getRecentConversations() {
-  const list = loadMessages();
+export async function getRecentConversations() {
+  try {
+    const { data, error } = await supabase.from('whatsapp_messages').select('*').order('sent_at', { ascending: false });
+    if (error) throw error;
+    const list = data || [];
+    return _buildConversations(list);
+  } catch (err) {
+    console.warn('Supabase fetch (recent conversations) failed, falling back to localStorage:', err);
+    const list = loadMessages();
+    return _buildConversations(list);
+  }
+}
+
+function _buildConversations(list) {
   const byContact = {};
   list.forEach(m => {
     const key = m.contact_id || m.contact_phone;
@@ -172,12 +227,23 @@ export function getRecentConversations() {
 }
 
 // ── Template CRUD ──────────────────────────────────────────────
-export function getTemplates(onlyActive = false) {
+export async function getTemplates(onlyActive = false) {
+  try {
+    let query = supabase.from('whatsapp_templates').select('*');
+    if (onlyActive) query = query.eq('is_active', true);
+    const { data, error } = await query;
+    if (error) throw error;
+    if (data && data.length > 0) return data;
+    // Fall through to localStorage if Supabase is empty
+  } catch (err) {
+    console.warn('Supabase fetch (whatsapp templates) failed, falling back to localStorage:', err);
+  }
+
   const list = loadTemplates();
   return onlyActive ? list.filter(t => t.is_active) : list;
 }
 
-export function saveTemplate(tpl) {
+export async function saveTemplate(tpl) {
   const list = loadTemplates();
   const idx = list.findIndex(t => t.id === tpl.id);
   if (idx > -1) {
@@ -186,36 +252,94 @@ export function saveTemplate(tpl) {
     list.push({ ...tpl, id: tpl.id || genId(), created_at: new Date().toISOString(), is_active: true });
   }
   saveTemplates(list);
+
+  try {
+    if (idx > -1) {
+      const { error } = await supabase.from('whatsapp_templates').update({ ...tpl, updated_at: new Date().toISOString() }).eq('id', tpl.id);
+      if (error) throw error;
+    } else {
+      const newTpl = list[list.length - 1];
+      await supabase.from('whatsapp_templates').insert([newTpl]);
+    }
+  } catch (err) {
+    console.warn('Supabase upsert (whatsapp template) failed, localStorage used as fallback:', err);
+  }
+
   return list;
 }
 
-export function deleteTemplate(id) {
+export async function deleteTemplate(id) {
   const list = loadTemplates().filter(t => t.id !== id);
   saveTemplates(list);
+
+  try {
+    const { error } = await supabase.from('whatsapp_templates').delete().eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase delete (whatsapp template) failed, localStorage used as fallback:', err);
+  }
+
   return list;
 }
 
-export function toggleTemplate(id) {
+export async function toggleTemplate(id) {
   const list = loadTemplates();
   const tpl = list.find(t => t.id === id);
   if (tpl) tpl.is_active = !tpl.is_active;
   saveTemplates(list);
+
+  try {
+    if (tpl) {
+      const { error } = await supabase.from('whatsapp_templates').update({ is_active: tpl.is_active }).eq('id', id);
+      if (error) throw error;
+    }
+  } catch (err) {
+    console.warn('Supabase update (toggleTemplate) failed, localStorage used as fallback:', err);
+  }
+
   return list;
 }
 
 // ── Stats ──────────────────────────────────────────────────────
-export function getWhatsAppStats() {
-  const list = loadMessages();
-  const today = new Date().toISOString().slice(0, 10);
-  const todayMsgs = list.filter(m => m.sent_at?.slice(0, 10) === today);
-  const contactIds = new Set(list.map(m => m.contact_id).filter(Boolean));
-  const templates = loadTemplates();
-  return {
-    total_messages: list.length,
-    today_count: todayMsgs.length,
-    templates_count: templates.filter(t => t.is_active).length,
-    contacts_reached: contactIds.size,
-  };
+export async function getWhatsAppStats() {
+  try {
+    const { data, error } = await supabase.from('whatsapp_messages').select('sent_at, contact_id');
+    if (error) throw error;
+    const list = data || [];
+    const today = new Date().toISOString().slice(0, 10);
+    const todayMsgs = list.filter(m => m.sent_at?.slice(0, 10) === today);
+    const contactIds = new Set(list.map(m => m.contact_id).filter(Boolean));
+
+    // Templates from Supabase or localStorage
+    let templatesCount = 0;
+    try {
+      const { data: tplData, error: tplErr } = await supabase.from('whatsapp_templates').select('is_active').eq('is_active', true);
+      if (tplErr) throw tplErr;
+      templatesCount = (tplData || []).length;
+    } catch {
+      templatesCount = loadTemplates().filter(t => t.is_active).length;
+    }
+
+    return {
+      total_messages: list.length,
+      today_count: todayMsgs.length,
+      templates_count: templatesCount,
+      contacts_reached: contactIds.size,
+    };
+  } catch (err) {
+    console.warn('Supabase fetch (whatsapp stats) failed, falling back to localStorage:', err);
+    const list = loadMessages();
+    const today = new Date().toISOString().slice(0, 10);
+    const todayMsgs = list.filter(m => m.sent_at?.slice(0, 10) === today);
+    const contactIds = new Set(list.map(m => m.contact_id).filter(Boolean));
+    const templates = loadTemplates();
+    return {
+      total_messages: list.length,
+      today_count: todayMsgs.length,
+      templates_count: templates.filter(t => t.is_active).length,
+      contacts_reached: contactIds.size,
+    };
+  }
 }
 
 // ── WhatsApp Link Generator ────────────────────────────────────

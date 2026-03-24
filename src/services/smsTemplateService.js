@@ -1,5 +1,7 @@
 // ── SMS Template Service ─────────────────────────────────────────────────
-// localStorage-based with Supabase-ready structure
+// localStorage-based with Supabase as primary, localStorage as fallback
+
+import supabase from '../lib/supabase';
 
 const TEMPLATES_KEY = 'platform_sms_templates';
 const SMS_LOG_KEY = 'platform_sms_log';
@@ -58,7 +60,30 @@ function uid() {
 }
 
 // ── CRUD ───────────────────────────────────────────────────────────────
-export function getTemplates(filters = {}) {
+export async function getTemplates(filters = {}) {
+  try {
+    let query = supabase.from('sms_templates').select('*');
+    if (filters.category) query = query.eq('category', filters.category);
+    query = query.order('created_at', { ascending: false });
+    const { data, error } = await query;
+    if (error) throw error;
+    let templates = data || [];
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      templates = templates.filter(t =>
+        (t.name || '').toLowerCase().includes(q) ||
+        (t.nameAr || '').toLowerCase().includes(q) ||
+        (t.body || '').toLowerCase().includes(q) ||
+        (t.bodyAr || '').toLowerCase().includes(q)
+      );
+    }
+    if (templates.length > 0) return templates;
+    // Fall through to localStorage if Supabase is empty
+  } catch (err) {
+    console.warn('Supabase fetch (sms_templates) failed, falling back to localStorage:', err);
+  }
+
+  // Existing localStorage logic
   let templates = getAll();
   if (filters.category) templates = templates.filter(t => t.category === filters.category);
   if (filters.search) {
@@ -73,11 +98,19 @@ export function getTemplates(filters = {}) {
   return templates;
 }
 
-export function getTemplateById(id) {
+export async function getTemplateById(id) {
+  try {
+    const { data, error } = await supabase.from('sms_templates').select('*').eq('id', id).single();
+    if (error) throw error;
+    if (data) return data;
+  } catch (err) {
+    console.warn('Supabase fetch (sms_template by id) failed, falling back to localStorage:', err);
+  }
+
   return getAll().find(t => t.id === id) || null;
 }
 
-export function createTemplate({ name, nameAr, body, bodyAr, category, variables = [] }) {
+export async function createTemplate({ name, nameAr, body, bodyAr, category, variables = [] }) {
   const all = getAll();
   const now = new Date().toISOString();
   const template = {
@@ -86,28 +119,51 @@ export function createTemplate({ name, nameAr, body, bodyAr, category, variables
   };
   all.unshift(template);
   saveAll(all);
+
+  try {
+    await supabase.from('sms_templates').insert([template]);
+  } catch (err) {
+    console.warn('Supabase insert (sms_templates) failed, localStorage used as fallback:', err);
+  }
+
   return template;
 }
 
-export function updateTemplate(id, updates) {
+export async function updateTemplate(id, updates) {
   const all = getAll();
   const idx = all.findIndex(t => t.id === id);
   if (idx === -1) return null;
   all[idx] = { ...all[idx], ...updates, updated_at: new Date().toISOString() };
   saveAll(all);
+
+  try {
+    const { error } = await supabase.from('sms_templates').update({ ...updates, updated_at: all[idx].updated_at }).eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase update (sms_templates) failed, localStorage used as fallback:', err);
+  }
+
   return all[idx];
 }
 
-export function deleteTemplate(id) {
+export async function deleteTemplate(id) {
   const all = getAll();
   const filtered = all.filter(t => t.id !== id);
   saveAll(filtered);
+
+  try {
+    const { error } = await supabase.from('sms_templates').delete().eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase delete (sms_templates) failed, localStorage used as fallback:', err);
+  }
+
   return true;
 }
 
 // ── Render / Send ──────────────────────────────────────────────────────
-export function renderTemplate(templateId, data = {}, lang = 'en') {
-  const template = getTemplateById(templateId);
+export async function renderTemplate(templateId, data = {}, lang = 'en') {
+  const template = await getTemplateById(templateId);
   if (!template) return '';
   let text = lang === 'ar' ? (template.bodyAr || template.body) : template.body;
   Object.entries(data).forEach(([key, value]) => {
@@ -124,7 +180,7 @@ export function renderBody(body, data = {}) {
   return text;
 }
 
-export function sendSMS(phone, message, templateId = null, templateName = '') {
+export async function sendSMS(phone, message, templateId = null, templateName = '') {
   const log = getLog();
   const entry = {
     id: uid(),
@@ -165,10 +221,46 @@ export function sendSMS(phone, message, templateId = null, templateName = '') {
     localStorage.setItem('platform_notifications', JSON.stringify(notifs));
   } catch { /* ignore */ }
 
+  // Sync SMS log entry to Supabase
+  try {
+    await supabase.from('sms_log').insert([entry]);
+    // Also update send_count in Supabase
+    if (templateId) {
+      await supabase.from('sms_templates').update({ send_count: (getAll().find(t => t.id === templateId)?.send_count || 1) }).eq('id', templateId);
+    }
+  } catch (err) {
+    console.warn('Supabase insert (sms_log) failed, localStorage used as fallback:', err);
+  }
+
   return entry;
 }
 
-export function getSMSLog(filters = {}) {
+export async function getSMSLog(filters = {}) {
+  try {
+    let query = supabase.from('sms_log').select('*').order('sent_at', { ascending: false });
+    if (filters.template_id) query = query.eq('template_id', filters.template_id);
+    const { data, error } = await query;
+    if (error) throw error;
+    let log = data || [];
+    if (filters.phone) {
+      const q = filters.phone.toLowerCase();
+      log = log.filter(l => (l.phone || '').toLowerCase().includes(q));
+    }
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      log = log.filter(l =>
+        (l.phone || '').toLowerCase().includes(q) ||
+        (l.message || '').toLowerCase().includes(q) ||
+        (l.template_name || '').toLowerCase().includes(q)
+      );
+    }
+    if (log.length > 0) return log;
+    // Fall through to localStorage if empty
+  } catch (err) {
+    console.warn('Supabase fetch (sms_log) failed, falling back to localStorage:', err);
+  }
+
+  // Existing localStorage logic
   let log = getLog();
   if (filters.phone) {
     const q = filters.phone.toLowerCase();
@@ -188,9 +280,9 @@ export function getSMSLog(filters = {}) {
   return log;
 }
 
-export function bulkSend(templateId, contacts = [], lang = 'en') {
+export async function bulkSend(templateId, contacts = [], lang = 'en') {
   const results = [];
-  contacts.forEach(contact => {
+  for (const contact of contacts) {
     const data = {
       client_name: contact.full_name || contact.name || '',
       client_phone: contact.phone || '',
@@ -200,13 +292,13 @@ export function bulkSend(templateId, contacts = [], lang = 'en') {
       date: new Date().toLocaleDateString('en-GB'),
       amount: contact.amount || '',
     };
-    const message = renderTemplate(templateId, data, lang);
-    const template = getTemplateById(templateId);
+    const message = await renderTemplate(templateId, data, lang);
+    const template = await getTemplateById(templateId);
     if (contact.phone && message) {
-      const entry = sendSMS(contact.phone, message, templateId, template?.name || '');
+      const entry = await sendSMS(contact.phone, message, templateId, template?.name || '');
       results.push({ ...entry, contact_name: contact.full_name || contact.name });
     }
-  });
+  }
   return results;
 }
 

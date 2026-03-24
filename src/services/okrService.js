@@ -3,6 +3,8 @@
  * Key: platform_okrs
  */
 
+import supabase from '../lib/supabase';
+
 const LOCAL_KEY = 'platform_okrs';
 
 // ── Status colors ──────────────────────────────────────────────────────
@@ -55,21 +57,38 @@ function genId() {
 }
 
 // ── CRUD ───────────────────────────────────────────────────────────────
-export function getObjectives(filters = {}) {
-  let data = getAll();
-  if (filters.quarter) data = data.filter(o => o.quarter === filters.quarter);
-  if (filters.year) data = data.filter(o => o.year === Number(filters.year));
-  if (filters.department) data = data.filter(o => o.department === filters.department);
-  if (filters.status) data = data.filter(o => o.status === filters.status);
-  return data;
+export async function getObjectives(filters = {}) {
+  try {
+    let query = supabase.from('okrs').select('*');
+    if (filters.quarter) query = query.eq('quarter', filters.quarter);
+    if (filters.year) query = query.eq('year', Number(filters.year));
+    if (filters.department) query = query.eq('department', filters.department);
+    if (filters.status) query = query.eq('status', filters.status);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  } catch {
+    // Fallback to localStorage
+    let data = getAll();
+    if (filters.quarter) data = data.filter(o => o.quarter === filters.quarter);
+    if (filters.year) data = data.filter(o => o.year === Number(filters.year));
+    if (filters.department) data = data.filter(o => o.department === filters.department);
+    if (filters.status) data = data.filter(o => o.status === filters.status);
+    return data;
+  }
 }
 
-export function getObjectiveById(id) {
-  return getAll().find(o => o.id === id) || null;
+export async function getObjectiveById(id) {
+  try {
+    const { data, error } = await supabase.from('okrs').select('*').eq('id', id).single();
+    if (error) throw error;
+    return data || null;
+  } catch {
+    return getAll().find(o => o.id === id) || null;
+  }
 }
 
-export function createObjective({ title, titleAr, description, quarter, year, owner_id, owner_name, department, keyResults = [] }) {
-  const all = getAll();
+export async function createObjective({ title, titleAr, description, quarter, year, owner_id, owner_name, department, keyResults = [] }) {
   const obj = {
     id: genId(),
     title,
@@ -94,32 +113,55 @@ export function createObjective({ title, titleAr, description, quarter, year, ow
       dueDate: kr.dueDate || '',
     })),
   };
-  all.unshift(obj);
-  saveAll(all);
-  return obj;
+  // Save to localStorage first (optimistic)
+  try { const all = getAll(); all.unshift(obj); saveAll(all); } catch {}
+  // Try Supabase
+  try {
+    const { data, error } = await supabase.from('okrs').insert([obj]).select('*').single();
+    if (error) throw error;
+    return data;
+  } catch {
+    return obj;
+  }
 }
 
-export function updateObjective(id, updates) {
+export async function updateObjective(id, updates) {
+  // Update localStorage (optimistic)
   const all = getAll();
   const idx = all.findIndex(o => o.id === id);
   if (idx === -1) return null;
   const old = { ...all[idx] };
   all[idx] = { ...all[idx], ...updates };
   saveAll(all);
-  return { old, updated: all[idx] };
+  // Try Supabase
+  try {
+    const { data, error } = await supabase.from('okrs').update(updates).eq('id', id).select('*').single();
+    if (error) throw error;
+    return { old, updated: data };
+  } catch {
+    return { old, updated: all[idx] };
+  }
 }
 
-export function deleteObjective(id) {
+export async function deleteObjective(id) {
+  // Delete from localStorage (optimistic)
   const all = getAll();
   const idx = all.findIndex(o => o.id === id);
   if (idx === -1) return null;
   const removed = all.splice(idx, 1)[0];
   saveAll(all);
+  // Try Supabase
+  try {
+    const { error } = await supabase.from('okrs').delete().eq('id', id);
+    if (error) throw error;
+  } catch {
+    // localStorage already updated
+  }
   return removed;
 }
 
 // ── Key Results ────────────────────────────────────────────────────────
-export function addKeyResult(objectiveId, keyResult) {
+export async function addKeyResult(objectiveId, keyResult) {
   const all = getAll();
   const obj = all.find(o => o.id === objectiveId);
   if (!obj) return null;
@@ -136,10 +178,17 @@ export function addKeyResult(objectiveId, keyResult) {
   };
   obj.keyResults.push(kr);
   saveAll(all);
+  // Try Supabase — update the entire okr record with new keyResults
+  try {
+    const { error } = await supabase.from('okrs').update({ keyResults: obj.keyResults }).eq('id', objectiveId);
+    if (error) throw error;
+  } catch {
+    // localStorage already updated
+  }
   return kr;
 }
 
-export function updateKeyResult(objectiveId, krId, updates) {
+export async function updateKeyResult(objectiveId, krId, updates) {
   const all = getAll();
   const obj = all.find(o => o.id === objectiveId);
   if (!obj) return null;
@@ -151,15 +200,29 @@ export function updateKeyResult(objectiveId, krId, updates) {
     kr.progress = Math.min(100, Math.round((kr.current / kr.target) * 100));
   }
   saveAll(all);
+  // Try Supabase — update the entire okr record with updated keyResults
+  try {
+    const { error } = await supabase.from('okrs').update({ keyResults: obj.keyResults }).eq('id', objectiveId);
+    if (error) throw error;
+  } catch {
+    // localStorage already updated
+  }
   return kr;
 }
 
-export function deleteKeyResult(objectiveId, krId) {
+export async function deleteKeyResult(objectiveId, krId) {
   const all = getAll();
   const obj = all.find(o => o.id === objectiveId);
   if (!obj) return null;
   obj.keyResults = obj.keyResults.filter(k => k.id !== krId);
   saveAll(all);
+  // Try Supabase — update the entire okr record with filtered keyResults
+  try {
+    const { error } = await supabase.from('okrs').update({ keyResults: obj.keyResults }).eq('id', objectiveId);
+    if (error) throw error;
+  } catch {
+    // localStorage already updated
+  }
   return true;
 }
 
@@ -174,8 +237,8 @@ export function computeObjectiveProgress(objective) {
   return Math.round(sum / krs.length);
 }
 
-export function getQuarterSummary(quarter, year) {
-  const objectives = getObjectives({ quarter, year: Number(year) });
+export async function getQuarterSummary(quarter, year) {
+  const objectives = await getObjectives({ quarter, year: Number(year) });
   const total = objectives.length;
   if (total === 0) return { total: 0, avgProgress: 0, onTrack: 0, atRisk: 0, behind: 0 };
 

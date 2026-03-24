@@ -120,6 +120,19 @@ export async function updateContact(id, updates) {
   }
 }
 
+export async function deleteContact(id) {
+  try {
+    const { error } = await supabase.from('contacts').delete().eq('id', id);
+    if (error) throw error;
+  } catch {
+    // Fallback: remove from localStorage and enqueue for retry
+    const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+    const filtered = all.filter(c => String(c.id) !== String(id));
+    localStorage.setItem('platform_contacts', JSON.stringify(filtered));
+    enqueue('contact', 'delete', { id });
+  }
+}
+
 export async function blacklistContact(id, reason) {
   return updateContact(id, { is_blacklisted: true, blacklist_reason: reason });
 }
