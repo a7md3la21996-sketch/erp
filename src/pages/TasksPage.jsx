@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import {
@@ -581,6 +582,7 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
 // ── Main Page ────────────────────────────────────────────────────────
 export default function TasksPage() {
   const { i18n } = useTranslation();
+  const navigate = useNavigate();
   const { user, profile } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -898,9 +900,12 @@ export default function TasksPage() {
                         {lang==='ar'?stDef?.ar:stDef?.en}
                       </Badge>
                       {task.contact_name && (
-                        <span className="text-xs text-brand-500 flex items-center gap-[3px]">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(task.contact_id ? `/contacts?highlight=${task.contact_id}` : `/contacts?q=${encodeURIComponent(task.contact_name)}`); }}
+                          className="text-xs text-brand-500 flex items-center gap-[3px] bg-transparent border-none cursor-pointer hover:underline p-0 font-inherit"
+                        >
                           <User size={10} /> {task.contact_name}
-                        </span>
+                        </button>
                       )}
                       {task._offline && (
                         <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>

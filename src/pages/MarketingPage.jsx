@@ -281,6 +281,94 @@ export default function MarketingPage() {
     return [...campaigns].sort((a, b) => (campaignStats[b.id]?.leads || 0) - (campaignStats[a.id]?.leads || 0)).slice(0, 5);
   }, [campaigns, campaignStats]);
 
+  // ── ROI Performance Data ──────────────────────────────────────
+  const roiData = useMemo(() => {
+    const rows = campaigns.map(camp => {
+      const nameEn = camp.name_en?.toLowerCase().trim();
+      const nameAr = camp.name_ar?.toLowerCase().trim();
+      const spent = camp.spent || 0;
+
+      // Contacts linked to this campaign
+      const campaignContactIds = new Set();
+      contacts.forEach(c => {
+        let matched = false;
+        const cn = c.campaign_name?.toLowerCase().trim();
+        if (cn && (cn === nameEn || cn === nameAr)) matched = true;
+        (c.campaign_interactions || []).forEach(i => {
+          const ic = i.campaign?.toLowerCase().trim();
+          if (ic === nameEn || ic === nameAr) matched = true;
+        });
+        if (matched) campaignContactIds.add(c.id);
+      });
+
+      const leads = campaignContactIds.size;
+
+      // Opportunities from these contacts
+      const campOpps = opportunities.filter(o => {
+        const cid = o.contact_id || o.contact?.id;
+        return cid && campaignContactIds.has(cid);
+      });
+
+      // Won deals from those opportunities
+      const wonDeals = deals.filter(d => {
+        const oppMatch = campOpps.some(o => o.id === d.opportunity_id);
+        const contactMatch = campaignContactIds.has(d.contact_id || d.contact?.id);
+        return oppMatch || contactMatch;
+      });
+
+      const commission = wonDeals.reduce((sum, d) => sum + (d.deal_value || 0), 0);
+      const costPerLead = leads > 0 ? Math.round(spent / leads) : 0;
+      const costPerDeal = wonDeals.length > 0 ? Math.round(spent / wonDeals.length) : 0;
+      const roi = spent > 0 ? Math.round(((commission - spent) / spent) * 100) : 0;
+
+      return {
+        id: camp.id,
+        name_en: camp.name_en,
+        name_ar: camp.name_ar,
+        platform: camp.platform,
+        status: camp.status,
+        budget: camp.budget || 0,
+        spent,
+        leads,
+        opps: campOpps.length,
+        wonDeals: wonDeals.length,
+        commission,
+        costPerLead,
+        costPerDeal,
+        roi,
+      };
+    });
+
+    const totalSpentAll = rows.reduce((s, r) => s + r.spent, 0);
+    const totalLeadsAll = rows.reduce((s, r) => s + r.leads, 0);
+    const totalCommission = rows.reduce((s, r) => s + r.commission, 0);
+    const totalDealsWon = rows.reduce((s, r) => s + r.wonDeals, 0);
+    const avgRoi = rows.length > 0 ? Math.round(rows.reduce((s, r) => s + r.roi, 0) / rows.length) : 0;
+    const bestCampaign = rows.length > 0 ? [...rows].sort((a, b) => b.roi - a.roi)[0] : null;
+
+    return { rows, totalSpentAll, totalLeadsAll, totalCommission, totalDealsWon, avgRoi, bestCampaign };
+  }, [campaigns, contacts, opportunities, deals]);
+
+  const [roiSortField, setRoiSortField] = useState('roi');
+  const [roiSortDir, setRoiSortDir] = useState('desc');
+  const sortedRoiRows = useMemo(() => {
+    return [...roiData.rows].sort((a, b) => {
+      const mul = roiSortDir === 'desc' ? -1 : 1;
+      const av = a[roiSortField] ?? 0;
+      const bv = b[roiSortField] ?? 0;
+      if (typeof av === 'string') return mul * av.localeCompare(bv);
+      return mul * (av - bv);
+    });
+  }, [roiData.rows, roiSortField, roiSortDir]);
+
+  const handleRoiSort = useCallback((field) => {
+    setRoiSortField(prev => {
+      if (prev === field) { setRoiSortDir(d => d === 'desc' ? 'asc' : 'desc'); return field; }
+      setRoiSortDir('desc');
+      return field;
+    });
+  }, []);
+
   // Handlers
   const handleSave = async (form) => {
     if (editTarget) {
@@ -856,6 +944,259 @@ export default function MarketingPage() {
           </table>
         </div>
       </Card>
+
+      </>)}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* ═══ ROI REPORT TAB ═══ */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {activeTab === 'roi' && (<>
+
+      {/* ═══ ROI KPI Cards ═══ */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
+        <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي المصروف' : 'Total Spent'} value={fmtMoney(roiData.totalSpentAll) + ' EGP'} color="#EF4444" />
+        <KpiCard icon={Users} label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={roiData.totalLeadsAll} color="#4A7AAB" />
+        <KpiCard icon={CircleDollarSign} label={isRTL ? 'إجمالي العمولات' : 'Total Commission'} value={fmtMoney(roiData.totalCommission) + ' EGP'} color="#10B981" />
+        <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط ROI' : 'Average ROI'} value={roiData.avgRoi + '%'} color={roiData.avgRoi > 0 ? '#10B981' : '#EF4444'} />
+        <KpiCard
+          icon={Award}
+          label={isRTL ? 'أفضل حملة' : 'Best Campaign'}
+          value={roiData.bestCampaign ? (isRTL ? roiData.bestCampaign.name_ar : roiData.bestCampaign.name_en) : '—'}
+          color="#6B21A8"
+          sub={roiData.bestCampaign ? `ROI: ${roiData.bestCampaign.roi}%` : ''}
+        />
+      </div>
+
+      {/* ═══ ROI Summary Cards ═══ */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
+        <Card className="p-4 text-center">
+          <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'إجمالي الصفقات الناجحة' : 'Total Won Deals'}</p>
+          <p className="m-0 text-2xl font-bold text-emerald-500">{roiData.totalDealsWon}</p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'تكلفة الليد الكلية' : 'Overall Cost/Lead'}</p>
+          <p className="m-0 text-2xl font-bold text-brand-500">{roiData.totalLeadsAll > 0 ? fmtMoney(Math.round(roiData.totalSpentAll / roiData.totalLeadsAll)) : '—'} <span className="text-sm">EGP</span></p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'تكلفة الصفقة الكلية' : 'Overall Cost/Deal'}</p>
+          <p className="m-0 text-2xl font-bold text-amber-500">{roiData.totalDealsWon > 0 ? fmtMoney(Math.round(roiData.totalSpentAll / roiData.totalDealsWon)) : '—'} <span className="text-sm">EGP</span></p>
+        </Card>
+      </div>
+
+      {/* ═══ ROI Bar Chart ═══ */}
+      <Card className="p-4 mb-5">
+        <p className="m-0 mb-3 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'ROI حسب الحملة' : 'ROI by Campaign'}</p>
+        <div style={{ width: '100%', height: 320 }}>
+          <ResponsiveContainer>
+            <BarChart data={sortedRoiRows.map(r => ({ name: isRTL ? r.name_ar : r.name_en, ROI: r.roi, [isRTL ? 'المصروف' : 'Spent']: r.spent, [isRTL ? 'العمولة' : 'Commission']: r.commission }))} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#eee'} />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: isDark ? '#aaa' : '#666' }} angle={-35} textAnchor="end" interval={0} height={80} reversed={isRTL} />
+              <YAxis tick={{ fontSize: 10, fill: isDark ? '#aaa' : '#666' }} />
+              <Tooltip
+                contentStyle={{ backgroundColor: isDark ? '#1e1e1e' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, borderRadius: 8, fontSize: 12, direction: isRTL ? 'rtl' : 'ltr' }}
+                formatter={(value, name) => [name === 'ROI' ? value + '%' : fmtMoney(value) + ' EGP', name]}
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="ROI" fill="#4A7AAB" radius={[4, 4, 0, 0]}>
+                {sortedRoiRows.map((entry, idx) => (
+                  <Cell key={idx} fill={entry.roi > 0 ? '#10B981' : '#EF4444'} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {/* ═══ Spent vs Commission Chart ═══ */}
+      <Card className="p-4 mb-5">
+        <p className="m-0 mb-3 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'المصروف مقابل العمولة' : 'Spent vs Commission'}</p>
+        <div style={{ width: '100%', height: 300 }}>
+          <ResponsiveContainer>
+            <BarChart data={sortedRoiRows.filter(r => r.spent > 0 || r.commission > 0).map(r => ({ name: isRTL ? r.name_ar : r.name_en, [isRTL ? 'المصروف' : 'Spent']: r.spent, [isRTL ? 'العمولة' : 'Commission']: r.commission }))} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#eee'} />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: isDark ? '#aaa' : '#666' }} angle={-35} textAnchor="end" interval={0} height={80} reversed={isRTL} />
+              <YAxis tick={{ fontSize: 10, fill: isDark ? '#aaa' : '#666' }} />
+              <Tooltip contentStyle={{ backgroundColor: isDark ? '#1e1e1e' : '#fff', border: `1px solid ${isDark ? '#333' : '#ddd'}`, borderRadius: 8, fontSize: 12, direction: isRTL ? 'rtl' : 'ltr' }} formatter={(value) => fmtMoney(value) + ' EGP'} />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey={isRTL ? 'المصروف' : 'Spent'} fill="#EF4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey={isRTL ? 'العمولة' : 'Commission'} fill="#10B981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {/* ═══ Campaign Performance Table ═══ */}
+      <Card className="p-4 mb-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="m-0 text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'تقرير أداء الحملات التفصيلي' : 'Detailed Campaign Performance Report'}</p>
+          <ExportButton
+            data={sortedRoiRows.map(r => ({
+              name: isRTL ? r.name_ar : r.name_en,
+              platform: getPlatform(r.platform) ? (isRTL ? getPlatform(r.platform).ar : getPlatform(r.platform).en) : r.platform,
+              spent: r.spent,
+              leads: r.leads,
+              opportunities: r.opps,
+              won_deals: r.wonDeals,
+              commission: r.commission,
+              cost_per_lead: r.costPerLead,
+              cost_per_deal: r.costPerDeal,
+              roi: r.roi + '%',
+            }))}
+            filename="campaign_roi_report"
+            title={isRTL ? 'تقرير ROI' : 'ROI Report'}
+            columns={[
+              { header: isRTL ? 'الحملة' : 'Campaign', key: 'name' },
+              { header: isRTL ? 'المنصة' : 'Platform', key: 'platform' },
+              { header: isRTL ? 'المصروف' : 'Spent', key: 'spent' },
+              { header: isRTL ? 'الليدز' : 'Leads', key: 'leads' },
+              { header: isRTL ? 'الفرص' : 'Opps', key: 'opportunities' },
+              { header: isRTL ? 'صفقات ناجحة' : 'Won Deals', key: 'won_deals' },
+              { header: isRTL ? 'العمولة' : 'Commission', key: 'commission' },
+              { header: isRTL ? 'تكلفة/ليد' : 'Cost/Lead', key: 'cost_per_lead' },
+              { header: isRTL ? 'تكلفة/صفقة' : 'Cost/Deal', key: 'cost_per_deal' },
+              { header: 'ROI %', key: 'roi' },
+            ]}
+          />
+        </div>
+        <div className="overflow-x-auto">
+          <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[900px]">
+            <thead>
+              <tr>
+                {[
+                  { key: 'name_ar', label: isRTL ? 'الحملة' : 'Campaign' },
+                  { key: 'platform', label: isRTL ? 'المنصة' : 'Platform' },
+                  { key: 'spent', label: isRTL ? 'المصروف' : 'Spent' },
+                  { key: 'leads', label: isRTL ? 'الليدز' : 'Leads' },
+                  { key: 'opps', label: isRTL ? 'الفرص' : 'Opps' },
+                  { key: 'wonDeals', label: isRTL ? 'صفقات ناجحة' : 'Won Deals' },
+                  { key: 'commission', label: isRTL ? 'العمولة' : 'Commission' },
+                  { key: 'costPerLead', label: isRTL ? 'تكلفة/ليد' : 'Cost/Lead' },
+                  { key: 'costPerDeal', label: isRTL ? 'تكلفة/صفقة' : 'Cost/Deal' },
+                  { key: 'roi', label: 'ROI %' },
+                ].map(col => (
+                  <th
+                    key={col.key}
+                    onClick={() => handleRoiSort(col.key)}
+                    className={`${thCls} cursor-pointer select-none hover:bg-brand-500/[0.06] transition-colors`}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      {col.label}
+                      {roiSortField === col.key && (roiSortDir === 'desc' ? <ChevronDown size={12} /> : <ChevronUp size={12} />)}
+                    </span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedRoiRows.map(row => {
+                const platform = getPlatform(row.platform);
+                const status = getStatus(row.status);
+                return (
+                  <tr key={row.id} className="border-b border-edge/50 dark:border-edge-dark/50 hover:bg-brand-500/[0.03] transition-colors">
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-content dark:text-content-dark">{isRTL ? row.name_ar : row.name_en}</span>
+                        {status && <span className="text-[8px] px-1.5 py-0.5 rounded-full font-medium shrink-0" style={{ color: status.color, backgroundColor: status.color + '18' }}>{isRTL ? status.ar : status.en}</span>}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="flex items-center gap-1.5 text-xs">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: platform?.color || '#666' }} />
+                        {isRTL ? platform?.ar : platform?.en}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-xs font-medium text-red-500">{fmtMoney(row.spent)} <span className="text-[9px]">EGP</span></td>
+                    <td className="px-3 py-3 text-xs font-bold text-brand-500">{row.leads}</td>
+                    <td className="px-3 py-3 text-xs text-content dark:text-content-dark">{row.opps}</td>
+                    <td className="px-3 py-3 text-xs font-bold text-emerald-500">{row.wonDeals}</td>
+                    <td className="px-3 py-3 text-xs font-medium text-emerald-600">{row.commission > 0 ? fmtMoney(row.commission) + ' EGP' : '—'}</td>
+                    <td className="px-3 py-3">
+                      <span className={`text-xs font-medium ${row.costPerLead > 300 ? 'text-red-500' : row.costPerLead > 200 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                        {row.costPerLead > 0 ? fmtMoney(row.costPerLead) : '—'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`text-xs font-medium ${row.costPerDeal > 5000 ? 'text-red-500' : row.costPerDeal > 2000 ? 'text-amber-500' : row.costPerDeal > 0 ? 'text-emerald-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                        {row.costPerDeal > 0 ? fmtMoney(row.costPerDeal) : '—'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${row.roi > 0 ? 'bg-emerald-500/10 text-emerald-500' : row.roi === 0 ? 'bg-gray-500/10 text-content-muted dark:text-content-muted-dark' : 'bg-red-500/10 text-red-500'}`}>
+                        {row.roi > 0 ? <TrendingUp size={12} /> : row.roi < 0 ? <TrendingDown size={12} /> : null}
+                        {row.roi}%
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            {/* Totals Row */}
+            <tfoot>
+              <tr className="border-t-2 border-brand-500/20 bg-brand-500/[0.04]">
+                <td className="px-3 py-3 text-xs font-bold text-content dark:text-content-dark" colSpan={2}>{isRTL ? 'الإجمالي' : 'Total'}</td>
+                <td className="px-3 py-3 text-xs font-bold text-red-500">{fmtMoney(roiData.totalSpentAll)} <span className="text-[9px]">EGP</span></td>
+                <td className="px-3 py-3 text-xs font-bold text-brand-500">{roiData.totalLeadsAll}</td>
+                <td className="px-3 py-3 text-xs font-bold text-content dark:text-content-dark">{roiData.rows.reduce((s, r) => s + r.opps, 0)}</td>
+                <td className="px-3 py-3 text-xs font-bold text-emerald-500">{roiData.totalDealsWon}</td>
+                <td className="px-3 py-3 text-xs font-bold text-emerald-600">{roiData.totalCommission > 0 ? fmtMoney(roiData.totalCommission) + ' EGP' : '—'}</td>
+                <td className="px-3 py-3 text-xs font-bold text-brand-500">{roiData.totalLeadsAll > 0 ? fmtMoney(Math.round(roiData.totalSpentAll / roiData.totalLeadsAll)) : '—'}</td>
+                <td className="px-3 py-3 text-xs font-bold text-amber-500">{roiData.totalDealsWon > 0 ? fmtMoney(Math.round(roiData.totalSpentAll / roiData.totalDealsWon)) : '—'}</td>
+                <td className="px-3 py-3">
+                  <span className={`text-xs font-bold ${roiData.totalSpentAll > 0 ? (((roiData.totalCommission - roiData.totalSpentAll) / roiData.totalSpentAll * 100) > 0 ? 'text-emerald-500' : 'text-red-500') : 'text-content-muted'}`}>
+                    {roiData.totalSpentAll > 0 ? Math.round(((roiData.totalCommission - roiData.totalSpentAll) / roiData.totalSpentAll) * 100) + '%' : '—'}
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </Card>
+
+      {/* ═══ ROI Mobile Cards (for smaller screens) ═══ */}
+      <div className="md:hidden space-y-3 mb-5">
+        {sortedRoiRows.map(row => {
+          const platform = getPlatform(row.platform);
+          return (
+            <Card key={row.id} className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: platform?.color || '#666' }} />
+                  <span className="text-xs font-bold text-content dark:text-content-dark truncate">{isRTL ? row.name_ar : row.name_en}</span>
+                </div>
+                <span className={`text-xs font-bold px-2 py-1 rounded-lg ${row.roi > 0 ? 'bg-emerald-500/10 text-emerald-500' : row.roi < 0 ? 'bg-red-500/10 text-red-500' : 'bg-gray-500/10 text-content-muted dark:text-content-muted-dark'}`}>
+                  ROI: {row.roi}%
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-brand-500/[0.06] rounded-lg px-2 py-2">
+                  <p className="m-0 text-[9px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'المصروف' : 'Spent'}</p>
+                  <p className="m-0 text-[11px] font-bold text-red-500">{fmtMoney(row.spent)}</p>
+                </div>
+                <div className="bg-brand-500/[0.06] rounded-lg px-2 py-2">
+                  <p className="m-0 text-[9px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'الليدز' : 'Leads'}</p>
+                  <p className="m-0 text-[11px] font-bold text-brand-500">{row.leads}</p>
+                </div>
+                <div className="bg-brand-500/[0.06] rounded-lg px-2 py-2">
+                  <p className="m-0 text-[9px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'العمولة' : 'Commission'}</p>
+                  <p className="m-0 text-[11px] font-bold text-emerald-500">{row.commission > 0 ? fmtMoney(row.commission) : '—'}</p>
+                </div>
+                <div className="bg-brand-500/[0.06] rounded-lg px-2 py-2">
+                  <p className="m-0 text-[9px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'صفقات' : 'Deals'}</p>
+                  <p className="m-0 text-[11px] font-bold text-emerald-500">{row.wonDeals}</p>
+                </div>
+                <div className="bg-brand-500/[0.06] rounded-lg px-2 py-2">
+                  <p className="m-0 text-[9px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'تكلفة/ليد' : 'CPL'}</p>
+                  <p className={`m-0 text-[11px] font-bold ${row.costPerLead > 300 ? 'text-red-500' : 'text-emerald-500'}`}>{row.costPerLead > 0 ? row.costPerLead : '—'}</p>
+                </div>
+                <div className="bg-brand-500/[0.06] rounded-lg px-2 py-2">
+                  <p className="m-0 text-[9px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'تكلفة/صفقة' : 'CPD'}</p>
+                  <p className="m-0 text-[11px] font-bold text-amber-500">{row.costPerDeal > 0 ? fmtMoney(row.costPerDeal) : '—'}</p>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
 
       </>)}
 
