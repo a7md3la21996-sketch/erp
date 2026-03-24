@@ -484,7 +484,10 @@ export default function EmailPage() {
 function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
   const contacts = useMemo(() => loadContacts(), []);
   const opportunities = useMemo(() => loadOpportunities(), []);
-  const templates = useMemo(() => getTemplates(), []);
+  const [templates, setTemplates] = useState([]);
+  useEffect(() => {
+    getTemplates().then(result => setTemplates(Array.isArray(result) ? result : []));
+  }, []);
 
   const [to, setTo] = useState(draft?.to || '');
   const [toName, setToName] = useState(draft?.to_name || '');
@@ -533,8 +536,8 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
     setSending(true);
-    sendTimeoutRef.current = setTimeout(() => {
-      sendEmail({
+    sendTimeoutRef.current = setTimeout(async () => {
+      await sendEmail({
         to, to_name: toName, subject, body,
         contact_id: contactId || null,
         opportunity_id: oppId || null,
@@ -549,8 +552,8 @@ function ComposeModal({ isDark, isRTL, lang, draft, onClose, onSent }) {
     return () => { if (sendTimeoutRef.current) clearTimeout(sendTimeoutRef.current); };
   }, []);
 
-  const handleSaveDraft = () => {
-    saveDraft({
+  const handleSaveDraft = async () => {
+    await saveDraft({
       id: draftId, to, to_name: toName, subject, body,
       contact_id: contactId || null,
       opportunity_id: oppId || null,

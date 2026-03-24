@@ -5,6 +5,7 @@
  */
 
 import supabase from '../lib/supabase';
+import { showPushNotification } from './pushService';
 
 const STORAGE_KEY = 'platform_notifications';
 const PREFS_KEY = 'platform_notification_preferences';
@@ -123,6 +124,15 @@ export async function addNotification({ type, title, titleEn, message, messageEn
   list.unshift(notification);
   save(list);
   dispatch();
+
+  // Trigger browser push notification if permitted
+  if (Notification.permission === 'granted') {
+    showPushNotification(notification.title_ar || notification.title_en || notification.title, {
+      body: notification.body_ar || notification.body_en || notification.message,
+      tag: notification.id,
+      data: { url: notification.action_url || '/' },
+    });
+  }
 
   // Sync to Supabase
   try {

@@ -11,6 +11,7 @@ import RecentItemsDropdown from '../ui/RecentItemsDropdown';
 import SyncIndicator from '../ui/SyncIndicator';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { getUnreadCount } from '../../services/notificationService';
+import { isPushSupported, getPushPermission, requestPushPermission } from '../../services/pushService';
 import { getSuggestionsCount } from '../../services/suggestionsService';
 import { getUnseenCount } from '../../pages/ChangelogPage';
 import { useShortcutsHelp } from './KeyboardShortcutsProvider';
@@ -47,6 +48,10 @@ export default function Header({ onMenuClick }) {
   const [changelogUnseen, setChangelogUnseen] = useState(0);
   const { setShowHelp } = useShortcutsHelp();
   const navigate = useNavigate();
+  const [pushPermission, setPushPermission] = useState(() => isPushSupported() ? getPushPermission() : 'denied');
+  const [pushDismissed, setPushDismissed] = useState(() => {
+    try { return localStorage.getItem('platform_push_dismissed') === 'true'; } catch { return false; }
+  });
 
   // Keep unread count in sync
   useEffect(() => {
@@ -225,6 +230,34 @@ export default function Header({ onMenuClick }) {
           </button>
           <NotificationsDropdown show={showNotifications} onClose={() => setShowNotifications(false)} />
         </div>
+        {/* Push Notification Enable Button — only show if not yet asked and not dismissed */}
+        {isPushSupported() && pushPermission === 'default' && !pushDismissed && (
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-brand-500/10 border border-brand-500/20 text-[11px] font-semibold me-1">
+            <Bell size={13} className="text-brand-500 shrink-0" />
+            <span className="hidden sm:inline text-brand-600 dark:text-brand-400">
+              {isRTL ? 'تفعيل الإشعارات' : 'Enable Notifications'}
+            </span>
+            <button
+              onClick={async () => {
+                const granted = await requestPushPermission();
+                setPushPermission(granted ? 'granted' : 'denied');
+              }}
+              className="px-2 py-0.5 rounded-md border-none cursor-pointer bg-brand-500 text-white text-[10px] font-semibold hover:bg-brand-600 transition-colors"
+            >
+              {isRTL ? 'تفعيل' : 'Enable'}
+            </button>
+            <button
+              onClick={() => {
+                setPushDismissed(true);
+                try { localStorage.setItem('platform_push_dismissed', 'true'); } catch {}
+              }}
+              className="px-1 py-0.5 rounded-md border-none cursor-pointer bg-transparent text-content-muted dark:text-content-muted-dark text-[10px] hover:text-content dark:hover:text-content-dark transition-colors"
+              title={isRTL ? 'إغلاق' : 'Dismiss'}
+            >
+              &times;
+            </button>
+          </div>
+        )}
         {/* Role Switcher - visible only to admin */}
         {isRealAdmin && (
           <div ref={roleSwitcherRef} className="relative">
