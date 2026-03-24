@@ -58,10 +58,11 @@ export default function EmailPage() {
   const [showCompose, setShowCompose] = useState(false);
   const [editDraft, setEditDraft] = useState(null);
 
-  const refresh = useCallback(() => {
-    const filtered = getEmails(activeFolder, { search: searchQuery });
-    setEmails(filtered);
-    setStats(getEmailStats());
+  const refresh = useCallback(async () => {
+    const filtered = await getEmails(activeFolder, { search: searchQuery });
+    setEmails(Array.isArray(filtered) ? filtered : []);
+    const emailStats = await getEmailStats();
+    setStats(emailStats && typeof emailStats === 'object' ? emailStats : { inbox: 0, unread: 0, sent: 0, drafts: 0 });
   }, [activeFolder, searchQuery]);
 
   useEffect(() => { refresh(); setLoading(false); }, [refresh]);
@@ -72,25 +73,25 @@ export default function EmailPage() {
     return () => window.removeEventListener('platform_emails_changed', handler);
   }, [refresh]);
 
-  const handleSelectEmail = (email) => {
+  const handleSelectEmail = async (email) => {
     setSelectedEmail(email);
-    if (!email.read) markAsRead(email.id);
+    if (!email.read) await markAsRead(email.id);
   };
 
-  const handleStar = (e, id) => {
+  const handleStar = async (e, id) => {
     e.stopPropagation();
-    starEmail(id);
+    await starEmail(id);
   };
 
-  const handleDelete = (e, id) => {
+  const handleDelete = async (e, id) => {
     e.stopPropagation();
-    moveToTrash(id);
+    await moveToTrash(id);
     if (selectedEmail?.id === id) setSelectedEmail(null);
   };
 
-  const handleToggleRead = (e, id) => {
+  const handleToggleRead = async (e, id) => {
     e.stopPropagation();
-    toggleReadStatus(id);
+    await toggleReadStatus(id);
   };
 
   const handleOpenDraft = (draft) => {

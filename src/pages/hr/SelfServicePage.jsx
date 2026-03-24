@@ -217,6 +217,17 @@ export default function SelfServicePage() {
     if (emp) loadOkrs();
   }, [emp]);
 
+  // ── Pre-loaded async expense claims ──
+  const [ssClaims, setSsClaims] = useState([]);
+  useEffect(() => {
+    const loadClaims = async () => {
+      const empId = emp?.id || 'e1';
+      const result = await getEmployeeClaims(empId);
+      setSsClaims(Array.isArray(result) ? result.slice(0, 5) : []);
+    };
+    if (emp) loadClaims();
+  }, [emp]);
+
   // Enrich MY_REQUESTS with approval data
   const getRequestApproval = (req) => {
     // Try to find a matching approval by category/type
@@ -579,7 +590,7 @@ export default function SelfServicePage() {
       {/* ── My Expenses ── */}
       {(() => {
         const empId = emp?.id || 'e1';
-        const myClaims = getEmployeeClaims(empId).slice(0, 5);
+        const myClaims = ssClaims;
         const myPendingAmt = myClaims.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0);
         const myApprovedAmt = myClaims.filter(c => c.status === 'approved' || c.status === 'paid').reduce((s, c) => s + c.amount, 0);
         const statusMap = {

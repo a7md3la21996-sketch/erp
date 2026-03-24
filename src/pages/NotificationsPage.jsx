@@ -99,10 +99,10 @@ export default function NotificationsPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [prefs, setPrefs] = useState(DEFAULT_PREFERENCES);
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     if (searchQuery.trim()) {
-      const results = searchNotifications(searchQuery);
-      let filtered = results;
+      const results = await searchNotifications(searchQuery);
+      let filtered = Array.isArray(results) ? results : [];
       if (filterType) filtered = filtered.filter(n => n.type === filterType);
       if (filterPriority) filtered = filtered.filter(n => n.priority === filterPriority);
       if (filterRead === 'unread') filtered = filtered.filter(n => !n.read);
@@ -115,12 +115,15 @@ export default function NotificationsPage() {
       if (filterRead === 'unread') opts.unreadOnly = true;
       if (filterType) opts.type = filterType;
       if (filterPriority) opts.priority = filterPriority;
-      const { data, total: t } = getNotifications(opts);
+      const result = await getNotifications(opts);
+      const data = Array.isArray(result?.data) ? result.data : [];
+      const t = result?.total || 0;
       // If read filter, we need to additionally filter
       let finalData = data;
       if (filterRead === 'read') {
-        const all = getNotifications({ ...opts, limit: 999 });
-        const readOnly = all.data.filter(n => n.read);
+        const all = await getNotifications({ ...opts, limit: 999 });
+        const allData = Array.isArray(all?.data) ? all.data : [];
+        const readOnly = allData.filter(n => n.read);
         setTotal(readOnly.length);
         finalData = readOnly.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
       } else {
@@ -167,18 +170,18 @@ export default function NotificationsPage() {
     }
   };
 
-  const handleBulkRead = () => {
-    selectedIds.forEach(id => markAsRead(id));
+  const handleBulkRead = async () => {
+    await Promise.all([...selectedIds].map(id => markAsRead(id)));
     refresh();
   };
 
-  const handleBulkDelete = () => {
-    selectedIds.forEach(id => deleteNotification(id));
+  const handleBulkDelete = async () => {
+    await Promise.all([...selectedIds].map(id => deleteNotification(id)));
     refresh();
   };
 
-  const handleClearAll = () => {
-    clearAll();
+  const handleClearAll = async () => {
+    await clearAll();
     refresh();
   };
 
@@ -454,7 +457,7 @@ export default function NotificationsPage() {
                 />
                 {isRTL ? 'تحديد الكل' : 'Select All'}
               </label>
-              <button onClick={() => { markAllAsRead(); refresh(); }}
+              <button onClick={async () => { await markAllAsRead(); refresh(); }}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 10px', borderRadius: 6, cursor: 'pointer',
@@ -507,8 +510,8 @@ export default function NotificationsPage() {
 
                   {/* Content */}
                   <div style={{ flex: 1, minWidth: 0 }}
-                    onClick={() => {
-                      if (!n.read) markAsRead(n.id);
+                    onClick={async () => {
+                      if (!n.read) await markAsRead(n.id);
                       if (n.action_url) navigate(n.action_url);
                       refresh();
                     }}>
@@ -561,7 +564,7 @@ export default function NotificationsPage() {
                   {/* Actions */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
                     {!n.read && (
-                      <button onClick={(e) => { e.stopPropagation(); markAsRead(n.id); refresh(); }}
+                      <button onClick={async (e) => { e.stopPropagation(); await markAsRead(n.id); refresh(); }}
                         title={isRTL ? 'تعيين كمقروء' : 'Mark as read'}
                         style={{
                           width: 28, height: 28, borderRadius: 6, display: 'flex',
@@ -571,7 +574,7 @@ export default function NotificationsPage() {
                         <Check size={13} />
                       </button>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); deleteNotification(n.id); refresh(); }}
+                    <button onClick={async (e) => { e.stopPropagation(); await deleteNotification(n.id); refresh(); }}
                       title={isRTL ? 'حذف' : 'Delete'}
                       style={{
                         width: 28, height: 28, borderRadius: 6, display: 'flex',
