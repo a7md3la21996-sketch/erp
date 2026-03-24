@@ -71,8 +71,23 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showWAPopup, setShowWAPopup] = useState(false);
   const [waMessage, setWaMessage] = useState('');
   const [waSelectedTpl, setWaSelectedTpl] = useState('');
-  const waTemplates = useMemo(() => getWhatsAppTemplates(true), []);
-  const recentWAMessages = useMemo(() => getMessagesByContact(contact?.id).slice(0, 5), [contact?.id]);
+  const [waTemplates, setWaTemplates] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      try { const t = await getWhatsAppTemplates(true); setWaTemplates(Array.isArray(t) ? t : []); } catch { setWaTemplates([]); }
+    };
+    load();
+  }, []);
+  const [recentWAMessages, setRecentWAMessages] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const msgs = await getMessagesByContact(contact?.id);
+        setRecentWAMessages(Array.isArray(msgs) ? msgs.slice(0, 5) : []);
+      } catch { setRecentWAMessages([]); }
+    };
+    if (contact?.id) load();
+  }, [contact?.id]);
   const navigate = useNavigate();
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
