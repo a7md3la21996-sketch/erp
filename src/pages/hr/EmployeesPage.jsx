@@ -7,7 +7,7 @@ import { useAuditFilter } from '../../hooks/useAuditFilter';
 import {
   Users, Plus, Eye, Edit2, FileText,
   AlertTriangle, Clock, Building2,
-  UserCheck
+  UserCheck, Trash2
 } from 'lucide-react';
 import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 
@@ -55,6 +55,8 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('employee');
   const userName = profile?.full_name_ar || profile?.full_name_en || '';
@@ -108,7 +110,10 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleDeleteEmployee = async (id) => {
+  const confirmDeleteEmployee = async () => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleting(true);
     try {
       const emp = employees.find(e => e.id === id);
       await deleteEmployee(id);
@@ -117,13 +122,16 @@ export default function EmployeesPage() {
         entity: 'employee',
         entityId: id,
         entityName: emp?.full_name_ar || emp?.full_name_en || '',
-        description: `Deleted employee: ${emp?.full_name_ar || emp?.full_name_en || ''}`,
+        description: `Soft-deleted employee: ${emp?.full_name_ar || emp?.full_name_en || ''}`,
         userName,
       });
-      setEmployees(prev => prev.filter(e => e.id !== id));
+      // Soft delete: update status in local state instead of removing
+      setEmployees(prev => prev.map(e => e.id === id ? { ...e, is_active: false, deleted_at: new Date().toISOString(), status: 'inactive' } : e));
     } catch (err) {
       console.error('Delete employee failed:', err);
-      throw err;
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -186,7 +194,8 @@ export default function EmployeesPage() {
   ], [departments, auditFields]);
 
   const filtered = useMemo(() => {
-    let result = employees;
+    // Exclude soft-deleted employees unless explicitly filtering for inactive
+    let result = employees.filter(e => !e.deleted_at);
 
     // Apply smart filters
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
@@ -350,6 +359,7 @@ export default function EmployeesPage() {
                       <IconBtn icon={Eye}     onClick={() => setSelected(emp)} title={lang === 'ar' ? 'عرض' : 'View'} />
                       <IconBtn icon={Edit2}   onClick={() => {}} title={lang === 'ar' ? 'تعديل' : 'Edit'} />
                       <IconBtn icon={FileText} onClick={() => {}} title={lang === 'ar' ? 'Payslip' : 'Payslip'} color="#6B8DB5" />
+                      <IconBtn icon={Trash2}  onClick={() => setDeleteTarget(emp)} title={lang === 'ar' ? 'حذف' : 'Delete'} color="#EF4444" />
                     </div>
                   </Td>
                 </Tr>
@@ -379,6 +389,52 @@ export default function EmployeesPage() {
 
       {/* ── Employee Detail Modal ── */}
       <EmployeeModal emp={selected} onClose={() => setSelected(null)} isRTL={isRTL} lang={lang} />
+
+      {/* ── Delete Confirmation Modal ── */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={lang === 'ar' ? 'تأكيد حذف الموظف' : 'Confirm Employee Deletion'} width="max-w-sm">
+        {deleteTarget && (
+          <>
+            <div className={`flex items-center gap-3 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className="w-10 h-10 rounded-xl bg-red-500/[0.12] flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} className="text-red-500" />
+              </div>
+              <div className="text-start">
+                <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
+                  {lang === 'ar' ? 'هل أنت متأكد من حذف هذا الموظف؟' : 'Are you sure you want to delete this employee?'}
+                </p>
+                <p className="m-0 mt-1 text-xs font-semibold text-red-500">
+                  {(isRTL ? deleteTarget.full_name_ar : deleteTarget.full_name_en) || deleteTarget.full_name_ar}
+                </p>
+              </div>
+            </div>
+            <div className="bg-amber-500/[0.07] border border-amber-500/25 rounded-lg p-3 mb-4">
+              <p className="m-0 text-xs text-amber-700 dark:text-amber-400 font-medium mb-1.5">
+                {lang === 'ar' ? 'سيتم تعطيل حساب الموظف مع الاحتفاظ بالبيانات التالية:' : 'The employee account will be deactivated. The following data will be preserved:'}
+              </p>
+              <ul className={`m-0 text-xs text-amber-700 dark:text-amber-400 ${isRTL ? 'pr-4' : 'pl-4'}`} style={{ listStyleType: 'disc' }}>
+                <li>{lang === 'ar' ? 'سجلات الحضور والانصراف' : 'Attendance records'}</li>
+                <li>{lang === 'ar' ? 'سجلات الإجازات' : 'Leave records'}</li>
+                <li>{lang === 'ar' ? 'سجلات الرواتب' : 'Payroll history'}</li>
+              </ul>
+            </div>
+            <ModalFooter>
+              <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button
+                onClick={confirmDeleteEmployee}
+                disabled={deleting}
+                className="!bg-red-500 hover:!bg-red-600 !text-white !border-red-500"
+              >
+                {deleting
+                  ? (lang === 'ar' ? 'جارٍ الحذف...' : 'Deleting...')
+                  : (lang === 'ar' ? 'تأكيد الحذف' : 'Confirm Delete')
+                }
+              </Button>
+            </ModalFooter>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

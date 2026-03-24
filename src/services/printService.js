@@ -1,5 +1,10 @@
 // ── Print Layout Service ──────────────────────────────────────────
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 const STORAGE_KEY = 'platform_company_info';
 
 const DEFAULTS = {
@@ -92,20 +97,20 @@ const printCSS = `
 
 function buildHeader(companyInfo, lang) {
   const isAr = lang === 'ar';
-  const name = isAr ? companyInfo.name_ar : companyInfo.name_en;
-  const address = isAr ? companyInfo.address_ar : companyInfo.address_en;
+  const name = escapeHtml(isAr ? companyInfo.name_ar : companyInfo.name_en);
+  const address = escapeHtml(isAr ? companyInfo.address_ar : companyInfo.address_en);
   return `
     <div class="header">
       <div>
-        <img src="${companyInfo.logo_url}" alt="Logo" class="header-logo" onerror="this.style.display='none'" />
+        <img src="${escapeHtml(companyInfo.logo_url)}" alt="Logo" class="header-logo" onerror="this.style.display='none'" />
       </div>
       <div class="company-info ${isAr ? '' : 'ltr'}">
         <div class="company-name">${name}</div>
         ${address ? `<div class="company-detail">${address}</div>` : ''}
-        ${companyInfo.phone ? `<div class="company-detail">${companyInfo.phone}</div>` : ''}
-        ${companyInfo.email ? `<div class="company-detail">${companyInfo.email}</div>` : ''}
-        ${companyInfo.tax_id ? `<div class="company-detail">${isAr ? 'الرقم الضريبي' : 'Tax ID'}: ${companyInfo.tax_id}</div>` : ''}
-        ${companyInfo.website ? `<div class="company-detail">${companyInfo.website}</div>` : ''}
+        ${companyInfo.phone ? `<div class="company-detail">${escapeHtml(companyInfo.phone)}</div>` : ''}
+        ${companyInfo.email ? `<div class="company-detail">${escapeHtml(companyInfo.email)}</div>` : ''}
+        ${companyInfo.tax_id ? `<div class="company-detail">${isAr ? 'الرقم الضريبي' : 'Tax ID'}: ${escapeHtml(companyInfo.tax_id)}</div>` : ''}
+        ${companyInfo.website ? `<div class="company-detail">${escapeHtml(companyInfo.website)}</div>` : ''}
       </div>
     </div>
   `;
@@ -352,20 +357,20 @@ export function generateContactCardHTML(contact, companyInfo, lang) {
   const isAr = lang === 'ar';
   const ci = companyInfo || getCompanyInfo();
   const c = contact || {};
-  const name = isAr ? (c.name_ar || c.full_name || c.name || '') : (c.name_en || c.full_name || c.name || '');
-  const initStr = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const name = escapeHtml(isAr ? (c.name_ar || c.full_name || c.name || '') : (c.name_en || c.full_name || c.name || ''));
+  const initStr = escapeHtml(name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase());
 
   const rows = [
-    { label: isAr ? 'الهاتف' : 'Phone', value: c.phone },
-    { label: isAr ? 'البريد' : 'Email', value: c.email },
-    { label: isAr ? 'الشركة' : 'Company', value: isAr ? (c.company_ar || c.company) : (c.company_en || c.company) },
-    { label: isAr ? 'المسمى الوظيفي' : 'Job Title', value: c.job_title },
-    { label: isAr ? 'المصدر' : 'Source', value: c.source },
-    { label: isAr ? 'النوع' : 'Type', value: c.contact_type },
-    { label: isAr ? 'الحالة' : 'Status', value: c.contact_status },
-    { label: isAr ? 'الميزانية' : 'Budget', value: c.budget },
+    { label: isAr ? 'الهاتف' : 'Phone', value: escapeHtml(c.phone) },
+    { label: isAr ? 'البريد' : 'Email', value: escapeHtml(c.email) },
+    { label: isAr ? 'الشركة' : 'Company', value: escapeHtml(isAr ? (c.company_ar || c.company) : (c.company_en || c.company)) },
+    { label: isAr ? 'المسمى الوظيفي' : 'Job Title', value: escapeHtml(c.job_title) },
+    { label: isAr ? 'المصدر' : 'Source', value: escapeHtml(c.source) },
+    { label: isAr ? 'النوع' : 'Type', value: escapeHtml(c.contact_type) },
+    { label: isAr ? 'الحالة' : 'Status', value: escapeHtml(c.contact_status) },
+    { label: isAr ? 'الميزانية' : 'Budget', value: escapeHtml(c.budget) },
     { label: isAr ? 'تاريخ الإنشاء' : 'Created', value: c.created_at ? new Date(c.created_at).toLocaleDateString(isAr ? 'ar-EG' : 'en-US') : null },
-    { label: isAr ? 'ملاحظات' : 'Notes', value: c.notes },
+    { label: isAr ? 'ملاحظات' : 'Notes', value: escapeHtml(c.notes) },
   ].filter(r => r.value);
 
   const content = `
@@ -373,7 +378,7 @@ export function generateContactCardHTML(contact, companyInfo, lang) {
     <div class="contact-card">
       <div class="contact-avatar">${initStr}</div>
       <div class="contact-name">${name}</div>
-      ${c.job_title ? `<div class="contact-role">${c.job_title}</div>` : ''}
+      ${c.job_title ? `<div class="contact-role">${escapeHtml(c.job_title)}</div>` : ''}
       <div class="contact-details ${isAr ? 'rtl-details' : ''}">
         ${rows.map(r => `<div class="detail-row"><span class="detail-label">${r.label}</span><span class="detail-value">${r.value}</span></div>`).join('')}
       </div>

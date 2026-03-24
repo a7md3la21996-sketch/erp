@@ -79,14 +79,25 @@ export async function updateEmployee(id, updates) {
 }
 
 export async function deleteEmployee(id) {
+  const now = new Date().toISOString();
   try {
     const { data: old } = await supabase.from('employees').select('*').eq('id', id).single();
-    const { error } = await supabase.from('employees').delete().eq('id', id);
+    // Soft delete: mark as inactive with a deleted_at timestamp instead of removing the record.
+    // This preserves historical data (attendance, leave records, payroll) linked to this employee.
+    const { error } = await supabase
+      .from('employees')
+      .update({ is_active: false, deleted_at: now, status: 'inactive', updated_at: now })
+      .eq('id', id);
     if (error) throw error;
     await logDelete('employee', id, old);
   } catch {
     const idx = MOCK_EMPLOYEES.findIndex(e => e.id === id);
-    if (idx > -1) MOCK_EMPLOYEES.splice(idx, 1);
+    if (idx > -1) {
+      // Soft delete in mock data: keep the record but mark as deleted/inactive
+      MOCK_EMPLOYEES[idx].is_active = false;
+      MOCK_EMPLOYEES[idx].deleted_at = now;
+      MOCK_EMPLOYEES[idx].status = 'inactive';
+    }
   }
 }
 

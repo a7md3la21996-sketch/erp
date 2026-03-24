@@ -81,14 +81,87 @@ export async function approveLeaveRequest(id) {
       .single();
     if (error) throw error;
     await logUpdate('leave_request', id, old, data, 'Approved leave request');
+
+    // Deduct leave balance
+    if (data) {
+      await deductLeaveBalance(data.employee_id, data.type, data.days || calculateDays(data.start_date, data.end_date));
+    }
+
     return data;
   } catch {
     const idx = MOCK_LEAVE_REQUESTS.findIndex(r => r.id === id);
     if (idx > -1) {
       MOCK_LEAVE_REQUESTS[idx].status = 'approved';
       MOCK_LEAVE_REQUESTS[idx].approved_by = 'e1';
+
+      // Deduct from mock leave balance
+      const req = MOCK_LEAVE_REQUESTS[idx];
+      const days = req.days || calculateDays(req.start_date, req.end_date);
+      const balance = MOCK_LEAVE_BALANCES[req.employee_id];
+      if (balance && req.type !== 'unpaid') {
+        const usedKey = `used_${req.type}`;
+        if (usedKey in balance) {
+          balance[usedKey] += days;
+        }
+      }
     }
     return MOCK_LEAVE_REQUESTS[idx];
+  }
+}
+
+/**
+ * Calculate the number of working days between two dates (inclusive).
+ */
+export function calculateDays(startDate, endDate) {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end - start);
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 because both days are inclusive
+}
+
+/**
+ * Deduct days from an employee's leave balance after approval.
+ */
+async function deductLeaveBalance(employeeId, leaveType, days) {
+  if (!employeeId || !days || leaveType === 'unpaid') return;
+
+  const usedKey = `used_${leaveType}`;
+
+  try {
+    // Get current balance
+    const { data: balance, error: fetchError } = await supabase
+      .from('leave_balances')
+      .select('*')
+      .eq('employee_id', employeeId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Update the used count
+    const update = { [usedKey]: (balance[usedKey] || 0) + days };
+    const { error: updateError } = await supabase
+      .from('leave_balances')
+      .update(update)
+      .eq('employee_id', employeeId);
+
+    if (updateError) throw updateError;
+  } catch {
+    // Fallback: update mock balance
+    const balance = MOCK_LEAVE_BALANCES[employeeId];
+    if (balance && usedKey in balance) {
+      balance[usedKey] += days;
+    }
+
+    // Also persist to localStorage so balance survives page refreshes
+    try {
+      const stored = JSON.parse(localStorage.getItem('leave_balances') || '{}');
+      if (!stored[employeeId]) {
+        stored[employeeId] = { ...(MOCK_LEAVE_BALANCES[employeeId] || {}) };
+      }
+      stored[employeeId][usedKey] = (stored[employeeId][usedKey] || 0) + days;
+      localStorage.setItem('leave_balances', JSON.stringify(stored));
+    } catch { /* localStorage unavailable */ }
   }
 }
 
@@ -125,6 +198,23 @@ export async function getLeaveBalance(employeeId) {
     if (error) throw error;
     return data;
   } catch {
+    // Check localStorage for persisted balance updates (mock mode)
+    try {
+      const stored = JSON.parse(localStorage.getItem('leave_balances') || '{}');
+      if (stored[employeeId]) {
+        return stored[employeeId];
+      }
+    } catch { /* localStorage unavailable */ }
     return MOCK_LEAVE_BALANCES[employeeId] || { annual: 0, sick: 0, emergency: 0, used_annual: 0, used_sick: 0, used_emergency: 0 };
   }
+}
+
+/**
+ * Get the remaining balance for a specific leave type.
+ */
+export function getRemainingBalance(balance, leaveType) {
+  if (!balance || leaveType === 'unpaid') return null;
+  const total = balance[leaveType] || 0;
+  const used = balance[`used_${leaveType}`] || 0;
+  return total - used;
 }

@@ -1,15 +1,308 @@
 -- ============================================================
 -- Platform Real Estate ERP — Supabase Schema
--- Tables: departments, employees, attendance, leave_requests,
---         chart_of_accounts, journal_entries, journal_entry_lines,
---         invoices, expenses, deals, installments, handovers, tickets
+-- Tables: users, contacts, opportunities, activities, tasks,
+--         projects, campaigns, resale_units, reminders,
+--         view_logs, audit_logs, sessions,
+--         departments, employees, attendance, leave_requests,
+--         leave_balances, chart_of_accounts, journal_entries,
+--         journal_entry_lines, invoices, expenses, deals,
+--         installments, handovers, tickets
 -- ============================================================
 
 -- ── Extensions ──────────────────────────────────────────────────
 create extension if not exists "uuid-ossp";
 
--- ── Departments ─────────────────────────────────────────────────
+-- ============================================================
+-- CRM / Sales Tables
+-- ============================================================
 
+-- ── Users (application-level profiles linked to auth.users) ───
+create table if not exists users (
+  id              uuid primary key references auth.users(id) on delete cascade,
+  full_name_ar    text,
+  full_name_en    text,
+  email           text unique,
+  phone           text,
+  role            text default 'sales_agent',
+  team_id         uuid,
+  avatar_url      text,
+  is_active       boolean default true,
+  created_at      timestamptz default now(),
+  updated_at      timestamptz default now()
+);
+
+create index idx_users_role    on users(role);
+create index idx_users_team    on users(team_id);
+
+-- ── Contacts ──────────────────────────────────────────────────
+create table if not exists contacts (
+  id                     uuid primary key default gen_random_uuid(),
+  full_name              text,
+  phone                  text,
+  phone2                 text,
+  email                  text,
+  contact_type           text default 'lead',
+  source                 text,
+  department             text default 'sales',
+  platform               text,
+  campaign_name          text,
+  campaign_interactions  jsonb default '[]',
+  lead_score             integer default 0,
+  temperature            text default 'warm',
+  budget_min             numeric,
+  budget_max             numeric,
+  preferred_location     text,
+  interested_in_type     text,
+  is_blacklisted         boolean default false,
+  blacklist_reason       text,
+  contact_status         text default 'new',
+  assigned_to            uuid references users(id),
+  assigned_to_name       text,
+  assigned_by_name       text,
+  created_by             uuid,
+  created_by_name        text,
+  notes                  text,
+  company                text,
+  job_title              text,
+  gender                 text,
+  nationality            text,
+  birth_date             date,
+  prefix                 text,
+  extra_phones           jsonb,
+  created_at             timestamptz default now(),
+  updated_at             timestamptz default now(),
+  last_activity_at       timestamptz default now()
+);
+
+create index idx_contacts_phone       on contacts(phone);
+create index idx_contacts_type        on contacts(contact_type);
+create index idx_contacts_assigned    on contacts(assigned_to);
+create index idx_contacts_department  on contacts(department);
+create index idx_contacts_temperature on contacts(temperature);
+create index idx_contacts_source      on contacts(source);
+create index idx_contacts_last_act    on contacts(last_activity_at);
+
+-- ── Projects ──────────────────────────────────────────────────
+create table if not exists projects (
+  id              uuid primary key default gen_random_uuid(),
+  name_ar         text,
+  name_en         text,
+  developer_ar    text,
+  developer_en    text,
+  location        text,
+  property_type   text,
+  status          text default 'active',
+  created_at      timestamptz default now(),
+  updated_at      timestamptz default now()
+);
+
+create index idx_projects_status on projects(status);
+
+-- ── Opportunities ─────────────────────────────────────────────
+create table if not exists opportunities (
+  id                   uuid primary key default gen_random_uuid(),
+  contact_id           uuid references contacts(id) on delete set null,
+  contact_name         text,
+  project_id           uuid references projects(id) on delete set null,
+  project_name         text,
+  assigned_to          uuid references users(id) on delete set null,
+  assigned_to_name     text,
+  agent_name           text,
+  stage                text default 'new',
+  priority             text default 'medium',
+  temperature          text default 'warm',
+  budget               numeric default 0,
+  source               text,
+  dept                 text default 'sales',
+  property_type        text,
+  expected_close_date  date,
+  lost_reason          text,
+  won_date             timestamptz,
+  notes                text,
+  created_at           timestamptz default now(),
+  updated_at           timestamptz default now()
+);
+
+create index idx_opp_contact    on opportunities(contact_id);
+create index idx_opp_assigned   on opportunities(assigned_to);
+create index idx_opp_stage      on opportunities(stage);
+create index idx_opp_project    on opportunities(project_id);
+
+-- ── Activities ────────────────────────────────────────────────
+create table if not exists activities (
+  id              uuid primary key default gen_random_uuid(),
+  type            text not null,
+  notes           text,
+  entity_type     text,
+  contact_id      uuid references contacts(id) on delete set null,
+  opportunity_id  uuid references opportunities(id) on delete set null,
+  user_id         uuid references users(id) on delete set null,
+  user_name_ar    text,
+  user_name_en    text,
+  dept            text,
+  status          text default 'completed',
+  scheduled_date  timestamptz,
+  created_at      timestamptz default now()
+);
+
+create index idx_activities_contact  on activities(contact_id);
+create index idx_activities_user     on activities(user_id);
+create index idx_activities_type     on activities(type);
+create index idx_activities_dept     on activities(dept);
+
+-- ── Tasks ─────────────────────────────────────────────────────
+create table if not exists tasks (
+  id                    uuid primary key default gen_random_uuid(),
+  title                 text not null,
+  type                  text default 'general',
+  priority              text default 'medium',
+  status                text default 'pending',
+  contact_id            uuid references contacts(id) on delete set null,
+  contact_name          text,
+  assigned_to           uuid references users(id) on delete set null,
+  assigned_to_name_ar   text,
+  assigned_to_name_en   text,
+  due_date              timestamptz,
+  notes                 text,
+  dept                  text,
+  created_at            timestamptz default now(),
+  updated_at            timestamptz default now()
+);
+
+create index idx_tasks_contact   on tasks(contact_id);
+create index idx_tasks_assigned  on tasks(assigned_to);
+create index idx_tasks_status    on tasks(status);
+create index idx_tasks_due       on tasks(due_date);
+create index idx_tasks_dept      on tasks(dept);
+
+-- ── Resale Units ──────────────────────────────────────────────
+create table if not exists resale_units (
+  id              uuid primary key default gen_random_uuid(),
+  contact_id      uuid references contacts(id) on delete set null,
+  project_name    text,
+  developer_name  text,
+  unit_code       text,
+  unit_type       text,
+  area            numeric,
+  floor           text,
+  price           numeric,
+  status          text default 'available',
+  notes           text,
+  created_at      timestamptz default now(),
+  updated_at      timestamptz default now()
+);
+
+create index idx_resale_contact on resale_units(contact_id);
+create index idx_resale_status  on resale_units(status);
+
+-- ── Campaigns ─────────────────────────────────────────────────
+create table if not exists campaigns (
+  id                    uuid primary key default gen_random_uuid(),
+  name_en               text,
+  name_ar               text,
+  platform              text,
+  status                text default 'active',
+  budget                numeric default 0,
+  spent                 numeric default 0,
+  start_date            date,
+  end_date              date,
+  type                  text,
+  target_audience       text,
+  target_location       text,
+  target_property_type  text,
+  notes                 text,
+  created_by            uuid references users(id) on delete set null,
+  created_by_name       text,
+  created_at            timestamptz default now(),
+  updated_at            timestamptz default now()
+);
+
+create index idx_campaigns_status   on campaigns(status);
+create index idx_campaigns_platform on campaigns(platform);
+
+-- ── Reminders ─────────────────────────────────────────────────
+create table if not exists reminders (
+  id              uuid primary key default gen_random_uuid(),
+  entity_type     text,
+  entity_id       uuid,
+  entity_name     text,
+  due_at          timestamptz not null,
+  type            text default 'call',
+  notes           text,
+  assigned_to     uuid references users(id) on delete set null,
+  is_done         boolean default false,
+  done_at         timestamptz,
+  created_at      timestamptz default now()
+);
+
+create index idx_reminders_assigned on reminders(assigned_to);
+create index idx_reminders_due      on reminders(due_at);
+create index idx_reminders_done     on reminders(is_done);
+
+-- ── View Logs ─────────────────────────────────────────────────
+create table if not exists view_logs (
+  id              uuid primary key default gen_random_uuid(),
+  entity_type     text,
+  entity_id       text,
+  entity_name     text,
+  user_id         uuid references users(id) on delete set null,
+  user_name       text,
+  user_role       text,
+  viewed_at       timestamptz default now(),
+  device_type     text,
+  browser         text,
+  os              text
+);
+
+create index idx_viewlogs_entity on view_logs(entity_type, entity_id);
+create index idx_viewlogs_user   on view_logs(user_id);
+create index idx_viewlogs_date   on view_logs(viewed_at);
+
+-- ── Audit Logs ────────────────────────────────────────────────
+create table if not exists audit_logs (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid references auth.users(id) on delete set null,
+  action          text not null,
+  entity          text,
+  entity_id       text,
+  old_data        jsonb,
+  new_data        jsonb,
+  changes         jsonb,
+  description     text,
+  user_agent      text,
+  created_at      timestamptz default now()
+);
+
+create index idx_audit_user   on audit_logs(user_id);
+create index idx_audit_entity on audit_logs(entity);
+create index idx_audit_action on audit_logs(action);
+create index idx_audit_date   on audit_logs(created_at);
+
+-- ── Sessions ──────────────────────────────────────────────────
+create table if not exists sessions (
+  id              text primary key,
+  user_id         uuid references users(id) on delete set null,
+  user_name       text,
+  user_role       text,
+  ip_address      text,
+  device_type     text,
+  browser         text,
+  os              text,
+  user_agent      text,
+  login_at        timestamptz default now(),
+  last_active_at  timestamptz default now(),
+  logout_at       timestamptz,
+  is_active       boolean default true
+);
+
+create index idx_sessions_user   on sessions(user_id);
+create index idx_sessions_active on sessions(is_active);
+
+-- ============================================================
+-- HR / Operations / Finance Tables
+-- ============================================================
+
+-- ── Departments ─────────────────────────────────────────────────
 create table if not exists departments (
   id        uuid primary key default uuid_generate_v4(),
   name_ar   text not null,
@@ -18,7 +311,6 @@ create table if not exists departments (
 );
 
 -- ── Employees ───────────────────────────────────────────────────
-
 create table if not exists employees (
   id              uuid primary key default uuid_generate_v4(),
   employee_number text unique,
@@ -55,7 +347,6 @@ create index idx_employees_status     on employees(status);
 create index idx_employees_manager    on employees(direct_manager_id);
 
 -- ── Attendance ──────────────────────────────────────────────────
-
 create table if not exists attendance (
   id          uuid primary key default uuid_generate_v4(),
   employee_id uuid not null references employees(id) on delete cascade,
@@ -79,7 +370,6 @@ create index idx_attendance_date     on attendance(date);
 create index idx_attendance_month    on attendance(date_trunc('month', date));
 
 -- ── Leave Requests ──────────────────────────────────────────────
-
 create table if not exists leave_requests (
   id               uuid primary key default uuid_generate_v4(),
   employee_id      uuid not null references employees(id) on delete cascade,
@@ -100,7 +390,6 @@ create index idx_leave_employee on leave_requests(employee_id);
 create index idx_leave_status   on leave_requests(status);
 
 -- ── Leave Balances (materialized / cached) ──────────────────────
-
 create table if not exists leave_balances (
   id              uuid primary key default uuid_generate_v4(),
   employee_id     uuid not null unique references employees(id) on delete cascade,
@@ -115,7 +404,6 @@ create table if not exists leave_balances (
 );
 
 -- ── Chart of Accounts ───────────────────────────────────────────
-
 create table if not exists chart_of_accounts (
   id        uuid primary key default uuid_generate_v4(),
   code      text unique not null,
@@ -132,7 +420,6 @@ create index idx_coa_type   on chart_of_accounts(type);
 create index idx_coa_parent on chart_of_accounts(parent_id);
 
 -- ── Journal Entries ─────────────────────────────────────────────
-
 create table if not exists journal_entries (
   id             uuid primary key default uuid_generate_v4(),
   entry_number   text unique not null,
@@ -153,7 +440,6 @@ create index idx_je_date   on journal_entries(date);
 create index idx_je_status on journal_entries(status);
 
 -- ── Journal Entry Lines ─────────────────────────────────────────
-
 create table if not exists journal_entry_lines (
   id               uuid primary key default uuid_generate_v4(),
   journal_entry_id uuid not null references journal_entries(id) on delete cascade,
@@ -167,7 +453,6 @@ create index idx_jel_entry   on journal_entry_lines(journal_entry_id);
 create index idx_jel_account on journal_entry_lines(account_id);
 
 -- ── Invoices ────────────────────────────────────────────────────
-
 create table if not exists invoices (
   id              uuid primary key default uuid_generate_v4(),
   number          text unique not null,
@@ -193,7 +478,6 @@ create index idx_invoices_date   on invoices(date);
 create index idx_invoices_type   on invoices(type);
 
 -- ── Expenses ────────────────────────────────────────────────────
-
 create table if not exists expenses (
   id              uuid primary key default uuid_generate_v4(),
   number          text unique,
@@ -219,7 +503,6 @@ create index idx_expenses_category on expenses(category);
 create index idx_expenses_date     on expenses(date);
 
 -- ── Deals (Operations) ─────────────────────────────────────────
-
 create table if not exists deals (
   id                uuid primary key default uuid_generate_v4(),
   deal_number       text unique not null,
@@ -252,7 +535,6 @@ create index idx_deals_status on deals(status);
 create index idx_deals_number on deals(deal_number);
 
 -- ── Installments ────────────────────────────────────────────────
-
 create table if not exists installments (
   id           uuid primary key default uuid_generate_v4(),
   deal_id      uuid not null references deals(id) on delete cascade,
@@ -279,7 +561,6 @@ create index idx_installments_status on installments(status);
 create index idx_installments_due    on installments(due_date);
 
 -- ── Handovers ───────────────────────────────────────────────────
-
 create table if not exists handovers (
   id                  uuid primary key default uuid_generate_v4(),
   deal_id             uuid references deals(id),
@@ -306,7 +587,6 @@ create index idx_handovers_deal   on handovers(deal_id);
 create index idx_handovers_status on handovers(status);
 
 -- ── Tickets ─────────────────────────────────────────────────────
-
 create table if not exists tickets (
   id             uuid primary key default uuid_generate_v4(),
   ticket_number  text unique not null,
@@ -335,165 +615,504 @@ create index idx_tickets_type     on tickets(type);
 create index idx_tickets_priority on tickets(priority);
 create index idx_tickets_deal     on tickets(deal_id);
 
+
+-- ============================================================
+-- Foreign Key Constraints (cross-table references)
+-- ============================================================
+
+ALTER TABLE opportunities ADD CONSTRAINT fk_opp_contact
+  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL;
+
+ALTER TABLE opportunities ADD CONSTRAINT fk_opp_project
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
+
+ALTER TABLE opportunities ADD CONSTRAINT fk_opp_assigned
+  FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE activities ADD CONSTRAINT fk_act_contact
+  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL;
+
+ALTER TABLE activities ADD CONSTRAINT fk_act_opportunity
+  FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE SET NULL;
+
+ALTER TABLE activities ADD CONSTRAINT fk_act_user
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+
+ALTER TABLE deals ADD CONSTRAINT fk_deal_contact
+  FOREIGN KEY (contact_id) REFERENCES contacts(id) ON DELETE SET NULL;
+
+ALTER TABLE deals ADD CONSTRAINT fk_deal_opp
+  FOREIGN KEY (opportunity_id) REFERENCES opportunities(id) ON DELETE SET NULL;
+
+ALTER TABLE deals ADD CONSTRAINT fk_deal_project
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL;
+
+ALTER TABLE reminders ADD CONSTRAINT fk_reminder_assigned
+  FOREIGN KEY (assigned_to) REFERENCES users(id) ON DELETE SET NULL;
+
+
 -- ============================================================
 -- Row Level Security (RLS) Policies
 -- ============================================================
 
--- Enable RLS on all tables
-alter table departments       enable row level security;
-alter table employees         enable row level security;
-alter table attendance        enable row level security;
-alter table leave_requests    enable row level security;
-alter table leave_balances    enable row level security;
-alter table chart_of_accounts enable row level security;
-alter table journal_entries   enable row level security;
-alter table journal_entry_lines enable row level security;
-alter table invoices          enable row level security;
-alter table expenses          enable row level security;
-alter table deals             enable row level security;
-alter table installments      enable row level security;
-alter table handovers         enable row level security;
-alter table tickets           enable row level security;
+-- ── Enable RLS on ALL tables ─────────────────────────────────
 
--- ── Departments — readable by all authenticated users ────────
+ALTER TABLE users              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contacts           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opportunities      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activities         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE resale_units       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campaigns          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reminders          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE view_logs          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employees          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE attendance         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leave_requests     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leave_balances     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chart_of_accounts  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entries    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journal_entry_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deals              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE installments       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE handovers          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tickets            ENABLE ROW LEVEL SECURITY;
 
-create policy "departments_select" on departments
-  for select to authenticated using (true);
 
-create policy "departments_manage" on departments
-  for all to authenticated using (true) with check (true);
+-- ============================================================
+-- CRM Policies (role-based)
+-- ============================================================
 
--- ── Employees — HR and managers can manage, all can read ─────
+-- ── Users ─────────────────────────────────────────────────────
 
-create policy "employees_select" on employees
-  for select to authenticated using (true);
+CREATE POLICY "users_admin_all" ON users FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
-create policy "employees_insert" on employees
-  for insert to authenticated with check (true);
+CREATE POLICY "users_read_all" ON users FOR SELECT
+  USING (auth.uid() IS NOT NULL);
 
-create policy "employees_update" on employees
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "users_update_own" ON users FOR UPDATE
+  USING (id = auth.uid());
 
-create policy "employees_delete" on employees
-  for delete to authenticated using (true);
+-- ── Contacts ──────────────────────────────────────────────────
 
--- ── Attendance — employees see own, HR sees all ──────────────
+CREATE POLICY "contacts_admin_all" ON contacts FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
-create policy "attendance_select" on attendance
-  for select to authenticated using (true);
+CREATE POLICY "contacts_read" ON contacts FOR SELECT
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director', 'team_leader')
+  );
 
-create policy "attendance_insert" on attendance
-  for insert to authenticated with check (true);
+CREATE POLICY "contacts_insert" ON contacts FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
 
-create policy "attendance_update" on attendance
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "contacts_update" ON contacts FOR UPDATE
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director')
+  );
 
--- ── Leave Requests — employees see own, managers see team ────
+CREATE POLICY "contacts_delete" ON contacts FOR DELETE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'sales_manager'));
 
-create policy "leave_select" on leave_requests
-  for select to authenticated using (true);
+-- ── Projects ──────────────────────────────────────────────────
 
-create policy "leave_insert" on leave_requests
-  for insert to authenticated with check (true);
+CREATE POLICY "projects_read" ON projects FOR SELECT
+  USING (auth.uid() IS NOT NULL);
 
-create policy "leave_update" on leave_requests
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "projects_admin_all" ON projects FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
--- ── Leave Balances ──────────────────────────────────────────
+CREATE POLICY "projects_manage" ON projects FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director'));
 
-create policy "leave_balances_select" on leave_balances
-  for select to authenticated using (true);
+CREATE POLICY "projects_update" ON projects FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director'));
 
-create policy "leave_balances_manage" on leave_balances
-  for all to authenticated using (true) with check (true);
+-- ── Opportunities ─────────────────────────────────────────────
 
--- ── Chart of Accounts — readable by all, managed by finance ─
+CREATE POLICY "opp_admin_all" ON opportunities FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
-create policy "coa_select" on chart_of_accounts
-  for select to authenticated using (true);
+CREATE POLICY "opp_read" ON opportunities FOR SELECT
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director', 'team_leader')
+  );
 
-create policy "coa_manage" on chart_of_accounts
-  for all to authenticated using (true) with check (true);
+CREATE POLICY "opp_insert" ON opportunities FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
 
--- ── Journal Entries ─────────────────────────────────────────
+CREATE POLICY "opp_update" ON opportunities FOR UPDATE
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director')
+  );
 
-create policy "je_select" on journal_entries
-  for select to authenticated using (true);
+CREATE POLICY "opp_delete" ON opportunities FOR DELETE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'sales_manager'));
 
-create policy "je_insert" on journal_entries
-  for insert to authenticated with check (true);
+-- ── Activities ────────────────────────────────────────────────
 
-create policy "je_update" on journal_entries
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "activities_admin_all" ON activities FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
-create policy "jel_select" on journal_entry_lines
-  for select to authenticated using (true);
+CREATE POLICY "activities_read" ON activities FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director', 'team_leader')
+  );
 
-create policy "jel_insert" on journal_entry_lines
-  for insert to authenticated with check (true);
+CREATE POLICY "activities_insert" ON activities FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
 
--- ── Invoices ────────────────────────────────────────────────
+CREATE POLICY "activities_update" ON activities FOR UPDATE
+  USING (
+    user_id = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director')
+  );
 
-create policy "invoices_select" on invoices
-  for select to authenticated using (true);
+CREATE POLICY "activities_delete" ON activities FOR DELETE
+  USING (
+    user_id = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager')
+  );
 
-create policy "invoices_insert" on invoices
-  for insert to authenticated with check (true);
+-- ── Tasks ─────────────────────────────────────────────────────
 
-create policy "invoices_update" on invoices
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "tasks_admin_all" ON tasks FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
--- ── Expenses ────────────────────────────────────────────────
+CREATE POLICY "tasks_read" ON tasks FOR SELECT
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director', 'team_leader')
+  );
 
-create policy "expenses_select" on expenses
-  for select to authenticated using (true);
+CREATE POLICY "tasks_insert" ON tasks FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
 
-create policy "expenses_insert" on expenses
-  for insert to authenticated with check (true);
+CREATE POLICY "tasks_update" ON tasks FOR UPDATE
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director')
+  );
 
-create policy "expenses_update" on expenses
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "tasks_delete" ON tasks FOR DELETE
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager')
+  );
 
--- ── Deals ───────────────────────────────────────────────────
+-- ── Resale Units ──────────────────────────────────────────────
 
-create policy "deals_select" on deals
-  for select to authenticated using (true);
+CREATE POLICY "resale_admin_all" ON resale_units FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
-create policy "deals_insert" on deals
-  for insert to authenticated with check (true);
+CREATE POLICY "resale_read" ON resale_units FOR SELECT
+  USING (auth.uid() IS NOT NULL);
 
-create policy "deals_update" on deals
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "resale_insert" ON resale_units FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
 
--- ── Installments ────────────────────────────────────────────
+CREATE POLICY "resale_update" ON resale_units FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director'));
 
-create policy "installments_select" on installments
-  for select to authenticated using (true);
+CREATE POLICY "resale_delete" ON resale_units FOR DELETE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'sales_manager'));
 
-create policy "installments_insert" on installments
-  for insert to authenticated with check (true);
+-- ── Campaigns ─────────────────────────────────────────────────
 
-create policy "installments_update" on installments
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "campaigns_admin_all" ON campaigns FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
--- ── Handovers ───────────────────────────────────────────────
+CREATE POLICY "campaigns_read" ON campaigns FOR SELECT
+  USING (auth.uid() IS NOT NULL);
 
-create policy "handovers_select" on handovers
-  for select to authenticated using (true);
+CREATE POLICY "campaigns_insert" ON campaigns FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director', 'marketing'));
 
-create policy "handovers_insert" on handovers
-  for insert to authenticated with check (true);
+CREATE POLICY "campaigns_update" ON campaigns FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director', 'marketing'));
 
-create policy "handovers_update" on handovers
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "campaigns_delete" ON campaigns FOR DELETE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'sales_manager'));
 
--- ── Tickets ─────────────────────────────────────────────────
+-- ── Reminders ─────────────────────────────────────────────────
 
-create policy "tickets_select" on tickets
-  for select to authenticated using (true);
+CREATE POLICY "reminders_admin_all" ON reminders FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
 
-create policy "tickets_insert" on tickets
-  for insert to authenticated with check (true);
+CREATE POLICY "reminders_read" ON reminders FOR SELECT
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director')
+  );
 
-create policy "tickets_update" on tickets
-  for update to authenticated using (true) with check (true);
+CREATE POLICY "reminders_insert" ON reminders FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "reminders_update" ON reminders FOR UPDATE
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager')
+  );
+
+CREATE POLICY "reminders_delete" ON reminders FOR DELETE
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager')
+  );
+
+-- ── View Logs ─────────────────────────────────────────────────
+
+CREATE POLICY "viewlogs_admin_all" ON view_logs FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "viewlogs_read" ON view_logs FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director')
+  );
+
+CREATE POLICY "viewlogs_insert" ON view_logs FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- ── Audit Logs ────────────────────────────────────────────────
+
+CREATE POLICY "auditlogs_admin_all" ON audit_logs FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "auditlogs_read" ON audit_logs FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director')
+  );
+
+CREATE POLICY "auditlogs_insert" ON audit_logs FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+-- ── Sessions ──────────────────────────────────────────────────
+
+CREATE POLICY "sessions_admin_all" ON sessions FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "sessions_read_own" ON sessions FOR SELECT
+  USING (
+    user_id = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director')
+  );
+
+CREATE POLICY "sessions_insert" ON sessions FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "sessions_update_own" ON sessions FOR UPDATE
+  USING (user_id = auth.uid() OR auth.jwt() ->> 'role' = 'admin');
+
+
+-- ============================================================
+-- HR / Finance / Operations Policies (role-based)
+-- ============================================================
+
+-- ── Departments — readable by all, managed by admin/HR ────────
+
+CREATE POLICY "departments_select" ON departments FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "departments_manage" ON departments FOR ALL
+  USING (auth.jwt() ->> 'role' IN ('admin', 'hr_manager'));
+
+-- ── Employees — HR and managers can manage, all can read ──────
+
+CREATE POLICY "employees_select" ON employees FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "employees_insert" ON employees FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'hr_manager'));
+
+CREATE POLICY "employees_update" ON employees FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'hr_manager'));
+
+CREATE POLICY "employees_delete" ON employees FOR DELETE
+  USING (auth.jwt() ->> 'role' = 'admin');
+
+-- ── Attendance — employees see own, HR sees all ───────────────
+
+CREATE POLICY "attendance_select" ON attendance FOR SELECT
+  USING (
+    employee_id IN (
+      SELECT e.id FROM employees e WHERE e.email = auth.jwt() ->> 'email'
+    )
+    OR auth.jwt() ->> 'role' IN ('admin', 'hr_manager')
+  );
+
+CREATE POLICY "attendance_insert" ON attendance FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'hr_manager'));
+
+CREATE POLICY "attendance_update" ON attendance FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'hr_manager'));
+
+-- ── Leave Requests — employees see own, managers see team ─────
+
+CREATE POLICY "leave_select" ON leave_requests FOR SELECT
+  USING (
+    employee_id IN (
+      SELECT e.id FROM employees e WHERE e.email = auth.jwt() ->> 'email'
+    )
+    OR auth.jwt() ->> 'role' IN ('admin', 'hr_manager')
+  );
+
+CREATE POLICY "leave_insert" ON leave_requests FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "leave_update" ON leave_requests FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'hr_manager'));
+
+-- ── Leave Balances ────────────────────────────────────────────
+
+CREATE POLICY "leave_balances_select" ON leave_balances FOR SELECT
+  USING (
+    employee_id IN (
+      SELECT e.id FROM employees e WHERE e.email = auth.jwt() ->> 'email'
+    )
+    OR auth.jwt() ->> 'role' IN ('admin', 'hr_manager')
+  );
+
+CREATE POLICY "leave_balances_manage" ON leave_balances FOR ALL
+  USING (auth.jwt() ->> 'role' IN ('admin', 'hr_manager'));
+
+-- ── Chart of Accounts — readable by all, managed by finance ──
+
+CREATE POLICY "coa_select" ON chart_of_accounts FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "coa_manage" ON chart_of_accounts FOR ALL
+  USING (auth.jwt() ->> 'role' IN ('admin', 'finance_manager'));
+
+-- ── Journal Entries — finance team can manage ─────────────────
+
+CREATE POLICY "je_select" ON journal_entries FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "je_insert" ON journal_entries FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'finance_manager', 'accountant'));
+
+CREATE POLICY "je_update" ON journal_entries FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'finance_manager'));
+
+CREATE POLICY "jel_select" ON journal_entry_lines FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "jel_insert" ON journal_entry_lines FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'finance_manager', 'accountant'));
+
+-- ── Invoices — finance team ───────────────────────────────────
+
+CREATE POLICY "invoices_select" ON invoices FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "invoices_insert" ON invoices FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'finance_manager', 'accountant'));
+
+CREATE POLICY "invoices_update" ON invoices FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'finance_manager'));
+
+-- ── Expenses — finance team ──────────────────────────────────
+
+CREATE POLICY "expenses_select" ON expenses FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "expenses_insert" ON expenses FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "expenses_update" ON expenses FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'finance_manager'));
+
+-- ── Deals — operations team ──────────────────────────────────
+
+CREATE POLICY "deals_admin_all" ON deals FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "deals_select" ON deals FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "deals_insert" ON deals FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'sales_director', 'operations'));
+
+CREATE POLICY "deals_update" ON deals FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'operations'));
+
+-- ── Installments ──────────────────────────────────────────────
+
+CREATE POLICY "installments_select" ON installments FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "installments_insert" ON installments FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'finance_manager', 'operations'));
+
+CREATE POLICY "installments_update" ON installments FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'finance_manager', 'operations'));
+
+-- ── Handovers ─────────────────────────────────────────────────
+
+CREATE POLICY "handovers_select" ON handovers FOR SELECT
+  USING (auth.uid() IS NOT NULL);
+
+CREATE POLICY "handovers_insert" ON handovers FOR INSERT
+  WITH CHECK (auth.jwt() ->> 'role' IN ('admin', 'operations'));
+
+CREATE POLICY "handovers_update" ON handovers FOR UPDATE
+  USING (auth.jwt() ->> 'role' IN ('admin', 'operations'));
+
+-- ── Tickets ───────────────────────────────────────────────────
+
+CREATE POLICY "tickets_admin_all" ON tickets FOR ALL
+  USING (auth.jwt() ->> 'role' = 'admin');
+
+CREATE POLICY "tickets_select" ON tickets FOR SELECT
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'sales_manager', 'operations')
+  );
+
+CREATE POLICY "tickets_insert" ON tickets FOR INSERT
+  WITH CHECK (auth.uid() IS NOT NULL);
+
+CREATE POLICY "tickets_update" ON tickets FOR UPDATE
+  USING (
+    assigned_to = auth.uid()
+    OR auth.jwt() ->> 'role' IN ('admin', 'operations')
+  );
+
+
+-- ============================================================
+-- Updated-at trigger (auto-update updated_at on row change)
+-- ============================================================
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_contacts_updated      BEFORE UPDATE ON contacts      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_opportunities_updated  BEFORE UPDATE ON opportunities  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_tasks_updated          BEFORE UPDATE ON tasks          FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_resale_units_updated   BEFORE UPDATE ON resale_units   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_campaigns_updated      BEFORE UPDATE ON campaigns      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_users_updated          BEFORE UPDATE ON users          FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_employees_updated      BEFORE UPDATE ON employees      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_deals_updated          BEFORE UPDATE ON deals          FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_installments_updated   BEFORE UPDATE ON installments   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_invoices_updated       BEFORE UPDATE ON invoices       FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER trg_tickets_updated        BEFORE UPDATE ON tickets        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
