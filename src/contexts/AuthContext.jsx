@@ -89,11 +89,15 @@ export function AuthProvider({ children }) {
           if (!isMounted) return;
 
           if (event === 'SIGNED_OUT' || !session) {
-            setUser(null);
-            setProfile(null);
-            setPermissions([]);
-            setIsImpersonating(false);
-            setOriginalProfile(null);
+            // Only clear state if there's no mock session active
+            const hasMock = localStorage.getItem('platform_mock_user');
+            if (!hasMock) {
+              setUser(null);
+              setProfile(null);
+              setPermissions([]);
+              setIsImpersonating(false);
+              setOriginalProfile(null);
+            }
             return;
           }
 
