@@ -1,15 +1,29 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { Briefcase, Users, Clock, CheckCircle2, Plus, Eye } from 'lucide-react';
 import { KpiCard, Button, Th, Td, Tr, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
-const MOCK_JOBS = [
+const STORAGE_KEY = 'platform_hr_recruitment';
+const DEFAULT_JOBS = [
   { id:1, title_ar:'مدير مبيعات', title_en:'Sales Manager', dept:'المبيعات', type:'full-time', status:'open', applicants:12, posted:'2026-02-15' },
   { id:2, title_ar:'محاسب', title_en:'Accountant', dept:'المالية', type:'full-time', status:'open', applicants:8, posted:'2026-02-20' },
   { id:3, title_ar:'مستشار عقاري', title_en:'Real Estate Consultant', dept:'العقارات', type:'full-time', status:'interviewing', applicants:5, posted:'2026-03-01' },
   { id:4, title_ar:'مدير تسويق', title_en:'Marketing Manager', dept:'التسويق', type:'full-time', status:'closed', applicants:20, posted:'2026-01-10' },
 ];
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_JOBS));
+  return [...DEFAULT_JOBS];
+}
+
+function saveData(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
 
 const statusColor = s => s==='open'?'#4A7AAB':s==='interviewing'?'#6B8DB5':'#8BA8C8';
 const statusLabel = (s,lang) => ({ open:lang==='ar'?'مفتوح':'Open', interviewing:lang==='ar'?'مقابلات':'Interviewing', closed:lang==='ar'?'مغلق':'Closed' }[s]||s);
@@ -29,7 +43,10 @@ function ViewBtn() {
 export default function RecruitmentPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [jobs] = useState(MOCK_JOBS);
+  const [jobs, setJobs] = useState(loadData);
+
+  // Persist to localStorage whenever jobs change
+  useEffect(() => { saveData(jobs); }, [jobs]);
   const [search, setSearch] = useState('');
   const [smartFilters, setSmartFilters] = useState([]);
   const [page, setPage] = useState(1);

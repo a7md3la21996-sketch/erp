@@ -1236,7 +1236,7 @@ export default function DashboardPage() {
         const pColor = gs.avgProgress >= 70 ? '#10B981' : gs.avgProgress >= 40 ? '#F59E0B' : '#EF4444';
         return (
           <div
-            onClick={() => navigate('/goals')}
+            onClick={() => navigate('/hr/goals')}
             style={{
               marginBottom: 16, padding: '14px 20px', borderRadius: 14, cursor: 'pointer',
               background: isDark ? '#1a2332' : '#ffffff',

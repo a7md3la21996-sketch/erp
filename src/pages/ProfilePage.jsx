@@ -45,8 +45,12 @@ export default function ProfilePage() {
 
   // Find this employee in MOCK_EMPLOYEES
   const employee = useMemo(() => {
-    return MOCK_EMPLOYEES.find(e => e.id === 'e1') || MOCK_EMPLOYEES[0];
-  }, []);
+    if (profile?.id) {
+      const found = MOCK_EMPLOYEES.find(e => e.id === profile.id || e.email === profile.email);
+      if (found) return found;
+    }
+    return MOCK_EMPLOYEES[0];
+  }, [profile]);
 
   const dept = DEPARTMENTS.find(d => d.id === employee.department);
   const roleLabel = ROLE_LABELS[employee.role]?.[i18n.language] || employee.role;

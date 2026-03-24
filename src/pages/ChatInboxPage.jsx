@@ -1,11 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import { MessageSquare, AtSign, Filter, User, Briefcase, Target, Users } from 'lucide-react';
 import { getRecentComments, getMentions, getTeamMembers } from '../services/chatService';
 import Pagination from '../components/ui/Pagination';
-
-const CURRENT_USER = { id: 'e1', name: 'أحمد محمد' };
 
 const ENTITY_CONFIG = {
   contact:     { ar: 'جهة اتصال', en: 'Contact',     color: '#4A7AAB', icon: User },
@@ -52,8 +51,11 @@ function renderText(text, isDark) {
 export default function ChatInboxPage() {
   const { i18n } = useTranslation();
   const { theme } = useTheme();
+  const { profile } = useAuth();
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
+
+  const currentUserId = profile?.id || 'e1';
 
   const [activeTab, setActiveTab] = useState('all');
   const [filterEntity, setFilterEntity] = useState('all');
@@ -65,12 +67,12 @@ export default function ChatInboxPage() {
 
   const refresh = () => {
     setAllComments(getRecentComments(500));
-    setMentionComments(getMentions(CURRENT_USER.id));
+    setMentionComments(getMentions(currentUserId));
   };
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [currentUserId]);
 
   useEffect(() => {
     const handler = () => refresh();

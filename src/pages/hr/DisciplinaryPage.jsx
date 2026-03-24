@@ -6,12 +6,26 @@ import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, ShieldAlert } from 
 import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 
 
-const MOCK_CASES = [
+const STORAGE_KEY = 'platform_hr_disciplinary';
+const DEFAULT_CASES = [
   { id:1, emp_id:'EMP-001', type:'warning', reason:'تأخير متكرر', date:'2026-02-10', status:'open', severity:'low' },
   { id:2, emp_id:'EMP-002', type:'suspension', reason:'غياب بدون إذن', date:'2026-01-20', status:'closed', severity:'high' },
   { id:3, emp_id:'EMP-003', type:'warning', reason:'سلوك غير لائق', date:'2026-03-01', status:'open', severity:'medium' },
   { id:4, emp_id:'EMP-004', type:'termination', reason:'خرق سياسة الشركة', date:'2026-02-28', status:'closed', severity:'high' },
 ];
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_CASES));
+  return [...DEFAULT_CASES];
+}
+
+function saveData(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
 
 /* ─── Dynamic Badge ─── */
 function DynBadge({ label, color = '#4A7AAB' }) {
@@ -28,7 +42,10 @@ function DynBadge({ label, color = '#4A7AAB' }) {
 export default function DisciplinaryPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [cases] = useState(MOCK_CASES);
+  const [cases, setCases] = useState(loadData);
+
+  // Persist to localStorage whenever cases change
+  useEffect(() => { saveData(cases); }, [cases]);
   const [employees, setEmployees] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);

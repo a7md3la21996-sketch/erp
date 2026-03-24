@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { MessageCircle, Send, Pencil, Trash2, X, Check } from 'lucide-react';
 import {
   getComments, addComment, editComment, deleteComment,
   getTeamMembers, parseMentions,
 } from '../../services/chatService';
-
-const CURRENT_USER = { id: 'e1', name: 'أحمد محمد' };
 
 // ── Relative time formatter ────────────────────────────────────
 function relativeTime(dateStr, isRTL) {
@@ -52,8 +51,14 @@ function initials(name) {
 export default function CommentsSection({ entity, entityId, entityName }) {
   const { i18n } = useTranslation();
   const { theme } = useTheme();
+  const { profile } = useAuth();
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
+
+  const CURRENT_USER = {
+    id: profile?.id || 'e1',
+    name: profile?.full_name_ar || profile?.full_name_en || 'مستخدم',
+  };
 
   const [comments, setComments] = useState([]);
   const [text, setText] = useState('');

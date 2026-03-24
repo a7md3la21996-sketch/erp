@@ -20,8 +20,24 @@ const CHECKLIST_ITEMS = [
   { id: 'first_review',    label_ar: 'جدولة المراجعة الأولى',  label_en: 'First Review Scheduled',   icon: '📅' },
 ];
 
-/* ─── Comprehensive Mock Data ─── */
-const MOCK_ONBOARDING = [
+/* ─── localStorage helpers for onboarding records ─── */
+const STORAGE_KEY = 'platform_hr_onboarding';
+
+function loadOnboardingData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_ONBOARDING));
+  return [...DEFAULT_ONBOARDING];
+}
+
+function saveOnboardingData(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
+
+/* ─── Comprehensive Default Data ─── */
+const DEFAULT_ONBOARDING = [
   {
     id: 'OB-001',
     employee_name_ar: 'أحمد محمد علي',
@@ -237,6 +253,7 @@ export default function OnboardingPage() {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
 
+  const [onboardingRecords, setOnboardingRecords] = useState(loadOnboardingData);
   const [expanded, setExpanded] = useState(null);
   const [smartFilters, setSmartFilters] = useState([]);
   const [page, setPage] = useState(1);
@@ -244,13 +261,16 @@ export default function OnboardingPage() {
 
   const { auditFields, applyAuditFilters } = useAuditFilter('onboarding');
 
+  // Persist onboarding records to localStorage
+  useEffect(() => { saveOnboardingData(onboardingRecords); }, [onboardingRecords]);
+
   /* ─── Checklist state (localStorage persistence) ─── */
   const [checklistState, setChecklistState] = useState(() => {
     const saved = loadChecklistState();
     if (saved) return saved;
-    // Initialize from mock data
+    // Initialize from loaded data
     const init = {};
-    MOCK_ONBOARDING.forEach(ob => { init[ob.id] = { ...ob.checklist }; });
+    onboardingRecords.forEach(ob => { init[ob.id] = { ...ob.checklist }; });
     return init;
   });
 
@@ -271,13 +291,13 @@ export default function OnboardingPage() {
 
   /* ─── Enrich data with live checklist state ─── */
   const enrichedData = useMemo(() => {
-    return MOCK_ONBOARDING.map(ob => {
+    return onboardingRecords.map(ob => {
       const checklist = checklistState[ob.id] || ob.checklist;
       const { done, total, pct } = getProgress(checklist);
       const status = deriveStatus(checklist);
       return { ...ob, checklist, progress: pct, done, total, status };
     });
-  }, [checklistState]);
+  }, [onboardingRecords, checklistState]);
 
   /* ─── Smart Filter fields ─── */
   const SMART_FIELDS = useMemo(() => [
@@ -296,8 +316,8 @@ export default function OnboardingPage() {
     { id: 'start_date', label: 'تاريخ البدء', labelEn: 'Start Date', type: 'date' },
     {
       id: 'mentor_name', label: 'المرشد', labelEn: 'Mentor', type: 'select',
-      options: [...new Set(MOCK_ONBOARDING.map(ob => ob.mentor_name))].map(m => {
-        const ob = MOCK_ONBOARDING.find(o => o.mentor_name === m);
+      options: [...new Set(DEFAULT_ONBOARDING.map(ob => ob.mentor_name))].map(m => {
+        const ob = DEFAULT_ONBOARDING.find(o => o.mentor_name === m);
         return { value: m, label: m, labelEn: ob?.mentor_name_en || m };
       }),
     },

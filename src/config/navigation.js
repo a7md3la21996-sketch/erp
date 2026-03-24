@@ -40,8 +40,8 @@ export const NAV_ITEMS = [
   ]},
   { id: 'hr', label: { ar: 'الموارد البشرية', en: 'HR' }, icon: UserCog, permission: P.HR_VIEW_OWN, children: [
     { id: 'employees',    label: { ar: 'الموظفين',        en: 'Employees' },    path: '/hr/employees',    permission: P.HR_VIEW_OWN },
-    { id: 'performance', label: { ar: 'الأداء', en: 'Performance' }, path: '/performance', permission: P.HR_VIEW_OWN },
-    { id: 'goals', label: { ar: 'الأهداف', en: 'Goals & OKRs' }, path: '/goals', permission: P.HR_VIEW_OWN },
+    { id: 'performance', label: { ar: 'الأداء', en: 'Performance' }, path: '/hr/performance', permission: P.HR_VIEW_OWN },
+    { id: 'goals', label: { ar: 'الأهداف', en: 'Goals & OKRs' }, path: '/hr/goals', permission: P.HR_VIEW_OWN },
     { id: 'attendance',   label: { ar: 'الحضور',          en: 'Attendance' },   path: '/hr/attendance',   permission: P.ATTEND_VIEW_OWN },
     { id: 'leave',        label: { ar: 'الإجازات',        en: 'Leave' },        path: '/hr/leave',        permission: P.LEAVE_REQUEST },
     { id: 'payroll',      label: { ar: 'الرواتب',         en: 'Payroll' },      path: '/hr/payroll',      permission: P.PAYROLL_VIEW },

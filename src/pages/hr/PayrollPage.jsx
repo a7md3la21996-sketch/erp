@@ -1,17 +1,23 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import { useToast } from '../../contexts/ToastContext';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download } from 'lucide-react';
 import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
+const TAX_RATE = 0.14;
+const SOCIAL_INSURANCE_RATE = 0.11;
+const ALLOWANCE_RATE = 0.20;
+
 export default function PayrollPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const { auditFields, applyAuditFilters } = useAuditFilter('payroll');
+  const { showToast } = useToast();
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -61,6 +67,64 @@ export default function PayrollPage() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [month, smartFilters]);
 
+  const handleRunPayroll = useCallback(() => {
+    if (!employees.length) return;
+
+    const payrollItems = employees
+      .filter(emp => emp.status === 'active' || !emp.status)
+      .map(emp => {
+        const baseSalary = emp.salary || 0;
+        const allowances = Math.round(baseSalary * ALLOWANCE_RATE);
+        const absentDays = emp.absent_days || 0;
+        const dailyRate = Math.round(baseSalary / 30);
+        const absentDeduction = absentDays * dailyRate;
+        const tax = Math.round(baseSalary * TAX_RATE);
+        const socialInsurance = Math.round(baseSalary * SOCIAL_INSURANCE_RATE);
+        const totalDeductions = tax + socialInsurance + absentDeduction;
+        const netSalary = baseSalary + allowances - totalDeductions;
+
+        return {
+          employee_id: emp.id,
+          employee_name_ar: emp.full_name_ar,
+          employee_name_en: emp.full_name_en,
+          department: emp.department,
+          base_salary: baseSalary,
+          allowances,
+          tax,
+          social_insurance: socialInsurance,
+          absent_days: absentDays,
+          absent_deduction: absentDeduction,
+          total_deductions: totalDeductions,
+          net_salary: netSalary,
+        };
+      });
+
+    const payrollRun = {
+      id: `PR-${Date.now()}`,
+      month,
+      year: 2026,
+      run_date: new Date().toISOString(),
+      total_employees: payrollItems.length,
+      total_net: payrollItems.reduce((sum, item) => sum + item.net_salary, 0),
+      total_gross: payrollItems.reduce((sum, item) => sum + item.base_salary + item.allowances, 0),
+      total_deductions: payrollItems.reduce((sum, item) => sum + item.total_deductions, 0),
+      items: payrollItems,
+      status: 'completed',
+    };
+
+    // Save to localStorage
+    const existing = JSON.parse(localStorage.getItem('platform_payroll_runs') || '[]');
+    existing.push(payrollRun);
+    localStorage.setItem('platform_payroll_runs', JSON.stringify(existing));
+
+    showToast(
+      lang === 'ar'
+        ? `تم تشغيل مسير رواتب ${MONTHS_AR[month - 1]} بنجاح - ${payrollItems.length} موظف`
+        : `Payroll for ${MONTHS_AR[month - 1]} processed successfully - ${payrollItems.length} employees`,
+      'success'
+    );
+  }, [employees, month, lang, showToast]);
+
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
       <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={7} />
@@ -104,7 +168,7 @@ export default function PayrollPage() {
               { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
             ]}
           />
-          <Button size="md">{lang==='ar'?'تشغيل المسير':'Run Payroll'}</Button>
+          <Button size="md" onClick={handleRunPayroll}>{lang==='ar'?'تشغيل المسير':'Run Payroll'}</Button>
         </div>
       </div>
 
@@ -146,8 +210,10 @@ export default function PayrollPage() {
 function PayrollRow({ emp, isRTL, lang }) {
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
   const base = emp.salary || 0;
-  const allow = Math.round(base * 0.2);
-  const ded = Math.round(base * 0.1);
+  const allow = Math.round(base * ALLOWANCE_RATE);
+  const tax = Math.round(base * TAX_RATE);
+  const social = Math.round(base * SOCIAL_INSURANCE_RATE);
+  const ded = tax + social;
   const net = base + allow - ded;
   const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
   return (

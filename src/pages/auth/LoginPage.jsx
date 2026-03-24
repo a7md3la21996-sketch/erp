@@ -72,29 +72,37 @@ export default function LoginPage() {
             </div>
           )}
 
-          <div className="mb-5">
-            <label className="block text-sm font-medium text-gray-700 dark:text-content-dark mb-1.5">{t('auth.email')}</label>
-            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKeyDown}
-              placeholder="admin@platform.com" dir="ltr" className="!h-11" />
-          </div>
-
-          <div className="mb-6">
-            <div className="flex justify-between mb-1.5">
-              <label className="text-sm font-medium text-gray-700 dark:text-content-dark">{t('auth.password')}</label>
+          <form onSubmit={(e) => { e.preventDefault(); if (!disabled) handleLogin(); }} autoComplete="on">
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 dark:text-content-dark mb-1.5">{t('auth.email')}</label>
+              <Input type="email" name="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="admin@platform.com" dir="ltr" className="!h-11" />
             </div>
-            <div className="relative">
-              <Input type={showPw ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKeyDown}
-                placeholder="••••••••" dir="ltr" className="!h-11 !pe-11" />
-              <button onClick={() => setShowPw(!showPw)}
-                className="absolute top-2.5 end-3 bg-transparent border-none cursor-pointer text-gray-400 dark:text-content-muted-dark">
-                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+
+            <div className="mb-2">
+              <div className="flex justify-between mb-1.5">
+                <label className="text-sm font-medium text-gray-700 dark:text-content-dark">{t('auth.password')}</label>
+              </div>
+              <div className="relative">
+                <Input type={showPw ? 'text' : 'password'} name="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••" dir="ltr" className="!h-11 !pe-11" />
+                <button type="button" onClick={() => setShowPw(!showPw)}
+                  className="absolute top-2.5 end-3 bg-transparent border-none cursor-pointer text-gray-400 dark:text-content-muted-dark">
+                  {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex justify-end mb-6">
+              <button type="button" onClick={() => {}} className="text-xs text-brand-600 dark:text-brand-400 bg-transparent border-none cursor-pointer p-0 hover:underline">
+                {t('auth.forgotPassword')}
               </button>
             </div>
-          </div>
 
-          <Button type="submit" onClick={handleLogin} disabled={disabled} className="w-full !h-11">
-            {loading ? '...' : t('auth.login')}
-          </Button>
+            <Button type="submit" disabled={disabled} className="w-full !h-11">
+              {loading ? '...' : t('auth.login')}
+            </Button>
+          </form>
 
           <p className="text-center text-xs text-gray-400 dark:text-content-muted-dark mt-8">&copy; 2026 Platform Real Estate</p>
         </div>

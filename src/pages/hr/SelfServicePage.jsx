@@ -655,7 +655,7 @@ export default function SelfServicePage() {
                 </p>
               </div>
               <button
-                onClick={() => window.location.href = '/goals'}
+                onClick={() => window.location.href = '/hr/goals'}
                 className="px-3 py-1.5 rounded-lg text-[11px] font-semibold border-none cursor-pointer transition-colors"
                 style={{ background: 'rgba(74,122,171,0.12)', color: '#4A7AAB' }}
               >

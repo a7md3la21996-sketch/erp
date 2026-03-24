@@ -126,9 +126,9 @@ function ComingSoon({ title }) {
 function AuthRedirect() {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return (
-    <div className="flex items-center justify-center h-screen bg-surface-bg-dark flex-col gap-4">
+    <div className="flex items-center justify-center h-screen bg-surface-bg dark:bg-surface-bg-dark flex-col gap-4">
       <div className="w-10 h-10 border-[3px] border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
-      <p className="text-content-muted-dark text-sm m-0">Loading...</p>
+      <p className="text-content-muted dark:text-content-muted-dark text-sm m-0">Loading...</p>
     </div>
   );
   if (isAuthenticated) return <Navigate to="/dashboard" replace />;
@@ -157,8 +157,10 @@ export default function App() {
                 <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
                 <Route path="/crm/opportunities" element={<Guarded><OpportunitiesPage /></Guarded>} />
                 <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
-                <Route path="/performance" element={<Guarded><PerformancePage /></Guarded>} />
-                <Route path="/goals" element={<Guarded><GoalsPage /></Guarded>} />
+                <Route path="/hr/performance" element={<Guarded><PerformancePage /></Guarded>} />
+                <Route path="/hr/goals" element={<Guarded><GoalsPage /></Guarded>} />
+                <Route path="/performance" element={<Navigate to="/hr/performance" replace />} />
+                <Route path="/goals" element={<Navigate to="/hr/goals" replace />} />
                 <Route path="/sales/deals" element={<Guarded><DealsPage /></Guarded>} />
                 <Route path="/sales/commissions" element={<Guarded><CommissionsPage /></Guarded>} />
                 <Route path="/sales/forecast" element={<Guarded><SalesForecastPage /></Guarded>} />

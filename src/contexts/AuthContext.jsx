@@ -123,7 +123,8 @@ export function AuthProvider({ children }) {
   const loginWithMock = (email, password) => {
     const mockUser = MOCK_USERS[email.toLowerCase().trim()];
     if (!mockUser || mockUser.password !== password) {
-      throw new Error('بيانات الدخول غير صحيحة');
+      const lang = localStorage.getItem('i18nextLng') || 'ar';
+      throw new Error(lang === 'ar' ? 'بيانات الدخول غير صحيحة' : 'Invalid email or password');
     }
     const profileData = {
       id: email,

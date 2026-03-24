@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
-import ExcelJS from 'exceljs';
+// ExcelJS is loaded dynamically to reduce bundle size (~917KB)
 import { Button, FilterPill } from '../../components/ui';
 
 const SOURCE_PLATFORM = { facebook: 'meta', instagram: 'meta', google_ads: 'google', website: 'organic', call: 'direct', walk_in: 'direct', referral: 'direct', developer: 'direct', cold_call: 'direct', other: 'other' };
@@ -310,7 +310,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
 
   const processFile = async (file) => {
     const arrayBuffer = await file.arrayBuffer();
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.default.Workbook();
     await workbook.xlsx.load(arrayBuffer);
     const ws = workbook.worksheets[0];
     if (!ws || ws.rowCount === 0) return;
@@ -612,7 +613,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
       TYPE: r.contact_type || '',
       REASON: r._reason,
     }));
-    const workbook = new ExcelJS.Workbook();
+    const ExcelJS = await import('exceljs');
+    const workbook = new ExcelJS.default.Workbook();
     const ws = workbook.addWorksheet('Errors');
     const keys = Object.keys(data[0]);
     ws.columns = keys.map(key => ({ header: key, key }));
@@ -970,7 +972,8 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
               <div style={{ textAlign: 'center', marginTop: 16 }}>
                 <Button variant="secondary" size="sm" onClick={async () => {
                   const headers = SYSTEM_FIELDS.map(f => f.key);
-                  const workbook = new ExcelJS.Workbook();
+                  const ExcelJS = await import('exceljs');
+                  const workbook = new ExcelJS.default.Workbook();
                   const ws = workbook.addWorksheet('Contacts');
                   ws.addRow(headers);
                   const buffer = await workbook.xlsx.writeBuffer();

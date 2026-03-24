@@ -20,15 +20,23 @@ export default function Header({ onMenuClick }) {
   const { t, i18n } = useTranslation();
   const { profile, logout, isRealAdmin, isImpersonating, impersonate, stopImpersonating, originalProfile } = useAuth();
   const { theme, toggleTheme, themeMode, setThemeMode, scheduleStart, setScheduleStart, scheduleEnd, setScheduleEnd } = useTheme();
-  const [showThemeMenu, setShowThemeMenu] = useState(false);
+  // Single dropdown state: only one dropdown open at a time
+  const [openDropdown, setOpenDropdown] = useState(null); // 'theme' | 'profile' | 'roleSwitcher' | 'notifications' | 'favorites' | 'recent' | null
+  const showThemeMenu = openDropdown === 'theme';
+  const showProfile = openDropdown === 'profile';
+  const showRoleSwitcher = openDropdown === 'roleSwitcher';
+  const showNotifications = openDropdown === 'notifications';
+  const showFavorites = openDropdown === 'favorites';
+  const showRecent = openDropdown === 'recent';
+  const setShowThemeMenu = (v) => setOpenDropdown(v ? 'theme' : null);
+  const setShowProfile = (v) => setOpenDropdown(v ? 'profile' : null);
+  const setShowRoleSwitcher = (v) => setOpenDropdown(v ? 'roleSwitcher' : null);
+  const setShowNotifications = (v) => setOpenDropdown(v ? 'notifications' : null);
+  const setShowFavorites = (v) => setOpenDropdown(v ? 'favorites' : null);
+  const setShowRecent = (v) => setOpenDropdown(v ? 'recent' : null);
   const themeMenuRef = useRef(null);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const roleSwitcherRef = useRef(null);
   const [showSearch, setShowSearch] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showFavorites, setShowFavorites] = useState(false);
-  const [showRecent, setShowRecent] = useState(false);
   const favRef = useRef(null);
   const recentRef = useRef(null);
   const ref = useRef(null);
@@ -107,7 +115,10 @@ export default function Header({ onMenuClick }) {
   const roleLabel = profile?.role ? (ROLE_LABELS[profile.role]?.[i18n.language] || profile.role) : '';
   const handleLangToggle = () => {
     const newLang = i18n.language === 'ar' ? 'en' : 'ar';
-    i18n.changeLanguage(newLang).then(() => { window.location.reload(); });
+    i18n.changeLanguage(newLang).then(() => {
+      document.documentElement.dir = newLang === 'ar' ? 'rtl' : 'ltr';
+      document.documentElement.lang = newLang;
+    });
   };
 
   return (

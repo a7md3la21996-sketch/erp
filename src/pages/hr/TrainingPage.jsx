@@ -4,17 +4,34 @@ import { BookOpen, Users, CheckCircle2, Clock, Plus, GraduationCap } from 'lucid
 import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 
-const MOCK_PROGRAMS = [
+const STORAGE_KEY = 'platform_hr_training';
+const DEFAULT_PROGRAMS = [
   { id:1, title:'مهارات التفاوض', title_en:'Negotiation Skills', category:'sales', duration:16, enrolled:6, completed:4, status:'active', start:'2026-03-10' },
   { id:2, title:'خدمة العملاء', title_en:'Customer Service', category:'crm', duration:8, enrolled:8, completed:8, status:'completed', start:'2026-02-01' },
   { id:3, title:'إدارة العقارات', title_en:'Property Management', category:'real_estate', duration:24, enrolled:5, completed:2, status:'active', start:'2026-03-15' },
   { id:4, title:'التسويق الرقمي', title_en:'Digital Marketing', category:'marketing', duration:12, enrolled:4, completed:0, status:'upcoming', start:'2026-04-01' },
 ];
 
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PROGRAMS));
+  return [...DEFAULT_PROGRAMS];
+}
+
+function saveData(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
+
 export default function TrainingPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [programs] = useState(MOCK_PROGRAMS);
+  const [programs, setPrograms] = useState(loadData);
+
+  // Persist to localStorage whenever programs change
+  useEffect(() => { saveData(programs); }, [programs]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [smartFilters, setSmartFilters] = useState([]);

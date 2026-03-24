@@ -1,5 +1,3 @@
-import ExcelJS from 'exceljs';
-
 /**
  * Export data as Excel file
  * @param {Array<Object>} data - Array of row objects
@@ -8,7 +6,8 @@ import ExcelJS from 'exceljs';
  */
 export async function exportToExcel(data, filename = 'export', sheetName = 'Sheet1') {
   if (!data || data.length === 0) return;
-  const workbook = new ExcelJS.Workbook();
+  const ExcelJS = await import('exceljs');
+  const workbook = new ExcelJS.default.Workbook();
   const ws = workbook.addWorksheet(sheetName);
   const keys = Object.keys(data[0]);
   ws.columns = keys.map(key => ({ header: key, key }));

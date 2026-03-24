@@ -6,7 +6,8 @@ import { Package, CheckCircle2, AlertCircle, Clock, Plus, Edit2, Trash2 } from '
 import { Button, Card, KpiCard, Th, Tr, Td, FilterPill, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
 
-const MOCK_ASSETS = [
+const STORAGE_KEY = 'platform_hr_assets';
+const DEFAULT_ASSETS = [
   { id:1, name:'MacBook Pro 14"', type:'laptop', serial:'MBP-2024-001', assigned_to:'EMP-001', status:'active', condition:'good', value:45000, acquired:'2024-01-15' },
   { id:2, name:'iPhone 15 Pro', type:'phone', serial:'IPH-2024-002', assigned_to:'EMP-002', status:'active', condition:'excellent', value:18000, acquired:'2024-02-10' },
   { id:3, name:'Dell Monitor 27"', type:'monitor', serial:'DLL-2023-003', assigned_to:'EMP-003', status:'active', condition:'good', value:8000, acquired:'2023-11-05' },
@@ -15,10 +16,26 @@ const MOCK_ASSETS = [
   { id:6, name:'iPad Pro 12.9"', type:'tablet', serial:'IPD-2024-005', assigned_to:'EMP-004', status:'active', condition:'excellent', value:22000, acquired:'2024-03-01' },
 ];
 
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_ASSETS));
+  return [...DEFAULT_ASSETS];
+}
+
+function saveData(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
+
 export default function AssetsPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [assets] = useState(MOCK_ASSETS);
+  const [assets, setAssets] = useState(loadData);
+
+  // Persist to localStorage whenever assets change
+  useEffect(() => { saveData(assets); }, [assets]);
   const [filter, setFilter] = useState('all');
   const [employees, setEmployees] = useState([]);
   const [page, setPage] = useState(1);
