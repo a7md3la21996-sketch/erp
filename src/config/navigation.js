@@ -79,6 +79,7 @@ export const NAV_ITEMS = [
     { id: 'comparison', label: { ar: 'تقارير المقارنة', en: 'Comparison' }, path: '/comparison', permission: P.RPT_SALES },
     { id: 'heatmap', label: { ar: 'خريطة النشاط', en: 'Activity Map' }, path: '/heatmap', permission: P.RPT_SALES },
     { id: 'analytics', label: { ar: 'تحليلات متقدمة', en: 'Analytics' }, path: '/analytics', permission: P.RPT_SALES },
+    { id: 'rpt-forecast', label: { ar: 'توقعات المبيعات', en: 'Sales Forecast' }, path: '/sales/forecast', permission: P.DEALS_VIEW_OWN },
     { id: 'chart-builder', label: { ar: 'منشئ الرسوم البيانية', en: 'Chart Builder' }, path: '/chart-builder', permission: P.RPT_SALES },
   ]},
   { id: 'settings', label: { ar: 'الإعدادات', en: 'Settings' }, icon: Settings, permission: P.SETTINGS_VIEW, children: [

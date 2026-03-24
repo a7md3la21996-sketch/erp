@@ -5,6 +5,8 @@ import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/f
 import { fetchContactActivities, createActivity } from '../../../services/contactsService';
 import { createTask, TASK_PRIORITIES } from '../../../services/tasksService';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
+import { useAuth } from '../../../contexts/AuthContext';
+import { logView, getEntityViewers } from '../../../services/viewTrackingService';
 import FollowUpReminder from '../../../components/ui/FollowUpReminder';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
@@ -265,6 +267,8 @@ export default function OpportunityDrawer({
   const toast = useToast();
   const { i18n } = useTranslation();
   const isRTL = isRTLProp ?? i18n.language === 'ar';
+  const { profile: authProfile } = useAuth();
+  const viewerProfile = profile || authProfile;
 
   // ─── State ───
   const [tab, setTab] = useState('activity');
@@ -302,6 +306,31 @@ export default function OpportunityDrawer({
 
   // ESC close
   useEscClose(onClose);
+
+  // Log view when opportunity opens
+  const lastViewedId = useRef(null);
+  useEffect(() => {
+    if (selectedOpp?.id && selectedOpp.id !== lastViewedId.current) {
+      lastViewedId.current = selectedOpp.id;
+      const contactName = selectedOpp.contacts
+        ? (isRTL ? (selectedOpp.contacts.full_name_ar || selectedOpp.contacts.full_name_en) : (selectedOpp.contacts.full_name_en || selectedOpp.contacts.full_name_ar))
+        : '';
+      logView({ entityType: 'opportunity', entityId: selectedOpp.id, entityName: contactName || `Opportunity #${selectedOpp.id}`, viewer: viewerProfile });
+    }
+  }, [selectedOpp?.id, viewerProfile]);
+
+  // Arrow key navigation (prev/next)
+  useEffect(() => {
+    const handler = (e) => {
+      if (showEdit || showAddActivity || showDrawerMenu) return;
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+      if (e.key === 'ArrowLeft' && onNext) { e.preventDefault(); onNext(); }
+      if (e.key === 'ArrowRight' && onPrev) { e.preventDefault(); onPrev(); }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onPrev, onNext, showEdit, showAddActivity, showDrawerMenu]);
 
   // Reset tab on opp change
   useEffect(() => {
@@ -572,10 +601,10 @@ export default function OpportunityDrawer({
               const TabIcon = t.icon;
               const isActive = tab === t.key;
               return (
-                <button key={t.key} onClick={() => setTab(t.key)}
-                  className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors ${isActive ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal hover:text-content dark:hover:text-content-dark'}`}>
-                  <TabIcon size={13} />
-                  {t.label}
+                <button key={t.key} onClick={() => setTab(t.key)} title={t.label}
+                  className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer flex items-center justify-center gap-1 transition-colors ${isActive ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal hover:text-content dark:hover:text-content-dark'}`}>
+                  <TabIcon size={14} />
+                  <span className="hidden sm:inline truncate max-w-[60px]">{t.label}</span>
                 </button>
               );
             })}
@@ -989,6 +1018,36 @@ export default function OpportunityDrawer({
 
               {/* Follow Up Reminder */}
               <FollowUpReminder entityType="opportunity" entityId={String(selectedOpp.id)} entityName={getContactName(selectedOpp)} />
+
+              {/* Viewed By */}
+              {(() => {
+                const viewers = getEntityViewers('opportunity', selectedOpp.id);
+                if (viewers.length === 0) return null;
+                return (
+                  <div className="rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
+                    <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-input/50 dark:bg-surface-input-dark/50 border-b border-edge dark:border-edge-dark">
+                      <Star size={13} style={{ color: '#6B21A8' }} />
+                      <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wide">{isRTL ? 'شوهد بواسطة' : 'Viewed By'}</span>
+                      <span className="text-[9px] text-content-muted dark:text-content-muted-dark ms-auto">{viewers.length} {isRTL ? 'مستخدم' : 'users'}</span>
+                    </div>
+                    <div className="px-3.5 py-1.5 max-h-[180px] overflow-y-auto">
+                      {viewers.map(v => (
+                        <div key={v.user_id} className="flex items-center justify-between py-1.5 border-b border-brand-500/[0.06] last:border-b-0 text-[11px]">
+                          <div>
+                            <span className="text-content dark:text-content-dark font-medium">{v.user_name}</span>
+                            {v.user_role && <span className="text-content-muted/50 dark:text-content-muted-dark/50 ms-1.5 text-[9px]">{v.user_role}</span>}
+                          </div>
+                          <div className="text-end">
+                            <span className="text-content-muted dark:text-content-muted-dark">
+                              {v.views}x · {new Date(v.last_view).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(v.last_view).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
