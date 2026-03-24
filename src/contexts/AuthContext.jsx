@@ -61,8 +61,8 @@ export function AuthProvider({ children }) {
         } catch (err) {
           console.error('Failed to restore Supabase session:', err);
         }
-        // If no Supabase session, try mock session from localStorage
-        if (isMounted && !profile) {
+        // If no Supabase session found, try mock session from localStorage
+        if (isMounted && !session?.user) {
           const saved = localStorage.getItem('platform_mock_user');
           if (saved) {
             try {
