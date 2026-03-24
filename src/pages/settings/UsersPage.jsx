@@ -1,16 +1,46 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabase';
 import {
   Users, Shield, UserCheck, UserX, Clock,
-  ToggleLeft, ToggleRight,
+  ToggleLeft, ToggleRight, Plus, Pencil,
 } from 'lucide-react';
 import {
   Button, Badge, KpiCard, Table, Th, Td, Tr,
   PageSkeleton, SmartFilter, applySmartFilters, Pagination,
+  Modal, ModalFooter,
 } from '../../components/ui';
+import Input, { Select } from '../../components/ui/Input';
+
+/* ─── Constants ─── */
+const ROLE_OPTIONS = [
+  { value: 'admin',          ar: 'مدير نظام',      en: 'Admin' },
+  { value: 'sales_director', ar: 'مدير مبيعات',     en: 'Sales Director' },
+  { value: 'sales_manager',  ar: 'سيلز مانجر',     en: 'Sales Manager' },
+  { value: 'team_leader',    ar: 'تيم ليدر',       en: 'Team Leader' },
+  { value: 'sales_agent',    ar: 'سيلز',           en: 'Sales Agent' },
+  { value: 'marketing',      ar: 'تسويق',          en: 'Marketing' },
+  { value: 'hr',             ar: 'موارد بشرية',     en: 'HR' },
+  { value: 'finance',        ar: 'مالية',           en: 'Finance' },
+  { value: 'operations',     ar: 'عمليات',          en: 'Operations' },
+];
+
+const DEPARTMENT_OPTIONS = [
+  { value: 'sales',      ar: 'المبيعات',      en: 'Sales' },
+  { value: 'hr',         ar: 'الموارد البشرية', en: 'HR' },
+  { value: 'finance',    ar: 'المالية',        en: 'Finance' },
+  { value: 'marketing',  ar: 'التسويق',       en: 'Marketing' },
+  { value: 'operations', ar: 'العمليات',       en: 'Operations' },
+];
+
+const EMPTY_FORM = {
+  email: '', password: '', full_name_ar: '', full_name_en: '',
+  role: 'sales_agent', department: 'sales', team_id: '', phone: '',
+};
 
 /* ─── Mock Data ─── */
 const MOCK_USERS = [
@@ -65,20 +95,34 @@ function StatusBadge({ status, lang }) {
 
 /* ─── Role Badge ─── */
 function RoleBadge({ role, lang }) {
-  const colors = { admin: '#EF4444', manager: '#4A7AAB', user: '#6B8DB5' };
-  const labels = {
-    admin: lang === 'ar' ? 'مدير نظام' : 'Admin',
-    manager: lang === 'ar' ? 'مدير' : 'Manager',
-    user: lang === 'ar' ? 'مستخدم' : 'User',
+  const colors = {
+    admin: '#EF4444', sales_director: '#8B5CF6', sales_manager: '#4A7AAB',
+    team_leader: '#F59E0B', sales_agent: '#6B8DB5', marketing: '#EC4899',
+    hr: '#14B8A6', finance: '#F97316', operations: '#6366F1',
+    manager: '#4A7AAB', user: '#6B8DB5',
   };
+  const entry = ROLE_OPTIONS.find(r => r.value === role);
+  const label = entry ? (lang === 'ar' ? entry.ar : entry.en) : role;
   const c = colors[role] || '#6B8DB5';
   return (
     <span
       className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
       style={{ background: c + '18', color: c, border: `1px solid ${c}35` }}
     >
-      {labels[role] || role}
+      {label}
     </span>
+  );
+}
+
+/* ─── Form Field wrapper ─── */
+function Field({ label, required, children }) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-content dark:text-content-dark mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+    </div>
   );
 }
 
@@ -91,6 +135,9 @@ export default function UsersPage() {
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
+  const toast = useToast();
+
+  const { register } = useAuth();
 
   const [search, setSearch] = useState('');
   const [smartFilters, setSmartFilters] = useState([]);
@@ -99,30 +146,41 @@ export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null); // null = add mode, object = edit mode
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
+
   const { auditFields, applyAuditFilters } = useAuditFilter('user');
 
-  /* ── Fetch users ── */
-  useEffect(() => {
-    async function loadUsers() {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .order('created_at', { ascending: false });
+  const USE_SUPABASE = !!import.meta.env.VITE_SUPABASE_URL;
 
-        if (error || !data || data.length === 0) {
-          setUsers(MOCK_USERS);
-        } else {
-          setUsers(data);
-        }
-      } catch {
-        setUsers(MOCK_USERS);
-      } finally {
-        setLoading(false);
+  /* ── Fetch users ── */
+  const loadUsers = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error || !data || data.length === 0) {
+        // In mock mode also load any locally-created users
+        const local = JSON.parse(localStorage.getItem('platform_users') || '[]');
+        setUsers([...local, ...MOCK_USERS]);
+      } else {
+        setUsers(data);
       }
+    } catch {
+      const local = JSON.parse(localStorage.getItem('platform_users') || '[]');
+      setUsers([...local, ...MOCK_USERS]);
+    } finally {
+      setLoading(false);
     }
-    loadUsers();
   }, []);
+
+  useEffect(() => { loadUsers(); }, [loadUsers]);
 
   /* ── Stats ── */
   const activeCount = users.filter(u => u.status === 'active').length;
@@ -135,11 +193,7 @@ export default function UsersPage() {
     { id: 'email', label: 'البريد الإلكتروني', labelEn: 'Email', type: 'text' },
     {
       id: 'role', label: 'الدور', labelEn: 'Role', type: 'select',
-      options: [
-        { value: 'admin', label: 'مدير نظام', labelEn: 'Admin' },
-        { value: 'manager', label: 'مدير', labelEn: 'Manager' },
-        { value: 'user', label: 'مستخدم', labelEn: 'User' },
-      ],
+      options: ROLE_OPTIONS.map(r => ({ value: r.value, label: r.ar, labelEn: r.en })),
     },
     {
       id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select',
@@ -163,7 +217,7 @@ export default function UsersPage() {
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(u => {
-        const name = (isRTL ? u.name_ar : u.name_en) || u.name_ar || '';
+        const name = (isRTL ? (u.name_ar || u.full_name_ar) : (u.name_en || u.full_name_en)) || u.name_ar || u.full_name_ar || '';
         return (
           name.toLowerCase().includes(q) ||
           (u.email || '').toLowerCase().includes(q)
@@ -196,7 +250,7 @@ export default function UsersPage() {
 
   /* ── Format date ── */
   const formatDate = (dateStr) => {
-    if (!dateStr) return '—';
+    if (!dateStr) return '\u2014';
     try {
       return new Date(dateStr).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', {
         year: 'numeric', month: 'short', day: 'numeric',
@@ -207,7 +261,7 @@ export default function UsersPage() {
   };
 
   const formatDateTime = (dateStr) => {
-    if (!dateStr) return '—';
+    if (!dateStr) return '\u2014';
     try {
       return new Date(dateStr).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', {
         year: 'numeric', month: 'short', day: 'numeric',
@@ -218,11 +272,166 @@ export default function UsersPage() {
     }
   };
 
+  /* ── Open Add Modal ── */
+  const openAddModal = () => {
+    setEditingUser(null);
+    setForm({ ...EMPTY_FORM });
+    setFormErrors({});
+    setShowModal(true);
+  };
+
+  /* ── Open Edit Modal ── */
+  const openEditModal = (user) => {
+    setEditingUser(user);
+    setForm({
+      email: user.email || '',
+      password: '',
+      full_name_ar: user.full_name_ar || user.name_ar || '',
+      full_name_en: user.full_name_en || user.name_en || '',
+      role: user.role || 'sales_agent',
+      department: user.department || 'sales',
+      team_id: user.team_id || '',
+      phone: user.phone || '',
+    });
+    setFormErrors({});
+    setShowModal(true);
+  };
+
+  /* ── Validate Form ── */
+  const validate = () => {
+    const errs = {};
+    const isEdit = !!editingUser;
+
+    if (!isEdit && !form.email.trim()) errs.email = true;
+    if (!isEdit && (!form.password || form.password.length < 6)) errs.password = true;
+    if (!form.full_name_ar.trim()) errs.full_name_ar = true;
+    if (!form.full_name_en.trim()) errs.full_name_en = true;
+    if (!form.role) errs.role = true;
+    if (!form.department) errs.department = true;
+
+    setFormErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
+  /* ── Save Handler ── */
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    const isEdit = !!editingUser;
+
+    try {
+      if (isEdit) {
+        // ── Edit user ──
+        const updates = {
+          full_name_ar: form.full_name_ar,
+          full_name_en: form.full_name_en,
+          name_ar: form.full_name_ar,
+          name_en: form.full_name_en,
+          role: form.role,
+          department: form.department,
+          team_id: form.team_id || null,
+          phone: form.phone || null,
+        };
+
+        if (USE_SUPABASE) {
+          const { error } = await supabase
+            .from('users')
+            .update(updates)
+            .eq('id', editingUser.id);
+          if (error) throw error;
+        }
+
+        // Update local state
+        setUsers(prev => prev.map(u =>
+          u.id === editingUser.id ? { ...u, ...updates } : u
+        ));
+
+        // Also update localStorage users if present
+        const local = JSON.parse(localStorage.getItem('platform_users') || '[]');
+        const idx = local.findIndex(u => u.id === editingUser.id);
+        if (idx >= 0) {
+          local[idx] = { ...local[idx], ...updates };
+          localStorage.setItem('platform_users', JSON.stringify(local));
+        }
+
+        toast.success(lang === 'ar' ? 'تم تحديث المستخدم بنجاح' : 'User updated successfully');
+      } else {
+        // ── Create user ──
+        if (USE_SUPABASE) {
+          try {
+            await register(form.email, form.password, {
+              full_name_ar: form.full_name_ar,
+              full_name_en: form.full_name_en,
+              role: form.role,
+              department: form.department,
+              team_id: form.team_id || null,
+              phone: form.phone || null,
+            });
+            toast.success(lang === 'ar' ? 'تم إنشاء المستخدم بنجاح' : 'User created successfully');
+          } catch (err) {
+            // If register throws (e.g. mock mode), fallback to localStorage
+            if (err?.message?.includes('only available with Supabase')) {
+              saveToLocalStorage();
+              toast.success(lang === 'ar' ? 'تم إنشاء المستخدم محليا' : 'User created locally');
+            } else {
+              throw err;
+            }
+          }
+        } else {
+          saveToLocalStorage();
+          toast.success(lang === 'ar' ? 'تم إنشاء المستخدم محليا' : 'User created locally');
+        }
+
+        await loadUsers();
+      }
+
+      setShowModal(false);
+      setEditingUser(null);
+      setForm({ ...EMPTY_FORM });
+    } catch (err) {
+      toast.error(err?.message || (lang === 'ar' ? 'حدث خطأ' : 'An error occurred'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── Save to localStorage (mock mode) ── */
+  const saveToLocalStorage = () => {
+    const local = JSON.parse(localStorage.getItem('platform_users') || '[]');
+    const newUser = {
+      id: crypto.randomUUID ? crypto.randomUUID() : `local_${Date.now()}`,
+      email: form.email,
+      name_ar: form.full_name_ar,
+      name_en: form.full_name_en,
+      full_name_ar: form.full_name_ar,
+      full_name_en: form.full_name_en,
+      role: form.role,
+      department: form.department,
+      team_id: form.team_id || null,
+      phone: form.phone || null,
+      status: 'active',
+      created_at: new Date().toISOString(),
+      last_login: null,
+    };
+    local.unshift(newUser);
+    localStorage.setItem('platform_users', JSON.stringify(local));
+  };
+
+  /* ── Update form field ── */
+  const setField = (key, value) => {
+    setForm(prev => ({ ...prev, [key]: value }));
+    if (formErrors[key]) setFormErrors(prev => ({ ...prev, [key]: false }));
+  };
+
+  const errClass = (key) => formErrors[key] ? 'border-red-500 focus:border-red-500 focus:ring-red-500/30' : '';
+
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
       <PageSkeleton hasKpis tableRows={6} tableCols={6} />
     </div>
   );
+
+  const isEdit = !!editingUser;
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -242,6 +451,9 @@ export default function UsersPage() {
             </p>
           </div>
         </div>
+        <Button size="sm" onClick={openAddModal}>
+          <Plus size={14} /> {lang === 'ar' ? 'إضافة مستخدم' : 'Add User'}
+        </Button>
       </div>
 
       {/* ── KPI Strip ── */}
@@ -282,13 +494,13 @@ export default function UsersPage() {
         </thead>
         <tbody>
           {paged.map(user => {
-            const name = (isRTL ? user.name_ar : user.name_en) || user.name_ar || user.email;
+            const name = (isRTL ? (user.name_ar || user.full_name_ar) : (user.name_en || user.full_name_en)) || user.name_ar || user.full_name_ar || user.email;
             const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
             const avatarColors = ['#1B3347', '#2B4C6F', '#4A7AAB', '#6B8DB5', '#8BA8C8'];
             const avatarBg = avatarColors[name?.charCodeAt(0) % avatarColors.length] || '#4A7AAB';
 
             return (
-              <Tr key={user.id}>
+              <Tr key={user.id} className="cursor-pointer hover:bg-brand-500/[0.04]" onClick={() => openEditModal(user)}>
                 <Td>
                   <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: avatarBg }}>
@@ -324,11 +536,18 @@ export default function UsersPage() {
                 <Td>
                   <div className={`flex gap-1.5 justify-end ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <button
+                      title={lang === 'ar' ? 'تعديل' : 'Edit'}
+                      onClick={(e) => { e.stopPropagation(); openEditModal(user); }}
+                      className="w-8 h-8 rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150"
+                    >
+                      <Pencil size={14} className="text-content-muted dark:text-content-muted-dark" />
+                    </button>
+                    <button
                       title={user.status === 'active'
                         ? (lang === 'ar' ? 'تعطيل' : 'Deactivate')
                         : (lang === 'ar' ? 'تفعيل' : 'Activate')
                       }
-                      onClick={() => toggleStatus(user.id)}
+                      onClick={(e) => { e.stopPropagation(); toggleStatus(user.id); }}
                       className="w-8 h-8 rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150"
                     >
                       {user.status === 'active'
@@ -368,6 +587,151 @@ export default function UsersPage() {
           </p>
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════
+          ADD / EDIT USER MODAL
+      ══════════════════════════════════════════════ */}
+      <Modal
+        open={showModal}
+        onClose={() => { setShowModal(false); setEditingUser(null); }}
+        title={isEdit
+          ? (lang === 'ar' ? 'تعديل المستخدم' : 'Edit User')
+          : (lang === 'ar' ? 'إضافة مستخدم جديد' : 'Add New User')
+        }
+        width="max-w-xl"
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Email */}
+          {!isEdit && (
+            <Field label={lang === 'ar' ? 'البريد الإلكتروني' : 'Email'} required>
+              <Input
+                type="email"
+                placeholder="user@company.com"
+                value={form.email}
+                onChange={(e) => setField('email', e.target.value)}
+                className={errClass('email')}
+              />
+            </Field>
+          )}
+
+          {/* Password - only for add */}
+          {!isEdit && (
+            <Field label={lang === 'ar' ? 'كلمة المرور' : 'Password'} required>
+              <Input
+                type="password"
+                placeholder={lang === 'ar' ? '٦ أحرف على الأقل' : 'Min 6 characters'}
+                value={form.password}
+                onChange={(e) => setField('password', e.target.value)}
+                className={errClass('password')}
+              />
+            </Field>
+          )}
+
+          {/* Full Name Arabic */}
+          <Field label={lang === 'ar' ? 'الاسم بالعربي' : 'Full Name (Arabic)'} required>
+            <Input
+              type="text"
+              dir="rtl"
+              placeholder="الاسم الكامل"
+              value={form.full_name_ar}
+              onChange={(e) => setField('full_name_ar', e.target.value)}
+              className={errClass('full_name_ar')}
+            />
+          </Field>
+
+          {/* Full Name English */}
+          <Field label={lang === 'ar' ? 'الاسم بالإنجليزي' : 'Full Name (English)'} required>
+            <Input
+              type="text"
+              dir="ltr"
+              placeholder="Full Name"
+              value={form.full_name_en}
+              onChange={(e) => setField('full_name_en', e.target.value)}
+              className={errClass('full_name_en')}
+            />
+          </Field>
+
+          {/* Role */}
+          <Field label={lang === 'ar' ? 'الدور' : 'Role'} required>
+            <Select
+              value={form.role}
+              onChange={(e) => setField('role', e.target.value)}
+              className={errClass('role')}
+            >
+              {ROLE_OPTIONS.map(r => (
+                <option key={r.value} value={r.value}>
+                  {lang === 'ar' ? r.ar : r.en}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          {/* Department */}
+          <Field label={lang === 'ar' ? 'القسم' : 'Department'} required>
+            <Select
+              value={form.department}
+              onChange={(e) => setField('department', e.target.value)}
+              className={errClass('department')}
+            >
+              {DEPARTMENT_OPTIONS.map(d => (
+                <option key={d.value} value={d.value}>
+                  {lang === 'ar' ? d.ar : d.en}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          {/* Team ID */}
+          <Field label={lang === 'ar' ? 'الفريق' : 'Team ID'}>
+            <Input
+              type="text"
+              placeholder={lang === 'ar' ? 'اختياري' : 'Optional'}
+              value={form.team_id}
+              onChange={(e) => setField('team_id', e.target.value)}
+            />
+          </Field>
+
+          {/* Phone */}
+          <Field label={lang === 'ar' ? 'رقم الهاتف' : 'Phone'}>
+            <Input
+              type="tel"
+              dir="ltr"
+              placeholder="+20 1xx xxx xxxx"
+              value={form.phone}
+              onChange={(e) => setField('phone', e.target.value)}
+            />
+          </Field>
+        </div>
+
+        {/* Show email (read-only) in edit mode */}
+        {isEdit && (
+          <div className="mt-3 text-xs text-content-muted dark:text-content-muted-dark">
+            {lang === 'ar' ? 'البريد الإلكتروني:' : 'Email:'} {editingUser.email}
+          </div>
+        )}
+
+        <ModalFooter className={isRTL ? 'flex-row-reverse' : ''}>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => { setShowModal(false); setEditingUser(null); }}
+          >
+            {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving
+              ? (lang === 'ar' ? 'جاري الحفظ...' : 'Saving...')
+              : isEdit
+                ? (lang === 'ar' ? 'حفظ التعديلات' : 'Save Changes')
+                : (lang === 'ar' ? 'إنشاء المستخدم' : 'Create User')
+            }
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
