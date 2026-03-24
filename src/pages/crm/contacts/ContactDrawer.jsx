@@ -5,7 +5,7 @@ import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
 import { addRecentItem } from '../../../services/recentItemsService';
-import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle, ExternalLink, Download } from 'lucide-react';
+import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle, ExternalLink, Download, Building2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
@@ -20,6 +20,7 @@ import { fetchTasks, createTask, TASK_PRIORITIES, TASK_STATUSES } from '../../..
 import EditContactModal from './EditContactModal';
 import TakeActionForm from './TakeActionForm';
 import ContactSMSModal from './ContactSMSModal';
+import ResaleUnitsTab from './ResaleUnitsTab';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
@@ -695,6 +696,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const tabs = [
     { key: 'activity', label: isRTL ? 'النشاط' : 'Activity', icon: Clock },
     { key: deptTab.key, label: isRTL ? deptTab.label_ar : deptTab.label_en, icon: deptTab.icon },
+    { key: 'units', label: isRTL ? 'وحدات للبيع' : 'Units', icon: Building2 },
     { key: 'comments', label: isRTL ? 'تعليقات' : 'Comments', icon: MessageSquare },
     { key: 'documents', label: isRTL ? 'المستندات' : 'Documents', icon: FileText },
     { key: 'data', label: isRTL ? 'البيانات' : 'Data', icon: Briefcase },
@@ -1271,6 +1273,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           )}
 
           {/* ══════ COMMENTS TAB (تعليقات) ══════ */}
+          {/* ══════ RESALE UNITS TAB (وحدات للبيع) ══════ */}
+          {tab === 'units' && (
+            <ResaleUnitsTab contact={contact} isRTL={isRTL} />
+          )}
+
           {tab === 'comments' && (
             <CommentsSection
               entity="contact"
