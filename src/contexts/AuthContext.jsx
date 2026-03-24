@@ -162,9 +162,13 @@ export function AuthProvider({ children }) {
         setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
         logSession(profileData);
         return profileData;
-      } catch {
-        // Supabase failed - fallback to mock users
-        return loginWithMock(email, password);
+      } catch (err) {
+        // Only fallback to mock if Supabase is unreachable (network error)
+        if (err?.message?.includes('fetch') || err?.message?.includes('network') || err?.message?.includes('Failed to fetch')) {
+          return loginWithMock(email, password);
+        }
+        // For auth errors (wrong password, user not found), show the error
+        throw err;
       }
     }
     return loginWithMock(email, password);

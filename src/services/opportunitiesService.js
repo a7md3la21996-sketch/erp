@@ -105,7 +105,7 @@ export async function fetchOpportunities({ role, userId, teamId } = {}) {
       if (ids.length) query = query.in('assigned_to', ids);
     }
 
-    const { data, error } = await query.limit(1000);
+    const { data, error } = await query.limit(2000);
     if (!error && data?.length) {
       // Enrich with contacts/users/projects
       const enriched = await enrichOpps(data);
