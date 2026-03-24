@@ -9,8 +9,9 @@ import {
   Megaphone, Plus, TrendingUp, Users, DollarSign, BarChart3, Search, X,
   Pencil, Trash2, Eye, Zap, RefreshCw, ChevronUp, ChevronDown,
   Phone, MessageCircle, ArrowUpDown, Target, Repeat, Clock,
-  PieChart, Calendar,
+  PieChart, Calendar, Award, TrendingDown, CircleDollarSign,
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import { Card, Button, Input, Select, Textarea, KpiCard, SmartFilter, applySmartFilters, FilterPill, ExportButton, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { fetchCampaigns, createCampaign, updateCampaign, deleteCampaign, getCampaignContacts, getCampaignInteractions } from '../services/marketingService';
@@ -92,6 +93,7 @@ export default function MarketingPage() {
     if (path.includes('/marketing/campaigns')) return 'campaigns';
     if (path.includes('/marketing/channels')) return 'channels';
     if (path.includes('/marketing/funnel')) return 'funnel';
+    if (path.includes('/marketing/roi')) return 'roi';
     return 'dashboard';
   }, [location.pathname]);
   const [campaigns, setCampaigns] = useState([]);

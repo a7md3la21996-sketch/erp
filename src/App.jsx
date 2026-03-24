@@ -192,11 +192,11 @@ export default function App() {
                 <Route path="/email" element={<Guarded><EmailPage /></Guarded>} />
                 <Route path="/whatsapp" element={<Guarded><WhatsAppPage /></Guarded>} />
                 <Route path="/reports" element={<Guarded><ReportsPage /></Guarded>} />
-                <Route path="/comparison" element={<Guarded><ComparisonReportsPage /></Guarded>} />
+                <Route path="/comparison" element={<Navigate to="/reports?tab=comparison" replace />} />
                 <Route path="/approvals" element={<Guarded><ApprovalsPage /></Guarded>} />
-                <Route path="/analytics" element={<Guarded><AnalyticsPage /></Guarded>} />
-                <Route path="/heatmap" element={<Guarded><HeatmapPage /></Guarded>} />
-                <Route path="/chart-builder" element={<Guarded><ChartBuilderPage /></Guarded>} />
+                <Route path="/analytics" element={<Navigate to="/reports?tab=analytics" replace />} />
+                <Route path="/heatmap" element={<Navigate to="/reports?tab=heatmap" replace />} />
+                <Route path="/chart-builder" element={<Navigate to="/reports?tab=chart-builder" replace />} />
                 <Route path="/announcements" element={<Guarded><AnnouncementsPage /></Guarded>} />
                 <Route path="/settings/general" element={<Guarded><SettingsPage /></Guarded>} />
                 <Route path="/settings/audit-log" element={<Guarded><AuditLogPage /></Guarded>} />

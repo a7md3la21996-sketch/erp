@@ -36,6 +36,7 @@ export const NAV_ITEMS = [
     { id: 'mkt-campaigns', label: { ar: 'الحملات', en: 'Campaigns' }, path: '/marketing/campaigns', permission: P.CAMPAIGNS_VIEW },
     { id: 'mkt-channels', label: { ar: 'القنوات', en: 'Channels' }, path: '/marketing/channels', permission: P.CAMPAIGNS_VIEW },
     { id: 'mkt-funnel', label: { ar: 'القمع التسويقي', en: 'Funnel' }, path: '/marketing/funnel', permission: P.CAMPAIGNS_VIEW },
+    { id: 'mkt-roi', label: { ar: 'تقرير الأداء و ROI', en: 'ROI Report' }, path: '/marketing/roi', permission: P.CAMPAIGNS_VIEW },
   ]},
   { id: 'hr', label: { ar: 'الموارد البشرية', en: 'HR' }, icon: UserCog, permission: P.HR_VIEW_OWN, children: [
     { id: 'employees',    label: { ar: 'الموظفين',        en: 'Employees' },    path: '/hr/employees',    permission: P.HR_VIEW_OWN },
@@ -74,14 +75,7 @@ export const NAV_ITEMS = [
     { id: 'email', label: { ar: 'البريد الإلكتروني', en: 'Email' }, path: '/email', permission: P.CHAT_USE },
     { id: 'whatsapp', label: { ar: 'واتساب', en: 'WhatsApp' }, path: '/whatsapp', permission: P.CHAT_USE },
   ]},
-  { id: 'reports', label: { ar: 'التقارير', en: 'Reports & Analytics' }, icon: BarChart3, permission: P.RPT_SALES, children: [
-    { id: 'rpt-overview', label: { ar: 'التقارير', en: 'Reports' }, path: '/reports', permission: P.RPT_SALES },
-    { id: 'comparison', label: { ar: 'تقارير المقارنة', en: 'Comparison' }, path: '/comparison', permission: P.RPT_SALES },
-    { id: 'heatmap', label: { ar: 'خريطة النشاط', en: 'Activity Map' }, path: '/heatmap', permission: P.RPT_SALES },
-    { id: 'analytics', label: { ar: 'تحليلات متقدمة', en: 'Analytics' }, path: '/analytics', permission: P.RPT_SALES },
-    { id: 'rpt-forecast', label: { ar: 'توقعات المبيعات', en: 'Sales Forecast' }, path: '/sales/forecast', permission: P.DEALS_VIEW_OWN },
-    { id: 'chart-builder', label: { ar: 'منشئ الرسوم البيانية', en: 'Chart Builder' }, path: '/chart-builder', permission: P.RPT_SALES },
-  ]},
+  { id: 'reports', label: { ar: 'التقارير والتحليلات', en: 'Reports & Analytics' }, icon: BarChart3, path: '/reports', permission: P.RPT_SALES },
   { id: 'settings', label: { ar: 'الإعدادات', en: 'Settings' }, icon: Settings, permission: P.SETTINGS_VIEW, children: [
     { id: 'general', label: { ar: 'إعدادات عامة', en: 'General' }, path: '/settings/general', permission: P.SETTINGS_MANAGE },
     { id: 'users-mgmt', label: { ar: 'المستخدمين', en: 'Users' }, path: '/settings/users', permission: P.USERS_MANAGE },

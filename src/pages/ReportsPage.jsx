@@ -1,12 +1,14 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
   FileText, Users, DollarSign, Briefcase, BarChart3,
   TrendingUp, Calendar, Clock, PieChart, Activity,
   CreditCard, Building2, UserCheck, FileBarChart,
   ArrowDownToLine, Trophy, Target, Award, Star, Medal,
-  ChevronUp, ChevronDown, Minus, Crown, Zap, Download, Printer
+  ChevronUp, ChevronDown, Minus, Crown, Zap, Download, Printer,
+  GitCompareArrows, Map, LineChart, PenTool
 } from 'lucide-react';
 import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { generateReportHTML, getCompanyInfo } from '../services/printService';
@@ -24,6 +26,28 @@ import {
   computePnl, computeExpenseBreakdown, computeInvoiceAging, computeCashflow,
   computeDealPipeline, computePaymentsSummary, computeHandoverStatus, computeTicketsSummary,
 } from '../services/reportsDataService';
+import { PageSkeleton } from '../components/ui/PageSkeletons';
+
+// ── Lazy-loaded section pages ────────────────────────────────────
+const ComparisonReportsPage = lazy(() => import('./ComparisonReportsPage'));
+const HeatmapPage = lazy(() => import('./HeatmapPage'));
+const AnalyticsPage = lazy(() => import('./AnalyticsPage'));
+const ChartBuilderPage = lazy(() => import('./ChartBuilderPage'));
+const SalesForecastPage = lazy(() => import('./sales/SalesForecastPage'));
+
+// ── Section-level tabs (top bar) ─────────────────────────────────
+const SECTION_TABS = [
+  { id: 'reports',       ar: 'التقارير',        en: 'Reports',        icon: FileText },
+  { id: 'comparison',    ar: 'المقارنة',        en: 'Comparison',     icon: GitCompareArrows },
+  { id: 'heatmap',       ar: 'خريطة النشاط',    en: 'Activity Map',   icon: Map },
+  { id: 'analytics',     ar: 'التحليلات',       en: 'Analytics',      icon: LineChart },
+  { id: 'chart-builder', ar: 'منشئ الرسوم',     en: 'Chart Builder',  icon: PenTool },
+  { id: 'forecast',      ar: 'توقعات المبيعات',  en: 'Sales Forecast', icon: TrendingUp },
+];
+
+function SectionLoader() {
+  return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
+}
 
 // ── Mock report data generators ──────────────────────────────────
 
@@ -595,6 +619,21 @@ export default function ReportsPage() {
   const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Section-level tab (top bar) — driven by ?tab= query param
+  const sectionTab = useMemo(() => {
+    const t = searchParams.get('tab');
+    return SECTION_TABS.some(s => s.id === t) ? t : 'reports';
+  }, [searchParams]);
+
+  const setSectionTab = useCallback((tabId) => {
+    if (tabId === 'reports') {
+      setSearchParams({}, { replace: true });
+    } else {
+      setSearchParams({ tab: tabId }, { replace: true });
+    }
+  }, [setSearchParams]);
 
   const [activeTab, setActiveTab] = useState('reports');
   const [dateFrom, setDateFrom] = useState('');
@@ -756,20 +795,87 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
-            <FileText size={20} className="text-brand-500" />
+            <BarChart3 size={20} className="text-brand-500" />
           </div>
           <div>
             <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">
-              {lang === 'ar' ? 'مركز التقارير' : 'Reports Hub'}
+              {lang === 'ar' ? 'التقارير والتحليلات' : 'Reports & Analytics'}
             </h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
-              {lang === 'ar' ? 'تقارير جاهزة ومتابعة التارجت' : 'Reports & Target Tracking'}
+              {lang === 'ar' ? 'تقارير، تحليلات، مقارنات ورسوم بيانية' : 'Reports, analytics, comparisons & charts'}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Section Tabs (pill style) */}
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 flex-wrap">
+        {SECTION_TABS.map(tab => {
+          const Icon = tab.icon;
+          const isActive = sectionTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSectionTab(tab.id)}
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-semibold cursor-pointer transition-all border ${
+                isActive
+                  ? 'bg-brand-500/[0.12] border-brand-500/30 text-brand-500'
+                  : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark hover:border-brand-500/20'
+              }`}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              <Icon size={15} />
+              {lang === 'ar' ? tab.ar : tab.en}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Embedded section pages — negative margin to offset parent padding */}
+      {sectionTab === 'comparison' && (
+        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
+          <Suspense fallback={<SectionLoader />}>
+            <ComparisonReportsPage />
+          </Suspense>
+        </div>
+      )}
+
+      {sectionTab === 'heatmap' && (
+        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
+          <Suspense fallback={<SectionLoader />}>
+            <HeatmapPage />
+          </Suspense>
+        </div>
+      )}
+
+      {sectionTab === 'analytics' && (
+        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
+          <Suspense fallback={<SectionLoader />}>
+            <AnalyticsPage />
+          </Suspense>
+        </div>
+      )}
+
+      {sectionTab === 'chart-builder' && (
+        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
+          <Suspense fallback={<SectionLoader />}>
+            <ChartBuilderPage />
+          </Suspense>
+        </div>
+      )}
+
+      {sectionTab === 'forecast' && (
+        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
+          <Suspense fallback={<SectionLoader />}>
+            <SalesForecastPage />
+          </Suspense>
+        </div>
+      )}
+
+      {/* Section: Reports (default — original content) */}
+      {sectionTab === 'reports' && (<>
+
+      {/* Internal Tabs */}
       <div className="flex gap-1 mb-5 border-b border-edge dark:border-edge-dark">
         {TABS.map(tab => {
           const Icon = tab.icon;
@@ -987,6 +1093,8 @@ export default function ReportsPage() {
           onClose={() => setPrintHTML(null)}
         />
       )}
+
+      </>)}
     </div>
   );
 }
