@@ -31,8 +31,22 @@ const LEVELS = {
 
 const SLA_MINUTES = { google: 15, tiktok: 20, meta: 30, organic: 60, cold_call: 1440 };
 
-// ── Sales Team (loaded from localStorage employees) ──────────────────────
-const MOCK_AGENTS = [];
+// ── Sales Team (loaded from localStorage) ──────────────────────
+function loadAgents() {
+  try {
+    const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+    const names = new Set();
+    const agents = [];
+    contacts.forEach(c => {
+      const name = c.assigned_to_name?.trim();
+      if (name && !names.has(name)) {
+        names.add(name);
+        agents.push({ id: name, name_ar: name, name_en: name, level: 'senior', today_count: 0 });
+      }
+    });
+    return agents;
+  } catch { return []; }
+}
 
 // ── Pool Data (localStorage) ──────────────────────────────────────────────
 function loadLeads() {
@@ -101,6 +115,12 @@ export default function LeadPoolPage() {
   const canViewAll     = canManage; // managers/directors see all teams
 
   const [leads, setLeads]             = useState(() => loadLeads());
+  const agentsList = useMemo(() => loadAgents(), []);
+
+  // Persist leads to localStorage on every change
+  useEffect(() => {
+    try { localStorage.setItem('platform_lead_pool', JSON.stringify(leads)); } catch { /* quota */ }
+  }, [leads]);
 
   const assignedToOptions = useMemo(() =>
     [...new Set(leads.map(l => l.assigned_to).filter(Boolean))].map(name => ({ value: name, label: name, labelEn: name })),
@@ -133,7 +153,7 @@ export default function LeadPoolPage() {
     // First apply permission + scope filters
     let result = leads.filter(l => {
       if (!canViewFresh && l.type === 'fresh') return false;
-      if (canViewAll && poolScope === 'my_team' && l.team !== (user?.team_id || 'team1')) return false;
+      if (poolScope === 'my_team' && l.team !== (user?.team_id || 'team1')) return false;
       return true;
     });
 
@@ -187,7 +207,7 @@ export default function LeadPoolPage() {
   };
 
   const handleAssign = (leadIds, agentId) => {
-    const agent = MOCK_AGENTS.find(a => a.id === agentId);
+    const agent = agentsList.find(a => a.id === agentId);
     const agentName = agent ? (lang === 'ar' ? agent.name_ar : agent.name_en) : agentId;
     const userName = profile?.full_name_ar || profile?.full_name_en || '';
     const isBulk = Array.isArray(leadIds) && leadIds.length > 1;
@@ -206,7 +226,7 @@ export default function LeadPoolPage() {
   };
 
   const handleAddCold = () => {
-    if (!newLead.name || !newLead.phone) return;
+    if (!newLead.name || !newLead.phone || newLead.phone.replace(/\D/g, '').length < 8) return;
     const lead = {
       id: Date.now().toString(),
       name: newLead.name,
@@ -432,7 +452,7 @@ export default function LeadPoolPage() {
         width="max-w-md"
       >
         <div className="flex flex-col gap-2">
-          {MOCK_AGENTS.map(agent => {
+          {agentsList.map(agent => {
             const level = LEVELS[agent.level];
             const atCap = agent.today_count >= level.dailyCap;
             return (
