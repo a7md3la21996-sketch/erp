@@ -1069,6 +1069,8 @@ export default function CommissionsPage() {
           {lang === 'ar' ? (tab === 'by_developer' ? 'مطور' : 'سجل') : (tab === 'by_developer' ? 'developers' : 'records')}
         </span>
       </div>
+
+      </>}
     </div>
   );
 }
