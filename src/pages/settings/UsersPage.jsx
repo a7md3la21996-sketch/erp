@@ -618,17 +618,17 @@ export default function UsersPage() {
           {/* Password - only for add */}
           {!isEdit && (
             <Field label={lang === 'ar' ? 'كلمة المرور' : 'Password'} required>
-              <div className="relative">
+              <div className="flex gap-2">
                 <Input
                   type={showPass ? 'text' : 'password'}
                   placeholder={lang === 'ar' ? '٦ أحرف على الأقل' : 'Min 6 characters'}
                   value={form.password}
                   onChange={(e) => setField('password', e.target.value)}
-                  className={errClass('password')}
+                  className={`flex-1 ${errClass('password')}`}
                 />
                 <button type="button" onClick={() => setShowPass(p => !p)}
-                  className="absolute top-1/2 -translate-y-1/2 end-2 bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark text-xs p-1">
-                  {showPass ? (lang === 'ar' ? 'إخفاء' : 'Hide') : (lang === 'ar' ? 'عرض' : 'Show')}
+                  className="px-3 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark text-xs cursor-pointer hover:bg-brand-500/10 shrink-0">
+                  {showPass ? '🙈' : '👁'}
                 </button>
               </div>
             </Field>
