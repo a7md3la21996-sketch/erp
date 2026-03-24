@@ -656,6 +656,18 @@ DO $$ BEGIN ALTER TABLE tasks ADD COLUMN contact_id uuid; EXCEPTION WHEN duplica
 DO $$ BEGIN ALTER TABLE employees ADD COLUMN is_active boolean default true; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 DO $$ BEGIN ALTER TABLE employees ADD COLUMN deleted_at timestamptz; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
 
+DO $$ BEGIN ALTER TABLE reminders ADD COLUMN assigned_to uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE tickets ADD COLUMN assigned_to uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE leave_requests ADD COLUMN employee_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE attendance ADD COLUMN employee_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE leave_balances ADD COLUMN employee_id uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
+DO $$ BEGIN ALTER TABLE invoices ADD COLUMN created_by uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE expenses ADD COLUMN created_by uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+DO $$ BEGIN ALTER TABLE journal_entries ADD COLUMN created_by uuid; EXCEPTION WHEN duplicate_column THEN NULL; END $$;
+
 -- ============================================================
 -- Foreign Key Constraints (safe - skip if already exists)
 -- ============================================================
