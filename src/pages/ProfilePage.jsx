@@ -43,17 +43,25 @@ export default function ProfilePage() {
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
 
-  // Find this employee in MOCK_EMPLOYEES
+  // Find this employee in MOCK_EMPLOYEES or use profile directly
   const employee = useMemo(() => {
     if (profile?.id) {
       const found = MOCK_EMPLOYEES.find(e => e.id === profile.id || e.email === profile.email);
       if (found) return found;
     }
-    return MOCK_EMPLOYEES[0];
+    // Fallback to profile data or safe defaults
+    return MOCK_EMPLOYEES[0] || {
+      id: profile?.id || '',
+      full_name_ar: profile?.full_name_ar || '',
+      full_name_en: profile?.full_name_en || '',
+      email: profile?.email || '',
+      role: profile?.role || 'sales_agent',
+      department: profile?.department || 'sales',
+    };
   }, [profile]);
 
-  const dept = DEPARTMENTS.find(d => d.id === employee.department);
-  const roleLabel = ROLE_LABELS[employee.role]?.[i18n.language] || employee.role;
+  const dept = DEPARTMENTS.find(d => d.id === (employee?.department || 'sales'));
+  const roleLabel = ROLE_LABELS[employee?.role]?.[i18n.language] || employee?.role || '';
 
   // Editing state
   const [editing, setEditing] = useState(false);
