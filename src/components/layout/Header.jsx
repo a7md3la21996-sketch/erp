@@ -87,23 +87,16 @@ export default function Header({ onMenuClick }) {
     return () => window.removeEventListener('changelog_seen', handler);
   }, []);
 
+  // Single click-outside handler for all dropdowns
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setShowProfile(false); };
+    if (!openDropdown) return;
+    const handler = (e) => {
+      const inside = [ref, themeMenuRef, roleSwitcherRef].some(r => r.current?.contains(e.target));
+      if (!inside) setOpenDropdown(null);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => { if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) setShowThemeMenu(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  useEffect(() => {
-    const handler = (e) => { if (roleSwitcherRef.current && !roleSwitcherRef.current.contains(e.target)) setShowRoleSwitcher(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [openDropdown]);
 
   // Cmd+K / Ctrl+K to open search
   useEffect(() => {

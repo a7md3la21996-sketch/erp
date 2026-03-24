@@ -297,33 +297,41 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   useEffect(() => {
     if (!contact?.id) return;
     const cid = String(contact.id);
-    try {
-      const comments = getComments('contact', cid) || [];
-      const documents = getDocumentsByEntity('contact', cid) || [];
-      const { data: allAudits } = getLocalAuditLogs({ limit: 500, entity: 'contact' });
-      const audits = allAudits.filter(a => String(a.entity_id) === cid);
-      // Filter out create/update audits that duplicate activities
-      const meaningfulAudits = audits.filter(a => !['create'].includes(a.action));
-      getWonDeals().then(allDeals => {
-        const deals = (allDeals || []).filter(d => String(d.contact_id) === cid);
-        setExtraSources({ comments, documents, audits: meaningfulAudits, deals });
-      }).catch(() => {
-        setExtraSources({ comments, documents, audits: meaningfulAudits, deals: [] });
-      });
-    } catch {
-      setExtraSources({ comments: [], documents: [], audits: [], deals: [] });
-    }
+    const loadExtra = async () => {
+      try {
+        const [comments, documents, allDeals] = await Promise.all([
+          getComments('contact', cid).catch(() => []),
+          getDocumentsByEntity('contact', cid).catch(() => []),
+          getWonDeals().catch(() => []),
+        ]);
+        const { data: allAudits } = getLocalAuditLogs({ limit: 500, entity: 'contact' });
+        const audits = (Array.isArray(allAudits) ? allAudits : []).filter(a => String(a.entity_id) === cid);
+        const meaningfulAudits = audits.filter(a => !['create'].includes(a.action));
+        const deals = (Array.isArray(allDeals) ? allDeals : []).filter(d => String(d.contact_id) === cid);
+        setExtraSources({
+          comments: Array.isArray(comments) ? comments : [],
+          documents: Array.isArray(documents) ? documents : [],
+          audits: meaningfulAudits,
+          deals,
+        });
+      } catch {
+        setExtraSources({ comments: [], documents: [], audits: [], deals: [] });
+      }
+    };
+    loadExtra();
   }, [contact?.id]);
 
   // Listen for real-time updates
   useEffect(() => {
-    const refresh = () => {
+    const refresh = async () => {
       if (!contact?.id) return;
       const cid = String(contact.id);
       try {
-        const comments = getComments('contact', cid) || [];
-        const documents = getDocumentsByEntity('contact', cid) || [];
-        setExtraSources(prev => ({ ...prev, comments, documents }));
+        const [comments, documents] = await Promise.all([
+          getComments('contact', cid).catch(() => []),
+          getDocumentsByEntity('contact', cid).catch(() => []),
+        ]);
+        setExtraSources(prev => ({ ...prev, comments: Array.isArray(comments) ? comments : [], documents: Array.isArray(documents) ? documents : [] }));
       } catch { /* ignore */ }
     };
     window.addEventListener('platform_comment', refresh);
