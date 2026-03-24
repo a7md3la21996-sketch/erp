@@ -165,11 +165,11 @@ export function AuthProvider({ children }) {
         logSession(profileData);
         return profileData;
       } catch (err) {
-        // Only fallback to mock if Supabase is unreachable (network error)
-        if (err?.message?.includes('fetch') || err?.message?.includes('network') || err?.message?.includes('Failed to fetch')) {
+        // If this email exists in mock users, try mock login
+        if (MOCK_USERS[email.toLowerCase().trim()]) {
           return loginWithMock(email, password);
         }
-        // For auth errors (wrong password, user not found), show the error
+        // For real Supabase users, show the error
         throw err;
       }
     }
