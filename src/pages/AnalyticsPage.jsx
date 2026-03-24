@@ -430,15 +430,15 @@ export default function AnalyticsPage() {
       {activeTab === 'winloss' && <WinLossTab data={winLossData} isDark={isDark} isRTL={isRTL} cardStyle={cardStyle} tableHeaderStyle={tableHeaderStyle} tableCellStyle={tableCellStyle} textPrimary={textPrimary} textSecondary={textSecondary} borderColor={borderColor} bgCardAlt={bgCardAlt} axisColor={axisColor} />}
       {activeTab === 'agents' && <AgentsTab data={agentData} isDark={isDark} isRTL={isRTL} cardStyle={cardStyle} tableHeaderStyle={tableHeaderStyle} tableCellStyle={tableCellStyle} textPrimary={textPrimary} textSecondary={textSecondary} borderColor={borderColor} bgCardAlt={bgCardAlt} axisColor={axisColor} />}
 
-      {/* Demo notice */}
-      {rawData.useMock && (
+      {/* No data notice */}
+      {!rawData.hasData && (
         <div style={{
           textAlign: 'center', padding: '12px 16px', fontSize: 12,
           color: textSecondary, background: bgCardAlt,
           borderRadius: 8, border: `1px solid ${borderColor}`,
           marginTop: 16,
         }}>
-          {isRTL ? 'البيانات المعروضة هي بيانات تجريبية للعرض' : 'Displaying demo data for preview purposes'}
+          {isRTL ? 'لا توجد بيانات — أضف بيانات حقيقية لعرض التحليلات' : 'No data available — add real data to view analytics'}
         </div>
       )}
     </div>
