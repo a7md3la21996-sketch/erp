@@ -13,7 +13,7 @@ import { fetchActivities } from '../services/activitiesService';
 import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 
 // ── CRM Activity Data (loaded from real services) ─────────────────────────────
-const EMPTY_CRM = { calls: 0, opportunities: 0, deals_closed: 0, leads: 0, campaigns: 0, revenue: 0 };
+const EMPTY_CRM = { calls: 0, calls_answered: 0, calls_no_answer: 0, calls_busy: 0, visits: 0, meetings_scheduled: 0, whatsapp_sent: 0, opportunities: 0, deals_closed: 0, leads: 0, campaigns: 0, revenue: 0 };
 
 // ── Competency scores (consistent with CompetenciesPage) ──────
 function genCompScores(empId) {
@@ -37,11 +37,14 @@ const MONTH = new Date().getMonth() + 1;
 // KPI definitions per department with frequency
 const DEPT_KPIS = {
   sales: [
-    { key: 'calls',        ar: 'المكالمات',      en: 'Calls',          freq: 'daily',   target: 50,  unit: '',      source: 'crm'        },
-    { key: 'opportunities',ar: 'الفرص',          en: 'Opportunities',  freq: 'weekly',  target: 10,  unit: '',      source: 'crm'        },
-    { key: 'deals_closed', ar: 'الصفقات',        en: 'Deals Closed',   freq: 'monthly', target: 3,   unit: '',      source: 'crm'        },
-    { key: 'revenue',      ar: 'الإيرادات',      en: 'Revenue',        freq: 'monthly', target: 250000, unit: 'EGP', source: 'crm'      },
-    { key: 'attendance',   ar: 'الحضور',         en: 'Attendance',     freq: 'daily',   target: 22,  unit: 'days',  source: 'hr'         },
+    { key: 'calls',            ar: 'المكالمات',       en: 'Calls',           freq: 'daily',   target: 50,     unit: '',      source: 'crm' },
+    { key: 'calls_answered',   ar: 'مكالمات ناجحة',   en: 'Answered Calls',  freq: 'daily',   target: 30,     unit: '',      source: 'crm' },
+    { key: 'opportunities',    ar: 'الفرص',           en: 'Opportunities',   freq: 'weekly',  target: 10,     unit: '',      source: 'crm' },
+    { key: 'deals_closed',     ar: 'الصفقات',         en: 'Deals Closed',    freq: 'monthly', target: 3,      unit: '',      source: 'crm' },
+    { key: 'visits',           ar: 'زيارات',          en: 'Site Visits',     freq: 'weekly',  target: 5,      unit: '',      source: 'crm' },
+    { key: 'meetings_scheduled', ar: 'اجتماعات',      en: 'Meetings',        freq: 'weekly',  target: 3,      unit: '',      source: 'crm' },
+    { key: 'revenue',          ar: 'الإيرادات',       en: 'Revenue',         freq: 'monthly', target: 250000, unit: 'EGP',   source: 'crm' },
+    { key: 'attendance',       ar: 'الحضور',          en: 'Attendance',      freq: 'daily',   target: 22,     unit: 'days',  source: 'hr'  },
   ],
   marketing: [
     { key: 'leads',        ar: 'الليدز',         en: 'Leads',          freq: 'daily',   target: 40,  unit: '',      source: 'crm'        },
@@ -125,31 +128,73 @@ export default function PerformancePage() {
   const [selectedEmp, setSelectedEmp] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [period, setPeriod] = useState('this_month');
 
   const { auditFields, applyAuditFilters } = useAuditFilter('performance');
+
+  // ── Period date range helper ──
+  function getPeriodRange(p) {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (p === 'today') return { start: startOfDay, end: now };
+    if (p === 'this_week') {
+      const day = now.getDay();
+      const diff = day === 0 ? 6 : day - 1; // week starts Monday
+      const weekStart = new Date(startOfDay);
+      weekStart.setDate(weekStart.getDate() - diff);
+      return { start: weekStart, end: now };
+    }
+    // this_month
+    return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: now };
+  }
+
+  function filterByPeriod(items, periodVal) {
+    const { start, end } = getPeriodRange(periodVal);
+    return items.filter(item => {
+      const d = item.date || item.created_at;
+      if (!d) return true;
+      const dt = new Date(d);
+      return dt >= start && dt <= end;
+    });
+  }
+
+  function buildCrmMap(opps, acts, periodVal) {
+    const filteredActs = filterByPeriod(acts, periodVal);
+    const filteredOpps = filterByPeriod(opps, periodVal);
+    const map = {};
+    MOCK_EMPLOYEES.forEach(emp => {
+      const empOpps = filteredOpps.filter(o => o.assigned_to === emp.id);
+      const closedWon = empOpps.filter(o => o.stage === 'closed_won');
+      const empActs = filteredActs.filter(a => a.user_id === emp.id || a.assigned_to === emp.id);
+      const empCalls = empActs.filter(a => a.type === 'call');
+      const desc = (a) => (a.description || a.notes || '').toLowerCase();
+      map[emp.id] = {
+        calls: empCalls.length,
+        calls_answered: empCalls.filter(a => /answered|رد/i.test(desc(a))).length,
+        calls_no_answer: empCalls.filter(a => /no answer|لم يرد/i.test(desc(a))).length,
+        calls_busy: empCalls.filter(a => /busy|مشغول/i.test(desc(a))).length,
+        visits: empActs.filter(a => a.type === 'site_visit').length,
+        meetings_scheduled: empActs.filter(a => a.type === 'meeting').length,
+        whatsapp_sent: empActs.filter(a => a.type === 'whatsapp').length,
+        opportunities: empOpps.length,
+        deals_closed: closedWon.length,
+        leads: 0,
+        campaigns: 0,
+        revenue: closedWon.reduce((sum, o) => sum + (Number(o.budget) || 0), 0),
+      };
+    });
+    return map;
+  }
 
   // ── Load real CRM data from services ──
   const [crmData, setCrmData] = useState(() => {
     // Initialize from localStorage as immediate fallback
-    const map = {};
     try {
       const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
       const acts = JSON.parse(localStorage.getItem('platform_activities') || '[]');
-      MOCK_EMPLOYEES.forEach(emp => {
-        const empOpps = opps.filter(o => o.assigned_to === emp.id);
-        const closedWon = empOpps.filter(o => o.stage === 'closed_won');
-        const empCalls = acts.filter(a => a.type === 'call' && (a.user_id === emp.id || a.assigned_to === emp.id));
-        map[emp.id] = {
-          calls: empCalls.length,
-          opportunities: empOpps.length,
-          deals_closed: closedWon.length,
-          leads: 0,
-          campaigns: 0,
-          revenue: closedWon.reduce((sum, o) => sum + (Number(o.budget) || 0), 0),
-        };
-      });
+      return buildCrmMap(opps, acts, period);
     } catch { /* ignore */ }
-    return map;
+    return {};
   });
 
   useEffect(() => {
@@ -161,26 +206,12 @@ export default function PerformancePage() {
           fetchActivities({ limit: 500 }),
         ]);
         if (cancelled) return;
-        const map = {};
-        MOCK_EMPLOYEES.forEach(emp => {
-          const empOpps = opps.filter(o => o.assigned_to === emp.id);
-          const closedWon = empOpps.filter(o => o.stage === 'closed_won');
-          const empCalls = acts.filter(a => a.type === 'call' && (a.user_id === emp.id || a.assigned_to === emp.id));
-          map[emp.id] = {
-            calls: empCalls.length,
-            opportunities: empOpps.length,
-            deals_closed: closedWon.length,
-            leads: 0,
-            campaigns: 0,
-            revenue: closedWon.reduce((sum, o) => sum + (Number(o.budget) || 0), 0),
-          };
-        });
-        setCrmData(map);
+        setCrmData(buildCrmMap(opps, acts, period));
       } catch { /* keep localStorage fallback */ }
     }
     loadCrmData();
     return () => { cancelled = true; };
-  }, []);
+  }, [period]);
 
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const empData = useMemo(() =>
@@ -351,6 +382,28 @@ export default function PerformancePage() {
       <div className={`flex flex-wrap gap-2 mb-5 overflow-x-auto ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         {tabs.map(t => (
           <FilterPill key={t.key} label={lang === 'ar' ? t.ar : t.en} active={activeTab === t.key} onClick={() => setActiveTab(t.key)} />
+        ))}
+      </div>
+
+      {/* Period Filter */}
+      <div className={`flex flex-wrap gap-2 mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <span className="text-xs font-semibold text-content-muted dark:text-content-muted-dark self-center">{lang === 'ar' ? 'الفترة:' : 'Period:'}</span>
+        {[
+          { key: 'today', ar: 'اليوم', en: 'Today' },
+          { key: 'this_week', ar: 'هذا الأسبوع', en: 'This Week' },
+          { key: 'this_month', ar: 'هذا الشهر', en: 'This Month' },
+        ].map(p => (
+          <button
+            key={p.key}
+            onClick={() => setPeriod(p.key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+              period === p.key
+                ? 'bg-brand-500 text-white border-brand-500'
+                : 'bg-surface dark:bg-surface-dark text-content dark:text-content-dark border-edge dark:border-edge-dark hover:border-brand-500/50'
+            }`}
+          >
+            {lang === 'ar' ? p.ar : p.en}
+          </button>
         ))}
       </div>
 
@@ -587,14 +640,16 @@ export default function PerformancePage() {
       {activeTab === 'activity' && (
         <div className="flex flex-col gap-4">
           {/* Activity Legend */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {[
-              { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(crmData).reduce((s,d) => s + d.calls, 0), icon: '', color: '#4A7AAB' },
-              { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(crmData).reduce((s,d) => s + d.opportunities, 0), icon: '', color: '#4A7AAB' },
-              { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(crmData).reduce((s,d) => s + d.deals_closed, 0), icon: '', color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'إجمالي المكالمات' : 'Total Calls', value: Object.values(crmData).reduce((s,d) => s + (d.calls || 0), 0), color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'مكالمات ناجحة' : 'Answered', value: Object.values(crmData).reduce((s,d) => s + (d.calls_answered || 0), 0), color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'زيارات' : 'Visits', value: Object.values(crmData).reduce((s,d) => s + (d.visits || 0), 0), color: '#6B8DB5' },
+              { label: lang === 'ar' ? 'اجتماعات' : 'Meetings', value: Object.values(crmData).reduce((s,d) => s + (d.meetings_scheduled || 0), 0), color: '#6B8DB5' },
+              { label: lang === 'ar' ? 'الفرص المفتوحة' : 'Open Opportunities', value: Object.values(crmData).reduce((s,d) => s + (d.opportunities || 0), 0), color: '#4A7AAB' },
+              { label: lang === 'ar' ? 'الصفقات المغلقة' : 'Deals Closed', value: Object.values(crmData).reduce((s,d) => s + (d.deals_closed || 0), 0), color: '#4A7AAB' },
             ].map((s, i) => (
-              <Card key={i} className="px-5 py-4">
-                <div className="text-xl mb-1.5">{s.icon}</div>
+              <Card key={i} className="px-4 py-3.5">
                 <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
                 <div className="text-xs text-content-muted dark:text-content-muted-dark">{s.label}</div>
               </Card>
@@ -635,6 +690,58 @@ export default function PerformancePage() {
                       <Td>
                         <Badge size="sm" className="rounded-[20px]" style={{ background: analysis.color + '20', color: analysis.color }}>
                           {lang === 'ar' ? analysis.ar : analysis.en}
+                        </Badge>
+                      </Td>
+                    </Tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            </div>
+          </Card>
+
+          {/* Detailed Activity Breakdown */}
+          <Card className="overflow-hidden">
+            <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark text-sm font-bold text-content dark:text-content-dark text-start`}>
+              {lang === 'ar' ? 'تفاصيل النشاط — Sales' : 'Activity Breakdown — Sales'}
+            </div>
+            <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm min-w-[700px]">
+              <thead>
+                <tr>
+                  {[
+                    lang === 'ar' ? 'الموظف' : 'Agent',
+                    lang === 'ar' ? 'إجمالي مكالمات' : 'Total Calls',
+                    lang === 'ar' ? 'ناجحة' : 'Answered',
+                    lang === 'ar' ? 'لم يرد' : 'No Answer',
+                    lang === 'ar' ? 'مشغول' : 'Busy',
+                    lang === 'ar' ? 'زيارات' : 'Visits',
+                    lang === 'ar' ? 'اجتماعات' : 'Meetings',
+                    lang === 'ar' ? 'واتساب' : 'WhatsApp',
+                    lang === 'ar' ? 'نسبة الرد' : 'Answer Rate',
+                  ].map((h, i) => (
+                    <Th key={i} className="text-center whitespace-nowrap">{h}</Th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {empData.filter(d => d.emp.department === 'sales').map((d) => {
+                  const c = d.crm;
+                  const answerRate = c.calls > 0 ? Math.round((c.calls_answered / c.calls) * 100) : 0;
+                  const rateColor = answerRate >= 60 ? '#4A7AAB' : answerRate >= 40 ? '#6B8DB5' : '#EF4444';
+                  return (
+                    <Tr key={d.emp.id}>
+                      <Td className="text-xs font-semibold">{lang === 'ar' ? d.emp.full_name_ar : d.emp.full_name_en}</Td>
+                      <Td className="text-xs text-center font-bold">{c.calls}</Td>
+                      <Td className="text-xs text-center" style={{ color: '#4A7AAB' }}>{c.calls_answered}</Td>
+                      <Td className="text-xs text-center" style={{ color: '#6B8DB5' }}>{c.calls_no_answer}</Td>
+                      <Td className="text-xs text-center" style={{ color: '#EF4444' }}>{c.calls_busy}</Td>
+                      <Td className="text-xs text-center">{c.visits}</Td>
+                      <Td className="text-xs text-center">{c.meetings_scheduled}</Td>
+                      <Td className="text-xs text-center">{c.whatsapp_sent}</Td>
+                      <Td className="text-center">
+                        <Badge size="sm" className="rounded-[20px]" style={{ background: rateColor + '20', color: rateColor }}>
+                          {answerRate}%
                         </Badge>
                       </Td>
                     </Tr>
