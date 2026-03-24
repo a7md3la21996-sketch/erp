@@ -1353,13 +1353,18 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wide">{isRTL ? 'شوهد بواسطة' : 'Viewed By'}</span>
                       <span className="text-[9px] text-content-muted dark:text-content-muted-dark ms-auto">{viewers.length} {isRTL ? 'مستخدم' : 'users'}</span>
                     </div>
-                    <div className="px-3.5 py-1.5 max-h-[120px] overflow-y-auto">
-                      {viewers.slice(0, 10).map(v => (
+                    <div className="px-3.5 py-1.5 max-h-[180px] overflow-y-auto">
+                      {viewers.map(v => (
                         <div key={v.user_id} className="flex items-center justify-between py-1.5 border-b border-brand-500/[0.06] last:border-b-0 text-[11px]">
-                          <span className="text-content dark:text-content-dark font-medium">{v.user_name}</span>
-                          <span className="text-content-muted dark:text-content-muted-dark">
-                            {v.views}x · {new Date(v.last_view).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
-                          </span>
+                          <div>
+                            <span className="text-content dark:text-content-dark font-medium">{v.user_name}</span>
+                            {v.user_role && <span className="text-content-muted/50 dark:text-content-muted-dark/50 ms-1.5 text-[9px]">{v.user_role}</span>}
+                          </div>
+                          <div className="text-end">
+                            <span className="text-content-muted dark:text-content-muted-dark">
+                              {v.views}x · {new Date(v.last_view).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(v.last_view).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
                         </div>
                       ))}
                     </div>
