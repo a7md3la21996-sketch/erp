@@ -1,13 +1,17 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useTranslation } from 'react-i18next';
-import { Building2, MapPin, Home, TrendingUp, Package, X, ChevronRight, ChevronLeft, Users, Layers } from 'lucide-react';
-import { KpiCard, ExportButton, Pagination } from '../../components/ui';
+import { Building2, MapPin, Home, TrendingUp, Package, X, ChevronRight, ChevronLeft, Users, Layers, Plus, Pencil, Trash2 } from 'lucide-react';
+import { KpiCard, ExportButton, Pagination, Button, Input, Select } from '../../components/ui';
 import { fmtMoney } from '../../utils/formatting';
 import { useEscClose } from '../../utils/hooks';
 
 // ── Storage ──────────────────────────────────────────────────
 const STORAGE_KEY = 'platform_projects';
+
+const saveProjects = (data) => {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+};
 
 // ── Status / Type configs ────────────────────────────────────
 const PROJECT_STATUS_CONFIG = {
@@ -22,6 +26,20 @@ const PROJECT_TYPE_CONFIG = {
   commercial:  { ar: 'تجاري',   en: 'Commercial',  color: '#2B4C6F' },
   mixed:       { ar: 'مختلط',   en: 'Mixed Use',   color: '#6B8DB5' },
   resort:      { ar: 'منتجع',   en: 'Resort',      color: '#1B3347' },
+};
+
+// ── Empty form state ─────────────────────────────────────────
+const EMPTY_FORM = {
+  name_ar: '', name_en: '',
+  developer_ar: '', developer_en: '',
+  location_ar: '', location_en: '',
+  type: 'residential',
+  status: 'upcoming',
+  units_total: '',
+  units_sold: '',
+  units_available: '',
+  price_from: '',
+  price_to: '',
 };
 
 // ── Mock Data ────────────────────────────────────────────────
@@ -62,8 +80,13 @@ export default function ProjectsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
+  // CRUD modal state
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [editingProject, setEditingProject] = useState(null); // null = add mode, object = edit mode
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // project to delete
+
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    saveProjects(projects);
   }, [projects]);
 
   const filtered = useMemo(() => {
@@ -101,6 +124,51 @@ export default function ProjectsPage() {
   const CloseIcon = X;
   const ArrowIcon = isRTL ? ChevronLeft : ChevronRight;
 
+  // ── CRUD handlers ────────────────────────────────────────────
+  const handleOpenAdd = useCallback(() => {
+    setEditingProject(null);
+    setShowFormModal(true);
+  }, []);
+
+  const handleOpenEdit = useCallback((project, e) => {
+    e.stopPropagation();
+    setEditingProject(project);
+    setShowFormModal(true);
+  }, []);
+
+  const handleSaveProject = useCallback((formData) => {
+    if (editingProject) {
+      // Edit mode
+      const updated = projects.map(p =>
+        p.id === editingProject.id ? { ...p, ...formData } : p
+      );
+      setProjects(updated);
+    } else {
+      // Add mode
+      const newProject = {
+        ...formData,
+        id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        image: null,
+        created_at: new Date().toISOString().split('T')[0],
+      };
+      setProjects(prev => [newProject, ...prev]);
+    }
+    setShowFormModal(false);
+    setEditingProject(null);
+  }, [editingProject, projects]);
+
+  const handleDeleteRequest = useCallback((project, e) => {
+    e.stopPropagation();
+    setDeleteConfirm(project);
+  }, []);
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!deleteConfirm) return;
+    const updated = projects.filter(p => p.id !== deleteConfirm.id);
+    setProjects(updated);
+    setDeleteConfirm(null);
+  }, [deleteConfirm, projects]);
+
   // ── Tab style ──────────────────────────────────────────────
   const tabCls = "flex gap-1 mb-5 bg-surface-card dark:bg-surface-card-dark rounded-xl p-1 border border-edge dark:border-edge-dark w-full md:w-fit overflow-x-auto";
   const tabBtnCls = (active) =>
@@ -127,19 +195,28 @@ export default function ProjectsPage() {
             </p>
           </div>
         </div>
-        <ExportButton
-          data={filtered}
-          filename="projects"
-          title={isRTL ? 'المشاريع العقارية' : 'Real Estate Projects'}
-          columns={[
-            { key: isRTL ? 'name_ar' : 'name_en', label: isRTL ? 'المشروع' : 'Project' },
-            { key: isRTL ? 'developer_ar' : 'developer_en', label: isRTL ? 'المطور' : 'Developer' },
-            { key: isRTL ? 'location_ar' : 'location_en', label: isRTL ? 'الموقع' : 'Location' },
-            { key: 'units_total', label: isRTL ? 'إجمالي الوحدات' : 'Total Units' },
-            { key: 'units_available', label: isRTL ? 'متاح' : 'Available' },
-            { key: 'status', label: isRTL ? 'الحالة' : 'Status' },
-          ]}
-        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-brand-500 text-white text-sm font-medium cursor-pointer border-none hover:bg-brand-600 transition-colors shadow-sm"
+          >
+            <Plus size={16} />
+            {isRTL ? 'إضافة مشروع' : 'Add Project'}
+          </button>
+          <ExportButton
+            data={filtered}
+            filename="projects"
+            title={isRTL ? 'المشاريع العقارية' : 'Real Estate Projects'}
+            columns={[
+              { key: isRTL ? 'name_ar' : 'name_en', label: isRTL ? 'المشروع' : 'Project' },
+              { key: isRTL ? 'developer_ar' : 'developer_en', label: isRTL ? 'المطور' : 'Developer' },
+              { key: isRTL ? 'location_ar' : 'location_en', label: isRTL ? 'الموقع' : 'Location' },
+              { key: 'units_total', label: isRTL ? 'إجمالي الوحدات' : 'Total Units' },
+              { key: 'units_available', label: isRTL ? 'متاح' : 'Available' },
+              { key: 'status', label: isRTL ? 'الحالة' : 'Status' },
+            ]}
+          />
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -205,6 +282,8 @@ export default function ProjectsPage() {
               isRTL={isRTL}
               isDark={isDark}
               onClick={() => setSelectedProject(project)}
+              onEdit={(e) => handleOpenEdit(project, e)}
+              onDelete={(e) => handleDeleteRequest(project, e)}
             />
           ))}
         </div>
@@ -229,12 +308,342 @@ export default function ProjectsPage() {
           onClose={() => setSelectedProject(null)}
         />
       )}
+
+      {/* Add / Edit Modal */}
+      {showFormModal && (
+        <ProjectFormModal
+          isRTL={isRTL}
+          project={editingProject}
+          onSave={handleSaveProject}
+          onClose={() => { setShowFormModal(false); setEditingProject(null); }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
+        <DeleteConfirmModal
+          isRTL={isRTL}
+          project={deleteConfirm}
+          onConfirm={handleDeleteConfirm}
+          onClose={() => setDeleteConfirm(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Project Form Modal (Add / Edit) ──────────────────────────
+function ProjectFormModal({ isRTL, project, onSave, onClose }) {
+  const isEdit = !!project;
+  const [form, setForm] = useState(() => {
+    if (project) {
+      return {
+        name_ar: project.name_ar || '',
+        name_en: project.name_en || '',
+        developer_ar: project.developer_ar || '',
+        developer_en: project.developer_en || '',
+        location_ar: project.location_ar || '',
+        location_en: project.location_en || '',
+        type: project.type || 'residential',
+        status: project.status || 'upcoming',
+        units_total: project.units_total?.toString() || '',
+        units_sold: project.units_sold?.toString() || '',
+        units_available: project.units_available?.toString() || '',
+        price_from: project.price_from?.toString() || '',
+        price_to: project.price_to?.toString() || '',
+      };
+    }
+    return { ...EMPTY_FORM };
+  });
+
+  useEscClose(onClose);
+
+  const update = (key, val) => {
+    setForm(prev => {
+      const next = { ...prev, [key]: val };
+      // Auto-calculate units_available when units_total or units_sold change
+      if (key === 'units_total' || key === 'units_sold') {
+        const total = parseInt(key === 'units_total' ? val : next.units_total) || 0;
+        const sold = parseInt(key === 'units_sold' ? val : next.units_sold) || 0;
+        next.units_available = String(Math.max(0, total - sold));
+      }
+      return next;
+    });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.name_ar.trim() && !form.name_en.trim()) return;
+    onSave({
+      name_ar: form.name_ar.trim(),
+      name_en: form.name_en.trim(),
+      developer_ar: form.developer_ar.trim(),
+      developer_en: form.developer_en.trim(),
+      location_ar: form.location_ar.trim(),
+      location_en: form.location_en.trim(),
+      type: form.type,
+      status: form.status,
+      units_total: parseInt(form.units_total) || 0,
+      units_sold: parseInt(form.units_sold) || 0,
+      units_available: parseInt(form.units_available) || 0,
+      price_from: parseInt(form.price_from) || 0,
+      price_to: parseInt(form.price_to) || 0,
+    });
+  };
+
+  const labelCls = "block text-[11px] font-medium text-content-muted dark:text-content-muted-dark mb-1";
+
+  return (
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
+      {/* Modal */}
+      <div
+        className="relative w-full max-w-[640px] max-h-[90vh] overflow-y-auto bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl shadow-2xl"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark px-5 py-4 flex items-center justify-between rounded-t-2xl">
+          <h2 className="text-base font-bold text-content dark:text-content-dark m-0">
+            {isEdit
+              ? (isRTL ? 'تعديل المشروع' : 'Edit Project')
+              : (isRTL ? 'إضافة مشروع' : 'Add Project')
+            }
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg flex items-center justify-center border border-edge dark:border-edge-dark bg-transparent cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+          >
+            <X size={18} className="text-content-muted dark:text-content-muted-dark" />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Project Name AR */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'اسم المشروع (عربي)' : 'Project Name (AR)'}</label>
+              <Input
+                value={form.name_ar}
+                onChange={e => update('name_ar', e.target.value)}
+                placeholder={isRTL ? 'اسم المشروع بالعربي' : 'Arabic project name'}
+              />
+            </div>
+            {/* Project Name EN */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'اسم المشروع (إنجليزي)' : 'Project Name (EN)'}</label>
+              <Input
+                value={form.name_en}
+                onChange={e => update('name_en', e.target.value)}
+                placeholder={isRTL ? 'اسم المشروع بالإنجليزي' : 'English project name'}
+              />
+            </div>
+
+            {/* Developer AR */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'المطور (عربي)' : 'Developer (AR)'}</label>
+              <Input
+                value={form.developer_ar}
+                onChange={e => update('developer_ar', e.target.value)}
+                placeholder={isRTL ? 'اسم المطور بالعربي' : 'Arabic developer name'}
+              />
+            </div>
+            {/* Developer EN */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'المطور (إنجليزي)' : 'Developer (EN)'}</label>
+              <Input
+                value={form.developer_en}
+                onChange={e => update('developer_en', e.target.value)}
+                placeholder={isRTL ? 'اسم المطور بالإنجليزي' : 'English developer name'}
+              />
+            </div>
+
+            {/* Location AR */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'الموقع (عربي)' : 'Location (AR)'}</label>
+              <Input
+                value={form.location_ar}
+                onChange={e => update('location_ar', e.target.value)}
+                placeholder={isRTL ? 'الموقع بالعربي' : 'Arabic location'}
+              />
+            </div>
+            {/* Location EN */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'الموقع (إنجليزي)' : 'Location (EN)'}</label>
+              <Input
+                value={form.location_en}
+                onChange={e => update('location_en', e.target.value)}
+                placeholder={isRTL ? 'الموقع بالإنجليزي' : 'English location'}
+              />
+            </div>
+
+            {/* Type */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'نوع المشروع' : 'Project Type'}</label>
+              <Select value={form.type} onChange={e => update('type', e.target.value)}>
+                {Object.entries(PROJECT_TYPE_CONFIG).map(([key, cfg]) => (
+                  <option key={key} value={key}>{isRTL ? cfg.ar : cfg.en}</option>
+                ))}
+              </Select>
+            </div>
+            {/* Status */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'الحالة' : 'Status'}</label>
+              <Select value={form.status} onChange={e => update('status', e.target.value)}>
+                {Object.entries(PROJECT_STATUS_CONFIG).map(([key, cfg]) => (
+                  <option key={key} value={key}>{isRTL ? cfg.ar : cfg.en}</option>
+                ))}
+              </Select>
+            </div>
+
+            {/* Units Total */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'إجمالي الوحدات' : 'Total Units'}</label>
+              <Input
+                type="number"
+                min="0"
+                value={form.units_total}
+                onChange={e => update('units_total', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            {/* Units Sold */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'الوحدات المباعة' : 'Units Sold'}</label>
+              <Input
+                type="number"
+                min="0"
+                value={form.units_sold}
+                onChange={e => update('units_sold', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            {/* Units Available (auto-calculated, read-only) */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'الوحدات المتاحة' : 'Units Available'} <span className="text-content-muted dark:text-content-muted-dark">({isRTL ? 'تلقائي' : 'auto'})</span></label>
+              <Input
+                type="number"
+                value={form.units_available}
+                readOnly
+                className="opacity-60"
+              />
+            </div>
+
+            {/* Price From */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'السعر من' : 'Price From'}</label>
+              <Input
+                type="number"
+                min="0"
+                value={form.price_from}
+                onChange={e => update('price_from', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            {/* Price To */}
+            <div>
+              <label className={labelCls}>{isRTL ? 'السعر إلى' : 'Price To'}</label>
+              <Input
+                type="number"
+                min="0"
+                value={form.price_to}
+                onChange={e => update('price_to', e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-edge dark:border-edge-dark">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer border border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+            >
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </button>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-sm font-medium cursor-pointer border-none bg-brand-500 text-white hover:bg-brand-600 transition-colors shadow-sm"
+            >
+              {isEdit
+                ? (isRTL ? 'حفظ التعديلات' : 'Save Changes')
+                : (isRTL ? 'إضافة المشروع' : 'Add Project')
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Delete Confirmation Modal ────────────────────────────────
+function DeleteConfirmModal({ isRTL, project, onConfirm, onClose }) {
+  useEscClose(onClose);
+
+  return (
+    <div
+      className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+      dir={isRTL ? 'rtl' : 'ltr'}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
+      {/* Modal */}
+      <div
+        className="relative w-full max-w-[400px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl shadow-2xl p-5"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-red-500/10">
+            <Trash2 size={20} className="text-red-500" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-content dark:text-content-dark m-0">
+              {isRTL ? 'حذف المشروع' : 'Delete Project'}
+            </h3>
+            <p className="text-xs text-content-muted dark:text-content-muted-dark m-0 mt-0.5">
+              {isRTL ? 'هل أنت متأكد من حذف هذا المشروع؟' : 'Are you sure you want to delete this project?'}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-edge dark:border-edge-dark p-3 mb-5 bg-gray-50 dark:bg-white/5">
+          <p className="text-sm font-semibold text-content dark:text-content-dark m-0">
+            {isRTL ? project.name_ar : project.name_en}
+          </p>
+          <p className="text-xs text-content-muted dark:text-content-muted-dark m-0 mt-0.5">
+            {isRTL ? project.developer_ar : project.developer_en} — {isRTL ? project.location_ar : project.location_en}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer border border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+          >
+            {isRTL ? 'إلغاء' : 'Cancel'}
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-5 py-2.5 rounded-xl text-sm font-medium cursor-pointer border-none bg-red-500 text-white hover:bg-red-600 transition-colors shadow-sm"
+          >
+            {isRTL ? 'حذف' : 'Delete'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ── Project Card ─────────────────────────────────────────────
-function ProjectCard({ project, isRTL, isDark, onClick }) {
+function ProjectCard({ project, isRTL, isDark, onClick, onEdit, onDelete }) {
   const [hov, setHov] = useState(false);
   const p = project;
   const statusCfg = PROJECT_STATUS_CONFIG[p.status] || PROJECT_STATUS_CONFIG.selling;
@@ -270,6 +679,23 @@ function ProjectCard({ project, isRTL, isDark, onClick }) {
           >
             {isRTL ? typeCfg.ar : typeCfg.en}
           </span>
+        </div>
+        {/* Edit / Delete buttons */}
+        <div className="absolute top-3 end-3 flex gap-1.5" style={{ opacity: hov ? 1 : 0, transition: 'opacity 0.2s' }}>
+          <button
+            onClick={onEdit}
+            className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/90 dark:bg-black/50 border-none cursor-pointer hover:bg-white dark:hover:bg-black/70 transition-colors shadow-sm"
+            title={isRTL ? 'تعديل' : 'Edit'}
+          >
+            <Pencil size={13} className="text-brand-500" />
+          </button>
+          <button
+            onClick={onDelete}
+            className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/90 dark:bg-black/50 border-none cursor-pointer hover:bg-white dark:hover:bg-black/70 transition-colors shadow-sm"
+            title={isRTL ? 'حذف' : 'Delete'}
+          >
+            <Trash2 size={13} className="text-red-500" />
+          </button>
         </div>
         <div className="absolute bottom-3 start-3">
           <Building2 size={32} style={{ color: `${statusCfg.color}60` }} />
