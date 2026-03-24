@@ -31,8 +31,8 @@ create table if not exists users (
   updated_at      timestamptz default now()
 );
 
-create index idx_users_role    on users(role);
-create index idx_users_team    on users(team_id);
+drop index if exists idx_users_role; create index idx_users_role    on users(role);
+drop index if exists idx_users_team; create index idx_users_team    on users(team_id);
 
 -- ── Contacts ──────────────────────────────────────────────────
 create table if not exists contacts (
@@ -74,13 +74,13 @@ create table if not exists contacts (
   last_activity_at       timestamptz default now()
 );
 
-create index idx_contacts_phone       on contacts(phone);
-create index idx_contacts_type        on contacts(contact_type);
-create index idx_contacts_assigned    on contacts(assigned_to);
-create index idx_contacts_department  on contacts(department);
-create index idx_contacts_temperature on contacts(temperature);
-create index idx_contacts_source      on contacts(source);
-create index idx_contacts_last_act    on contacts(last_activity_at);
+drop index if exists idx_contacts_phone; create index idx_contacts_phone       on contacts(phone);
+drop index if exists idx_contacts_type; create index idx_contacts_type        on contacts(contact_type);
+drop index if exists idx_contacts_assigned; create index idx_contacts_assigned    on contacts(assigned_to);
+drop index if exists idx_contacts_department; create index idx_contacts_department  on contacts(department);
+drop index if exists idx_contacts_temperature; create index idx_contacts_temperature on contacts(temperature);
+drop index if exists idx_contacts_source; create index idx_contacts_source      on contacts(source);
+drop index if exists idx_contacts_last_act; create index idx_contacts_last_act    on contacts(last_activity_at);
 
 -- ── Projects ──────────────────────────────────────────────────
 create table if not exists projects (
@@ -96,7 +96,7 @@ create table if not exists projects (
   updated_at      timestamptz default now()
 );
 
-create index idx_projects_status on projects(status);
+drop index if exists idx_projects_status; create index idx_projects_status on projects(status);
 
 -- ── Opportunities ─────────────────────────────────────────────
 create table if not exists opportunities (
@@ -123,10 +123,10 @@ create table if not exists opportunities (
   updated_at           timestamptz default now()
 );
 
-create index idx_opp_contact    on opportunities(contact_id);
-create index idx_opp_assigned   on opportunities(assigned_to);
-create index idx_opp_stage      on opportunities(stage);
-create index idx_opp_project    on opportunities(project_id);
+drop index if exists idx_opp_contact; create index idx_opp_contact    on opportunities(contact_id);
+drop index if exists idx_opp_assigned; create index idx_opp_assigned   on opportunities(assigned_to);
+drop index if exists idx_opp_stage; create index idx_opp_stage      on opportunities(stage);
+drop index if exists idx_opp_project; create index idx_opp_project    on opportunities(project_id);
 
 -- ── Activities ────────────────────────────────────────────────
 create table if not exists activities (
@@ -145,10 +145,10 @@ create table if not exists activities (
   created_at      timestamptz default now()
 );
 
-create index idx_activities_contact  on activities(contact_id);
-create index idx_activities_user     on activities(user_id);
-create index idx_activities_type     on activities(type);
-create index idx_activities_dept     on activities(dept);
+drop index if exists idx_activities_contact; create index idx_activities_contact  on activities(contact_id);
+drop index if exists idx_activities_user; create index idx_activities_user     on activities(user_id);
+drop index if exists idx_activities_type; create index idx_activities_type     on activities(type);
+drop index if exists idx_activities_dept; create index idx_activities_dept     on activities(dept);
 
 -- ── Tasks ─────────────────────────────────────────────────────
 create table if not exists tasks (
@@ -169,11 +169,11 @@ create table if not exists tasks (
   updated_at            timestamptz default now()
 );
 
-create index idx_tasks_contact   on tasks(contact_id);
-create index idx_tasks_assigned  on tasks(assigned_to);
-create index idx_tasks_status    on tasks(status);
-create index idx_tasks_due       on tasks(due_date);
-create index idx_tasks_dept      on tasks(dept);
+drop index if exists idx_tasks_contact; create index idx_tasks_contact   on tasks(contact_id);
+drop index if exists idx_tasks_assigned; create index idx_tasks_assigned  on tasks(assigned_to);
+drop index if exists idx_tasks_status; create index idx_tasks_status    on tasks(status);
+drop index if exists idx_tasks_due; create index idx_tasks_due       on tasks(due_date);
+drop index if exists idx_tasks_dept; create index idx_tasks_dept      on tasks(dept);
 
 -- ── Resale Units ──────────────────────────────────────────────
 create table if not exists resale_units (
@@ -192,8 +192,8 @@ create table if not exists resale_units (
   updated_at      timestamptz default now()
 );
 
-create index idx_resale_contact on resale_units(contact_id);
-create index idx_resale_status  on resale_units(status);
+drop index if exists idx_resale_contact; create index idx_resale_contact on resale_units(contact_id);
+drop index if exists idx_resale_status; create index idx_resale_status  on resale_units(status);
 
 -- ── Campaigns ─────────────────────────────────────────────────
 create table if not exists campaigns (
@@ -217,8 +217,8 @@ create table if not exists campaigns (
   updated_at            timestamptz default now()
 );
 
-create index idx_campaigns_status   on campaigns(status);
-create index idx_campaigns_platform on campaigns(platform);
+drop index if exists idx_campaigns_status; create index idx_campaigns_status   on campaigns(status);
+drop index if exists idx_campaigns_platform; create index idx_campaigns_platform on campaigns(platform);
 
 -- ── Reminders ─────────────────────────────────────────────────
 create table if not exists reminders (
@@ -235,9 +235,9 @@ create table if not exists reminders (
   created_at      timestamptz default now()
 );
 
-create index idx_reminders_assigned on reminders(assigned_to);
-create index idx_reminders_due      on reminders(due_at);
-create index idx_reminders_done     on reminders(is_done);
+drop index if exists idx_reminders_assigned; create index idx_reminders_assigned on reminders(assigned_to);
+drop index if exists idx_reminders_due; create index idx_reminders_due      on reminders(due_at);
+drop index if exists idx_reminders_done; create index idx_reminders_done     on reminders(is_done);
 
 -- ── View Logs ─────────────────────────────────────────────────
 create table if not exists view_logs (
@@ -254,9 +254,9 @@ create table if not exists view_logs (
   os              text
 );
 
-create index idx_viewlogs_entity on view_logs(entity_type, entity_id);
-create index idx_viewlogs_user   on view_logs(user_id);
-create index idx_viewlogs_date   on view_logs(viewed_at);
+drop index if exists idx_viewlogs_entity; create index idx_viewlogs_entity on view_logs(entity_type, entity_id);
+drop index if exists idx_viewlogs_user; create index idx_viewlogs_user   on view_logs(user_id);
+drop index if exists idx_viewlogs_date; create index idx_viewlogs_date   on view_logs(viewed_at);
 
 -- ── Audit Logs ────────────────────────────────────────────────
 create table if not exists audit_logs (
@@ -273,10 +273,10 @@ create table if not exists audit_logs (
   created_at      timestamptz default now()
 );
 
-create index idx_audit_user   on audit_logs(user_id);
-create index idx_audit_entity on audit_logs(entity);
-create index idx_audit_action on audit_logs(action);
-create index idx_audit_date   on audit_logs(created_at);
+drop index if exists idx_audit_user; create index idx_audit_user   on audit_logs(user_id);
+drop index if exists idx_audit_entity; create index idx_audit_entity on audit_logs(entity);
+drop index if exists idx_audit_action; create index idx_audit_action on audit_logs(action);
+drop index if exists idx_audit_date; create index idx_audit_date   on audit_logs(created_at);
 
 -- ── Sessions ──────────────────────────────────────────────────
 create table if not exists sessions (
@@ -295,8 +295,8 @@ create table if not exists sessions (
   is_active       boolean default true
 );
 
-create index idx_sessions_user   on sessions(user_id);
-create index idx_sessions_active on sessions(is_active);
+drop index if exists idx_sessions_user; create index idx_sessions_user   on sessions(user_id);
+drop index if exists idx_sessions_active; create index idx_sessions_active on sessions(is_active);
 
 -- ============================================================
 -- HR / Operations / Finance Tables
@@ -342,9 +342,9 @@ create table if not exists employees (
   updated_at      timestamptz default now()
 );
 
-create index idx_employees_department on employees(department_id);
-create index idx_employees_status     on employees(status);
-create index idx_employees_manager    on employees(direct_manager_id);
+drop index if exists idx_employees_department; create index idx_employees_department on employees(department_id);
+drop index if exists idx_employees_status; create index idx_employees_status     on employees(status);
+drop index if exists idx_employees_manager; create index idx_employees_manager    on employees(direct_manager_id);
 
 -- ── Attendance ──────────────────────────────────────────────────
 create table if not exists attendance (
@@ -365,9 +365,9 @@ create table if not exists attendance (
   unique(employee_id, date)
 );
 
-create index idx_attendance_employee on attendance(employee_id);
-create index idx_attendance_date     on attendance(date);
-create index idx_attendance_month    on attendance(date_trunc('month', date));
+drop index if exists idx_attendance_employee; create index idx_attendance_employee on attendance(employee_id);
+drop index if exists idx_attendance_date; create index idx_attendance_date     on attendance(date);
+drop index if exists idx_attendance_month; create index idx_attendance_month    on attendance(date_trunc('month', date));
 
 -- ── Leave Requests ──────────────────────────────────────────────
 create table if not exists leave_requests (
@@ -386,8 +386,8 @@ create table if not exists leave_requests (
   created_at       timestamptz default now()
 );
 
-create index idx_leave_employee on leave_requests(employee_id);
-create index idx_leave_status   on leave_requests(status);
+drop index if exists idx_leave_employee; create index idx_leave_employee on leave_requests(employee_id);
+drop index if exists idx_leave_status; create index idx_leave_status   on leave_requests(status);
 
 -- ── Leave Balances (materialized / cached) ──────────────────────
 create table if not exists leave_balances (
@@ -416,8 +416,8 @@ create table if not exists chart_of_accounts (
   created_at timestamptz default now()
 );
 
-create index idx_coa_type   on chart_of_accounts(type);
-create index idx_coa_parent on chart_of_accounts(parent_id);
+drop index if exists idx_coa_type; create index idx_coa_type   on chart_of_accounts(type);
+drop index if exists idx_coa_parent; create index idx_coa_parent on chart_of_accounts(parent_id);
 
 -- ── Journal Entries ─────────────────────────────────────────────
 create table if not exists journal_entries (
@@ -436,8 +436,8 @@ create table if not exists journal_entries (
   created_at     timestamptz default now()
 );
 
-create index idx_je_date   on journal_entries(date);
-create index idx_je_status on journal_entries(status);
+drop index if exists idx_je_date; create index idx_je_date   on journal_entries(date);
+drop index if exists idx_je_status; create index idx_je_status on journal_entries(status);
 
 -- ── Journal Entry Lines ─────────────────────────────────────────
 create table if not exists journal_entry_lines (
@@ -449,8 +449,8 @@ create table if not exists journal_entry_lines (
   description      text
 );
 
-create index idx_jel_entry   on journal_entry_lines(journal_entry_id);
-create index idx_jel_account on journal_entry_lines(account_id);
+drop index if exists idx_jel_entry; create index idx_jel_entry   on journal_entry_lines(journal_entry_id);
+drop index if exists idx_jel_account; create index idx_jel_account on journal_entry_lines(account_id);
 
 -- ── Invoices ────────────────────────────────────────────────────
 create table if not exists invoices (
@@ -473,9 +473,9 @@ create table if not exists invoices (
   updated_at      timestamptz default now()
 );
 
-create index idx_invoices_status on invoices(status);
-create index idx_invoices_date   on invoices(date);
-create index idx_invoices_type   on invoices(type);
+drop index if exists idx_invoices_status; create index idx_invoices_status on invoices(status);
+drop index if exists idx_invoices_date; create index idx_invoices_date   on invoices(date);
+drop index if exists idx_invoices_type; create index idx_invoices_type   on invoices(type);
 
 -- ── Expenses ────────────────────────────────────────────────────
 create table if not exists expenses (
@@ -498,9 +498,9 @@ create table if not exists expenses (
   created_at      timestamptz default now()
 );
 
-create index idx_expenses_status   on expenses(status);
-create index idx_expenses_category on expenses(category);
-create index idx_expenses_date     on expenses(date);
+drop index if exists idx_expenses_status; create index idx_expenses_status   on expenses(status);
+drop index if exists idx_expenses_category; create index idx_expenses_category on expenses(category);
+drop index if exists idx_expenses_date; create index idx_expenses_date     on expenses(date);
 
 -- ── Deals (Operations) ─────────────────────────────────────────
 create table if not exists deals (
@@ -531,8 +531,8 @@ create table if not exists deals (
   updated_at        timestamptz default now()
 );
 
-create index idx_deals_status on deals(status);
-create index idx_deals_number on deals(deal_number);
+drop index if exists idx_deals_status; create index idx_deals_status on deals(status);
+drop index if exists idx_deals_number; create index idx_deals_number on deals(deal_number);
 
 -- ── Installments ────────────────────────────────────────────────
 create table if not exists installments (
@@ -556,9 +556,9 @@ create table if not exists installments (
   updated_at   timestamptz default now()
 );
 
-create index idx_installments_deal   on installments(deal_id);
-create index idx_installments_status on installments(status);
-create index idx_installments_due    on installments(due_date);
+drop index if exists idx_installments_deal; create index idx_installments_deal   on installments(deal_id);
+drop index if exists idx_installments_status; create index idx_installments_status on installments(status);
+drop index if exists idx_installments_due; create index idx_installments_due    on installments(due_date);
 
 -- ── Handovers ───────────────────────────────────────────────────
 create table if not exists handovers (
@@ -583,8 +583,8 @@ create table if not exists handovers (
   created_at          timestamptz default now()
 );
 
-create index idx_handovers_deal   on handovers(deal_id);
-create index idx_handovers_status on handovers(status);
+drop index if exists idx_handovers_deal; create index idx_handovers_deal   on handovers(deal_id);
+drop index if exists idx_handovers_status; create index idx_handovers_status on handovers(status);
 
 -- ── Tickets ─────────────────────────────────────────────────────
 create table if not exists tickets (
@@ -610,10 +610,10 @@ create table if not exists tickets (
   updated_at     timestamptz default now()
 );
 
-create index idx_tickets_status   on tickets(status);
-create index idx_tickets_type     on tickets(type);
-create index idx_tickets_priority on tickets(priority);
-create index idx_tickets_deal     on tickets(deal_id);
+drop index if exists idx_tickets_status; create index idx_tickets_status   on tickets(status);
+drop index if exists idx_tickets_type; create index idx_tickets_type     on tickets(type);
+drop index if exists idx_tickets_priority; create index idx_tickets_priority on tickets(priority);
+drop index if exists idx_tickets_deal; create index idx_tickets_deal     on tickets(deal_id);
 
 
 -- ============================================================
