@@ -50,6 +50,7 @@ export function AuthProvider({ children }) {
       let isMounted = true;
 
       const initSession = async () => {
+        let hasSession = false;
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user && isMounted) {
@@ -57,12 +58,13 @@ export function AuthProvider({ children }) {
             setUser({ id: session.user.id, email: session.user.email });
             setProfile(profileData);
             setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
+            hasSession = true;
           }
         } catch (err) {
           console.error('Failed to restore Supabase session:', err);
         }
-        // If no Supabase session found, try mock session from localStorage
-        if (isMounted && !session?.user) {
+        // If no Supabase session, try mock session from localStorage
+        if (isMounted && !hasSession) {
           const saved = localStorage.getItem('platform_mock_user');
           if (saved) {
             try {
