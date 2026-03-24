@@ -981,10 +981,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               const TabIcon = t.icon;
               const isActive = tab === t.key;
               return (
-                <button key={t.key} onClick={() => setTab(t.key)}
-                  className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors ${isActive ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal hover:text-content dark:hover:text-content-dark'}`}>
-                  <TabIcon size={13} />
-                  {t.label}
+                <button key={t.key} onClick={() => setTab(t.key)} title={t.label}
+                  className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer flex items-center justify-center gap-1 transition-colors ${isActive ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal hover:text-content dark:hover:text-content-dark'}`}>
+                  <TabIcon size={14} />
+                  <span className="hidden sm:inline truncate max-w-[60px]">{t.label}</span>
                 </button>
               );
             })}
