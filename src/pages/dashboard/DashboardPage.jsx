@@ -10,7 +10,6 @@ import { fetchTodayReminders } from '../../services/remindersService';
 import { fetchAllDashboardData, buildPipelineData, getDateRange, buildRevenueTrend, buildTopSellers, filterStatsByRange } from '../../services/dashboardService';
 import { getTopPerformers, getTeamOverallPct, METRIC_CONFIG } from '../../services/kpiTargetsService';
 import { getWonDeals } from '../../services/dealsService';
-import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Users, TrendingUp, DollarSign, Clock, AlertTriangle, Target, UserCheck, Briefcase, ArrowUpRight, ArrowDownRight, Star, Trophy, Building2, Activity, CalendarCheck, ShieldAlert, Wallet, BarChart2, Bell, Phone, MessageCircle, MapPin, Mail, CheckCircle, Repeat, Check, SkipForward, User, Settings, X, ChevronUp, ChevronDown, RotateCcw, Eye, EyeOff, Volume2, Pin } from 'lucide-react';
 import { Card, KpiCard, Badge, DashboardSkeleton } from '../../components/ui';
