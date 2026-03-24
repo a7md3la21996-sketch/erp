@@ -24,12 +24,14 @@ async function fetchSupabaseProfile(userId) {
     .from('users')
     .select('*')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error('Profile not found');
   return {
     id: data.id,
     email: data.email,
     role: data.role,
+    department: data.department,
     full_name_ar: data.full_name_ar,
     full_name_en: data.full_name_en,
   };
