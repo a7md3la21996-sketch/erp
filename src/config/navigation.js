@@ -95,6 +95,7 @@ export const NAV_ITEMS = [
     { id: 'api-docs', label: { ar: 'توثيق API', en: 'API Docs' }, path: '/settings/api-docs', permission: P.SETTINGS_MANAGE },
     { id: 'export-import-history', label: { ar: 'سجل التصدير والاستيراد', en: 'Export/Import History' }, path: '/settings/export-import-history', permission: P.SETTINGS_MANAGE },
     { id: 'sla', label: { ar: 'اتفاقيات مستوى الخدمة', en: 'SLA Management' }, path: '/settings/sla', permission: P.SETTINGS_MANAGE },
+    { id: 'ads-integration', label: { ar: 'ربط الإعلانات', en: 'Ads Integration' }, path: '/settings/ads-integration', permission: P.SETTINGS_MANAGE },
   ]},
   { id: 'changelog', label: { ar: 'ما الجديد', en: "What's New" }, icon: Gift, path: '/changelog', permission: P.DASHBOARD },
   { id: 'help-center', label: { ar: 'مركز المساعدة', en: 'Help & Knowledge' }, icon: HelpCircle, permission: P.DASHBOARD, children: [

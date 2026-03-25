@@ -75,6 +75,7 @@ const ExportImportHistoryPage = lazy(() => import('./pages/settings/ExportImport
 const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
 const RolesPage = lazy(() => import('./pages/settings/RolesPage'));
 const SLAManagementPage = lazy(() => import('./pages/settings/SLAManagementPage'));
+const AdsIntegrationPage = lazy(() => import('./pages/settings/AdsIntegrationPage'));
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
 const KnowledgeBasePage = lazy(() => import('./pages/KnowledgeBasePage'));
@@ -218,6 +219,7 @@ export default function App() {
                 <Route path="/settings/export-import-history" element={<Guarded><ExportImportHistoryPage /></Guarded>} />
                 <Route path="/settings/roles" element={<Guarded><RolesPage /></Guarded>} />
                 <Route path="/settings/sla" element={<Guarded><SLAManagementPage /></Guarded>} />
+                <Route path="/settings/ads-integration" element={<Guarded><AdsIntegrationPage /></Guarded>} />
                 <Route path="/changelog" element={<Guarded><ChangelogPage /></Guarded>} />
                 <Route path="/notifications" element={<Guarded><NotificationsPage /></Guarded>} />
                 <Route path="/help" element={<Guarded><HelpCenterPage /></Guarded>} />
