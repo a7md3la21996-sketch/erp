@@ -6,8 +6,9 @@
  */
 export async function exportToExcel(data, filename = 'export', sheetName = 'Sheet1') {
   if (!data || data.length === 0) return;
-  const ExcelJS = await import('exceljs');
-  const workbook = new ExcelJS.default.Workbook();
+  const ExcelJSModule = await import('exceljs');
+  const ExcelJS = ExcelJSModule.default || ExcelJSModule;
+  const workbook = new ExcelJS.Workbook();
   const ws = workbook.addWorksheet(sheetName);
   const keys = Object.keys(data[0]);
   ws.columns = keys.map(key => ({ header: key, key }));

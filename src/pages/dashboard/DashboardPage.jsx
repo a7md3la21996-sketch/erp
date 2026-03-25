@@ -592,15 +592,23 @@ export default function DashboardPage() {
   // ── Pre-loaded async data for widgets ──────────────────────────────────
   const [dashAnnouncements, setDashAnnouncements] = useState([]);
   const [dashQuarterSummary, setDashQuarterSummary] = useState({ total: 0, avgProgress: 0, onTrack: 0, atRisk: 0, behind: 0 });
+  const [dashTeamPerf, setDashTeamPerf] = useState({ topPerformers: [], teamPct: 0 });
   useEffect(() => {
     const loadAsync = async () => {
-      const annResult = await getAnnouncements();
-      setDashAnnouncements(Array.isArray(annResult) ? annResult.slice(0, 3) : []);
-      const currentMonth = new Date().getMonth();
-      const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
-      const cy = new Date().getFullYear();
-      const gsResult = await getQuarterSummary(cq, cy);
-      setDashQuarterSummary(gsResult && typeof gsResult === 'object' ? gsResult : { total: 0, avgProgress: 0, onTrack: 0, atRisk: 0, behind: 0 });
+      try { const annResult = await getAnnouncements(); setDashAnnouncements(Array.isArray(annResult) ? annResult.slice(0, 3) : []); } catch {}
+      try {
+        const currentMonth = new Date().getMonth();
+        const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
+        const cy = new Date().getFullYear();
+        const gsResult = await getQuarterSummary(cq, cy);
+        setDashQuarterSummary(gsResult && typeof gsResult === 'object' ? gsResult : { total: 0, avgProgress: 0, onTrack: 0, atRisk: 0, behind: 0 });
+      } catch {}
+      try {
+        const salesEmps = MOCK_EMPLOYEES.filter(e => ['sales_director','sales_manager','team_leader','sales_agent'].includes(e.role));
+        const tp = await getTopPerformers(salesEmps, MONTH, YEAR, 3);
+        const pct = await getTeamOverallPct(salesEmps, MONTH, YEAR);
+        setDashTeamPerf({ topPerformers: Array.isArray(tp) ? tp : [], teamPct: typeof pct === 'number' ? pct : 0 });
+      } catch {}
     };
     loadAsync();
   }, []);
@@ -907,8 +915,8 @@ export default function DashboardPage() {
       case 'team_performance': {
         if (!sections.showSales) return null;
         const salesEmps = MOCK_EMPLOYEES.filter(e => ['sales_director','sales_manager','team_leader','sales_agent'].includes(e.role));
-        const topPerformers = getTopPerformers(salesEmps, MONTH, YEAR, 3);
-        const teamPct = getTeamOverallPct(salesEmps, MONTH, YEAR);
+        const topPerformers = dashTeamPerf?.topPerformers || [];
+        const teamPct = dashTeamPerf?.teamPct || 0;
         const teamColor = teamPct >= 80 ? '#10B981' : teamPct >= 50 ? '#F59E0B' : '#EF4444';
         return (
           <div>

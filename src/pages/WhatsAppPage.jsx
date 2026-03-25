@@ -68,9 +68,16 @@ export default function WhatsAppPage() {
   const [contactSearch, setContactSearch] = useState('');
   const messagesEndRef = useRef(null);
 
-  const allContacts = useMemo(() => loadContacts(), []);
-  const templates = useMemo(() => getTemplates(false), [showTemplates]);
-  const activeTemplates = useMemo(() => templates.filter(t => t.is_active), [templates]);
+  const [allContacts, setAllContacts] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      try { const c = await loadContacts(); setAllContacts(Array.isArray(c) ? c : []); } catch { setAllContacts([]); }
+      try { const t = await getTemplates(false); setTemplates(Array.isArray(t) ? t : []); } catch { setTemplates([]); }
+    };
+    load();
+  }, [showTemplates]);
+  const activeTemplates = useMemo(() => (Array.isArray(templates) ? templates : []).filter(t => t.is_active), [templates]);
 
   const selectedContact = useMemo(() => {
     if (!selectedContactId) return null;

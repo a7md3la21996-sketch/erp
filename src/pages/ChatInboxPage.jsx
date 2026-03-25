@@ -65,9 +65,15 @@ export default function ChatInboxPage() {
   const [allComments, setAllComments] = useState([]);
   const [mentionComments, setMentionComments] = useState([]);
 
-  const refresh = () => {
-    setAllComments(getRecentComments(500));
-    setMentionComments(getMentions(currentUserId));
+  const refresh = async () => {
+    try {
+      const [comments, mentions] = await Promise.all([
+        getRecentComments(500),
+        getMentions(currentUserId),
+      ]);
+      setAllComments(Array.isArray(comments) ? comments : []);
+      setMentionComments(Array.isArray(mentions) ? mentions : []);
+    } catch { setAllComments([]); setMentionComments([]); }
   };
 
   useEffect(() => {
