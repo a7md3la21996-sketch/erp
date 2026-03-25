@@ -96,11 +96,13 @@ export async function createContact(contactData) {
 }
 
 export async function updateContact(id, updates) {
+  // Remove computed/internal fields that don't exist in Supabase
+  const { _campaign_count, _country, _opp_count, _aging_level, _offline, opportunities, ...cleanUpdates } = updates;
   try {
     const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
     const { data, error } = await supabase
       .from('contacts')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single();
@@ -115,7 +117,7 @@ export async function updateContact(id, updates) {
       Object.assign(all[idx], updates, { updated_at: new Date().toISOString() });
       localStorage.setItem('platform_contacts', JSON.stringify(all));
     }
-    enqueue('contact', 'update', { id, ...updates });
+    enqueue('contact', 'update', { id, ...cleanUpdates });
     return { id, ...updates };
   }
 }
