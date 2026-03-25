@@ -311,7 +311,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   const processFile = async (file) => {
     const arrayBuffer = await file.arrayBuffer();
     const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.default.Workbook();
+    const workbook = new (ExcelJS.default || ExcelJS).Workbook();
     await workbook.xlsx.load(arrayBuffer);
     const ws = workbook.worksheets[0];
     if (!ws || ws.rowCount === 0) return;
@@ -614,7 +614,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
       REASON: r._reason,
     }));
     const ExcelJS = await import('exceljs');
-    const workbook = new ExcelJS.default.Workbook();
+    const workbook = new (ExcelJS.default || ExcelJS).Workbook();
     const ws = workbook.addWorksheet('Errors');
     const keys = Object.keys(data[0]);
     ws.columns = keys.map(key => ({ header: key, key }));
@@ -973,7 +973,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
                 <Button variant="secondary" size="sm" onClick={async () => {
                   const headers = SYSTEM_FIELDS.map(f => f.key);
                   const ExcelJS = await import('exceljs');
-                  const workbook = new ExcelJS.default.Workbook();
+                  const workbook = new (ExcelJS.default || ExcelJS).Workbook();
                   const ws = workbook.addWorksheet('Contacts');
                   ws.addRow(headers);
                   const buffer = await workbook.xlsx.writeBuffer();

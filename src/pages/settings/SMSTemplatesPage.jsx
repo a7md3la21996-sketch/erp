@@ -673,9 +673,9 @@ export default function SMSTemplatesPage() {
   const { auditFields, applyAuditFilters } = useAuditFilter('sms_template');
 
   // Load data
-  const reload = () => {
-    setTemplates(getTemplates());
-    setSmsLog(getSMSLog());
+  const reload = async () => {
+    try { const t = await getTemplates(); setTemplates(Array.isArray(t) ? t : []); } catch { setTemplates([]); }
+    try { const l = await getSMSLog(); setSmsLog(Array.isArray(l) ? l : []); } catch { setSmsLog([]); }
   };
   useEffect(() => { reload(); }, []);
 

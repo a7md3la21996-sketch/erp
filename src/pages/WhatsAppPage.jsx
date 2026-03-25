@@ -88,11 +88,11 @@ export default function WhatsAppPage() {
     return null;
   }, [selectedContactId, conversations, allContacts]);
 
-  const refresh = useCallback(() => {
-    setConversations(getRecentConversations());
-    setStats(getWhatsAppStats());
+  const refresh = useCallback(async () => {
+    try { const c = await getRecentConversations(); setConversations(Array.isArray(c) ? c : []); } catch { setConversations([]); }
+    try { const s = await getWhatsAppStats(); setStats(s || {}); } catch {}
     if (selectedContactId) {
-      setMessages(getConversation(selectedContactId));
+      try { const m = await getConversation(selectedContactId); setMessages(Array.isArray(m) ? m : []); } catch { setMessages([]); }
     }
   }, [selectedContactId]);
 
@@ -128,9 +128,9 @@ export default function WhatsAppPage() {
     ).slice(0, 20);
   }, [allContacts, contactSearch]);
 
-  const handleSelectConversation = (conv) => {
+  const handleSelectConversation = async (conv) => {
     setSelectedContactId(conv.contact_id);
-    setMessages(getConversation(conv.contact_id));
+    try { const msgs = await getConversation(conv.contact_id); setMessages(Array.isArray(msgs) ? msgs : []); } catch { setMessages([]); }
     setShowNewChat(false);
   };
 
@@ -142,7 +142,7 @@ export default function WhatsAppPage() {
       return;
     }
     // Log message
-    logMessage({
+    await logMessage({
       contact_id: selectedContact.contact_id,
       contact_name: selectedContact.contact_name,
       contact_phone: phone,
@@ -175,9 +175,9 @@ export default function WhatsAppPage() {
     setShowTemplatePicker(false);
   };
 
-  const handleLogIncoming = () => {
+  const handleLogIncoming = async () => {
     if (!incomingText.trim() || !selectedContact) return;
-    logMessage({
+    await logMessage({
       contact_id: selectedContact.contact_id,
       contact_name: selectedContact.contact_name,
       contact_phone: selectedContact.contact_phone,
@@ -190,9 +190,9 @@ export default function WhatsAppPage() {
     refresh();
   };
 
-  const handleStartChat = (contact) => {
+  const handleStartChat = async (contact) => {
     setSelectedContactId(contact.id);
-    setMessages(getConversation(contact.id));
+    try { const m = await getConversation(contact.id); setMessages(Array.isArray(m) ? m : []); } catch { setMessages([]); }
     setShowNewChat(false);
   };
 
