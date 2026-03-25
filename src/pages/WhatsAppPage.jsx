@@ -134,7 +134,7 @@ export default function WhatsAppPage() {
     setShowNewChat(false);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedContact) return;
     const phone = selectedContact.contact_phone;
     if (!phone || !/^\+?\d{7,15}$/.test(phone.replace(/[\s-]/g, ''))) {
