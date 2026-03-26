@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +12,7 @@ import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from 
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -124,6 +125,11 @@ export default function ActivitiesPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // Realtime: auto-refresh activities when any row changes in Supabase
+  useRealtimeSubscription('activities', useCallback(() => {
+    load();
+  }, []));
 
   const filtered = useMemo(() => {
     let list = activities;

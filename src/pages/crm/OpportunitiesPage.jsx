@@ -35,6 +35,7 @@ import useOppData from './opportunities/useOppData';
 import { useResponsive } from '../../hooks/useMediaQuery';
 import { useToast } from '../../contexts/ToastContext';
 import useCrmPermissions from '../../hooks/useCrmPermissions';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 
 /* Components extracted to ./opportunities/: OppCard, ContactSearch, AddModal, OpportunityDrawer, OppKPIs, ConversionFunnel, OppTable, OppKanban, OppToolbar, BulkActionsBar */
 // ═══════════════════════════════════════════════
@@ -222,6 +223,11 @@ export default function OpportunitiesPage() {
   }, [profile?.role, profile?.id, profile?.team_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Realtime: auto-refresh opportunities when any row changes in Supabase
+  useRealtimeSubscription('opportunities', useCallback(() => {
+    loadData(true);
+  }, [loadData]));
 
   const scoreMap = useMemo(() => {
     const m = {};

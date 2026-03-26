@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef as useReactRef, useCallback } from 'react';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -358,36 +359,42 @@ export default function ContactsPage() {
   ];
 
   // Load contacts
-  useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchContacts({
-          role: profile?.role,
-          userId: profile?.id,
-          teamId: profile?.team_id,
-          filters: {},
-        });
-        if (data.length) {
-          setContacts(data);
-        } else {
-          throw new Error('no data');
-        }
-      } catch {
-        const cached = localStorage.getItem('platform_contacts');
-        if (cached) {
-          try { setContacts(JSON.parse(cached)); } catch { setContacts(MOCK); }
-        } else {
-          setContacts(MOCK);
-        }
-      } finally {
-        setLoading(false);
+  const loadContactsData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await fetchContacts({
+        role: profile?.role,
+        userId: profile?.id,
+        teamId: profile?.team_id,
+        filters: {},
+      });
+      if (data.length) {
+        setContacts(data);
+      } else {
+        throw new Error('no data');
       }
-    };
-    if (profile) load();
+    } catch {
+      const cached = localStorage.getItem('platform_contacts');
+      if (cached) {
+        try { setContacts(JSON.parse(cached)); } catch { setContacts(MOCK); }
+      } else {
+        setContacts(MOCK);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.role, profile?.id, profile?.team_id]);
+
+  useEffect(() => {
+    if (profile) loadContactsData();
     else { setContacts(MOCK); setLoading(false); }
     fetchCampaigns().then(c => setCampaignsList(c)).catch(() => {});
-  }, [profile]);
+  }, [profile, loadContactsData]);
+
+  // Realtime: auto-refresh contacts when any row changes in Supabase
+  useRealtimeSubscription('contacts', useCallback(() => {
+    if (profile) loadContactsData();
+  }, [profile, loadContactsData]));
 
   // Handle highlight query param
   useEffect(() => {
