@@ -8,7 +8,7 @@ import {
   CreditCard, Building2, UserCheck, FileBarChart,
   ArrowDownToLine, Trophy, Target, Award, Star, Medal,
   ChevronUp, ChevronDown, Minus, Crown, Zap, Download, Printer,
-  GitCompareArrows, Map, LineChart, PenTool
+  GitCompareArrows, Map as MapIcon, LineChart, PenTool
 } from 'lucide-react';
 import { Card, CardHeader, Button, Badge, Modal, Input, Select, KpiCard, ExportButton, Table, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { generateReportHTML, getCompanyInfo } from '../services/printService';
@@ -39,7 +39,7 @@ const SalesForecastPage = lazy(() => import('./sales/SalesForecastPage').catch((
 const SECTION_TABS = [
   { id: 'reports',       ar: 'التقارير',        en: 'Reports',        icon: FileText },
   { id: 'comparison',    ar: 'المقارنة',        en: 'Comparison',     icon: GitCompareArrows },
-  { id: 'heatmap',       ar: 'خريطة النشاط',    en: 'Activity Map',   icon: Map },
+  { id: 'heatmap',       ar: 'خريطة النشاط',    en: 'Activity Map',   icon: MapIcon },
   { id: 'analytics',     ar: 'التحليلات',       en: 'Analytics',      icon: LineChart },
   { id: 'chart-builder', ar: 'منشئ الرسوم',     en: 'Chart Builder',  icon: PenTool },
   { id: 'forecast',      ar: 'توقعات المبيعات',  en: 'Sales Forecast', icon: TrendingUp },
