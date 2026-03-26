@@ -7,7 +7,7 @@ import { logCreate, logUpdate, logDelete } from '../services/auditService';
 
 const STORAGE_KEY = 'platform_sync_queue';
 const OLD_STORAGE_KEY = 'platform_offline_queue';
-const MAX_RETRIES = 5;
+const MAX_RETRIES = 2;
 
 // Migrate from old key if needed
 if (typeof window !== 'undefined') {
@@ -162,8 +162,8 @@ async function processItem(item) {
 
   try {
     if (action === 'create') {
-      // Strip offline markers and temp ID
-      const { _offline, users, contacts, projects, ...payload } = data;
+      // Strip offline markers, computed fields, and temp ID
+      const { _offline, _campaign_count, _country, _opp_count, _aging_level, users, contacts, projects, opportunities, ...payload } = data;
       const tempId = payload.id;
       delete payload.id; // Let Supabase generate real ID
 
@@ -190,7 +190,7 @@ async function processItem(item) {
     }
 
     if (action === 'update') {
-      const { _id, _offline, users, contacts, projects, ...updates } = data;
+      const { _id, _offline, _campaign_count, _country, _opp_count, _aging_level, users, contacts, projects, opportunities, ...updates } = data;
       const targetId = _id || data.id;
       const realId = resolveId(targetId);
       delete updates.id;
