@@ -584,12 +584,6 @@ export default function OpportunitiesPage() {
         lostReasonCounts={lostReasonCounts} topLostReason={topLostReason} lostReasonsMap={lostReasonsMap}
       />
 
-      {/* Conversion Funnel */}
-      <ConversionFunnel
-        isRTL={isRTL} isDark={isDark} showFunnel={showFunnel} setShowFunnel={setShowFunnel}
-        sortedFiltered={sortedFiltered} funnelData={funnelData}
-      />
-
       {/* Stage Tabs */}
       <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 overflow-x-auto scrollbar-hide">
         {stageConfigWithAll.map(s => {
