@@ -7,7 +7,8 @@ export default defineConfig({
     react(),
     VitePWA({
       devOptions: { enabled: false },
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      selfDestroying: true,
       includeAssets: ['favicon.ico', 'logo.png', 'logo-white.png'],
       manifest: {
         name: 'Platform ERP',
