@@ -587,7 +587,7 @@ export default function UsersPage() {
                         if (!confirm(confirmMsg)) return;
                         try {
                           await supabase.from('users').delete().eq('id', user.id);
-                          try { await supabase.auth.admin.deleteUser(user.id); } catch {}
+                          await supabase.rpc('delete_auth_user', { user_id: user.id });
                           setUsers(prev => prev.filter(u => u.id !== user.id));
                           toast.success(lang === 'ar' ? 'تم حذف المستخدم' : 'User deleted');
                         } catch { toast.error(lang === 'ar' ? 'فشل الحذف' : 'Delete failed'); }
