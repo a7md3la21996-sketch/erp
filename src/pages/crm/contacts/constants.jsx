@@ -90,9 +90,8 @@ export const TEMP = {
   cold: { label: 'Cold', labelAr: 'بارد', color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  Icon: Snowflake },
 };
 export const TYPE = {
-  lead:      { label: 'ليد',       labelEn: 'Lead',       color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)'  },
-  cold:      { label: 'كولد',      labelEn: 'Cold',       color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
-  client:    { label: 'عميل',      labelEn: 'Client',     color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)'   },
+  lead:      { label: 'فريش ليد',   labelEn: 'Fresh Lead', color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)'  },
+  cold:      { label: 'كولد كول',  labelEn: 'Cold Call',  color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
   supplier:  { label: 'مورد',      labelEn: 'Supplier',   color: '#0F766E', bg: 'rgba(15,118,110,0.12)'  },
   developer: { label: 'مطور',      labelEn: 'Developer',  color: '#B45309', bg: 'rgba(180,83,9,0.12)'    },
   applicant: { label: 'متقدم',     labelEn: 'Applicant',  color: '#6B21A8', bg: 'rgba(107,33,168,0.12)'  },

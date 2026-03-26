@@ -347,10 +347,12 @@ export default function ContactsPage() {
     { value: 'disqualified', label: isRTL ? 'غير مؤهل' : 'Disqualified' },
   ];
   const DQ_REASONS = [
+    { value: 'existing_client', label: isRTL ? 'عميل حالي (شاري)' : 'Existing Client' },
     { value: 'resale', label: isRTL ? 'عايز يبيع وحدته' : 'Wants to sell unit' },
     { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not interested' },
     { value: 'no_budget', label: isRTL ? 'ميزانية غير مناسبة' : 'No budget' },
     { value: 'wrong_audience', label: isRTL ? 'جمهور خاطئ' : 'Wrong audience' },
+    { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong number' },
     { value: 'duplicate', label: isRTL ? 'مكرر' : 'Duplicate' },
     { value: 'other', label: isRTL ? 'سبب آخر' : 'Other' },
   ];

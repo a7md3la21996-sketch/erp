@@ -52,9 +52,8 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       { value: 'أستاذ', label: 'أستاذ', labelEn: 'Prof.' },
     ]},
     { id: 'contact_type', label: 'النوع', labelEn: 'Type', type: 'select', options: [
-      { value: 'lead', label: 'ليد', labelEn: 'Lead' },
-      { value: 'cold', label: 'كولد', labelEn: 'Cold' },
-      { value: 'client', label: 'عميل', labelEn: 'Client' },
+      { value: 'lead', label: 'فريش ليد', labelEn: 'Fresh Lead' },
+      { value: 'cold', label: 'كولد كول', labelEn: 'Cold Call' },
       { value: 'supplier', label: 'مورد', labelEn: 'Supplier' },
       { value: 'developer', label: 'مطور عقاري', labelEn: 'Developer' },
       { value: 'applicant', label: 'متقدم لوظيفة', labelEn: 'Applicant' },
