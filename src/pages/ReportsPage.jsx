@@ -29,11 +29,11 @@ import {
 import { PageSkeleton } from '../components/ui/PageSkeletons';
 
 // ── Lazy-loaded section pages ────────────────────────────────────
-const ComparisonReportsPage = lazy(() => import('./ComparisonReportsPage'));
-const HeatmapPage = lazy(() => import('./HeatmapPage'));
-const AnalyticsPage = lazy(() => import('./AnalyticsPage'));
-const ChartBuilderPage = lazy(() => import('./ChartBuilderPage'));
-const SalesForecastPage = lazy(() => import('./sales/SalesForecastPage'));
+const ComparisonReportsPage = lazy(() => import('./ComparisonReportsPage').catch(() => ({ default: () => null })));
+const HeatmapPage = lazy(() => import('./HeatmapPage').catch(() => ({ default: () => null })));
+const AnalyticsPage = lazy(() => import('./AnalyticsPage').catch(() => ({ default: () => null })));
+const ChartBuilderPage = lazy(() => import('./ChartBuilderPage').catch(() => ({ default: () => null })));
+const SalesForecastPage = lazy(() => import('./sales/SalesForecastPage').catch(() => ({ default: () => null })));
 
 // ── Section-level tabs (top bar) ─────────────────────────────────
 const SECTION_TABS = [
