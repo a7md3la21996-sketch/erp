@@ -64,6 +64,11 @@ export default function OppTable({
                 {opp.budget > 0 && <span className="text-[11px] font-bold text-brand-500">{fmtBudget(opp.budget)} {isRTL ? '\u062C' : 'EGP'}</span>}
                 <span className="text-[10px] ms-auto" style={{ color: scoreColor(score) }}>{score} pts</span>
               </div>
+              {opp.notes && (
+                <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[200px] block mt-1">
+                  📝 {opp.notes.slice(0, 40)}{opp.notes.length > 40 ? '...' : ''}
+                </span>
+              )}
               {opp.contacts?.phone && (
                 <div className="flex gap-1.5 mt-2" onClick={e => e.stopPropagation()}>
                   <a href={`tel:${normalizePhone(opp.contacts.phone)}`} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-emerald-500/[0.08] border border-emerald-500/20 text-emerald-500 no-underline text-[11px] font-semibold">
@@ -190,6 +195,11 @@ export default function OppTable({
                         </div>
                         {opp.contacts?.phone && (
                           <div className="text-[11px] text-content-muted dark:text-content-muted-dark" dir="ltr">{opp.contacts.phone}</div>
+                        )}
+                        {opp.notes && (
+                          <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[150px] block">
+                            📝 {opp.notes.slice(0, 40)}{opp.notes.length > 40 ? '...' : ''}
+                          </span>
                         )}
                       </div>
                     </div>

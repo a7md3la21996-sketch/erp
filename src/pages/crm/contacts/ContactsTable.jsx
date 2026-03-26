@@ -222,6 +222,12 @@ export default function ContactsTable({
                       {c.created_at && <><span className="opacity-30">·</span><span>{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span></>}
                     </div>
                   )}
+                  {/* Notes preview */}
+                  {c.notes && (
+                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[150px] block mt-1 ms-[52px]">
+                      📝 {c.notes.slice(0, 40)}{c.notes.length > 40 ? '...' : ''}
+                    </span>
+                  )}
                   {/* Opps / Sales — highest stage on mobile */}
                   {c.opportunities?.length > 0 && (() => {
                     const opps = c.opportunities;
@@ -325,6 +331,11 @@ export default function ContactsTable({
                   <div className="text-xs text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
                   {c.campaign_name && <div className="text-[10px] text-brand-500/70 dark:text-brand-400/70 mt-0.5 truncate max-w-[160px]" title={c.campaign_name}>{c.campaign_name}</div>}
                   {c.created_at && <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60 mt-0.5">{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
+                  {c.notes && (
+                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[150px] block mt-0.5">
+                      📝 {c.notes.slice(0, 40)}{c.notes.length > 40 ? '...' : ''}
+                    </span>
+                  )}
                 </td>
 
                 {/* Opps / Sales — highest stage only */}
