@@ -423,10 +423,16 @@ function KpiPerformanceTab({ lang, isRTL }) {
     MOCK_EMPLOYEES.filter(e => ['sales_director','sales_manager','team_leader','sales_agent'].includes(e.role)),
   []);
 
-  const teamKpis = useMemo(() =>
-    getTeamKPIs(salesEmployees, selectedMonth, selectedYear),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [salesEmployees, selectedMonth, selectedYear, refreshKey]);
+  const [teamKpis, setTeamKpis] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const result = await getTeamKPIs(salesEmployees, selectedMonth, selectedYear);
+        setTeamKpis(Array.isArray(result) ? result : []);
+      } catch { setTeamKpis([]); }
+    };
+    load();
+  }, [salesEmployees, selectedMonth, selectedYear, refreshKey]);
 
   const teamOverall = teamKpis.length > 0
     ? Math.round(teamKpis.reduce((s, k) => s + k.overallPct, 0) / teamKpis.length)
@@ -437,10 +443,10 @@ function KpiPerformanceTab({ lang, isRTL }) {
   const getPctColor = (pct) => pct >= 80 ? '#10B981' : pct >= 50 ? '#F59E0B' : '#EF4444';
   const fmtVal = (metric, val) => metric === 'revenue' ? (val >= 1000000 ? (val/1000000).toFixed(1)+'M' : val >= 1000 ? (val/1000).toFixed(0)+'K' : val) : val;
 
-  const handleSaveEdit = (empId, metric) => {
+  const handleSaveEdit = async (empId, metric) => {
     const val = Number(editValue);
     if (!isNaN(val) && val >= 0) {
-      setTargets(empId, selectedMonth, selectedYear, { [metric]: val });
+      await setTargets(empId, selectedMonth, selectedYear, { [metric]: val });
       setRefreshKey(k => k + 1);
     }
     setEditingCell(null);
