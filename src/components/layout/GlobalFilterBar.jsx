@@ -45,11 +45,11 @@ export default function GlobalFilterBar() {
   }, [agents, department, teamId]);
 
   const selectClass = `
-    h-[30px] px-2 text-xs rounded-lg border border-edge dark:border-edge-dark
+    h-[28px] md:h-[30px] px-1.5 md:px-2 text-[11px] md:text-xs rounded-lg border border-edge dark:border-edge-dark
     bg-surface-card dark:bg-surface-card-dark
     text-content dark:text-content-dark
     focus:outline-none focus:ring-1 focus:ring-brand-500/40
-    appearance-none cursor-pointer
+    appearance-none cursor-pointer max-w-[110px] md:max-w-none
   `.trim();
 
   // If not expanded and not filtered, show just the toggle button
@@ -71,13 +71,13 @@ export default function GlobalFilterBar() {
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 md:px-7 py-2 bg-surface-card/60 dark:bg-surface-card-dark/60 border-b border-edge/50 dark:border-edge-dark/50 backdrop-blur-sm ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
+      className={`flex flex-wrap items-center gap-2 md:gap-3 px-4 md:px-7 py-2 bg-surface-card/60 dark:bg-surface-card-dark/60 border-b border-edge/50 dark:border-edge-dark/50 backdrop-blur-sm ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* Filter icon */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
         <Filter size={13} className={isFiltered ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'} />
-        <span className={`text-xs font-medium ${isFiltered ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+        <span className={`text-xs font-medium hidden sm:inline ${isFiltered ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
           {isRTL ? 'فلتر عام' : 'Global Filter'}
         </span>
       </div>
