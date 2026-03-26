@@ -62,6 +62,11 @@ export function AuthProvider({ children }) {
       return false;
     };
 
+    // Restore mock session immediately (before any async)
+    if (restoreMockSession()) {
+      setLoading(false);
+    }
+
     if (USE_SUPABASE_AUTH) {
       let isMounted = true;
 
