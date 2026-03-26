@@ -388,7 +388,7 @@ export default function ActivitiesPage() {
                       </Badge>
                     )}
                     <span className={`text-[11px] text-content-muted dark:text-content-muted-dark ms-auto`} title={act.created_at ? new Date(act.created_at).toLocaleString(isRTL ? 'ar-EG' : 'en-US') : ''}>
-                      {act.created_at ? new Date(act.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' }) + ' ' + new Date(act.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {timeAgo(act.created_at, lang)}
                     </span>
                   </div>
                   {/* Row 2: Entity (Related To) + User (By) */}
