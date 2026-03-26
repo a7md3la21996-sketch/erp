@@ -579,6 +579,23 @@ export default function UsersPage() {
                     >
                       <span className="text-amber-500 text-xs font-bold">🔑</span>
                     </button>
+                    <button
+                      title={lang === 'ar' ? 'حذف المستخدم' : 'Delete User'}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        const confirmMsg = lang === 'ar' ? `حذف ${user.full_name_ar || user.email}؟` : `Delete ${user.full_name_en || user.email}?`;
+                        if (!confirm(confirmMsg)) return;
+                        try {
+                          await supabase.from('users').delete().eq('id', user.id);
+                          try { await supabase.auth.admin.deleteUser(user.id); } catch {}
+                          setUsers(prev => prev.filter(u => u.id !== user.id));
+                          toast.success(lang === 'ar' ? 'تم حذف المستخدم' : 'User deleted');
+                        } catch { toast.error(lang === 'ar' ? 'فشل الحذف' : 'Delete failed'); }
+                      }}
+                      className="w-8 h-8 rounded-lg border border-red-500/30 bg-transparent hover:bg-red-500/10 hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150"
+                    >
+                      <span className="text-red-500 text-xs font-bold">🗑</span>
+                    </button>
                   </div>
                 </Td>
               </Tr>
