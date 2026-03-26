@@ -118,6 +118,10 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     if (globalFilter?.agentName && globalFilter.agentName !== 'all') {
       list = list.filter(c => c.assigned_to_name === globalFilter.agentName);
     }
+    if (globalFilter?.dateRange) {
+      const { start, end } = globalFilter.dateRange;
+      list = list.filter(c => c.created_at && c.created_at >= start && c.created_at <= end);
+    }
     list.sort((a, b) => {
       const aPinned = pinnedIds.includes(a.id) ? 0 : 1;
       const bPinned = pinnedIds.includes(b.id) ? 0 : 1;
@@ -130,7 +134,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       return 0;
     });
     return list;
-  }, [contacts, filterType, search, showBlacklisted, sortBy, pinnedIds, smartFilters, SMART_FIELDS, applyAuditFilters, globalFilter?.department, globalFilter?.agentName]);
+  }, [contacts, filterType, search, showBlacklisted, sortBy, pinnedIds, smartFilters, SMART_FIELDS, applyAuditFilters, globalFilter?.department, globalFilter?.agentName, globalFilter?.dateRange]);
 
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);

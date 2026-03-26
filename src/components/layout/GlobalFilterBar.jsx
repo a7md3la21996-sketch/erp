@@ -17,7 +17,7 @@ export default function GlobalFilterBar() {
   const { i18n } = useTranslation();
   const lang = i18n.language;
   const isRTL = lang === 'ar';
-  const { department, setDepartment, teamId, setTeamId, agentName, setAgentName, isFiltered, clearFilters } = useGlobalFilter();
+  const { department, setDepartment, teamId, setTeamId, agentName, setAgentName, period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo, isFiltered, clearFilters } = useGlobalFilter();
 
   const [expanded, setExpanded] = useState(false);
   const [agents, setAgents] = useState([]);
@@ -121,6 +121,30 @@ export default function GlobalFilterBar() {
           </option>
         ))}
       </select>
+
+      {/* Period */}
+      <select value={period} onChange={e => setPeriod(e.target.value)} className={selectClass} dir={isRTL ? 'rtl' : 'ltr'}>
+        {[
+          { value: 'all', ar: 'كل الأوقات', en: 'All Time' },
+          { value: 'today', ar: 'اليوم', en: 'Today' },
+          { value: 'yesterday', ar: 'أمس', en: 'Yesterday' },
+          { value: 'this_week', ar: 'هذا الأسبوع', en: 'This Week' },
+          { value: 'this_month', ar: 'هذا الشهر', en: 'This Month' },
+          { value: 'last_7', ar: 'آخر 7 أيام', en: 'Last 7 Days' },
+          { value: 'last_30', ar: 'آخر 30 يوم', en: 'Last 30 Days' },
+          { value: 'custom', ar: 'فترة مخصصة', en: 'Custom Range' },
+        ].map(p => <option key={p.value} value={p.value}>{isRTL ? p.ar : p.en}</option>)}
+      </select>
+
+      {/* Custom date range */}
+      {period === 'custom' && (
+        <>
+          <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)}
+            className={`${selectClass} w-[120px]`} />
+          <input type="date" value={customTo} onChange={e => setCustomTo(e.target.value)}
+            className={`${selectClass} w-[120px]`} />
+        </>
+      )}
 
       {/* Clear / Collapse */}
       {isFiltered && (
