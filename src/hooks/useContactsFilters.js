@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { applySmartFilters } from '../components/ui';
 import { SOURCE_LABELS, SOURCE_EN, COUNTRY_CODES } from '../pages/crm/contacts/constants';
+import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 
 const detectCountry = (phone) => {
   if (!phone) return '';
@@ -27,6 +28,7 @@ const COUNTRY_OPTIONS = COUNTRY_CODES
   .map(c => ({ value: c.country, label: c.labelAr, labelEn: c.label }));
 
 export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAuditFilters, initialSearch = '', initialFilterType = 'all', initialShowBlacklisted = false, initialSortBy = 'created', initialPage = 1 }) {
+  const globalFilter = useGlobalFilter();
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
   useEffect(() => {
@@ -109,6 +111,13 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     }));
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
+    // Global filter
+    if (globalFilter?.department && globalFilter.department !== 'all') {
+      list = list.filter(c => c.department === globalFilter.department);
+    }
+    if (globalFilter?.agentName && globalFilter.agentName !== 'all') {
+      list = list.filter(c => c.assigned_to_name === globalFilter.agentName);
+    }
     list.sort((a, b) => {
       const aPinned = pinnedIds.includes(a.id) ? 0 : 1;
       const bPinned = pinnedIds.includes(b.id) ? 0 : 1;
@@ -121,7 +130,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       return 0;
     });
     return list;
-  }, [contacts, filterType, search, showBlacklisted, sortBy, pinnedIds, smartFilters, SMART_FIELDS, applyAuditFilters]);
+  }, [contacts, filterType, search, showBlacklisted, sortBy, pinnedIds, smartFilters, SMART_FIELDS, applyAuditFilters, globalFilter?.department, globalFilter?.agentName]);
 
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);

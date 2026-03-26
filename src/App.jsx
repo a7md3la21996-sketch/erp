@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SystemConfigProvider } from './contexts/SystemConfigContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { GlobalFilterProvider } from './contexts/GlobalFilterContext';
 import { ProtectedRoute } from './components/auth/PermissionGate';
 import MainLayout from './components/layout/MainLayout';
 import KeyboardShortcutsProvider from './components/layout/KeyboardShortcutsProvider';
@@ -142,6 +143,7 @@ export default function App() {
       <ThemeProvider>
         <SystemConfigProvider>
         <AuthProvider>
+          <GlobalFilterProvider>
           <ToastProvider>
             <AppErrorBoundary>
             <KeyboardShortcutsProvider>
@@ -233,6 +235,7 @@ export default function App() {
             </KeyboardShortcutsProvider>
             </AppErrorBoundary>
           </ToastProvider>
+          </GlobalFilterProvider>
         </AuthProvider>
         </SystemConfigProvider>
       </ThemeProvider>

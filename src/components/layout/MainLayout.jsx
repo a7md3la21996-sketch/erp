@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import GlobalFilterBar from './GlobalFilterBar';
 
 function useIsMobile(breakpoint = 768) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < breakpoint);
@@ -50,6 +51,7 @@ export default function MainLayout() {
         style={{ marginInlineStart: isMobile ? 0 : (collapsed ? 72 : 260) }}
       >
         <Header onMenuClick={() => setSidebarOpen(true)} />
+        <GlobalFilterBar />
         <main>
           <Outlet />
         </main>

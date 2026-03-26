@@ -6,6 +6,7 @@ import {
 } from './constants';
 import { getDeptStages, deptStageLabel } from '../contacts/constants';
 import { applySmartFilters } from '../../../components/ui';
+import { useGlobalFilter } from '../../../contexts/GlobalFilterContext';
 
 export default function useOppData({
   opps, normalizedOpps, smartFilters, SMART_FIELDS, activeStage, search, lang, isRTL,
@@ -13,6 +14,8 @@ export default function useOppData({
   configStageWinRates, sourceLabelsMap, lostReasonsMap,
   filterDept,
 }) {
+  const globalFilter = useGlobalFilter();
+
   const filtered = useMemo(() => {
     let result = applySmartFilters(normalizedOpps, smartFilters, SMART_FIELDS);
     result = applyAuditFilters(result, smartFilters);
@@ -27,8 +30,19 @@ export default function useOppData({
         return name.includes(q) || project.includes(q) || phone.includes(q) || email.includes(q);
       });
     }
+    // Global filter
+    if (globalFilter?.department && globalFilter.department !== 'all') {
+      result = result.filter(o => o.department === globalFilter.department);
+    }
+    if (globalFilter?.agentName && globalFilter.agentName !== 'all') {
+      result = result.filter(o => {
+        const name = getAgentName(o, 'en');
+        const nameAr = getAgentName(o, 'ar');
+        return name === globalFilter.agentName || nameAr === globalFilter.agentName;
+      });
+    }
     return result;
-  }, [normalizedOpps, smartFilters, SMART_FIELDS, activeStage, search, lang]);
+  }, [normalizedOpps, smartFilters, SMART_FIELDS, activeStage, search, lang, globalFilter?.department, globalFilter?.agentName]);
 
   const sortedFiltered = useMemo(() => {
     const arr = [...filtered];

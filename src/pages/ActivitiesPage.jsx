@@ -11,6 +11,7 @@ import {
 import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
+import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -68,6 +69,7 @@ export default function ActivitiesPage() {
   const [pageSize, setPageSize] = useState(25);
   const [deleting, setDeleting] = useState(false);
   const { auditFields, applyAuditFilters } = useAuditFilter('activity');
+  const globalFilter = useGlobalFilter();
 
   const uniqueUsers = useMemo(() => {
     const map = new Map();
@@ -136,8 +138,15 @@ export default function ActivitiesPage() {
     }
     list = applySmartFilters(list, smartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
+    // Global filter
+    if (globalFilter?.department && globalFilter.department !== 'all') {
+      list = list.filter(a => a.dept === globalFilter.department);
+    }
+    if (globalFilter?.agentName && globalFilter.agentName !== 'all') {
+      list = list.filter(a => a.user_name_en === globalFilter.agentName || a.user_name_ar === globalFilter.agentName);
+    }
     return list;
-  }, [activities, search, smartFilters, SMART_FIELDS]);
+  }, [activities, search, smartFilters, SMART_FIELDS, globalFilter?.department, globalFilter?.agentName]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);

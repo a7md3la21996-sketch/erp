@@ -12,6 +12,7 @@ import {
 import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
+import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { logAction } from '../services/auditService';
 import { notifyTaskAssigned } from '../services/notificationsService';
 import {
@@ -601,6 +602,7 @@ export default function TasksPage() {
   const [pageSize, setPageSize]     = useState(25);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('task');
+  const globalFilter = useGlobalFilter();
 
   const assignedToOptions = useMemo(() =>
     [...new Set(tasks.map(t => t.assigned_to_name_en).filter(Boolean))].map(name => {
@@ -651,6 +653,10 @@ export default function TasksPage() {
       const s = search.toLowerCase();
       result = result.filter(t => t.title?.toLowerCase().includes(s) || t.contact_name?.toLowerCase().includes(s));
     }
+    // Global filter
+    if (globalFilter?.agentName && globalFilter.agentName !== 'all') {
+      result = result.filter(t => t.assigned_to_name_en === globalFilter.agentName || t.assigned_to_name_ar === globalFilter.agentName);
+    }
     const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
     result = [...result].sort((a, b) => {
       switch (sortBy) {
@@ -663,7 +669,7 @@ export default function TasksPage() {
       }
     });
     return result;
-  }, [tasks, smartFilters, SMART_FIELDS, search, sortBy]);
+  }, [tasks, smartFilters, SMART_FIELDS, search, sortBy, globalFilter?.agentName]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
