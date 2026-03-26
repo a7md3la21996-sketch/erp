@@ -7,7 +7,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabase';
 import {
   Users, Shield, UserCheck, UserX, Clock,
-  ToggleLeft, ToggleRight, Plus, Pencil,
+  ToggleLeft, ToggleRight, Plus, Pencil, KeyRound, Trash2, Eye, EyeOff,
 } from 'lucide-react';
 import {
   Button, Badge, KpiCard, Table, Th, Td, Tr,
@@ -577,7 +577,7 @@ export default function UsersPage() {
                       onClick={(e) => { e.stopPropagation(); resetUserPassword(user.id, user.email); }}
                       className="w-8 h-8 rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150"
                     >
-                      <span className="text-amber-500 text-xs font-bold">🔑</span>
+                      <KeyRound size={14} className="text-amber-500" />
                     </button>
                     <button
                       title={lang === 'ar' ? 'حذف المستخدم' : 'Delete User'}
@@ -594,7 +594,7 @@ export default function UsersPage() {
                       }}
                       className="w-8 h-8 rounded-lg border border-red-500/30 bg-transparent hover:bg-red-500/10 hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150"
                     >
-                      <span className="text-red-500 text-xs font-bold">🗑</span>
+                      <Trash2 size={14} className="text-red-500" />
                     </button>
                   </div>
                 </Td>
