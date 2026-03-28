@@ -126,11 +126,14 @@ function TodayRecurringTasks({ lang, isRTL, isDark }) {
       {pending.length === 0 ? (
         <div className="text-center py-6">
           <CheckCircle size={32} className="text-brand-500 opacity-40 mb-2 mx-auto" />
-          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mb-3">
             {doneCount > 0
               ? (lang === 'ar' ? 'أنجزت كل مهامك المتكررة!' : 'All recurring tasks done!')
               : (lang === 'ar' ? 'لا مهام متكررة مجدولة اليوم' : 'No recurring tasks scheduled today')}
           </p>
+          <Link to="/tasks" className="text-xs font-semibold text-brand-500 px-3 py-1.5 rounded-lg bg-brand-500/[0.08] hover:bg-brand-500/[0.15] transition-all no-underline">
+            {lang === 'ar' ? 'عرض كل المهام' : 'View all tasks'}
+          </Link>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -227,7 +230,15 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
       ) : reminders.length === 0 ? (
         <div className="text-center py-6">
           <CheckCircle size={32} className="text-brand-500 opacity-40 mb-2 mx-auto" />
-          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'أنجزت كل متابعاتك اليوم!' : 'All caught up for today!'}</p>
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mb-3">{lang === 'ar' ? 'أنجزت كل متابعاتك اليوم!' : 'All caught up for today!'}</p>
+          <div className="flex gap-2 justify-center">
+            <Link to="/contacts" className="text-xs font-semibold text-brand-500 px-3 py-1.5 rounded-lg bg-brand-500/[0.08] hover:bg-brand-500/[0.15] transition-all no-underline">
+              {lang === 'ar' ? 'اتصل بليدز جديدة' : 'Call new leads'}
+            </Link>
+            <Link to="/tasks" className="text-xs font-semibold text-brand-500 px-3 py-1.5 rounded-lg bg-brand-500/[0.08] hover:bg-brand-500/[0.15] transition-all no-underline">
+              {lang === 'ar' ? 'أنشئ مهمة' : 'Create task'}
+            </Link>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -248,9 +259,9 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
             );
           })}
           {reminders.length > 5 && (
-            <p className="mt-1 mb-0 text-xs text-content-muted dark:text-content-muted-dark text-center">
-              {lang === 'ar' ? '+ ' + (reminders.length - 5) + ' متابعات أخرى' : '+ ' + (reminders.length - 5) + ' more'}
-            </p>
+            <Link to="/contacts" className="mt-1 mb-0 text-xs text-brand-500 font-semibold text-center block hover:underline">
+              {lang === 'ar' ? '+ ' + (reminders.length - 5) + ' متابعات أخرى — عرض الكل' : '+ ' + (reminders.length - 5) + ' more — View All'}
+            </Link>
           )}
         </div>
       )}
@@ -544,6 +555,115 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
 }
 
 
+function MyDayWidget({ lang, isRTL, isDark, userId, navigate }) {
+  const [reminders, setReminders] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchTodayReminders(userId).then(data => {
+      setReminders(data || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [userId]);
+
+  const todayTasks = useMemo(() => {
+    try { generateDueInstances(); } catch {}
+    return getTodayInstances().filter(i => i.status === 'pending');
+  }, []);
+
+  const overdueTasks = useMemo(() => {
+    try {
+      const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
+      const now = new Date();
+      return opps.filter(o => o.expected_close_date && new Date(o.expected_close_date) < now && !['closed_won','closed_lost'].includes(o.stage));
+    } catch { return []; }
+  }, []);
+
+  const newLeadsToday = useMemo(() => {
+    try {
+      const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      const today = new Date().toISOString().slice(0, 10);
+      return contacts.filter(c => c.created_at?.startsWith(today));
+    } catch { return []; }
+  }, []);
+
+  const sections = [
+    { icon: Bell, label: lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups", count: reminders.length, color: '#4A7AAB', link: '/contacts', loading },
+    { icon: AlertTriangle, label: lang === 'ar' ? 'فرص متأخرة' : 'Overdue Opps', count: overdueTasks.length, color: overdueTasks.length > 0 ? '#EF4444' : '#10B981', link: '/crm/opportunities' },
+    { icon: Repeat, label: lang === 'ar' ? 'مهام متكررة' : 'Recurring Tasks', count: todayTasks.length, color: '#F59E0B', link: '/tasks' },
+    { icon: UserCheck, label: lang === 'ar' ? 'ليدز جديدة اليوم' : 'New Leads Today', count: newLeadsToday.length, color: '#8B5CF6', link: '/contacts' },
+  ];
+
+  const quickActions = [
+    { icon: Phone, label: lang === 'ar' ? 'سجل مكالمة' : 'Log Call', link: '/contacts', color: '#10B981' },
+    { icon: Users, label: lang === 'ar' ? 'ليد جديد' : 'New Lead', link: '/contacts?action=add', color: '#4A7AAB' },
+    { icon: Activity, label: lang === 'ar' ? 'الفرص' : 'Opportunities', link: '/crm/opportunities', color: '#2B4C6F' },
+  ];
+
+  return (
+    <div>
+      <div className={`flex items-center gap-2.5 mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className="w-9 h-9 rounded-xl bg-brand-500/[0.12] flex items-center justify-center">
+          <Star size={18} className="text-brand-500" />
+        </div>
+        <div className="text-start">
+          <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
+            {lang === 'ar' ? 'يومي' : 'My Day'}
+          </p>
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+            {lang === 'ar' ? 'كل اللي محتاج تعمله النهاردة' : 'Everything you need to do today'}
+          </p>
+        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-4">
+        {sections.map((s, i) => {
+          const SIcon = s.icon;
+          return (
+            <div
+              key={i}
+              onClick={() => navigate(s.link)}
+              className="cursor-pointer rounded-xl p-3 bg-surface-bg dark:bg-white/[0.04] border border-edge dark:border-edge-dark hover:border-brand-500/40 transition-all duration-150"
+              style={{ textAlign: isRTL ? 'right' : 'left' }}
+            >
+              <div className={`flex items-center gap-2 mb-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: s.color + '18' }}>
+                  <SIcon size={14} color={s.color} />
+                </div>
+              </div>
+              <p className="m-0 text-xl font-bold text-content dark:text-content-dark">
+                {s.loading ? '...' : s.count}
+              </p>
+              <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark leading-tight mt-0.5">
+                {s.label}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Quick actions */}
+      <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        {quickActions.map((a, i) => {
+          const AIcon = a.icon;
+          return (
+            <button
+              key={i}
+              onClick={() => navigate(a.link)}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark hover:border-brand-500/40 transition-all duration-150 cursor-pointer"
+              style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
+            >
+              <AIcon size={14} color={a.color} />
+              <span className="text-xs font-semibold text-content dark:text-content-dark">{a.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
@@ -696,7 +816,10 @@ export default function DashboardPage() {
   }, [wonDeals, activeDateRange]);
 
   const salesData = realTopSellers || [];
-  const salesTarget = filteredCrm.revenue > 0 ? Math.max(filteredCrm.revenue * 1.2, filteredCrm.revenue + 100000) : 0;
+  // Sales target: from localStorage config (set in Settings), or 0 = no target configured
+  const salesTarget = (() => {
+    try { return Number(JSON.parse(localStorage.getItem('platform_system_config') || '{}').monthly_sales_target) || 0; } catch { return 0; }
+  })();
   const targetPct = salesTarget > 0 ? Math.min(Math.round((filteredCrm.revenue / salesTarget) * 100), 100) : 0;
   const chartData = useMemo(() => (realRevenueTrend || []).map(d => ({ ...d, label: lang === 'ar' ? d.label_ar : d.label_en })), [lang, realRevenueTrend]);
 
@@ -752,6 +875,7 @@ export default function DashboardPage() {
             <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
             <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities')} />
             <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue ? (filteredCrm.revenue / 1000).toFixed(0) + 'K' : '0')} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
+            <DashKpiCard icon={TrendingUp} label={lang === 'ar' ? 'قيمة الـ Pipeline' : 'Pipeline Value'} value={dashLoading ? '...' : (() => { const pv = (rawOpps || []).filter(o => !['closed_won','closed_lost'].includes(o.stage)).reduce((s, o) => s + (o.budget || 0), 0); return pv ? (pv / 1000).toFixed(0) + 'K' : '0'; })()} sub="EGP" color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
           </div>
         );
 
@@ -960,6 +1084,9 @@ export default function DashboardPage() {
           </div>
         );
       }
+
+      case 'my_day':
+        return <MyDayWidget lang={lang} isRTL={isRTL} isDark={isDark} userId={profile?.id} navigate={navigate} />;
 
       case 'today_tasks':
         return <TodayRecurringTasks lang={lang} isRTL={isRTL} isDark={isDark} />;

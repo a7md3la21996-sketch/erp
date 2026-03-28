@@ -196,8 +196,13 @@ export default function LeadPoolPage() {
     const fresh = leads.filter(l => l.type === 'fresh');
     const cold  = leads.filter(l => l.type === 'cold_call');
     const slaBreached = leads.filter(l => getSLAStatus(l).breached);
+    const stale = leads.filter(l => {
+      if (!l.created_at) return false;
+      const hrs = (Date.now() - new Date(l.created_at)) / 3600000;
+      return hrs > 48 && !l.assigned_to; // unassigned for 48+ hours = stale
+    });
     const avgWait = leads.length ? Math.round(leads.reduce((s, l) => s + (Date.now() - new Date(l.created_at)) / 60000, 0) / leads.length) : 0;
-    return { total: leads.length, fresh: fresh.length, cold: cold.length, slaBreached: slaBreached.length, avgWait };
+    return { total: leads.length, fresh: fresh.length, cold: cold.length, slaBreached: slaBreached.length, stale: stale.length, avgWait };
   }, [leads, tick]);
 
   const handleReserve = (lead) => {
@@ -232,6 +237,59 @@ export default function LeadPoolPage() {
     setLeads(prev => prev.filter(l => !idsToAssign.includes(l.id)));
     setSelected([]);
     setAssignModal(null);
+  };
+
+  const handleAutoDistribute = () => {
+    if (!agentsList.length || !visible.length) return;
+    const unassigned = visible.filter(l => !l.assigned_to && (!l.reserved_by || new Date(l.reserved_until) <= new Date()));
+    if (!unassigned.length) return;
+
+    // Build agent capacity map based on weights and daily caps
+    const agentCaps = agentsList.map(a => {
+      const level = LEVELS[a.level] || LEVELS.junior;
+      const remaining = Math.max(level.dailyCap - (a.today_count || 0), 0);
+      return { ...a, weight: level.weight, remaining, assigned: 0 };
+    }).filter(a => a.remaining > 0 && a.weight > 0);
+
+    if (!agentCaps.length) return;
+
+    const totalWeight = agentCaps.reduce((s, a) => s + a.weight, 0);
+    const idsToRemove = [];
+    const userName = profile?.full_name_ar || profile?.full_name_en || '';
+
+    // Sort leads by score desc (best leads first)
+    const sorted = [...unassigned].sort((a, b) => getLeadScore(b) - getLeadScore(a));
+
+    // Check source restrictions (Google → senior only)
+    sorted.forEach(lead => {
+      const srcConfig = SOURCES[lead.source];
+      let eligible = agentCaps;
+      if (srcConfig?.seniorOnly) {
+        eligible = agentCaps.filter(a => ['top_senior', 'senior'].includes(a.level));
+      }
+      if (!eligible.length) eligible = agentCaps;
+
+      // Weighted random pick among eligible agents with remaining capacity
+      const available = eligible.filter(a => a.remaining - a.assigned > 0);
+      if (!available.length) return;
+
+      const weightSum = available.reduce((s, a) => s + a.weight, 0);
+      let rand = Math.random() * weightSum;
+      let chosen = available[0];
+      for (const a of available) {
+        rand -= a.weight;
+        if (rand <= 0) { chosen = a; break; }
+      }
+
+      chosen.assigned++;
+      idsToRemove.push(lead.id);
+    });
+
+    if (idsToRemove.length > 0) {
+      logAction({ action: 'auto_distribute', entity: 'lead', entityId: idsToRemove.join(','), entityName: `${idsToRemove.length} leads`, description: `Auto-distributed ${idsToRemove.length} leads to ${agentCaps.filter(a => a.assigned > 0).length} agents`, userName });
+      setLeads(prev => prev.filter(l => !idsToRemove.includes(l.id)));
+      setSelected([]);
+    }
   };
 
   const handleAddCold = () => {
@@ -305,6 +363,12 @@ export default function LeadPoolPage() {
               {lang === 'ar' ? `توزيع (${selected.length})` : `Assign (${selected.length})`}
             </Button>
           )}
+          {canManage && visible.filter(l => !l.assigned_to).length > 0 && (
+            <Button variant="secondary" size="sm" onClick={handleAutoDistribute} className={isRTL ? 'flex-row-reverse' : ''}>
+              <Zap size={15} />
+              {lang === 'ar' ? `توزيع تلقائي (${visible.filter(l => !l.assigned_to).length})` : `Auto-assign (${visible.filter(l => !l.assigned_to).length})`}
+            </Button>
+          )}
           <Button variant="primary" size="sm" onClick={() => setAddModal(true)} className={isRTL ? 'flex-row-reverse' : ''}>
             <Plus size={15} />
             {lang === 'ar' ? 'كولد كول جديد' : 'Add Cold Call'}
@@ -332,6 +396,21 @@ export default function LeadPoolPage() {
           <span className="text-xs text-red-500 font-semibold">
             {lang === 'ar' ? `${stats.slaBreached} ليد تعدى وقت SLA — يحتاج توزيع عاجل` : `${stats.slaBreached} leads breached SLA — urgent assignment needed`}
           </span>
+        </div>
+      )}
+
+      {/* Stale leads warning */}
+      {stats.stale > 0 && canManage && (
+        <div className={`bg-amber-500/[0.08] border border-amber-500/30 rounded-xl px-3.5 py-2.5 mb-3.5 flex items-center justify-between gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Clock size={15} color="#F59E0B" />
+            <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold">
+              {lang === 'ar' ? `${stats.stale} ليد راكد (أكثر من 48 ساعة بدون توزيع)` : `${stats.stale} stale leads (48+ hours unassigned)`}
+            </span>
+          </div>
+          <Button variant="secondary" size="sm" onClick={handleAutoDistribute} className="text-xs shrink-0">
+            {lang === 'ar' ? 'وزّعهم الآن' : 'Assign now'}
+          </Button>
         </div>
       )}
 

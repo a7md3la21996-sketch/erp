@@ -1249,6 +1249,261 @@ CREATE POLICY "tickets_update" ON tickets FOR UPDATE
 
 
 -- ============================================================
+-- Missing tables (referenced by services)
+-- ============================================================
+
+-- ── Announcements ─────────────────────────────────────────────
+create table if not exists announcements (
+  id            uuid primary key default uuid_generate_v4(),
+  title         text not null,
+  title_ar      text,
+  body          text,
+  body_ar       text,
+  category      text default 'general',
+  priority      text default 'normal',
+  pinned        boolean default false,
+  created_by    uuid references users(id),
+  created_at    timestamptz default now()
+);
+
+-- ── Approvals ─────────────────────────────────────────────────
+create table if not exists approvals (
+  id              uuid primary key default uuid_generate_v4(),
+  entity_type     text not null,
+  entity_id       text not null,
+  entity_name     text,
+  requester_id    text,
+  requester_name  text,
+  approver_id     text,
+  approver_name   text,
+  status          text default 'pending',
+  amount          numeric default 0,
+  priority        text default 'normal',
+  notes           text,
+  decided_at      timestamptz,
+  created_at      timestamptz default now()
+);
+
+-- ── Chat Messages ─────────────────────────────────────────────
+create table if not exists chat_messages (
+  id            uuid primary key default uuid_generate_v4(),
+  channel_id    text,
+  sender_id     uuid references users(id),
+  sender_name   text,
+  content       text,
+  type          text default 'text',
+  read_by       jsonb default '[]',
+  created_at    timestamptz default now()
+);
+
+-- ── Commission Installments ───────────────────────────────────
+create table if not exists commission_installments (
+  id            uuid primary key default uuid_generate_v4(),
+  deal_id       uuid references deals(id),
+  agent_id      uuid references users(id),
+  amount        numeric default 0,
+  status        text default 'pending',
+  due_date      date,
+  paid_date     date,
+  created_at    timestamptz default now()
+);
+
+-- ── Documents ─────────────────────────────────────────────────
+create table if not exists documents (
+  id            uuid primary key default uuid_generate_v4(),
+  entity_type   text not null,
+  entity_id     text not null,
+  name          text,
+  file_url      text,
+  file_type     text,
+  file_size     integer,
+  uploaded_by   uuid references users(id),
+  created_at    timestamptz default now()
+);
+
+-- ── Emails & Templates ────────────────────────────────────────
+create table if not exists email_templates (
+  id            uuid primary key default uuid_generate_v4(),
+  name          text,
+  subject       text,
+  body          text,
+  category      text,
+  created_at    timestamptz default now()
+);
+
+create table if not exists emails (
+  id            uuid primary key default uuid_generate_v4(),
+  from_address  text,
+  to_address    text,
+  subject       text,
+  body          text,
+  status        text default 'draft',
+  folder        text default 'inbox',
+  is_read       boolean default false,
+  contact_id    uuid references contacts(id),
+  created_at    timestamptz default now()
+);
+
+-- ── Expense Claims ────────────────────────────────────────────
+create table if not exists expense_claims (
+  id            uuid primary key default uuid_generate_v4(),
+  employee_id   uuid references employees(id),
+  amount        numeric default 0,
+  category      text,
+  description   text,
+  receipt_url   text,
+  status        text default 'pending',
+  approved_by   uuid references users(id),
+  created_at    timestamptz default now()
+);
+
+-- ── Knowledge Base ────────────────────────────────────────────
+create table if not exists knowledge_articles (
+  id            uuid primary key default uuid_generate_v4(),
+  title         text not null,
+  title_ar      text,
+  body          text,
+  body_ar       text,
+  category      text,
+  tags          jsonb default '[]',
+  author_id     uuid references users(id),
+  published     boolean default false,
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+
+-- ── KPI Targets ───────────────────────────────────────────────
+create table if not exists kpi_targets (
+  id            uuid primary key default uuid_generate_v4(),
+  employee_id   uuid references users(id),
+  month         integer not null,
+  year          integer not null,
+  calls         integer default 0,
+  meetings      integer default 0,
+  site_visits   integer default 0,
+  deals_closed  integer default 0,
+  revenue       numeric default 0,
+  created_at    timestamptz default now()
+);
+
+-- ── Notifications ─────────────────────────────────────────────
+create table if not exists notifications (
+  id            uuid primary key default uuid_generate_v4(),
+  user_id       uuid references users(id),
+  type          text default 'info',
+  title         text,
+  message       text,
+  entity_type   text,
+  entity_id     text,
+  priority      text default 'normal',
+  is_read       boolean default false,
+  created_at    timestamptz default now()
+);
+
+-- ── OKRs ──────────────────────────────────────────────────────
+create table if not exists okrs (
+  id            uuid primary key default uuid_generate_v4(),
+  title         text not null,
+  title_ar      text,
+  type          text default 'objective',
+  parent_id     uuid references okrs(id),
+  owner_id      uuid references users(id),
+  quarter       text,
+  year          integer,
+  progress      integer default 0,
+  status        text default 'on_track',
+  created_at    timestamptz default now(),
+  updated_at    timestamptz default now()
+);
+
+-- ── Scheduled Reports ─────────────────────────────────────────
+create table if not exists scheduled_reports (
+  id            uuid primary key default uuid_generate_v4(),
+  name          text,
+  report_type   text,
+  frequency     text default 'weekly',
+  recipients    jsonb default '[]',
+  filters       jsonb default '{}',
+  is_active     boolean default true,
+  last_sent_at  timestamptz,
+  created_by    uuid references users(id),
+  created_at    timestamptz default now()
+);
+
+-- ── SMS Log & Templates ───────────────────────────────────────
+create table if not exists sms_templates (
+  id            uuid primary key default uuid_generate_v4(),
+  name          text,
+  name_ar       text,
+  body          text,
+  body_ar       text,
+  category      text,
+  created_at    timestamptz default now()
+);
+
+create table if not exists sms_log (
+  id            uuid primary key default uuid_generate_v4(),
+  contact_id    uuid references contacts(id),
+  phone         text,
+  template_id   uuid references sms_templates(id),
+  message       text,
+  status        text default 'sent',
+  sent_by       uuid references users(id),
+  created_at    timestamptz default now()
+);
+
+-- ── System Config ─────────────────────────────────────────────
+create table if not exists system_config (
+  id            uuid primary key default uuid_generate_v4(),
+  key           text unique not null,
+  value         jsonb,
+  updated_by    uuid references users(id),
+  updated_at    timestamptz default now()
+);
+
+-- ── WhatsApp ──────────────────────────────────────────────────
+create table if not exists whatsapp_messages (
+  id            uuid primary key default uuid_generate_v4(),
+  contact_id    uuid references contacts(id),
+  contact_name  text,
+  contact_phone text,
+  direction     text default 'outgoing',
+  message       text,
+  type          text default 'text',
+  status        text default 'sent',
+  sent_by       uuid references users(id),
+  created_at    timestamptz default now()
+);
+
+create table if not exists whatsapp_templates (
+  id            uuid primary key default uuid_generate_v4(),
+  name          text,
+  name_ar       text,
+  body          text,
+  body_ar       text,
+  category      text,
+  created_at    timestamptz default now()
+);
+
+-- ── Stage History ─────────────────────────────────────────────
+create table if not exists stage_history (
+  id              uuid primary key default uuid_generate_v4(),
+  opportunity_id  uuid references opportunities(id) on delete cascade,
+  from_stage      text,
+  to_stage        text,
+  changed_at      timestamptz default now()
+);
+
+-- ── Security Config (IP whitelist etc) ────────────────────────
+create table if not exists security_config (
+  id            uuid primary key default uuid_generate_v4(),
+  key           text unique not null,
+  value         jsonb,
+  updated_by    uuid references users(id),
+  updated_at    timestamptz default now()
+);
+
+-- ============================================================
 -- Updated-at trigger (auto-update updated_at on row change)
 -- ============================================================
 

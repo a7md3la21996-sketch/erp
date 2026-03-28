@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
-import { X } from 'lucide-react';
+import { X, CheckCircle } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
@@ -164,6 +164,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const [extraDups, setExtraDups] = useState([]);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedContact, setSavedContact] = useState(null);
   const [errors, setErrors] = useState({});
   const [customFieldValues, setCustomFieldValues] = useState({});
   const loggedInteractionRef = useRef(null); // track which dup+campaign combo was logged
@@ -244,15 +245,16 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         return acc;
       }, []);
       const { countryCode, ...formData } = form;
-      await onSave({
+      const saveData = {
         ...formData,
         phone: fullPhone,
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
         extra_phones: validExtras.length > 0 ? validExtras : null,
         _customFieldValues: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined,
-      });
-      onClose();
+      };
+      await onSave(saveData);
+      setSavedContact({ full_name: form.full_name, phone: fullPhone });
     } catch (err) {
       toast.error((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
       setSaving(false);
@@ -262,6 +264,29 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   return (
     <div onClick={onClose} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'}>
       <div onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[560px] max-h-[92vh] flex flex-col">
+        {savedContact ? (
+          <div className="p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/[0.12] flex items-center justify-center mx-auto mb-4">
+              <CheckCircle size={32} className="text-emerald-500" />
+            </div>
+            <h3 className="m-0 text-lg font-bold text-content dark:text-content-dark mb-1">
+              {isRTL ? 'تم الحفظ بنجاح!' : 'Contact Saved!'}
+            </h3>
+            <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark mb-6">
+              {savedContact.full_name || savedContact.phone}
+            </p>
+            <div className="flex flex-col gap-2.5">
+              {onOpenOpportunity && (
+                <Button onClick={() => { onOpenOpportunity(savedContact); onClose(); }}>
+                  {isRTL ? 'أنشئ فرصة جديدة' : 'Create Opportunity'}
+                </Button>
+              )}
+              <Button variant="secondary" onClick={onClose}>
+                {isRTL ? 'تم' : 'Done'}
+              </Button>
+            </div>
+          </div>
+        ) : (<>
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <div>
@@ -316,7 +341,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                     <option value="Eng.">{isRTL ? 'م.' : 'Eng.'}</option>
                     <option value="أستاذ">{isRTL ? 'أستاذ' : 'Prof.'}</option>
                   </Select>
-                  <Input className="flex-1" placeholder={isRTL ? 'محمد أحمد...' : 'John Doe...'} value={form.full_name} onChange={e => set('full_name', e.target.value)} />
+                  <Input className="flex-1" autoComplete="name" placeholder={isRTL ? 'محمد أحمد...' : 'John Doe...'} value={form.full_name} onChange={e => set('full_name', e.target.value)} />
                 </div>
               </div>
               <div>
@@ -330,7 +355,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                     {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.flag} {c.code}</option>)}
                   </Select>
                   <Input className={`flex-1 ${dupWarning ? '!border-red-500' : ''}`}
-                    placeholder="10xxxxxxxx" value={form.phone}
+                    placeholder="10xxxxxxxx" inputMode="tel" autoComplete="tel" value={form.phone}
                     onChange={e => {
                       const v = e.target.value.replace(/[^0-9+]/g, '');
                       set('phone', v);
@@ -384,7 +409,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                 {extraPhones.map((ph, i) => (
                   <div key={i} className="mb-2">
                     <div className="flex gap-1.5">
-                      <Input className="flex-1" placeholder="012xxxxxxxx or +966..."
+                      <Input className="flex-1" inputMode="tel" placeholder="012xxxxxxxx or +966..."
                         value={ph}
                         onChange={e => {
                           const v = e.target.value.replace(/[^0-9+]/g, '');
@@ -415,7 +440,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               </div>
               <div className="col-span-full">
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'البريد الإلكتروني' : 'Email'}</label>
-                <Input type="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} style={errors.email ? { border: '1.5px solid #ef4444' } : {}} />
+                <Input type="email" inputMode="email" autoComplete="email" placeholder="email@domain.com" value={form.email} onChange={e => set('email', e.target.value)} style={errors.email ? { border: '1.5px solid #ef4444' } : {}} />
                 {(errors.email || (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))) && (
                   <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.email || (isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format')}</span>
                 )}
@@ -443,6 +468,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                     set('campaign_name', campName);
                     const camp = campData || campaigns.find(c => (c.name_ar === campName || c.name_en === campName));
                     if (camp) {
+                      set('campaign_id', camp.id || null);
                       if (camp.target_location) set('preferred_location', camp.target_location);
                       if (camp.target_property_type) set('interested_in_type', camp.target_property_type);
                     }
@@ -498,11 +524,11 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               {['lead','cold','client'].includes(form.contact_type) && (<>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ميزانية من' : 'Budget From (EGP)'}</label>
-                <Input type="number" placeholder="1500000" value={form.budget_min} onChange={e => set('budget_min', e.target.value)} />
+                <Input type="number" inputMode="numeric" placeholder="1500000" value={form.budget_min} onChange={e => set('budget_min', e.target.value)} />
               </div>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ميزانية إلى' : 'Budget To (EGP)'}</label>
-                <Input type="number" placeholder="3000000" value={form.budget_max} onChange={e => set('budget_max', e.target.value)} />
+                <Input type="number" inputMode="numeric" placeholder="3000000" value={form.budget_max} onChange={e => set('budget_max', e.target.value)} />
               </div>
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الموقع المفضل' : 'Preferred Location'}</label>
@@ -540,6 +566,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
             }
           </div>
         </div>
+        </>)}
       </div>
     </div>
   );

@@ -1,10 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import viteCompression from 'vite-plugin-compression';
 
 export default defineConfig({
   plugins: [
     react(),
+    viteCompression({ algorithm: 'gzip', threshold: 10240 }),
+    viteCompression({ algorithm: 'brotliCompress', ext: '.br', threshold: 10240 }),
     VitePWA({
       devOptions: { enabled: false },
       registerType: 'prompt',
@@ -51,7 +54,7 @@ export default defineConfig({
           'vendor-recharts': ['recharts'],
           'vendor-i18n': ['react-i18next', 'i18next'],
           'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-exceljs': ['exceljs'],
+          // exceljs removed — already uses dynamic import(), loads on-demand only
         },
       },
     },

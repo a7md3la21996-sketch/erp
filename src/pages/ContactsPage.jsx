@@ -273,6 +273,12 @@ export default function ContactsPage() {
     updated.filter(c => selectedIds.includes(c.id)).forEach(c => {
       notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', agentId: agentName, agentName, assignedBy: assignedByName });
     });
+    // Also propagate reassignment to linked opportunities
+    try {
+      const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
+      const updatedOpps = opps.map(o => idsToUpdate.includes(o.contact_id) ? { ...o, assigned_to_name: agentName } : o);
+      localStorage.setItem('platform_opportunities', JSON.stringify(updatedOpps));
+    } catch {}
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
     setSelectedIds([]);
     setBulkReassignModal(false);

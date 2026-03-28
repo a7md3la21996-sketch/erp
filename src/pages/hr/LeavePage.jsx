@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
-import { fetchLeaveRequests, approveLeaveRequest, rejectLeaveRequest } from '../../services/leaveService';
+import { fetchLeaveRequests, approveLeaveRequest, rejectLeaveRequest, createLeaveRequest } from '../../services/leaveService';
 import { createApproval, getApprovals, approveRequest, rejectRequest, getApprovalByEntity } from '../../services/approvalService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { CalendarOff, Clock, CheckCircle2, XCircle, Plus, Check, X, MessageSquare, User } from 'lucide-react';
@@ -53,6 +53,9 @@ export default function LeavePage() {
   const [smartFilters, setSmartFilters] = useState([]);
   const [approvals, setApprovals] = useState([]);
   const [rejectCommentId, setRejectCommentId] = useState(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [reqForm, setReqForm] = useState({ employee_id: '', type: 'annual', start_date: '', end_date: '', notes: '' });
+  const [reqSaving, setReqSaving] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
 
   const { auditFields, applyAuditFilters } = useAuditFilter('leave');
@@ -233,7 +236,7 @@ export default function LeavePage() {
               { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(getEffectiveStatus(r), lang) },
             ]}
           />
-          <Button size="md"><Plus size={16}/>{lang==='ar'?'+ طلب إجازة':'+ Request Leave'}</Button>
+          <Button size="md" onClick={() => setShowRequestModal(true)}><Plus size={16}/>{lang==='ar'?'+ طلب إجازة':'+ Request Leave'}</Button>
         </div>
       </div>
 
@@ -349,6 +352,67 @@ export default function LeavePage() {
         </Table>
         <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
       </Card>
+
+      {/* ── Leave Request Modal ── */}
+      {showRequestModal && (
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setShowRequestModal(false)}>
+          <div onClick={e => e.stopPropagation()} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[480px] p-6">
+            <h3 className="m-0 text-base font-bold text-content dark:text-content-dark mb-4">
+              {lang === 'ar' ? 'طلب إجازة جديد' : 'New Leave Request'}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="col-span-full">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الموظف' : 'Employee'}</label>
+                <select value={reqForm.employee_id} onChange={e => setReqForm(f => ({ ...f, employee_id: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
+                  <option value="">{isRTL ? 'اختر الموظف...' : 'Select employee...'}</option>
+                  {employees.map(e => <option key={e.id} value={e.id}>{isRTL ? e.full_name_ar : (e.full_name_en || e.full_name_ar)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'نوع الإجازة' : 'Leave Type'}</label>
+                <select value={reqForm.type} onChange={e => setReqForm(f => ({ ...f, type: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
+                  <option value="annual">{isRTL ? 'سنوية' : 'Annual'}</option>
+                  <option value="sick">{isRTL ? 'مرضية' : 'Sick'}</option>
+                  <option value="casual">{isRTL ? 'عارضة' : 'Casual'}</option>
+                  <option value="unpaid">{isRTL ? 'بدون راتب' : 'Unpaid'}</option>
+                </select>
+              </div>
+              <div />
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'من تاريخ' : 'Start Date'}</label>
+                <input type="date" value={reqForm.start_date} onChange={e => setReqForm(f => ({ ...f, start_date: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'إلى تاريخ' : 'End Date'}</label>
+                <input type="date" value={reqForm.end_date} onChange={e => setReqForm(f => ({ ...f, end_date: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+              </div>
+              <div className="col-span-full">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'ملاحظات' : 'Notes'}</label>
+                <textarea rows={2} value={reqForm.notes} onChange={e => setReqForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm resize-none" />
+              </div>
+            </div>
+            <div className="flex gap-2.5 justify-end mt-5">
+              <Button variant="secondary" onClick={() => setShowRequestModal(false)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+              <Button disabled={reqSaving || !reqForm.employee_id || !reqForm.start_date || !reqForm.end_date} onClick={async () => {
+                setReqSaving(true);
+                try {
+                  const result = await createLeaveRequest(reqForm);
+                  setLeaves(prev => [result, ...prev]);
+                  setShowRequestModal(false);
+                  setReqForm({ employee_id: '', type: 'annual', start_date: '', end_date: '', notes: '' });
+                } catch {} finally { setReqSaving(false); }
+              }}>
+                {reqSaving ? (isRTL ? 'جاري الإرسال...' : 'Submitting...') : (isRTL ? 'إرسال الطلب' : 'Submit Request')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

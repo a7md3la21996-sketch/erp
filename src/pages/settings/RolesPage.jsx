@@ -10,14 +10,14 @@ import {
   getModules, getActions, getActionLabels, getUserRole, setUserRole,
 } from '../../services/rbacService';
 
-/* ─── Mock Users for Assignment ─── */
-const MOCK_USERS = [
+/* ─── Mock Users for Assignment (DEV only) ─── */
+const MOCK_USERS = import.meta.env.DEV ? [
   { id: '1', name_ar: 'أحمد محمد', name_en: 'Ahmed Mohamed', email: 'ahmed@company.com' },
   { id: '2', name_ar: 'سارة علي', name_en: 'Sara Ali', email: 'sara@company.com' },
   { id: '3', name_ar: 'محمد حسن', name_en: 'Mohamed Hassan', email: 'mohamed@company.com' },
   { id: '4', name_ar: 'فاطمة أحمد', name_en: 'Fatma Ahmed', email: 'fatma@company.com' },
   { id: '5', name_ar: 'عمر خالد', name_en: 'Omar Khaled', email: 'omar@company.com' },
-];
+] : [];
 
 /* ══════════════════════════════════════════════
    PERMISSION MATRIX

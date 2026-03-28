@@ -260,14 +260,20 @@ export function computeLeadSourceROI(contacts, opportunities, deals) {
     }
   });
 
-  // Estimated cost per source (mock)
-  const costEstimates = {
-    'Facebook': 15000, 'Google Ads': 25000, 'Instagram': 12000,
-    'LinkedIn': 18000, 'Website': 5000, 'Referral': 2000, 'Walk-in': 1000,
-  };
+  // Real cost from campaign spend data (no more hardcoded estimates)
+  const campaignList = (() => {
+    try { return JSON.parse(localStorage.getItem('platform_campaigns') || '[]'); } catch { return []; }
+  })();
+  const spentBySource = {};
+  campaignList.forEach(c => {
+    const platformMap = { meta: 'facebook', google: 'google_ads', tiktok: 'tiktok', organic: 'website', direct: 'referral' };
+    const src = platformMap[c.platform] || c.platform || 'other';
+    spentBySource[src] = (spentBySource[src] || 0) + (c.spent || 0);
+  });
 
   return Object.values(sources).map(s => {
-    const cost = costEstimates[s.source] || 0;
+    const srcKey = s.source.toLowerCase().replace(/\s+/g, '_');
+    const cost = spentBySource[srcKey] || spentBySource[s.source?.toLowerCase()] || 0;
     s.cost = cost;
     s.roi = cost > 0 ? Math.round(((s.revenue - cost) / cost) * 100) : 0;
     s.conversionRate = s.leads > 0 ? Math.round((s.deals / s.leads) * 100) : 0;

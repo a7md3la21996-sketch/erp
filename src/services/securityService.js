@@ -9,6 +9,7 @@ function getConfig() {
 }
 
 function saveConfig(config) {
+  // Save to localStorage immediately
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   } catch (e) {
@@ -16,6 +17,27 @@ function saveConfig(config) {
       console.warn('Storage quota exceeded for security config');
     }
   }
+  // Persist to Supabase (non-blocking)
+  import('../lib/supabase').then(({ default: supabase }) => {
+    supabase.from('security_config')
+      .upsert({ key: 'security', value: config, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      .then(() => {}).catch(() => {});
+  }).catch(() => {});
+}
+
+/**
+ * Load security config from Supabase first, fallback to localStorage
+ */
+export async function loadSecurityConfigFromServer() {
+  try {
+    const { default: supabase } = await import('../lib/supabase');
+    const { data, error } = await supabase.from('security_config').select('value').eq('key', 'security').maybeSingle();
+    if (!error && data?.value) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data.value)); } catch {}
+      return data.value;
+    }
+  } catch {}
+  return getConfig();
 }
 
 // ── IP Whitelist ──────────────────────────────────────────────────────────

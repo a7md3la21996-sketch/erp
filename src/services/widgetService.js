@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 /**
  * Widget Layout Service
  * localStorage-based widget layout persistence (key: platform_widget_layout)
@@ -68,6 +69,15 @@ export const AVAILABLE_WIDGETS = [
     description_en: 'Follow-up reminders',
     category: 'general',
     defaultSize: 'md',
+  },
+  {
+    id: 'my_day',
+    title_ar: 'يومي',
+    title_en: 'My Day',
+    description_ar: 'ملخص يومك: متابعات + مهام متأخرة + ليدز جديدة + إجراءات سريعة',
+    description_en: 'Your day: follow-ups + overdue + new leads + quick actions',
+    category: 'general',
+    defaultSize: 'lg',
   },
   {
     id: 'recent_activities',
@@ -205,7 +215,7 @@ export function getLayout(role = 'admin') {
     const filtered = saved.filter(s => validIds.has(s.widgetId));
 
     return filtered.sort((a, b) => a.order - b.order);
-  } catch {
+  } catch (err) { reportError('widgetService', 'query', err);
     return getDefaultLayout(role);
   }
 }
@@ -217,7 +227,7 @@ export function saveLayout(layout) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
     return true;
-  } catch {
+  } catch (err) { reportError('widgetService', 'query', err);
     return false;
   }
 }

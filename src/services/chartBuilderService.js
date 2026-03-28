@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 /**
  * Chart Builder Service
  * localStorage-based service for custom chart configurations and data retrieval
@@ -94,7 +95,7 @@ function getCharts() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (err) { reportError('chartBuilderService', 'query', err);
     return [];
   }
 }
@@ -134,7 +135,7 @@ function getRawData(dataSourceKey) {
   try {
     const raw = localStorage.getItem(src.key);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (err) { reportError('chartBuilderService', 'query', err);
     return [];
   }
 }
@@ -145,7 +146,7 @@ function formatDateValue(val) {
     const d = new Date(val);
     if (isNaN(d.getTime())) return 'Unknown';
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  } catch {
+  } catch (err) { reportError('chartBuilderService', 'query', err);
     return 'Unknown';
   }
 }

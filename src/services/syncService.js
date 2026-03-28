@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 // ── Sync Service ─────────────────────────────────────────────────────────
 // Centralized sync management between localStorage and Supabase.
 // localStorage is always the source of truth for reads.
@@ -19,7 +20,7 @@ const SYNC_META_KEY = 'platform_sync_meta';
 function getMeta() {
   try {
     return JSON.parse(localStorage.getItem(SYNC_META_KEY) || '{}');
-  } catch {
+  } catch (err) { reportError('syncService', 'query', err);
     return {};
   }
 }

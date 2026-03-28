@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
 /**
@@ -34,17 +35,35 @@ export function getDateRange(rangeKey) {
   return { start, end: now };
 }
 
-// ── localStorage helpers ─────────────────────────────────────────────────────
+// ── localStorage helpers with per-session cache ──────────────────────────────
+// Avoids re-parsing large JSON arrays on every call within the same page load.
+const _cache = { contacts: null, opps: null, activities: null, _ts: 0 };
+const CACHE_TTL = 30_000; // 30 seconds
+
+function _invalidateIfStale() {
+  if (Date.now() - _cache._ts > CACHE_TTL) {
+    _cache.contacts = null;
+    _cache.opps = null;
+    _cache.activities = null;
+  }
+}
+
 function getLocalContacts() {
-  try { return JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch { return []; }
+  _invalidateIfStale();
+  if (_cache.contacts) return _cache.contacts;
+  try { _cache.contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]'); _cache._ts = Date.now(); return _cache.contacts; } catch { return []; }
 }
 
 function getLocalOpportunities() {
-  try { return JSON.parse(localStorage.getItem('platform_opportunities') || '[]'); } catch { return []; }
+  _invalidateIfStale();
+  if (_cache.opps) return _cache.opps;
+  try { _cache.opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]'); _cache._ts = Date.now(); return _cache.opps; } catch { return []; }
 }
 
 function getLocalActivities() {
-  try { return JSON.parse(localStorage.getItem('platform_activities') || '[]'); } catch { return []; }
+  _invalidateIfStale();
+  if (_cache.activities) return _cache.activities;
+  try { _cache.activities = JSON.parse(localStorage.getItem('platform_activities') || '[]'); _cache._ts = Date.now(); return _cache.activities; } catch { return []; }
 }
 
 // ── Contacts KPIs ────────────────────────────────────────────────────────────
@@ -56,11 +75,12 @@ export async function fetchContactStats() {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
 
-    const totalLeads = localContacts.filter(c =>
-      ['lead', 'cold'].includes(c.contact_type)
-    ).length || localContacts.length; // fallback to all contacts if none match type filter
+    // Only count actual leads/qualified/nurturing — exclude suppliers, developers, partners, applicants
+    const LEAD_TYPES = ['lead', 'cold', 'qualified', 'nurturing', 'converted', 'customer'];
+    const leads = localContacts.filter(c => LEAD_TYPES.includes(c.contact_type) || c.department === 'sales');
+    const totalLeads = leads.length;
 
-    const newLeadsThisMonth = localContacts.filter(c => {
+    const newLeadsThisMonth = leads.filter(c => {
       const created = new Date(c.created_at);
       return created >= monthStart;
     }).length;
@@ -85,7 +105,7 @@ export async function fetchContactStats() {
     if (e2) throw e2;
 
     return { totalLeads: totalLeads || 0, newLeadsThisMonth: newLeadsThisMonth || 0 };
-  } catch {
+  } catch (err) { reportError('dashboardService', 'query', err);
     // Return zeros — no data available
     return { totalLeads: 0, newLeadsThisMonth: 0 };
   }
@@ -119,7 +139,7 @@ function computeOppStats(opps) {
   const closedDeals = opps.filter(o => o.stage === 'closed_won').length;
   const revenue = opps
     .filter(o => o.stage === 'closed_won')
-    .reduce((sum, o) => sum + (parseFloat(o.budget) || 0), 0);
+    .reduce((sum, o) => sum + (parseFloat(o.deal_value || o.budget) || 0), 0);
 
   const monthStart = new Date();
   monthStart.setDate(1);
@@ -161,7 +181,7 @@ export async function fetchTaskStats() {
     if (e2) throw e2;
 
     return { dueToday: dueToday || 0, overdue: overdue || 0 };
-  } catch {
+  } catch (err) { reportError('dashboardService', 'query', err);
     return { dueToday: 0, overdue: 0 };
   }
 }
@@ -191,7 +211,7 @@ export async function fetchActivityStats() {
     if (error) throw error;
 
     return { activitiesThisWeek: thisWeek || 0 };
-  } catch {
+  } catch (err) { reportError('dashboardService', 'query', err);
     return { activitiesThisWeek: 0 };
   }
 }
@@ -205,7 +225,7 @@ export async function fetchEmployeeStats() {
     if (error) throw error;
 
     return { totalEmployees: total || 0 };
-  } catch {
+  } catch (err) { reportError('dashboardService', 'query', err);
     return { totalEmployees: 0 };
   }
 }
@@ -313,7 +333,7 @@ export async function fetchAllDashboardData() {
       fetchEmployeeStats(),
     ]);
     return { contacts, opportunities, tasks, activities, employees };
-  } catch {
+  } catch (err) { reportError('dashboardService', 'query', err);
     return {
       contacts: { totalLeads: 0, newLeadsThisMonth: 0 },
       opportunities: { activeOpps: 0, closedDeals: 0, revenue: 0, closedThisMonth: 0, stageCounts: {}, totalOpps: 0, rawOpps: [] },

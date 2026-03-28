@@ -58,9 +58,30 @@ export default function OppKanban({
                 </div>
               ) : stageOpps.map(opp => (
                 <div key={opp.id} className="relative"
-                  draggable
-                  onDragStart={() => setDraggingOpp(opp)}
+                  draggable={!isMobile}
+                  onDragStart={() => !isMobile && setDraggingOpp(opp)}
                   onDragEnd={() => { setDraggingOpp(null); setDragOverStage(null); }}
+                  onTouchStart={(e) => {
+                    if (!isMobile) return;
+                    const touch = e.touches[0];
+                    e.currentTarget._touchStart = { x: touch.clientX, y: touch.clientY, opp };
+                  }}
+                  onTouchEnd={(e) => {
+                    if (!isMobile || !e.currentTarget._touchStart) return;
+                    const touch = e.changedTouches[0];
+                    const dx = touch.clientX - e.currentTarget._touchStart.x;
+                    const threshold = 80;
+                    if (Math.abs(dx) > threshold) {
+                      const stageIds = currentStages.map(s => s.id);
+                      const curIdx = stageIds.indexOf(opp.stage);
+                      const dir = (isRTL ? -1 : 1) * (dx > 0 ? 1 : -1);
+                      const nextIdx = curIdx + dir;
+                      if (nextIdx >= 0 && nextIdx < stageIds.length) {
+                        handleMove(opp.id, stageIds[nextIdx]);
+                      }
+                    }
+                    e.currentTarget._touchStart = null;
+                  }}
                 >
                   {bulkMode && (
                     <button

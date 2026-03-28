@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 /**
  * Push Notification Service — Browser Notification API + Service Worker
  * No external push service needed. Uses the native browser APIs.
@@ -22,7 +23,7 @@ export function isPushEnabled() {
   if (Notification.permission !== 'granted') return false;
   try {
     return localStorage.getItem(PUSH_PREF_KEY) !== 'false';
-  } catch {
+  } catch (err) { reportError('pushService', 'query', err);
     return true;
   }
 }

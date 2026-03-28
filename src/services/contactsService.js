@@ -1,6 +1,7 @@
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
+import { reportError } from '../utils/errorReporter';
 
 export async function fetchContacts({ role, userId, teamId, filters = {}, page, pageSize }) {
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
@@ -51,7 +52,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     const { data, error } = await query.limit(1000);
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('contactsService', 'query', err);
     // Fallback to localStorage when Supabase is unreachable
     try {
       const cached = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
@@ -72,10 +73,27 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
 }
 
 export async function createContact(contactData) {
+  // Input validation
+  if (!contactData.phone || String(contactData.phone).replace(/\D/g, '').length < 8) {
+    throw new Error('Invalid phone number');
+  }
+  if (contactData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactData.email)) {
+    throw new Error('Invalid email format');
+  }
+  if (!contactData.department) {
+    throw new Error('Department is required');
+  }
+  // Sanitize string fields to prevent XSS
+  const sanitize = (v) => typeof v === 'string' ? v.replace(/<[^>]*>/g, '').trim() : v;
+  const sanitized = {};
+  for (const [k, v] of Object.entries(contactData)) {
+    sanitized[k] = sanitize(v);
+  }
+
   try {
     const { data, error } = await supabase
       .from('contacts')
-      .insert([{ ...contactData, last_activity_at: new Date().toISOString() }])
+      .insert([{ ...sanitized, last_activity_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -84,7 +102,7 @@ export async function createContact(contactData) {
   } catch (err) {
     // Save to localStorage and enqueue for retry
     const tempId = 'temp_' + Date.now();
-    const offlineContact = { ...contactData, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };
+    const offlineContact = { ...sanitized, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };
     try {
       const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
       all.unshift(offlineContact);
@@ -109,7 +127,7 @@ export async function updateContact(id, updates) {
     if (error) throw error;
     logUpdate('contact', id, oldData, data);
     return data;
-  } catch {
+  } catch (err) { reportError('contactsService', 'query', err);
     // Fallback: update in localStorage and enqueue for retry
     const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
     const idx = all.findIndex(c => String(c.id) === String(id));
@@ -124,13 +142,31 @@ export async function updateContact(id, updates) {
 
 export async function deleteContact(id) {
   try {
+    // Clean up related opportunities first (prevent orphans)
+    try {
+      await supabase.from('opportunities').delete().eq('contact_id', id);
+    } catch { /* best-effort cleanup */ }
+    // Clean up related activities
+    try {
+      await supabase.from('activities').delete().eq('contact_id', id);
+    } catch { /* best-effort cleanup */ }
+    // Clean up related reminders
+    try {
+      await supabase.from('reminders').delete().eq('entity_id', id);
+    } catch { /* best-effort cleanup */ }
+
     const { error } = await supabase.from('contacts').delete().eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('contactsService', 'query', err);
     // Fallback: remove from localStorage and enqueue for retry
     const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
     const filtered = all.filter(c => String(c.id) !== String(id));
     localStorage.setItem('platform_contacts', JSON.stringify(filtered));
+    // Also clean local opportunities
+    try {
+      const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
+      localStorage.setItem('platform_opportunities', JSON.stringify(opps.filter(o => String(o.contact_id) !== String(id))));
+    } catch { /* ignore */ }
     enqueue('contact', 'delete', { id });
   }
 }

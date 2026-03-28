@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { createApproval, getApprovalByEntity } from './approvalService';
 import { logAction } from './auditService';
@@ -91,7 +92,7 @@ export async function createClaim({ title, category, amount, currency, date, des
     const { data: sbData, error } = await supabase.from('expense_claims').insert([claim]).select('*').single();
     if (error) throw error;
     result = sbData;
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     // localStorage already has it
   }
 
@@ -129,7 +130,7 @@ export async function getClaims(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     // Fallback to localStorage
     let list = syncWithApprovals(load());
     if (filters.status)    list = list.filter(c => c.status === filters.status);
@@ -146,7 +147,7 @@ export async function getClaimById(id) {
     const { data, error } = await supabase.from('expense_claims').select('*').eq('id', id).single();
     if (error) throw error;
     return data || null;
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     const list = syncWithApprovals(load());
     return list.find(c => c.id === id) || null;
   }
@@ -173,7 +174,7 @@ export async function updateClaim(id, updates) {
     const { data, error } = await supabase.from('expense_claims').update(safeUpdates).eq('id', id).select('*').single();
     if (error) throw error;
     result = data;
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     // localStorage already updated
   }
 
@@ -205,7 +206,7 @@ export async function deleteClaim(id) {
   try {
     const { error } = await supabase.from('expense_claims').delete().eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     // localStorage already updated
   }
 
@@ -239,7 +240,7 @@ export async function approveClaim(id, approverName) {
     const { data, error } = await supabase.from('expense_claims').update({ status: 'approved', approver_name: approverName, approved_at: list[idx].approved_at }).eq('id', id).select('*').single();
     if (error) throw error;
     result = data;
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     // localStorage already updated
   }
 
@@ -274,7 +275,7 @@ export async function rejectClaim(id, approverName, reason) {
     const { data, error } = await supabase.from('expense_claims').update({ status: 'rejected', approver_name: approverName, rejected_reason: reason || '' }).eq('id', id).select('*').single();
     if (error) throw error;
     result = data;
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     // localStorage already updated
   }
 
@@ -307,7 +308,7 @@ export async function markClaimPaid(id, userName) {
     const { data, error } = await supabase.from('expense_claims').update({ status: 'paid' }).eq('id', id).select('*').single();
     if (error) throw error;
     result = data;
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     // localStorage already updated
   }
 
@@ -331,7 +332,7 @@ export async function getClaimStats() {
     const { data, error } = await supabase.from('expense_claims').select('*');
     if (error) throw error;
     list = data || [];
-  } catch {
+  } catch (err) { reportError('expenseClaimService', 'query', err);
     list = syncWithApprovals(load());
   }
   const now = new Date();

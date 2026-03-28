@@ -1,6 +1,7 @@
 // ── Deals Service — bridge between CRM Opportunities and Operations ──
 import supabase from '../lib/supabase';
 import { logCreate } from './auditService';
+import { reportError } from '../utils/errorReporter';
 
 const STORAGE_KEY = 'platform_won_deals';
 
@@ -25,7 +26,7 @@ export async function getWonDeals() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (err) { reportError('dealsService', 'query', err);
     return [];
   }
 }
@@ -35,7 +36,7 @@ export function getWonDealsSync() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (err) { reportError('dealsService', 'query', err);
     return [];
   }
 }
@@ -58,7 +59,7 @@ function nextDealNumber(existingDeals) {
  * Create a deal from a won opportunity
  * Saves to Supabase first, falls back to localStorage
  */
-export async function createDealFromOpportunity(opp, existingDeals = []) {
+export async function createDealFromOpportunity(opp, existingDeals = [], extraFields = {}) {
   const contact = opp.contacts || {};
   const agent = opp.users || {};
   const project = opp.projects || {};
@@ -76,19 +77,23 @@ export async function createDealFromOpportunity(opp, existingDeals = []) {
     client_ar: contact.full_name || opp.contact_name || '—',
     client_en: contact.full_name || opp.contact_name || '—',
     phone: contact.phone || '',
+    source: contact.source || opp.source || '',
+    campaign_name: contact.campaign_name || '',
     agent_ar: agent.full_name_ar || opp.agent_name || '—',
     agent_en: agent.full_name_en || agent.full_name_ar || opp.agent_name || '—',
     project_ar: project.name_ar || opp.project_name || '',
     project_en: project.name_en || project.name_ar || opp.project_name || '',
-    developer_ar: '',
-    developer_en: '',
-    unit_code: '',
-    unit_type_ar: '',
-    unit_type_en: '',
+    developer_ar: extraFields.developer_ar || '',
+    developer_en: extraFields.developer_en || '',
+    unit_code: extraFields.unit_code || '',
+    unit_type_ar: extraFields.unit_type_ar || '',
+    unit_type_en: extraFields.unit_type_en || '',
+    // Multi-unit support: array of { unit_code, unit_type_ar, unit_type_en }
+    units: extraFields.units || (extraFields.unit_code ? [{ unit_code: extraFields.unit_code, unit_type_ar: extraFields.unit_type_ar || '', unit_type_en: extraFields.unit_type_en || '' }] : []),
     deal_value: opp.deal_value || opp.budget || 0,
     client_budget: opp.budget || 0,
-    down_payment: 0,
-    installments_count: 0,
+    down_payment: extraFields.down_payment || 0,
+    installments_count: extraFields.installments_count || 0,
     status: 'new_deal',
     documents: {
       national_id: false,

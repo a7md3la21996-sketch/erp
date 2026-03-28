@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
 import {
@@ -31,7 +32,7 @@ export async function fetchJournalEntries(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('financeService', 'query', err);
     let result = [...MOCK_JOURNAL_ENTRIES];
     if (filters.status) result = result.filter(e => e.status === filters.status);
     if (filters.startDate) result = result.filter(e => e.date >= filters.startDate);
@@ -65,7 +66,7 @@ export async function createJournalEntry(data) {
 
     await logCreate('journal_entry', entry.id, entry);
     return entry;
-  } catch {
+  } catch (err) { reportError('financeService', 'query', err);
     const mock = {
       ...data,
       id: 'je-' + Date.now(),
@@ -96,7 +97,7 @@ export async function fetchInvoices(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('financeService', 'query', err);
     let result = [...MOCK_INVOICES];
     if (filters.status) result = result.filter(i => i.status === filters.status);
     if (filters.type)   result = result.filter(i => i.type === filters.type);
@@ -122,7 +123,7 @@ export async function createInvoice(data) {
     if (error) throw error;
     await logCreate('invoice', d.id, d);
     return d;
-  } catch {
+  } catch (err) { reportError('financeService', 'query', err);
     const mock = { ...data, id: 'inv-' + Date.now(), created_at: new Date().toISOString() };
     MOCK_INVOICES.unshift(mock);
     return mock;
@@ -141,7 +142,7 @@ export async function updateInvoiceStatus(id, status) {
     if (error) throw error;
     await logUpdate('invoice', id, old, data, `Invoice status changed to ${status}`);
     return data;
-  } catch {
+  } catch (err) { reportError('financeService', 'query', err);
     const idx = MOCK_INVOICES.findIndex(i => i.id === id);
     if (idx > -1) MOCK_INVOICES[idx].status = status;
     return MOCK_INVOICES[idx];
@@ -168,7 +169,7 @@ export async function fetchExpenses(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('financeService', 'query', err);
     let result = [...MOCK_EXPENSES];
     if (filters.status)   result = result.filter(e => e.status === filters.status);
     if (filters.category) result = result.filter(e => e.category === filters.category);
@@ -195,7 +196,7 @@ export async function createExpense(data) {
     if (error) throw error;
     await logCreate('expense', d.id, d);
     return d;
-  } catch {
+  } catch (err) { reportError('financeService', 'query', err);
     const mock = { ...data, id: 'exp-' + Date.now(), created_at: new Date().toISOString() };
     MOCK_EXPENSES.unshift(mock);
     return mock;
@@ -212,7 +213,7 @@ export async function fetchChartOfAccounts() {
       .order('code', { ascending: true });
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('financeService', 'query', err);
     return [...CHART_OF_ACCOUNTS];
   }
 }

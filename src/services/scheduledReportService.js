@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 /**
  * Scheduled Report Service — localStorage-based with Supabase sync
  * Key: platform_scheduled_reports
@@ -179,7 +180,7 @@ export async function createSchedule(data) {
       .from('scheduled_reports')
       .insert([schedule]);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('scheduledReportService', 'query', err);
     // localStorage already saved
   }
 
@@ -199,7 +200,7 @@ export async function getSchedules() {
       save(data); // sync to localStorage
       return data;
     }
-  } catch {
+  } catch (err) { reportError('scheduledReportService', 'query', err);
     // fallback to localStorage
   }
 
@@ -226,7 +227,7 @@ export async function updateSchedule(id, updates) {
         : updates)
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('scheduledReportService', 'query', err);
     // localStorage already saved
   }
 
@@ -247,7 +248,7 @@ export async function deleteSchedule(id) {
       .delete()
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('scheduledReportService', 'query', err);
     // localStorage already saved
   }
 }
@@ -269,7 +270,7 @@ export async function toggleSchedule(id) {
       .update({ enabled: list[idx].enabled, nextRun: list[idx].nextRun })
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('scheduledReportService', 'query', err);
     // localStorage already saved
   }
 
@@ -312,7 +313,7 @@ async function computeReportData(reportType, filters) {
         return computeContactsBySource(filterByDateRange(contacts, dateRange));
       }
     }
-  } catch {
+  } catch (err) { reportError('scheduledReportService', 'query', err);
     // Fallback: return mock summary
     return [
       { metric: 'Total', value: Math.floor(Math.random() * 100) + 10 },
@@ -332,7 +333,7 @@ export async function generateReport(scheduleId) {
   try {
     data = await computeReportData(schedule.reportType, schedule.filters);
     status = 'success';
-  } catch {
+  } catch (err) { reportError('scheduledReportService', 'query', err);
     data = [];
     status = 'error';
   }
@@ -365,7 +366,7 @@ export async function generateReport(scheduleId) {
         .from('scheduled_reports')
         .update({ lastRun: list[idx].lastRun, nextRun: list[idx].nextRun })
         .eq('id', scheduleId);
-    } catch {
+    } catch (err) { reportError('scheduledReportService', 'query', err);
       // localStorage already saved
     }
   }
@@ -405,7 +406,7 @@ export async function checkAndGenerateDueReports() {
   for (const schedule of due) {
     try {
       await generateReport(schedule.id);
-    } catch {
+    } catch (err) { reportError('scheduledReportService', 'query', err);
       // Silently skip failed ones
     }
   }

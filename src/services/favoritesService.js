@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 const STORAGE_KEY = 'platform_favorites';
 const MAX_FAVORITES = 50;
 
@@ -5,7 +6,7 @@ function readFavorites() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (err) { reportError('favoritesService', 'query', err);
     return [];
   }
 }

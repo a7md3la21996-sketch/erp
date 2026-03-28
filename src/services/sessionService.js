@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
 const STORAGE_KEY = 'platform_sessions';
@@ -57,7 +58,7 @@ async function getIP() {
     const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
     const data = await res.json();
     return data.ip || 'Unknown';
-  } catch {
+  } catch (err) { reportError('sessionService', 'query', err);
     return 'Unknown';
   }
 }

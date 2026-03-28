@@ -1,10 +1,19 @@
 /**
  * RBAC Service — Role-Based Access Control
- * localStorage-first with optional Supabase sync
+ * localStorage-first with Supabase sync for persistence
  */
 
 const ROLES_KEY = 'platform_rbac_roles';
 const USER_ROLES_KEY = 'platform_rbac_user_roles';
+
+// Sync roles to Supabase (non-blocking)
+function syncToSupabase(key, value) {
+  import('../lib/supabase').then(({ default: supabase }) => {
+    supabase.from('system_config')
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      .then(() => {}).catch(() => {});
+  }).catch(() => {});
+}
 
 /* ─── Modules ─── */
 const MODULES = [
@@ -147,7 +156,6 @@ function safeSet(key, value) {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (e) {
     if (e?.name === 'QuotaExceededError') {
-      // Trim oldest custom roles if quota exceeded
       if (key === ROLES_KEY && Array.isArray(value)) {
         const builtIn = value.filter(r => r.builtIn);
         const custom = value.filter(r => !r.builtIn);
@@ -156,6 +164,8 @@ function safeSet(key, value) {
       }
     }
   }
+  // Persist to Supabase for cross-browser/device sync
+  syncToSupabase(key, value);
 }
 
 /* ─── Initialize roles if not present ─── */

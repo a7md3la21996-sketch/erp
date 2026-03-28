@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 const STORAGE_KEY = 'platform_recent_items';
 const MAX_ITEMS = 20;
 
@@ -5,7 +6,7 @@ function getAll() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (err) { reportError('recentItemsService', 'query', err);
     return [];
   }
 }
@@ -19,7 +20,7 @@ function saveAll(items) {
       try {
         const trimmed = items.slice(0, Math.floor(items.length / 2));
         localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-      } catch {
+      } catch (err) { reportError('recentItemsService', 'query', err);
         // give up silently
       }
     }
@@ -55,7 +56,7 @@ export function getRecentItems(limit = 10) {
 export function clearRecent() {
   try {
     localStorage.removeItem(STORAGE_KEY);
-  } catch {
+  } catch (err) { reportError('recentItemsService', 'query', err);
     // ignore
   }
   window.dispatchEvent(new CustomEvent('platform_recent_changed'));

@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 // ── Document Management Service ─────────────────────────────────────────
 // localStorage-based document metadata storage with Supabase sync
 
@@ -87,7 +88,7 @@ export async function addDocument({
       .single();
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('documentService', 'query', err);
     // localStorage already saved
   }
   return doc;
@@ -123,7 +124,7 @@ export async function getDocuments({ entity, entity_id, type, search } = {}) {
       }
       return docs;
     }
-  } catch {
+  } catch (err) { reportError('documentService', 'query', err);
     // fallback to localStorage
   }
 
@@ -167,7 +168,7 @@ export async function deleteDocument(id) {
       .delete()
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('documentService', 'query', err);
     // localStorage already saved
   }
 

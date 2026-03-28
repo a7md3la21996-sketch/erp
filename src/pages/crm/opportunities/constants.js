@@ -108,16 +108,27 @@ const SAVED_FILTERS_KEY = 'platform_opp_saved_filters';
 export const getSavedFilters = () => { try { return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY) || '[]'); } catch { return []; } };
 export const saveSavedFilters = (f) => { try { localStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(f)); } catch {} };
 
-// ─── Stage History (localStorage) ───
+// ─── Stage History (localStorage + Supabase) ───
 const STAGE_HISTORY_KEY = 'platform_opp_stage_history';
 export const getStageHistory = (oppId) => { try { const all = JSON.parse(localStorage.getItem(STAGE_HISTORY_KEY) || '{}'); return all[oppId] || []; } catch { return []; } };
 export const addStageHistory = (oppId, fromStage, toStage) => {
+  const entry = { from: fromStage, to: toStage, at: new Date().toISOString() };
+  // Save to localStorage
   try {
     const all = JSON.parse(localStorage.getItem(STAGE_HISTORY_KEY) || '{}');
     if (!all[oppId]) all[oppId] = [];
-    all[oppId].push({ from: fromStage, to: toStage, at: new Date().toISOString() });
+    all[oppId].push(entry);
     localStorage.setItem(STAGE_HISTORY_KEY, JSON.stringify(all));
   } catch {}
+  // Also persist to Supabase (best-effort, non-blocking)
+  import('../../../lib/supabase').then(({ default: supabase }) => {
+    supabase.from('stage_history').insert([{
+      opportunity_id: oppId,
+      from_stage: fromStage,
+      to_stage: toStage,
+      changed_at: entry.at,
+    }]).catch(() => {});
+  }).catch(() => {});
 };
 
 // ─── Notes (localStorage) ───

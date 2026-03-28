@@ -76,6 +76,17 @@ export const DEPT_STAGES = {
   ],
 };
 export const getDeptStages = (dept) => DEPT_STAGES[dept] || DEPT_STAGES.sales;
+
+/**
+ * Stage gates: required activity types before entering a stage.
+ * If the contact/opportunity has no activity of the required type, the move is blocked with a warning.
+ */
+export const STAGE_GATES = {
+  site_visited:  { required_activity: 'site_visit',  label_ar: 'يجب تسجيل زيارة موقع أولاً', label_en: 'A site visit must be logged first' },
+  proposal:      { required_activity: 'call',         label_ar: 'يجب تسجيل مكالمة أولاً',     label_en: 'A call must be logged first' },
+  reserved:      { required_activity: 'site_visit',   label_ar: 'يجب تسجيل زيارة موقع أولاً', label_en: 'A site visit must be logged first' },
+};
+export const getStageGate = (stageId) => STAGE_GATES[stageId] || null;
 export const deptStageLabel = (stageId, dept, isRTL) => {
   const stages = getDeptStages(dept);
   const s = stages.find(st => st.id === stageId);

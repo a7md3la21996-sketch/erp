@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 
@@ -20,7 +21,7 @@ function loadCampaigns() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [...INITIAL_CAMPAIGNS];
-  } catch {
+  } catch (err) { reportError('marketingService', 'query', err);
     return [...INITIAL_CAMPAIGNS];
   }
 }
@@ -42,7 +43,7 @@ export async function fetchCampaigns() {
     const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('marketingService', 'query', err);
     // Fallback to localStorage
     return loadCampaigns();
   }
@@ -58,7 +59,7 @@ export async function createCampaign(data) {
     if (error) throw error;
     logCreate('campaign', sbData.id, sbData);
     return sbData;
-  } catch {
+  } catch (err) { reportError('marketingService', 'query', err);
     logCreate('campaign', campaign.id, campaign);
     return campaign;
   }
@@ -78,7 +79,7 @@ export async function updateCampaign(id, updates) {
     if (error) throw error;
     logUpdate('campaign', id, old, data);
     return data;
-  } catch {
+  } catch (err) { reportError('marketingService', 'query', err);
     logUpdate('campaign', id, old, list[idx]);
     return list[idx];
   }
@@ -94,7 +95,7 @@ export async function deleteCampaign(id) {
   try {
     const { error } = await supabase.from('campaigns').delete().eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('marketingService', 'query', err);
     // localStorage already updated as fallback
   }
   if (campaign) logDelete('campaign', id, campaign);

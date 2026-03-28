@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import { logAction } from './auditService';
 
 const LAST_BACKUP_KEY = 'platform_last_backup';
@@ -146,7 +147,7 @@ export function getStorageUsage() {
         if (Array.isArray(parsed)) entries = parsed.length;
         else if (typeof parsed === 'object' && parsed !== null) entries = Object.keys(parsed).length;
         else entries = 1;
-      } catch {
+      } catch (err) { reportError('backupService', 'query', err);
         entries = 1;
       }
       usage.push({

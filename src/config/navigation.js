@@ -103,3 +103,18 @@ export const NAV_ITEMS = [
     { id: 'knowledge-base', label: { ar: 'قاعدة المعرفة', en: 'Knowledge Base' }, path: '/knowledge-base', permission: P.DASHBOARD },
   ]},
 ];
+
+/**
+ * Role-based sidebar: only show these nav group IDs for each role.
+ * If a role is not listed, all permitted items are shown (admin default).
+ */
+export const ROLE_NAV_GROUPS = {
+  sales_agent:    ['dashboard', 'contacts', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'help-center'],
+  team_leader:    ['dashboard', 'contacts', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
+  sales_manager:  ['dashboard', 'contacts', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
+  sales_director: ['dashboard', 'contacts', 'crm', 'sales', 'real-estate', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
+  marketing:      ['dashboard', 'contacts', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
+  hr:             ['dashboard', 'hr', 'workspace', 'communication', 'help-center'],
+  finance:        ['dashboard', 'finance', 'sales', 'operations', 'workspace', 'communication', 'help-center'],
+  operations:     ['dashboard', 'operations', 'sales', 'contacts', 'workspace', 'communication', 'help-center'],
+};

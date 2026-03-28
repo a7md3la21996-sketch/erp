@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 /**
  * KPI Targets Service — localStorage-based with Supabase-ready structure
  * Key: platform_kpi_targets
@@ -41,7 +42,7 @@ const ROLE_DEFAULTS = {
 function loadAll() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-  } catch {
+  } catch (err) { reportError('kpiTargetsService', 'query', err);
     return [];
   }
 }
@@ -64,7 +65,7 @@ export async function getTargets(month, year) {
     const { data, error } = await supabase.from('kpi_targets').select('*').eq('month', month).eq('year', year);
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('kpiTargetsService', 'query', err);
     const all = loadAll();
     return all.filter(t => t.month === month && t.year === year);
   }
@@ -78,7 +79,7 @@ export async function getEmployeeTargets(employeeId, month, year) {
     const { data, error } = await supabase.from('kpi_targets').select('*').eq('employee_id', employeeId).eq('month', month).eq('year', year);
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('kpiTargetsService', 'query', err);
     const all = loadAll();
     return all.filter(t => t.employee_id === employeeId && t.month === month && t.year === year);
   }
@@ -124,7 +125,7 @@ export async function setTargets(employeeId, month, year, targets) {
       const { error } = await supabase.from('kpi_targets').upsert(upsertItems, { onConflict: 'id' });
       if (error) throw error;
     }
-  } catch {
+  } catch (err) { reportError('kpiTargetsService', 'query', err);
     // localStorage already updated
   }
 

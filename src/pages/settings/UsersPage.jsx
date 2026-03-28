@@ -42,8 +42,8 @@ const EMPTY_FORM = {
   role: 'sales_agent', department: 'sales', team_id: '', phone: '',
 };
 
-/* ─── Mock Data ─── */
-const MOCK_USERS = [
+/* ─── Mock Data (DEV only — empty in production) ─── */
+const MOCK_USERS = import.meta.env.DEV ? [
   {
     id: '1', name_ar: 'أحمد محمد', name_en: 'Ahmed Mohamed',
     email: 'ahmed@company.com', role: 'admin', status: 'active',
@@ -74,7 +74,7 @@ const MOCK_USERS = [
     email: 'nour@company.com', role: 'user', status: 'inactive',
     last_login: '2026-01-10T10:30:00', created_at: '2025-06-22T11:00:00',
   },
-];
+] : [];
 
 /* ─── Status Badge ─── */
 function StatusBadge({ status, lang }) {

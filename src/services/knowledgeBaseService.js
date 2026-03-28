@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
 const STORAGE_KEY = 'platform_knowledge_base';
@@ -44,7 +45,7 @@ export async function getAll() {
       save(data); // sync to localStorage
       return data;
     }
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // fallback to localStorage
   }
   const list = load();
@@ -64,7 +65,7 @@ export async function getById(id) {
       .single();
     if (error) throw error;
     return data || null;
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // fallback to localStorage
   }
   return load().find(a => a.id === id) || null;
@@ -99,7 +100,7 @@ export async function create(data) {
       .single();
     if (error) throw error;
     if (row) return row;
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // localStorage already saved
   }
   return article;
@@ -127,7 +128,7 @@ export async function update(id, data) {
       .single();
     if (error) throw error;
     if (row) return row;
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // localStorage already saved
   }
   return list[idx];
@@ -144,7 +145,7 @@ export async function remove(id) {
       .delete()
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // localStorage already saved
   }
   return true;
@@ -165,7 +166,7 @@ export async function searchArticles(query) {
       .order('created_at', { ascending: false });
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // fallback to localStorage
   }
 
@@ -191,7 +192,7 @@ export async function getByCategory(cat) {
       .order('created_at', { ascending: false });
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // fallback to localStorage
   }
   const all = await getAll();
@@ -215,7 +216,7 @@ export async function incrementViews(id) {
       .single();
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // localStorage already saved
   }
   return list[idx];
@@ -239,7 +240,7 @@ export async function togglePin(id) {
       .single();
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('knowledgeBaseService', 'query', err);
     // localStorage already saved
   }
   return list[idx];

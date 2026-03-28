@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 /**
  * OKR Service — localStorage-based with Supabase-ready structure
  * Key: platform_okrs
@@ -67,7 +68,7 @@ export async function getObjectives(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('okrService', 'query', err);
     // Fallback to localStorage
     let data = getAll();
     if (filters.quarter) data = data.filter(o => o.quarter === filters.quarter);
@@ -83,7 +84,7 @@ export async function getObjectiveById(id) {
     const { data, error } = await supabase.from('okrs').select('*').eq('id', id).single();
     if (error) throw error;
     return data || null;
-  } catch {
+  } catch (err) { reportError('okrService', 'query', err);
     return getAll().find(o => o.id === id) || null;
   }
 }
@@ -120,7 +121,7 @@ export async function createObjective({ title, titleAr, description, quarter, ye
     const { data, error } = await supabase.from('okrs').insert([obj]).select('*').single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('okrService', 'query', err);
     return obj;
   }
 }
@@ -138,7 +139,7 @@ export async function updateObjective(id, updates) {
     const { data, error } = await supabase.from('okrs').update(updates).eq('id', id).select('*').single();
     if (error) throw error;
     return { old, updated: data };
-  } catch {
+  } catch (err) { reportError('okrService', 'query', err);
     return { old, updated: all[idx] };
   }
 }
@@ -154,7 +155,7 @@ export async function deleteObjective(id) {
   try {
     const { error } = await supabase.from('okrs').delete().eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('okrService', 'query', err);
     // localStorage already updated
   }
   return removed;
@@ -182,7 +183,7 @@ export async function addKeyResult(objectiveId, keyResult) {
   try {
     const { error } = await supabase.from('okrs').update({ keyResults: obj.keyResults }).eq('id', objectiveId);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('okrService', 'query', err);
     // localStorage already updated
   }
   return kr;
@@ -204,7 +205,7 @@ export async function updateKeyResult(objectiveId, krId, updates) {
   try {
     const { error } = await supabase.from('okrs').update({ keyResults: obj.keyResults }).eq('id', objectiveId);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('okrService', 'query', err);
     // localStorage already updated
   }
   return kr;
@@ -220,7 +221,7 @@ export async function deleteKeyResult(objectiveId, krId) {
   try {
     const { error } = await supabase.from('okrs').update({ keyResults: obj.keyResults }).eq('id', objectiveId);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('okrService', 'query', err);
     // localStorage already updated
   }
   return true;

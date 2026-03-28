@@ -18,7 +18,7 @@ function IconBtn({ icon: Icon, onClick, color = '#4A7AAB', title }) {
     <button
       title={title}
       onClick={e => { e.stopPropagation(); onClick?.(); }}
-      className="w-8 h-8 rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150 text-content-muted dark:text-content-muted-dark"
+      className="w-8 h-8 md:w-8 md:h-8 min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150 text-content-muted dark:text-content-muted-dark"
       style={{ '--btn-color': color }}
     >
       <Icon size={14} />
@@ -57,6 +57,8 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editTarget, setEditTarget] = useState(null);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('employee');
   const userName = profile?.full_name_ar || profile?.full_name_en || '';
@@ -256,7 +258,7 @@ export default function EmployeesPage() {
               { header: isRTL ? 'تاريخ التعيين' : 'Hire Date', key: 'hire_date' },
             ]}
           />
-          <Button size="md">
+          <Button size="md" onClick={() => setShowCreateModal(true)}>
             <Plus size={16} />{lang === 'ar' ? '+ موظف جديد' : '+ New Employee'}
           </Button>
         </div>
@@ -357,7 +359,7 @@ export default function EmployeesPage() {
                   <Td>
                     <div className={`flex gap-1.5 justify-end ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <IconBtn icon={Eye}     onClick={() => setSelected(emp)} title={lang === 'ar' ? 'عرض' : 'View'} />
-                      <IconBtn icon={Edit2}   onClick={() => {}} title={lang === 'ar' ? 'تعديل' : 'Edit'} />
+                      <IconBtn icon={Edit2}   onClick={() => setEditTarget(emp)} title={lang === 'ar' ? 'تعديل' : 'Edit'} />
                       <IconBtn icon={FileText} onClick={() => {}} title={lang === 'ar' ? 'Payslip' : 'Payslip'} color="#6B8DB5" />
                       <IconBtn icon={Trash2}  onClick={() => setDeleteTarget(emp)} title={lang === 'ar' ? 'حذف' : 'Delete'} color="#EF4444" />
                     </div>
@@ -435,7 +437,111 @@ export default function EmployeesPage() {
           </>
         )}
       </Modal>
+
+      {/* ── Create / Edit Employee Modal ── */}
+      <EmployeeFormModal
+        open={showCreateModal || !!editTarget}
+        employee={editTarget}
+        departments={departments}
+        isRTL={isRTL}
+        lang={lang}
+        onClose={() => { setShowCreateModal(false); setEditTarget(null); }}
+        onSave={async (data) => {
+          if (editTarget) {
+            await handleUpdateEmployee(editTarget.id, data);
+          } else {
+            await handleCreateEmployee(data);
+          }
+          setShowCreateModal(false);
+          setEditTarget(null);
+        }}
+      />
     </div>
+  );
+}
+
+function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, onSave }) {
+  const [form, setForm] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useState(() => {
+    if (employee) {
+      setForm({ ...employee });
+    } else {
+      setForm({ full_name_ar: '', full_name_en: '', email: '', phone: '', department: '', role: 'sales_agent', salary: '', employment_type: 'full_time', join_date: '' });
+    }
+  }, [employee, open]);
+
+  // Reset form when modal opens
+  if (!open) return null;
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSubmit = async () => {
+    if (!form.full_name_ar && !form.full_name_en) return;
+    setSaving(true);
+    try {
+      await onSave(form);
+    } catch {} finally {
+      setSaving(false);
+    }
+  };
+
+  const WORK_TYPES = [
+    { value: 'full_time', ar: 'دوام كامل', en: 'Full Time' },
+    { value: 'part_time', ar: 'دوام جزئي', en: 'Part Time' },
+    { value: 'contract', ar: 'عقد', en: 'Contract' },
+    { value: 'probation', ar: 'فترة تجربة', en: 'Probation' },
+  ];
+
+  return (
+    <Modal open={open} onClose={onClose} title={employee ? (lang === 'ar' ? 'تعديل موظف' : 'Edit Employee') : (lang === 'ar' ? 'إضافة موظف' : 'New Employee')} width="max-w-lg">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-1">
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الاسم (عربي)' : 'Name (AR)'}</label>
+          <input value={form.full_name_ar || ''} onChange={e => set('full_name_ar', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الاسم (إنجليزي)' : 'Name (EN)'}</label>
+          <input value={form.full_name_en || ''} onChange={e => set('full_name_en', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'البريد' : 'Email'}</label>
+          <input type="email" value={form.email || ''} onChange={e => set('email', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الهاتف' : 'Phone'}</label>
+          <input value={form.phone || ''} onChange={e => set('phone', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'القسم' : 'Department'}</label>
+          <select value={form.department || ''} onChange={e => set('department', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
+            <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+            {departments.map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'نوع التعاقد' : 'Work Type'}</label>
+          <select value={form.employment_type || ''} onChange={e => set('employment_type', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
+            {WORK_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الراتب' : 'Salary'}</label>
+          <input type="number" value={form.salary || ''} onChange={e => set('salary', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'تاريخ الالتحاق' : 'Join Date'}</label>
+          <input type="date" value={form.join_date || ''} onChange={e => set('join_date', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+        </div>
+      </div>
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+        <Button onClick={handleSubmit} disabled={saving}>
+          {saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (employee ? (isRTL ? 'حفظ التعديلات' : 'Save Changes') : (isRTL ? 'إضافة' : 'Add'))}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }
 

@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
 const STORAGE_KEY = 'platform_announcements';
@@ -165,7 +166,7 @@ export async function createAnnouncement({ title, titleAr, body, bodyAr, categor
       window.dispatchEvent(new CustomEvent('platform_announcement', { detail: data }));
       return data;
     }
-  } catch {
+  } catch (err) { reportError('announcementService', 'query', err);
     // localStorage already saved
   }
 
@@ -203,7 +204,7 @@ export async function getAnnouncements(filters = {}) {
       }
       return list;
     }
-  } catch {
+  } catch (err) { reportError('announcementService', 'query', err);
     // fallback to localStorage
   }
 
@@ -253,7 +254,7 @@ export async function updateAnnouncement(id, updates) {
       .single();
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('announcementService', 'query', err);
     // localStorage already saved
   }
   return list[idx];
@@ -274,7 +275,7 @@ export async function deleteAnnouncement(id) {
       .delete()
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('announcementService', 'query', err);
     // localStorage already saved
   }
 }
@@ -297,7 +298,7 @@ export async function togglePin(id) {
       .single();
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('announcementService', 'query', err);
     // localStorage already saved
   }
   return list[idx];

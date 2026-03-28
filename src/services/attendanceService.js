@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { getAttendanceForMonth, updateAttendanceRecord, addAttendanceRecord } from '../data/attendanceStore';
 
@@ -24,7 +25,7 @@ export async function fetchAttendance({ month, year, employeeId } = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('attendanceService', 'query', err);
     if (!month || !year) {
       const now = new Date();
       month = month || (now.getMonth() + 1);
@@ -55,7 +56,7 @@ export async function recordCheckIn(employeeId) {
       .single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('attendanceService', 'query', err);
     const record = {
       id: `${employeeId}-${date}`,
       employee_id: employeeId,
@@ -86,7 +87,7 @@ export async function recordCheckOut(employeeId) {
       .single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('attendanceService', 'query', err);
     const records = getAttendanceForMonth(now.getFullYear(), now.getMonth() + 1);
     const existing = records.find(r => r.employee_id === employeeId && r.date === date);
     if (existing) {
@@ -120,7 +121,7 @@ export async function getAttendanceSummary(month, year) {
       else if (r.status === 'leave') summary.leave++;
     });
     return summary;
-  } catch {
+  } catch (err) { reportError('attendanceService', 'query', err);
     const records = getAttendanceForMonth(year, month);
     const summary = { total: records.length, present: 0, absent: 0, late: 0, leave: 0 };
     records.forEach(r => {

@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { MOCK_EMPLOYEES, DEPARTMENTS } from '../data/hr_mock_data';
@@ -25,7 +26,7 @@ export async function fetchEmployees(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('employeesService', 'query', err);
     let result = [...MOCK_EMPLOYEES];
     if (filters.department) result = result.filter(e => e.department === filters.department);
     if (filters.status)     result = result.filter(e => e.status === filters.status);
@@ -52,7 +53,7 @@ export async function createEmployee(data) {
     if (error) throw error;
     await logCreate('employee', d.id, d);
     return d;
-  } catch {
+  } catch (err) { reportError('employeesService', 'query', err);
     const mock = { ...data, id: 'e' + Date.now(), created_at: new Date().toISOString() };
     MOCK_EMPLOYEES.push(mock);
     return mock;
@@ -71,7 +72,7 @@ export async function updateEmployee(id, updates) {
     if (error) throw error;
     await logUpdate('employee', id, old, data);
     return data;
-  } catch {
+  } catch (err) { reportError('employeesService', 'query', err);
     const idx = MOCK_EMPLOYEES.findIndex(e => e.id === id);
     if (idx > -1) Object.assign(MOCK_EMPLOYEES[idx], updates);
     return MOCK_EMPLOYEES[idx];
@@ -90,7 +91,7 @@ export async function deleteEmployee(id) {
       .eq('id', id);
     if (error) throw error;
     await logDelete('employee', id, old);
-  } catch {
+  } catch (err) { reportError('employeesService', 'query', err);
     const idx = MOCK_EMPLOYEES.findIndex(e => e.id === id);
     if (idx > -1) {
       // Soft delete in mock data: keep the record but mark as deleted/inactive
@@ -111,7 +112,7 @@ export async function fetchDepartments() {
       .order('name_ar', { ascending: true });
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('employeesService', 'query', err);
     return [...DEPARTMENTS];
   }
 }

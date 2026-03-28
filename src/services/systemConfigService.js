@@ -2,12 +2,16 @@ const STORAGE_KEY = 'platform_system_config';
 
 export const DEFAULT_CONFIG = {
   contactTypes: [
-    { key: 'lead',      label_ar: 'ليد',       label_en: 'Lead',       color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)',  departments: ['sales', 'marketing'] },
-    { key: 'client',    label_ar: 'عميل',      label_en: 'Client',     color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)',   departments: [] },
-    { key: 'supplier',  label_ar: 'مورد',      label_en: 'Supplier',   color: '#0F766E', bg: 'rgba(15,118,110,0.12)',  departments: ['finance', 'operations'] },
-    { key: 'developer', label_ar: 'مطور',      label_en: 'Developer',  color: '#B45309', bg: 'rgba(180,83,9,0.12)',    departments: ['sales'] },
-    { key: 'applicant', label_ar: 'متقدم',     label_en: 'Applicant',  color: '#6B21A8', bg: 'rgba(107,33,168,0.12)',  departments: ['hr'] },
-    { key: 'partner',   label_ar: 'شريك',      label_en: 'Partner',    color: '#1E40AF', bg: 'rgba(30,64,175,0.12)',   departments: ['sales', 'operations'] },
+    { key: 'lead',       label_ar: 'ليد',        label_en: 'Lead',        color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)',  departments: ['sales', 'marketing'] },
+    { key: 'qualified',  label_ar: 'مؤهل',       label_en: 'Qualified',   color: '#2563EB', bg: 'rgba(37,99,235,0.12)',   departments: ['sales', 'marketing'] },
+    { key: 'nurturing',  label_ar: 'متابعة',     label_en: 'Nurturing',   color: '#7C3AED', bg: 'rgba(124,58,237,0.12)',  departments: ['sales', 'marketing'] },
+    { key: 'converted',  label_ar: 'محول',        label_en: 'Converted',   color: '#059669', bg: 'rgba(5,150,105,0.12)',   departments: ['sales'] },
+    { key: 'customer',   label_ar: 'عميل حالي',  label_en: 'Customer',    color: '#10B981', bg: 'rgba(16,185,129,0.12)',  departments: ['sales', 'operations'] },
+    { key: 'client',     label_ar: 'عميل',       label_en: 'Client',      color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)',   departments: [] },
+    { key: 'supplier',   label_ar: 'مورد',       label_en: 'Supplier',    color: '#0F766E', bg: 'rgba(15,118,110,0.12)',  departments: ['finance', 'operations'] },
+    { key: 'developer',  label_ar: 'مطور',       label_en: 'Developer',   color: '#B45309', bg: 'rgba(180,83,9,0.12)',    departments: ['sales'] },
+    { key: 'applicant',  label_ar: 'متقدم',      label_en: 'Applicant',   color: '#6B21A8', bg: 'rgba(107,33,168,0.12)',  departments: ['hr'] },
+    { key: 'partner',    label_ar: 'شريك',       label_en: 'Partner',     color: '#1E40AF', bg: 'rgba(30,64,175,0.12)',   departments: ['sales', 'operations'] },
   ],
   sources: [
     { key: 'facebook',   label_ar: 'فيسبوك',        label_en: 'Facebook',      platform: 'meta'    },
@@ -190,12 +194,41 @@ export function loadConfig() {
   }
 }
 
+/**
+ * Async load from Supabase (called on app init), falls back to localStorage
+ */
+export async function loadConfigFromServer() {
+  try {
+    const { default: supabase } = await import('../lib/supabase');
+    const { data, error } = await supabase.from('system_config').select('key, value');
+    if (error) throw error;
+    if (data?.length) {
+      const serverConfig = {};
+      data.forEach(row => { serverConfig[row.key] = row.value; });
+      const merged = deepMerge(DEFAULT_CONFIG, serverConfig);
+      // Sync to localStorage as cache
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(merged)); } catch {}
+      return merged;
+    }
+  } catch { /* fall through to localStorage */ }
+  return loadConfig();
+}
+
 export function saveConfig(config) {
+  // Save to localStorage immediately
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   } catch (e) {
     console.error('Failed to save system config:', e);
   }
+  // Also persist to Supabase (non-blocking)
+  import('../lib/supabase').then(({ default: supabase }) => {
+    Object.entries(config).forEach(([key, value]) => {
+      supabase.from('system_config')
+        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+        .then(() => {}).catch(() => {});
+    });
+  }).catch(() => {});
 }
 
 export function saveSection(key, data) {

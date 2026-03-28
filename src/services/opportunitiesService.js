@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { addToSyncQueue } from './syncService';
@@ -87,7 +88,7 @@ async function enrichOpps(opps) {
 }
 
 // ─── Fetch all opportunities with related data ───
-export async function fetchOpportunities({ role, userId, teamId } = {}) {
+export async function fetchOpportunities({ role, userId, teamId, page = 0, pageSize = 200 } = {}) {
   try {
     let query = supabase
       .from('opportunities')
@@ -105,41 +106,57 @@ export async function fetchOpportunities({ role, userId, teamId } = {}) {
       if (ids.length) query = query.in('assigned_to', ids);
     }
 
-    const { data, error } = await query.limit(2000);
+    const from = page * pageSize;
+    const to = from + pageSize - 1;
+    const { data, error } = await query.range(from, to);
     if (!error && data?.length) {
-      // Enrich with contacts/users/projects
+      // Enrich only the 200 fetched records (not 2000)
       const enriched = await enrichOpps(data);
       saveLocalOpps(enriched);
       // Merge any truly local-only opps
       const local = getLocalOpps().filter(o => !enriched.some(s => String(s.id) === String(o.id)));
-      return [...enriched, ...local].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200);
+      return [...enriched, ...local].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
     }
     if (error) throw error;
-    return getLocalOpps().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200);
-  } catch {
-    return getLocalOpps().sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 200);
+    return getLocalOpps().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  } catch (err) { reportError('opportunitiesService', 'query', err);
+    return getLocalOpps().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }
 }
 
 // ─── Create opportunity ───
 export async function createOpportunity(oppData) {
+  // Input validation
+  if (!oppData.contact_id && !oppData.contact_name) {
+    throw new Error('Contact is required for opportunity');
+  }
+  if (oppData.budget && (isNaN(Number(oppData.budget)) || Number(oppData.budget) < 0)) {
+    throw new Error('Invalid budget value');
+  }
+  // Sanitize string fields
+  const sanitize = (v) => typeof v === 'string' ? v.replace(/<[^>]*>/g, '').trim() : v;
+  const sanitized = {};
+  for (const [k, v] of Object.entries(oppData)) {
+    sanitized[k] = sanitize(v);
+  }
+
   // Block if unit is already reserved or sold
-  if (oppData.unit_id) {
-    const availability = checkUnitAvailability(oppData.unit_id);
+  if (sanitized.unit_id) {
+    const availability = checkUnitAvailability(sanitized.unit_id);
     if (!availability.available) {
       throw new Error(`Unit is already ${availability.reason}. Cannot create opportunity for this unit.`);
     }
   }
 
   const now = new Date().toISOString();
-  const localOpp = { ...oppData, id: Date.now().toString(), created_at: now };
+  const localOpp = { ...sanitized, id: Date.now().toString(), created_at: now };
 
   // If opportunity starts at reserved/contracted stage, block the unit immediately
-  if (oppData.unit_id && (oppData.stage === 'reserved' || oppData.stage === 'contracted')) {
-    updateUnitStatus(oppData.unit_id, 'reserved');
+  if (sanitized.unit_id && (sanitized.stage === 'reserved' || sanitized.stage === 'contracted')) {
+    updateUnitStatus(sanitized.unit_id, 'reserved');
   }
-  if (oppData.unit_id && oppData.stage === 'closed_won') {
-    updateUnitStatus(oppData.unit_id, 'sold');
+  if (sanitized.unit_id && sanitized.stage === 'closed_won') {
+    updateUnitStatus(sanitized.unit_id, 'sold');
   }
 
   // Always save to localStorage first
@@ -165,7 +182,7 @@ export async function createOpportunity(oppData) {
       logCreate('opportunity', enriched.id, enriched);
       return enriched;
     }
-  } catch {
+  } catch (err) { reportError('opportunitiesService', 'query', err);
     // Queue for later sync
     addToSyncQueue('opportunities', 'create', localOpp);
   }
@@ -221,7 +238,7 @@ export async function updateOpportunity(id, updates) {
     const [enriched] = await enrichOpps([data]);
     logUpdate('opportunity', id, oldData, enriched);
     return enriched;
-  } catch {
+  } catch (err) { reportError('opportunitiesService', 'query', err);
     const all = getLocalOpps();
     const idx = all.findIndex(o => String(o.id) === String(id));
     if (idx > -1) {
@@ -245,7 +262,7 @@ export async function deleteOpportunity(id) {
     // Also remove from localStorage on success
     const filtered = getLocalOpps().filter(o => String(o.id) !== String(id));
     saveLocalOpps(filtered);
-  } catch {
+  } catch (err) { reportError('opportunitiesService', 'query', err);
     // Queue for later sync but don't delete from localStorage yet
     addToSyncQueue('opportunities', 'delete', { id });
     throw new Error('Delete failed - queued for retry');
@@ -262,7 +279,7 @@ export async function fetchSalesAgents() {
       .order('full_name_ar');
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('opportunitiesService', 'query', err);
     return [];
   }
 }
@@ -276,7 +293,7 @@ export async function fetchProjects() {
       .order('name_ar');
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('opportunitiesService', 'query', err);
     return [];
   }
 }
@@ -292,7 +309,7 @@ export async function searchContacts(query) {
       .limit(10);
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('opportunitiesService', 'query', err);
     // Fallback: search localStorage contacts
     try {
       const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');

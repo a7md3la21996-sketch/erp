@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
 const STORAGE_KEY = 'platform_resale_units';
@@ -19,7 +20,7 @@ export async function fetchUnitsByContact(contactId) {
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('resaleUnitsService', 'query', err);
     return getLocal().filter(u => u.contact_id === contactId);
   }
 }
@@ -32,7 +33,7 @@ export async function fetchAllUnits() {
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('resaleUnitsService', 'query', err);
     return getLocal();
   }
 }
@@ -53,7 +54,7 @@ export async function createUnit(unitData) {
       .single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('resaleUnitsService', 'query', err);
     const all = getLocal();
     all.unshift(unit);
     saveLocal(all);
@@ -72,7 +73,7 @@ export async function updateUnit(id, updates) {
       .single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('resaleUnitsService', 'query', err);
     const all = getLocal();
     const idx = all.findIndex(u => u.id === id);
     if (idx !== -1) {
@@ -91,7 +92,7 @@ export async function deleteUnit(id) {
       .delete()
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('resaleUnitsService', 'query', err);
     const all = getLocal().filter(u => u.id !== id);
     saveLocal(all);
   }

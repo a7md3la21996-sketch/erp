@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
@@ -93,7 +94,7 @@ export async function updateTask(id, updates) {
     if (error) throw error;
     logUpdate('task', id, oldData, data);
     return data;
-  } catch {
+  } catch (err) { reportError('tasksService', 'query', err);
     if (!navigator.onLine) {
       enqueue('task', 'update', { _id: id, ...updates });
       return { id, ...updates, _offline: true };
@@ -111,7 +112,7 @@ export async function deleteTask(id) {
     const { data: oldData } = await supabase.from('tasks').select('*').eq('id', id).single();
     await supabase.from('tasks').delete().eq('id', id);
     logDelete('task', id, oldData);
-  } catch {
+  } catch (err) { reportError('tasksService', 'query', err);
     if (!navigator.onLine) {
       enqueue('task', 'delete', { id });
       return;

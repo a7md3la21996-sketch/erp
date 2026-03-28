@@ -68,9 +68,9 @@ export default function useOppData({
   const avgDealSize = wonCount > 0 ? Math.round(filtered.filter(o => o.stage === 'closed_won').reduce((s, o) => s + (o.budget || 0), 0) / wonCount) : 0;
 
   const avgCloseTime = useMemo(() => {
-    const wonOpps = opps.filter(o => o.stage === 'closed_won' && o.created_at && o.stage_changed_at);
+    const wonOpps = opps.filter(o => o.stage === 'closed_won' && o.created_at);
     if (!wonOpps.length) return 0;
-    const totalDays = wonOpps.reduce((s, o) => s + Math.max(0, Math.floor((new Date(o.stage_changed_at) - new Date(o.created_at)) / 86400000)), 0);
+    const totalDays = wonOpps.reduce((s, o) => s + Math.max(0, Math.floor((new Date(o.stage_changed_at || o.updated_at || o.created_at) - new Date(o.created_at)) / 86400000)), 0);
     return Math.round(totalDays / wonOpps.length);
   }, [opps]);
 

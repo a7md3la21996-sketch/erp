@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { createNotification } from './notificationsService';
 import { logAction } from './auditService';
@@ -101,7 +102,7 @@ export async function createApproval({ type, requesterId, requesterName, data, a
       .from('approvals')
       .insert([approval]);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // localStorage already saved
   }
 
@@ -155,7 +156,7 @@ export async function updateApproval(id, updates) {
       .update(updates)
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // localStorage already saved
   }
 
@@ -185,7 +186,7 @@ export async function getApprovals(filters = {}) {
       save(data); // sync to localStorage
       return data;
     }
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // fallback to localStorage
   }
 
@@ -212,7 +213,7 @@ export async function getApprovalByEntity(type, entityId) {
       .single();
     if (error) throw error;
     return data || null;
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // fallback to localStorage
   }
   const list = load();
@@ -231,7 +232,7 @@ export async function getApprovalsByEntity(entityId) {
       .order('created_at', { ascending: false });
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // fallback to localStorage
   }
   const list = load();
@@ -251,7 +252,7 @@ export async function getPendingByApprover(approverId) {
       .order('created_at', { ascending: false });
     if (error) throw error;
     if (data) return data;
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // fallback to localStorage
   }
   const list = load();
@@ -293,7 +294,7 @@ export async function approveRequest(id, approverName, comments) {
       })
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // localStorage already saved
   }
 
@@ -358,7 +359,7 @@ export async function rejectRequest(id, approverName, comments) {
       })
       .eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // localStorage already saved
   }
 
@@ -420,7 +421,7 @@ export async function escalateStaleApprovals() {
           .from('approvals')
           .update({ status: 'escalated', chain: item?.chain })
           .eq('id', id);
-      } catch {
+      } catch (err) { reportError('approvalService', 'query', err);
         // localStorage already saved
       }
     }
@@ -442,7 +443,7 @@ export async function getPendingCount(approverId) {
     const { count, error } = await query;
     if (error) throw error;
     if (count !== null) return count;
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // fallback to localStorage
   }
   const list = load();
@@ -463,7 +464,7 @@ export async function getApprovalStats() {
       save(data); // sync to localStorage
       return computeStats(data);
     }
-  } catch {
+  } catch (err) { reportError('approvalService', 'query', err);
     // fallback to localStorage
   }
   return computeStats(load());

@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
 
@@ -43,7 +44,7 @@ export async function fetchLeaveRequests(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('leaveService', 'query', err);
     let result = [...MOCK_LEAVE_REQUESTS];
     if (filters.employeeId) result = result.filter(r => r.employee_id === filters.employeeId);
     if (filters.status)     result = result.filter(r => r.status === filters.status);
@@ -62,7 +63,7 @@ export async function createLeaveRequest(data) {
     if (error) throw error;
     await logCreate('leave_request', d.id, d);
     return d;
-  } catch {
+  } catch (err) { reportError('leaveService', 'query', err);
     const mock = { ...data, id: 'lr-' + Date.now(), status: 'pending', created_at: new Date().toISOString() };
     MOCK_LEAVE_REQUESTS.unshift(mock);
     return mock;
@@ -88,7 +89,7 @@ export async function approveLeaveRequest(id) {
     }
 
     return data;
-  } catch {
+  } catch (err) { reportError('leaveService', 'query', err);
     const idx = MOCK_LEAVE_REQUESTS.findIndex(r => r.id === id);
     if (idx > -1) {
       MOCK_LEAVE_REQUESTS[idx].status = 'approved';
@@ -146,7 +147,7 @@ async function deductLeaveBalance(employeeId, leaveType, days) {
       .eq('employee_id', employeeId);
 
     if (updateError) throw updateError;
-  } catch {
+  } catch (err) { reportError('leaveService', 'query', err);
     // Fallback: update mock balance
     const balance = MOCK_LEAVE_BALANCES[employeeId];
     if (balance && usedKey in balance) {
@@ -178,7 +179,7 @@ export async function rejectLeaveRequest(id, reason) {
     if (error) throw error;
     await logUpdate('leave_request', id, old, data, 'Rejected leave request');
     return data;
-  } catch {
+  } catch (err) { reportError('leaveService', 'query', err);
     const idx = MOCK_LEAVE_REQUESTS.findIndex(r => r.id === id);
     if (idx > -1) {
       MOCK_LEAVE_REQUESTS[idx].status = 'rejected';
@@ -197,7 +198,7 @@ export async function getLeaveBalance(employeeId) {
       .single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('leaveService', 'query', err);
     // Check localStorage for persisted balance updates (mock mode)
     try {
       const stored = JSON.parse(localStorage.getItem('leave_balances') || '{}');

@@ -140,7 +140,7 @@ export default function DealsPage() {
         case 'date_asc': return new Date(a.created_at || 0) - new Date(b.created_at || 0);
         case 'value_desc': return (b.deal_value || 0) - (a.deal_value || 0);
         case 'value_asc': return (a.deal_value || 0) - (b.deal_value || 0);
-        case 'client': return (lang === 'ar' ? (a.client_ar || '') : (a.client_en || '')).localeCompare(lang === 'ar' ? (b.client_ar || '') : (b.client_en || ''), lang === 'ar' ? 'ar' : 'en');
+        case 'client': return String(lang === 'ar' ? (a.client_ar || a.client_en || '') : (a.client_en || a.client_ar || '')).localeCompare(String(lang === 'ar' ? (b.client_ar || b.client_en || '') : (b.client_en || b.client_ar || '')), lang === 'ar' ? 'ar' : 'en');
         case 'date_desc': default: return new Date(b.created_at || 0) - new Date(a.created_at || 0);
       }
     });

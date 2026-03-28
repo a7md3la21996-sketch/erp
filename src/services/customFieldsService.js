@@ -1,8 +1,16 @@
 // ── Custom Fields Service ────────────────────────────────────────────────
-// localStorage-based custom field definitions and values
+// localStorage with Supabase sync for custom field definitions and values
 
 const FIELDS_KEY = 'platform_custom_fields';
 const VALUES_KEY = 'platform_cf_values';
+
+function syncToSupabase(key, value) {
+  import('../lib/supabase').then(({ default: supabase }) => {
+    supabase.from('system_config')
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+      .then(() => {}).catch(() => {});
+  }).catch(() => {});
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 function getStore(key) {
@@ -14,13 +22,13 @@ function setStore(key, data) {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
     if (e?.name === 'QuotaExceededError' || e?.code === 22) {
-      // Trim oldest entries for values store
       if (key === VALUES_KEY && Array.isArray(data) && data.length > 100) {
         data = data.slice(0, Math.ceil(data.length / 2));
-        try { localStorage.setItem(key, JSON.stringify(data)); } catch { /* give up */ }
+        try { localStorage.setItem(key, JSON.stringify(data)); } catch {}
       }
     }
   }
+  syncToSupabase(key, data);
 }
 
 function uid() {

@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
 export async function fetchReminders({ userId, entityType, entityId, todayOnly = false } = {}) {
@@ -19,7 +20,7 @@ export async function fetchReminders({ userId, entityType, entityId, todayOnly =
     const { data, error } = await query.eq('is_done', false).limit(100);
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('remindersService', 'query', err);
     return [];
   }
 }
@@ -37,7 +38,7 @@ export async function createReminder({ entityType, entityId, entityName, dueAt, 
       .single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('remindersService', 'query', err);
     return { id: Date.now(), entity_type: entityType, entity_id: entityId, entity_name: entityName, due_at: dueAt, type, notes, assigned_to: assignedTo, is_done: false, created_at: new Date().toISOString() };
   }
 }
@@ -50,7 +51,7 @@ export async function markReminderDone(id) {
       .eq('id', id).select('*').single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('remindersService', 'query', err);
     return { id, is_done: true, done_at: new Date().toISOString() };
   }
 }
@@ -59,7 +60,7 @@ export async function deleteReminder(id) {
   try {
     const { error } = await supabase.from('reminders').delete().eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('remindersService', 'query', err);
     // silent fallback
   }
 }
@@ -70,7 +71,7 @@ export async function updateReminder(id, updates) {
       .from('reminders').update(updates).eq('id', id).select('*').single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('remindersService', 'query', err);
     return { id, ...updates };
   }
 }

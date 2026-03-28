@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
@@ -91,10 +92,24 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
 
     logCreate('activity', data.id, data);
     if (entityType === 'contact' && entityId) {
-      await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
+      // Update last_activity and recalculate lead_score
+      const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15, note: 2 };
+      const scoreIncrement = SCORE_MAP[type] || 2;
+      try {
+        const { data: contact } = await supabase.from('contacts').select('lead_score, first_response_at').eq('id', entityId).maybeSingle();
+        const newScore = Math.min((contact?.lead_score || 0) + scoreIncrement, 100);
+        const updates = { last_activity_at: new Date().toISOString(), lead_score: newScore };
+        // Track first response time (time to first activity after lead creation)
+        if (!contact?.first_response_at && ['call', 'whatsapp', 'email', 'meeting'].includes(type)) {
+          updates.first_response_at = new Date().toISOString();
+        }
+        await supabase.from('contacts').update(updates).eq('id', entityId);
+      } catch (err) { reportError('activitiesService', 'query', err);
+        await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
+      }
     }
     return data;
-  } catch {
+  } catch (err) { reportError('activitiesService', 'query', err);
     const tempId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const tempActivity = { ...payload, id: tempId, user_name_ar: 'أنت', user_name_en: 'You', _offline: true };
     const all = getLocalActivities();
@@ -115,7 +130,7 @@ export async function updateActivity(id, updates) {
       .single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('activitiesService', 'query', err);
     // Fallback: update in localStorage
     const all = getLocalActivities();
     const idx = all.findIndex(a => String(a.id) === String(id));
@@ -134,7 +149,7 @@ export async function deleteActivity(id) {
     const { error } = await supabase.from('activities').delete().eq('id', id);
     if (error) throw error;
     logDelete('activity', id, oldData);
-  } catch {
+  } catch (err) { reportError('activitiesService', 'query', err);
     // Queue for retry and delete locally
     enqueue('activity', 'delete', { id });
     const filtered = getLocalActivities().filter(a => String(a.id) !== String(id));

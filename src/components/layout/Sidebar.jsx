@@ -3,7 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
-import { NAV_ITEMS } from '../../config/navigation';
+import { NAV_ITEMS, ROLE_NAV_GROUPS } from '../../config/navigation';
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star } from 'lucide-react';
 import { getFavorites, toggleFavorite, isFavorite as checkFavorite } from '../../services/favoritesService';
 import { getUnreadCount as getAnnouncementUnread } from '../../services/announcementService';
@@ -124,7 +124,13 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const toggleMenu = (id) => setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
   const isActive = (path) => location.pathname === path;
   const isParentActive = (item) => item.children?.some(c => location.pathname.startsWith(c.path));
-  const visibleItems = NAV_ITEMS.filter(item => hasPermission(item.permission));
+  const role = profile?.role || 'admin';
+  const roleGroups = ROLE_NAV_GROUPS[role];
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if (!hasPermission(item.permission)) return false;
+    if (roleGroups && !roleGroups.includes(item.id)) return false;
+    return true;
+  });
   const hasChild = (item, childId) => item.children?.some(c => c.id === childId);
   const getBadgeCount = (item) => {
     let count = 0;
@@ -265,7 +271,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                     {showLabels && (
                       <span
                         onClick={(e) => handleStarClick(e, item)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 md:opacity-0 md:group-hover:opacity-100 max-md:opacity-100 transition-opacity"
                         style={{ flexShrink: 0, display: 'flex', alignItems: 'center', cursor: 'pointer', padding: 2, borderRadius: 4 }}
                         title={checkFavorite(`page_${item.id}`) ? (isRTL ? 'إزالة من المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
                       >

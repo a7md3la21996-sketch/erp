@@ -8,15 +8,15 @@ const AuthContext = createContext(null);
 // ── Flag: use Supabase Auth when env var is set ─────────────────────────────
 const USE_SUPABASE_AUTH = !!import.meta.env.VITE_SUPABASE_URL;
 
-// ── Mock users (fallback for development) ───────────────────────────────────
-const MOCK_USERS = {
+// ── Mock users (DEV ONLY — disabled in production builds) ───────────────────
+const MOCK_USERS = import.meta.env.DEV ? {
   'admin@platform.com':     { password: 'admin123', role: 'admin',          full_name_ar: 'مدير النظام',    full_name_en: 'Admin' },
   'director@platform.com':  { password: 'pass123',  role: 'sales_director', full_name_ar: 'مدير المبيعات', full_name_en: 'Sales Director' },
   'manager@platform.com':   { password: 'pass123',  role: 'sales_manager',  full_name_ar: 'سيلز مانجر',    full_name_en: 'Sales Manager' },
   'leader@platform.com':    { password: 'pass123',  role: 'team_leader',    full_name_ar: 'تيم ليدر',      full_name_en: 'Team Leader' },
   'sales@platform.com':     { password: 'pass123',  role: 'sales_agent',    full_name_ar: 'سيلز',          full_name_en: 'Sales Agent' },
   'marketing@platform.com': { password: 'pass123',  role: 'marketing',      full_name_ar: 'تسويق',         full_name_en: 'Marketing' },
-};
+} : {}; // Empty in production — mock auth completely disabled
 
 // ── Helper: fetch profile from Supabase users table ─────────────────────────
 async function fetchSupabaseProfile(userId) {
@@ -170,11 +170,7 @@ export function AuthProvider({ children }) {
         logSession(profileData);
         return profileData;
       } catch (err) {
-        // If this email exists in mock users, try mock login
-        if (MOCK_USERS[email.toLowerCase().trim()]) {
-          return loginWithMock(email, password);
-        }
-        // For real Supabase users, show the error
+        // In production with Supabase configured, never fall back to mock auth
         throw err;
       }
     }

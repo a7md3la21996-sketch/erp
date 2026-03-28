@@ -11,4 +11,21 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
+/**
+ * Helper for services: wraps a Supabase call and auto-reports errors.
+ * Usage: const data = await safeQuery('contacts', 'fetch', () => supabase.from('contacts').select('*'));
+ */
+export async function safeQuery(table, operation, queryFn) {
+  try {
+    const result = await queryFn();
+    if (result?.error) {
+      import('../utils/errorReporter.js').then(m => m.reportError(`supabase.${table}`, operation, result.error)).catch(() => {});
+    }
+    return result;
+  } catch (err) {
+    import('../utils/errorReporter.js').then(m => m.reportError(`supabase.${table}`, operation, err)).catch(() => {});
+    throw err;
+  }
+}
+
 export default supabase;

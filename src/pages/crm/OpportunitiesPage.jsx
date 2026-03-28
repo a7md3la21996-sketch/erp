@@ -4,11 +4,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { fetchOpportunities, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects } from '../../services/opportunitiesService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { TrendingUp, Plus, Search, X, Grid3X3, Phone, MessageCircle, Mail, Users as UsersIcon, Clock, Star, CheckSquare, AlertTriangle, RefreshCw, Printer, MoreHorizontal } from 'lucide-react';
 import { Button, Card, Input, PageSkeleton, ExportButton } from '../../components/ui';
-import { getDeptStages } from './contacts/constants';
+import { getDeptStages, getStageGate } from './contacts/constants';
 import { logView } from '../../services/viewTrackingService';
 import { addRecentItem } from '../../services/recentItemsService';
 import { logAction } from '../../services/auditService';
@@ -38,6 +38,142 @@ import useCrmPermissions from '../../hooks/useCrmPermissions';
 import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 
 /* Components extracted to ./opportunities/: OppCard, ContactSearch, AddModal, OpportunityDrawer, OppKPIs, ConversionFunnel, OppTable, OppKanban, OppToolbar, BulkActionsBar */
+
+// ═══════════════════════════════════════════════
+// Deal Closing Wizard
+// ═══════════════════════════════════════════════
+function DealClosingWizard({ opp, isRTL, lang, isDark, onComplete, onClose }) {
+  const [form, setForm] = useState({
+    unit_code: '', developer_ar: '', developer_en: '',
+    unit_type: '', down_payment: '', installments_count: '',
+  });
+  const [extraUnits, setExtraUnits] = useState([]); // multi-unit support
+  const [saving, setSaving] = useState(false);
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const UNIT_TYPES = [
+    { value: 'apartment', ar: 'شقة', en: 'Apartment' },
+    { value: 'villa', ar: 'فيلا', en: 'Villa' },
+    { value: 'duplex', ar: 'دوبلكس', en: 'Duplex' },
+    { value: 'studio', ar: 'ستوديو', en: 'Studio' },
+    { value: 'penthouse', ar: 'بنتهاوس', en: 'Penthouse' },
+    { value: 'office', ar: 'مكتب', en: 'Office' },
+    { value: 'shop', ar: 'محل', en: 'Shop' },
+  ];
+
+  const contactName = opp?.contact_name || opp?.contacts?.full_name || '—';
+  const projectName = lang === 'ar' ? (opp?.project_name || opp?.projects?.name_ar || '') : (opp?.projects?.name_en || opp?.project_name || '');
+
+  const handleSave = async () => {
+    setSaving(true);
+    const unitType = UNIT_TYPES.find(t => t.value === form.unit_type);
+    const allUnits = [
+      ...(form.unit_code ? [{ unit_code: form.unit_code, unit_type_ar: unitType?.ar || '', unit_type_en: unitType?.en || '' }] : []),
+      ...extraUnits.filter(u => u.unit_code),
+    ];
+    const extraFields = {
+      unit_code: form.unit_code,
+      developer_ar: form.developer_ar || form.developer_en,
+      developer_en: form.developer_en || form.developer_ar,
+      unit_type_ar: unitType?.ar || '',
+      unit_type_en: unitType?.en || '',
+      down_payment: form.down_payment ? Number(form.down_payment) : 0,
+      installments_count: form.installments_count ? Number(form.installments_count) : 0,
+      units: allUnits,
+    };
+    try {
+      await onComplete(opp, extraFields);
+    } catch {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col">
+        <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark">
+          <h2 className="m-0 text-[17px] font-bold text-content dark:text-content-dark">
+            {isRTL ? 'إتمام الصفقة' : 'Complete Deal'}
+          </h2>
+          <p className="m-0 mt-1 text-xs text-content-muted dark:text-content-muted-dark">
+            {contactName} {projectName ? `· ${projectName}` : ''}
+          </p>
+          <div className="h-[3px] bg-brand-500/15 rounded-b-sm mt-4">
+            <div className="h-full bg-gradient-to-r from-emerald-500 to-brand-500 rounded-b-sm w-full" />
+          </div>
+        </div>
+        <div className="flex-1 overflow-auto px-6 py-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'كود الوحدة' : 'Unit Code'}</label>
+              <Input value={form.unit_code} onChange={e => set('unit_code', e.target.value)} placeholder={isRTL ? 'مثال: A-301' : 'e.g. A-301'} />
+            </div>
+            <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'نوع الوحدة' : 'Unit Type'}</label>
+              <select value={form.unit_type} onChange={e => set('unit_type', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
+                <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
+                {UNIT_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المطور (عربي)' : 'Developer (AR)'}</label>
+              <Input value={form.developer_ar} onChange={e => set('developer_ar', e.target.value)} placeholder={isRTL ? 'اسم المطور' : 'Developer name'} />
+            </div>
+            <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المطور (إنجليزي)' : 'Developer (EN)'}</label>
+              <Input value={form.developer_en} onChange={e => set('developer_en', e.target.value)} placeholder="Developer name" />
+            </div>
+            <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'المقدم (EGP)' : 'Down Payment (EGP)'}</label>
+              <Input type="number" value={form.down_payment} onChange={e => set('down_payment', e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'عدد الأقساط' : 'Installments'}</label>
+              <Input type="number" value={form.installments_count} onChange={e => set('installments_count', e.target.value)} placeholder="0" />
+            </div>
+          </div>
+
+          {/* Extra units (multi-unit support) */}
+          {extraUnits.map((u, i) => (
+            <div key={i} className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mt-2.5 p-3 rounded-xl bg-surface-bg dark:bg-white/[0.03] border border-edge dark:border-edge-dark">
+              <div>
+                <label className="block text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'كود الوحدة' : 'Unit Code'}</label>
+                <Input value={u.unit_code} onChange={e => { const arr = [...extraUnits]; arr[i] = { ...arr[i], unit_code: e.target.value }; setExtraUnits(arr); }} placeholder="B-102" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النوع' : 'Type'}</label>
+                <select value={u.unit_type || ''} onChange={e => { const arr = [...extraUnits]; const t = UNIT_TYPES.find(t => t.value === e.target.value); arr[i] = { ...arr[i], unit_type: e.target.value, unit_type_ar: t?.ar || '', unit_type_en: t?.en || '' }; setExtraUnits(arr); }}
+                  className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs">
+                  <option value="">{isRTL ? 'اختر' : 'Select'}</option>
+                  {UNIT_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <button onClick={() => setExtraUnits(extraUnits.filter((_, j) => j !== i))}
+                  className="px-2.5 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-xs font-semibold">
+                  {isRTL ? 'حذف' : 'Remove'}
+                </button>
+              </div>
+            </div>
+          ))}
+          <button onClick={() => setExtraUnits([...extraUnits, { unit_code: '', unit_type: '', unit_type_ar: '', unit_type_en: '' }])}
+            className="mt-2.5 w-full py-2 rounded-xl border border-dashed border-brand-500/30 bg-transparent text-brand-500 text-xs font-semibold cursor-pointer hover:bg-brand-500/[0.05] transition-colors">
+            + {isRTL ? 'إضافة وحدة أخرى (باركينج، مخزن...)' : 'Add another unit (parking, storage...)'}
+          </button>
+        </div>
+        <div className="px-6 py-4 border-t border-edge dark:border-edge-dark flex gap-2.5 justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            {isRTL ? 'تخطي' : 'Skip'}
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (isRTL ? 'جاري الإنشاء...' : 'Creating...') : (isRTL ? 'إنشاء الصفقة' : 'Create Deal')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════
 // Main Page
 // ═══════════════════════════════════════════════
@@ -49,6 +185,7 @@ export default function OpportunitiesPage() {
   const { isMobile } = useResponsive();
   const perms = useCrmPermissions();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const toast = useToast();
   const { lostReasons: configLostReasons, sources: configSources, typeMap: configTypeMap, departments: configDepartments, activityTypes: configActivityTypes, activityResults: configActivityResults, stageWinRates: configStageWinRates } = useSystemConfig();
@@ -89,6 +226,7 @@ export default function OpportunitiesPage() {
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
+  const [dealWizardOpp, setDealWizardOpp] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [viewMode, setViewMode] = useState(searchParams.get('view') || 'table');
   const [sortBy, setSortBy] = useState(searchParams.get('sort') || 'newest');
@@ -322,6 +460,8 @@ export default function OpportunitiesPage() {
   const gridPaged = viewMode === 'table' ? sortedFiltered.slice((gridSafePage - 1) * pageSize, gridSafePage * pageSize) : sortedFiltered;
   useEffect(() => { setGridPage(1); }, [search, smartFilters, activeStage, sortBy, pageSize]);
 
+  const [skipConfirm, setSkipConfirm] = useState(null); // { id, toStage, extraUpdates, skipped }
+
   const handleMove = async (id, toStage, extraUpdates = {}) => {
     if (!isAdmin) {
       const opp = opps.find(o => o.id === id);
@@ -335,8 +475,29 @@ export default function OpportunitiesPage() {
           setTimeout(() => setMoveWarningToast(null), 3500);
           return;
         }
+        // Stage skip prevention: warn if skipping more than 1 stage forward (unless already confirmed)
+        if (fromIdx !== -1 && toIdx !== -1 && toIdx > fromIdx + 1 && toStage !== 'closed_lost' && !extraUpdates._skipConfirmed) {
+          const skipped = stages.slice(fromIdx + 1, toIdx).map(s => isRTL ? s.label_ar : s.label_en);
+          setSkipConfirm({ id, toStage, extraUpdates, skipped });
+          return;
+        }
       }
     }
+    // Stage gate check: verify required activity exists
+    if (!isAdmin && !extraUpdates._skipGate) {
+      const gate = getStageGate(toStage);
+      if (gate) {
+        const opp_ = opps.find(o => o.id === id);
+        const activities = opp_?.activities || [];
+        const hasRequired = activities.some(a => a.type === gate.required_activity);
+        if (!hasRequired) {
+          setMoveWarningToast(isRTL ? gate.label_ar : gate.label_en);
+          setTimeout(() => setMoveWarningToast(null), 4000);
+          return;
+        }
+      }
+    }
+
     if (toStage === 'closed_lost' && !extraUpdates.lost_reason) {
       setLostReasonModal({ id, toStage });
       setLostReason('');
@@ -392,9 +553,7 @@ export default function OpportunitiesPage() {
         }
       }
       if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
-        const deal = await createDealFromOpportunity({ ...opp, stage: toStage });
-        setDealCreatedToast(deal.deal_number);
-        setTimeout(() => setDealCreatedToast(null), 4000);
+        setDealWizardOpp({ ...opp, stage: toStage });
       }
     }
   };
@@ -511,9 +670,7 @@ export default function OpportunitiesPage() {
       }
       const opp = opps.find(o => o.id === oppId);
       if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
-        const deal = await createDealFromOpportunity({ ...opp, ...result });
-        setDealCreatedToast(deal.deal_number);
-        setTimeout(() => setDealCreatedToast(null), 4000);
+        setDealWizardOpp({ ...opp, ...result });
       }
     }
     setActionLoading(false);
@@ -745,15 +902,41 @@ export default function OpportunitiesPage() {
         <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center text-sm">🎉</div>
         <div>
           <div>{isRTL ? 'تم إنشاء صفقة جديدة!' : 'Deal created!'}</div>
-          <div className="text-xs opacity-85 mt-0.5">{dealCreatedToast} → {isRTL ? 'العمليات' : 'Operations'}</div>
+          <div className="text-xs opacity-85 mt-0.5">{dealCreatedToast}</div>
         </div>
         <button
+          onClick={() => { setDealCreatedToast(null); navigate('/sales/deals'); }}
+          className="bg-white/20 border-none text-white cursor-pointer px-2.5 py-1 rounded-lg text-xs font-semibold ms-2 hover:bg-white/30 transition-all"
+        >
+          {isRTL ? 'افتح الصفقة' : 'View Deal'}
+        </button>
+        <button
           onClick={() => setDealCreatedToast(null)}
-          className="bg-transparent border-none text-white cursor-pointer opacity-70 p-0.5 ms-2 hover:opacity-100 transition-opacity"
+          className="bg-transparent border-none text-white cursor-pointer opacity-70 p-0.5 ms-1 hover:opacity-100 transition-opacity"
         >
           ✕
         </button>
       </div>
+    )}
+    {dealWizardOpp && (
+      <DealClosingWizard
+        opp={dealWizardOpp}
+        isRTL={isRTL}
+        lang={i18n.language}
+        isDark={isDark}
+        onClose={async () => {
+          const deal = await createDealFromOpportunity(dealWizardOpp);
+          setDealCreatedToast(deal.deal_number);
+          setTimeout(() => setDealCreatedToast(null), 8000);
+          setDealWizardOpp(null);
+        }}
+        onComplete={async (opp, extraFields) => {
+          const deal = await createDealFromOpportunity(opp, [], extraFields);
+          setDealCreatedToast(deal.deal_number);
+          setTimeout(() => setDealCreatedToast(null), 8000);
+          setDealWizardOpp(null);
+        }}
+      />
     )}
     {/* Bulk Operation Toast */}
     {bulkToast && (
@@ -777,6 +960,35 @@ export default function OpportunitiesPage() {
     )}
 
     {/* Lost Reason Modal */}
+    {skipConfirm && (
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => setSkipConfirm(null)}>
+        <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-7 w-full max-w-[420px]" onClick={e => e.stopPropagation()}>
+          <h3 className="m-0 text-base font-bold text-content dark:text-content-dark mb-2">
+            {isRTL ? 'تخطي مراحل؟' : 'Skip stages?'}
+          </h3>
+          <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark mb-4">
+            {isRTL ? 'أنت بتتخطى المراحل دي:' : 'You are skipping these stages:'}
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {skipConfirm.skipped.map((s, i) => (
+              <span key={i} className="px-2.5 py-1 rounded-lg bg-yellow-500/[0.12] text-yellow-600 dark:text-yellow-400 text-xs font-semibold">{s}</span>
+            ))}
+          </div>
+          <div className="flex gap-2.5 justify-end">
+            <Button variant="secondary" size="sm" onClick={() => setSkipConfirm(null)}>
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button size="sm" onClick={() => {
+              const { id, toStage, extraUpdates } = skipConfirm;
+              setSkipConfirm(null);
+              handleMove(id, toStage, { ...extraUpdates, _skipConfirmed: true });
+            }}>
+              {isRTL ? 'تأكيد التخطي' : 'Confirm Skip'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
     {lostReasonModal && (
       <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => setLostReasonModal(null)}>
         <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-7 w-full max-w-[420px]" onClick={e => e.stopPropagation()}>

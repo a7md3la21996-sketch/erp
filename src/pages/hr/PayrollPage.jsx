@@ -112,10 +112,16 @@ export default function PayrollPage() {
       status: 'completed',
     };
 
-    // Save to localStorage
+    // Save to localStorage + Supabase
     const existing = JSON.parse(localStorage.getItem('platform_payroll_runs') || '[]');
     existing.push(payrollRun);
     localStorage.setItem('platform_payroll_runs', JSON.stringify(existing));
+    // Persist to Supabase (non-blocking)
+    import('../../lib/supabase').then(({ default: supabase }) => {
+      supabase.from('system_config')
+        .upsert({ key: 'payroll_runs', value: existing, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+        .catch(() => {});
+    }).catch(() => {});
 
     showToast(
       lang === 'ar'

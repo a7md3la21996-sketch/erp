@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
 const MESSAGES_KEY = 'platform_whatsapp_messages';
@@ -29,7 +30,7 @@ function loadTemplates() {
     const defaults = getDefaultTemplates();
     saveTemplates(defaults);
     return defaults;
-  } catch {
+  } catch (err) { reportError('whatsappService', 'query', err);
     const defaults = getDefaultTemplates();
     saveTemplates(defaults);
     return defaults;
@@ -316,7 +317,7 @@ export async function getWhatsAppStats() {
       const { data: tplData, error: tplErr } = await supabase.from('whatsapp_templates').select('is_active').eq('is_active', true);
       if (tplErr) throw tplErr;
       templatesCount = (tplData || []).length;
-    } catch {
+    } catch (err) { reportError('whatsappService', 'query', err);
       templatesCount = loadTemplates().filter(t => t.is_active).length;
     }
 

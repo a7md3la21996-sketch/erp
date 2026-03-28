@@ -126,6 +126,57 @@ html.dark textarea, body.dark textarea {
   }
 }
 
+/* ── Mobile touch targets (44px minimum on touch devices) ───── */
+@media (pointer: coarse) {
+  button, a, [role="button"], select, input[type="checkbox"], input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  /* Exclude inline text links and tiny icon toggles that look weird at 44px */
+  a:not([class*="btn"]):not([class*="Button"]) {
+    min-height: auto;
+    min-width: auto;
+  }
+  /* Modal close buttons */
+  [class*="modal"] button[class*="close"],
+  [class*="Modal"] button:last-child {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ── Mobile responsive tables → stacked card layout ──────────── */
+@media (max-width: 768px) {
+  .mobile-card-table thead {
+    display: none;
+  }
+  .mobile-card-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--edge, #e2e8f0);
+    gap: 6px;
+  }
+  .mobile-card-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border: none;
+    font-size: 13px;
+  }
+  .mobile-card-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--muted, #64748b);
+    flex-shrink: 0;
+    margin-inline-end: 12px;
+  }
+}
+
 /* ── Reduced motion preference ───────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

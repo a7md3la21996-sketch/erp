@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import {
@@ -32,7 +33,7 @@ export async function fetchDeals(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     let result = [...MOCK_OPS_DEALS];
     if (filters.status) result = result.filter(d => d.status === filters.status);
     if (filters.search) {
@@ -60,7 +61,7 @@ export async function createDeal(data) {
     if (error) throw error;
     await logCreate('deal', d.id, d);
     return d;
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     const mock = { ...data, id: 'deal-' + Date.now(), created_at: new Date().toISOString() };
     MOCK_OPS_DEALS.unshift(mock);
     return mock;
@@ -79,7 +80,7 @@ export async function updateDeal(id, updates) {
     if (error) throw error;
     await logUpdate('deal', id, old, data);
     return data;
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     const idx = MOCK_OPS_DEALS.findIndex(d => d.id === id);
     if (idx > -1) Object.assign(MOCK_OPS_DEALS[idx], updates);
     return MOCK_OPS_DEALS[idx];
@@ -100,7 +101,7 @@ export async function fetchInstallments(dealId) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     let result = [...MOCK_INSTALLMENTS];
     if (dealId) result = result.filter(i => i.deal_id === dealId);
     return result.sort((a, b) => a.due_date.localeCompare(b.due_date));
@@ -116,7 +117,7 @@ export async function createInstallment(data) {
       .single();
     if (error) throw error;
     return d;
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     const mock = { ...data, id: 'inst-' + Date.now(), created_at: new Date().toISOString() };
     MOCK_INSTALLMENTS.push(mock);
     return mock;
@@ -133,7 +134,7 @@ export async function updateInstallmentStatus(id, status, extra = {}) {
       .single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     const idx = MOCK_INSTALLMENTS.findIndex(i => i.id === id);
     if (idx > -1) Object.assign(MOCK_INSTALLMENTS[idx], { status, ...extra });
     return MOCK_INSTALLMENTS[idx];
@@ -155,7 +156,7 @@ export async function fetchHandovers(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     let result = [...MOCK_HANDOVERS];
     if (filters.status) result = result.filter(h => h.status === filters.status);
     if (filters.dealId) result = result.filter(h => h.deal_id === filters.dealId);
@@ -172,7 +173,7 @@ export async function createHandover(data) {
       .single();
     if (error) throw error;
     return d;
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     const mock = { ...data, id: 'ho-' + Date.now(), created_at: new Date().toISOString() };
     MOCK_HANDOVERS.push(mock);
     return mock;
@@ -201,7 +202,7 @@ export async function fetchTickets(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     let result = [...MOCK_TICKETS];
     if (filters.status)   result = result.filter(t => t.status === filters.status);
     if (filters.type)     result = result.filter(t => t.type === filters.type);
@@ -229,7 +230,7 @@ export async function createTicket(data) {
     if (error) throw error;
     await logCreate('ticket', d.id, d);
     return d;
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     const mock = { ...data, id: 'tkt-' + Date.now(), created_at: new Date().toISOString() };
     MOCK_TICKETS.unshift(mock);
     return mock;
@@ -252,7 +253,7 @@ export async function updateTicketStatus(id, status) {
     if (error) throw error;
     await logUpdate('ticket', id, old, data, `Ticket status changed to ${status}`);
     return data;
-  } catch {
+  } catch (err) { reportError('operationsService', 'query', err);
     const idx = MOCK_TICKETS.findIndex(t => t.id === id);
     if (idx > -1) {
       MOCK_TICKETS[idx].status = status;

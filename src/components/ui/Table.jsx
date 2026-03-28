@@ -1,7 +1,7 @@
-export function Table({ className = '', children }) {
+export function Table({ className = '', mobileCards = false, children }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-edge dark:border-edge-dark">
-      <table className={`w-full border-collapse text-sm ${className}`}>
+      <table className={`w-full border-collapse text-sm ${mobileCards ? 'mobile-card-table' : ''} ${className}`}>
         {children}
       </table>
     </div>

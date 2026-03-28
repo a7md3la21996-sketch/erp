@@ -2,14 +2,17 @@ import supabase from '../lib/supabase';
 import { parseDevice } from './sessionService';
 
 const STORAGE_KEY = 'platform_view_logs';
-const MAX_LOGS = 5000;
+const MAX_LOGS = 2000; // reduced from 5000 to prevent localStorage bloat
 
+let _logsCache = null;
 function loadLogs() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
+  if (_logsCache) return _logsCache;
+  try { _logsCache = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); return _logsCache; } catch { return []; }
 }
 
 function saveLogs(logs) {
   if (logs.length > MAX_LOGS) logs = logs.slice(0, MAX_LOGS);
+  _logsCache = logs;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(logs));
   } catch (e) {

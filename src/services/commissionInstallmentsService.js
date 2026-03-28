@@ -1,3 +1,4 @@
+import { reportError } from '../utils/errorReporter';
 // ── Commission Installments Service ─────────────────────────────────────
 // Tracks installment payments from developers to the company
 
@@ -9,7 +10,7 @@ function loadAll() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
-  } catch {
+  } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     return [];
   }
 }
@@ -52,7 +53,7 @@ export async function fetchInstallments(filters = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
-  } catch {
+  } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     // Fallback to localStorage
     let data = autoMarkOverdue(loadAll());
     if (filters.status) data = data.filter(d => d.status === filters.status);
@@ -89,7 +90,7 @@ export async function createInstallment(data) {
     const { data: sbData, error } = await supabase.from('commission_installments').insert([item]).select('*').single();
     if (error) throw error;
     return sbData;
-  } catch {
+  } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     return item;
   }
 }
@@ -109,7 +110,7 @@ export async function updateInstallment(id, updates) {
     const { data, error } = await supabase.from('commission_installments').update(updates).eq('id', id).select('*').single();
     if (error) throw error;
     return data;
-  } catch {
+  } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     return all[idx];
   }
 }
@@ -126,7 +127,7 @@ export async function deleteInstallment(id) {
   try {
     const { error } = await supabase.from('commission_installments').delete().eq('id', id);
     if (error) throw error;
-  } catch {
+  } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     // localStorage already updated as fallback
   }
   return filtered;
@@ -141,7 +142,7 @@ export async function getInstallmentStats() {
     const { data: sbData, error } = await supabase.from('commission_installments').select('*');
     if (error) throw error;
     data = sbData || [];
-  } catch {
+  } catch (err) { reportError('commissionInstallmentsService', 'query', err);
     data = autoMarkOverdue(loadAll());
   }
   const today = new Date();
