@@ -46,7 +46,7 @@ function autoMarkOverdue(list) {
  */
 export async function fetchInstallments(filters = {}) {
   try {
-    let query = supabase.from('commission_installments').select('*').order('due_date', { ascending: true });
+    let query = supabase.from('commission_installments').select('*').order('due_date', { ascending: true }).range(0, 499);
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.developer_name) query = query.eq('developer_name', filters.developer_name);
     if (filters.deal_id) query = query.eq('deal_id', filters.deal_id);

@@ -50,7 +50,7 @@ function saveLocalTasks(tasks) {
 export async function fetchTasks({ contactId, dept, status } = {}) {
   let supaData = [];
   try {
-    let query = supabase.from('tasks').select('*').order('due_date', { ascending: true });
+    let query = supabase.from('tasks').select('*').order('due_date', { ascending: true }).range(0, 499);
     if (contactId) query = query.eq('contact_id', contactId);
     if (dept)      query = query.eq('dept', dept);
     if (status)    query = query.eq('status', status);

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef as useReactRef, useCallback } from 'react';
-import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
+import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -122,7 +122,7 @@ export default function ContactsPage() {
   const { activityResults: configResults, contactsSettings } = useSystemConfig();
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
-  const saveContactsLocal = (data) => { try { localStorage.setItem('platform_contacts', JSON.stringify(data)); } catch { /* quota */ } };
+  const saveContactsLocal = (data) => { try { const capped = Array.isArray(data) && data.length > 500 ? data.slice(0, 500) : data; localStorage.setItem('platform_contacts', JSON.stringify(capped)); } catch { /* quota */ } };
 
   const deletedContactsRef = useReactRef(null);
   const restoreContacts = useCallback((deletedItems) => {
@@ -398,8 +398,13 @@ export default function ContactsPage() {
   }, [profile, loadContactsData]);
 
   // Realtime: auto-refresh contacts when any row changes in Supabase
-  useRealtimeSubscription('contacts', useCallback(() => {
-    if (profile) loadContactsData();
+  useRealtimeSubscription('contacts', useCallback((payload) => {
+    // Smart upsert: apply only the changed record instead of full re-fetch
+    if (payload?.eventType) {
+      setContacts(prev => applyRealtimePayload(prev, payload));
+    } else if (profile) {
+      loadContactsData(); // fallback for old-style callbacks
+    }
   }, [profile, loadContactsData]));
 
   // Handle highlight query param

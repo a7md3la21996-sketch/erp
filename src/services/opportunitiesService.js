@@ -8,7 +8,9 @@ function getLocalOpps() {
   try { return JSON.parse(localStorage.getItem('platform_opportunities') || '[]'); } catch { return []; }
 }
 function saveLocalOpps(opps) {
-  try { localStorage.setItem('platform_opportunities', JSON.stringify(opps)); } catch { /* ignore */ }
+  // Cap localStorage cache to 200 records to prevent overflow at scale
+  const capped = Array.isArray(opps) && opps.length > 200 ? opps.slice(0, 200) : opps;
+  try { localStorage.setItem('platform_opportunities', JSON.stringify(capped)); } catch { /* ignore */ }
 }
 
 // ── Unit blocking helpers ──
@@ -92,7 +94,7 @@ export async function fetchOpportunities({ role, userId, teamId, page = 0, pageS
   try {
     let query = supabase
       .from('opportunities')
-      .select('*')
+      .select('id, contact_id, contact_name, project_id, project_name, assigned_to, assigned_to_name, stage, priority, temperature, budget, deal_value, source, expected_close_date, lost_reason, won_date, stage_changed_at, notes, created_at, updated_at')
       .order('created_at', { ascending: false });
 
     if (role === 'sales_agent') {

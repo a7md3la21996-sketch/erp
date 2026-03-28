@@ -1504,6 +1504,70 @@ create table if not exists security_config (
 );
 
 -- ============================================================
+-- Performance Indexes (for 5000+ contacts scale)
+-- ============================================================
+
+-- Contacts: frequent query patterns
+CREATE INDEX IF NOT EXISTS idx_contacts_department       ON contacts (department);
+CREATE INDEX IF NOT EXISTS idx_contacts_assigned         ON contacts (assigned_to_name);
+CREATE INDEX IF NOT EXISTS idx_contacts_source           ON contacts (source);
+CREATE INDEX IF NOT EXISTS idx_contacts_type             ON contacts (contact_type);
+CREATE INDEX IF NOT EXISTS idx_contacts_last_activity    ON contacts (last_activity_at DESC);
+CREATE INDEX IF NOT EXISTS idx_contacts_created          ON contacts (created_at DESC);
+
+-- Opportunities: pipeline queries
+CREATE INDEX IF NOT EXISTS idx_opps_stage                ON opportunities (stage);
+CREATE INDEX IF NOT EXISTS idx_opps_assigned             ON opportunities (assigned_to);
+CREATE INDEX IF NOT EXISTS idx_opps_contact              ON opportunities (contact_id);
+CREATE INDEX IF NOT EXISTS idx_opps_stage_changed        ON opportunities (stage_changed_at DESC);
+
+-- Activities: entity lookups
+CREATE INDEX IF NOT EXISTS idx_activities_contact         ON activities (contact_id);
+CREATE INDEX IF NOT EXISTS idx_activities_user            ON activities (user_id);
+CREATE INDEX IF NOT EXISTS idx_activities_created         ON activities (created_at DESC);
+
+-- Deals
+CREATE INDEX IF NOT EXISTS idx_deals_opp                 ON deals (opportunity_id);
+CREATE INDEX IF NOT EXISTS idx_deals_status               ON deals (status);
+
+-- Notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user         ON notifications (user_id, is_read);
+
+-- Archive table for old audit logs
+CREATE TABLE IF NOT EXISTS audit_logs_archive (LIKE audit_logs INCLUDING ALL);
+
+-- Function: archive audit logs older than 6 months
+CREATE OR REPLACE FUNCTION archive_old_audit_logs()
+RETURNS void AS $$
+BEGIN
+  INSERT INTO audit_logs_archive
+    SELECT * FROM audit_logs
+    WHERE created_at < now() - interval '6 months';
+  DELETE FROM audit_logs
+    WHERE created_at < now() - interval '6 months';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Archive table for old view logs
+CREATE TABLE IF NOT EXISTS view_logs_archive (LIKE view_logs INCLUDING ALL);
+
+CREATE OR REPLACE FUNCTION archive_old_view_logs()
+RETURNS void AS $$
+BEGIN
+  INSERT INTO view_logs_archive
+    SELECT * FROM view_logs
+    WHERE created_at < now() - interval '3 months';
+  DELETE FROM view_logs
+    WHERE created_at < now() - interval '3 months';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Fuzzy text search (requires pg_trgm extension)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS idx_contacts_name_trgm        ON contacts USING gin (full_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_contacts_phone_trgm       ON contacts USING gin (phone gin_trgm_ops);
+
+-- ============================================================
 -- Updated-at trigger (auto-update updated_at on row change)
 -- ============================================================
 

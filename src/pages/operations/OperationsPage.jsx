@@ -29,6 +29,7 @@ import {
   updateTicketStatus as svcUpdateTicketStatus,
 } from '../../services/operationsService';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
 import { KpiCard, Button, Card, CardHeader, CardBody, Input, Select, Badge, Modal, ModalFooter, Table, Th, Td, Tr, FilterPill, ExportButton } from '../../components/ui';
 
 const TICKET_TYPE_ICONS = { complaint: AlertTriangle, maintenance: Wrench, inquiry: HelpCircle, modification: Edit3 };
@@ -110,8 +111,10 @@ function StatusBadgeStatic({ status, config, isRTL }) {
 export default function OperationsPage() {
   const { i18n } = useTranslation();
   const { theme } = useTheme();
+  const toast = useToast();
   const isRTL = i18n.language === 'ar';
   const isDark = theme === 'dark';
+  const [actionLoading, setActionLoading] = useState(false);
 
   const location = useLocation();
   const activeTab = useMemo(() => {
@@ -191,37 +194,62 @@ export default function OperationsPage() {
     const idx = order.indexOf(deal.status);
     if (idx < 0 || idx >= order.length - 1) return;
     const newStatus = order[idx + 1];
+    setActionLoading(true);
+    try {
     const updated = await svcUpdateDeal(dealId, { status: newStatus });
     setDeals(prev => prev.map(d => d.id === dealId ? { ...d, ...updated, status: newStatus } : d));
     setSelectedDeal(prev => {
       if (!prev || prev.id !== dealId) return prev;
       return { ...prev, ...updated, status: newStatus };
     });
+    toast.success(isRTL ? 'تم تحديث حالة الصفقة' : 'Deal status updated');
+    } catch (err) { toast.error(isRTL ? 'فشل التحديث' : 'Update failed'); }
+    setActionLoading(false);
   };
 
   const cancelDeal = async (dealId) => {
-    await svcUpdateDeal(dealId, { status: 'cancelled' });
-    setDeals(prev => prev.map(d => d.id === dealId ? { ...d, status: 'cancelled' } : d));
-    setSelectedDeal(null);
+    setActionLoading(true);
+    try {
+      await svcUpdateDeal(dealId, { status: 'cancelled' });
+      setDeals(prev => prev.map(d => d.id === dealId ? { ...d, status: 'cancelled' } : d));
+      setSelectedDeal(null);
+      toast.success(isRTL ? 'تم إلغاء الصفقة' : 'Deal cancelled');
+    } catch { toast.error(isRTL ? 'فشل الإلغاء' : 'Cancel failed'); }
+    setActionLoading(false);
   };
 
   const addDeal = async (deal) => {
-    const saved = await svcCreateDeal(deal);
-    setDeals(prev => [saved, ...prev]);
-    setShowDealModal(false);
+    setActionLoading(true);
+    try {
+      const saved = await svcCreateDeal(deal);
+      setDeals(prev => [saved, ...prev]);
+      setShowDealModal(false);
+      toast.success(isRTL ? 'تم إنشاء الصفقة' : 'Deal created');
+    } catch { toast.error(isRTL ? 'فشل الإنشاء' : 'Create failed'); }
+    setActionLoading(false);
   };
 
   const addTicket = async (ticket) => {
-    const saved = await svcCreateTicket(ticket);
-    setTickets(prev => [saved, ...prev]);
-    setShowTicketModal(false);
+    setActionLoading(true);
+    try {
+      const saved = await svcCreateTicket(ticket);
+      setTickets(prev => [saved, ...prev]);
+      setShowTicketModal(false);
+      toast.success(isRTL ? 'تم إنشاء التذكرة' : 'Ticket created');
+    } catch { toast.error(isRTL ? 'فشل الإنشاء' : 'Create failed'); }
+    setActionLoading(false);
   };
 
   const recordPayment = async (instId) => {
-    const today = new Date().toISOString().split('T')[0];
-    const updated = await svcUpdateInstallmentStatus(instId, 'paid', { paid_date: today, method: 'bank_transfer', receipt: `R-${Date.now().toString().slice(-6)}` });
-    setInstallments(prev => prev.map(i => i.id === instId ? { ...i, ...updated, status: 'paid', paid_date: today, method: 'bank_transfer', receipt: updated?.receipt || `R-${Date.now().toString().slice(-6)}` } : i));
-    setShowPaymentModal(false);
+    setActionLoading(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const updated = await svcUpdateInstallmentStatus(instId, 'paid', { paid_date: today, method: 'bank_transfer', receipt: `R-${Date.now().toString().slice(-6)}` });
+      setInstallments(prev => prev.map(i => i.id === instId ? { ...i, ...updated, status: 'paid', paid_date: today, method: 'bank_transfer', receipt: updated?.receipt || `R-${Date.now().toString().slice(-6)}` } : i));
+      setShowPaymentModal(false);
+      toast.success(isRTL ? 'تم تسجيل الدفعة' : 'Payment recorded');
+    } catch { toast.error(isRTL ? 'فشل تسجيل الدفعة' : 'Payment failed'); }
+    setActionLoading(false);
   };
 
   // ── Filtered data ───────────────────────────────────────────────────

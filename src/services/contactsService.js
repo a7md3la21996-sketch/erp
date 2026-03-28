@@ -9,7 +9,11 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     let query = supabase
       .from('contacts')
       .select(`
-        *,
+        id, full_name, phone, email, contact_type, source, department, temperature,
+        assigned_to_name, assigned_by_name, campaign_name, budget_min, budget_max,
+        preferred_location, interested_in_type, notes, lead_score, is_blacklisted,
+        gender, company, job_title, extra_phones, first_response_at,
+        last_activity_at, created_at, updated_at,
         opportunities!left (
           id, stage, assigned_to, priority,
           users!opportunities_assigned_to_fkey (full_name_ar, full_name_en)
@@ -49,7 +53,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       return { data: data || [], count: count || 0 };
     }
 
-    const { data, error } = await query.limit(1000);
+    const { data, error } = await query.range(0, 499); // max 500 per fetch
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('contactsService', 'query', err);
