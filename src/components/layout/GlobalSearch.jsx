@@ -143,8 +143,9 @@ export default function GlobalSearch({ onClose }) {
               const { data, error } = await supabase
                 .from('contacts')
                 .select('id, full_name, phone, email, company, contact_type, source')
+                .eq('is_blacklisted', false)
                 .order('last_activity_at', { ascending: false })
-                .limit(200);
+                .range(0, 999);
               if (error) throw error;
               return data || [];
             } catch {
@@ -191,6 +192,28 @@ export default function GlobalSearch({ onClose }) {
     debounceRef.current = setTimeout(() => setDebouncedQuery(query), 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
+
+  // Live search from Supabase when query changes (searches all 21K contacts)
+  const [liveContacts, setLiveContacts] = useState([]);
+  useEffect(() => {
+    if (!debouncedQuery || debouncedQuery.length < 2) { setLiveContacts([]); return; }
+    let cancelled = false;
+    const q = debouncedQuery.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
+    if (!q) return;
+    supabase
+      .from('contacts')
+      .select('id, full_name, phone, email, company, contact_type, source')
+      .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%`)
+      .limit(20)
+      .then(({ data }) => {
+        if (!cancelled && data) {
+          // Merge with cached, dedup by id
+          const cachedIds = new Set((contacts || []).map(c => c.id));
+          setLiveContacts(data.filter(c => !cachedIds.has(c.id)));
+        }
+      }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [debouncedQuery, contacts]);
 
   // Build grouped results
   const { groupedResults, flatResults } = useMemo(() => {
@@ -263,14 +286,18 @@ export default function GlobalSearch({ onClose }) {
       }
     });
 
-    // 2. Contacts
-    contacts.forEach(c => {
+    // 2. Contacts — search from cached + live Supabase results
+    const allContacts = [...(contacts || []), ...(liveContacts || [])];
+    const seenContactIds = new Set();
+    allContacts.forEach(c => {
+      if (seenContactIds.has(c.id)) return;
       const match =
         c.full_name?.toLowerCase().includes(q) ||
         c.phone?.includes(q) ||
         c.email?.toLowerCase().includes(q) ||
         c.company?.toLowerCase().includes(q);
       if (match) {
+        seenContactIds.add(c.id);
         addToSection('contact', {
           type: 'contact',
           id: 'contact-' + c.id,
@@ -372,7 +399,7 @@ export default function GlobalSearch({ onClose }) {
     });
 
     return { groupedResults: limited, flatResults: flat };
-  }, [debouncedQuery, contacts, opportunities, tasks, employees, activities, lang, isRTL, recentSearches, searchHistory]);
+  }, [debouncedQuery, contacts, liveContacts, opportunities, tasks, employees, activities, lang, isRTL, recentSearches, searchHistory]);
 
   // Reset active index when results change
   useEffect(() => { setActiveIndex(0); }, [flatResults]);
@@ -428,7 +455,7 @@ export default function GlobalSearch({ onClose }) {
     if (item.type === 'page') {
       navigate(item.path);
     } else if (item.type === 'contact') {
-      navigate('/contacts', { state: { selectedContactId: item.data?.id } });
+      navigate(`/contacts?highlight=${item.data?.id}`);
     } else if (cfg) {
       navigate(cfg.path);
     }
