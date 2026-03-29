@@ -45,19 +45,16 @@ export default function ProductTour() {
   const [step, setStep] = useState(0);
 
   useEffect(() => {
-    if (!profile?.id) return;
-    const key = `${STORAGE_KEY}_${profile.id}`;
-    const completed = localStorage.getItem(key);
+    if (!profile) return;
+    const completed = localStorage.getItem(STORAGE_KEY);
     if (!completed) {
       const timer = setTimeout(() => setShow(true), 1500);
       return () => clearTimeout(timer);
     }
-  }, [profile?.id]);
+  }, [profile]);
 
   const complete = () => {
-    if (profile?.id) {
-      localStorage.setItem(`${STORAGE_KEY}_${profile.id}`, 'true');
-    }
+    localStorage.setItem(STORAGE_KEY, 'true');
     setShow(false);
   };
 
