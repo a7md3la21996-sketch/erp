@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { VitePWA } from 'vite-plugin-pwa';
 import viteCompression from 'vite-plugin-compression';
 
 export default defineConfig({
@@ -8,41 +7,9 @@ export default defineConfig({
     react(),
     viteCompression({ algorithm: 'gzip', threshold: 10240 }),
     viteCompression({ algorithm: 'brotliCompress', ext: '.br', threshold: 10240 }),
-    VitePWA({
-      devOptions: { enabled: false },
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'logo.png', 'logo-white.png'],
-      manifest: {
-        name: 'Platform ERP',
-        short_name: 'ERP',
-        description: 'Enterprise Resource Planning System',
-        theme_color: '#4A7AAB',
-        background_color: '#0F1E2D',
-        display: 'standalone',
-        orientation: 'portrait',
-        scope: '/',
-        start_url: '/',
-        icons: [
-          { src: '/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
-        importScripts: ['/sw-custom.js'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*supabase.*$/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api',
-              expiration: { maxEntries: 50, maxAgeSeconds: 300 },
-            },
-          },
-        ],
-      },
-    }),
+    // PWA/Service Worker REMOVED — was causing stale cache issues
+    // Users had to clear cache after every deploy
+    // Vercel CDN handles caching efficiently without SW
   ],
   build: {
     chunkSizeWarningLimit: 1000,
@@ -53,7 +20,6 @@ export default defineConfig({
           'vendor-recharts': ['recharts'],
           'vendor-i18n': ['react-i18next', 'i18next'],
           'vendor-supabase': ['@supabase/supabase-js'],
-          // exceljs removed — already uses dynamic import(), loads on-demand only
         },
       },
     },
