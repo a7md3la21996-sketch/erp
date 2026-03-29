@@ -26,7 +26,8 @@ class ErrorBoundary extends Component {
 
   handleBackToDashboard = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    window.location.href = '/dashboard';
+    // Use replace + reload to clear any stuck state
+    window.location.replace('/dashboard');
   };
 
   render() {
