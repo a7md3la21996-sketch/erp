@@ -33,9 +33,9 @@ export async function getAuditLogs({ limit = 50, offset = 0, action, entity, sea
     if (entity) query = query.eq('entity', entity);
     if (search) query = query.or(`description.ilike.%${search}%,entity_name.ilike.%${search}%`);
     const { data, error, count } = await query;
-    if (error) { reportError('auditService', 'getAuditLogs', error); return { data: [], total: 0 }; }
+    if (error) return { data: [], total: 0 };
     return { data: data || [], total: count || 0 };
-  } catch (err) { reportError('auditService', 'getAuditLogs', err); return { data: [], total: 0 }; }
+  } catch { return { data: [], total: 0 }; }
 }
 
 // Backward-compatible alias
