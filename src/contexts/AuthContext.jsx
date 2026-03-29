@@ -39,6 +39,8 @@ async function fetchSupabaseProfile(userId, authUser = null) {
         department: data.department,
         full_name_ar: data.full_name_ar,
         full_name_en: data.full_name_en,
+        status: data.status,
+        is_active: data.is_active,
       };
     }
   } catch { /* DB query failed or timed out — fall through */ }
@@ -208,6 +210,13 @@ export function AuthProvider({ children }) {
         });
         if (error) throw error;
         const profileData = await fetchSupabaseProfile(data.user.id, data.user);
+
+        // Check if user is deactivated
+        if (profileData.status === 'inactive' || profileData.is_active === false) {
+          await supabase.auth.signOut();
+          throw new Error('تم تعطيل حسابك. تواصل مع المدير.');
+        }
+
         setUser({ id: data.user.id, email: data.user.email });
         setProfile(profileData);
         setPermissions(ROLE_PERMISSIONS[profileData.role] || []);

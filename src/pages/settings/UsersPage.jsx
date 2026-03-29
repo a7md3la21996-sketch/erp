@@ -251,15 +251,22 @@ export default function UsersPage() {
   };
 
   const toggleStatus = async (userId) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id === userId) {
-        const newStatus = u.status === 'active' ? 'inactive' : 'active';
-        // Try to update in Supabase (will silently fail for mock data)
-        supabase.from('users').update({ status: newStatus }).eq('id', userId).then();
-        return { ...u, status: newStatus };
-      }
-      return u;
-    }));
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    const newStatus = user.status === 'active' ? 'inactive' : 'active';
+
+    try {
+      const { error: dbErr } = await supabase.from('users').update({ status: newStatus, is_active: newStatus === 'active' }).eq('id', userId);
+      if (dbErr) throw dbErr;
+
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      toast.success(newStatus === 'inactive'
+        ? (lang === 'ar' ? 'تم تعطيل المستخدم — لن يستطيع الدخول' : 'User deactivated — login blocked')
+        : (lang === 'ar' ? 'تم تفعيل المستخدم' : 'User activated')
+      );
+    } catch (err) {
+      toast.error(lang === 'ar' ? 'فشل في تحديث الحالة' : 'Failed to update status');
+    }
   };
 
   /* ── Format date ── */
