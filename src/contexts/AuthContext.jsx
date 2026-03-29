@@ -19,22 +19,58 @@ const MOCK_USERS = import.meta.env.DEV ? {
 } : {}; // Empty in production — mock auth completely disabled
 
 // ── Helper: fetch profile from Supabase users table ─────────────────────────
-async function fetchSupabaseProfile(userId) {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', userId)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) throw new Error('Profile not found');
-  return {
-    id: data.id,
-    email: data.email,
-    role: data.role,
-    department: data.department,
-    full_name_ar: data.full_name_ar,
-    full_name_en: data.full_name_en,
-  };
+async function fetchSupabaseProfile(userId, authUser = null) {
+  // Try DB query first (with timeout to avoid RLS deadlock)
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+      .abortSignal(controller.signal);
+    clearTimeout(timeout);
+    if (!error && data) {
+      return {
+        id: data.id,
+        email: data.email,
+        role: data.role,
+        department: data.department,
+        full_name_ar: data.full_name_ar,
+        full_name_en: data.full_name_en,
+      };
+    }
+  } catch { /* DB query failed or timed out — fall through */ }
+
+  // Fallback: use auth user_metadata (always available, no RLS issues)
+  if (authUser?.user_metadata) {
+    const meta = authUser.user_metadata;
+    return {
+      id: userId,
+      email: authUser.email,
+      role: meta.role || 'sales_agent',
+      department: meta.department || 'sales',
+      full_name_ar: meta.full_name || authUser.email,
+      full_name_en: meta.full_name || authUser.email,
+    };
+  }
+
+  // Last resort: get from auth API
+  const { data: { user: currentUser } } = await supabase.auth.getUser();
+  if (currentUser) {
+    const meta = currentUser.user_metadata || {};
+    return {
+      id: userId,
+      email: currentUser.email,
+      role: meta.role || 'sales_agent',
+      department: meta.department || 'sales',
+      full_name_ar: meta.full_name || currentUser.email,
+      full_name_en: meta.full_name || currentUser.email,
+    };
+  }
+
+  throw new Error('Profile not found');
 }
 
 export function AuthProvider({ children }) {
@@ -71,13 +107,12 @@ export function AuthProvider({ children }) {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user && isMounted) {
             try {
-              const profileData = await fetchSupabaseProfile(session.user.id);
+              const profileData = await fetchSupabaseProfile(session.user.id, session.user);
               setUser({ id: session.user.id, email: session.user.email });
               setProfile(profileData);
               setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
             } catch (profileErr) {
-              console.error('[Auth] Profile fetch failed — no user record in users table. Signing out.', profileErr.message);
-              // User exists in auth but not in users table — sign out for safety
+              console.error('[Auth] Profile fetch failed:', profileErr.message);
               await supabase.auth.signOut();
               setUser(null);
               setProfile(null);
@@ -172,7 +207,7 @@ export function AuthProvider({ children }) {
           password,
         });
         if (error) throw error;
-        const profileData = await fetchSupabaseProfile(data.user.id);
+        const profileData = await fetchSupabaseProfile(data.user.id, data.user);
         setUser({ id: data.user.id, email: data.user.email });
         setProfile(profileData);
         setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
