@@ -215,9 +215,10 @@ export default function ProfilePage() {
   });
 
   function formatCurrency(v) {
+    if (v == null) return '0';
     if (v >= 1000000) return (v / 1000000).toFixed(1) + 'M';
     if (v >= 1000) return (v / 1000).toFixed(0) + 'K';
-    return v.toString();
+    return String(v);
   }
 
   function ChartTooltipCustom({ active, payload, label }) {

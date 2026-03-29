@@ -1058,6 +1058,26 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </div>
           )}
 
+          {/* ═══ Key Info (always visible) ═══ */}
+          <div className="mx-5 mb-3 rounded-xl border border-edge dark:border-edge-dark overflow-hidden text-xs">
+            {[
+              show('phone') && { label: isRTL ? 'الموبايل' : 'Phone', val: contact.phone || '—' },
+              show('phone2') && contact.phone2 && { label: isRTL ? 'موبايل 2' : 'Phone 2', val: contact.phone2 },
+              show('email') && { label: isRTL ? 'الإيميل' : 'Email', val: contact.email || '—' },
+              show('source') && { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source || '—') },
+              show('campaign_name') && { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name || '—' },
+              show('assigned_to_name') && { label: isRTL ? 'المسؤول' : 'Assigned', val: contact.assigned_to_name || '—' },
+              show('contact_status') && { label: isRTL ? 'الحالة' : 'Status', val: contact.contact_status ? ((isRTL ? { new: 'جديد', contacted: 'تم التواصل', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' })[contact.contact_status] || contact.contact_status) : '—' },
+              show('last_activity_at') && { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: contact.last_activity_at ? (() => { const d = daysSince(contact.last_activity_at); return d === 0 ? (isRTL ? 'اليوم' : 'Today') : isRTL ? `منذ ${d} يوم` : `${d} days ago`; })() : '—' },
+              show('notes') && contact.notes && { label: isRTL ? 'ملاحظات' : 'Notes', val: contact.notes.length > 60 ? contact.notes.slice(0, 60) + '...' : contact.notes },
+            ].filter(Boolean).map(r => (
+              <div key={r.label} className="flex justify-between items-center px-3.5 py-1.5 border-b border-edge/50 dark:border-edge-dark/50 last:border-b-0">
+                <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
+                <span className="text-content dark:text-content-dark font-medium max-w-[60%] text-end truncate">{r.val}</span>
+              </div>
+            ))}
+          </div>
+
           {/* Stats Bar */}
           <div className="flex gap-0 mx-5 mb-2.5 rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
             <div className="flex-1 py-1.5 text-center bg-brand-500/[0.05]">
