@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import useDebouncedSearch from '../hooks/useDebouncedSearch';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import {
@@ -594,7 +595,7 @@ export default function TasksPage() {
   const [tasks, setTasks]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [smartFilters, setSmartFilters] = useState([]);
-  const [search, setSearch]         = useState('');
+  const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [showAdd, setShowAdd]       = useState(false);
   const [form, setForm]             = useState({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'crm', due_date: '', notes: '', contact_name: '' });
   const [saving, setSaving]         = useState(false);
@@ -842,8 +843,8 @@ export default function TasksPage() {
             fields={SMART_FIELDS}
             filters={smartFilters}
             onFiltersChange={setSmartFilters}
-            search={search}
-            onSearchChange={setSearch}
+            search={searchInput}
+            onSearchChange={setSearchInput}
             searchPlaceholder={lang === 'ar' ? 'بحث بالعنوان أو العميل...' : 'Search by title or contact...'}
             sortOptions={SORT_OPTIONS}
             sortBy={sortBy}

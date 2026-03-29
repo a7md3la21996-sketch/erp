@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import useDebouncedSearch from '../../hooks/useDebouncedSearch';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -77,7 +78,7 @@ export default function DealsPage() {
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [smartFilters, setSmartFilters] = useState([]);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [sortBy, setSortBy] = useState('date_desc');
   const [selectedDeal, setSelectedDeal] = useState(null);
   const [selectedIdx, setSelectedIdx] = useState(-1);
@@ -228,8 +229,8 @@ export default function DealsPage() {
         fields={SMART_FIELDS}
         filters={smartFilters}
         onFiltersChange={setSmartFilters}
-        search={search}
-        onSearchChange={setSearch}
+        search={searchInput}
+        onSearchChange={setSearchInput}
         searchPlaceholder={isRTL ? 'ابحث عن صفقة...' : 'Search deal...'}
         resultsCount={filtered.length}
         sortOptions={SORT_OPTIONS}

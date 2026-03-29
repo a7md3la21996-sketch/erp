@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { fetchEmployees, fetchDepartments, createEmployee, updateEmployee, deleteEmployee } from '../../services/employeesService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import useDebouncedSearch from '../../hooks/useDebouncedSearch';
 import {
   Users, Plus, Eye, Edit2, FileText,
   AlertTriangle, Clock, Building2,
@@ -47,7 +48,7 @@ export default function EmployeesPage() {
   const lang  = i18n.language;
   const { profile } = useAuth();
 
-  const [search,  setSearch]  = useState('');
+  const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [smartFilters, setSmartFilters] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -288,8 +289,8 @@ export default function EmployeesPage() {
         fields={SMART_FIELDS}
         filters={smartFilters}
         onFiltersChange={setSmartFilters}
-        search={search}
-        onSearchChange={setSearch}
+        search={searchInput}
+        onSearchChange={setSearchInput}
         searchPlaceholder={lang === 'ar' ? 'ابحث عن موظف...' : 'Search employees...'}
         resultsCount={filtered.length}
       />

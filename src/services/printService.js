@@ -15,7 +15,7 @@ const DEFAULTS = {
   email: '',
   address_ar: '',
   address_en: '',
-  logo_url: '/logo.png',
+  logo_url: '/logo.webp',
   tax_id: '',
   website: '',
 };
