@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { Component, createElement } from 'react';
 import { Button } from './ui';
 
 class ErrorBoundary extends Component {
@@ -11,12 +11,18 @@ class ErrorBoundary extends Component {
     return { hasError: true, error };
   }
 
+  componentDidUpdate(prevProps) {
+    // Reset error when route/children change (user navigated away)
+    if (this.state.hasError && this.props.children !== prevProps.children) {
+      this.setState({ hasError: false, error: null, errorInfo: null });
+    }
+  }
+
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }
-    // Always log to console for debugging
     console.error('[ErrorBoundary]', error, errorInfo);
   }
 
@@ -26,8 +32,6 @@ class ErrorBoundary extends Component {
 
   handleBackToDashboard = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
-    // Use replace + reload to clear any stuck state
-    window.location.replace('/dashboard');
   };
 
   render() {
@@ -125,7 +129,7 @@ class ErrorBoundary extends Component {
             <Button size="sm" onClick={this.handleReset}>
               {labels.tryAgain}
             </Button>
-            <Button size="sm" variant="ghost" onClick={this.handleBackToDashboard}>
+            <Button size="sm" variant="ghost" onClick={() => { window.location.href = '/dashboard'; window.location.reload(); }}>
               {labels.backToDashboard}
             </Button>
           </div>
