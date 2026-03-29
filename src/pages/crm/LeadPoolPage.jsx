@@ -123,7 +123,7 @@ export default function LeadPoolPage() {
   // Supabase is the source of truth — no localStorage persistence needed
 
   const assignedToOptions = useMemo(() =>
-    [...new Set(leads.map(l => l.assigned_to).filter(Boolean))].map(name => ({ value: name, label: name, labelEn: name })),
+    [...new Set((leads || []).map(l => l.assigned_to).filter(Boolean))].map(name => ({ value: name, label: name, labelEn: name })),
   [leads]);
 
   const SMART_FIELDS = useMemo(() => [
@@ -151,7 +151,7 @@ export default function LeadPoolPage() {
   // Filter leads based on permissions and filters
   const visible = useMemo(() => {
     // First apply permission + scope filters
-    let result = leads.filter(l => {
+    let result = (leads || []).filter(l => {
       if (!canViewFresh && l.type === 'fresh') return false;
       if (poolScope === 'my_team' && l.team !== (user?.team_id || 'team1')) return false;
       return true;
@@ -190,16 +190,16 @@ export default function LeadPoolPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const fresh = leads.filter(l => l.type === 'fresh');
-    const cold  = leads.filter(l => l.type === 'cold_call');
-    const slaBreached = leads.filter(l => getSLAStatus(l).breached);
-    const stale = leads.filter(l => {
+    const fresh = (leads || []).filter(l => l.type === 'fresh');
+    const cold  = (leads || []).filter(l => l.type === 'cold_call');
+    const slaBreached = (leads || []).filter(l => getSLAStatus(l).breached);
+    const stale = (leads || []).filter(l => {
       if (!l.created_at) return false;
       const hrs = (Date.now() - new Date(l.created_at)) / 3600000;
       return hrs > 48 && !l.assigned_to; // unassigned for 48+ hours = stale
     });
-    const avgWait = leads.length ? Math.round(leads.reduce((s, l) => s + (Date.now() - new Date(l.created_at)) / 60000, 0) / leads.length) : 0;
-    return { total: leads.length, fresh: fresh.length, cold: cold.length, slaBreached: slaBreached.length, stale: stale.length, avgWait };
+    const avgWait = (leads || []).length ? Math.round((leads || []).reduce((s, l) => s + (Date.now() - new Date(l.created_at)) / 60000, 0) / (leads || []).length) : 0;
+    return { total: (leads || []).length, fresh: fresh.length, cold: cold.length, slaBreached: slaBreached.length, stale: stale.length, avgWait };
   }, [leads, tick]);
 
   const handleReserve = (lead) => {

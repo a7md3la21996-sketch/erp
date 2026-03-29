@@ -75,9 +75,9 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'lead_score', label: 'Lead Score', labelEn: 'Lead Score', type: 'number' },
     { id: 'campaign_name', label: 'الحملة', labelEn: 'Campaign', type: 'text' },
     { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
-    { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: [...new Set(contacts.map(c => c.assigned_to_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
-    { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set(contacts.map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
-    { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set(contacts.map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
+    { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: [...new Set((contacts || []).map(c => c.assigned_to_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
+    { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set((contacts || []).map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
+    { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set((contacts || []).map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
     { id: '_opp_count', label: 'عدد الفرص', labelEn: 'Opportunities Count', type: 'number' },
     ...auditFields,
@@ -93,7 +93,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
 
   // Filter + Sort
   const filtered = useMemo(() => {
-    let list = contacts.filter(c => {
+    let list = (contacts || []).filter(c => {
       if (!showBlacklisted && c.is_blacklisted) return false;
       if (filterType !== 'all' && c.contact_type !== filterType) return false;
       if (search) {

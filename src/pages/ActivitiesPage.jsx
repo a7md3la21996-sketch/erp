@@ -77,7 +77,7 @@ export default function ActivitiesPage() {
 
   const uniqueUsers = useMemo(() => {
     const map = new Map();
-    activities.forEach(a => {
+    (activities || []).forEach(a => {
       const key = a.user_name_en || a.user_id || '';
       if (key && !map.has(key)) map.set(key, { value: key, label: a.user_name_ar || key, labelEn: a.user_name_en || key });
     });
@@ -86,7 +86,7 @@ export default function ActivitiesPage() {
 
   const uniqueEntities = useMemo(() => {
     const map = new Map();
-    activities.forEach(a => {
+    (activities || []).forEach(a => {
       if (a.entity_name && !map.has(a.entity_name)) map.set(a.entity_name, { value: a.entity_name, label: a.entity_name, labelEn: a.entity_name });
     });
     return [...map.values()];
@@ -139,7 +139,7 @@ export default function ActivitiesPage() {
   }, []));
 
   const filtered = useMemo(() => {
-    let list = activities;
+    let list = activities || [];
     if (search) {
       const s = search.toLowerCase();
       list = list.filter(a =>
@@ -170,11 +170,11 @@ export default function ActivitiesPage() {
   // Stats
   const stats = useMemo(() => {
     const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
-    const today = activities.filter(a => a.created_at && new Date(a.created_at) >= startOfToday);
+    const today = (activities || []).filter(a => a.created_at && new Date(a.created_at) >= startOfToday);
     const byType = {};
-    activities.forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
+    (activities || []).forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
     const topType = Object.entries(byType).sort((a,b) => b[1]-a[1])[0] || null;
-    return { total: activities.length, today: today.length, topType };
+    return { total: (activities || []).length, today: today.length, topType };
   }, [activities]);
 
   const handleAdd = async () => {

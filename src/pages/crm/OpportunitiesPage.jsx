@@ -399,7 +399,7 @@ export default function OpportunitiesPage() {
     return m;
   }, [opps]);
 
-  const normalizedOpps = useMemo(() => opps.map(o => ({
+  const normalizedOpps = useMemo(() => (opps || []).map(o => ({
     ...o,
     department: o.contacts?.department || 'sales',
     source: o.contacts?.source || o.source || '',
