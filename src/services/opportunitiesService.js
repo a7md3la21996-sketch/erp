@@ -1,16 +1,18 @@
+import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { addToSyncQueue } from './syncService';
 
-// ── localStorage helpers ──
+// ── localStorage helpers (disabled when OFFLINE_MODE=false) ──
 function getLocalOpps() {
+  if (!FEATURES.OFFLINE_MODE) return [];
   try { return JSON.parse(localStorage.getItem('platform_opportunities') || '[]'); } catch { return []; }
 }
 function saveLocalOpps(opps) {
-  // Cap localStorage cache to 200 records to prevent overflow at scale
+  if (!FEATURES.OFFLINE_MODE) return;
   const capped = Array.isArray(opps) && opps.length > 200 ? opps.slice(0, 200) : opps;
-  try { localStorage.setItem('platform_opportunities', JSON.stringify(capped)); } catch { /* ignore */ }
+  try { localStorage.setItem('platform_opportunities', JSON.stringify(capped)); } catch {}
 }
 
 // ── Unit blocking helpers ──

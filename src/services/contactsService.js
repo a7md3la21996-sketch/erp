@@ -2,13 +2,15 @@ import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
 import { reportError } from '../utils/errorReporter';
+import { FEATURES } from '../config/features';
 
-// ── Module-level localStorage cache (parse once, not 13 times) ─────────────
+// ── Module-level localStorage cache (disabled when OFFLINE_MODE=false) ──────
 let _contactsCache = null;
 let _contactsCacheTs = 0;
 function getCachedContacts() {
+  if (!FEATURES.OFFLINE_MODE) return [];
   if (_contactsCache && Date.now() - _contactsCacheTs < 15000) return _contactsCache;
-  try { _contactsCache = getCachedContacts(); _contactsCacheTs = Date.now(); } catch { _contactsCache = []; }
+  try { _contactsCache = JSON.parse(localStorage.getItem('platform_contacts') || '[]'); _contactsCacheTs = Date.now(); } catch { _contactsCache = []; }
   return _contactsCache;
 }
 function invalidateContactsCache() { _contactsCache = null; _contactsCacheTs = 0; }

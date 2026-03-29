@@ -1,6 +1,7 @@
 // ── Deals Service — bridge between CRM Opportunities and Operations ──
 import supabase from '../lib/supabase';
 import { logCreate } from './auditService';
+import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
 
 const STORAGE_KEY = 'platform_won_deals';

@@ -1,3 +1,4 @@
+import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';

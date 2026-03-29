@@ -122,7 +122,7 @@ export default function ContactsPage() {
   const { activityResults: configResults, contactsSettings } = useSystemConfig();
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
-  const saveContactsLocal = (data) => { try { const capped = Array.isArray(data) && data.length > 500 ? data.slice(0, 500) : data; localStorage.setItem('platform_contacts', JSON.stringify(capped)); } catch { /* quota */ } };
+  const saveContactsLocal = () => {}; // OFFLINE_MODE disabled — Supabase is single source of truth
 
   const deletedContactsRef = useReactRef(null);
   const restoreContacts = useCallback((deletedItems) => {
