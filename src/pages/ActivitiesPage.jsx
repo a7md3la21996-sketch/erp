@@ -329,8 +329,8 @@ export default function ActivitiesPage() {
         fields={SMART_FIELDS}
         filters={smartFilters}
         onFiltersChange={setSmartFilters}
-        search={search}
-        onSearchChange={setSearch}
+        search={searchInput}
+        onSearchChange={setSearchInput}
         searchPlaceholder={isRTL ? 'بحث بالملاحظات أو اسم المستخدم...' : 'Search by notes or user name...'}
         quickFilters={QUICK_FILTERS}
         resultsCount={filtered.length}
