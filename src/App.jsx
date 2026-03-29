@@ -1,5 +1,6 @@
 import { Component, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SystemConfigProvider } from './contexts/SystemConfigContext';
@@ -137,8 +138,20 @@ function AuthRedirect() {
   return <LoginPage />;
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,      // data stays fresh for 5 minutes
+      gcTime: 30 * 60 * 1000,         // cache kept for 30 minutes
+      refetchOnWindowFocus: false,     // don't refetch on tab switch
+      retry: 1,                        // retry failed queries once
+    },
+  },
+});
+
 export default function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <ThemeProvider>
         <SystemConfigProvider>
@@ -240,5 +253,6 @@ export default function App() {
         </SystemConfigProvider>
       </ThemeProvider>
     </BrowserRouter>
+    </QueryClientProvider>
   );
 }

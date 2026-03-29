@@ -1562,6 +1562,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- ── Deal Number Sequence (prevents race conditions) ─────────
+CREATE SEQUENCE IF NOT EXISTS deal_number_seq START WITH 100 INCREMENT BY 1;
+
+CREATE OR REPLACE FUNCTION generate_deal_number()
+RETURNS text AS $$
+DECLARE
+  yr text := extract(year FROM now())::text;
+  seq int := nextval('deal_number_seq');
+BEGIN
+  RETURN 'D-' || yr || '-' || lpad(seq::text, 3, '0');
+END;
+$$ LANGUAGE plpgsql;
+
 -- Fuzzy text search (requires pg_trgm extension)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS idx_contacts_name_trgm        ON contacts USING gin (full_name gin_trgm_ops);

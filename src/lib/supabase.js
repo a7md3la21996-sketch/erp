@@ -9,6 +9,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
   },
+  global: {
+    headers: { 'x-client-info': 'platform-erp/2.0' },
+  },
+  realtime: {
+    params: { eventsPerSecond: 10 }, // rate limit realtime events
+  },
 });
 
 /**

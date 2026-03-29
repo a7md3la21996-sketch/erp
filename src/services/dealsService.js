@@ -43,9 +43,16 @@ export function getWonDealsSync() {
 }
 
 /**
- * Generate next deal number (D-YYYY-NNN)
+ * Generate next deal number.
+ * Tries DB sequence first (race-condition safe), falls back to JS increment.
  */
-function nextDealNumber(existingDeals) {
+async function nextDealNumber(existingDeals) {
+  // Try database sequence (atomic, no race conditions)
+  try {
+    const { data, error } = await supabase.rpc('generate_deal_number');
+    if (!error && data) return data;
+  } catch {}
+  // Fallback: JS-based (for offline/dev)
   const year = new Date().getFullYear();
   const prefix = `D-${year}-`;
   const nums = existingDeals
@@ -71,7 +78,7 @@ export async function createDealFromOpportunity(opp, existingDeals = [], extraFi
   if (existing) return existing;
 
   const dealData = {
-    deal_number: nextDealNumber([...existingDeals, ...localDeals]),
+    deal_number: await nextDealNumber([...existingDeals, ...localDeals]),
     opportunity_id: opp.id,
     contact_id: opp.contact_id || null,
     project_id: opp.project_id || null,

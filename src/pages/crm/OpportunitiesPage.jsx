@@ -240,6 +240,9 @@ export default function OpportunitiesPage() {
   const [lostReason, setLostReason] = useState('');
   const [lostReasonCustom, setLostReasonCustom] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [serverPage, setServerPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showFunnel, setShowFunnel] = useState(false);
   const [showMoreActions, setShowMoreActions] = useState(false);
   const moreActionsRef = useRef(null);
@@ -328,7 +331,7 @@ export default function OpportunitiesPage() {
     let oppsData, agentsData, projectsData;
     try {
       [oppsData, agentsData, projectsData] = await Promise.all([
-        fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
+        fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: 0, pageSize: 200 }),
         fetchSalesAgents(),
         fetchProjects(),
       ]);
@@ -356,9 +359,31 @@ export default function OpportunitiesPage() {
     setOpps(enriched);
     setAgents(agentsData);
     setProjects(projectsData);
+    setHasMore(oppsData.length >= 200); // if we got a full page, there might be more
+    setServerPage(0);
     setLoading(false);
     setRefreshing(false);
   }, [profile?.role, profile?.id, profile?.team_id]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const nextPage = serverPage + 1;
+    try {
+      const more = await fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: nextPage, pageSize: 200 });
+      if (more.length > 0) {
+        setOpps(prev => {
+          const existingIds = new Set(prev.map(o => String(o.id)));
+          const newOnes = more.filter(o => !existingIds.has(String(o.id)));
+          return [...prev, ...newOnes];
+        });
+        setServerPage(nextPage);
+        setHasMore(more.length >= 200);
+      } else {
+        setHasMore(false);
+      }
+    } catch {} finally { setLoadingMore(false); }
+  }, [serverPage, hasMore, loadingMore, profile?.role, profile?.id, profile?.team_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -857,6 +882,15 @@ export default function OpportunitiesPage() {
           perms={perms}
         />
       </>)}
+
+      {/* Load More from server */}
+      {hasMore && (
+        <div className="flex justify-center py-4">
+          <Button variant="secondary" size="sm" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? (isRTL ? 'جاري التحميل...' : 'Loading...') : (isRTL ? `تحميل المزيد (${opps.length} محمّلة)` : `Load more (${opps.length} loaded)`)}
+          </Button>
+        </div>
+      )}
 
       {showModal && <AddModal isRTL={isRTL} lang={lang} onClose={() => setShowModal(false)} onSave={handleSave} agents={agents} projects={projects} existingOpps={opps} currentUserId={profile?.id} currentUserName={profile?.full_name_ar || profile?.full_name_en} />}
 
