@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 import { reportError } from '../utils/errorReporter';
 /**
  * Push Notification Service — Browser Notification API + Service Worker

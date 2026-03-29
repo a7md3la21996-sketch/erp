@@ -1,0 +1,37 @@
+{
+  "total_leads": 30686,
+  "with_phones": 30686,
+  "with_timeline": 2046,
+  "total_activities": 27372,
+  "by_status": {
+    "Trying to Reach": 2674,
+    "Status_70": 431,
+    "Unqualified": 25532,
+    "Interested": 131,
+    "Pending interest clarification": 73,
+    "Status_69": 433,
+    "Status_129": 555,
+    "Status_119": 771,
+    "Resale": 2,
+    "Reservation & Done Deal": 78,
+    "Status_73": 1,
+    "Status_122": 5
+  },
+  "by_source": {
+    "Hotline": 4842,
+    "Google Ads": 15744,
+    "Platform Website": 681,
+    "Facebook Campaign": 6869,
+    "Employee Referral": 213,
+    "Web Form": 331,
+    "Source_101": 1859,
+    "Tiktok": 99,
+    "Source_132": 48
+  },
+  "by_rating": {
+    "Warm": 22962,
+    "None": 4621,
+    "Hot": 161,
+    "Cold": 2942
+  }
+}

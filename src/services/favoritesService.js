@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 import { reportError } from '../utils/errorReporter';
 const STORAGE_KEY = 'platform_favorites';
 const MAX_FAVORITES = 50;

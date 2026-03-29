@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../../utils/supabaseSync';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
@@ -19,12 +20,12 @@ function loadData() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return JSON.parse(saved);
   } catch {}
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_CASES));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_CASES)); syncToSupabase('platform_hr_disciplinary', DEFAULT_CASES);
   return [...DEFAULT_CASES];
 }
 
 function saveData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); syncToSupabase('platform_hr_disciplinary', data); } catch {}
 }
 
 /* ─── Dynamic Badge ─── */

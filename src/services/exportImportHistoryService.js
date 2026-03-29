@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 const LOCAL_KEY = 'platform_export_import_history';
 const MAX_ENTRIES = 200;
 

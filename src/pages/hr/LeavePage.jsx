@@ -132,7 +132,7 @@ export default function LeavePage() {
               requesterId: lv.employee_id || lv.emp_id || '',
               requesterName: name,
               data: { entity_id: lv.id, leave_type: lv.type, start_date: lv.start_date, end_date: lv.end_date, days: lv.days, reason: lv.reason },
-              approverId: 'e1',
+              approverId: profile?.id || '',
               approverName: lang === 'ar' ? 'مدير الموارد البشرية' : 'HR Manager',
             });
           }

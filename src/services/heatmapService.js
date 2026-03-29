@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 /**
  * Heatmap Data Service
  * Aggregates activity data into {date, count} arrays for heatmap calendars.

@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 import { createNotification } from './notificationsService';
 
 const STORAGE_KEY = 'platform_recurring_tasks';

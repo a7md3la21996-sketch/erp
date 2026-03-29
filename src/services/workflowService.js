@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 const STORAGE_KEY = 'platform_workflows';
 const MAX_WORKFLOWS = 50;
 

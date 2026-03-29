@@ -55,7 +55,7 @@ export default function ChatInboxPage() {
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
 
-  const currentUserId = profile?.id || 'e1';
+  const currentUserId = profile?.id || '';
 
   const [activeTab, setActiveTab] = useState('all');
   const [filterEntity, setFilterEntity] = useState('all');

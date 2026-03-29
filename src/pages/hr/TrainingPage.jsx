@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../../utils/supabaseSync';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Users, CheckCircle2, Clock, Plus, GraduationCap } from 'lucide-react';
@@ -17,12 +18,12 @@ function loadData() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return JSON.parse(saved);
   } catch {}
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PROGRAMS));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PROGRAMS)); syncToSupabase('platform_hr_training', DEFAULT_PROGRAMS);
   return [...DEFAULT_PROGRAMS];
 }
 
 function saveData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); syncToSupabase('platform_hr_training', data); } catch {}
 }
 
 export default function TrainingPage() {

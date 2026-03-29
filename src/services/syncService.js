@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 import { reportError } from '../utils/errorReporter';
 // ── Sync Service ─────────────────────────────────────────────────────────
 // Centralized sync management between localStorage and Supabase.

@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 /**
  * Reports Data Service — computes report data from real services
  * Falls back to mock data when real data is unavailable

@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 import { reportError } from '../utils/errorReporter';
 /**
  * Widget Layout Service

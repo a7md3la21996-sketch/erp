@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 // ── Print Layout Service ──────────────────────────────────────────
 
 function escapeHtml(str) {

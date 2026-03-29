@@ -56,7 +56,7 @@ export default function CommentsSection({ entity, entityId, entityName }) {
   const isRTL = i18n.language === 'ar';
 
   const CURRENT_USER = {
-    id: profile?.id || 'e1',
+    id: profile?.id || '',
     name: profile?.full_name_ar || profile?.full_name_en || 'مستخدم',
   };
 

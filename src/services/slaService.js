@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 const POLICIES_KEY = 'platform_sla_policies';
 const TICKETS_KEY = 'platform_sla_tickets';
 const MAX_TICKETS = 500;

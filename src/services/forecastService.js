@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 /**
  * Sales Forecasting Service
  * Computes weighted pipeline forecasts from opportunity data

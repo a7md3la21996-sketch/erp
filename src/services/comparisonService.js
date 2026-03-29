@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 /**
  * Comparison Reports Service
  * Compares performance metrics between two periods

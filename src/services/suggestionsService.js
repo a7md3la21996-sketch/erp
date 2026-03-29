@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 /**
  * Smart Suggestions / AI Insights Engine
  * Analyzes CRM data and generates actionable insights

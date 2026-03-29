@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../../utils/supabaseSync';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
@@ -17,12 +18,12 @@ function loadData() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return JSON.parse(saved);
   } catch {}
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_JOBS));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_JOBS)); syncToSupabase('platform_hr_recruitment', DEFAULT_JOBS);
   return [...DEFAULT_JOBS];
 }
 
 function saveData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); syncToSupabase('platform_hr_recruitment', data); } catch {}
 }
 
 const statusColor = s => s==='open'?'#4A7AAB':s==='interviewing'?'#6B8DB5':'#8BA8C8';

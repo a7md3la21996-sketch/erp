@@ -147,7 +147,7 @@ export default function ExpenseClaimsPage() {
     if (editingClaim) {
       await updateClaim(editingClaim.id, { title: form.title, category: form.category, date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, amount: amt });
     } else {
-      await createClaim({ title: form.title, category: form.category, amount: amt, currency: 'EGP', date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, employee_id: 'e1', employee_name: 'Ahmed Mohamed' });
+      await createClaim({ title: form.title, category: form.category, amount: amt, currency: 'EGP', date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, employee_id: profile?.id || '', employee_name: profile?.full_name_ar || profile?.full_name_en || '' });
     }
     setShowModal(false);
     reload();

@@ -1,3 +1,4 @@
+import { syncToSupabase } from '../utils/supabaseSync';
 import { getStorageUsage, getBackupInfo } from './backupService';
 
 const ERROR_LOG_KEY = 'platform_error_log';

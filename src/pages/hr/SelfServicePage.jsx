@@ -176,9 +176,9 @@ export default function SelfServicePage() {
     return () => window.removeEventListener('platform_approval_change', handler);
   }, [loadApprovals]);
 
-  // Simulate logged-in user with first employee
-  const emp = employees[0];
-  const name = (isRTL ? emp?.full_name_ar : emp?.full_name_en) || emp?.full_name_ar || (isRTL ? 'أحمد محمد' : 'Ahmed Mohamed');
+  // Use actual logged-in user's employee record, fallback to first employee
+  const emp = employees.find(e => e.id === profile?.id || e.email === profile?.email) || employees[0];
+  const name = (isRTL ? emp?.full_name_ar : emp?.full_name_en) || emp?.full_name_ar || profile?.full_name_ar || profile?.full_name_en || '';
   const initials = name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
 
   // ── Pre-loaded async KPI targets ──
@@ -190,7 +190,7 @@ export default function SelfServicePage() {
       const currentYear = new Date().getFullYear();
       const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
       const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-      const empId = emp?.id || 'e1';
+      const empId = emp?.id || profile?.id || '';
       const empRole = emp?.role || 'sales_agent';
       await ensureTargets(empId, empRole, currentMonth, currentYear);
       const tgts = await getEmployeeTargets(empId, currentMonth, currentYear);
@@ -209,7 +209,7 @@ export default function SelfServicePage() {
       const currentMonth = new Date().getMonth();
       const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
       const cy = new Date().getFullYear();
-      const empId = emp?.id || 'e1';
+      const empId = emp?.id || profile?.id || '';
       const result = await getObjectives({ quarter: cq, year: cy });
       const arr = Array.isArray(result) ? result : [];
       setSsObjectives(arr.filter(o => o.owner_id === empId));
@@ -221,7 +221,7 @@ export default function SelfServicePage() {
   const [ssClaims, setSsClaims] = useState([]);
   useEffect(() => {
     const loadClaims = async () => {
-      const empId = emp?.id || 'e1';
+      const empId = emp?.id || profile?.id || '';
       const result = await getEmployeeClaims(empId);
       setSsClaims(Array.isArray(result) ? result.slice(0, 5) : []);
     };
@@ -488,7 +488,7 @@ export default function SelfServicePage() {
         const currentYear = new Date().getFullYear();
         const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
         const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-        const empId = emp?.id || 'e1';
+        const empId = emp?.id || profile?.id || '';
 
         const targets = ssTargets;
         const actuals = computeActuals(empId, currentMonth, currentYear);
@@ -589,7 +589,7 @@ export default function SelfServicePage() {
 
       {/* ── My Expenses ── */}
       {(() => {
-        const empId = emp?.id || 'e1';
+        const empId = emp?.id || profile?.id || '';
         const myClaims = ssClaims;
         const myPendingAmt = myClaims.filter(c => c.status === 'pending').reduce((s, c) => s + c.amount, 0);
         const myApprovedAmt = myClaims.filter(c => c.status === 'approved' || c.status === 'paid').reduce((s, c) => s + c.amount, 0);

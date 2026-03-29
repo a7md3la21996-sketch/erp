@@ -222,9 +222,17 @@ export default function ContactsPage() {
 
   const handleDelete = (id) => {
     const contact = contacts.find(c => c.id === id);
+    // Check for linked opportunities/deals
+    const linkedOpps = (() => { try { return JSON.parse(localStorage.getItem('platform_opportunities') || '[]').filter(o => String(o.contact_id) === String(id)).length; } catch { return 0; } })();
+    const linkedDeals = (() => { try { return JSON.parse(localStorage.getItem('platform_won_deals') || '[]').filter(d => String(d.contact_id) === String(id)).length; } catch { return 0; } })();
+    const warning = linkedOpps > 0 || linkedDeals > 0
+      ? (isRTL
+        ? `\n⚠️ تحذير: مرتبط بـ ${linkedOpps} فرصة و ${linkedDeals} صفقة — هيتم حذفهم كمان!`
+        : `\n⚠️ Warning: linked to ${linkedOpps} opportunities and ${linkedDeals} deals — they will also be deleted!`)
+      : '';
     setConfirmAction({
       title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
-      message: isRTL ? `هل أنت متأكد من حذف "${contact?.full_name || ''}"؟` : `Are you sure you want to delete "${contact?.full_name || ''}"?`,
+      message: (isRTL ? `هل أنت متأكد من حذف "${contact?.full_name || ''}"؟` : `Are you sure you want to delete "${contact?.full_name || ''}"?`) + warning,
       onConfirm: () => {
         const deletedItems = [contact];
         const updated = contacts.filter(c => c.id !== id);

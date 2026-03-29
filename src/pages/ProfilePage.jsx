@@ -43,14 +43,14 @@ export default function ProfilePage() {
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
 
-  // Find this employee in MOCK_EMPLOYEES or use profile directly
+  // Use actual profile data, try MOCK_EMPLOYEES only in dev
   const employee = useMemo(() => {
     if (profile?.id) {
       const found = MOCK_EMPLOYEES.find(e => e.id === profile.id || e.email === profile.email);
       if (found) return found;
     }
-    // Fallback to profile data or safe defaults
-    return MOCK_EMPLOYEES[0] || {
+    // Fallback to auth profile data directly
+    return {
       id: profile?.id || '',
       full_name_ar: profile?.full_name_ar || '',
       full_name_en: profile?.full_name_en || '',
