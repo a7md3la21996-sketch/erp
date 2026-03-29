@@ -8,7 +8,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    lock: 'no-op',
+    storageKey: 'platform-erp-auth',
+    flowType: 'pkce',
   },
   global: {
     headers: { 'x-client-info': 'platform-erp/2.0' },
