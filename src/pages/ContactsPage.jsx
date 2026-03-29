@@ -8,7 +8,7 @@ import { useSystemConfig } from '../contexts/SystemConfigContext';
 import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact, deleteContact,
-  blacklistContact, createActivity,
+  blacklistContact, createActivity, recordAssignment,
 } from '../services/contactsService';
 import { logAction } from '../services/auditService';
 import { bulkSend } from '../services/smsTemplateService';
@@ -270,7 +270,9 @@ export default function ContactsPage() {
     setContacts(updated);
     saveContactsLocal(updated);
     logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
-    updated.filter(c => selectedIds.includes(c.id)).forEach(c => {
+    // Record assignment history for each contact
+    contacts.filter(c => selectedIds.includes(c.id)).forEach(c => {
+      recordAssignment(c.id, { fromAgent: c.assigned_to_name, toAgent: agentName, assignedBy: assignedByName });
       notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', agentId: agentName, agentName, assignedBy: assignedByName });
     });
     // Also propagate reassignment to linked opportunities

@@ -11,7 +11,7 @@ import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../service
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity, updateActivity,
-  fetchContactOpportunities
+  fetchContactOpportunities, getAssignmentHistory,
 } from '../../../services/contactsService';
 import { createOpportunity } from '../../../services/opportunitiesService';
 import { createNotification } from '../../../services/notificationsService';
@@ -102,6 +102,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showOppModal, setShowOppModal] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState('all');
   const [activityAgentFilter, setActivityAgentFilter] = useState('all');
+  const assignmentHistory = useMemo(() => contact?.id ? getAssignmentHistory(contact.id) : [], [contact?.id]);
   const { profile } = useAuth();
   const isSalesAgent = profile?.role === 'sales_agent';
   const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
@@ -365,8 +366,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     extraSources.documents.forEach(d => items.push({ ...d, _type: 'document', _date: d.uploaded_at || d.created_at }));
     extraSources.audits.forEach(a => items.push({ ...a, _type: 'audit', _date: a.created_at }));
     extraSources.deals.forEach(d => items.push({ ...d, _type: 'deal', _date: d.created_at }));
+    // Include assignment history in timeline
+    assignmentHistory.forEach(h => items.push({
+      ...h, _type: 'assignment', _date: h.at,
+      type: 'reassignment',
+      notes: `${h.from || '—'} → ${h.to}${h.notes ? ' · ' + h.notes : ''}`,
+      user_name_ar: h.by, user_name_en: h.by,
+    }));
     return items.sort((a, b) => new Date(b._date || 0) - new Date(a._date || 0));
-  }, [activities, tasks, opportunities, extraSources]);
+  }, [activities, tasks, opportunities, extraSources, assignmentHistory]);
 
   const filteredTimeline = useMemo(() => {
     let items = timeline;
@@ -856,6 +864,29 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </div>
             </div>
           </div>
+
+          {/* Assignment History Banner */}
+          {assignmentHistory.length > 0 && (
+            <div className="mx-5 mb-2.5 p-3 rounded-xl bg-amber-500/[0.06] border border-amber-500/20">
+              <div className={`flex items-center gap-2 mb-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <History size={13} className="text-amber-500" />
+                <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                  {isRTL ? `تم تعيينه ${assignmentHistory.length} مرة` : `Reassigned ${assignmentHistory.length} time${assignmentHistory.length > 1 ? 's' : ''}`}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {assignmentHistory.slice(-3).map((h, i) => (
+                  <div key={i} className={`flex items-center gap-1.5 text-[10px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <span className="font-semibold">{h.from || '—'}</span>
+                    <span>→</span>
+                    <span className="font-semibold text-brand-500">{h.to}</span>
+                    <span className="opacity-60">· {new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
+                    {h.by && <span className="opacity-50">({isRTL ? 'بواسطة' : 'by'} {h.by})</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions — compact icons with labels */}
           <div className="flex gap-2 px-5 pb-2.5">

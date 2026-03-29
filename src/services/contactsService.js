@@ -3,6 +3,44 @@ import { logCreate, logUpdate } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
 import { reportError } from '../utils/errorReporter';
 
+// ── Assignment History ─────────────────────────────────────────────────────
+const ASSIGN_HISTORY_KEY = 'platform_assignment_history';
+
+export function getAssignmentHistory(contactId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(ASSIGN_HISTORY_KEY) || '{}');
+    return all[contactId] || [];
+  } catch { return []; }
+}
+
+export function recordAssignment(contactId, { fromAgent, toAgent, assignedBy, notes = '' }) {
+  const entry = {
+    from: fromAgent || null,
+    to: toAgent,
+    by: assignedBy,
+    notes,
+    at: new Date().toISOString(),
+  };
+  // Save to localStorage
+  try {
+    const all = JSON.parse(localStorage.getItem(ASSIGN_HISTORY_KEY) || '{}');
+    if (!all[contactId]) all[contactId] = [];
+    all[contactId].push(entry);
+    localStorage.setItem(ASSIGN_HISTORY_KEY, JSON.stringify(all));
+  } catch {}
+  // Persist to Supabase (non-blocking)
+  supabase.from('activities').insert([{
+    type: 'reassignment',
+    entity_type: 'contact',
+    contact_id: contactId,
+    notes: `${fromAgent || '—'} → ${toAgent}${notes ? ': ' + notes : ''}`,
+    user_id: null,
+    status: 'completed',
+    created_at: entry.at,
+  }]).then(() => {}).catch(() => {});
+  return entry;
+}
+
 export async function fetchContacts({ role, userId, teamId, filters = {}, page, pageSize }) {
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
   try {
