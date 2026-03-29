@@ -321,7 +321,6 @@ export async function fetchContactOpportunities(contactId) {
     if (error) throw error;
     return data || [];
   } catch (err) {
-    reportError('contactsService', 'fetchContactOpportunities', err);
     return [];
   }
 }
