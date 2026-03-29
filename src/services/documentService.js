@@ -178,6 +178,41 @@ export async function deleteDocument(id) {
 /**
  * Format file size for display
  */
+/**
+ * Upload a file to Supabase Storage and create a document record.
+ * @param {File} file - Browser File object
+ * @param {string} entityType - 'contact' | 'opportunity' | 'deal'
+ * @param {string} entityId
+ * @param {string} uploadedBy - user ID
+ * @returns {object} Document record with file_url
+ */
+export async function uploadFile(file, entityType, entityId, uploadedBy) {
+  const bucket = 'documents';
+  const path = `${entityType}/${entityId}/${Date.now()}_${file.name}`;
+
+  // Upload to Supabase Storage
+  const { data: uploadData, error: uploadError } = await supabase.storage
+    .from(bucket)
+    .upload(path, file, { upsert: false });
+
+  if (uploadError) throw uploadError;
+
+  // Get public URL
+  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
+  const fileUrl = urlData?.publicUrl || path;
+
+  // Create document record
+  return addDocument({
+    entity_type: entityType,
+    entity_id: entityId,
+    name: file.name,
+    file_url: fileUrl,
+    file_type: file.type,
+    file_size: file.size,
+    uploaded_by: uploadedBy,
+  });
+}
+
 export function formatFileSize(bytes) {
   if (!bytes || bytes === 0) return '0 B';
   const k = 1024;

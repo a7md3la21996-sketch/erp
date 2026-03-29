@@ -4,6 +4,8 @@
  * This file exists for backward compatibility with existing imports.
  */
 
+import { playNotificationSound } from '../utils/notificationSound';
+
 import {
   createNotification as _create,
   getNotifications as _getAll,
@@ -45,6 +47,8 @@ export function createNotification(opts) {
   _create(opts).catch(() => {});
   // Dispatch event for real-time UI
   window.dispatchEvent(new CustomEvent('platform_notification', { detail: placeholder }));
+  // Play notification sound
+  try { playNotificationSound(); } catch {}
   return placeholder;
 }
 

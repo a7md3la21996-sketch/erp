@@ -84,7 +84,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
 
     if (filters.search) {
       const s = filters.search.replace(/[%_]/g, '');
-      query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%`);
+      query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`);
     }
     if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
     if (filters.source) query = query.eq('source', filters.source);

@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 
-const base = 'inline-flex items-center justify-center gap-2 font-semibold rounded-lg cursor-pointer transition-all duration-200 font-cairo disabled:opacity-50 disabled:cursor-not-allowed select-none';
+const base = 'inline-flex items-center justify-center gap-2 font-semibold rounded-lg cursor-pointer transition-all duration-200 font-cairo disabled:opacity-50 disabled:cursor-not-allowed select-none active:scale-[0.97]';
 
 const sizes = {
   sm: 'text-xs px-3 py-1.5',

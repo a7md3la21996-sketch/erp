@@ -9,6 +9,7 @@ import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tool
 import { fetchTodayReminders } from '../../services/remindersService';
 import { fetchAllDashboardData, buildPipelineData, getDateRange, buildRevenueTrend, buildTopSellers, filterStatsByRange } from '../../services/dashboardService';
 import { runTemperatureDecay } from '../../services/leadRecyclingService';
+import { checkContactBirthdays } from '../../services/birthdayService';
 import { getTopPerformers, getTeamOverallPct, METRIC_CONFIG } from '../../services/kpiTargetsService';
 import { getWonDeals } from '../../services/dealsService';
 import { Link, useNavigate } from 'react-router-dom';
@@ -739,8 +740,9 @@ export default function DashboardPage() {
   const [dashLoading, setDashLoading] = useState(true);
 
   useEffect(() => {
-    // Run lead temperature decay on dashboard load (non-blocking)
+    // Run lead temperature decay + birthday checks on dashboard load (non-blocking)
     runTemperatureDecay().catch(() => {});
+    checkContactBirthdays(userId).catch(() => {});
 
     fetchAllDashboardData().then(data => {
       setDashData(data);

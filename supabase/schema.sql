@@ -69,6 +69,8 @@ create table if not exists contacts (
   birth_date             date,
   prefix                 text,
   extra_phones           jsonb,
+  referred_by            uuid references contacts(id),
+  first_response_at      timestamptz,
   created_at             timestamptz default now(),
   updated_at             timestamptz default now(),
   last_activity_at       timestamptz default now()

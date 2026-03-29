@@ -133,10 +133,34 @@ export async function setTargets(employeeId, month, year, targets) {
 }
 
 /**
- * Compute actuals for an employee from mock data (simulating Supabase queries on activities, opps, deals)
+ * Compute actuals for an employee from real CRM data.
  */
-export function computeActuals(employeeId, month, year) {
-  return { calls: 0, new_opportunities: 0, closed_deals: 0, revenue: 0, meetings: 0, site_visits: 0 };
+export async function computeActuals(employeeId, month, year) {
+  const startDate = new Date(year, month - 1, 1).toISOString();
+  const endDate = new Date(year, month, 0, 23, 59, 59).toISOString();
+  const actuals = { calls: 0, new_opportunities: 0, closed_deals: 0, revenue: 0, meetings: 0, site_visits: 0 };
+  try {
+    const { data: activities } = await supabase.from('activities').select('type')
+      .eq('user_id', employeeId).gte('created_at', startDate).lte('created_at', endDate).range(0, 999);
+    if (activities) {
+      activities.forEach(a => {
+        if (a.type === 'call') actuals.calls++;
+        if (a.type === 'meeting') actuals.meetings++;
+        if (a.type === 'site_visit') actuals.site_visits++;
+      });
+    }
+    const { count: oppCount } = await supabase.from('opportunities').select('*', { count: 'exact', head: true })
+      .eq('assigned_to', employeeId).gte('created_at', startDate).lte('created_at', endDate);
+    actuals.new_opportunities = oppCount || 0;
+    const { data: wonDeals } = await supabase.from('opportunities').select('budget, deal_value')
+      .eq('assigned_to', employeeId).eq('stage', 'closed_won')
+      .gte('stage_changed_at', startDate).lte('stage_changed_at', endDate).range(0, 99);
+    if (wonDeals) {
+      actuals.closed_deals = wonDeals.length;
+      actuals.revenue = wonDeals.reduce((sum, d) => sum + (d.deal_value || d.budget || 0), 0);
+    }
+  } catch {}
+  return actuals;
 }
 
 /**

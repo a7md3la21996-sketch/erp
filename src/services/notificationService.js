@@ -297,7 +297,7 @@ export function createNotification(opts) {
 }
 
 // ── Helper shortcuts (kept from old service) ──
-export function notifyLeadAssigned({ contactName, agentId, agentName, assignedBy }) {
+export function notifyLeadAssigned({ contactName, contactId, agentId, agentName, assignedBy }) {
   return addNotification({
     type: 'lead_assigned',
     title: 'ليد جديد',
@@ -305,11 +305,13 @@ export function notifyLeadAssigned({ contactName, agentId, agentName, assignedBy
     message: `تم تعيين "${contactName}" لك بواسطة ${assignedBy}`,
     messageEn: `"${contactName}" has been assigned to you by ${assignedBy}`,
     entity: 'contact',
+    entityId: contactId,
+    actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
     priority: 'high',
   });
 }
 
-export function notifyTaskAssigned({ taskTitle, assigneeId, assignedBy }) {
+export function notifyTaskAssigned({ taskTitle, taskId, assigneeId, assignedBy }) {
   return addNotification({
     type: 'task_assigned',
     title: 'مهمة جديدة',
@@ -317,11 +319,13 @@ export function notifyTaskAssigned({ taskTitle, assigneeId, assignedBy }) {
     message: `تم تعيين مهمة "${taskTitle}" لك`,
     messageEn: `Task "${taskTitle}" has been assigned to you`,
     entity: 'task',
+    entityId: taskId,
+    actionUrl: '/tasks',
     priority: 'high',
   });
 }
 
-export function notifyDealWon({ dealNumber, clientName, value, agentId }) {
+export function notifyDealWon({ dealNumber, dealId, clientName, value, agentId }) {
   return addNotification({
     type: 'deal_won',
     title: 'صفقة ناجحة!',
@@ -329,6 +333,8 @@ export function notifyDealWon({ dealNumber, clientName, value, agentId }) {
     message: `تم إغلاق الصفقة ${dealNumber} — ${clientName} بقيمة ${value}`,
     messageEn: `Deal ${dealNumber} closed — ${clientName} worth ${value}`,
     entity: 'deal',
+    entityId: dealId,
+    actionUrl: '/sales/deals',
     priority: 'high',
   });
 }
