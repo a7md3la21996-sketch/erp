@@ -69,7 +69,7 @@ export default function MainLayout() {
         </main>
       </div>
       <BottomNav onMoreClick={() => setSidebarOpen(true)} />
-      <ProductTour />
+      {/* <ProductTour /> — disabled until launch */}
       {serviceError && (
         <div className="fixed bottom-4 start-4 z-[400] bg-amber-500/95 text-white px-4 py-3 rounded-xl shadow-lg text-xs font-medium max-w-[360px] animate-[slideUp_0.3s_ease-out]">
           ⚠️ {isRTL ? 'تعذر الاتصال بالسيرفر — البيانات المعروضة قد تكون قديمة' : 'Server connection failed — displayed data may be stale'}
