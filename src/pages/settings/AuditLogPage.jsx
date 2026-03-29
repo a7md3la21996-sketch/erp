@@ -104,7 +104,7 @@ export default function AuditLogPage() {
           });
         }
       } catch { /* ignore */ }
-      const { data: localLogs } = getLocalAuditLogs({ limit: 500 });
+      const { data: localLogs } = await getLocalAuditLogs({ limit: 500 });
       localLogs.forEach(l => {
         if (l.user_name && !map.has(l.user_name)) {
           map.set(l.user_name, { value: l.user_name, label: l.user_name, labelEn: l.user_name });
@@ -155,7 +155,7 @@ export default function AuditLogPage() {
       }
     } catch { /* ignore */ }
 
-    const { data: localLogs } = getLocalAuditLogs({ limit: 500, action: filterAction, entity: filterEntity, search });
+    const { data: localLogs } = await getLocalAuditLogs({ limit: 500, action: filterAction, entity: filterEntity, search });
     const supaIds = new Set(allLogs.map(l => l.id));
     const uniqueLocal = localLogs.filter(l => !supaIds.has(l.id)).map(l => ({
       ...l,

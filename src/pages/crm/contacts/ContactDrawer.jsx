@@ -127,17 +127,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'qualification', temperature:'warm', priority:'medium', notes:'', assigned_to_name: isSalesAgent ? selfName : '' });
 
   // Get agents list for assignment dropdown
-  const agentsList = useMemo(() => {
-    const names = new Set();
-    try {
-      const allContacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
-      allContacts.forEach(c => { if (c.assigned_to_name?.trim()) names.add(c.assigned_to_name.trim()); });
-    } catch { /* ignore */ }
-    try {
-      const allOpps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
-      allOpps.forEach(o => { if (o.assigned_to_name?.trim()) names.add(o.assigned_to_name.trim()); });
-    } catch { /* ignore */ }
-    return [...names].sort();
+  const [agentsList, setAgentsList] = useState([]);
+  useEffect(() => {
+    import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
+      fetchSalesAgents().then(agents => {
+        setAgentsList(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
+      }).catch(() => {});
+    }).catch(() => {});
   }, []);
 
   // Favorites
@@ -323,7 +319,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           getDocumentsByEntity('contact', cid).catch(() => []),
           getWonDeals().catch(() => []),
         ]);
-        const { data: allAudits } = getLocalAuditLogs({ limit: 500, entity: 'contact' });
+        const { data: allAudits } = await getLocalAuditLogs({ limit: 500, entity: 'contact' });
         const audits = (Array.isArray(allAudits) ? allAudits : []).filter(a => String(a.entity_id) === cid);
         const meaningfulAudits = audits.filter(a => !['create'].includes(a.action));
         const deals = (Array.isArray(allDeals) ? allDeals : []).filter(d => String(d.contact_id) === cid);

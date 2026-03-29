@@ -376,7 +376,7 @@ function BulkSendModal({ template, onClose, onSend, isRTL, isDark }) {
   // Get contacts from localStorage
   const allContacts = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem('platform_contacts') || '[]')
+      return []
         .filter(c => c.phone && !c.is_blacklisted)
         .slice(0, 200);
     } catch { return []; }

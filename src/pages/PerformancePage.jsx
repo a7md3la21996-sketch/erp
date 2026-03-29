@@ -191,15 +191,7 @@ export default function PerformancePage() {
   }
 
   // ── Load real CRM data from services ──
-  const [crmData, setCrmData] = useState(() => {
-    // Initialize from localStorage as immediate fallback
-    try {
-      const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
-      const acts = JSON.parse(localStorage.getItem('platform_activities') || '[]');
-      return buildCrmMap(opps, acts, period);
-    } catch { /* ignore */ }
-    return {};
-  });
+  const [crmData, setCrmData] = useState({});
 
   useEffect(() => {
     let cancelled = false;

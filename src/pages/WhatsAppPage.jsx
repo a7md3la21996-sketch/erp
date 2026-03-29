@@ -34,7 +34,7 @@ function formatTime(dateStr, isRTL) {
 }
 
 function loadContacts() {
-  try { return JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch { return []; }
+  return [];
 }
 
 const STATUS_ICONS = {

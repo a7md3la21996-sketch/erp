@@ -25,11 +25,11 @@ function relativeTime(dateStr, isRTL) {
 }
 
 function loadContacts() {
-  try { return JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch { return []; }
+  return [];
 }
 
 function loadOpportunities() {
-  try { return JSON.parse(localStorage.getItem('platform_opportunities') || '[]'); } catch { return []; }
+  return [];
 }
 
 // ── Folder Config ──────────────────────────────────────────────

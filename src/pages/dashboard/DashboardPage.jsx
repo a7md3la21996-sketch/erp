@@ -573,21 +573,8 @@ function MyDayWidget({ lang, isRTL, isDark, userId, navigate }) {
     return getTodayInstances().filter(i => i.status === 'pending');
   }, []);
 
-  const overdueTasks = useMemo(() => {
-    try {
-      const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
-      const now = new Date();
-      return opps.filter(o => o.expected_close_date && new Date(o.expected_close_date) < now && !['closed_won','closed_lost'].includes(o.stage));
-    } catch { return []; }
-  }, []);
-
-  const newLeadsToday = useMemo(() => {
-    try {
-      const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
-      const today = new Date().toISOString().slice(0, 10);
-      return contacts.filter(c => c.created_at?.startsWith(today));
-    } catch { return []; }
-  }, []);
+  const overdueTasks = useMemo(() => [], []);
+  const newLeadsToday = useMemo(() => [], []);
 
   const sections = [
     { icon: Bell, label: lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups", count: reminders.length, color: '#4A7AAB', link: '/contacts', loading },

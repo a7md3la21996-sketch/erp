@@ -87,10 +87,6 @@ function loadUnits() {
 }
 
 function loadProjects() {
-  try {
-    const saved = localStorage.getItem('platform_projects');
-    if (saved) return JSON.parse(saved);
-  } catch { /* ignore */ }
   return [];
 }
 

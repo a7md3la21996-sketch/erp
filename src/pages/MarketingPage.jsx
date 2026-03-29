@@ -123,7 +123,7 @@ export default function MarketingPage() {
     Promise.all([
       fetchCampaigns(),
       fetchContacts({ role: profile?.role, userId: profile?.id }).catch(() => {
-        try { return JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch { return []; }
+        return [];
       }),
       fetchOpportunities({ role: profile?.role, userId: profile?.id }).catch(() => []),
       getWonDeals().catch(() => []),

@@ -345,10 +345,7 @@ export default function OpportunitiesPage() {
     agentsData.forEach(a => { agentMap[a.id] = a; });
     const projMap = {};
     projectsData.forEach(p => { projMap[p.id] = p; });
-    let localContacts = [];
-    try { localContacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]'); } catch {}
     const contactMap = {};
-    localContacts.forEach(c => { contactMap[c.id] = c; });
 
     const enriched = oppsData.map(o => ({
       ...o,

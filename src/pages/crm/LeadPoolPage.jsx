@@ -34,7 +34,7 @@ const SLA_MINUTES = { google: 15, tiktok: 20, meta: 30, organic: 60, cold_call: 
 // ── Sales Team (loaded from localStorage) ──────────────────────
 function loadAgents() {
   try {
-    const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+    const contacts = [];
     const names = new Set();
     const agents = [];
     contacts.forEach(c => {
@@ -51,7 +51,7 @@ function loadAgents() {
 // ── Pool Data (localStorage) ──────────────────────────────────────────────
 function loadLeads() {
   try {
-    return JSON.parse(localStorage.getItem('platform_lead_pool') || '[]');
+    return [];
   } catch { return []; }
 }
 
