@@ -71,7 +71,53 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50 }
     .slice(0, limit);
 }
 
-export async function createActivity({ type, notes, entityType, entityId, dept, userId, status = 'completed', scheduled_date }) {
+export async function createActivity({ type, notes, entityType, entityId, dept, userId, status = 'completed', scheduled_date, scheduledActivityId }) {
+  // Activity Cycle: if completing a scheduled activity, update it instead of creating duplicate
+  if (status === 'completed' && !scheduledActivityId && entityId) {
+    try {
+      const { data: existing } = await supabase
+        .from('activities')
+        .select('id')
+        .eq('type', type)
+        .eq(`${entityType}_id`, entityId)
+        .eq('status', 'scheduled')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (existing) scheduledActivityId = existing.id;
+    } catch {}
+  }
+
+  if (scheduledActivityId) {
+    // Update existing scheduled activity → completed (no duplicate)
+    try {
+      const { data, error } = await supabase
+        .from('activities')
+        .update({ status: 'completed', notes, completed_at: new Date().toISOString() })
+        .eq('id', scheduledActivityId)
+        .select('*')
+        .single();
+      if (!error && data) {
+        if (entityType === 'contact' && entityId) {
+          const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15, note: 2 };
+          const scoreIncrement = SCORE_MAP[type] || 2;
+          try {
+            const { data: contact } = await supabase.from('contacts').select('lead_score, first_response_at').eq('id', entityId).maybeSingle();
+            const newScore = Math.min((contact?.lead_score || 0) + scoreIncrement, 100);
+            const updates = { last_activity_at: new Date().toISOString(), lead_score: newScore };
+            if (!contact?.first_response_at && ['call', 'whatsapp', 'email', 'meeting'].includes(type)) {
+              updates.first_response_at = new Date().toISOString();
+            }
+            await supabase.from('contacts').update(updates).eq('id', entityId);
+          } catch {
+            await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
+          }
+        }
+        return data;
+      }
+    } catch {}
+  }
+
   const payload = {
     type, notes, dept,
     entity_type: entityType,

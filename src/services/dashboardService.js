@@ -76,7 +76,7 @@ export async function fetchContactStats() {
     monthStart.setHours(0, 0, 0, 0);
 
     // Only count actual leads/qualified/nurturing — exclude suppliers, developers, partners, applicants
-    const LEAD_TYPES = ['lead', 'cold', 'qualified', 'nurturing', 'converted', 'customer'];
+    const LEAD_TYPES = ['lead', 'cold', 'qualified', 'nurturing', 'converted', 'customer', 'repeat_buyer', 'referrer', 'vip'];
     const leads = localContacts.filter(c => LEAD_TYPES.includes(c.contact_type) || c.department === 'sales');
     const totalLeads = leads.length;
 
