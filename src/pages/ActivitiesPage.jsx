@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import useDebouncedSearch from '../hooks/useDebouncedSearch';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -61,7 +62,7 @@ export default function ActivitiesPage() {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [smartFilters, setSmartFilters] = useState([]);
-  const [search, setSearch]         = useState('');
+  const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [adding, setAdding]         = useState(false);
   const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'crm' });
   const [saving, setSaving]         = useState(false);

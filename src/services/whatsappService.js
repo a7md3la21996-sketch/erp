@@ -134,7 +134,7 @@ export async function logMessage({ contact_id, contact_name, contact_phone, dire
 
 export async function getMessages(filters = {}) {
   try {
-    let query = supabase.from('whatsapp_messages').select('*');
+    let query = supabase.from('whatsapp_messages').select('id, contact_id, contact_name, contact_phone, direction, message, type, status, sent_by, created_at');
     if (filters.direction) query = query.eq('direction', filters.direction);
     if (filters.contact_id) query = query.eq('contact_id', String(filters.contact_id));
     query = query.order('sent_at', { ascending: false });
@@ -169,7 +169,7 @@ export async function getMessages(filters = {}) {
 
 export async function getMessagesByContact(contactId) {
   try {
-    const { data, error } = await supabase.from('whatsapp_messages').select('*').eq('contact_id', String(contactId)).order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('whatsapp_messages').select('id, contact_id, contact_name, contact_phone, direction, message, type, status, sent_by, created_at').eq('contact_id', String(contactId)).order('sent_at', { ascending: false });
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -180,7 +180,7 @@ export async function getMessagesByContact(contactId) {
 
 export async function getConversation(contactId) {
   try {
-    const { data, error } = await supabase.from('whatsapp_messages').select('*').eq('contact_id', String(contactId)).order('sent_at', { ascending: true });
+    const { data, error } = await supabase.from('whatsapp_messages').select('id, contact_id, contact_name, contact_phone, direction, message, type, status, sent_by, created_at').eq('contact_id', String(contactId)).order('sent_at', { ascending: true });
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -193,7 +193,7 @@ export async function getConversation(contactId) {
 
 export async function getRecentConversations() {
   try {
-    const { data, error } = await supabase.from('whatsapp_messages').select('*').order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('whatsapp_messages').select('id, contact_id, contact_name, contact_phone, direction, message, type, status, sent_by, created_at').order('sent_at', { ascending: false });
     if (error) throw error;
     const list = data || [];
     return _buildConversations(list);

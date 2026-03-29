@@ -1,0 +1,28 @@
+{
+  "statuses": {
+    "146": "Resale",
+    "69": "Interested",
+    "136": "Pending interest clarification",
+    "121": "Interested",
+    "71": "Interested",
+    "70": "Interested",
+    "129": "Interested",
+    "131": "Trying to Reach",
+    "119": "Interested",
+    "137": "Reservation & Done Deal"
+  },
+  "sources": {
+    "92": "Google Ads",
+    "125": "Platform Website",
+    "93": "Facebook Campaign",
+    "91": "Hotline",
+    "103": "Web Form",
+    "130": "Tiktok",
+    "90": "Employee Referral"
+  },
+  "ratings": {
+    "84": "Warm",
+    "82": "None",
+    "83": "Hot"
+  }
+}

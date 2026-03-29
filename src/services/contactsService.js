@@ -3,6 +3,16 @@ import { logCreate, logUpdate } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
 import { reportError } from '../utils/errorReporter';
 
+// ── Module-level localStorage cache (parse once, not 13 times) ─────────────
+let _contactsCache = null;
+let _contactsCacheTs = 0;
+function getCachedContacts() {
+  if (_contactsCache && Date.now() - _contactsCacheTs < 15000) return _contactsCache;
+  try { _contactsCache = getCachedContacts(); _contactsCacheTs = Date.now(); } catch { _contactsCache = []; }
+  return _contactsCache;
+}
+function invalidateContactsCache() { _contactsCache = null; _contactsCacheTs = 0; }
+
 // ── Assignment History ─────────────────────────────────────────────────────
 const ASSIGN_HISTORY_KEY = 'platform_assignment_history';
 
@@ -97,7 +107,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
   } catch (err) { reportError('contactsService', 'query', err);
     // Fallback to localStorage when Supabase is unreachable
     try {
-      const cached = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      const cached = getCachedContacts();
       // Enrich with opportunities from localStorage
       const allOpps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
       if (allOpps.length) {
@@ -146,9 +156,9 @@ export async function createContact(contactData) {
     const tempId = 'temp_' + Date.now();
     const offlineContact = { ...sanitized, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };
     try {
-      const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      const all = getCachedContacts();
       all.unshift(offlineContact);
-      localStorage.setItem('platform_contacts', JSON.stringify(all));
+      invalidateContactsCache(); localStorage.setItem('platform_contacts', JSON.stringify(all));
     } catch { /* ignore quota */ }
     enqueue('contact', 'create', offlineContact);
     return offlineContact;
@@ -171,11 +181,11 @@ export async function updateContact(id, updates) {
     return data;
   } catch (err) { reportError('contactsService', 'query', err);
     // Fallback: update in localStorage and enqueue for retry
-    const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+    const all = getCachedContacts();
     const idx = all.findIndex(c => String(c.id) === String(id));
     if (idx > -1) {
       Object.assign(all[idx], updates, { updated_at: new Date().toISOString() });
-      localStorage.setItem('platform_contacts', JSON.stringify(all));
+      invalidateContactsCache(); localStorage.setItem('platform_contacts', JSON.stringify(all));
     }
     enqueue('contact', 'update', { id, ...cleanUpdates });
     return { id, ...updates };
@@ -201,9 +211,9 @@ export async function deleteContact(id) {
     if (error) throw error;
   } catch (err) { reportError('contactsService', 'query', err);
     // Fallback: remove from localStorage and enqueue for retry
-    const all = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+    const all = getCachedContacts();
     const filtered = all.filter(c => String(c.id) !== String(id));
-    localStorage.setItem('platform_contacts', JSON.stringify(filtered));
+    invalidateContactsCache(); localStorage.setItem('platform_contacts', JSON.stringify(filtered));
     // Also clean local opportunities
     try {
       const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
@@ -323,11 +333,11 @@ export async function createActivity(activityData) {
       }
     }
     if (activityData.contact_id) {
-      const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+      const contacts = getCachedContacts();
       const idx = contacts.findIndex(c => String(c.id) === String(activityData.contact_id));
       if (idx > -1) {
         contacts[idx].last_activity_at = new Date().toISOString();
-        try { localStorage.setItem('platform_contacts', JSON.stringify(contacts)); } catch { /* ignore quota */ }
+        try { invalidateContactsCache(); localStorage.setItem('platform_contacts', JSON.stringify(contacts)); } catch { /* ignore quota */ }
       }
     }
   } catch { /* ignore */ }
