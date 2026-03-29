@@ -159,7 +159,7 @@ export async function createAnnouncement({ title, titleAr, body, bodyAr, categor
   try {
     const { data, error } = await supabase
       .from('announcements')
-      .insert([announcement])
+      .insert([stripInternalFields(announcement)])
       .select('*')
       .single();
     if (error) throw error;

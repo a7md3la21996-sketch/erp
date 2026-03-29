@@ -581,8 +581,9 @@ export default function OpportunitiesPage() {
           });
         }
       }
-      if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
-        setDealWizardOpp({ ...opp, stage: toStage });
+      if (opp && (opp.contacts?.department || 'sales') === 'sales') {
+        const dealExists = await dealExistsForOpportunity(opp.id);
+        if (!dealExists) setDealWizardOpp({ ...opp, stage: toStage });
       }
     }
   };
@@ -698,8 +699,9 @@ export default function OpportunitiesPage() {
         });
       }
       const opp = opps.find(o => o.id === oppId);
-      if (opp && (opp.contacts?.department || 'sales') === 'sales' && !dealExistsForOpportunity(opp.id)) {
-        setDealWizardOpp({ ...opp, ...result });
+      if (opp && (opp.contacts?.department || 'sales') === 'sales') {
+        const dealExists = await dealExistsForOpportunity(opp.id);
+        if (!dealExists) setDealWizardOpp({ ...opp, ...result });
       }
     }
     setActionLoading(false);

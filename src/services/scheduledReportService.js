@@ -1,4 +1,5 @@
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 /**
  * Scheduled Report Service — localStorage-based with Supabase sync
  * Key: platform_scheduled_reports
@@ -178,7 +179,7 @@ export async function createSchedule(data) {
   try {
     const { error } = await supabase
       .from('scheduled_reports')
-      .insert([schedule]);
+      .insert([stripInternalFields(schedule)]);
     if (error) throw error;
   } catch (err) { reportError('scheduledReportService', 'query', err);
     // localStorage already saved
@@ -222,9 +223,9 @@ export async function updateSchedule(id, updates) {
   try {
     const { error } = await supabase
       .from('scheduled_reports')
-      .update(updates.frequency || updates.dayOfWeek !== undefined || updates.dayOfMonth !== undefined || updates.time
+      .update(stripInternalFields(updates.frequency || updates.dayOfWeek !== undefined || updates.dayOfMonth !== undefined || updates.time
         ? { ...updates, nextRun: updated.nextRun }
-        : updates)
+        : updates))
       .eq('id', id);
     if (error) throw error;
   } catch (err) { reportError('scheduledReportService', 'query', err);

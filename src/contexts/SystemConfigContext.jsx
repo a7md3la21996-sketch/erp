@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useMemo, useEffect } from 'react';
-import { loadConfig, saveSection, resetConfig } from '../services/systemConfigService';
+import { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
+import { loadConfig, loadConfigFromServer, saveSection, resetConfig } from '../services/systemConfigService';
 import { supabase } from '../lib/supabase';
 
 const SystemConfigContext = createContext(null);
@@ -7,7 +7,17 @@ const SystemConfigContext = createContext(null);
 export function SystemConfigProvider({ children }) {
   const [config, setConfig] = useState(() => loadConfig());
 
-  const reloadConfig = () => setConfig(loadConfig());
+  const reloadConfig = useCallback(() => setConfig(loadConfig()), []);
+
+  // Reload from Supabase (used when realtime change detected from another user)
+  const reloadFromServer = useCallback(async () => {
+    try {
+      const serverConfig = await loadConfigFromServer();
+      setConfig(serverConfig);
+    } catch {
+      reloadConfig(); // fallback to localStorage
+    }
+  }, [reloadConfig]);
 
   const updateSection = (key, data) => {
     saveSection(key, data);
@@ -19,17 +29,20 @@ export function SystemConfigProvider({ children }) {
     reloadConfig();
   };
 
+  // Load from Supabase on mount
+  useEffect(() => { reloadFromServer(); }, [reloadFromServer]);
+
   // Subscribe to realtime changes on the system_config table
   useEffect(() => {
     const channel = supabase
       .channel('system_config_changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'system_config' }, () => {
-        reloadConfig();
+        reloadFromServer();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [reloadFromServer]);
 
   // Helper functions for backward compatibility
   const getType = (key) => config.contactTypes.find(t => t.key === key);

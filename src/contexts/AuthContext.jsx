@@ -76,12 +76,12 @@ export function AuthProvider({ children }) {
               setProfile(profileData);
               setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
             } catch (profileErr) {
-              console.error('[Auth] Profile fetch failed:', profileErr.message);
-              // User exists in auth but not in users table — create minimal profile
-              const fallback = { id: session.user.id, email: session.user.email, role: 'sales_agent', full_name_ar: session.user.email, full_name_en: session.user.email };
-              setUser({ id: session.user.id, email: session.user.email });
-              setProfile(fallback);
-              setPermissions(ROLE_PERMISSIONS['sales_agent'] || []);
+              console.error('[Auth] Profile fetch failed — no user record in users table. Signing out.', profileErr.message);
+              // User exists in auth but not in users table — sign out for safety
+              await supabase.auth.signOut();
+              setUser(null);
+              setProfile(null);
+              setPermissions([]);
             }
           }
         } catch (err) {

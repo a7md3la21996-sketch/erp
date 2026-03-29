@@ -205,21 +205,16 @@ export async function sendSMS(phone, message, templateId = null, templateName = 
     }
   }
 
-  // Create notification in localStorage
+  // Create notification via service
   try {
-    const notifs = JSON.parse(localStorage.getItem('platform_notifications') || '[]');
-    notifs.unshift({
-      id: uid(),
+    const { createNotification } = await import('./notificationsService');
+    createNotification({
       type: 'sms_sent',
       title: 'SMS Sent',
       titleAr: 'تم إرسال الرسالة',
       message: `SMS sent to ${phone}`,
       messageAr: `تم إرسال رسالة إلى ${phone}`,
-      read: false,
-      created_at: new Date().toISOString(),
     });
-    if (notifs.length > 200) notifs.length = 200;
-    localStorage.setItem('platform_notifications', JSON.stringify(notifs));
   } catch { /* ignore */ }
 
   // Sync SMS log entry to Supabase

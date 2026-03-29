@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense } from 'react';
+import { Component, lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -18,71 +18,88 @@ import ErrorBoundary from './components/ErrorBoundary';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import './i18n';
 
+// ── Chunk-load retry: if a lazy chunk 404s after deploy, reload the page ────
+function lazyRetry(importFn) {
+  return lazy(() =>
+    importFn().catch((err) => {
+      // Only auto-reload once to avoid infinite loops
+      const reloaded = sessionStorage.getItem('chunk_reload');
+      if (!reloaded) {
+        sessionStorage.setItem('chunk_reload', '1');
+        window.location.reload();
+        return new Promise(() => {}); // never resolves — page is reloading
+      }
+      sessionStorage.removeItem('chunk_reload');
+      throw err; // let ErrorBoundary handle it
+    })
+  );
+}
+
 // Lazy-loaded pages
-const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
-const ContactsPage = lazy(() => import('./pages/ContactsPage'));
-const OpportunitiesPage = lazy(() => import('./pages/crm/OpportunitiesPage'));
-const LeadPoolPage = lazy(() => import('./pages/crm/LeadPoolPage'));
-const ActivitiesPage = lazy(() => import('./pages/ActivitiesPage'));
-const TasksPage = lazy(() => import('./pages/TasksPage'));
-const PerformancePage = lazy(() => import('./pages/PerformancePage'));
-const FinancePage = lazy(() => import('./pages/finance/FinancePage'));
-const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
-const EmployeesPage = lazy(() => import('./pages/hr/EmployeesPage'));
-const HRPoliciesPage = lazy(() => import('./pages/hr/HRPoliciesPage'));
-const AttendancePage = lazy(() => import('./pages/hr/AttendancePage'));
-const LeavePage = lazy(() => import('./pages/hr/LeavePage'));
-const PayrollPage = lazy(() => import('./pages/hr/PayrollPage'));
-const CompetenciesPage = lazy(() => import('./pages/hr/CompetenciesPage'));
-const RecruitmentPage = lazy(() => import('./pages/hr/RecruitmentPage'));
-const DisciplinaryPage = lazy(() => import('./pages/hr/DisciplinaryPage'));
-const TrainingPage = lazy(() => import('./pages/hr/TrainingPage'));
-const SelfServicePage = lazy(() => import('./pages/hr/SelfServicePage'));
-const AssetsPage = lazy(() => import('./pages/hr/AssetsPage'));
-const OnboardingPage = lazy(() => import('./pages/hr/OnboardingPage'));
-const ExpenseClaimsPage = lazy(() => import('./pages/hr/ExpenseClaimsPage'));
-const OperationsPage = lazy(() => import('./pages/operations/OperationsPage'));
-const AuditLogPage = lazy(() => import('./pages/settings/AuditLogPage'));
-const CalendarPage = lazy(() => import('./pages/CalendarPage'));
-const ReportsPage = lazy(() => import('./pages/ReportsPage'));
-const MarketingPage = lazy(() => import('./pages/MarketingPage'));
-const SystemConfigPage = lazy(() => import('./pages/settings/SystemConfigPage'));
-const UserTrackingPage = lazy(() => import('./pages/settings/UserTrackingPage'));
-const DealsPage = lazy(() => import('./pages/sales/DealsPage'));
-const CommissionsPage = lazy(() => import('./pages/sales/CommissionsPage'));
-const SalesForecastPage = lazy(() => import('./pages/sales/SalesForecastPage'));
-const ProjectsPage = lazy(() => import('./pages/real-estate/ProjectsPage'));
-const UnitsPage = lazy(() => import('./pages/real-estate/UnitsPage'));
-const UsersPage = lazy(() => import('./pages/settings/UsersPage'));
-const TriggersPage = lazy(() => import('./pages/settings/TriggersPage'));
-const CustomFieldsPage = lazy(() => import('./pages/settings/CustomFieldsPage'));
-const BackupPage = lazy(() => import('./pages/settings/BackupPage'));
-const ScheduledReportsPage = lazy(() => import('./pages/settings/ScheduledReportsPage'));
-const SMSTemplatesPage = lazy(() => import('./pages/settings/SMSTemplatesPage'));
-const PrintSettingsPage = lazy(() => import('./pages/settings/PrintSettingsPage'));
-const ChatInboxPage = lazy(() => import('./pages/ChatInboxPage'));
-const EmailPage = lazy(() => import('./pages/EmailPage'));
-const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage'));
-const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
-const ChartBuilderPage = lazy(() => import('./pages/ChartBuilderPage'));
-const AnnouncementsPage = lazy(() => import('./pages/AnnouncementsPage'));
-const GoalsPage = lazy(() => import('./pages/GoalsPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const HeatmapPage = lazy(() => import('./pages/HeatmapPage'));
-const SecurityPage = lazy(() => import('./pages/settings/SecurityPage'));
-const WorkflowBuilderPage = lazy(() => import('./pages/settings/WorkflowBuilderPage'));
-const SystemHealthPage = lazy(() => import('./pages/settings/SystemHealthPage'));
-const APIDocsPage = lazy(() => import('./pages/settings/APIDocsPage'));
-const ExportImportHistoryPage = lazy(() => import('./pages/settings/ExportImportHistoryPage'));
-const ChangelogPage = lazy(() => import('./pages/ChangelogPage'));
-const RolesPage = lazy(() => import('./pages/settings/RolesPage'));
-const SLAManagementPage = lazy(() => import('./pages/settings/SLAManagementPage'));
-const AdsIntegrationPage = lazy(() => import('./pages/settings/AdsIntegrationPage'));
-const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
-const HelpCenterPage = lazy(() => import('./pages/HelpCenterPage'));
-const KnowledgeBasePage = lazy(() => import('./pages/KnowledgeBasePage'));
-const ComparisonReportsPage = lazy(() => import('./pages/ComparisonReportsPage'));
-const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'));
+const DashboardPage = lazyRetry(() => import('./pages/dashboard/DashboardPage'));
+const ContactsPage = lazyRetry(() => import('./pages/ContactsPage'));
+const OpportunitiesPage = lazyRetry(() => import('./pages/crm/OpportunitiesPage'));
+const LeadPoolPage = lazyRetry(() => import('./pages/crm/LeadPoolPage'));
+const ActivitiesPage = lazyRetry(() => import('./pages/ActivitiesPage'));
+const TasksPage = lazyRetry(() => import('./pages/TasksPage'));
+const PerformancePage = lazyRetry(() => import('./pages/PerformancePage'));
+const FinancePage = lazyRetry(() => import('./pages/finance/FinancePage'));
+const SettingsPage = lazyRetry(() => import('./pages/settings/SettingsPage'));
+const EmployeesPage = lazyRetry(() => import('./pages/hr/EmployeesPage'));
+const HRPoliciesPage = lazyRetry(() => import('./pages/hr/HRPoliciesPage'));
+const AttendancePage = lazyRetry(() => import('./pages/hr/AttendancePage'));
+const LeavePage = lazyRetry(() => import('./pages/hr/LeavePage'));
+const PayrollPage = lazyRetry(() => import('./pages/hr/PayrollPage'));
+const CompetenciesPage = lazyRetry(() => import('./pages/hr/CompetenciesPage'));
+const RecruitmentPage = lazyRetry(() => import('./pages/hr/RecruitmentPage'));
+const DisciplinaryPage = lazyRetry(() => import('./pages/hr/DisciplinaryPage'));
+const TrainingPage = lazyRetry(() => import('./pages/hr/TrainingPage'));
+const SelfServicePage = lazyRetry(() => import('./pages/hr/SelfServicePage'));
+const AssetsPage = lazyRetry(() => import('./pages/hr/AssetsPage'));
+const OnboardingPage = lazyRetry(() => import('./pages/hr/OnboardingPage'));
+const ExpenseClaimsPage = lazyRetry(() => import('./pages/hr/ExpenseClaimsPage'));
+const OperationsPage = lazyRetry(() => import('./pages/operations/OperationsPage'));
+const AuditLogPage = lazyRetry(() => import('./pages/settings/AuditLogPage'));
+const CalendarPage = lazyRetry(() => import('./pages/CalendarPage'));
+const ReportsPage = lazyRetry(() => import('./pages/ReportsPage'));
+const MarketingPage = lazyRetry(() => import('./pages/MarketingPage'));
+const SystemConfigPage = lazyRetry(() => import('./pages/settings/SystemConfigPage'));
+const UserTrackingPage = lazyRetry(() => import('./pages/settings/UserTrackingPage'));
+const DealsPage = lazyRetry(() => import('./pages/sales/DealsPage'));
+const CommissionsPage = lazyRetry(() => import('./pages/sales/CommissionsPage'));
+const SalesForecastPage = lazyRetry(() => import('./pages/sales/SalesForecastPage'));
+const ProjectsPage = lazyRetry(() => import('./pages/real-estate/ProjectsPage'));
+const UnitsPage = lazyRetry(() => import('./pages/real-estate/UnitsPage'));
+const UsersPage = lazyRetry(() => import('./pages/settings/UsersPage'));
+const TriggersPage = lazyRetry(() => import('./pages/settings/TriggersPage'));
+const CustomFieldsPage = lazyRetry(() => import('./pages/settings/CustomFieldsPage'));
+const BackupPage = lazyRetry(() => import('./pages/settings/BackupPage'));
+const ScheduledReportsPage = lazyRetry(() => import('./pages/settings/ScheduledReportsPage'));
+const SMSTemplatesPage = lazyRetry(() => import('./pages/settings/SMSTemplatesPage'));
+const PrintSettingsPage = lazyRetry(() => import('./pages/settings/PrintSettingsPage'));
+const ChatInboxPage = lazyRetry(() => import('./pages/ChatInboxPage'));
+const EmailPage = lazyRetry(() => import('./pages/EmailPage'));
+const WhatsAppPage = lazyRetry(() => import('./pages/WhatsAppPage'));
+const AnalyticsPage = lazyRetry(() => import('./pages/AnalyticsPage'));
+const ChartBuilderPage = lazyRetry(() => import('./pages/ChartBuilderPage'));
+const AnnouncementsPage = lazyRetry(() => import('./pages/AnnouncementsPage'));
+const GoalsPage = lazyRetry(() => import('./pages/GoalsPage'));
+const ProfilePage = lazyRetry(() => import('./pages/ProfilePage'));
+const HeatmapPage = lazyRetry(() => import('./pages/HeatmapPage'));
+const SecurityPage = lazyRetry(() => import('./pages/settings/SecurityPage'));
+const WorkflowBuilderPage = lazyRetry(() => import('./pages/settings/WorkflowBuilderPage'));
+const SystemHealthPage = lazyRetry(() => import('./pages/settings/SystemHealthPage'));
+const APIDocsPage = lazyRetry(() => import('./pages/settings/APIDocsPage'));
+const ExportImportHistoryPage = lazyRetry(() => import('./pages/settings/ExportImportHistoryPage'));
+const ChangelogPage = lazyRetry(() => import('./pages/ChangelogPage'));
+const RolesPage = lazyRetry(() => import('./pages/settings/RolesPage'));
+const SLAManagementPage = lazyRetry(() => import('./pages/settings/SLAManagementPage'));
+const AdsIntegrationPage = lazyRetry(() => import('./pages/settings/AdsIntegrationPage'));
+const NotificationsPage = lazyRetry(() => import('./pages/NotificationsPage'));
+const HelpCenterPage = lazyRetry(() => import('./pages/HelpCenterPage'));
+const KnowledgeBasePage = lazyRetry(() => import('./pages/KnowledgeBasePage'));
+const ComparisonReportsPage = lazyRetry(() => import('./pages/ComparisonReportsPage'));
+const ApprovalsPage = lazyRetry(() => import('./pages/ApprovalsPage'));
 
 
 function PageLoader() {

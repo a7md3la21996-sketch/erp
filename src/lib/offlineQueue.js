@@ -113,6 +113,18 @@ export async function processQueue(onProgress) {
   const queue = getQueue();
   if (queue.length === 0) return { success: 0, failed: 0 };
 
+  // Lock with a unique ID to prevent concurrent processing across tabs
+  const lockId = 'oq_lock_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  try {
+    const existingLock = localStorage.getItem('platform_queue_lock');
+    if (existingLock) {
+      const lockData = JSON.parse(existingLock);
+      // If lock is less than 60 seconds old, another tab is processing
+      if (Date.now() - lockData.ts < 60000) return { success: 0, failed: 0 };
+    }
+    localStorage.setItem('platform_queue_lock', JSON.stringify({ id: lockId, ts: Date.now() }));
+  } catch { /* proceed without lock */ }
+
   _processing = true;
   let success = 0;
   let skipped = 0;
@@ -150,6 +162,7 @@ export async function processQueue(onProgress) {
     }
   } finally {
     _processing = false;
+    try { localStorage.removeItem('platform_queue_lock'); } catch {}
   }
 
   return { success, failed: getQueue().length - skipped };

@@ -223,8 +223,8 @@ export default function ContactsPage() {
   const handleDelete = (id) => {
     const contact = contacts.find(c => c.id === id);
     // Check for linked opportunities/deals
-    const linkedOpps = (() => { try { return JSON.parse(localStorage.getItem('platform_opportunities') || '[]').filter(o => String(o.contact_id) === String(id)).length; } catch { return 0; } })();
-    const linkedDeals = (() => { try { return JSON.parse(localStorage.getItem('platform_won_deals') || '[]').filter(d => String(d.contact_id) === String(id)).length; } catch { return 0; } })();
+    const linkedOpps = 0;
+    const linkedDeals = 0;
     const warning = linkedOpps > 0 || linkedDeals > 0
       ? (isRTL
         ? `\n⚠️ تحذير: مرتبط بـ ${linkedOpps} فرصة و ${linkedDeals} صفقة — هيتم حذفهم كمان!`
@@ -283,12 +283,7 @@ export default function ContactsPage() {
       recordAssignment(c.id, { fromAgent: c.assigned_to_name, toAgent: agentName, assignedBy: assignedByName });
       notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', agentId: agentName, agentName, assignedBy: assignedByName });
     });
-    // Also propagate reassignment to linked opportunities
-    try {
-      const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
-      const updatedOpps = opps.map(o => idsToUpdate.includes(o.contact_id) ? { ...o, assigned_to_name: agentName } : o);
-      localStorage.setItem('platform_opportunities', JSON.stringify(updatedOpps));
-    } catch {}
+    // Opportunities reassignment is handled via Supabase in updateContact
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
     setSelectedIds([]);
     setBulkReassignModal(false);
@@ -384,18 +379,9 @@ export default function ContactsPage() {
         teamId: profile?.team_id,
         filters: {},
       });
-      if (data.length) {
-        setContacts(data);
-      } else {
-        throw new Error('no data');
-      }
+      setContacts(Array.isArray(data) ? data : []);
     } catch {
-      const cached = localStorage.getItem('platform_contacts');
-      if (cached) {
-        try { setContacts(JSON.parse(cached)); } catch { setContacts(MOCK); }
-      } else {
-        setContacts(MOCK);
-      }
+      setContacts([]);
     } finally {
       setLoading(false);
     }

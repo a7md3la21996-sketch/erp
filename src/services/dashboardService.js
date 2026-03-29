@@ -49,25 +49,9 @@ function _invalidateIfStale() {
   }
 }
 
-function getLocalContacts() {
-  if (!FEATURES.OFFLINE_MODE) return [];
-  _invalidateIfStale();
-  if (_cache.contacts) return _cache.contacts;
-  try { _cache.contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]'); _cache._ts = Date.now(); return _cache.contacts; } catch { return []; }
-}
-
-function getLocalOpportunities() {
-  if (!FEATURES.OFFLINE_MODE) return [];
-  _invalidateIfStale();
-  if (_cache.opps) return _cache.opps;
-  try { _cache.opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]'); _cache._ts = Date.now(); return _cache.opps; } catch { return []; }
-}
-
-function getLocalActivities() {
-  _invalidateIfStale();
-  if (_cache.activities) return _cache.activities;
-  try { _cache.activities = JSON.parse(localStorage.getItem('platform_activities') || '[]'); _cache._ts = Date.now(); return _cache.activities; } catch { return []; }
-}
+function getLocalContacts() { return []; }
+function getLocalOpportunities() { return []; }
+function getLocalActivities() { return []; }
 
 // ── Contacts KPIs ────────────────────────────────────────────────────────────
 export async function fetchContactStats() {

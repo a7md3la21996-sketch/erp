@@ -1,25 +1,6 @@
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
-const STORAGE_KEY = 'platform_sessions';
-const ACTIVE_SESSION_KEY = 'platform_active_session';
-
-function loadSessions() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { return []; }
-}
-
-function saveSessions(list) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-  } catch (e) {
-    // QuotaExceededError — trim to 250 and retry
-    if (e?.name === 'QuotaExceededError' || e?.code === 22) {
-      if (list.length > 250) list.length = 250;
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch { /* give up */ }
-    }
-  }
-}
-
 /**
  * Parse user agent to extract device info
  */
@@ -63,6 +44,9 @@ async function getIP() {
   }
 }
 
+// Track active session id in memory
+let _activeSessionId = null;
+
 /**
  * Log a new session on login
  */
@@ -87,20 +71,13 @@ export async function logSession(user) {
     is_active: true,
   };
 
-  // Save active session ref
-  localStorage.setItem(ACTIVE_SESSION_KEY, session.id);
+  _activeSessionId = session.id;
 
-  // Save to sessions list
-  const sessions = loadSessions();
-  sessions.unshift(session);
-  // Keep max 500 sessions
-  if (sessions.length > 500) sessions.length = 500;
-  saveSessions(sessions);
-
-  // Try Supabase
   try {
     await supabase.from('sessions').insert(session);
-  } catch {}
+  } catch (err) {
+    reportError('sessionService', 'startSession', err);
+  }
 
   return session;
 }
@@ -108,52 +85,51 @@ export async function logSession(user) {
 /**
  * Update last_active_at for current session (call periodically)
  */
-export function updateSessionActivity() {
-  const activeId = localStorage.getItem(ACTIVE_SESSION_KEY);
-  if (!activeId) return;
-  const sessions = loadSessions();
-  const idx = sessions.findIndex(s => s.id === activeId);
-  if (idx !== -1) {
-    sessions[idx].last_active_at = new Date().toISOString();
-    saveSessions(sessions);
-  }
+export async function updateSessionActivity() {
+  if (!_activeSessionId) return;
+  try {
+    await supabase.from('sessions').update({ last_active_at: new Date().toISOString() }).eq('id', _activeSessionId);
+  } catch (err) { reportError('sessionService', 'updateSessionActivity', err); }
 }
 
 /**
  * End current session on logout
  */
-export function endSession() {
-  const activeId = localStorage.getItem(ACTIVE_SESSION_KEY);
-  if (!activeId) return;
-  const sessions = loadSessions();
-  const idx = sessions.findIndex(s => s.id === activeId);
-  if (idx !== -1) {
-    sessions[idx].is_active = false;
-    sessions[idx].logout_at = new Date().toISOString();
-    saveSessions(sessions);
-  }
-  localStorage.removeItem(ACTIVE_SESSION_KEY);
+export async function endSession() {
+  if (!_activeSessionId) return;
+  try {
+    await supabase.from('sessions').update({ is_active: false, logout_at: new Date().toISOString() }).eq('id', _activeSessionId);
+  } catch (err) { reportError('sessionService', 'endSession', err); }
+  _activeSessionId = null;
 }
 
 /**
  * Get all sessions for a user
  */
-export function getUserSessions(userId) {
-  return loadSessions().filter(s => s.user_id === userId);
+export async function getUserSessions(userId) {
+  try {
+    const { data, error } = await supabase.from('sessions').select('*').eq('user_id', userId).order('login_at', { ascending: false });
+    if (error) { reportError('sessionService', 'getUserSessions', error); return []; }
+    return data || [];
+  } catch (err) { reportError('sessionService', 'getUserSessions', err); return []; }
 }
 
 /**
  * Get all sessions
  */
-export function getAllSessions() {
-  return loadSessions();
+export async function getAllSessions() {
+  try {
+    const { data, error } = await supabase.from('sessions').select('*').order('login_at', { ascending: false }).range(0, 499);
+    if (error) { reportError('sessionService', 'getAllSessions', error); return []; }
+    return data || [];
+  } catch (err) { reportError('sessionService', 'getAllSessions', err); return []; }
 }
 
 /**
  * Get session stats
  */
-export function getSessionStats() {
-  const sessions = loadSessions();
+export async function getSessionStats() {
+  const sessions = await getAllSessions();
   const today = new Date().toDateString();
   const todaySessions = sessions.filter(s => new Date(s.login_at).toDateString() === today);
   const activeSessions = sessions.filter(s => s.is_active);

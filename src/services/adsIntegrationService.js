@@ -26,7 +26,8 @@ export async function syncMetaCampaigns(config) {
   if (!config?.token || !config?.account_id) throw new Error('Meta Ads not configured');
 
   const response = await fetch(
-    `https://graph.facebook.com/v18.0/act_${config.account_id}/campaigns?fields=id,name,status,daily_budget,lifetime_budget,start_time,stop_time,objective&access_token=${config.token}`
+    `https://graph.facebook.com/v18.0/act_${encodeURIComponent(config.account_id)}/campaigns?fields=id,name,status,daily_budget,lifetime_budget,start_time,stop_time,objective`,
+    { headers: { Authorization: `Bearer ${config.token}` } }
   );
   if (!response.ok) throw new Error('Meta API error: ' + response.statusText);
   const { data } = await response.json();
@@ -38,7 +39,8 @@ export async function syncMetaInsights(config, campaignId, dateRange = 'last_30d
   if (!config?.token) throw new Error('Meta Ads not configured');
 
   const response = await fetch(
-    `https://graph.facebook.com/v18.0/${campaignId}/insights?fields=spend,impressions,clicks,actions,cost_per_action_type&date_preset=${dateRange}&access_token=${config.token}`
+    `https://graph.facebook.com/v18.0/${encodeURIComponent(campaignId)}/insights?fields=spend,impressions,clicks,actions,cost_per_action_type&date_preset=${encodeURIComponent(dateRange)}`,
+    { headers: { Authorization: `Bearer ${config.token}` } }
   );
   if (!response.ok) throw new Error('Meta API error');
   const { data } = await response.json();
@@ -71,10 +73,12 @@ export async function importCampaignsToERP(campaigns, platform) {
     synced_at: new Date().toISOString(),
   }));
 
-  // Save to localStorage and Supabase
-  const existing = JSON.parse(localStorage.getItem('platform_campaigns') || '[]');
-  const merged = [...existing.filter(e => !e.external_id || e.source !== platform), ...marketingCampaigns];
-  localStorage.setItem('platform_campaigns', JSON.stringify(merged));
+  // Save to Supabase
+  try {
+    for (const c of marketingCampaigns) {
+      await supabase.from('campaigns').upsert(c, { onConflict: 'id' });
+    }
+  } catch { /* best effort */ }
 
   return marketingCampaigns;
 }

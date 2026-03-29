@@ -167,15 +167,12 @@ export default function UsersPage() {
         .order('created_at', { ascending: false });
 
       if (error || !data || data.length === 0) {
-        // In mock mode also load any locally-created users
-        const local = JSON.parse(localStorage.getItem('platform_users') || '[]');
-        setUsers([...local, ...MOCK_USERS]);
+        setUsers([]);
       } else {
         setUsers(data);
       }
     } catch {
-      const local = JSON.parse(localStorage.getItem('platform_users') || '[]');
-      setUsers([...local, ...MOCK_USERS]);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -363,14 +360,6 @@ export default function UsersPage() {
           u.id === editingUser.id ? { ...u, ...updates } : u
         ));
 
-        // Also update localStorage users if present
-        const local = JSON.parse(localStorage.getItem('platform_users') || '[]');
-        const idx = local.findIndex(u => u.id === editingUser.id);
-        if (idx >= 0) {
-          local[idx] = { ...local[idx], ...updates };
-          localStorage.setItem('platform_users', JSON.stringify(local));
-        }
-
         toast.success(lang === 'ar' ? 'تم تحديث المستخدم بنجاح' : 'User updated successfully');
       } else {
         // ── Create user ──
@@ -412,26 +401,9 @@ export default function UsersPage() {
     }
   };
 
-  /* ── Save to localStorage (mock mode) ── */
+  /* ── Save to localStorage (deprecated — users must be created via Supabase auth) ── */
   const saveToLocalStorage = () => {
-    const local = JSON.parse(localStorage.getItem('platform_users') || '[]');
-    const newUser = {
-      id: crypto.randomUUID ? crypto.randomUUID() : `local_${Date.now()}`,
-      email: form.email,
-      name_ar: form.full_name_ar,
-      name_en: form.full_name_en,
-      full_name_ar: form.full_name_ar,
-      full_name_en: form.full_name_en,
-      role: form.role,
-      department: form.department,
-      team_id: form.team_id || null,
-      phone: form.phone || null,
-      status: 'active',
-      created_at: new Date().toISOString(),
-      last_login: null,
-    };
-    local.unshift(newUser);
-    localStorage.setItem('platform_users', JSON.stringify(local));
+    // No-op: users are managed through Supabase auth only
   };
 
   /* ── Update form field ── */

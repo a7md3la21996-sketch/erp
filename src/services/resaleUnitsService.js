@@ -1,16 +1,7 @@
 import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
-
-const STORAGE_KEY = 'platform_resale_units';
-
-function getLocal() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
-  catch { return []; }
-}
-function saveLocal(units) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(units)); } catch { /* quota */ }
-}
+import { enqueue } from '../lib/offlineQueue';
 
 export async function fetchUnitsByContact(contactId) {
   try {
@@ -21,8 +12,9 @@ export async function fetchUnitsByContact(contactId) {
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
-  } catch (err) { reportError('resaleUnitsService', 'query', err);
-    return getLocal().filter(u => u.contact_id === contactId);
+  } catch (err) {
+    reportError('resaleUnitsService', 'query', err);
+    return [];
   }
 }
 
@@ -34,8 +26,9 @@ export async function fetchAllUnits() {
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
-  } catch (err) { reportError('resaleUnitsService', 'query', err);
-    return getLocal();
+  } catch (err) {
+    reportError('resaleUnitsService', 'query', err);
+    return [];
   }
 }
 
@@ -55,10 +48,10 @@ export async function createUnit(unitData) {
       .single();
     if (error) throw error;
     return data;
-  } catch (err) { reportError('resaleUnitsService', 'query', err);
-    const all = getLocal();
-    all.unshift(unit);
-    saveLocal(all);
+  } catch (err) {
+    reportError('resaleUnitsService', 'createUnit', err);
+    unit._offline = true;
+    enqueue('resale_units', 'create', unit);
     return unit;
   }
 }
@@ -74,14 +67,8 @@ export async function updateUnit(id, updates) {
       .single();
     if (error) throw error;
     return data;
-  } catch (err) { reportError('resaleUnitsService', 'query', err);
-    const all = getLocal();
-    const idx = all.findIndex(u => u.id === id);
-    if (idx !== -1) {
-      all[idx] = { ...all[idx], ...updates, updated_at: now };
-      saveLocal(all);
-      return all[idx];
-    }
+  } catch (err) {
+    reportError('resaleUnitsService', 'query', err);
     return null;
   }
 }
@@ -93,8 +80,7 @@ export async function deleteUnit(id) {
       .delete()
       .eq('id', id);
     if (error) throw error;
-  } catch (err) { reportError('resaleUnitsService', 'query', err);
-    const all = getLocal().filter(u => u.id !== id);
-    saveLocal(all);
+  } catch (err) {
+    reportError('resaleUnitsService', 'query', err);
   }
 }

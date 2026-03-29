@@ -1,4 +1,5 @@
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 
 export async function fetchReminders({ userId, entityType, entityId, todayOnly = false } = {}) {
@@ -33,7 +34,7 @@ export async function createReminder({ entityType, entityId, entityName, dueAt, 
   try {
     const { data, error } = await supabase
       .from('reminders')
-      .insert([{ entity_type: entityType, entity_id: entityId, entity_name: entityName, due_at: dueAt, type, notes, assigned_to: assignedTo, is_done: false, created_at: new Date().toISOString() }])
+      .insert([stripInternalFields({ entity_type: entityType, entity_id: entityId, entity_name: entityName, due_at: dueAt, type, notes, assigned_to: assignedTo, is_done: false, created_at: new Date().toISOString() })])
       .select('*')
       .single();
     if (error) throw error;
@@ -68,7 +69,7 @@ export async function deleteReminder(id) {
 export async function updateReminder(id, updates) {
   try {
     const { data, error } = await supabase
-      .from('reminders').update(updates).eq('id', id).select('*').single();
+      .from('reminders').update(stripInternalFields(updates)).eq('id', id).select('*').single();
     if (error) throw error;
     return data;
   } catch (err) { reportError('remindersService', 'query', err);

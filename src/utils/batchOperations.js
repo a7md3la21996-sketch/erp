@@ -65,17 +65,19 @@ export async function batchUpdate(table, updates, chunkSize = 50) {
  * @returns {number} Count of deleted records
  */
 export async function batchDelete(table, ids, chunkSize = 100) {
-  if (!ids?.length) return 0;
-  let count = 0;
+  if (!ids?.length) return { success: 0, failed: 0, failedIds: [] };
+  let success = 0;
+  const failedIds = [];
   for (let i = 0; i < ids.length; i += chunkSize) {
     const chunk = ids.slice(i, i + chunkSize);
     try {
       const { error } = await supabase.from(table).delete().in('id', chunk);
       if (error) throw error;
-      count += chunk.length;
+      success += chunk.length;
     } catch (err) {
       reportError(`batchDelete.${table}`, `chunk ${Math.floor(i / chunkSize)}`, err);
+      failedIds.push(...chunk);
     }
   }
-  return count;
+  return { success, failed: failedIds.length, failedIds };
 }

@@ -44,7 +44,9 @@ export function createNotification(opts) {
     read: false,
     created_at: new Date().toISOString(),
   };
-  _create(opts).catch(() => {});
+  _create(opts).catch((err) => {
+    import('../utils/errorReporter').then(m => m.reportError('notificationsService', 'createNotification', err)).catch(() => {});
+  });
   // Dispatch event for real-time UI
   window.dispatchEvent(new CustomEvent('platform_notification', { detail: placeholder }));
   // Play notification sound
@@ -53,46 +55,21 @@ export function createNotification(opts) {
 }
 
 export function getNotifications(userId, { unreadOnly = false, limit = 50 } = {}) {
-  // Return cached sync result from localStorage for backward compat
-  try {
-    let list = JSON.parse(localStorage.getItem('platform_notifications') || '[]')
-      .filter(n => n.for_user_id === userId || n.for_user_id === 'all' || n.user_id === userId);
-    if (unreadOnly) list = list.filter(n => !n.read && !n.is_read);
-    return list.slice(0, limit);
-  } catch { return []; }
+  return _getAll({ unreadOnly, limit });
 }
 
 export function getUnreadCount(userId) {
-  try {
-    return JSON.parse(localStorage.getItem('platform_notifications') || '[]')
-      .filter(n => (n.for_user_id === userId || n.for_user_id === 'all' || n.user_id === userId) && !n.read && !n.is_read)
-      .length;
-  } catch { return 0; }
+  return _unread();
 }
 
 export function markAsRead(notificationId) {
   _read(notificationId).catch(() => {});
-  // Also update localStorage cache
-  try {
-    const list = JSON.parse(localStorage.getItem('platform_notifications') || '[]');
-    const idx = list.findIndex(n => n.id === notificationId);
-    if (idx !== -1) { list[idx].read = true; list[idx].is_read = true; localStorage.setItem('platform_notifications', JSON.stringify(list)); }
-  } catch {}
 }
 
 export function markAllAsRead(userId) {
   _readAll().catch(() => {});
-  try {
-    const list = JSON.parse(localStorage.getItem('platform_notifications') || '[]');
-    list.forEach(n => { if (n.for_user_id === userId || n.for_user_id === 'all' || n.user_id === userId) { n.read = true; n.is_read = true; } });
-    localStorage.setItem('platform_notifications', JSON.stringify(list));
-  } catch {}
 }
 
 export function deleteNotification(notificationId) {
   _del(notificationId).catch(() => {});
-  try {
-    const list = JSON.parse(localStorage.getItem('platform_notifications') || '[]').filter(n => n.id !== notificationId);
-    localStorage.setItem('platform_notifications', JSON.stringify(list));
-  } catch {}
 }

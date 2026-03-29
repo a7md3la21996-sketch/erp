@@ -1,31 +1,17 @@
 import supabase from '../lib/supabase';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import { logCreate, logUpdate } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
 import { reportError } from '../utils/errorReporter';
-import { FEATURES } from '../config/features';
-
-// ── Module-level localStorage cache (disabled when OFFLINE_MODE=false) ──────
-let _contactsCache = null;
-let _contactsCacheTs = 0;
-function getCachedContacts() {
-  if (!FEATURES.OFFLINE_MODE) return [];
-  if (_contactsCache && Date.now() - _contactsCacheTs < 15000) return _contactsCache;
-  try { _contactsCache = JSON.parse(localStorage.getItem('platform_contacts') || '[]'); _contactsCacheTs = Date.now(); } catch { _contactsCache = []; }
-  return _contactsCache;
-}
-function invalidateContactsCache() { _contactsCache = null; _contactsCacheTs = 0; }
 
 // ── Assignment History ─────────────────────────────────────────────────────
-const ASSIGN_HISTORY_KEY = 'platform_assignment_history';
 
-export function getAssignmentHistory(contactId) {
-  try {
-    const all = JSON.parse(localStorage.getItem(ASSIGN_HISTORY_KEY) || '{}');
-    return all[contactId] || [];
-  } catch { return []; }
+/** @deprecated Assignment history now comes from activities (type='reassignment') via fetchContactActivities */
+export function getAssignmentHistory() {
+  return [];
 }
 
-export function recordAssignment(contactId, { fromAgent, toAgent, assignedBy, notes = '' }) {
+export async function recordAssignment(contactId, { fromAgent, toAgent, assignedBy, notes = '' }) {
   const entry = {
     from: fromAgent || null,
     to: toAgent,
@@ -33,14 +19,7 @@ export function recordAssignment(contactId, { fromAgent, toAgent, assignedBy, no
     notes,
     at: new Date().toISOString(),
   };
-  // Save to localStorage
-  try {
-    const all = JSON.parse(localStorage.getItem(ASSIGN_HISTORY_KEY) || '{}');
-    if (!all[contactId]) all[contactId] = [];
-    all[contactId].push(entry);
-    localStorage.setItem(ASSIGN_HISTORY_KEY, JSON.stringify(all));
-  } catch {}
-  // Persist to Supabase (non-blocking)
+  // Persist to Supabase (fire-and-forget)
   supabase.from('activities').insert([{
     type: 'reassignment',
     entity_type: 'contact',
@@ -49,7 +28,7 @@ export function recordAssignment(contactId, { fromAgent, toAgent, assignedBy, no
     user_id: null,
     status: 'completed',
     created_at: entry.at,
-  }]).then(() => {}).catch(() => {});
+  }]).then(() => {}).catch((err) => { reportError('contactsService', 'recordAssignment', err); });
   return entry;
 }
 
@@ -73,8 +52,10 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     }
 
     if (filters.search) {
-      const s = filters.search.replace(/[%_]/g, '');
-      query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`);
+      const s = filters.search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
+      if (s.length > 0) {
+        query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`);
+      }
     }
     if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
     if (filters.source) query = query.eq('source', filters.source);
@@ -97,31 +78,27 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       return { data: data || [], count: count || 0 };
     }
 
-    const { data, error } = await query.range(0, 499); // max 500 per fetch
-    if (error) throw error;
+    // Fetch all contacts in batches of 1000 (Supabase max per request)
+    const allData = [];
+    let from = 0;
+    const BATCH = 1000;
+    while (true) {
+      const { data: batch, error: batchErr } = await query.range(from, from + BATCH - 1);
+      if (batchErr) throw batchErr;
+      if (!batch || batch.length === 0) break;
+      allData.push(...batch);
+      if (batch.length < BATCH) break; // last batch
+      from += BATCH;
+    }
     // Ensure array fields are never null (prevents .map() crashes)
-    (data || []).forEach(c => {
+    allData.forEach(c => {
       if (!Array.isArray(c.campaign_interactions)) c.campaign_interactions = [];
       if (!Array.isArray(c.extra_phones)) c.extra_phones = [];
     });
-    return data || [];
-  } catch (err) { reportError('contactsService', 'query', err);
-    // Fallback to localStorage when Supabase is unreachable
-    try {
-      const cached = getCachedContacts();
-      // Enrich with opportunities from localStorage
-      const allOpps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
-      if (allOpps.length) {
-        const oppsByContact = {};
-        allOpps.forEach(o => {
-          if (!o.contact_id) return;
-          if (!oppsByContact[o.contact_id]) oppsByContact[o.contact_id] = [];
-          oppsByContact[o.contact_id].push({ id: o.id, stage: o.stage, assigned_to: o.assigned_to, assigned_to_name: o.assigned_to_name, priority: o.priority, users: o.users || null });
-        });
-        cached.forEach(c => { c.opportunities = oppsByContact[c.id] || []; });
-      }
-      return isServerPaginated ? { data: cached.slice(0, 1000), count: cached.length } : cached.slice(0, 1000);
-    } catch { return isServerPaginated ? { data: [], count: 0 } : []; }
+    return allData;
+  } catch (err) {
+    reportError('contactsService', 'query', err);
+    return isServerPaginated ? { data: [], count: 0 } : [];
   }
 }
 
@@ -137,7 +114,7 @@ export async function createContact(contactData) {
     throw new Error('Department is required');
   }
   // Sanitize string fields to prevent XSS + remove internal fields
-  const sanitize = (v) => typeof v === 'string' ? v.replace(/<[^>]*>/g, '').trim() : v;
+  const sanitize = (v) => typeof v === 'string' ? v.replace(/<[^>]*>|javascript\s*:|on\w+\s*=|data\s*:/gi, '').trim() : v;
   const INTERNAL_FIELDS = ['_customFieldValues', '_offline', '_campaign_count', '_country', '_opp_count', '_aging_level', 'countryCode', 'country'];
   const sanitized = {};
   for (const [k, v] of Object.entries(contactData)) {
@@ -148,7 +125,7 @@ export async function createContact(contactData) {
   try {
     const { data, error } = await supabase
       .from('contacts')
-      .insert([{ ...sanitized, last_activity_at: new Date().toISOString() }])
+      .insert([stripInternalFields({ ...sanitized, last_activity_at: new Date().toISOString() })])
       .select('*')
       .single();
     if (error) {
@@ -160,43 +137,41 @@ export async function createContact(contactData) {
   } catch (err) {
     console.error('[createContact] Failed:', err.message || err);
     reportError('contactsService', 'createContact', err);
-    // Save to localStorage and enqueue for retry
     const tempId = 'temp_' + Date.now();
     const offlineContact = { ...sanitized, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };
-    try {
-      const all = getCachedContacts();
-      all.unshift(offlineContact);
-      invalidateContactsCache(); localStorage.setItem('platform_contacts', JSON.stringify(all));
-    } catch { /* ignore quota */ }
     enqueue('contact', 'create', offlineContact);
     return offlineContact;
   }
 }
 
-export async function updateContact(id, updates) {
+export async function updateContact(id, updates, lastKnownUpdatedAt) {
   // Remove computed/internal fields that don't exist in Supabase
   const { _campaign_count, _country, _opp_count, _aging_level, _offline, opportunities, ...cleanUpdates } = updates;
   try {
+    // Check for conflicts before saving (optimistic locking)
+    if (lastKnownUpdatedAt) {
+      const { checkConflict } = await import('../utils/optimisticLock');
+      const conflict = await checkConflict('contacts', id, lastKnownUpdatedAt);
+      if (conflict) {
+        const err = new Error(conflict.message_en);
+        err.conflict = conflict;
+        throw err;
+      }
+    }
     const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
     const { data, error } = await supabase
       .from('contacts')
-      .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
+      .update(stripInternalFields({ ...cleanUpdates, updated_at: new Date().toISOString() }))
       .eq('id', id)
       .select('*')
       .single();
     if (error) throw error;
     logUpdate('contact', id, oldData, data);
     return data;
-  } catch (err) { reportError('contactsService', 'query', err);
-    // Fallback: update in localStorage and enqueue for retry
-    const all = getCachedContacts();
-    const idx = all.findIndex(c => String(c.id) === String(id));
-    if (idx > -1) {
-      Object.assign(all[idx], updates, { updated_at: new Date().toISOString() });
-      invalidateContactsCache(); localStorage.setItem('platform_contacts', JSON.stringify(all));
-    }
+  } catch (err) {
+    reportError('contactsService', 'query', err);
     enqueue('contact', 'update', { id, ...cleanUpdates });
-    return { id, ...updates };
+    return { id, ...updates, _offline: true };
   }
 }
 
@@ -205,28 +180,20 @@ export async function deleteContact(id) {
     // Clean up related opportunities first (prevent orphans)
     try {
       await supabase.from('opportunities').delete().eq('contact_id', id);
-    } catch { /* best-effort cleanup */ }
+    } catch (err) { reportError('contactsService', 'deleteContact.cleanupOpps', err); }
     // Clean up related activities
     try {
       await supabase.from('activities').delete().eq('contact_id', id);
-    } catch { /* best-effort cleanup */ }
+    } catch (err) { reportError('contactsService', 'deleteContact.cleanupActivities', err); }
     // Clean up related reminders
     try {
       await supabase.from('reminders').delete().eq('entity_id', id);
-    } catch { /* best-effort cleanup */ }
+    } catch (err) { reportError('contactsService', 'deleteContact.cleanupReminders', err); }
 
     const { error } = await supabase.from('contacts').delete().eq('id', id);
     if (error) throw error;
-  } catch (err) { reportError('contactsService', 'query', err);
-    // Fallback: remove from localStorage and enqueue for retry
-    const all = getCachedContacts();
-    const filtered = all.filter(c => String(c.id) !== String(id));
-    invalidateContactsCache(); localStorage.setItem('platform_contacts', JSON.stringify(filtered));
-    // Also clean local opportunities
-    try {
-      const opps = JSON.parse(localStorage.getItem('platform_opportunities') || '[]');
-      localStorage.setItem('platform_opportunities', JSON.stringify(opps.filter(o => String(o.contact_id) !== String(id))));
-    } catch { /* ignore */ }
+  } catch (err) {
+    reportError('contactsService', 'query', err);
     enqueue('contact', 'delete', { id });
   }
 }
@@ -260,43 +227,22 @@ export async function checkDuplicate(phone) {
   const digits = normalized ? normalized.replace(/\D/g, '') : '';
   const last9 = digits.length >= 9 ? digits.slice(-9) : digits;
 
-  // Try Supabase first
   try {
     const { data } = await supabase
       .from('contacts')
       .select('id, full_name, phone, phone2, extra_phones, contact_type')
-      .or(`phone.eq.${normalized},phone.ilike.%${last9},phone2.eq.${normalized},phone2.ilike.%${last9},extra_phones.ilike.%${last9}`)
+      .or(`phone.eq.${normalized.replace(/[^+\d]/g, '')},phone.ilike.%${last9.replace(/\D/g, '')},phone2.eq.${normalized.replace(/[^+\d]/g, '')},phone2.ilike.%${last9.replace(/\D/g, '')},extra_phones.ilike.%${last9.replace(/\D/g, '')}`)
       .limit(1)
       .maybeSingle();
     if (data) return data;
-  } catch { /* fall through to localStorage */ }
-
-  // Fallback: check localStorage (mock mode)
-  try {
-    const cached = localStorage.getItem('platform_contacts');
-    if (cached) {
-      const contacts = JSON.parse(cached);
-      const found = contacts.find(c => {
-        if (fuzzyPhoneMatch(c.phone, normalized)) return true;
-        if (fuzzyPhoneMatch(c.phone2, normalized)) return true;
-        // extra_phones can be a comma-separated string or an array
-        if (c.extra_phones) {
-          const extras = Array.isArray(c.extra_phones)
-            ? c.extra_phones
-            : String(c.extra_phones).split(',').map(s => s.trim());
-          if (extras.some(ep => fuzzyPhoneMatch(ep, normalized))) return true;
-        }
-        return false;
-      });
-      return found || null;
-    }
-  } catch { /* ignore */ }
+  } catch (err) {
+    reportError('contactsService', 'checkDuplicate', err);
+  }
 
   return null;
 }
 
 export async function fetchContactActivities(contactId) {
-  let supaData = [];
   try {
     const { data, error } = await supabase
       .from('activities')
@@ -304,96 +250,60 @@ export async function fetchContactActivities(contactId) {
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50);
-    if (!error && data?.length) supaData = data;
-  } catch { /* ignore */ }
-
-  // Always merge with localStorage
-  try {
-    const local = JSON.parse(localStorage.getItem('platform_activities') || '[]')
-      .filter(a => String(a.contact_id) === String(contactId))
-      .filter(a => !supaData.some(s => String(s.id) === String(a.id)));
-    return [...supaData, ...local]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-      .slice(0, 50);
-  } catch { return supaData; }
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    reportError('contactsService', 'fetchContactActivities', err);
+    return [];
+  }
 }
 
 export async function createActivity(activityData) {
-  const mock = {
-    ...activityData,
-    id: Date.now().toString(),
-    created_at: activityData.created_at || new Date().toISOString(),
-    users: { full_name_ar: 'أنت', full_name_en: 'You' },
-  };
-
-  // Always save to localStorage first
-  try {
-    const all = JSON.parse(localStorage.getItem('platform_activities') || '[]');
-    all.unshift(mock);
-    // Keep max 500 activities locally
-    if (all.length > 500) all.length = 500;
-    try {
-      localStorage.setItem('platform_activities', JSON.stringify(all));
-    } catch (e) {
-      if (e?.name === 'QuotaExceededError' || e?.code === 22) {
-        all.length = Math.min(all.length, 250);
-        try { localStorage.setItem('platform_activities', JSON.stringify(all)); } catch { /* give up */ }
-      }
-    }
-    if (activityData.contact_id) {
-      const contacts = getCachedContacts();
-      const idx = contacts.findIndex(c => String(c.id) === String(activityData.contact_id));
-      if (idx > -1) {
-        contacts[idx].last_activity_at = new Date().toISOString();
-        try { invalidateContactsCache(); localStorage.setItem('platform_contacts', JSON.stringify(contacts)); } catch { /* ignore quota */ }
-      }
-    }
-  } catch { /* ignore */ }
-
-  // Try Supabase in background
+  // Try Supabase FIRST — source of truth
   try {
     const { user_id, ...cleanData } = activityData;
     const { data, error } = await supabase
       .from('activities')
-      .insert([cleanData])
+      .insert([stripInternalFields(cleanData)])
       .select('*')
       .single();
-    if (!error && data) {
+    if (error) throw error;
+    // Update contact last_activity_at
+    if (activityData.contact_id) {
       await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', activityData.contact_id);
-      return data;
     }
-  } catch { /* ignore */ }
-
-  return mock;
+    return data;
+  } catch (err) {
+    reportError('contactsService', 'createActivity', err);
+    const mock = {
+      ...activityData,
+      id: Date.now().toString(),
+      created_at: activityData.created_at || new Date().toISOString(),
+      users: { full_name_ar: 'أنت', full_name_en: 'You' },
+      _offline: true,
+    };
+    enqueue('activity', 'create', mock);
+    return mock;
+  }
 }
 
 export async function updateActivity(id, updates) {
-  // Update in localStorage
-  try {
-    const all = JSON.parse(localStorage.getItem('platform_activities') || '[]');
-    const idx = all.findIndex(a => String(a.id) === String(id));
-    if (idx > -1) {
-      Object.assign(all[idx], updates);
-      localStorage.setItem('platform_activities', JSON.stringify(all));
-    }
-  } catch { /* ignore */ }
-
-  // Try Supabase in background
   try {
     const { data, error } = await supabase
       .from('activities')
-      .update(updates)
+      .update(stripInternalFields(updates))
       .eq('id', id)
       .select('*')
       .single();
-    if (!error && data) return data;
-  } catch { /* ignore */ }
-
-  return { id, ...updates };
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    reportError('contactsService', 'updateActivity', err);
+    return { id, ...updates, _offline: true };
+  }
 }
 
 export async function fetchContactOpportunities(contactId) {
-  let supaData = [];
   try {
     const { data, error } = await supabase
       .from('opportunities')
@@ -404,15 +314,10 @@ export async function fetchContactOpportunities(contactId) {
       `)
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false });
-    if (!error && data?.length) supaData = data;
-  } catch { /* ignore */ }
-
-  // Always merge with localStorage
-  try {
-    const local = JSON.parse(localStorage.getItem('platform_opportunities') || '[]')
-      .filter(o => String(o.contact_id) === String(contactId))
-      .filter(o => !supaData.some(s => String(s.id) === String(o.id)));
-    return [...supaData, ...local]
-      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  } catch { return supaData; }
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    reportError('contactsService', 'fetchContactOpportunities', err);
+    return [];
+  }
 }

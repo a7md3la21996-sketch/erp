@@ -6,3 +6,5 @@ dist/
 env.txt
 scripts/8x-data/*.json
 scripts/8x-data/*.csv
+scripts/import-*.mjs
+scripts/clean-*.mjs

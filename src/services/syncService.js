@@ -114,8 +114,17 @@ function stopBackgroundSync() {
 
 // ── Auto-start on module load ────────────────────────────────────────────
 
-if (typeof window !== 'undefined') {
-  // Start periodic sync
+// Named handlers for proper cleanup
+function _handleOnline() {
+  setTimeout(async () => {
+    if (getPendingCount() > 0) {
+      const result = await processQueue();
+      if (result.success > 0) updateLastSync();
+    }
+  }, 2000);
+}
+
+export function initSyncListeners() {
   startBackgroundSync();
 
   // Sync when page loads (with small delay)
@@ -126,16 +135,17 @@ if (typeof window !== 'undefined') {
     }
   }, 3000);
 
-  // Sync when coming back online
-  window.addEventListener('online', () => {
-    setTimeout(async () => {
-      if (getPendingCount() > 0) {
-        const result = await processQueue();
-        if (result.success > 0) updateLastSync();
-      }
-    }, 2000);
-  });
-
-  // Clean up on page unload
+  window.addEventListener('online', _handleOnline);
   window.addEventListener('beforeunload', stopBackgroundSync);
+}
+
+export function cleanupSyncListeners() {
+  stopBackgroundSync();
+  window.removeEventListener('online', _handleOnline);
+  window.removeEventListener('beforeunload', stopBackgroundSync);
+}
+
+// Auto-start on module load
+if (typeof window !== 'undefined') {
+  initSyncListeners();
 }

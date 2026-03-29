@@ -1,4 +1,5 @@
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 /**
  * OKR Service — localStorage-based with Supabase-ready structure
  * Key: platform_okrs
@@ -118,7 +119,7 @@ export async function createObjective({ title, titleAr, description, quarter, ye
   try { const all = getAll(); all.unshift(obj); saveAll(all); } catch {}
   // Try Supabase
   try {
-    const { data, error } = await supabase.from('okrs').insert([obj]).select('*').single();
+    const { data, error } = await supabase.from('okrs').insert([stripInternalFields(obj)]).select('*').single();
     if (error) throw error;
     return data;
   } catch (err) { reportError('okrService', 'query', err);
@@ -136,7 +137,7 @@ export async function updateObjective(id, updates) {
   saveAll(all);
   // Try Supabase
   try {
-    const { data, error } = await supabase.from('okrs').update(updates).eq('id', id).select('*').single();
+    const { data, error } = await supabase.from('okrs').update(stripInternalFields(updates)).eq('id', id).select('*').single();
     if (error) throw error;
     return { old, updated: data };
   } catch (err) { reportError('okrService', 'query', err);

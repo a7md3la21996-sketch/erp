@@ -81,9 +81,10 @@ export function toggleIPWhitelist() {
 }
 
 export function checkIP(ip) {
-  // Simulated — always returns true with a log
-  console.log(`[Security] IP check for ${ip}: allowed (simulated)`);
-  return true;
+  if (!isIPWhitelistEnabled()) return true; // whitelist disabled = allow all
+  const whitelist = getIPWhitelist();
+  if (whitelist.length === 0) return true; // empty list = allow all
+  return whitelist.some(entry => entry.ip === ip);
 }
 
 // ── Password Policy ───────────────────────────────────────────────────────

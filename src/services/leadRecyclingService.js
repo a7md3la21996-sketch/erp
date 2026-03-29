@@ -53,17 +53,7 @@ export async function runTemperatureDecay() {
       decayedCount++;
     }
 
-    // Also update localStorage cache
-    if (decayedCount > 0) {
-      try {
-        const local = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
-        const updateMap = new Map(updates.map(u => [u.id, u.temperature]));
-        local.forEach(c => {
-          if (updateMap.has(c.id)) c.temperature = updateMap.get(c.id);
-        });
-        localStorage.setItem('platform_contacts', JSON.stringify(local));
-      } catch {}
-    }
+    // Supabase is the source of truth — no localStorage update needed
   } catch (err) {
     reportError('leadRecycling', 'temperatureDecay', err);
   }
@@ -109,12 +99,15 @@ export async function getStaleLeads() {
 /**
  * Get recycling stats for dashboard.
  */
-export function getRecyclingStats() {
+export async function getRecyclingStats() {
   try {
-    const contacts = JSON.parse(localStorage.getItem('platform_contacts') || '[]');
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('temperature, last_activity_at, created_at, contact_type')
+      .in('contact_type', ['lead', 'cold', 'qualified', 'nurturing']);
+    if (error) throw error;
+    const leads = data || [];
     const now = Date.now();
-    const leads = contacts.filter(c => ['lead', 'cold', 'qualified', 'nurturing'].includes(c.contact_type));
-
     const hot = leads.filter(c => c.temperature === 'hot').length;
     const warm = leads.filter(c => c.temperature === 'warm').length;
     const cold = leads.filter(c => c.temperature === 'cold').length;
@@ -122,7 +115,6 @@ export function getRecyclingStats() {
       const lastAct = new Date(c.last_activity_at || c.created_at);
       return (now - lastAct) / 86400000 > STALE_THRESHOLD_DAYS;
     }).length;
-
     return { hot, warm, cold, stale, total: leads.length };
   } catch {
     return { hot: 0, warm: 0, cold: 0, stale: 0, total: 0 };

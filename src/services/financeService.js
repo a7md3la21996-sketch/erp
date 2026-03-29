@@ -55,13 +55,13 @@ export async function createJournalEntry(data) {
     const { lines, ...entryData } = data;
     const { data: entry, error } = await supabase
       .from('journal_entries')
-      .insert([{ ...entryData, created_at: new Date().toISOString() }])
+      .insert([stripInternalFields({ ...entryData, created_at: new Date().toISOString() })])
       .select('*')
       .single();
     if (error) throw error;
 
     if (lines && lines.length > 0) {
-      const linesWithEntry = lines.map(l => ({ ...l, journal_entry_id: entry.id }));
+      const linesWithEntry = lines.map(l => stripInternalFields({ ...l, journal_entry_id: entry.id }));
       await supabase.from('journal_entry_lines').insert(linesWithEntry);
     }
 
@@ -211,7 +211,8 @@ export async function fetchChartOfAccounts() {
     const { data, error } = await supabase
       .from('chart_of_accounts')
       .select('*')
-      .order('code', { ascending: true });
+      .order('code', { ascending: true })
+      .range(0, 499);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('financeService', 'query', err);

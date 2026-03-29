@@ -19,10 +19,10 @@ import { fetchDeals, fetchInstallments, fetchHandovers, fetchTickets } from './o
 export async function fetchReportsData(profile) {
   const opts = { role: profile?.role, userId: profile?.id };
   const [contacts, opportunities, deals, activities, campaigns, employees, attendance, invoices, expenses, opsDeals, opsInstallments, opsHandovers, opsTickets] = await Promise.all([
-    fetchContacts(opts).catch(() => JSON.parse(localStorage.getItem('platform_contacts') || '[]')),
-    fetchOpportunities(opts).catch(() => JSON.parse(localStorage.getItem('platform_opportunities') || '[]')),
+    fetchContacts(opts).catch(() => []),
+    fetchOpportunities(opts).catch(() => []),
     getWonDeals().catch(() => []),
-    fetchActivities(opts).catch(() => JSON.parse(localStorage.getItem('platform_activities') || '[]')),
+    fetchActivities(opts).catch(() => []),
     fetchCampaigns().catch(() => []),
     fetchEmployees().catch(() => []),
     fetchAttendance().catch(() => []),

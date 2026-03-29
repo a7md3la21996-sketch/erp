@@ -96,7 +96,7 @@ export async function create(data) {
   try {
     const { data: row, error } = await supabase
       .from('knowledge_articles')
-      .insert([article])
+      .insert([stripInternalFields(article)])
       .select('*')
       .single();
     if (error) throw error;

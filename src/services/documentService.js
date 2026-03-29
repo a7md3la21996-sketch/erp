@@ -1,4 +1,5 @@
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 // ── Document Management Service ─────────────────────────────────────────
 // localStorage-based document metadata storage with Supabase sync
 
@@ -95,7 +96,7 @@ export async function addDocument({
   try {
     const { data, error } = await supabase
       .from('documents')
-      .insert([sbDoc])
+      .insert([stripInternalFields(sbDoc)])
       .select('*')
       .single();
     if (error) throw error;

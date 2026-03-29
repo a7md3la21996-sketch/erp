@@ -60,7 +60,7 @@ export async function sendEmail(data) {
 
   // Sync to Supabase
   try {
-    await supabase.from('emails').insert([email]);
+    await supabase.from('emails').insert([stripInternalFields(email)]);
   } catch (err) {
     console.warn('Supabase insert (emails) failed, localStorage used as fallback:', err);
   }
@@ -112,7 +112,7 @@ export async function getEmails(folder, filters = {}) {
 
 export async function getEmailsByContact(contactId) {
   try {
-    const { data, error } = await supabase.from('emails').select('*').eq('contact_id', contactId).order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('emails').select('*').eq('contact_id', contactId).order('sent_at', { ascending: false }).limit(100);
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -123,7 +123,7 @@ export async function getEmailsByContact(contactId) {
 
 export async function getEmailsByOpportunity(oppId) {
   try {
-    const { data, error } = await supabase.from('emails').select('*').eq('opportunity_id', oppId).order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('emails').select('*').eq('opportunity_id', oppId).order('sent_at', { ascending: false }).limit(100);
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -217,7 +217,7 @@ export async function moveToTrash(id) {
 
 export async function getDrafts() {
   try {
-    const { data, error } = await supabase.from('emails').select('*').eq('folder', 'draft').order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('emails').select('*').eq('folder', 'draft').order('sent_at', { ascending: false }).limit(100);
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -267,7 +267,7 @@ export async function saveDraft(data) {
   window.dispatchEvent(new Event('platform_emails_changed'));
 
   try {
-    await supabase.from('emails').insert([draft]);
+    await supabase.from('emails').insert([stripInternalFields(draft)]);
   } catch (err) {
     console.warn('Supabase insert (saveDraft) failed, localStorage used as fallback:', err);
   }
@@ -277,7 +277,7 @@ export async function saveDraft(data) {
 
 export async function getEmailStats() {
   try {
-    const { data, error } = await supabase.from('emails').select('folder, read');
+    const { data, error } = await supabase.from('emails').select('folder, read').range(0, 499);
     if (error) throw error;
     const emails = data || [];
     return {
@@ -302,7 +302,7 @@ export async function getEmailStats() {
 
 export async function getTemplates() {
   try {
-    const { data, error } = await supabase.from('email_templates').select('*');
+    const { data, error } = await supabase.from('email_templates').select('*').limit(100);
     if (error) throw error;
     if (data && data.length > 0) return data;
     // If Supabase is empty, fall through to localStorage/seed logic
@@ -361,7 +361,7 @@ export async function saveTemplate(data) {
       saveTemplates(templates);
 
       try {
-        const { error } = await supabase.from('email_templates').update(data).eq('id', data.id);
+        const { error } = await supabase.from('email_templates').update(stripInternalFields(data)).eq('id', data.id);
         if (error) throw error;
       } catch (err) {
         console.warn('Supabase update (email template) failed, localStorage used as fallback:', err);
@@ -384,7 +384,7 @@ export async function saveTemplate(data) {
   saveTemplates(templates);
 
   try {
-    await supabase.from('email_templates').insert([tpl]);
+    await supabase.from('email_templates').insert([stripInternalFields(tpl)]);
   } catch (err) {
     console.warn('Supabase insert (email template) failed, localStorage used as fallback:', err);
   }

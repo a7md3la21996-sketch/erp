@@ -1,4 +1,5 @@
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 // ── Commission Installments Service ─────────────────────────────────────
 // Tracks installment payments from developers to the company
 
@@ -87,7 +88,7 @@ export async function createInstallment(data) {
   try { const all = loadAll(); all.unshift(item); saveAll(all); } catch {}
   // Try Supabase
   try {
-    const { data: sbData, error } = await supabase.from('commission_installments').insert([item]).select('*').single();
+    const { data: sbData, error } = await supabase.from('commission_installments').insert([stripInternalFields(item)]).select('*').single();
     if (error) throw error;
     return sbData;
   } catch (err) { reportError('commissionInstallmentsService', 'query', err);
@@ -107,7 +108,7 @@ export async function updateInstallment(id, updates) {
   saveAll(all);
   // Try Supabase
   try {
-    const { data, error } = await supabase.from('commission_installments').update(updates).eq('id', id).select('*').single();
+    const { data, error } = await supabase.from('commission_installments').update(stripInternalFields(updates)).eq('id', id).select('*').single();
     if (error) throw error;
     return data;
   } catch (err) { reportError('commissionInstallmentsService', 'query', err);
@@ -139,7 +140,7 @@ export async function deleteInstallment(id) {
 export async function getInstallmentStats() {
   let data;
   try {
-    const { data: sbData, error } = await supabase.from('commission_installments').select('*');
+    const { data: sbData, error } = await supabase.from('commission_installments').select('*').range(0, 499);
     if (error) throw error;
     data = sbData || [];
   } catch (err) { reportError('commissionInstallmentsService', 'query', err);

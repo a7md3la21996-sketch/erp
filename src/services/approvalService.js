@@ -1,4 +1,5 @@
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 import { createNotification } from './notificationsService';
 import { logAction } from './auditService';
@@ -111,7 +112,7 @@ export async function createApproval({ type, requesterId, requesterName, data, a
       comment: approval.notes || approval.comments || '',
       created_at: approval.created_at,
     };
-    const { error } = await supabase.from('approvals').insert([sbApproval]);
+    const { error } = await supabase.from('approvals').insert([stripInternalFields(sbApproval)]);
     if (error) throw error;
   } catch (err) { reportError('approvalService', 'query', err);
     // localStorage already saved
@@ -246,7 +247,8 @@ export async function getApprovalsByEntity(entityId) {
       .from('approvals')
       .select('*')
       .eq('entity_id', entityId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (error) throw error;
     if (data) return data;
   } catch (err) { reportError('approvalService', 'query', err);
@@ -266,7 +268,8 @@ export async function getPendingByApprover(approverId) {
       .select('*')
       .eq('status', 'pending')
       .eq('approved_by', approverId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (error) throw error;
     if (data) return data;
   } catch (err) { reportError('approvalService', 'query', err);
@@ -475,7 +478,8 @@ export async function getApprovalStats() {
   try {
     const { data, error } = await supabase
       .from('approvals')
-      .select('*');
+      .select('*')
+      .range(0, 499);
     if (error) throw error;
     if (data) {
       save(data); // sync to localStorage

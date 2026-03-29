@@ -9,11 +9,12 @@ import {
   RefreshCw, CheckSquare, Plus, X, User, Link2,
   Clock, Activity, TrendingUp, CloudOff
 } from 'lucide-react';
-import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
+import { fetchActivities, createActivity, updateActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
+import ActivityDrawer from './ActivityDrawer';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -54,7 +55,7 @@ function timeAgo(dateStr, lang) {
 
 export default function ActivitiesPage() {
   const { i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const lang  = i18n.language;
   const isRTL  = lang === 'ar';
@@ -67,6 +68,7 @@ export default function ActivitiesPage() {
   const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'crm' });
   const [saving, setSaving]         = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [selectedActivity, setSelectedActivity] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [deleting, setDeleting] = useState(false);
@@ -179,7 +181,7 @@ export default function ActivitiesPage() {
     if (!form.notes.trim()) return;
     setSaving(true);
     try {
-      await createActivity({ type: form.type, notes: form.notes, entityType: 'internal', dept: form.dept, userId: user?.id || null });
+      await createActivity({ type: form.type, notes: form.notes, entityType: 'internal', dept: form.dept, userId: user?.id || null, userName_ar: profile?.full_name_ar, userName_en: profile?.full_name_en });
       await load();
       setForm({ type: 'call', notes: '', dept: 'crm' });
       setAdding(false);
@@ -366,7 +368,8 @@ export default function ActivitiesPage() {
             return (
               <div
                 key={act.id}
-                className={`group flex items-start gap-3 px-4 py-3 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.07] ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${idx < paged.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}`}
+                className={`group flex items-start gap-3 px-4 py-3 transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.07] cursor-pointer ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${idx < paged.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}`}
+                onClick={() => setSelectedActivity(act)}
               >
                 {/* Icon */}
                 <div
@@ -402,28 +405,31 @@ export default function ActivitiesPage() {
                       {timeAgo(act.created_at, lang)}
                     </span>
                   </div>
-                  {/* Row 2: Entity (Related To) + User (By) */}
-                  <div className={`flex items-center gap-3 flex-wrap mb-1 text-[11px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                    {act.entity_name && (
-                      <span className={`flex items-center gap-1 ${act.contact_id ? 'text-brand-500 cursor-pointer hover:underline' : 'text-content-muted dark:text-content-muted-dark'}`}
-                        onClick={act.contact_id && act.contact_id !== 'null' ? () => navigate(`/contacts?highlight=${act.contact_id}`) : undefined}
+                  {/* Row 2: Contact Name + User (By) */}
+                  <div className={`flex items-center gap-3 flex-wrap mb-1 text-[12px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    {(act.entity_name || act.contact_id) && (
+                      <span className={`flex items-center gap-1 font-semibold ${act.contact_id && act.contact_id !== 'null' ? 'text-brand-500 cursor-pointer hover:underline' : 'text-content dark:text-content-dark'}`}
+                        onClick={act.contact_id && act.contact_id !== 'null' ? (e) => { e.stopPropagation(); navigate(`/contacts?highlight=${act.contact_id}`); } : undefined}
                       >
-                        <Link2 size={10} />
-                        {act.entity_name}
+                        <Link2 size={11} />
+                        {act.entity_name || (isRTL ? 'عميل' : 'Contact')}
                       </span>
                     )}
+                    {act.contact_phone && (
+                      <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-mono">{act.contact_phone}</span>
+                    )}
                     {(act.user_name_ar || act.user_name_en) && (
-                      <span className="flex items-center gap-1 text-content-muted dark:text-content-muted-dark">
+                      <span className="flex items-center gap-1 text-[11px] text-content-muted dark:text-content-muted-dark">
                         <User size={10} />
                         {lang === 'ar' ? (act.user_name_ar || act.user_name_en) : (act.user_name_en || act.user_name_ar)}
                       </span>
                     )}
                   </div>
-                  {/* Row 3: Notes + Description */}
+                  {/* Row 3: Notes */}
                   {(act.notes || act.description) && (
-                    <div className="text-xs text-content dark:text-content-dark leading-relaxed" dir={isRTL ? 'rtl' : 'ltr'}>
+                    <div className="text-xs text-content-muted dark:text-content-muted-dark leading-relaxed line-clamp-2" dir={isRTL ? 'rtl' : 'ltr'}>
                       {act.description && act.description !== act.notes && (
-                        <span className="font-semibold">{act.description} — </span>
+                        <span className="font-semibold text-content dark:text-content-dark">{act.description} — </span>
                       )}
                       {act.notes}
                     </div>
@@ -432,7 +438,7 @@ export default function ActivitiesPage() {
 
                 {/* Delete */}
                 {confirmDeleteId === act.id ? (
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
                     <button disabled={deleting} onClick={async () => { if (deleting) return; setDeleting(true); const id = act.id; try { await deleteActivity(id); setActivities(prev => prev.filter(a => a.id !== id)); } catch { setActivities(prev => prev.filter(a => a.id !== id)); } setConfirmDeleteId(null); setDeleting(false); }}
                       className={`bg-red-500/10 border border-red-500/30 rounded px-1.5 py-0.5 text-[10px] text-red-500 font-semibold ${deleting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>{deleting ? '...' : (isRTL ? 'تأكيد' : 'Confirm')}</button>
                     <button onClick={() => setConfirmDeleteId(null)}
@@ -440,7 +446,7 @@ export default function ActivitiesPage() {
                   </div>
                 ) : (
                   <button
-                    onClick={() => setConfirmDeleteId(act.id)}
+                    onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(act.id); }}
                     className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150"
                   >
                     <X size={13} />
@@ -453,6 +459,25 @@ export default function ActivitiesPage() {
       </Card>
 
       <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
+
+      {/* Activity Detail Drawer */}
+      {selectedActivity && (
+        <ActivityDrawer
+          activity={selectedActivity}
+          onClose={() => setSelectedActivity(null)}
+          onUpdate={async (id, updates) => {
+            const updated = await updateActivity(id, updates);
+            setActivities(prev => prev.map(a => String(a.id) === String(id) ? { ...a, ...updates } : a));
+            setSelectedActivity(prev => ({ ...prev, ...updates }));
+            return updated;
+          }}
+          onDelete={async (id) => {
+            try { await deleteActivity(id); } catch {}
+            setActivities(prev => prev.filter(a => a.id !== id));
+            setSelectedActivity(null);
+          }}
+        />
+      )}
     </div>
   );
 }

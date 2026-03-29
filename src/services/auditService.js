@@ -1,6 +1,5 @@
 import supabase from '../lib/supabase';
-
-const LOCAL_KEY = 'platform_audit_logs';
+import { reportError } from '../utils/errorReporter';
 
 // ── Action types for detailed tracking ──────────────────────────────────
 export const ACTION_TYPES = {
@@ -25,38 +24,22 @@ export const ACTION_TYPES = {
   export:           { ar: 'تصدير',           en: 'Export' },
 };
 
-// ── localStorage helpers ────────────────────────────────────────────────
-function getLocalLogs() {
-  try { return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]'); } catch { return []; }
-}
-function saveLocalLog(entry) {
+export async function getAuditLogs({ limit = 50, offset = 0, action, entity, search } = {}) {
   try {
-    const logs = getLocalLogs();
-    logs.unshift(entry);
-    // Keep max 500 local logs
-    if (logs.length > 500) logs.length = 500;
-    try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(logs));
-    } catch (e) {
-      // QuotaExceededError — trim to 250 and retry
-      if (e?.name === 'QuotaExceededError' || e?.code === 22) {
-        logs.length = Math.min(logs.length, 250);
-        try { localStorage.setItem(LOCAL_KEY, JSON.stringify(logs)); } catch { /* give up */ }
-      }
-    }
-  } catch { /* ignore */ }
+    let query = supabase.from('audit_logs').select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+    if (action) query = query.eq('action', action);
+    if (entity) query = query.eq('entity', entity);
+    if (search) query = query.or(`description.ilike.%${search}%,entity_name.ilike.%${search}%`);
+    const { data, error, count } = await query;
+    if (error) { reportError('auditService', 'getAuditLogs', error); return { data: [], total: 0 }; }
+    return { data: data || [], total: count || 0 };
+  } catch (err) { reportError('auditService', 'getAuditLogs', err); return { data: [], total: 0 }; }
 }
 
-export function getLocalAuditLogs({ limit = 50, offset = 0, action, entity, search } = {}) {
-  let logs = getLocalLogs();
-  if (action) logs = logs.filter(l => l.action === action);
-  if (entity) logs = logs.filter(l => l.entity === entity);
-  if (search) {
-    const q = search.toLowerCase();
-    logs = logs.filter(l => (l.description || '').toLowerCase().includes(q) || (l.entity_name || '').toLowerCase().includes(q) || (l.user_name || '').toLowerCase().includes(q));
-  }
-  return { data: logs.slice(offset, offset + limit), total: logs.length };
-}
+// Backward-compatible alias
+export const getLocalAuditLogs = getAuditLogs;
 
 // ── Main audit function ─────────────────────────────────────────────────
 export async function logAudit({ action, entity, entityId, entityName = '', oldData = null, newData = null, description = '', userName = '' }) {
@@ -78,25 +61,22 @@ export async function logAudit({ action, entity, entityId, entityName = '', oldD
     if (Object.keys(changes).length === 0) changes = null;
   }
 
-  const localEntry = {
-    id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-    action,
-    entity,
-    entity_id: entityId,
-    entity_name: entityName,
-    old_data: oldData,
-    new_data: newData,
-    changes,
-    description,
-    user_name: userName || 'System',
-    user_agent: navigator.userAgent,
-    created_at: new Date().toISOString(),
-  };
+  // Strip sensitive fields before storing
+  const SENSITIVE_FIELDS = ['password', 'token', 'secret', 'access_token', 'refresh_token', 'api_key', 'apikey', 'credit_card', 'ssn', 'national_id'];
+  function stripSensitive(obj) {
+    if (!obj || typeof obj !== 'object') return obj;
+    const clean = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (SENSITIVE_FIELDS.some(f => k.toLowerCase().includes(f))) {
+        clean[k] = '[REDACTED]';
+      } else {
+        clean[k] = v;
+      }
+    }
+    return clean;
+  }
 
-  // Always save locally
-  saveLocalLog(localEntry);
-
-  // Try Supabase
+  // Save to Supabase
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -105,14 +85,17 @@ export async function logAudit({ action, entity, entityId, entityName = '', oldD
         action,
         entity,
         entity_id: entityId,
-        old_data: oldData,
-        new_data: newData,
+        entity_name: entityName,
+        old_data: stripSensitive(oldData),
+        new_data: stripSensitive(newData),
         changes,
         description,
         user_agent: navigator.userAgent,
       });
+    } else {
+      reportError('auditService', 'logAudit', new Error('No authenticated user'));
     }
-  } catch { /* ignore - already saved locally */ }
+  } catch (err) { reportError('auditService', 'logAudit', err); }
 }
 
 // ── Convenience helpers ─────────────────────────────────────────────────

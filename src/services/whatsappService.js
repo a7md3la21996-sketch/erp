@@ -1,4 +1,5 @@
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 
 const MESSAGES_KEY = 'platform_whatsapp_messages';
@@ -124,7 +125,7 @@ export async function logMessage({ contact_id, contact_name, contact_phone, dire
   window.dispatchEvent(new Event('platform_whatsapp_changed'));
 
   try {
-    await supabase.from('whatsapp_messages').insert([msg]);
+    await supabase.from('whatsapp_messages').insert([stripInternalFields(msg)]);
   } catch (err) {
     console.warn('Supabase insert (whatsapp_messages) failed, localStorage used as fallback:', err);
   }
@@ -169,7 +170,7 @@ export async function getMessages(filters = {}) {
 
 export async function getMessagesByContact(contactId) {
   try {
-    const { data, error } = await supabase.from('whatsapp_messages').select('*').eq('contact_id', String(contactId)).order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('whatsapp_messages').select('*').eq('contact_id', String(contactId)).order('sent_at', { ascending: false }).limit(100);
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -180,7 +181,7 @@ export async function getMessagesByContact(contactId) {
 
 export async function getConversation(contactId) {
   try {
-    const { data, error } = await supabase.from('whatsapp_messages').select('*').eq('contact_id', String(contactId)).order('sent_at', { ascending: true });
+    const { data, error } = await supabase.from('whatsapp_messages').select('*').eq('contact_id', String(contactId)).order('sent_at', { ascending: true }).limit(100);
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -193,7 +194,7 @@ export async function getConversation(contactId) {
 
 export async function getRecentConversations() {
   try {
-    const { data, error } = await supabase.from('whatsapp_messages').select('*').order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('whatsapp_messages').select('*').order('sent_at', { ascending: false }).range(0, 499);
     if (error) throw error;
     const list = data || [];
     return _buildConversations(list);
@@ -256,11 +257,11 @@ export async function saveTemplate(tpl) {
 
   try {
     if (idx > -1) {
-      const { error } = await supabase.from('whatsapp_templates').update({ ...tpl, updated_at: new Date().toISOString() }).eq('id', tpl.id);
+      const { error } = await supabase.from('whatsapp_templates').update(stripInternalFields({ ...tpl, updated_at: new Date().toISOString() })).eq('id', tpl.id);
       if (error) throw error;
     } else {
       const newTpl = list[list.length - 1];
-      await supabase.from('whatsapp_templates').insert([newTpl]);
+      await supabase.from('whatsapp_templates').insert([stripInternalFields(newTpl)]);
     }
   } catch (err) {
     console.warn('Supabase upsert (whatsapp template) failed, localStorage used as fallback:', err);
@@ -304,7 +305,7 @@ export async function toggleTemplate(id) {
 // ── Stats ──────────────────────────────────────────────────────
 export async function getWhatsAppStats() {
   try {
-    const { data, error } = await supabase.from('whatsapp_messages').select('sent_at, contact_id');
+    const { data, error } = await supabase.from('whatsapp_messages').select('sent_at, contact_id').range(0, 499);
     if (error) throw error;
     const list = data || [];
     const today = new Date().toISOString().slice(0, 10);
@@ -314,7 +315,7 @@ export async function getWhatsAppStats() {
     // Templates from Supabase or localStorage
     let templatesCount = 0;
     try {
-      const { data: tplData, error: tplErr } = await supabase.from('whatsapp_templates').select('is_active').eq('is_active', true);
+      const { data: tplData, error: tplErr } = await supabase.from('whatsapp_templates').select('is_active').eq('is_active', true).limit(100);
       if (tplErr) throw tplErr;
       templatesCount = (tplData || []).length;
     } catch (err) { reportError('whatsappService', 'query', err);

@@ -11,7 +11,9 @@ function syncToSupabase(key, value) {
   import('../lib/supabase').then(({ default: supabase }) => {
     supabase.from('system_config')
       .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-      .then(() => {}).catch(() => {});
+      .then(() => {}).catch((err) => {
+        import('../utils/errorReporter').then(m => m.reportError('rbacService', 'syncToSupabase', err)).catch(() => {});
+      });
   }).catch(() => {});
 }
 

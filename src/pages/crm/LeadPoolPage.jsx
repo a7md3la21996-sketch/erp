@@ -120,10 +120,7 @@ export default function LeadPoolPage() {
   const [leads, setLeads]             = useState(() => loadLeads());
   const agentsList = useMemo(() => loadAgents(), []);
 
-  // Persist leads to localStorage on every change
-  useEffect(() => {
-    try { localStorage.setItem('platform_lead_pool', JSON.stringify(leads)); } catch { /* quota */ }
-  }, [leads]);
+  // Supabase is the source of truth — no localStorage persistence needed
 
   const assignedToOptions = useMemo(() =>
     [...new Set(leads.map(l => l.assigned_to).filter(Boolean))].map(name => ({ value: name, label: name, labelEn: name })),

@@ -76,7 +76,7 @@ export async function updateCampaign(id, updates) {
   saveCampaigns(list);
   // Try Supabase
   try {
-    const { data, error } = await supabase.from('campaigns').update(updates).eq('id', id).select('*').single();
+    const { data, error } = await supabase.from('campaigns').update(stripInternalFields(updates)).eq('id', id).select('*').single();
     if (error) throw error;
     logUpdate('campaign', id, old, data);
     return data;

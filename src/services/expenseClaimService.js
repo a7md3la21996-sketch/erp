@@ -1,4 +1,5 @@
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 import { createApproval, getApprovalByEntity } from './approvalService';
 import { logAction } from './auditService';
@@ -89,7 +90,7 @@ export async function createClaim({ title, category, amount, currency, date, des
   let result = claim;
   // Try Supabase
   try {
-    const { data: sbData, error } = await supabase.from('expense_claims').insert([claim]).select('*').single();
+    const { data: sbData, error } = await supabase.from('expense_claims').insert([stripInternalFields(claim)]).select('*').single();
     if (error) throw error;
     result = sbData;
   } catch (err) { reportError('expenseClaimService', 'query', err);
@@ -171,7 +172,7 @@ export async function updateClaim(id, updates) {
     delete safeUpdates.id;
     delete safeUpdates.created_at;
     delete safeUpdates.status;
-    const { data, error } = await supabase.from('expense_claims').update(safeUpdates).eq('id', id).select('*').single();
+    const { data, error } = await supabase.from('expense_claims').update(stripInternalFields(safeUpdates)).eq('id', id).select('*').single();
     if (error) throw error;
     result = data;
   } catch (err) { reportError('expenseClaimService', 'query', err);

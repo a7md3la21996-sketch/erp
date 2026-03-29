@@ -148,8 +148,7 @@ export default function GlobalSearch({ onClose }) {
               if (error) throw error;
               return data || [];
             } catch {
-              const cached = localStorage.getItem('platform_contacts');
-              return cached ? JSON.parse(cached) : [];
+              return [];
             }
           })(),
           fetchOpportunities(),

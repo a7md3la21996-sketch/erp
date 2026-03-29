@@ -1,5 +1,5 @@
-import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
@@ -28,25 +28,13 @@ export const MEETING_SUBTYPES = {
   office:    { ar: 'في الشركة',       en: 'Office Meeting' },
 };
 
-// ── localStorage helpers (shared key with contactsService) ──
-function getLocalActivities() {
-  try {
-    const saved = localStorage.getItem('platform_activities');
-    if (saved) return JSON.parse(saved);
-  } catch { /* ignore */ }
-  return [];
-}
-function saveLocalActivities(acts) {
-  try { localStorage.setItem('platform_activities', JSON.stringify(acts)); } catch { /* ignore */ }
-}
-
 // ── Service Functions ───────────────────────────────────────────────────────
 export async function fetchActivities({ entityType, entityId, dept, limit = 50 } = {}) {
   let supaData = [];
   try {
     let query = supabase
       .from('activities')
-      .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en)`)
+      .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en), contacts (full_name, phone)`)
       .order('created_at', { ascending: false })
       .limit(limit);
 
@@ -55,24 +43,25 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50 }
     if (dept)       query = query.eq('dept', dept);
 
     const { data, error } = await query;
+    if (error) {
+      reportError('activitiesService', 'fetchActivities', error);
+    }
     if (!error && data?.length) supaData = data.map(a => ({
       ...a,
       user_name_ar: a.users?.full_name_ar || a.user_name_ar,
       user_name_en: a.users?.full_name_en || a.user_name_en,
+      entity_name: a.contacts?.full_name || a.entity_name || '',
+      contact_phone: a.contacts?.phone || '',
     }));
-  } catch { /* ignore */ }
+  } catch (err) {
+    reportError('activitiesService', 'fetchActivities', err);
+    return [];
+  }
 
-  // Always merge with localStorage
-  let local = getLocalActivities();
-  if (entityId)   local = local.filter(a => String(a[`${entityType}_id`]) === String(entityId));
-  if (dept)       local = local.filter(a => a.dept === dept);
-  local = local.filter(a => !supaData.some(s => String(s.id) === String(a.id)));
-  return [...supaData, ...local]
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    .slice(0, limit);
+  return supaData;
 }
 
-export async function createActivity({ type, notes, entityType, entityId, dept, userId, status = 'completed', scheduled_date, scheduledActivityId }) {
+export async function createActivity({ type, notes, entityType, entityId, dept, userId, userName_ar, userName_en, status = 'completed', scheduled_date, scheduledActivityId }) {
   // Activity Cycle: if completing a scheduled activity, update it instead of creating duplicate
   if (status === 'completed' && !scheduledActivityId && entityId) {
     try {
@@ -119,11 +108,23 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
     } catch {}
   }
 
+  // Auto-fetch user name from users table if not provided
+  let finalNameAr = userName_ar;
+  let finalNameEn = userName_en;
+  if (!finalNameAr && !finalNameEn && userId) {
+    try {
+      const { data: userRow } = await supabase.from('users').select('full_name_ar, full_name_en').eq('id', userId).maybeSingle();
+      if (userRow) { finalNameAr = userRow.full_name_ar; finalNameEn = userRow.full_name_en; }
+    } catch { /* best effort */ }
+  }
+
   const payload = {
     type, notes, dept,
     entity_type: entityType,
-    [`${entityType}_id`]: entityId,
+    ...(entityId ? { [`${entityType}_id`]: entityId } : {}),
     user_id: userId,
+    ...(finalNameAr ? { user_name_ar: finalNameAr } : {}),
+    ...(finalNameEn ? { user_name_en: finalNameEn } : {}),
     status,
     ...(scheduled_date ? { scheduled_date } : {}),
     created_at: new Date().toISOString(),
@@ -132,7 +133,7 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
   try {
     const { data, error } = await supabase
       .from('activities')
-      .insert([payload])
+      .insert([stripInternalFields(payload)])
       .select('*')
       .single();
     if (error) throw error;
@@ -159,9 +160,6 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
   } catch (err) { reportError('activitiesService', 'query', err);
     const tempId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const tempActivity = { ...payload, id: tempId, user_name_ar: 'أنت', user_name_en: 'You', _offline: true };
-    const all = getLocalActivities();
-    all.unshift(tempActivity);
-    saveLocalActivities(all);
     enqueue('activity', 'create', tempActivity);
     return tempActivity;
   }
@@ -171,22 +169,14 @@ export async function updateActivity(id, updates) {
   try {
     const { data, error } = await supabase
       .from('activities')
-      .update(updates)
+      .update(stripInternalFields(updates))
       .eq('id', id)
       .select('*')
       .single();
     if (error) throw error;
     return data;
   } catch (err) { reportError('activitiesService', 'query', err);
-    // Fallback: update in localStorage
-    const all = getLocalActivities();
-    const idx = all.findIndex(a => String(a.id) === String(id));
-    if (idx > -1) {
-      Object.assign(all[idx], updates);
-      saveLocalActivities(all);
-      return all[idx];
-    }
-    return { id, ...updates };
+    return { id, ...updates, _offline: true };
   }
 }
 
@@ -197,9 +187,6 @@ export async function deleteActivity(id) {
     if (error) throw error;
     logDelete('activity', id, oldData);
   } catch (err) { reportError('activitiesService', 'query', err);
-    // Queue for retry and delete locally
     enqueue('activity', 'delete', { id });
-    const filtered = getLocalActivities().filter(a => String(a.id) !== String(id));
-    saveLocalActivities(filtered);
   }
 }

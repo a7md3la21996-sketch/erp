@@ -109,7 +109,8 @@ export async function getAttendanceSummary(month, year) {
       .from('attendance')
       .select('employee_id, status')
       .gte('date', startDate)
-      .lte('date', endDate);
+      .lte('date', endDate)
+      .range(0, 499);
     if (error) throw error;
 
     const summary = { total: 0, present: 0, absent: 0, late: 0, leave: 0 };

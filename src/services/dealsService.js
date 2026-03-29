@@ -1,10 +1,8 @@
 // ── Deals Service — bridge between CRM Opportunities and Operations ──
 import supabase from '../lib/supabase';
 import { logCreate } from './auditService';
-import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
-
-const STORAGE_KEY = 'platform_won_deals';
+import { addToSyncQueue } from './syncService';
 
 /**
  * Get all deals created from won opportunities
@@ -18,27 +16,9 @@ export async function getWonDeals() {
       .order('created_at', { ascending: false })
       .range(0, 499);
     if (error) throw error;
-    if (data?.length) {
-      // Sync to localStorage
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-      return data;
-    }
-  } catch { /* fallback */ }
-  // Fallback to localStorage
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (err) { reportError('dealsService', 'query', err);
-    return [];
-  }
-}
-
-// Sync version for non-async callers (localStorage only)
-export function getWonDealsSync() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch (err) { reportError('dealsService', 'query', err);
+    return data || [];
+  } catch (err) {
+    reportError('dealsService', 'getWonDeals', err);
     return [];
   }
 }
@@ -66,20 +46,27 @@ async function nextDealNumber(existingDeals) {
 
 /**
  * Create a deal from a won opportunity
- * Saves to Supabase first, falls back to localStorage
+ * Saves to Supabase first, queues for retry on failure
  */
 export async function createDealFromOpportunity(opp, existingDeals = [], extraFields = {}) {
   const contact = opp.contacts || {};
   const agent = opp.users || {};
   const project = opp.projects || {};
 
-  // Check if already exists
-  const localDeals = getWonDealsSync();
-  const existing = localDeals.find(d => d.opportunity_id === opp.id);
-  if (existing) return existing;
+  // Check if already exists in Supabase
+  try {
+    const { data: existingDeal } = await supabase
+      .from('deals')
+      .select('*')
+      .eq('opportunity_id', opp.id)
+      .maybeSingle();
+    if (existingDeal) return existingDeal;
+  } catch (err) {
+    reportError('dealsService', 'createDealFromOpportunity:dupCheck', err);
+  }
 
   const dealData = {
-    deal_number: await nextDealNumber([...existingDeals, ...localDeals]),
+    deal_number: await nextDealNumber(existingDeals),
     opportunity_id: opp.id,
     contact_id: opp.contact_id || null,
     project_id: opp.project_id || null,
@@ -113,7 +100,7 @@ export async function createDealFromOpportunity(opp, existingDeals = [], extraFi
     },
   };
 
-  // Try Supabase first
+  // Try Supabase first — source of truth
   try {
     const { data, error } = await supabase
       .from('deals')
@@ -121,27 +108,35 @@ export async function createDealFromOpportunity(opp, existingDeals = [], extraFi
       .select('*')
       .single();
     if (error) throw error;
-    // Sync to localStorage
-    localDeals.unshift(data);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(localDeals)); } catch {}
     logCreate('deal', data.id, data);
     return data;
-  } catch { /* fallback to localStorage */ }
-
-  // localStorage fallback
-  const deal = {
-    ...dealData,
-    id: `deal-opp-${opp.id}`,
-    created_at: new Date().toISOString().split('T')[0],
-  };
-  localDeals.unshift(deal);
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(localDeals)); } catch {}
-  return deal;
+  } catch (err) {
+    reportError('dealsService', 'createDealFromOpportunity', err);
+    // Queue for retry
+    const deal = {
+      ...dealData,
+      id: `deal-opp-${opp.id}`,
+      created_at: new Date().toISOString().split('T')[0],
+      _offline: true,
+    };
+    addToSyncQueue('deals', 'create', deal);
+    return deal;
+  }
 }
 
 /**
- * Check if a deal already exists for an opportunity
+ * Check if a deal already exists for an opportunity (queries Supabase)
  */
-export function dealExistsForOpportunity(oppId) {
-  return getWonDealsSync().some(d => d.opportunity_id === oppId);
+export async function dealExistsForOpportunity(oppId) {
+  try {
+    const { count, error } = await supabase
+      .from('deals')
+      .select('id', { count: 'exact', head: true })
+      .eq('opportunity_id', oppId);
+    if (error) throw error;
+    return count > 0;
+  } catch (err) {
+    reportError('dealsService', 'dealExistsForOpportunity', err);
+    return false;
+  }
 }

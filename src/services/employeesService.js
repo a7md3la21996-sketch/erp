@@ -110,7 +110,8 @@ export async function fetchDepartments() {
     const { data, error } = await supabase
       .from('departments')
       .select('*')
-      .order('name_ar', { ascending: true });
+      .order('name_ar', { ascending: true })
+      .limit(100);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('employeesService', 'query', err);
