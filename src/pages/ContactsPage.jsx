@@ -783,7 +783,26 @@ export default function ContactsPage() {
       {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onUpdate={(updated) => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); saveContactsLocal(next); return next; }); updateContact(updated.id, updated).catch(() => {}); }} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
       {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
-      {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={(newContacts) => { setContacts(prev => { const updated = [...prev, ...newContacts]; saveContactsLocal(updated); return updated; }); setShowImportModal(false); }} />}
+      {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={async (newContacts) => {
+        // Import directly to Supabase using batch insert
+        const { batchInsert } = await import('../utils/batchOperations');
+        const { stripInternalFields } = await import('../utils/sanitizeForSupabase');
+        const clean = newContacts.map(c => ({
+          ...stripInternalFields(c),
+          last_activity_at: c.last_activity_at || new Date().toISOString(),
+          created_at: c.created_at || new Date().toISOString(),
+        }));
+        // Remove 'id' field so Supabase generates UUIDs
+        clean.forEach(c => { if (c.id && !c.id.match(/^[0-9a-f-]{36}$/)) delete c.id; });
+        try {
+          const inserted = await batchInsert('contacts', clean, 50);
+          setContacts(prev => [...inserted, ...prev]);
+          toast.success(isRTL ? `تم استيراد ${inserted.length} جهة اتصال` : `${inserted.length} contacts imported`);
+        } catch (err) {
+          toast.error(isRTL ? 'فشل الاستيراد: ' + err.message : 'Import failed: ' + err.message);
+        }
+        setShowImportModal(false);
+      }} />}
 
       {/* Batch Call Mode */}
       <BatchCallModal
