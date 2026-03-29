@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import supabase from '../lib/supabase';
 
 const STORAGE_KEY = 'platform_emails';
@@ -236,7 +237,7 @@ export async function saveDraft(data) {
       window.dispatchEvent(new Event('platform_emails_changed'));
 
       try {
-        const { error } = await supabase.from('emails').update({ ...data, folder: 'draft' }).eq('id', data.id);
+        const { error } = await supabase.from('emails').update({ ...stripInternalFields(data), folder: 'draft' }).eq('id', data.id);
         if (error) throw error;
       } catch (err) {
         console.warn('Supabase update (saveDraft) failed, localStorage used as fallback:', err);

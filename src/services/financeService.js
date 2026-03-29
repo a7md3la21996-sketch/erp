@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
@@ -117,7 +118,7 @@ export async function createInvoice(data) {
   try {
     const { data: d, error } = await supabase
       .from('invoices')
-      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(data), created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -190,7 +191,7 @@ export async function createExpense(data) {
   try {
     const { data: d, error } = await supabase
       .from('expenses')
-      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(data), created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;

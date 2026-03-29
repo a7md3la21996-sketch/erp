@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
@@ -122,7 +123,7 @@ export async function update(id, data) {
   try {
     const { data: row, error } = await supabase
       .from('knowledge_articles')
-      .update({ ...data, updated_at: new Date().toISOString() })
+      .update({ ...stripInternalFields(data), updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single();

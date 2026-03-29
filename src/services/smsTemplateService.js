@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 // ── SMS Template Service ─────────────────────────────────────────────────
 // localStorage-based with Supabase as primary, localStorage as fallback
 
@@ -137,7 +138,7 @@ export async function updateTemplate(id, updates) {
   saveAll(all);
 
   try {
-    const { error } = await supabase.from('sms_templates').update({ ...updates, updated_at: all[idx].updated_at }).eq('id', id);
+    const { error } = await supabase.from('sms_templates').update({ ...stripInternalFields(updates), updated_at: all[idx].updated_at }).eq('id', id);
     if (error) throw error;
   } catch (err) {
     console.warn('Supabase update (sms_templates) failed, localStorage used as fallback:', err);
