@@ -105,6 +105,24 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const assignmentHistory = useMemo(() => contact?.id ? getAssignmentHistory(contact.id) : [], [contact?.id]);
   const { profile } = useAuth();
   const isSalesAgent = profile?.role === 'sales_agent';
+
+  // Privacy: hide previous agent's activities if system config says so
+  const hidePreviousHistory = useMemo(() => {
+    if (!isSalesAgent) return false; // managers/admins always see everything
+    try {
+      const cfg = JSON.parse(localStorage.getItem('platform_system_config') || '{}');
+      return cfg.hide_previous_agent_history === true;
+    } catch { return false; }
+  }, [isSalesAgent]);
+
+  // Find when current agent was assigned (to filter timeline)
+  const myAssignmentDate = useMemo(() => {
+    if (!hidePreviousHistory || !assignmentHistory.length) return null;
+    const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
+    // Find the last assignment TO the current agent
+    const myAssign = [...assignmentHistory].reverse().find(h => h.to === selfName || h.to === profile?.full_name_ar || h.to === profile?.full_name_en);
+    return myAssign ? new Date(myAssign.at) : null;
+  }, [hidePreviousHistory, assignmentHistory, profile, isRTL]);
   const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
   const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'qualification', temperature:'warm', priority:'medium', notes:'', assigned_to_name: isSalesAgent ? selfName : '' });
 
@@ -378,6 +396,18 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   const filteredTimeline = useMemo(() => {
     let items = timeline;
+
+    // Privacy filter: hide activities before current agent's assignment date
+    if (hidePreviousHistory && myAssignmentDate) {
+      items = items.filter(item => {
+        // Always show assignment entries (so agent knows history exists)
+        if (item._type === 'assignment') return true;
+        // Hide activities from before this agent was assigned
+        const itemDate = new Date(item._date || 0);
+        return itemDate >= myAssignmentDate;
+      });
+    }
+
     if (timelineFilter !== 'all') items = items.filter(item => item._type === timelineFilter);
     if (activityAgentFilter !== 'all') {
       items = items.filter(item => {
@@ -386,7 +416,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       });
     }
     return items;
-  }, [timeline, timelineFilter, activityAgentFilter]);
+  }, [timeline, timelineFilter, activityAgentFilter, hidePreviousHistory, myAssignmentDate]);
 
   // Grouped contact info for data tab
   const dataGroups = [
@@ -864,6 +894,17 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </div>
             </div>
           </div>
+
+          {/* Privacy notice: previous history hidden */}
+          {hidePreviousHistory && myAssignmentDate && (
+            <div className="mx-5 mb-2 px-3 py-2 rounded-lg bg-brand-500/[0.06] border border-brand-500/15">
+              <p className="m-0 text-[10px] text-brand-500 font-medium">
+                {isRTL
+                  ? `بتشوف الأنشطة من ${myAssignmentDate.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })} — الأنشطة السابقة مخفية`
+                  : `Showing activities from ${myAssignmentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} — previous history hidden`}
+              </p>
+            </div>
+          )}
 
           {/* Assignment History Banner */}
           {assignmentHistory.length > 0 && (

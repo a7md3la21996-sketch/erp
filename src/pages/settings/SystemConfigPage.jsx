@@ -807,8 +807,19 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
 function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
   const [settings, setSettings] = useState(() => ({ mergeLimit: 2, maxPins: 5, ...(config.contactsSettings || {}) }));
 
+  // Privacy toggle: stored in system_config root level
+  const [hideHistory, setHideHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('platform_system_config') || '{}').hide_previous_agent_history === true; } catch { return false; }
+  });
+
   const handleSave = () => {
     updateSection('contactsSettings', settings);
+    // Save privacy toggle to root config
+    try {
+      const cfg = JSON.parse(localStorage.getItem('platform_system_config') || '{}');
+      cfg.hide_previous_agent_history = hideHistory;
+      localStorage.setItem('platform_system_config', JSON.stringify(cfg));
+    } catch {}
     toast.success(isRTL ? 'تم الحفظ' : 'Saved');
   };
 
@@ -841,6 +852,35 @@ function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
               />
             </div>
           ))}
+
+          {/* Privacy: Hide previous agent history */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', paddingTop: 16, borderTop: '1px solid var(--edge, #e2e8f0)' }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>
+                {isRTL ? 'إخفاء سجل الأنشطة السابقة عند إعادة التعيين' : 'Hide previous agent history on reassignment'}
+              </div>
+              <div className="text-content-muted dark:text-content-muted-dark" style={{ fontSize: 11 }}>
+                {isRTL
+                  ? 'لما contact يتعين لسيلز جديد، الأنشطة القديمة هتتخفى عنه (المدير يشوف كل حاجة)'
+                  : 'When a contact is reassigned, the new agent won\'t see previous activities (managers see everything)'}
+              </div>
+            </div>
+            <button
+              onClick={() => setHideHistory(h => !h)}
+              style={{
+                width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                background: hideHistory ? '#4A7AAB' : '#e2e8f0',
+                position: 'relative', transition: 'background 0.2s',
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: 3,
+                [hideHistory ? 'right' : 'left']: 3,
+                transition: 'all 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+              }} />
+            </button>
+          </div>
         </div>
       </div>
     </Card>
