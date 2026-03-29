@@ -369,17 +369,33 @@ export default function ContactsPage() {
     { value: 'other', label: isRTL ? 'سبب آخر' : 'Other' },
   ];
 
-  // Load contacts
+  // Load contacts — fetch non-blacklisted first for speed, then all
   const loadContactsData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchContacts({
+      const result = await fetchContacts({
         role: profile?.role,
         userId: profile?.id,
         teamId: profile?.team_id,
-        filters: {},
+        filters: { showBlacklisted: false },
+        page: 1,
+        pageSize: 5000,
       });
-      setContacts(Array.isArray(data) ? data : []);
+      const first = Array.isArray(result?.data) ? result.data : [];
+      setContacts(first);
+      setLoading(false);
+      // Then load blacklisted in background
+      const blResult = await fetchContacts({
+        role: profile?.role,
+        userId: profile?.id,
+        teamId: profile?.team_id,
+        filters: { showBlacklisted: true },
+        page: 1,
+        pageSize: 20000,
+      });
+      const bl = Array.isArray(blResult?.data) ? blResult.data : [];
+      if (bl.length > 0) setContacts(prev => [...prev, ...bl]);
+      return;
     } catch {
       setContacts([]);
     } finally {
