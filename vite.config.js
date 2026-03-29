@@ -10,8 +10,7 @@ export default defineConfig({
     viteCompression({ algorithm: 'brotliCompress', ext: '.br', threshold: 10240 }),
     VitePWA({
       devOptions: { enabled: false },
-      registerType: 'prompt',
-      selfDestroying: true,
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'logo.png', 'logo-white.png'],
       manifest: {
         name: 'Platform ERP',
