@@ -90,11 +90,20 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       query = query.range(from, to);
       const { data, error, count } = await query;
       if (error) throw error;
+      (data || []).forEach(c => {
+        if (!Array.isArray(c.campaign_interactions)) c.campaign_interactions = [];
+        if (!Array.isArray(c.extra_phones)) c.extra_phones = [];
+      });
       return { data: data || [], count: count || 0 };
     }
 
     const { data, error } = await query.range(0, 499); // max 500 per fetch
     if (error) throw error;
+    // Ensure array fields are never null (prevents .map() crashes)
+    (data || []).forEach(c => {
+      if (!Array.isArray(c.campaign_interactions)) c.campaign_interactions = [];
+      if (!Array.isArray(c.extra_phones)) c.extra_phones = [];
+    });
     return data || [];
   } catch (err) { reportError('contactsService', 'query', err);
     // Fallback to localStorage when Supabase is unreachable
