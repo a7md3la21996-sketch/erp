@@ -162,9 +162,15 @@ export async function updateApproval(id, updates) {
   save(list);
 
   try {
+    // Map code field names to Supabase column names
+    const sbUpdates = {};
+    if (updates.status) sbUpdates.status = updates.status;
+    if (updates.comments || updates.notes) sbUpdates.comment = updates.comments || updates.notes;
+    if (updates.resolved_at) sbUpdates.approved_at = updates.resolved_at;
+    if (updates.status === 'rejected' && updates.resolved_at) sbUpdates.rejected_at = updates.resolved_at;
     const { error } = await supabase
       .from('approvals')
-      .update(updates)
+      .update(sbUpdates)
       .eq('id', id);
     if (error) throw error;
   } catch (err) { reportError('approvalService', 'query', err);
@@ -221,7 +227,7 @@ export async function getApprovalByEntity(type, entityId) {
       .eq('type', type)
       .eq('entity_id', entityId)
       .limit(1)
-      .single();
+      .maybeSingle();
     if (error) throw error;
     return data || null;
   } catch (err) { reportError('approvalService', 'query', err);
