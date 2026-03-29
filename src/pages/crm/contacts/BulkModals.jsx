@@ -349,7 +349,7 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
   if (!bulkSMSModal) return null;
 
   const templates = getTemplates();
-  const selectedTemplate = templates.find(t => t.id === bulkSMSState.templateId);
+  const selectedTemplate = (templates || []).find(t => t.id === bulkSMSState.templateId);
   const smsContacts = (contacts || []).filter(c => selectedIds.includes(c.id));
   const withPhone = smsContacts.filter(c => c.phone);
   const withoutPhone = smsContacts.filter(c => !c.phone);
@@ -403,7 +403,7 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
                 <select value={bulkSMSState.templateId} onChange={e => setBulkSMSState(s => ({ ...s, templateId: e.target.value }))}
                   style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.3)', background: '#132337', color: '#e2e8f0', fontSize: 12, outline: 'none' }}>
                   <option value="">{isRTL ? '— اختر قالب —' : '-- Select Template --'}</option>
-                  {templates.map(t => (
+                  {(templates || []).map(t => (
                     <option key={t.id} value={t.id}>{lang === 'ar' ? (t.nameAr || t.name) : t.name}</option>
                   ))}
                 </select>

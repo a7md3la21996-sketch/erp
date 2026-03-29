@@ -168,7 +168,7 @@ export default function AttendancePage() {
             </tr>
           </thead>
           <tbody>
-            {employees.length === 0 ? (
+            {(employees || []).length === 0 ? (
               <tr><td colSpan={6} className="text-center py-16 px-5">
                 <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                   <Clock size={24} color='#4A7AAB' />

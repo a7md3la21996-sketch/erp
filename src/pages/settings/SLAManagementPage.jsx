@@ -334,7 +334,7 @@ function DashboardTab({
 
       {/* Tickets Table */}
       <div style={{ background: cardBg, borderRadius: 12, border: `1px solid ${borderColor}`, overflow: 'hidden' }}>
-        {tickets.length === 0 ? (
+        {(tickets || []).length === 0 ? (
           <div style={{ textAlign: 'center', padding: 60, color: textSecondary }}>
             <Shield size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
             <p style={{ margin: 0, fontSize: 14, fontWeight: 500 }}>
@@ -364,7 +364,7 @@ function DashboardTab({
                   </tr>
                 </thead>
                 <tbody>
-                  {tickets.map(ticket => {
+                  {(tickets || []).map(ticket => {
                     const timeLeft = getTimeRemaining(ticket.resolutionDeadline);
                     const respTime = ticket.firstResponseAt ? null : getTimeRemaining(ticket.firstResponseDeadline);
                     const isBreached = ticket.breached;

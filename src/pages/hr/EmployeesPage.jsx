@@ -93,7 +93,7 @@ export default function EmployeesPage() {
 
   const handleUpdateEmployee = async (id, updates) => {
     try {
-      const old = employees.find(e => e.id === id);
+      const old = (employees || []).find(e => e.id === id);
       const result = await updateEmployee(id, updates);
       logAction({
         action: 'update',
@@ -118,7 +118,7 @@ export default function EmployeesPage() {
     const id = deleteTarget.id;
     setDeleting(true);
     try {
-      const emp = employees.find(e => e.id === id);
+      const emp = (employees || []).find(e => e.id === id);
       await deleteEmployee(id);
       logAction({
         action: 'delete',
@@ -140,7 +140,7 @@ export default function EmployeesPage() {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      const old = employees.find(e => e.id === id);
+      const old = (employees || []).find(e => e.id === id);
       const result = await updateEmployee(id, { status: newStatus });
       logAction({
         action: 'status_change',
@@ -162,13 +162,13 @@ export default function EmployeesPage() {
 
   /* stats */
   const today = new Date();
-  const expiring = employees.filter(e => {
+  const expiring = (employees || []).filter(e => {
     if (!e.contract_end) return false;
     const days = Math.ceil((new Date(e.contract_end) - today) / 864e5);
     return days > 0 && days <= 30;
   });
-  const probation = employees.filter(e => e.employment_type === 'probation');
-  const active    = employees.filter(e => e.status === 'active');
+  const probation = (employees || []).filter(e => e.employment_type === 'probation');
+  const active    = (employees || []).filter(e => e.status === 'active');
 
   const SMART_FIELDS = useMemo(() => [
     {
@@ -198,7 +198,7 @@ export default function EmployeesPage() {
 
   const filtered = useMemo(() => {
     // Exclude soft-deleted employees unless explicitly filtering for inactive
-    let result = employees.filter(e => !e.deleted_at);
+    let result = (employees || []).filter(e => !e.deleted_at);
 
     // Apply smart filters
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
@@ -242,7 +242,7 @@ export default function EmployeesPage() {
           </div>
           <div className={'text-start'}>
             <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'الموظفين' : 'Employees'}</h1>
-            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{employees.length} {lang === 'ar' ? 'موظف' : 'employees'}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{(employees || []).length} {lang === 'ar' ? 'موظف' : 'employees'}</p>
           </div>
         </div>
         <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -267,7 +267,7 @@ export default function EmployeesPage() {
 
       {/* ── KPI Strip ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-        <KpiCard icon={Users}     label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={employees.length} color="#1B3347" />
+        <KpiCard icon={Users}     label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={(employees || []).length} color="#1B3347" />
         <KpiCard icon={UserCheck} label={lang === 'ar' ? 'نشط'             : 'Active'}           value={active.length}         color="#4A7AAB" />
         <KpiCard icon={Clock}     label={lang === 'ar' ? 'فترة تجربة'      : 'Probation'}        value={probation.length}      color="#6B8DB5" />
         <KpiCard icon={AlertTriangle} label={lang === 'ar' ? 'عقود تنتهي قريباً' : 'Expiring Soon'} value={expiring.length} color="#EF4444" />

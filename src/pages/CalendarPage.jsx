@@ -87,7 +87,7 @@ export default function CalendarPage() {
     const map = {};
     const ensure = (key) => { if (!map[key]) map[key] = { tasks: [], reminders: [], activities: [] }; };
 
-    tasks.forEach(t => {
+    (tasks || []).forEach(t => {
       if (!t.due_date) return;
       const d = new Date(t.due_date);
       const k = dateKey(d);
@@ -95,7 +95,7 @@ export default function CalendarPage() {
       map[k].tasks.push(t);
     });
 
-    reminders.forEach(r => {
+    (reminders || []).forEach(r => {
       if (!r.due_at) return;
       const d = new Date(r.due_at);
       const k = dateKey(d);
@@ -103,7 +103,7 @@ export default function CalendarPage() {
       map[k].reminders.push(r);
     });
 
-    activities.forEach(a => {
+    (activities || []).forEach(a => {
       if (!a.created_at) return;
       const d = new Date(a.created_at);
       const k = dateKey(d);

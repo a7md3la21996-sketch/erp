@@ -37,7 +37,7 @@ export default function BatchCallModal({
 
   if (!batchCallMode) return null;
 
-  const batchContacts = contacts.filter(c => selectedIds.includes(c.id));
+  const batchContacts = (contacts || []).filter(c => selectedIds.includes(c.id));
   const current = batchContacts[batchCallIndex];
   if (!current && batchCallIndex < batchContacts.length) return null;
 

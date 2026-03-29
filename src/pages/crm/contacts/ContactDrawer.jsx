@@ -374,7 +374,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const timeline = useMemo(() => {
     const items = [];
     (activities || []).forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at }));
-    tasks.forEach(t => items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date }));
+    (tasks || []).forEach(t => items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date }));
     opportunities.forEach(o => items.push({ ...o, _type: 'opportunity', _date: o.created_at }));
     extraSources.comments.forEach(c => items.push({ ...c, _type: 'comment', _date: c.created_at }));
     extraSources.documents.forEach(d => items.push({ ...d, _type: 'document', _date: d.uploaded_at || d.created_at }));
@@ -1117,7 +1117,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   {[
                     { key: 'all', label: isRTL ? 'الكل' : 'All', count: timeline.length },
                     { key: 'activity', label: isRTL ? 'نشاط' : 'Activities', count: activities.length },
-                    { key: 'task', label: isRTL ? 'مهام' : 'Tasks', count: tasks.length },
+                    { key: 'task', label: isRTL ? 'مهام' : 'Tasks', count: (tasks || []).length },
                     { key: 'opportunity', label: isRTL ? 'فرص' : 'Opps', count: opportunities.length },
                     { key: 'comment', label: isRTL ? 'تعليقات' : 'Comments', count: extraSources.comments.length },
                     { key: 'document', label: isRTL ? 'مستندات' : 'Docs', count: extraSources.documents.length },

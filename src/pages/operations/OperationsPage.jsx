@@ -164,24 +164,24 @@ export default function OperationsPage() {
   }, []);
 
   // ── Derived KPIs ────────────────────────────────────────────────────
-  const activeDeals      = deals.filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
-  const newDeals         = deals.filter(d => d.status === 'new_deal').length;
-  const underReview      = deals.filter(d => d.status === 'under_review').length;
-  const awaitingSign     = deals.filter(d => d.status === 'contract_prep').length;
-  const completedDeals   = deals.filter(d => d.status === 'completed').length;
+  const activeDeals      = (deals || []).filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
+  const newDeals         = (deals || []).filter(d => d.status === 'new_deal').length;
+  const underReview      = (deals || []).filter(d => d.status === 'under_review').length;
+  const awaitingSign     = (deals || []).filter(d => d.status === 'contract_prep').length;
+  const completedDeals   = (deals || []).filter(d => d.status === 'completed').length;
 
-  const overduePayments  = installments.filter(i => i.status === 'overdue');
+  const overduePayments  = (installments || []).filter(i => i.status === 'overdue');
   const overdueSum       = overduePayments.reduce((s, i) => s + i.amount, 0);
-  const paidThisMonth    = installments.filter(i => i.status === 'paid' && i.paid_date?.startsWith('2026-03'));
+  const paidThisMonth    = (installments || []).filter(i => i.status === 'paid' && i.paid_date?.startsWith('2026-03'));
   const paidSum          = paidThisMonth.reduce((s, i) => s + i.amount, 0);
-  const totalDue         = installments.filter(i => ['due', 'overdue'].includes(i.status)).reduce((s, i) => s + i.amount, 0);
-  const totalPaid        = installments.filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0);
+  const totalDue         = (installments || []).filter(i => ['due', 'overdue'].includes(i.status)).reduce((s, i) => s + i.amount, 0);
+  const totalPaid        = (installments || []).filter(i => i.status === 'paid').reduce((s, i) => s + i.amount, 0);
   const collectionRate   = totalPaid + totalDue > 0 ? Math.round((totalPaid / (totalPaid + totalDue)) * 100) : 0;
 
-  const handoverThisMonth = handovers.filter(h => h.expected_handover?.startsWith('2026-03') || h.expected_handover?.startsWith('2026-04')).length;
-  const openTickets      = tickets.filter(t => ['open', 'in_progress'].includes(t.status)).length;
-  const complaints       = tickets.filter(t => t.type === 'complaint' && ['open', 'in_progress'].includes(t.status)).length;
-  const resolvedTickets  = tickets.filter(t => t.resolved_at);
+  const handoverThisMonth = (handovers || []).filter(h => h.expected_handover?.startsWith('2026-03') || h.expected_handover?.startsWith('2026-04')).length;
+  const openTickets      = (tickets || []).filter(t => ['open', 'in_progress'].includes(t.status)).length;
+  const complaints       = (tickets || []).filter(t => t.type === 'complaint' && ['open', 'in_progress'].includes(t.status)).length;
+  const resolvedTickets  = (tickets || []).filter(t => t.resolved_at);
   const avgRating        = resolvedTickets.filter(t => t.rating).length > 0
     ? (resolvedTickets.filter(t => t.rating).reduce((s, t) => s + t.rating, 0) / resolvedTickets.filter(t => t.rating).length).toFixed(1)
     : '-';
@@ -189,7 +189,7 @@ export default function OperationsPage() {
   // ── Handlers ──────────────────────────────────────────────────────
   const advanceDeal = async (dealId) => {
     const order = ['new_deal','under_review','docs_collection','contract_prep','contract_signed','completed'];
-    const deal = deals.find(d => d.id === dealId);
+    const deal = (deals || []).find(d => d.id === dealId);
     if (!deal) return;
     const idx = order.indexOf(deal.status);
     if (idx < 0 || idx >= order.length - 1) return;
@@ -330,7 +330,7 @@ export default function OperationsPage() {
   function DealDrawer({ deal, onClose }) {
     if (!deal) return null;
     const sCfg = DEAL_STATUS_CONFIG[deal.status] || {};
-    const dealInstallments = installments.filter(i => i.deal_id === deal.id);
+    const dealInstallments = (installments || []).filter(i => i.deal_id === deal.id);
     const totalDocs = DOCUMENT_CHECKLIST.filter(d => d.required).length;
     const doneDocs = DOCUMENT_CHECKLIST.filter(d => d.required && deal.documents[d.key]).length;
     return (
@@ -608,15 +608,15 @@ export default function OperationsPage() {
 
   // ── HANDOVER TAB ────────────────────────────────────────────────────
   function renderHandover() {
-    const reservedCount = handovers.filter(h => ['reserved', 'developer_confirmed'].includes(h.status)).length;
-    const constructionCount = handovers.filter(h => ['under_construction', 'finishing'].includes(h.status)).length;
-    const handedCount = handovers.filter(h => h.status === 'handed_over').length;
+    const reservedCount = (handovers || []).filter(h => ['reserved', 'developer_confirmed'].includes(h.status)).length;
+    const constructionCount = (handovers || []).filter(h => ['under_construction', 'finishing'].includes(h.status)).length;
+    const handedCount = (handovers || []).filter(h => h.status === 'handed_over').length;
     return (
       <>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
           <KpiCard icon={Building2} label={isRTL ? 'وحدات محجوزة' : 'Reserved Units'} value={reservedCount} color="#4A7AAB" />
           <KpiCard icon={Clock} label={isRTL ? 'تحت الإنشاء' : 'Under Construction'} value={constructionCount} color="#6B8DB5" />
-          <KpiCard icon={KeyRound} label={isRTL ? 'جاهز للتسليم' : 'Ready'} value={handovers.filter(h => h.status === 'ready').length} color="#2B4C6F" />
+          <KpiCard icon={KeyRound} label={isRTL ? 'جاهز للتسليم' : 'Ready'} value={(handovers || []).filter(h => h.status === 'ready').length} color="#2B4C6F" />
           <KpiCard icon={CheckCircle} label={isRTL ? 'تم التسليم' : 'Handed Over'} value={handedCount} color="#1B3347" />
         </div>
         <div className={`flex gap-3 items-center flex-wrap mb-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -789,7 +789,7 @@ export default function OperationsPage() {
   }
 
   function RecordPaymentModal() {
-    const unpaid = installments.filter(i => ['due','overdue','upcoming'].includes(i.status));
+    const unpaid = (installments || []).filter(i => ['due','overdue','upcoming'].includes(i.status));
     const [selected, setSelected] = useState('');
     return (
       <Modal open={true} title={isRTL?'تسجيل دفعة':'Record Payment'} onClose={()=>setShowPaymentModal(false)} width="max-w-md">

@@ -136,7 +136,7 @@ export default function CommissionsPage() {
   const filteredInstallments = useMemo(() => {
     if (!instSearch.trim()) return installments;
     const q = instSearch.toLowerCase();
-    return installments.filter(r =>
+    return (installments || []).filter(r =>
       (r.deal_name || '').toLowerCase().includes(q) ||
       (r.developer_name || '').toLowerCase().includes(q) ||
       (r.deal_id || '').toLowerCase().includes(q) ||

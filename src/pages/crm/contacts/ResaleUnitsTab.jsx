@@ -268,8 +268,8 @@ export default function ResaleUnitsTab({ contact, isRTL }) {
         <h4 className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
           <Building2 size={15} className="text-brand-500" />
           {label('وحدات للبيع', 'Resale Units')}
-          {units.length > 0 && (
-            <span className="text-[10px] bg-brand-500/10 text-brand-500 px-1.5 py-0.5 rounded-full font-bold">{units.length}</span>
+          {(units || []).length > 0 && (
+            <span className="text-[10px] bg-brand-500/10 text-brand-500 px-1.5 py-0.5 rounded-full font-bold">{(units || []).length}</span>
           )}
         </h4>
         <Button variant="primary" size="sm" onClick={openAdd}>
@@ -279,7 +279,7 @@ export default function ResaleUnitsTab({ contact, isRTL }) {
       </div>
 
       {/* Empty state */}
-      {units.length === 0 && (
+      {(units || []).length === 0 && (
         <div className="text-center py-10">
           <Home size={36} className="mx-auto text-content-muted/30 dark:text-content-muted-dark/30 mb-3" />
           <p className="text-sm text-content-muted dark:text-content-muted-dark">{label('لا توجد وحدات بعد', 'No units yet')}</p>

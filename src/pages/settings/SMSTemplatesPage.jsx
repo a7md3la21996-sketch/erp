@@ -726,11 +726,11 @@ export default function SMSTemplatesPage() {
   const pageData = currentData.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   // KPI data
-  const totalTemplates = templates.length;
+  const totalTemplates = (templates || []).length;
   const totalSent = smsLog.length;
   const today = new Date().toISOString().slice(0, 10);
   const todaySent = smsLog.filter(l => (l.sent_at || '').slice(0, 10) === today).length;
-  const mostUsed = templates.reduce((best, t) => (!best || t.send_count > best.send_count) ? t : best, null);
+  const mostUsed = (templates || []).reduce((best, t) => (!best || t.send_count > best.send_count) ? t : best, null);
 
   // Handlers
   const handleSave = (form) => {

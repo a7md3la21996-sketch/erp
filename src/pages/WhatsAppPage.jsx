@@ -460,7 +460,7 @@ export default function WhatsAppPage() {
                 ? 'repeating-linear-gradient(45deg, rgba(37,211,102,0.01), rgba(37,211,102,0.01) 10px, transparent 10px, transparent 20px)'
                 : 'repeating-linear-gradient(45deg, rgba(37,211,102,0.015), rgba(37,211,102,0.015) 10px, transparent 10px, transparent 20px)',
             }}>
-              {messages.length === 0 ? (
+              {(messages || []).length === 0 ? (
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center',
                   justifyContent: 'center', height: '100%', gap: 12,
@@ -471,7 +471,7 @@ export default function WhatsAppPage() {
                   </p>
                 </div>
               ) : (
-                messages.map(msg => {
+                (messages || []).map(msg => {
                   const isOutgoing = msg.direction === 'outgoing';
                   const StatusIcon = STATUS_ICONS[msg.status] || Check;
                   return (
@@ -907,12 +907,12 @@ function TemplatesManager({ isDark, isRTL, onClose }) {
 
         {/* Templates list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
-          {templates.length === 0 ? (
+          {(templates || []).length === 0 ? (
             <p style={{ padding: 40, margin: 0, fontSize: 13, color: isDark ? '#64748b' : '#94a3b8', textAlign: 'center' }}>
               {isRTL ? 'لا توجد قوالب' : 'No templates yet'}
             </p>
           ) : (
-            templates.map(tpl => {
+            (templates || []).map(tpl => {
               const cat = TEMPLATE_CATEGORIES.find(c => c.id === tpl.category);
               return (
                 <div key={tpl.id} style={{

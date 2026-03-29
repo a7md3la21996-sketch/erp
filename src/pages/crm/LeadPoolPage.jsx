@@ -214,7 +214,7 @@ export default function LeadPoolPage() {
   const handleAssign = (leadIds, agentId) => {
     // Filter out reserved leads from bulk assignment
     const idsToAssign = (Array.isArray(leadIds) ? leadIds : [leadIds]).filter(id => {
-      const lead = leads.find(l => l.id === id);
+      const lead = (leads || []).find(l => l.id === id);
       return !lead?.reserved_by || new Date(lead.reserved_until) <= new Date();
     });
     if (idsToAssign.length === 0) return;
@@ -227,7 +227,7 @@ export default function LeadPoolPage() {
       logAction({ action: 'bulk_reassign', entity: 'lead', entityId: idsToAssign.join(','), entityName: `${idsToAssign.length} leads`, description: `Bulk assigned ${idsToAssign.length} leads to ${agentName}`, userName });
     } else {
       const leadId = idsToAssign[0];
-      const lead = leads.find(l => l.id === leadId);
+      const lead = (leads || []).find(l => l.id === leadId);
       logAction({ action: 'assign', entity: 'lead', entityId: leadId, entityName: lead?.name || '', description: `Assigned lead to ${agentName}`, userName });
     }
 

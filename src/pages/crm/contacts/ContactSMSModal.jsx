@@ -20,7 +20,7 @@ export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
     amount: SAMPLE_DATA.amount,
   }), [contact]);
 
-  const selectedTemplate = templates.find(t => t.id === selectedId);
+  const selectedTemplate = (templates || []).find(t => t.id === selectedId);
   const body = selectedTemplate ? (lang === 'ar' ? (selectedTemplate.bodyAr || selectedTemplate.body) : selectedTemplate.body) : '';
   const preview = renderBody(body, contactData);
 
@@ -77,7 +77,7 @@ export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
               onChange={e => setSelectedId(e.target.value)}
               className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none font-cairo"
             >
-              {templates.map(t => (
+              {(templates || []).map(t => (
                 <option key={t.id} value={t.id}>{isRTL ? (t.nameAr || t.name) : t.name}</option>
               ))}
             </select>

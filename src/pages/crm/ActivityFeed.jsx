@@ -80,9 +80,9 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
           <span className="text-xs font-semibold text-content dark:text-content-dark">
             {lang === 'ar' ? 'سجل الأنشطة' : 'Activity Log'}
           </span>
-          {activities.length > 0 && (
+          {(activities || []).length > 0 && (
             <Badge variant="default" size="sm">
-              {activities.length}
+              {(activities || []).length}
             </Badge>
           )}
         </div>
@@ -152,7 +152,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
         <div className="text-center text-content-muted dark:text-content-muted-dark text-xs py-5">
           {lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}
         </div>
-      ) : activities.length === 0 ? (
+      ) : (activities || []).length === 0 ? (
         <div className="text-center text-content-muted dark:text-content-muted-dark text-xs py-5">
           {lang === 'ar' ? 'لا يوجد أنشطة بعد' : 'No activities yet'}
         </div>
@@ -164,7 +164,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
             return (
               <div
                 key={act.id}
-                className={`group flex items-start gap-2.5 py-2 px-1.5 rounded-lg transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.06] ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${idx < activities.length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}`}
+                className={`group flex items-start gap-2.5 py-2 px-1.5 rounded-lg transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.06] ${isRTL ? 'flex-row-reverse' : 'flex-row'} ${idx < (activities || []).length - 1 ? 'border-b border-edge dark:border-edge-dark' : ''}`}
               >
                 {/* Icon */}
                 <div
