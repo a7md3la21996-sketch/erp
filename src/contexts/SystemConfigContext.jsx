@@ -89,6 +89,7 @@ export function SystemConfigProvider({ children }) {
       activityTypes: config.activityTypes || [],
       activityResults: config.activityResults || {},
       contactsSettings: config.contactsSettings || { mergeLimit: 2, maxPins: 5 },
+      drawerFields: config.drawerFields || {},
       stageWinRates: config.stageWinRates || {},
       getType,
       getSourceLabel,

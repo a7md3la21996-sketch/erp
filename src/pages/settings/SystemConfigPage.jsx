@@ -966,6 +966,90 @@ function StageWinRatesTab({ config, updateSection, isRTL, toast }) {
   );
 }
 
+// ─── Drawer Fields Tab ───────────────────────────────────────────────
+const DRAWER_FIELDS_LIST = [
+  { key: 'phone',              ar: 'الموبايل',           en: 'Phone' },
+  { key: 'phone2',             ar: 'موبايل ثاني',       en: 'Phone 2' },
+  { key: 'email',              ar: 'الإيميل',           en: 'Email' },
+  { key: 'company',            ar: 'الشركة',            en: 'Company' },
+  { key: 'job_title',          ar: 'المسمى الوظيفي',    en: 'Job Title' },
+  { key: 'budget',             ar: 'الميزانية',          en: 'Budget' },
+  { key: 'preferred_location', ar: 'المنطقة المفضلة',   en: 'Preferred Location' },
+  { key: 'interested_in_type', ar: 'نوع العقار',        en: 'Property Type' },
+  { key: 'assigned_to_name',   ar: 'المسؤول',           en: 'Assigned To' },
+  { key: 'assigned_by_name',   ar: 'تم التعيين بواسطة', en: 'Assigned By' },
+  { key: 'created_by_name',    ar: 'أنشأها',            en: 'Created By' },
+  { key: 'source',             ar: 'المصدر',            en: 'Source' },
+  { key: 'campaign_name',      ar: 'الحملة',            en: 'Campaign' },
+  { key: 'assigned_at',        ar: 'تاريخ التوزيع',     en: 'Assigned Date' },
+  { key: 'contact_status',     ar: 'الحالة',            en: 'Status' },
+  { key: 'lead_score',         ar: 'تقييم العميل',      en: 'Lead Score' },
+  { key: 'notes',              ar: 'ملاحظات',           en: 'Notes' },
+  { key: 'dq_reason',          ar: 'سبب الاستبعاد',     en: 'DQ Reason' },
+  { key: 'last_activity_at',   ar: 'آخر نشاط',          en: 'Last Activity' },
+  { key: 'created_at',         ar: 'تاريخ الإنشاء',     en: 'Created Date' },
+];
+
+function DrawerFieldsTab({ config, updateSection, isRTL, toast }) {
+  const [fields, setFields] = useState(() => {
+    const saved = config.drawerFields || {};
+    const result = {};
+    DRAWER_FIELDS_LIST.forEach(f => { result[f.key] = saved[f.key] !== false; }); // default true
+    return result;
+  });
+
+  const handleToggle = (key) => {
+    setFields(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleSave = () => {
+    updateSection('drawerFields', fields);
+    toast.success(isRTL ? 'تم حفظ إعدادات البطاقة' : 'Card fields saved');
+  };
+
+  const enabledCount = Object.values(fields).filter(Boolean).length;
+
+  return (
+    <Card>
+      <div style={{ padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{isRTL ? 'حقول بطاقة العميل' : 'Contact Card Fields'}</h3>
+            <p className="text-content-muted dark:text-content-muted-dark" style={{ margin: '4px 0 0', fontSize: 11 }}>
+              {isRTL ? `${enabledCount} حقل مفعّل من ${DRAWER_FIELDS_LIST.length}` : `${enabledCount} of ${DRAWER_FIELDS_LIST.length} fields enabled`}
+            </p>
+          </div>
+          <Button size="sm" onClick={handleSave}><Save size={13} /> {isRTL ? 'حفظ' : 'Save'}</Button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 8 }}>
+          {DRAWER_FIELDS_LIST.map(f => (
+            <label
+              key={f.key}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+                borderRadius: 10, cursor: 'pointer',
+                border: '1px solid', borderColor: fields[f.key] ? '#4A7AAB40' : 'var(--edge, #e2e8f0)',
+                background: fields[f.key] ? '#4A7AAB08' : 'transparent',
+                transition: 'all 0.15s',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={fields[f.key]}
+                onChange={() => handleToggle(f.key)}
+                style={{ accentColor: '#4A7AAB', width: 16, height: 16, cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: 13, fontWeight: fields[f.key] ? 600 : 400 }}>
+                {isRTL ? f.ar : f.en}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────
 const TABS = [
   { key: 'contactTypes', icon: Users, ar: 'أنواع جهات الاتصال', en: 'Contact Types' },
@@ -976,6 +1060,7 @@ const TABS = [
   { key: 'closeReasons', icon: ThumbsDown, ar: 'أسباب الخسارة', en: 'Lost Reasons' },
   { key: 'stageWinRates', icon: SlidersHorizontal, ar: 'نسب الفوز', en: 'Stage Win Rates' },
   { key: 'contactsSettings', icon: SlidersHorizontal, ar: 'إعدادات جهات الاتصال', en: 'Contacts Settings' },
+  { key: 'drawerFields', icon: SlidersHorizontal, ar: 'حقول بطاقة العميل', en: 'Contact Card Fields' },
   { key: 'company', icon: Briefcase, ar: 'بيانات الشركة', en: 'Company Info' },
   { key: 'roles', icon: Shield, ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' },
 ];
@@ -1034,6 +1119,8 @@ export default function SystemConfigPage() {
         return <StageWinRatesTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'contactsSettings':
         return <ContactsSettingsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
+      case 'drawerFields':
+        return <DrawerFieldsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'company':
         return <CompanyInfoTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'roles':

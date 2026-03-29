@@ -282,6 +282,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   };
 
   if (!contact) return null;
+  const { drawerFields: df } = useSystemConfig();
+  const show = (key) => !df || df[key] !== false; // default show if not configured
+
   const tempInfo = contact.temperature ? TEMP[contact.temperature] : null;
   const tp = contact.contact_type ? TYPE[contact.contact_type] : null;
   const isSupplier = contact.contact_type === 'supplier';
@@ -421,72 +424,72 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       icon: Phone,
       color: '#10B981',
       rows: [
-        { label: isRTL ? 'الهاتف' : 'Phone', val: contact.phone || '—' },
-        { label: isRTL ? 'الهاتف الثاني' : 'Phone 2', val: contact.phone2 || '—' },
-        { label: isRTL ? 'الإيميل' : 'Email', val: contact.email || '—' },
-      ],
+        show('phone') && { label: isRTL ? 'الهاتف' : 'Phone', val: contact.phone || '—' },
+        show('phone2') && { label: isRTL ? 'الهاتف الثاني' : 'Phone 2', val: contact.phone2 || '—' },
+        show('email') && { label: isRTL ? 'الإيميل' : 'Email', val: contact.email || '—' },
+      ].filter(Boolean),
     },
     {
       title: isRTL ? 'معلومات العمل' : 'Business Info',
       icon: Briefcase,
       color: '#4A7AAB',
       rows: [
-        { label: isRTL ? 'الشركة' : 'Company', val: contact.company || '—' },
-        { label: isRTL ? 'المسمى الوظيفي' : 'Job Title', val: contact.job_title || '—' },
-        { label: isRTL ? 'الميزانية' : 'Budget', val: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
-        { label: isRTL ? 'الموقع' : 'Location', val: contact.preferred_location || '—' },
-        { label: isRTL ? 'نوع العقار' : 'Property', val: (isRTL ? { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' } : { residential: 'Residential', commercial: 'Commercial', administrative: 'Administrative' })[contact.interested_in_type] || '—' },
-      ],
+        show('company') && { label: isRTL ? 'الشركة' : 'Company', val: contact.company || '—' },
+        show('job_title') && { label: isRTL ? 'المسمى الوظيفي' : 'Job Title', val: contact.job_title || '—' },
+        show('budget') && { label: isRTL ? 'الميزانية' : 'Budget', val: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
+        show('preferred_location') && { label: isRTL ? 'الموقع' : 'Location', val: contact.preferred_location || '—' },
+        show('interested_in_type') && { label: isRTL ? 'نوع العقار' : 'Property', val: (isRTL ? { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' } : { residential: 'Residential', commercial: 'Commercial', administrative: 'Administrative' })[contact.interested_in_type] || '—' },
+      ].filter(Boolean),
     },
     {
       title: isRTL ? 'التوزيع والمصدر' : 'Assignment',
       icon: Users,
       color: '#F59E0B',
       rows: [
-        { label: isRTL ? 'المسؤول' : 'Assigned', val: contact.assigned_to_name || '—' },
-        { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', val: contact.assigned_by_name || '—' },
-        { label: isRTL ? 'أنشأها' : 'Created By', val: contact.created_by_name || '—' },
-        { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
-        (() => {
+        show('assigned_to_name') && { label: isRTL ? 'المسؤول' : 'Assigned', val: contact.assigned_to_name || '—' },
+        show('assigned_by_name') && { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', val: contact.assigned_by_name || '—' },
+        show('created_by_name') && { label: isRTL ? 'أنشأها' : 'Created By', val: contact.created_by_name || '—' },
+        show('source') && { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
+        show('campaign_name') && (() => {
           const interactions = contact.campaign_interactions || [];
           const uniqueCampaigns = [...new Set(interactions.map(i => i.campaign))];
           if (uniqueCampaigns.length > 0) return { label: isRTL ? 'الحملات' : 'Campaigns', val: `${uniqueCampaigns.length} ${isRTL ? 'حملات' : 'campaigns'} (${interactions.length} ${isRTL ? 'تفاعل' : 'interactions'})` };
           return { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name || '—' };
         })(),
-        { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
-        ...(contact.contact_status === 'disqualified' ? [
+        show('assigned_at') && { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
+        ...(show('dq_reason') && contact.contact_status === 'disqualified' ? [
           { label: isRTL ? 'سبب الاستبعاد' : 'DQ Reason', val: contact.disqualify_reason ? ({ resale: isRTL ? 'عايز يبيع وحدته' : 'Wants to sell unit', not_interested: isRTL ? 'غير مهتم' : 'Not interested', no_budget: isRTL ? 'ميزانية غير مناسبة' : 'No budget', wrong_audience: isRTL ? 'جمهور خاطئ' : 'Wrong audience', duplicate: isRTL ? 'مكرر' : 'Duplicate', other: isRTL ? 'آخر' : 'Other' }[contact.disqualify_reason] || contact.disqualify_reason) : '—', color: '#EF4444' },
           ...(contact.disqualify_note ? [{ label: isRTL ? 'ملاحظة الاستبعاد' : 'DQ Note', val: contact.disqualify_note }] : []),
         ] : []),
-      ],
+      ].filter(Boolean),
     },
     {
       title: isRTL ? 'الحالة والتقييم' : 'Status & Score',
       icon: Star,
       color: '#6B21A8',
       rows: [
-        { label: isRTL ? 'الحالة' : 'Status', val: contact.contact_status ? ((isRTL ? { new: 'جديد', contacted: 'تم التواصل', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' })[contact.contact_status] || contact.contact_status) : '—', color: contact.contact_status === 'disqualified' ? '#EF4444' : contact.contact_status === 'interested' ? '#10B981' : undefined },
-        { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
-      ],
+        show('contact_status') && { label: isRTL ? 'الحالة' : 'Status', val: contact.contact_status ? ((isRTL ? { new: 'جديد', contacted: 'تم التواصل', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' })[contact.contact_status] || contact.contact_status) : '—', color: contact.contact_status === 'disqualified' ? '#EF4444' : contact.contact_status === 'interested' ? '#10B981' : undefined },
+        show('lead_score') && { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
+      ].filter(Boolean),
     },
     {
       title: isRTL ? 'ملاحظات' : 'Notes',
       icon: FileText,
       color: '#8BA8C8',
       rows: [
-        { label: isRTL ? 'ملاحظات' : 'Notes', val: contact.notes || '—' },
-      ],
+        show('notes') && { label: isRTL ? 'ملاحظات' : 'Notes', val: contact.notes || '—' },
+      ].filter(Boolean),
     },
     {
       title: isRTL ? 'التواريخ' : 'Dates',
       icon: Clock,
       color: '#6B8DB5',
       rows: [
-        { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: contact.last_activity_at ? (() => { const d = daysSince(contact.last_activity_at); return d === 0 ? (isRTL ? 'اليوم' : 'Today') : isRTL ? `منذ ${d} يوم` : `${d} days ago`; })() : '—' },
-        { label: isRTL ? 'تاريخ الإنشاء' : 'Created', val: contact.created_at ? new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' + new Date(contact.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '—' },
-      ],
+        show('last_activity_at') && { label: isRTL ? 'آخر نشاط' : 'Last Activity', val: contact.last_activity_at ? (() => { const d = daysSince(contact.last_activity_at); return d === 0 ? (isRTL ? 'اليوم' : 'Today') : isRTL ? `منذ ${d} يوم` : `${d} days ago`; })() : '—' },
+        show('created_at') && { label: isRTL ? 'تاريخ الإنشاء' : 'Created', val: contact.created_at ? new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) + ' ' + new Date(contact.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : '—' },
+      ].filter(Boolean),
     },
-  ];
+  ].filter(s => s.rows.length > 0);
 
   const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.06] text-xs';
 
