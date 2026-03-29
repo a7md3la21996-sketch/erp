@@ -461,13 +461,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       ],
     },
     {
-      title: isRTL ? 'معلومات شخصية' : 'Personal',
+      title: isRTL ? 'الحالة والتقييم' : 'Status & Score',
       icon: Star,
       color: '#6B21A8',
       rows: [
-        { label: isRTL ? 'الجنس' : 'Gender', val: contact.gender ? ((isRTL ? { male: 'ذكر', female: 'أنثى' } : { male: 'Male', female: 'Female' })[contact.gender] || contact.gender) : '—' },
-        { label: isRTL ? 'الجنسية' : 'Nationality', val: contact.nationality ? ((isRTL ? { egyptian: 'مصري', saudi: 'سعودي', emirati: 'إماراتي', kuwaiti: 'كويتي', qatari: 'قطري', libyan: 'ليبي', other: 'أخرى' } : { egyptian: 'Egyptian', saudi: 'Saudi', emirati: 'Emirati', kuwaiti: 'Kuwaiti', qatari: 'Qatari', libyan: 'Libyan', other: 'Other' })[contact.nationality] || contact.nationality) : '—' },
-        { label: isRTL ? 'تاريخ الميلاد' : 'Birth Date', val: contact.birth_date || '—' },
+        { label: isRTL ? 'الحالة' : 'Status', val: contact.contact_status ? ((isRTL ? { new: 'جديد', contacted: 'تم التواصل', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' })[contact.contact_status] || contact.contact_status) : '—', color: contact.contact_status === 'disqualified' ? '#EF4444' : contact.contact_status === 'interested' ? '#10B981' : undefined },
+        { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
+      ],
+    },
+    {
+      title: isRTL ? 'ملاحظات' : 'Notes',
+      icon: FileText,
+      color: '#8BA8C8',
+      rows: [
+        { label: isRTL ? 'ملاحظات' : 'Notes', val: contact.notes || '—' },
       ],
     },
     {
