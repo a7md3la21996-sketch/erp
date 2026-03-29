@@ -745,6 +745,7 @@ export default function ContactsPage() {
         setDqNote={setDqNote}
         handleDelete={handleDelete}
         setMergePreview={setMergePreview}
+        onEdit={(c) => { setSelected(c); setOpenWithAction(false); }}
         perms={perms}
         tdCls={tdCls}
         safePage={safePage}

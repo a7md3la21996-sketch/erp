@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Phone, MessageCircle, Search, Ban, Pin, PhoneCall, Merge, MoreVertical, Bell, FileDown, Trash2, Zap, X } from 'lucide-react';
+import { Phone, MessageCircle, Search, Ban, Pin, PhoneCall, Merge, MoreVertical, Bell, FileDown, Trash2, Zap, X, Pencil } from 'lucide-react';
 import {
   SOURCE_LABELS, SOURCE_EN,
   TYPE,
@@ -69,6 +69,7 @@ export default function ContactsTable({
   setDqNote,
   handleDelete,
   setMergePreview,
+  onEdit,
   perms = {},
   tdCls,
   // Pagination
@@ -154,6 +155,9 @@ export default function ContactsTable({
                         <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                           {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
+                        <span className="text-[9px] font-mono text-content-muted dark:text-content-muted-dark opacity-50" title={`ID: ${c.id}`}>
+                          #{String(c.id).slice(-6)}
+                        </span>
                         {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
                       </div>
                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
@@ -190,6 +194,9 @@ export default function ContactsTable({
                         </button>
                         <FixedDropdown btnRef={{ current: menuBtnRefs.current[`m-${c.id}`] }} isOpen={openMenuId === c.id} isRTL={isRTL}>
                           <div className="p-1">
+                            <button onClick={() => { onEdit?.(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                              <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل' : 'Edit'}
+                            </button>
                             <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                               <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
                             </button>
@@ -394,6 +401,9 @@ export default function ContactsTable({
                       </button>
                       <FixedDropdown btnRef={{ current: menuBtnRefs.current[`d-${c.id}`] }} isOpen={openMenuId === c.id} isRTL={isRTL}>
                         <div className="p-1">
+                          <button onClick={() => { onEdit?.(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                            <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل' : 'Edit'}
+                          </button>
                           <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                             <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
                           </button>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { supabase } from '../../lib/supabase';
 import { Eye, EyeOff, Sun, Moon, Globe } from 'lucide-react';
 import { Button, Input } from '../../components/ui';
 
@@ -17,6 +18,9 @@ export default function LoginPage() {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const handleLogin = async () => {
     setError('');
@@ -43,7 +47,7 @@ export default function LoginPage() {
       <div className="hidden md:flex flex-[0_0_50%] bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700 items-center justify-center relative overflow-hidden">
         <div className="absolute top-20 -left-20 w-[300px] h-[300px] bg-white/5 rounded-full blur-[60px]" />
         <div className="text-center z-[1]">
-          <div className="w-20 h-20 rounded-[20px] bg-white/15 flex items-center justify-center mx-auto mb-6 text-4xl font-bold text-white">P</div>
+          <img src="/logo-white.webp" alt="Platform ERP" className="w-auto h-16 mx-auto mb-6 object-contain" />
           <h1 className="text-white text-[28px] font-bold m-0 mb-2">{t('app.fullName')}</h1>
           <p className="text-brand-300 text-base">{t('app.tagline')}</p>
         </div>
@@ -93,8 +97,13 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex justify-end mb-6">
-              <button type="button" onClick={() => {}} className="text-xs text-brand-600 dark:text-brand-400 bg-transparent border-none cursor-pointer p-0 hover:underline">
+            <div className="flex justify-between items-center mb-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 cursor-pointer" />
+                <span className="text-xs text-gray-500 dark:text-content-muted-dark">{isRTL ? 'تذكرني' : 'Remember me'}</span>
+              </label>
+              <button type="button" onClick={() => setForgotMode(true)} className="text-xs text-brand-600 dark:text-brand-400 bg-transparent border-none cursor-pointer p-0 hover:underline">
                 {t('auth.forgotPassword')}
               </button>
             </div>
@@ -103,6 +112,57 @@ export default function LoginPage() {
               {loading ? '...' : t('auth.login')}
             </Button>
           </form>
+
+          {/* Forgot Password Modal */}
+          {forgotMode && (
+            <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={() => setForgotMode(false)}>
+              <div onClick={e => e.stopPropagation()} className="bg-white dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[400px] p-6">
+                {resetSent ? (
+                  <div className="text-center py-4">
+                    <div className="text-4xl mb-3">📧</div>
+                    <h3 className="m-0 text-lg font-bold text-content dark:text-content-dark mb-2">
+                      {isRTL ? 'تم إرسال رابط التعيين!' : 'Reset link sent!'}
+                    </h3>
+                    <p className="m-0 text-sm text-gray-500 dark:text-content-muted-dark mb-4">
+                      {isRTL ? 'تفقد بريدك الإلكتروني' : 'Check your email inbox'}
+                    </p>
+                    <Button onClick={() => { setForgotMode(false); setResetSent(false); }}>
+                      {isRTL ? 'تم' : 'Done'}
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <h3 className="m-0 text-lg font-bold text-content dark:text-content-dark mb-2">
+                      {isRTL ? 'نسيت كلمة المرور' : 'Forgot Password'}
+                    </h3>
+                    <p className="m-0 text-sm text-gray-500 dark:text-content-muted-dark mb-4">
+                      {isRTL ? 'أدخل بريدك الإلكتروني وهنبعتلك رابط لإعادة تعيين كلمة المرور' : 'Enter your email and we\'ll send you a reset link'}
+                    </p>
+                    <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@company.com" dir="ltr" className="mb-4" />
+                    <div className="flex gap-2.5">
+                      <Button variant="secondary" onClick={() => setForgotMode(false)} className="flex-1">
+                        {isRTL ? 'إلغاء' : 'Cancel'}
+                      </Button>
+                      <Button disabled={!email || loading} className="flex-1" onClick={async () => {
+                        setLoading(true);
+                        try {
+                          const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+                            redirectTo: window.location.origin + '/login',
+                          });
+                          if (err) throw err;
+                          setResetSent(true);
+                        } catch (err) {
+                          setError(err.message || (isRTL ? 'فشل الإرسال' : 'Failed to send'));
+                        } finally { setLoading(false); }
+                      }}>
+                        {loading ? '...' : (isRTL ? 'إرسال الرابط' : 'Send Link')}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           <p className="text-center text-xs text-gray-400 dark:text-content-muted-dark mt-8">&copy; 2026 Platform Real Estate</p>
         </div>
