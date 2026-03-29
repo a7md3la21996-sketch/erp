@@ -80,10 +80,22 @@ export async function addDocument({
   docs.unshift(doc);
   saveAll(docs);
 
+  // Map to actual Supabase column names
+  const sbDoc = {
+    name: doc.file_name || doc.name,
+    entity: doc.entity,
+    entity_id: String(doc.entity_id),
+    type: doc.file_type || '',
+    size: doc.file_size || 0,
+    url: doc.file_url || '',
+    uploaded_by: doc.uploaded_by || '',
+    uploaded_by_name: doc.uploaded_by_name || '',
+    created_at: doc.uploaded_at || new Date().toISOString(),
+  };
   try {
     const { data, error } = await supabase
       .from('documents')
-      .insert([doc])
+      .insert([sbDoc])
       .select('*')
       .single();
     if (error) throw error;
@@ -102,7 +114,7 @@ export async function getDocuments({ entity, entity_id, type, search } = {}) {
     let query = supabase
       .from('documents')
       .select('*')
-      .order('uploaded_at', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (entity) query = query.eq('entity', entity);
     if (entity_id) query = query.eq('entity_id', String(entity_id));

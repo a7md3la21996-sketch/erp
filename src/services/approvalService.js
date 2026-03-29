@@ -188,8 +188,8 @@ export async function getApprovals(filters = {}) {
     if (filters.status)      query = query.eq('status', filters.status);
     if (filters.type)        query = query.eq('type', filters.type);
     if (filters.priority)    query = query.eq('priority', filters.priority);
-    if (filters.approverId)  query = query.eq('approver_id', filters.approverId);
-    if (filters.requesterId) query = query.eq('requester_id', filters.requesterId);
+    if (filters.approverId)  query = query.eq('approved_by', filters.approverId);
+    if (filters.requesterId) query = query.eq('requested_by', filters.requesterId);
 
     const { data, error } = await query.range(0, 199);
     if (error) throw error;
@@ -259,7 +259,7 @@ export async function getPendingByApprover(approverId) {
       .from('approvals')
       .select('*')
       .eq('status', 'pending')
-      .eq('approver_id', approverId)
+      .eq('approved_by', approverId)
       .order('created_at', { ascending: false });
     if (error) throw error;
     if (data) return data;
@@ -267,7 +267,7 @@ export async function getPendingByApprover(approverId) {
     // fallback to localStorage
   }
   const list = load();
-  return list.filter(a => a.status === 'pending' && a.approver_id === approverId);
+  return list.filter(a => a.status === 'pending' && (a.approver_id === approverId || a.approved_by === approverId));
 }
 
 /**
@@ -450,7 +450,7 @@ export async function getPendingCount(approverId) {
       .from('approvals')
       .select('id', { count: 'exact', head: true })
       .eq('status', 'pending');
-    if (approverId) query = query.eq('approver_id', approverId);
+    if (approverId) query = query.eq('approved_by', approverId);
     const { count, error } = await query;
     if (error) throw error;
     if (count !== null) return count;
@@ -458,7 +458,7 @@ export async function getPendingCount(approverId) {
     // fallback to localStorage
   }
   const list = load();
-  if (approverId) return list.filter(a => a.status === 'pending' && a.approver_id === approverId).length;
+  if (approverId) return list.filter(a => a.status === 'pending' && (a.approver_id === approverId || a.approved_by === approverId)).length;
   return list.filter(a => a.status === 'pending').length;
 }
 
