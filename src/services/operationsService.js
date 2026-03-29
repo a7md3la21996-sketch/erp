@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
@@ -55,7 +56,7 @@ export async function createDeal(data) {
   try {
     const { data: d, error } = await supabase
       .from('deals')
-      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(data), created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -73,7 +74,7 @@ export async function updateDeal(id, updates) {
     const { data: old } = await supabase.from('deals').select('*').eq('id', id).single();
     const { data, error } = await supabase
       .from('deals')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...stripInternalFields(updates), updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single();
@@ -112,7 +113,7 @@ export async function createInstallment(data) {
   try {
     const { data: d, error } = await supabase
       .from('installments')
-      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(data), created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -168,7 +169,7 @@ export async function createHandover(data) {
   try {
     const { data: d, error } = await supabase
       .from('handovers')
-      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(data), created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -224,7 +225,7 @@ export async function createTicket(data) {
   try {
     const { data: d, error } = await supabase
       .from('tickets')
-      .insert([{ ...data, created_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(data), created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -246,7 +247,7 @@ export async function updateTicketStatus(id, status) {
     }
     const { data, error } = await supabase
       .from('tickets')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...stripInternalFields(updates), updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single();

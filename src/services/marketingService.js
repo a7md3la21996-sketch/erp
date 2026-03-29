@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
@@ -55,7 +56,7 @@ export async function createCampaign(data) {
   try { const list = loadCampaigns(); list.unshift(campaign); saveCampaigns(list); } catch {}
   // Try Supabase
   try {
-    const { data: sbData, error } = await supabase.from('campaigns').insert([campaign]).select('*').single();
+    const { data: sbData, error } = await supabase.from('campaigns').insert([stripInternalFields(campaign)]).select('*').single();
     if (error) throw error;
     logCreate('campaign', sbData.id, sbData);
     return sbData;

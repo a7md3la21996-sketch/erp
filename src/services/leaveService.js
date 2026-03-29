@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
@@ -57,7 +58,7 @@ export async function createLeaveRequest(data) {
   try {
     const { data: d, error } = await supabase
       .from('leave_requests')
-      .insert([{ ...data, status: 'pending', created_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(data), status: 'pending', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;

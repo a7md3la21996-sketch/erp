@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
@@ -77,7 +78,7 @@ export async function createTask(data) {
 
   // Try Supabase in background
   try {
-    const { data: d, error } = await supabase.from('tasks').insert([{ ...data, created_at: new Date().toISOString() }]).select('*').single();
+    const { data: d, error } = await supabase.from('tasks').insert([{ ...stripInternalFields(data), created_at: new Date().toISOString() }]).select('*').single();
     if (!error && d) {
       logCreate('task', d.id, d);
       return d;

@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
@@ -47,7 +48,7 @@ export async function createEmployee(data) {
   try {
     const { data: d, error } = await supabase
       .from('employees')
-      .insert([{ ...data, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(data), created_at: new Date().toISOString(), updated_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
@@ -65,7 +66,7 @@ export async function updateEmployee(id, updates) {
     const { data: old } = await supabase.from('employees').select('*').eq('id', id).single();
     const { data, error } = await supabase
       .from('employees')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...stripInternalFields(updates), updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single();

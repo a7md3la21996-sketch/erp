@@ -1,3 +1,4 @@
+import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
@@ -153,6 +154,7 @@ export async function createOpportunity(oppData) {
   }
 
   const now = new Date().toISOString();
+  // Strip internal fields before Supabase
   const localOpp = { ...sanitized, id: Date.now().toString(), created_at: now };
 
   // If opportunity starts at reserved/contracted stage, block the unit immediately
@@ -172,7 +174,7 @@ export async function createOpportunity(oppData) {
   try {
     const { data, error } = await supabase
       .from('opportunities')
-      .insert([{ ...oppData, created_at: now }])
+      .insert([{ ...stripInternalFields(sanitized), created_at: now }])
       .select('*')
       .single();
     if (!error && data) {
@@ -234,7 +236,7 @@ export async function updateOpportunity(id, updates) {
     const { data: oldData } = await supabase.from('opportunities').select('*').eq('id', id).single();
     const { data, error } = await supabase
       .from('opportunities')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...stripInternalFields(updates), updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single();
