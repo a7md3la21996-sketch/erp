@@ -74,7 +74,7 @@ export async function getEmails(folder, filters = {}) {
     if (filters.starred) query = query.eq('starred', true);
     if (filters.unread) query = query.eq('read', false);
     query = query.order('sent_at', { ascending: false });
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     let emails = data || [];
     if (filters.search) {

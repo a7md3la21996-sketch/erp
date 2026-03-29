@@ -138,7 +138,7 @@ export async function getMessages(filters = {}) {
     if (filters.direction) query = query.eq('direction', filters.direction);
     if (filters.contact_id) query = query.eq('contact_id', String(filters.contact_id));
     query = query.order('sent_at', { ascending: false });
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     let list = data || [];
     if (filters.search) {
@@ -232,7 +232,7 @@ export async function getTemplates(onlyActive = false) {
   try {
     let query = supabase.from('whatsapp_templates').select('*');
     if (onlyActive) query = query.eq('is_active', true);
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     if (data && data.length > 0) return data;
     // Fall through to localStorage if Supabase is empty

@@ -194,7 +194,7 @@ export async function getSchedules() {
     const { data, error } = await supabase
       .from('scheduled_reports')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }).range(0, 199);
     if (error) throw error;
     if (data && data.length > 0) {
       save(data); // sync to localStorage

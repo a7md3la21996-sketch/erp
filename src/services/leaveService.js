@@ -41,7 +41,7 @@ export async function fetchLeaveRequests(filters = {}) {
     if (filters.status)     query = query.eq('status', filters.status);
     if (filters.type)       query = query.eq('type', filters.type);
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('leaveService', 'query', err);

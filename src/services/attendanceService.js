@@ -22,7 +22,7 @@ export async function fetchAttendance({ month, year, employeeId } = {}) {
     }
     if (employeeId) query = query.eq('employee_id', employeeId);
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('attendanceService', 'query', err);

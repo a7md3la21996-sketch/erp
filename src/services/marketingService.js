@@ -40,7 +40,7 @@ function saveCampaigns(list) {
 
 export async function fetchCampaigns() {
   try {
-    const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false }).range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('marketingService', 'query', err);

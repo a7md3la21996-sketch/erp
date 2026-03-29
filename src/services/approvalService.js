@@ -180,7 +180,7 @@ export async function getApprovals(filters = {}) {
     if (filters.approverId)  query = query.eq('approver_id', filters.approverId);
     if (filters.requesterId) query = query.eq('requester_id', filters.requesterId);
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     if (data) {
       save(data); // sync to localStorage

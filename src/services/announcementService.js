@@ -185,7 +185,7 @@ export async function getAnnouncements(filters = {}) {
     if (filters.category) query = query.eq('category', filters.category);
     if (filters.priority) query = query.eq('priority', filters.priority);
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     if (data) {
       save(data); // sync to localStorage

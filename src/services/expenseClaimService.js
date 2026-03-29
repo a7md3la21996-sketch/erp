@@ -127,7 +127,7 @@ export async function getClaims(filters = {}) {
     if (filters.category) query = query.eq('category', filters.category);
     if (filters.dateFrom) query = query.gte('date', filters.dateFrom);
     if (filters.dateTo) query = query.lte('date', filters.dateTo);
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('expenseClaimService', 'query', err);

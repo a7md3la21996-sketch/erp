@@ -29,7 +29,7 @@ export async function fetchJournalEntries(filters = {}) {
       );
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('financeService', 'query', err);
@@ -94,7 +94,7 @@ export async function fetchInvoices(filters = {}) {
       );
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('financeService', 'query', err);
@@ -166,7 +166,7 @@ export async function fetchExpenses(filters = {}) {
       );
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('financeService', 'query', err);

@@ -65,7 +65,7 @@ export async function getObjectives(filters = {}) {
     if (filters.year) query = query.eq('year', Number(filters.year));
     if (filters.department) query = query.eq('department', filters.department);
     if (filters.status) query = query.eq('status', filters.status);
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('okrService', 'query', err);

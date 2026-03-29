@@ -23,7 +23,7 @@ export async function fetchEmployees(filters = {}) {
       );
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('employeesService', 'query', err);

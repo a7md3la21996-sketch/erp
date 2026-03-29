@@ -46,10 +46,13 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function main() {
   console.log('\nTimeline Puller — Loading lead IDs...\n');
 
-  // Get lead IDs with activities from v2 data
+  // Get lead IDs with activities, EXCLUDING status 121 (Unqualified)
+  const EXCLUDE_STATUS = [121];
   const v2Data = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'leads-v2.json'), 'utf8'));
-  const leadIds = v2Data.filter(l => l.last_activity_id != null).map(l => l.id);
-  console.log(`  Leads with activities: ${leadIds.length}\n`);
+  const leadIds = v2Data
+    .filter(l => l.last_activity_id != null && !EXCLUDE_STATUS.includes(l.status_id))
+    .map(l => l.id);
+  console.log(`  Leads with activities (excl. Unqualified): ${leadIds.length}\n`);
 
   // Load progress (resume support)
   let timelines = {};

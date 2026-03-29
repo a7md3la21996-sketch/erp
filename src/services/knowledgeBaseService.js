@@ -39,7 +39,7 @@ export async function getAll() {
       .from('knowledge_articles')
       .select('*')
       .order('pinned', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }).range(0, 199);
     if (error) throw error;
     if (data) {
       save(data); // sync to localStorage
@@ -163,7 +163,7 @@ export async function searchArticles(query) {
       .select('*')
       .or(`title.ilike.%${q}%,title_ar.ilike.%${q}%,content.ilike.%${q}%,content_ar.ilike.%${q}%`)
       .order('pinned', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }).range(0, 199);
     if (error) throw error;
     if (data) return data;
   } catch (err) { reportError('knowledgeBaseService', 'query', err);
@@ -189,7 +189,7 @@ export async function getByCategory(cat) {
       .select('*')
       .eq('category', cat)
       .order('pinned', { ascending: false })
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }).range(0, 199);
     if (error) throw error;
     if (data) return data;
   } catch (err) { reportError('knowledgeBaseService', 'query', err);

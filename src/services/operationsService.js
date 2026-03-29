@@ -30,7 +30,7 @@ export async function fetchDeals(filters = {}) {
     if (filters.agent)     query = query.eq('agent_en', filters.agent);
     if (filters.developer) query = query.eq('developer_en', filters.developer);
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('operationsService', 'query', err);
@@ -98,7 +98,7 @@ export async function fetchInstallments(dealId) {
 
     if (dealId) query = query.eq('deal_id', dealId);
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 499);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('operationsService', 'query', err);
@@ -153,7 +153,7 @@ export async function fetchHandovers(filters = {}) {
     if (filters.status)  query = query.eq('status', filters.status);
     if (filters.dealId)  query = query.eq('deal_id', filters.dealId);
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('operationsService', 'query', err);
@@ -199,7 +199,7 @@ export async function fetchTickets(filters = {}) {
       );
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.range(0, 199);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('operationsService', 'query', err);
