@@ -216,30 +216,30 @@ export default function App() {
                 <Route path="/heatmap" element={<Navigate to="/reports?tab=heatmap" replace />} />
                 <Route path="/chart-builder" element={<Navigate to="/reports?tab=chart-builder" replace />} />
                 <Route path="/announcements" element={<Guarded><AnnouncementsPage /></Guarded>} />
-                <Route path="/settings/general" element={<Guarded><SettingsPage /></Guarded>} />
-                <Route path="/settings/audit-log" element={<Guarded><AuditLogPage /></Guarded>} />
-                <Route path="/settings/system" element={<Guarded><SystemConfigPage /></Guarded>} />
-                <Route path="/settings/tracking" element={<Guarded><UserTrackingPage /></Guarded>} />
-                <Route path="/settings/users" element={<Guarded><UsersPage /></Guarded>} />
-                <Route path="/settings/triggers" element={<Guarded><TriggersPage /></Guarded>} />
-                <Route path="/settings/custom-fields" element={<Guarded><CustomFieldsPage /></Guarded>} />
-                <Route path="/settings/backup" element={<Guarded><BackupPage /></Guarded>} />
-                <Route path="/settings/scheduled-reports" element={<Guarded><ScheduledReportsPage /></Guarded>} />
-                <Route path="/settings/sms-templates" element={<Guarded><SMSTemplatesPage /></Guarded>} />
-                <Route path="/settings/print" element={<Guarded><PrintSettingsPage /></Guarded>} />
-                <Route path="/settings/security" element={<Guarded><SecurityPage /></Guarded>} />
-                <Route path="/settings/workflows" element={<Guarded><WorkflowBuilderPage /></Guarded>} />
-                <Route path="/settings/system-health" element={<Guarded><SystemHealthPage /></Guarded>} />
-                <Route path="/settings/api-docs" element={<Guarded><APIDocsPage /></Guarded>} />
-                <Route path="/settings/export-import-history" element={<Guarded><ExportImportHistoryPage /></Guarded>} />
-                <Route path="/settings/roles" element={<Guarded><RolesPage /></Guarded>} />
-                <Route path="/settings/sla" element={<Guarded><SLAManagementPage /></Guarded>} />
-                <Route path="/settings/ads-integration" element={<Guarded><AdsIntegrationPage /></Guarded>} />
+                <Route path="/settings/general" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><SettingsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/audit-log" element={<ProtectedRoute permission={P.AUDIT_VIEW}><Guarded><AuditLogPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/system" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><SystemConfigPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/tracking" element={<ProtectedRoute permission={P.AUDIT_VIEW}><Guarded><UserTrackingPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/users" element={<ProtectedRoute permission={P.USERS_MANAGE}><Guarded><UsersPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/triggers" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><TriggersPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/custom-fields" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><CustomFieldsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/backup" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><BackupPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/scheduled-reports" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><ScheduledReportsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/sms-templates" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><SMSTemplatesPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/print" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><PrintSettingsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/security" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><SecurityPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/workflows" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><WorkflowBuilderPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/system-health" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><SystemHealthPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/api-docs" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><APIDocsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/export-import-history" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><ExportImportHistoryPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/roles" element={<ProtectedRoute permission={P.ROLES_MANAGE}><Guarded><RolesPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/sla" element={<ProtectedRoute permission={P.SLA_MANAGE}><Guarded><SLAManagementPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/ads-integration" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><AdsIntegrationPage /></Guarded></ProtectedRoute>} />
                 <Route path="/changelog" element={<Guarded><ChangelogPage /></Guarded>} />
                 <Route path="/notifications" element={<Guarded><NotificationsPage /></Guarded>} />
                 <Route path="/help" element={<Guarded><HelpCenterPage /></Guarded>} />
                 <Route path="/knowledge-base" element={<Guarded><KnowledgeBasePage /></Guarded>} />
-                <Route path="/settings/*" element={<Guarded><SettingsPage /></Guarded>} />
+                <Route path="/settings/*" element={<ProtectedRoute permission={P.SETTINGS_VIEW}><Guarded><SettingsPage /></Guarded></ProtectedRoute>} />
                 <Route path="/profile" element={<Guarded><ProfilePage /></Guarded>} />
               </Route>
               <Route path="*" element={<Navigate to="/login" replace />} />

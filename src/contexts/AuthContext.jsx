@@ -62,16 +62,11 @@ export function AuthProvider({ children }) {
       return false;
     };
 
-    // Restore mock session immediately (before any async)
-    if (restoreMockSession()) {
-      setLoading(false);
-    }
-
     if (USE_SUPABASE_AUTH) {
+      // Production: ONLY use Supabase auth — never restore mock sessions
       let isMounted = true;
 
       const initSession = async () => {
-        let hasSession = false;
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user && isMounted) {
@@ -79,12 +74,8 @@ export function AuthProvider({ children }) {
             setUser({ id: session.user.id, email: session.user.email });
             setProfile(profileData);
             setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
-            hasSession = true;
           }
         } catch {}
-        if (isMounted && !hasSession) {
-          restoreMockSession();
-        }
         if (isMounted) setLoading(false);
       };
 
@@ -96,15 +87,12 @@ export function AuthProvider({ children }) {
           if (!isMounted) return;
 
           if (event === 'SIGNED_OUT' || !session) {
-            // Only clear state if there's no mock session active
-            const hasMock = localStorage.getItem('platform_mock_user');
-            if (!hasMock) {
-              setUser(null);
-              setProfile(null);
-              setPermissions([]);
-              setIsImpersonating(false);
-              setOriginalProfile(null);
-            }
+            setUser(null);
+            setProfile(null);
+            setPermissions([]);
+            setIsImpersonating(false);
+            setOriginalProfile(null);
+            localStorage.removeItem('platform_mock_user');
             return;
           }
 
