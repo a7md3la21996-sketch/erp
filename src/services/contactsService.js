@@ -78,24 +78,15 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       return { data: data || [], count: count || 0 };
     }
 
-    // Fetch all contacts in batches of 1000 (Supabase max per request)
-    const allData = [];
-    let from = 0;
-    const BATCH = 1000;
-    while (true) {
-      const { data: batch, error: batchErr } = await query.range(from, from + BATCH - 1);
-      if (batchErr) throw batchErr;
-      if (!batch || batch.length === 0) break;
-      allData.push(...batch);
-      if (batch.length < BATCH) break; // last batch
-      from += BATCH;
-    }
+    // Fetch contacts with generous limit
+    const { data, error } = await query.range(0, 24999);
+    if (error) throw error;
     // Ensure array fields are never null (prevents .map() crashes)
-    allData.forEach(c => {
+    (data || []).forEach(c => {
       if (!Array.isArray(c.campaign_interactions)) c.campaign_interactions = [];
       if (!Array.isArray(c.extra_phones)) c.extra_phones = [];
     });
-    return allData;
+    return data || [];
   } catch (err) {
     reportError('contactsService', 'query', err);
     return isServerPaginated ? { data: [], count: 0 } : [];
