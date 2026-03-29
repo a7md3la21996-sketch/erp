@@ -96,11 +96,22 @@ export async function createApproval({ type, requesterId, requesterName, data, a
   list.unshift(approval);
   save(list);
 
-  // Try Supabase
+  // Try Supabase — map local field names to Supabase column names
   try {
-    const { error } = await supabase
-      .from('approvals')
-      .insert([approval]);
+    const sbApproval = {
+      type: approval.type,
+      entity_type: approval.type,
+      entity_id: approval.entity_id,
+      entity_name: approval.entity_name,
+      requested_by: approval.requester_id,
+      requested_by_name: approval.requester_name,
+      amount: approval.amount || 0,
+      status: approval.status,
+      priority: approval.priority,
+      comment: approval.notes || approval.comments || '',
+      created_at: approval.created_at,
+    };
+    const { error } = await supabase.from('approvals').insert([sbApproval]);
     if (error) throw error;
   } catch (err) { reportError('approvalService', 'query', err);
     // localStorage already saved
