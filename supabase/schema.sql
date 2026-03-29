@@ -1568,6 +1568,208 @@ CREATE INDEX IF NOT EXISTS idx_contacts_name_trgm        ON contacts USING gin (
 CREATE INDEX IF NOT EXISTS idx_contacts_phone_trgm       ON contacts USING gin (phone gin_trgm_ops);
 
 -- ============================================================
+-- Row Level Security (RLS) — Data Protection
+-- ============================================================
+
+-- Helper: get current user's role from users table
+CREATE OR REPLACE FUNCTION auth_role()
+RETURNS text AS $$
+  SELECT COALESCE(
+    (SELECT role FROM users WHERE id = auth.uid()),
+    'sales_agent'
+  );
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+-- Helper: get current user's team_id
+CREATE OR REPLACE FUNCTION auth_team()
+RETURNS uuid AS $$
+  SELECT team_id FROM users WHERE id = auth.uid();
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+-- Helper: check if current user is admin/manager
+CREATE OR REPLACE FUNCTION is_manager_or_above()
+RETURNS boolean AS $$
+  SELECT auth_role() IN ('admin', 'sales_director', 'sales_manager');
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+-- ── Enable RLS on all critical tables ─────────────────────────
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE opportunities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leave_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- ══════════════════════════════════════════════
+-- USERS table policies
+-- ══════════════════════════════════════════════
+-- Everyone can read user profiles (needed for dropdowns, assignments)
+CREATE POLICY users_select ON users FOR SELECT USING (true);
+-- Only admin can insert/update/delete users
+CREATE POLICY users_insert ON users FOR INSERT WITH CHECK (auth_role() = 'admin');
+CREATE POLICY users_update ON users FOR UPDATE USING (
+  auth.uid() = id OR auth_role() = 'admin'
+);
+CREATE POLICY users_delete ON users FOR DELETE USING (auth_role() = 'admin');
+
+-- ══════════════════════════════════════════════
+-- CONTACTS table policies
+-- ══════════════════════════════════════════════
+-- Admin/Director/Manager: see all contacts
+-- Team Leader: see team contacts
+-- Sales Agent: see only own contacts
+CREATE POLICY contacts_select ON contacts FOR SELECT USING (
+  is_manager_or_above()
+  OR assigned_to_name = (SELECT full_name_ar FROM users WHERE id = auth.uid())
+  OR assigned_to_name = (SELECT full_name_en FROM users WHERE id = auth.uid())
+  OR auth_role() = 'team_leader'  -- team leaders see all for assignment purposes
+);
+-- Insert: any authenticated user
+CREATE POLICY contacts_insert ON contacts FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+-- Update: own contacts + managers
+CREATE POLICY contacts_update ON contacts FOR UPDATE USING (
+  is_manager_or_above()
+  OR assigned_to_name = (SELECT full_name_ar FROM users WHERE id = auth.uid())
+  OR assigned_to_name = (SELECT full_name_en FROM users WHERE id = auth.uid())
+);
+-- Delete: managers only
+CREATE POLICY contacts_delete ON contacts FOR DELETE USING (is_manager_or_above());
+
+-- ══════════════════════════════════════════════
+-- OPPORTUNITIES table policies
+-- ══════════════════════════════════════════════
+CREATE POLICY opps_select ON opportunities FOR SELECT USING (
+  is_manager_or_above()
+  OR assigned_to = auth.uid()
+  OR auth_role() = 'team_leader'
+);
+CREATE POLICY opps_insert ON opportunities FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY opps_update ON opportunities FOR UPDATE USING (
+  is_manager_or_above()
+  OR assigned_to = auth.uid()
+);
+CREATE POLICY opps_delete ON opportunities FOR DELETE USING (is_manager_or_above());
+
+-- ══════════════════════════════════════════════
+-- ACTIVITIES table policies
+-- ══════════════════════════════════════════════
+-- Activities readable by anyone involved
+CREATE POLICY activities_select ON activities FOR SELECT USING (
+  is_manager_or_above()
+  OR user_id = auth.uid()
+  OR auth_role() = 'team_leader'
+);
+CREATE POLICY activities_insert ON activities FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY activities_update ON activities FOR UPDATE USING (
+  user_id = auth.uid() OR is_manager_or_above()
+);
+CREATE POLICY activities_delete ON activities FOR DELETE USING (is_manager_or_above());
+
+-- ══════════════════════════════════════════════
+-- DEALS table policies
+-- ══════════════════════════════════════════════
+CREATE POLICY deals_select ON deals FOR SELECT USING (
+  is_manager_or_above()
+  OR auth_role() IN ('operations', 'finance')
+  OR agent_ar = (SELECT full_name_ar FROM users WHERE id = auth.uid())
+  OR agent_en = (SELECT full_name_en FROM users WHERE id = auth.uid())
+);
+CREATE POLICY deals_insert ON deals FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY deals_update ON deals FOR UPDATE USING (
+  is_manager_or_above() OR auth_role() IN ('operations', 'finance')
+);
+CREATE POLICY deals_delete ON deals FOR DELETE USING (auth_role() = 'admin');
+
+-- ══════════════════════════════════════════════
+-- TASKS table policies
+-- ══════════════════════════════════════════════
+CREATE POLICY tasks_select ON tasks FOR SELECT USING (
+  is_manager_or_above()
+  OR assigned_to = auth.uid()
+  OR user_id = auth.uid()
+);
+CREATE POLICY tasks_insert ON tasks FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY tasks_update ON tasks FOR UPDATE USING (
+  assigned_to = auth.uid() OR user_id = auth.uid() OR is_manager_or_above()
+);
+CREATE POLICY tasks_delete ON tasks FOR DELETE USING (is_manager_or_above());
+
+-- ══════════════════════════════════════════════
+-- NOTIFICATIONS table policies
+-- ══════════════════════════════════════════════
+CREATE POLICY notifications_select ON notifications FOR SELECT USING (
+  user_id = auth.uid() OR auth_role() = 'admin'
+);
+CREATE POLICY notifications_insert ON notifications FOR INSERT WITH CHECK (true);
+CREATE POLICY notifications_update ON notifications FOR UPDATE USING (
+  user_id = auth.uid()
+);
+CREATE POLICY notifications_delete ON notifications FOR DELETE USING (
+  user_id = auth.uid() OR auth_role() = 'admin'
+);
+
+-- ══════════════════════════════════════════════
+-- REMINDERS table policies
+-- ══════════════════════════════════════════════
+CREATE POLICY reminders_select ON reminders FOR SELECT USING (
+  user_id = auth.uid() OR is_manager_or_above()
+);
+CREATE POLICY reminders_insert ON reminders FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY reminders_update ON reminders FOR UPDATE USING (
+  user_id = auth.uid() OR is_manager_or_above()
+);
+CREATE POLICY reminders_delete ON reminders FOR DELETE USING (
+  user_id = auth.uid() OR is_manager_or_above()
+);
+
+-- ══════════════════════════════════════════════
+-- EMPLOYEES table policies
+-- ══════════════════════════════════════════════
+CREATE POLICY employees_select ON employees FOR SELECT USING (
+  auth_role() IN ('admin', 'hr') OR id = auth.uid()
+);
+CREATE POLICY employees_insert ON employees FOR INSERT WITH CHECK (auth_role() IN ('admin', 'hr'));
+CREATE POLICY employees_update ON employees FOR UPDATE USING (auth_role() IN ('admin', 'hr'));
+CREATE POLICY employees_delete ON employees FOR DELETE USING (auth_role() = 'admin');
+
+-- ══════════════════════════════════════════════
+-- LEAVE REQUESTS policies
+-- ══════════════════════════════════════════════
+CREATE POLICY leave_select ON leave_requests FOR SELECT USING (
+  auth_role() IN ('admin', 'hr') OR employee_id = auth.uid()
+);
+CREATE POLICY leave_insert ON leave_requests FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+CREATE POLICY leave_update ON leave_requests FOR UPDATE USING (auth_role() IN ('admin', 'hr'));
+
+-- ══════════════════════════════════════════════
+-- AUDIT LOGS — admin only
+-- ══════════════════════════════════════════════
+CREATE POLICY audit_select ON audit_logs FOR SELECT USING (auth_role() = 'admin');
+CREATE POLICY audit_insert ON audit_logs FOR INSERT WITH CHECK (true);
+
+-- ══════════════════════════════════════════════
+-- Rate Limiting function (optional — call from Edge Functions)
+-- ══════════════════════════════════════════════
+CREATE OR REPLACE FUNCTION check_rate_limit(user_uuid uuid, action_type text, max_per_minute int DEFAULT 60)
+RETURNS boolean AS $$
+DECLARE
+  recent_count int;
+BEGIN
+  SELECT count(*) INTO recent_count
+  FROM audit_logs
+  WHERE user_id = user_uuid::text
+    AND action = action_type
+    AND created_at > now() - interval '1 minute';
+  RETURN recent_count < max_per_minute;
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+
+-- ============================================================
 -- Updated-at trigger (auto-update updated_at on row change)
 -- ============================================================
 
