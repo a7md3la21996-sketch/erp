@@ -70,7 +70,7 @@ export async function sendEmail(data) {
 
 export async function getEmails(folder, filters = {}) {
   try {
-    let query = supabase.from('emails').select('id, from_address, to_address, subject, status, folder, is_read, contact_id, created_at');
+    let query = supabase.from('emails').select('*');
     if (folder) query = query.eq('folder', folder);
     if (filters.starred) query = query.eq('starred', true);
     if (filters.unread) query = query.eq('read', false);
@@ -112,7 +112,7 @@ export async function getEmails(folder, filters = {}) {
 
 export async function getEmailsByContact(contactId) {
   try {
-    const { data, error } = await supabase.from('emails').select('id, from_address, to_address, subject, status, folder, is_read, contact_id, created_at').eq('contact_id', contactId).order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('emails').select('*').eq('contact_id', contactId).order('sent_at', { ascending: false });
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -123,7 +123,7 @@ export async function getEmailsByContact(contactId) {
 
 export async function getEmailsByOpportunity(oppId) {
   try {
-    const { data, error } = await supabase.from('emails').select('id, from_address, to_address, subject, status, folder, is_read, contact_id, created_at').eq('opportunity_id', oppId).order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('emails').select('*').eq('opportunity_id', oppId).order('sent_at', { ascending: false });
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -217,7 +217,7 @@ export async function moveToTrash(id) {
 
 export async function getDrafts() {
   try {
-    const { data, error } = await supabase.from('emails').select('id, from_address, to_address, subject, status, folder, is_read, contact_id, created_at').eq('folder', 'draft').order('sent_at', { ascending: false });
+    const { data, error } = await supabase.from('emails').select('*').eq('folder', 'draft').order('sent_at', { ascending: false });
     if (error) throw error;
     return data || [];
   } catch (err) {

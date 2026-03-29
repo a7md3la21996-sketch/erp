@@ -13,7 +13,7 @@ export async function getWonDeals() {
   try {
     const { data, error } = await supabase
       .from('deals')
-      .select('id, deal_number, opportunity_id, contact_id, project_id, client_ar, client_en, phone, agent_ar, agent_en, project_ar, project_en, developer_ar, developer_en, unit_code, deal_value, down_payment, status, source, campaign_name, documents, units, created_at, updated_at')
+      .select('*')
       .not('opportunity_id', 'is', null)
       .order('created_at', { ascending: false })
       .range(0, 499);

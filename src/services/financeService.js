@@ -133,7 +133,7 @@ export async function createInvoice(data) {
 
 export async function updateInvoiceStatus(id, status) {
   try {
-    const { data: old } = await supabase.from('invoices').select('id, invoice_number, client_name, amount, status, due_date, paid_date, created_at').eq('id', id).single();
+    const { data: old } = await supabase.from('invoices').select('*').eq('id', id).single();
     const { data, error } = await supabase
       .from('invoices')
       .update({ status, updated_at: new Date().toISOString() })

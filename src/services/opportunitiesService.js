@@ -97,7 +97,7 @@ export async function fetchOpportunities({ role, userId, teamId, page = 0, pageS
   try {
     let query = supabase
       .from('opportunities')
-      .select('id, contact_id, contact_name, project_id, project_name, assigned_to, assigned_to_name, stage, priority, temperature, budget, deal_value, source, expected_close_date, lost_reason, won_date, stage_changed_at, notes, created_at, updated_at')
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (role === 'sales_agent') {
