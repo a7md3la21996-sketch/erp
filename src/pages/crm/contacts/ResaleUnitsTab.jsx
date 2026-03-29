@@ -289,7 +289,7 @@ export default function ResaleUnitsTab({ contact, isRTL }) {
 
       {/* Cards */}
       <div className="flex flex-col gap-3">
-        {units.map(unit => {
+        {(units || []).map(unit => {
           const st   = statusMap[unit.status]   || statusMap.available;
           const tp   = typeMap[unit.unit_type]   || { ar: unit.unit_type, en: unit.unit_type };
           const fin  = finMap[unit.finishing]     || { ar: unit.finishing, en: unit.finishing };

@@ -18,7 +18,7 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
 
   if (!mergePreview) return null;
 
-  const mergedPair = mergePreview.map(id => contacts.find(c => c.id === id)).filter(Boolean);
+  const mergedPair = mergePreview.map(id => (contacts || []).find(c => c.id === id)).filter(Boolean);
   if (mergedPair.length !== 2) return null;
   const [c1, c2] = mergedPair;
   // Merge: prefer c1 values, but fall back to c2 when c1 value is empty/null
@@ -64,7 +64,7 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
             {isRTL ? 'إلغاء' : 'Cancel'}
           </button>
           <Button size="sm" onClick={() => {
-            const updatedContacts = contacts.map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
+            const updatedContacts = (contacts || []).map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
             setContacts(updatedContacts);
             logAction({ action: 'merge', entity: 'contact', entityId: c1.id, entityName: c1.full_name, description: `Merged "${c2.full_name}" (ID:${c2.id}) into "${c1.full_name}" (ID:${c1.id})`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
             toast.success(isRTL ? 'تم دمج جهتي الاتصال بنجاح' : 'Contacts merged successfully');
@@ -153,8 +153,8 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
             const updates = { contact_status: 'disqualified', disqualify_reason: dqReason, disqualify_note: dqNote || '' };
             if (disqualifyModal === 'bulk') {
               const ids = [...selectedIds];
-              const names = contacts.filter(c => ids.includes(c.id)).map(c => c.full_name).join(', ');
-              const updated = contacts.map(c => ids.includes(c.id) ? { ...c, ...updates } : c);
+              const names = (contacts || []).filter(c => ids.includes(c.id)).map(c => c.full_name).join(', ');
+              const updated = (contacts || []).map(c => ids.includes(c.id) ? { ...c, ...updates } : c);
               setContacts(updated);
               await Promise.all(ids.map(id => updateContact(id, updates).catch(() => {})));
               logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
@@ -162,7 +162,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               setSelectedIds([]);
             } else {
               const c = disqualifyModal;
-              const updated = contacts.map(ct => ct.id === c.id ? { ...ct, ...updates } : ct);
+              const updated = (contacts || []).map(ct => ct.id === c.id ? { ...ct, ...updates } : ct);
               setContacts(updated);
               await updateContact(c.id, updates).catch(() => {});
               logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
@@ -211,7 +211,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
 
   if (!bulkOppModal) return null;
 
-  const selContacts = contacts.filter(c => selectedIds.includes(c.id));
+  const selContacts = (contacts || []).filter(c => selectedIds.includes(c.id));
   const agents = [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))];
   const stages = getDeptStages('sales');
 
@@ -350,7 +350,7 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
 
   const templates = getTemplates();
   const selectedTemplate = templates.find(t => t.id === bulkSMSState.templateId);
-  const smsContacts = contacts.filter(c => selectedIds.includes(c.id));
+  const smsContacts = (contacts || []).filter(c => selectedIds.includes(c.id));
   const withPhone = smsContacts.filter(c => c.phone);
   const withoutPhone = smsContacts.filter(c => !c.phone);
   const lang = bulkSMSState.lang;

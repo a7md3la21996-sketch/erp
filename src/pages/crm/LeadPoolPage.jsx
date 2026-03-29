@@ -37,7 +37,7 @@ function loadAgents() {
     const contacts = [];
     const names = new Set();
     const agents = [];
-    contacts.forEach(c => {
+    (contacts || []).forEach(c => {
       const name = c.assigned_to_name?.trim();
       if (name && !names.has(name)) {
         names.add(name);

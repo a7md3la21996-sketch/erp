@@ -395,7 +395,7 @@ export default function OpportunitiesPage() {
 
   const scoreMap = useMemo(() => {
     const m = {};
-    opps.forEach(o => { m[o.id] = calcLeadScore(o); });
+    (opps || []).forEach(o => { m[o.id] = calcLeadScore(o); });
     return m;
   }, [opps]);
 
@@ -468,8 +468,8 @@ export default function OpportunitiesPage() {
   // Handle highlight query param (deep-link from ContactDrawer)
   useEffect(() => {
     const highlightId = searchParams.get('highlight');
-    if (highlightId && opps.length > 0 && !selectedOpp) {
-      const target = opps.find(o => String(o.id) === String(highlightId));
+    if (highlightId && (opps || []).length > 0 && !selectedOpp) {
+      const target = (opps || []).find(o => String(o.id) === String(highlightId));
       if (target) {
         selectOpp(target);
         setSearchParams(prev => { prev.delete('highlight'); return prev; }, { replace: true });
@@ -490,7 +490,7 @@ export default function OpportunitiesPage() {
 
   const handleMove = async (id, toStage, extraUpdates = {}) => {
     if (!isAdmin) {
-      const opp = opps.find(o => o.id === id);
+      const opp = (opps || []).find(o => o.id === id);
       if (opp) {
         const dept = opp.contacts?.department || 'sales';
         const stages = getDeptStages(dept);
@@ -513,9 +513,9 @@ export default function OpportunitiesPage() {
     if (!isAdmin && !extraUpdates._skipGate) {
       const gate = getStageGate(toStage);
       if (gate) {
-        const opp_ = opps.find(o => o.id === id);
+        const opp_ = (opps || []).find(o => o.id === id);
         const activities = opp_?.activities || [];
-        const hasRequired = activities.some(a => a.type === gate.required_activity);
+        const hasRequired = (activities || []).some(a => a.type === gate.required_activity);
         if (!hasRequired) {
           setMoveWarningToast(isRTL ? gate.label_ar : gate.label_en);
           setTimeout(() => setMoveWarningToast(null), 4000);
@@ -530,7 +530,7 @@ export default function OpportunitiesPage() {
       setLostReasonCustom('');
       return;
     }
-    const opp_ = opps.find(o => String(o.id) === String(id));
+    const opp_ = (opps || []).find(o => String(o.id) === String(id));
     const fromStage = opp_?.stage;
     if (fromStage && fromStage !== toStage) addStageHistory(id, fromStage, toStage);
     // Optimistic update
@@ -593,7 +593,7 @@ export default function OpportunitiesPage() {
     if (lostReasonModal.bulkIds) {
       const ids = lostReasonModal.bulkIds;
       const prevOpps = [...opps];
-      ids.forEach(id => { const opp = opps.find(o => String(o.id) === String(id)); if (opp && opp.stage !== 'closed_lost') addStageHistory(id, opp.stage, 'closed_lost'); });
+      ids.forEach(id => { const opp = (opps || []).find(o => String(o.id) === String(id)); if (opp && opp.stage !== 'closed_lost') addStageHistory(id, opp.stage, 'closed_lost'); });
       setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() } : o));
       showBulkToast(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
       setBulkSelected(new Set()); setBulkMode(false);
@@ -635,7 +635,7 @@ export default function OpportunitiesPage() {
 
   const confirmDeleteOpp = async () => {
     if (!confirmDelete) return;
-    const deletedOpp = opps.find(o => o.id === confirmDelete);
+    const deletedOpp = (opps || []).find(o => o.id === confirmDelete);
     const prevOpps = opps;
     setOpps(p => p.filter(o => o.id !== confirmDelete));
     if (selectedOpp?.id === confirmDelete) setSelectedOpp(null);
@@ -695,7 +695,7 @@ export default function OpportunitiesPage() {
           notes: `${isRTL ? 'صفقة مغلقة بقيمة' : 'Deal won with value'} ${budgetVal2.toLocaleString()} EGP`,
         });
       }
-      const opp = opps.find(o => o.id === oppId);
+      const opp = (opps || []).find(o => o.id === oppId);
       if (opp && (opp.contacts?.department || 'sales') === 'sales') {
         const dealExists = await dealExistsForOpportunity(opp.id);
         if (!dealExists) setDealWizardOpp({ ...opp, ...result });
@@ -836,19 +836,19 @@ export default function OpportunitiesPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 px-5">
           <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-            {opps.length > 0 ? <Search size={24} className="text-brand-500" /> : <TrendingUp size={24} className="text-brand-500" />}
+            {(opps || []).length > 0 ? <Search size={24} className="text-brand-500" /> : <TrendingUp size={24} className="text-brand-500" />}
           </div>
           <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">
-            {opps.length > 0
+            {(opps || []).length > 0
               ? (isRTL ? 'لا توجد نتائج للفلاتر الحالية' : 'No results match your filters')
               : (isRTL ? 'لا توجد فرص بيع' : 'No Opportunities Found')}
           </p>
           <p className="m-0 mb-4 text-sm text-content-muted dark:text-content-muted-dark">
-            {opps.length > 0
+            {(opps || []).length > 0
               ? (isRTL ? 'جرب تعديل البحث أو الفلاتر' : 'Try adjusting your search or filters')
               : (isRTL ? 'لم يتم إضافة أي فرص بيع بعد' : 'No sales opportunities have been added yet')}
           </p>
-          {opps.length > 0 ? (
+          {(opps || []).length > 0 ? (
             <Button variant="secondary" size="sm" onClick={() => { setSearchInput(''); setSearch(''); setSmartFilters([]); setActiveStage('all'); setSortBy('newest'); }}>
               <X size={14} /> {isRTL ? 'مسح كل الفلاتر' : 'Clear All Filters'}
             </Button>
@@ -886,7 +886,7 @@ export default function OpportunitiesPage() {
       {hasMore && (
         <div className="flex justify-center py-4">
           <Button variant="secondary" size="sm" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? (isRTL ? 'جاري التحميل...' : 'Loading...') : (isRTL ? `تحميل المزيد (${opps.length} محمّلة)` : `Load more (${opps.length} loaded)`)}
+            {loadingMore ? (isRTL ? 'جاري التحميل...' : 'Loading...') : (isRTL ? `تحميل المزيد (${(opps || []).length} محمّلة)` : `Load more (${(opps || []).length} loaded)`)}
           </Button>
         </div>
       )}
@@ -901,7 +901,7 @@ export default function OpportunitiesPage() {
               <AlertTriangle size={20} className="text-red-500" />
             </div>
             <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">
-              {isRTL ? 'حذف فرصة' : 'Delete Opportunity'} {(() => { const o = opps.find(x => x.id === confirmDelete); return o ? `"${getContactName(o)}"` : ''; })()}?
+              {isRTL ? 'حذف فرصة' : 'Delete Opportunity'} {(() => { const o = (opps || []).find(x => x.id === confirmDelete); return o ? `"${getContactName(o)}"` : ''; })()}?
             </h3>
             <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'هل أنت متأكد؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure? This action cannot be undone.'}</p>
             <div className="flex gap-2.5 justify-center">

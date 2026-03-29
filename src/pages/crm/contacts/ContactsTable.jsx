@@ -241,7 +241,7 @@ export default function ContactsTable({
                     const dept = c.department || 'sales';
                     const stages = getDeptStages(dept);
                     let best = null; let bestIdx = -1;
-                    opps.forEach(o => { const si = stages.findIndex(s => s.id === o.stage); if (si > bestIdx) { bestIdx = si; best = o; } });
+                    (opps || []).forEach(o => { const si = stages.findIndex(s => s.id === o.stage); if (si > bestIdx) { bestIdx = si; best = o; } });
                     if (!best) return null;
                     const name = best.users ? (isRTL ? (best.users.full_name_ar || best.users.full_name_en) : (best.users.full_name_en || best.users.full_name_ar)) : (best.assigned_to_name || '?');
                     return (
@@ -249,7 +249,7 @@ export default function ContactsTable({
                         <span className="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">
                           {name}: {deptStageLabel(best.stage, dept, isRTL)}
                         </span>
-                        {opps.length > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{opps.length - 1}</span>}
+                        {(opps || []).length > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{(opps || []).length - 1}</span>}
                       </div>
                     );
                   })()}
@@ -349,14 +349,14 @@ export default function ContactsTable({
                 <td className={tdCls}>
                   {(() => {
                     const opps = c.opportunities || [];
-                    if (!opps.length) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                    if (!(opps || []).length) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
                     const dept = c.department || 'sales';
                     const stages = getDeptStages(dept);
                     const STAGE_COLORS = { closed_won: '#10B981', closed_lost: '#EF4444', contracted: '#10B981', reserved: '#1B3347', negotiation: '#F59E0B', proposal: '#4A7AAB', qualification: '#6B8DB5' };
                     const getStageColor = (stageId) => STAGE_COLORS[stageId] || stages.find(s => s.id === stageId)?.color || '#6B8DB5';
                     // Find the opportunity with the highest stage
                     let best = null; let bestIdx = -1;
-                    opps.forEach(o => {
+                    (opps || []).forEach(o => {
                       const si = stages.findIndex(s => s.id === o.stage);
                       if (si > bestIdx) { bestIdx = si; best = o; }
                     });
@@ -368,7 +368,7 @@ export default function ContactsTable({
                         <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: `${getStageColor(best.stage)}18`, border: `1px solid ${getStageColor(best.stage)}30`, color: getStageColor(best.stage), fontWeight: 600, whiteSpace: 'nowrap' }}>
                           {deptStageLabel(best.stage, dept, isRTL)}
                         </span>
-                        {opps.length > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{opps.length - 1}</span>}
+                        {(opps || []).length > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{(opps || []).length - 1}</span>}
                       </div>
                     );
                   })()}

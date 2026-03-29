@@ -184,7 +184,7 @@ export default function UnitsPage() {
       }
       // Also check if it's from default units project
       if (!projectAr && !projectEn) {
-        const existingUnit = units.find(u => u.project_id === formData.project_id);
+        const existingUnit = (units || []).find(u => u.project_id === formData.project_id);
         if (existingUnit) {
           projectAr = existingUnit.project_ar || '';
           projectEn = existingUnit.project_en || '';
@@ -253,7 +253,7 @@ export default function UnitsPage() {
       labelEn: 'Project',
       type: 'select',
       options: [...new Set(units.map(u => u.project_en))].filter(Boolean).map(p => {
-        const u = units.find(x => x.project_en === p);
+        const u = (units || []).find(x => x.project_en === p);
         return { value: p, label: u?.project_ar || p, labelEn: p };
       }),
     },
@@ -323,10 +323,10 @@ export default function UnitsPage() {
 
   // KPI values
   const kpis = useMemo(() => ({
-    total: units.length,
-    available: units.filter(u => u.status === 'available').length,
-    reserved: units.filter(u => u.status === 'reserved').length,
-    sold: units.filter(u => u.status === 'sold').length,
+    total: (units || []).length,
+    available: (units || []).filter(u => u.status === 'available').length,
+    reserved: (units || []).filter(u => u.status === 'reserved').length,
+    sold: (units || []).filter(u => u.status === 'sold').length,
   }), [units]);
 
   // Unique project list from units (for dropdown when no platform_projects)
@@ -340,7 +340,7 @@ export default function UnitsPage() {
     }
     // Fallback: extract unique projects from existing units
     const map = new Map();
-    units.forEach(u => {
+    (units || []).forEach(u => {
       if (u.project_id && !map.has(u.project_id)) {
         map.set(u.project_id, { id: u.project_id, ar: u.project_ar || '', en: u.project_en || '' });
       }

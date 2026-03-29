@@ -607,7 +607,7 @@ export default function TasksPage() {
 
   const assignedToOptions = useMemo(() =>
     [...new Set(tasks.map(t => t.assigned_to_name_en).filter(Boolean))].map(name => {
-      const match = tasks.find(t => t.assigned_to_name_en === name);
+      const match = (tasks || []).find(t => t.assigned_to_name_en === name);
       return { value: name, label: match?.assigned_to_name_ar || name, labelEn: name };
     }),
   [tasks]);
@@ -679,10 +679,10 @@ export default function TasksPage() {
   useEffect(() => { setPage(1); }, [search, smartFilters, sortBy]);
 
   const stats = useMemo(() => ({
-    total:   tasks.length,
-    pending: tasks.filter(t => t.status === 'pending').length,
-    overdue: tasks.filter(t => t.status !== 'done' && new Date(t.due_date) < new Date()).length,
-    done:    tasks.filter(t => t.status === 'done').length,
+    total:   (tasks || []).length,
+    pending: (tasks || []).filter(t => t.status === 'pending').length,
+    overdue: (tasks || []).filter(t => t.status !== 'done' && new Date(t.due_date) < new Date()).length,
+    done:    (tasks || []).filter(t => t.status === 'done').length,
   }), [tasks]);
 
   const handleAdd = async () => {
@@ -706,7 +706,7 @@ export default function TasksPage() {
   };
 
   const handleDelete = async (id) => {
-    const task = tasks.find(t => t.id === id);
+    const task = (tasks || []).find(t => t.id === id);
     await deleteTask(id);
     logAction({ action: 'delete', entity: 'task', entityId: id, entityName: task?.title || '', description: 'Deleted task', userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setTasks(prev => prev.filter(t => t.id !== id));

@@ -41,7 +41,7 @@ export default function UserTrackingPage() {
   const filteredSessions = useMemo(() => {
     if (!search) return sessions;
     const q = search.toLowerCase();
-    return sessions.filter(s =>
+    return (sessions || []).filter(s =>
       (s.user_name || '').toLowerCase().includes(q) ||
       (s.user_id || '').toLowerCase().includes(q) ||
       (s.ip_address || '').includes(q) ||
@@ -271,7 +271,7 @@ export default function UserTrackingPage() {
               {expandedUser === userId && (
                 <div className="px-4 pb-3">
                   <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-                    {data.sessions.map(s => (
+                    {(data.sessions || []).map(s => (
                       <div key={s.id} className="flex items-center gap-3 py-2 px-3 rounded-lg bg-brand-500/[0.04] text-[11px]">
                         <DeviceIcon type={s.device_type} />
                         <div className="flex-1 min-w-0">

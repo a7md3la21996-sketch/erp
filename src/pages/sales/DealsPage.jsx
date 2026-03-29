@@ -156,11 +156,11 @@ export default function DealsPage() {
   useEffect(() => { setPage(1); }, [smartFilters, search, sortBy, pageSize]);
 
   // KPIs
-  const totalValue = deals.reduce((s, d) => s + (d.deal_value || 0), 0);
-  const avgValue = deals.length > 0 ? Math.round(totalValue / deals.length) : 0;
-  const activeDeals = deals.filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
-  const completedDeals = deals.filter(d => d.status === 'completed').length;
-  const docsPending = deals.filter(d => {
+  const totalValue = (deals || []).reduce((s, d) => s + (d.deal_value || 0), 0);
+  const avgValue = (deals || []).length > 0 ? Math.round(totalValue / (deals || []).length) : 0;
+  const activeDeals = (deals || []).filter(d => d.status !== 'completed' && d.status !== 'cancelled').length;
+  const completedDeals = (deals || []).filter(d => d.status === 'completed').length;
+  const docsPending = (deals || []).filter(d => {
     const p = docProgress(d.documents);
     return p.pct < 100 && d.status !== 'cancelled';
   }).length;
@@ -195,8 +195,8 @@ export default function DealsPage() {
             </h1>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
               {isRTL
-                ? `${deals.length} صفقة · ${fmtMoney(totalValue)} EGP إجمالي`
-                : `${deals.length} deals · ${fmtMoney(totalValue)} EGP total`}
+                ? `${(deals || []).length} صفقة · ${fmtMoney(totalValue)} EGP إجمالي`
+                : `${(deals || []).length} deals · ${fmtMoney(totalValue)} EGP total`}
             </p>
           </div>
         </div>
@@ -216,7 +216,7 @@ export default function DealsPage() {
 
       {/* ═══ KPI Cards ═══ */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        <KpiCard icon={Briefcase} label={isRTL ? 'إجمالي الصفقات' : 'Total Deals'} value={deals.length} color="#4A7AAB" />
+        <KpiCard icon={Briefcase} label={isRTL ? 'إجمالي الصفقات' : 'Total Deals'} value={(deals || []).length} color="#4A7AAB" />
         <KpiCard icon={DollarSign} label={isRTL ? 'إجمالي القيمة' : 'Total Value'} value={fmtMoney(totalValue) + ' EGP'} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={isRTL ? 'متوسط القيمة' : 'Avg Deal Value'} value={fmtMoney(avgValue) + ' EGP'} color="#6B21A8" />
         <KpiCard icon={Clock} label={isRTL ? 'صفقات نشطة' : 'Active Deals'} value={activeDeals} color="#F59E0B" />
@@ -350,7 +350,7 @@ export default function DealsPage() {
         <span>{isRTL ? 'المتوسط:' : 'Avg:'} <strong>{fmtMoney(avgValue)} EGP</strong></span>
         <span>{isRTL ? 'نشطة:' : 'Active:'} <strong>{activeDeals}</strong></span>
         <span>{isRTL ? 'مكتملة:' : 'Completed:'} <strong>{completedDeals}</strong></span>
-        <span>{isRTL ? 'عرض:' : 'Showing:'} <strong>{filtered.length}</strong> / {deals.length}</span>
+        <span>{isRTL ? 'عرض:' : 'Showing:'} <strong>{filtered.length}</strong> / {(deals || []).length}</span>
       </div>
 
       {/* ═══ Deal Drawer ═══ */}

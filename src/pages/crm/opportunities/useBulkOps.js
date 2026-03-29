@@ -32,7 +32,7 @@ export default function useBulkOps({
     }
     const ids = [...bulkSelected];
     const prevOpps = opps;
-    ids.forEach(id => { const opp = opps.find(o => o.id === id); if (opp && opp.stage !== toStage) addStageHistory(id, opp.stage, toStage); });
+    ids.forEach(id => { const opp = (opps || []).find(o => o.id === id); if (opp && opp.stage !== toStage) addStageHistory(id, opp.stage, toStage); });
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString() } : o));
     showBulkToastMsg(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
     setBulkSelected(new Set()); setBulkMode(false);

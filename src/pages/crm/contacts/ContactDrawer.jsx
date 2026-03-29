@@ -291,7 +291,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // Unique agents from activities
   const uniqueAgents = useMemo(() => {
     const map = new Map();
-    activities.forEach(a => {
+    (activities || []).forEach(a => {
       const id = a.user_id || a.users?.full_name_ar || a.users?.full_name_en;
       if (!id) return;
       const name = isRTL ? (a.users?.full_name_ar || a.users?.full_name_en || '—') : (a.users?.full_name_en || a.users?.full_name_ar || '—');
@@ -304,7 +304,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   const actCount = activities.length;
   const oppCount = opportunities.length;
-  const openTaskCount = tasks.filter(t => t.status !== 'done' && t.status !== 'cancelled').length;
+  const openTaskCount = (tasks || []).filter(t => t.status !== 'done' && t.status !== 'cancelled').length;
 
   // ── Extra timeline sources (comments, documents, audit, deals) ───────────
   const [extraSources, setExtraSources] = useState({ comments: [], documents: [], audits: [], deals: [] });
@@ -373,7 +373,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // ── Unified Timeline ─────────────────────────────────────────────────────
   const timeline = useMemo(() => {
     const items = [];
-    activities.forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at }));
+    (activities || []).forEach(a => items.push({ ...a, _type: 'activity', _date: a.created_at }));
     tasks.forEach(t => items.push({ ...t, _type: 'task', _date: t.created_at || t.due_date }));
     opportunities.forEach(o => items.push({ ...o, _type: 'opportunity', _date: o.created_at }));
     extraSources.comments.forEach(c => items.push({ ...c, _type: 'comment', _date: c.created_at }));

@@ -158,7 +158,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
         </div>
       ) : (
         <div className="flex flex-col gap-0.5">
-          {activities.slice(0, compact ? 5 : 999).map((act, idx) => {
+          {(activities || []).slice(0, compact ? 5 : 999).map((act, idx) => {
             const typeDef = ACTIVITY_TYPES[act.type] || ACTIVITY_TYPES.note;
             const Ic = ICONS[typeDef.icon] || FileText;
             return (

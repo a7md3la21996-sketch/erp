@@ -81,7 +81,7 @@ export default function AnnouncementsPage() {
   ], [auditFields]);
 
   // ── Filtering ──────────────────────────────────────────────────────
-  const enriched = useMemo(() => announcements.map(a => ({
+  const enriched = useMemo(() => (announcements || []).map(a => ({
     ...a,
     pinned: String(a.pinned),
     readStatus: isReadFn(a.id, userId) ? 'read' : 'unread',
@@ -136,7 +136,7 @@ export default function AnnouncementsPage() {
 
   const handleEdit = (ann) => {
     // Restore original pinned boolean for form
-    const original = announcements.find(a => a.id === ann.id);
+    const original = (announcements || []).find(a => a.id === ann.id);
     setEditingAnn(original || ann);
     setShowModal(true);
   };

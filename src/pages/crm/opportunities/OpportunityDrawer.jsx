@@ -416,7 +416,7 @@ export default function OpportunityDrawer({
   // Client's other opportunities
   const clientOpps = useMemo(() => {
     if (!selectedOpp.contact_id) return [];
-    return opps.filter(o => o.contact_id === selectedOpp.contact_id && o.id !== selectedOpp.id);
+    return (opps || []).filter(o => o.contact_id === selectedOpp.contact_id && o.id !== selectedOpp.id);
   }, [opps, selectedOpp.contact_id, selectedOpp.id]);
 
   // Tabs config
@@ -837,7 +837,7 @@ export default function OpportunityDrawer({
                   { label: isRTL ? 'في المرحلة منذ' : 'In Stage', value: daysInStage(selectedOpp) + (isRTL ? ' يوم' : ' days'), color: daysInStage(selectedOpp) > 7 ? '#EF4444' : daysInStage(selectedOpp) > 3 ? '#F59E0B' : '#6B8DB5' },
                   ...(selectedOpp.expected_close_date ? [{ label: isRTL ? 'الإغلاق المتوقع' : 'Expected Close', value: new Date(selectedOpp.expected_close_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }), color: new Date(selectedOpp.expected_close_date) < new Date() ? '#EF4444' : '#6B8DB5' }] : []),
                   ...((selectedOpp.contacts?.source || selectedOpp.source) ? [{ label: isRTL ? 'المصدر' : 'Source', value: (() => { const src = selectedOpp.contacts?.source || selectedOpp.source; return isRTL ? (sourceLabelsMap[src]?.ar || src) : (sourceLabelsMap[src]?.en || src); })(), color: '#6B8DB5' }] : []),
-                  { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: opps.filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
+                  { label: isRTL ? 'عدد فرص العميل' : 'Client Opps', value: (opps || []).filter(o => o.contact_id === selectedOpp.contact_id).length, color: '#6B8DB5' },
                 ].map((item, i) => (
                   <div key={i} className="bg-brand-500/[0.08] dark:bg-brand-500/[0.08] rounded-xl px-3.5 py-3">
                     <p className="m-0 mb-1 text-xs text-content-muted dark:text-content-muted-dark">{item.label}</p>

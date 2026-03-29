@@ -741,7 +741,7 @@ export default function CommissionsPage() {
                             <span className="font-semibold" style={{ color: '#6B8DB5' }}>{fmtFull(dev.pending)}</span>
                           </td>
                         </tr>
-                        {isExpanded && dev.deals.map((deal) => (
+                        {isExpanded && (dev.deals || []).map((deal) => (
                           <tr key={deal.id} className="bg-gray-50/60 dark:bg-white/[0.02]">
                             <td className={tdCls}></td>
                             <td className={tdCls + ' text-xs text-content-muted dark:text-content-muted-dark ps-8'}>
@@ -801,7 +801,7 @@ export default function CommissionsPage() {
                   </div>
                   {isExpanded && (
                     <div className="mt-3 pt-3 border-t border-edge dark:border-edge-dark space-y-2">
-                      {dev.deals.map(deal => (
+                      {(dev.deals || []).map(deal => (
                         <div key={deal.id} className="flex items-center justify-between text-xs">
                           <div>
                             <span className="font-mono text-brand-500 font-semibold">{deal.deal_ref}</span>

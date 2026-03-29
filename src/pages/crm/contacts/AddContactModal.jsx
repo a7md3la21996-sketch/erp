@@ -21,7 +21,7 @@ function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCamp
   const [saving, setSaving] = useState(false);
   const ref = useRef(null);
 
-  const sourceCampaigns = campaigns.filter(c => c.platform === source || !source);
+  const sourceCampaigns = (campaigns || []).filter(c => c.platform === source || !source);
   const displayList = (sourceCampaigns.length > 0 ? sourceCampaigns : campaigns)
     .filter(c => !search || (c.name_ar || '').includes(search) || (c.name_en || '').toLowerCase().includes(search.toLowerCase()));
   const noMatch = search && displayList.length === 0;
@@ -466,7 +466,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                   isRTL={isRTL}
                   onChange={(campName, campData) => {
                     set('campaign_name', campName);
-                    const camp = campData || campaigns.find(c => (c.name_ar === campName || c.name_en === campName));
+                    const camp = campData || (campaigns || []).find(c => (c.name_ar === campName || c.name_en === campName));
                     if (camp) {
                       set('campaign_id', camp.id || null);
                       if (camp.target_location) set('preferred_location', camp.target_location);

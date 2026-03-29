@@ -64,11 +64,11 @@ export default function useOppData({
   const totalBudget = filtered.reduce((s, o) => s + (o.budget || 0), 0);
   const wonCount = filtered.filter(o => o.stage === 'closed_won').length;
   const hotCount = filtered.filter(o => o.temperature === 'hot').length;
-  const conversionRate = opps.length > 0 ? Math.round((opps.filter(o => o.stage === 'closed_won').length / opps.length) * 100) : 0;
+  const conversionRate = (opps || []).length > 0 ? Math.round((opps.filter(o => o.stage === 'closed_won').length / (opps || []).length) * 100) : 0;
   const avgDealSize = wonCount > 0 ? Math.round(filtered.filter(o => o.stage === 'closed_won').reduce((s, o) => s + (o.budget || 0), 0) / wonCount) : 0;
 
   const avgCloseTime = useMemo(() => {
-    const wonOpps = opps.filter(o => o.stage === 'closed_won' && o.created_at);
+    const wonOpps = (opps || []).filter(o => o.stage === 'closed_won' && o.created_at);
     if (!wonOpps.length) return 0;
     const totalDays = wonOpps.reduce((s, o) => s + Math.max(0, Math.floor((new Date(o.stage_changed_at || o.updated_at || o.created_at) - new Date(o.created_at)) / 86400000)), 0);
     return Math.round(totalDays / wonOpps.length);
@@ -128,7 +128,7 @@ export default function useOppData({
 
   const lostReasonCounts = useMemo(() => {
     const counts = {};
-    opps.forEach(o => {
+    (opps || []).forEach(o => {
       if (o.stage === 'closed_lost' && o.lost_reason) {
         counts[o.lost_reason] = (counts[o.lost_reason] || 0) + 1;
       }
@@ -163,7 +163,7 @@ export default function useOppData({
   // Duplicate detection
   const duplicateContactIds = useMemo(() => {
     const counts = {};
-    opps.forEach(o => { if (o.contact_id) counts[o.contact_id] = (counts[o.contact_id] || 0) + 1; });
+    (opps || []).forEach(o => { if (o.contact_id) counts[o.contact_id] = (counts[o.contact_id] || 0) + 1; });
     return new Set(Object.keys(counts).filter(k => counts[k] > 1));
   }, [opps]);
   const isDuplicate = (contactId) => duplicateContactIds.has(String(contactId));
