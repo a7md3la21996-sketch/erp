@@ -70,12 +70,23 @@ export function AuthProvider({ children }) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user && isMounted) {
-            const profileData = await fetchSupabaseProfile(session.user.id);
-            setUser({ id: session.user.id, email: session.user.email });
-            setProfile(profileData);
-            setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
+            try {
+              const profileData = await fetchSupabaseProfile(session.user.id);
+              setUser({ id: session.user.id, email: session.user.email });
+              setProfile(profileData);
+              setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
+            } catch (profileErr) {
+              console.error('[Auth] Profile fetch failed:', profileErr.message);
+              // User exists in auth but not in users table — create minimal profile
+              const fallback = { id: session.user.id, email: session.user.email, role: 'sales_agent', full_name_ar: session.user.email, full_name_en: session.user.email };
+              setUser({ id: session.user.id, email: session.user.email });
+              setProfile(fallback);
+              setPermissions(ROLE_PERMISSIONS['sales_agent'] || []);
+            }
           }
-        } catch {}
+        } catch (err) {
+          console.error('[Auth] Session check failed:', err.message);
+        }
         if (isMounted) setLoading(false);
       };
 
