@@ -35,7 +35,7 @@ import useOppData from './opportunities/useOppData';
 import { useResponsive } from '../../hooks/useMediaQuery';
 import { useToast } from '../../contexts/ToastContext';
 import useCrmPermissions from '../../hooks/useCrmPermissions';
-import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
+import { useRealtimeSubscription, applyRealtimePayload } from '../../hooks/useRealtimeSubscription';
 
 /* Components extracted to ./opportunities/: OppCard, ContactSearch, AddModal, OpportunityDrawer, OppKPIs, ConversionFunnel, OppTable, OppKanban, OppToolbar, BulkActionsBar */
 
@@ -362,9 +362,13 @@ export default function OpportunitiesPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Realtime: auto-refresh opportunities when any row changes in Supabase
-  useRealtimeSubscription('opportunities', useCallback(() => {
-    loadData(true);
+  // Realtime: granular update — apply only the changed record instead of full re-fetch
+  useRealtimeSubscription('opportunities', useCallback((payload) => {
+    if (payload?.eventType) {
+      setOpps(prev => applyRealtimePayload(prev, payload));
+    } else {
+      loadData(true);
+    }
   }, [loadData]));
 
   const scoreMap = useMemo(() => {

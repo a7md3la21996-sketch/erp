@@ -12,7 +12,7 @@ import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from 
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
-import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
+import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -126,9 +126,13 @@ export default function ActivitiesPage() {
 
   useEffect(() => { load(); }, []);
 
-  // Realtime: auto-refresh activities when any row changes in Supabase
-  useRealtimeSubscription('activities', useCallback(() => {
-    load();
+  // Realtime: granular update — apply only the changed record
+  useRealtimeSubscription('activities', useCallback((payload) => {
+    if (payload?.eventType) {
+      setActivities(prev => applyRealtimePayload(prev, payload));
+    } else {
+      load();
+    }
   }, []));
 
   const filtered = useMemo(() => {
