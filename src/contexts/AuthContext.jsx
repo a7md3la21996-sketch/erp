@@ -92,6 +92,15 @@ export function AuthProvider({ children }) {
 
       initSession();
 
+      // Safety timeout: if auth takes more than 8 seconds, stop loading
+      // This prevents infinite loading when token refresh fails silently
+      const safetyTimeout = setTimeout(() => {
+        if (isMounted) {
+          setLoading(false);
+          console.warn('[Auth] Safety timeout — forcing loading to false');
+        }
+      }, 8000);
+
       // Listen for auth state changes (sign-in, sign-out, token refresh)
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
@@ -122,6 +131,7 @@ export function AuthProvider({ children }) {
 
       return () => {
         isMounted = false;
+        clearTimeout(safetyTimeout);
         subscription.unsubscribe();
       };
     } else {
