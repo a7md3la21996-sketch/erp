@@ -137,10 +137,12 @@ export async function createContact(contactData) {
   if (!contactData.department) {
     throw new Error('Department is required');
   }
-  // Sanitize string fields to prevent XSS
+  // Sanitize string fields to prevent XSS + remove internal fields
   const sanitize = (v) => typeof v === 'string' ? v.replace(/<[^>]*>/g, '').trim() : v;
+  const INTERNAL_FIELDS = ['_customFieldValues', '_offline', '_campaign_count', '_country', '_opp_count', '_aging_level', 'countryCode', 'country'];
   const sanitized = {};
   for (const [k, v] of Object.entries(contactData)) {
+    if (INTERNAL_FIELDS.includes(k)) continue; // skip internal fields
     sanitized[k] = sanitize(v);
   }
 
@@ -150,10 +152,15 @@ export async function createContact(contactData) {
       .insert([{ ...sanitized, last_activity_at: new Date().toISOString() }])
       .select('*')
       .single();
-    if (error) throw error;
+    if (error) {
+      console.error('[createContact] Supabase error:', error.message, error.details, error.hint);
+      throw error;
+    }
     logCreate('contact', data.id, data);
     return data;
   } catch (err) {
+    console.error('[createContact] Failed:', err.message || err);
+    reportError('contactsService', 'createContact', err);
     // Save to localStorage and enqueue for retry
     const tempId = 'temp_' + Date.now();
     const offlineContact = { ...sanitized, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };

@@ -4,3 +4,5 @@ dist/
 *.local
 .env
 env.txt
+scripts/8x-data/*.json
+scripts/8x-data/*.csv
