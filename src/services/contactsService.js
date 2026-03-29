@@ -78,15 +78,28 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       return { data: data || [], count: count || 0 };
     }
 
-    // Fetch contacts with generous limit
-    const { data, error } = await query.range(0, 24999);
-    if (error) throw error;
+    // Fetch all contacts in pages of 1000 (Supabase default max)
+    let allData = [];
+    let offset = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data: batch, error: batchErr } = await supabase
+        .from('contacts')
+        .select('*')
+        .order('last_activity_at', { ascending: false })
+        .range(offset, offset + PAGE - 1);
+      if (batchErr) throw batchErr;
+      if (!batch || batch.length === 0) break;
+      allData = allData.concat(batch);
+      if (batch.length < PAGE) break;
+      offset += PAGE;
+    }
     // Ensure array fields are never null (prevents .map() crashes)
-    (data || []).forEach(c => {
+    allData.forEach(c => {
       if (!Array.isArray(c.campaign_interactions)) c.campaign_interactions = [];
       if (!Array.isArray(c.extra_phones)) c.extra_phones = [];
     });
-    return data || [];
+    return allData;
   } catch (err) {
     reportError('contactsService', 'query', err);
     return isServerPaginated ? { data: [], count: 0 } : [];
