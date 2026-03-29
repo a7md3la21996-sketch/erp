@@ -1,19 +1,23 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { getLocalAuditLogs, ACTION_TYPES } from '../services/auditService';
 
 /**
  * useAuditFilter – adds action history filters to any page's SmartFilter.
- *
- * Usage:
- *   const { auditFields, applyAuditFilters } = useAuditFilter('contact');
- *   // Spread auditFields into SMART_FIELDS
- *   // Call applyAuditFilters(filteredData, smartFilters) after applySmartFilters
  */
 export function useAuditFilter(entityType) {
+  const [allLogs, setAllLogs] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getLocalAuditLogs({ limit: 500 }).then(result => {
+      if (!cancelled) setAllLogs(result?.data || []);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [entityType]);
+
   // Build audit index: Map<entity_id, log_entry[]>
   const { index, actionOptions, userOptions } = useMemo(() => {
-    const { data: logs } = getLocalAuditLogs({ limit: 500 });
-    const entityLogs = logs.filter(l => l.entity === entityType);
+    const entityLogs = (allLogs || []).filter(l => l.entity === entityType);
 
     const idx = new Map();
     const actions = new Set();
@@ -38,7 +42,7 @@ export function useAuditFilter(entityType) {
     }));
 
     return { index: idx, actionOptions: actionOpts, userOptions: userOpts };
-  }, [entityType]);
+  }, [entityType, allLogs]);
 
   // SmartFilter field definitions
   const auditFields = useMemo(() => [
