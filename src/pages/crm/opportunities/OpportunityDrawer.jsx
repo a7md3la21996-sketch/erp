@@ -159,7 +159,7 @@ function OppTakeActionForm({ selectedOpp, isRTL, configActivityTypes, configActi
         )}
         {/* Activity type chips */}
         <div className="flex gap-1.5 flex-wrap mb-2.5">
-          {activityTypes.map(v => (
+          {(activityTypes || []).map(v => (
             <button key={v.key} onClick={() => setAct('type', v.key)}
               className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
                 actForm.type === v.key ? 'bg-brand-500 text-white border-brand-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/40'

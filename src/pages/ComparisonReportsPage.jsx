@@ -105,7 +105,7 @@ export default function ComparisonReportsPage() {
     [p2Label]: w.period2Revenue,
   }));
 
-  const deptChartData = departments.map(d => ({
+  const deptChartData = (departments || []).map(d => ({
     name: d.department,
     [p1Label]: d.period1Revenue,
     [p2Label]: d.period2Revenue,
@@ -420,12 +420,12 @@ export default function ComparisonReportsPage() {
             <h3 style={{ margin: '0 0 16px', fontSize: 15, fontWeight: 700, color: textPrimary }}>
               {isRTL ? 'مقارنة الأقسام' : 'Department Comparison'}
             </h3>
-            {departments.length === 0 ? (
+            {(departments || []).length === 0 ? (
               <p style={{ color: textSecondary, textAlign: 'center', padding: 20 }}>
                 {isRTL ? 'لا توجد بيانات' : 'No data available'}
               </p>
             ) : (
-              <ResponsiveContainer width="100%" height={Math.max(200, departments.length * 60)}>
+              <ResponsiveContainer width="100%" height={Math.max(200, (departments || []).length * 60)}>
                 <BarChart data={deptChartData} layout="vertical" barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#334155' : '#E2E8F0'} />
                   <XAxis type="number" tick={{ fill: textSecondary, fontSize: 12 }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : v} />

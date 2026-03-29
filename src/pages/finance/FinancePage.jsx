@@ -355,7 +355,7 @@ export default function FinancePage() {
   }, [postedEntries]);
 
   const totalExpenseAmt = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
-  const pendingExpenses = useMemo(() => expenses.filter(e => e.status === 'pending'), [expenses]);
+  const pendingExpenses = useMemo(() => (expenses || []).filter(e => e.status === 'pending'), [expenses]);
 
   const receivable = useMemo(() => calcAccountBalance(journalEntries, 'acc-1210'), [journalEntries]);
   const payable = useMemo(() => -calcAccountBalance(journalEntries, 'acc-2200'), [journalEntries]);
@@ -467,7 +467,7 @@ export default function FinancePage() {
         {/* Overdue Invoices */}
         <CardWrap title={L('فواتير تحتاج متابعة', 'Invoices Needing Attention')} icon={AlertTriangle}>
           <div className="px-5 py-3">
-            {invoices.filter(inv => inv.status === 'overdue' || inv.status === 'sent').slice(0, 4).map((inv, i) => (
+            {(invoices || []).filter(inv => inv.status === 'overdue' || inv.status === 'sent').slice(0, 4).map((inv, i) => (
               <div key={inv.id} className={`flex justify-between items-center py-2 ${i < 3 ? 'border-b border-edge dark:border-edge-dark' : ''}`}>
                 <div>
                   <div className="text-xs text-content dark:text-content-dark font-medium">{L(inv.counterparty_ar, inv.counterparty_en)}</div>
@@ -664,9 +664,9 @@ export default function FinancePage() {
     const invSafePage = Math.min(page, invTotalPages);
     const invPaginated = filtered.slice((invSafePage - 1) * pageSize, invSafePage * pageSize);
 
-    const salesTotal = invoices.filter(i => i.type === 'sales').reduce((s, i) => s + i.total, 0);
-    const purchaseTotal = invoices.filter(i => i.type === 'purchase').reduce((s, i) => s + i.total, 0);
-    const overdueTotal = invoices.filter(i => i.status === 'overdue').reduce((s, i) => s + (i.total - i.paid), 0);
+    const salesTotal = (invoices || []).filter(i => i.type === 'sales').reduce((s, i) => s + i.total, 0);
+    const purchaseTotal = (invoices || []).filter(i => i.type === 'purchase').reduce((s, i) => s + i.total, 0);
+    const overdueTotal = (invoices || []).filter(i => i.status === 'overdue').reduce((s, i) => s + (i.total - i.paid), 0);
     const taxTotal = invoices.reduce((s, i) => s + i.tax, 0);
 
     return (
@@ -885,12 +885,12 @@ export default function FinancePage() {
     const expSafePage = Math.min(page, expTotalPages);
     const expPaginated = filtered.slice((expSafePage - 1) * pageSize, expSafePage * pageSize);
 
-    const approvedAmt = expenses.filter(e => e.status === 'approved' || e.status === 'paid').reduce((s, e) => s + e.amount, 0);
+    const approvedAmt = (expenses || []).filter(e => e.status === 'approved' || e.status === 'paid').reduce((s, e) => s + e.amount, 0);
     const pendingAmt = pendingExpenses.reduce((s, e) => s + e.amount, 0);
 
     // Expense breakdown by category
     const byCat = {};
-    expenses.forEach(e => {
+    (expenses || []).forEach(e => {
       const cat = EXPENSE_CATEGORIES[e.category];
       const key = cat ? L(cat.ar, cat.en) : e.category;
       byCat[key] = (byCat[key] || 0) + e.amount;
@@ -1664,7 +1664,7 @@ export default function FinancePage() {
       {renderJournalModal()}
       {renderInvoiceModal()}
       {showJournalModal && <AddJournalModal L={L} onClose={() => setShowJournalModal(false)} onSave={async (entry) => { const saved = await svcCreateJournalEntry(entry); setJournalEntries(prev => [saved, ...prev]); setShowJournalModal(false); }} entryCount={journalEntries.length} chartOfAccounts={chartOfAccounts} />}
-      {showExpenseModal && <AddExpenseModal L={L} onClose={() => setShowExpenseModal(false)} onSave={async (exp) => { const saved = await svcCreateExpense(exp); setExpenses(prev => [saved, ...prev]); setShowExpenseModal(false); }} expCount={expenses.length} />}
+      {showExpenseModal && <AddExpenseModal L={L} onClose={() => setShowExpenseModal(false)} onSave={async (exp) => { const saved = await svcCreateExpense(exp); setExpenses(prev => [saved, ...prev]); setShowExpenseModal(false); }} expCount={(expenses || []).length} />}
     </div>
   );
 }

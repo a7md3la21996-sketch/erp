@@ -45,21 +45,21 @@ export function SystemConfigProvider({ children }) {
   }, [reloadFromServer]);
 
   // Helper functions for backward compatibility
-  const getType = (key) => config.contactTypes.find(t => t.key === key);
+  const getType = (key) => (config.contactTypes || []).find(t => t.key === key);
   const getSourceLabel = (key, isRTL) => {
-    const s = config.sources.find(src => src.key === key);
+    const s = (config.sources || []).find(src => src.key === key);
     return s ? (isRTL ? s.label_ar : s.label_en) : key;
   };
   const getDeptStages = (dept) => config.pipelineStages[dept] || [];
   const getDeptLabel = (key, isRTL) => {
-    const d = config.departments.find(dep => dep.key === key);
+    const d = (config.departments || []).find(dep => dep.key === key);
     return d ? (isRTL ? d.label_ar : d.label_en) : key;
   };
 
   // Build TYPE-compatible map for backward compat
   const typeMap = useMemo(() => {
     const m = {};
-    config.contactTypes.forEach(t => {
+    (config.contactTypes || []).forEach(t => {
       m[t.key] = { label: t.label_ar, labelEn: t.label_en, color: t.color, bg: t.bg };
     });
     return m;
@@ -67,7 +67,7 @@ export function SystemConfigProvider({ children }) {
 
   const sourceLabels = useMemo(() => {
     const ar = {}, en = {}, platform = {};
-    config.sources.forEach(s => {
+    (config.sources || []).forEach(s => {
       ar[s.key] = s.label_ar;
       en[s.key] = s.label_en;
       platform[s.key] = s.platform;
@@ -80,11 +80,11 @@ export function SystemConfigProvider({ children }) {
       config,
       updateSection,
       resetToDefaults,
-      contactTypes: config.contactTypes,
-      sources: config.sources,
-      departments: config.departments,
-      pipelineStages: config.pipelineStages,
-      companyInfo: config.companyInfo,
+      contactTypes: config.contactTypes || [],
+      sources: config.sources || [],
+      departments: config.departments || [],
+      pipelineStages: config.pipelineStages || {},
+      companyInfo: config.companyInfo || {},
       lostReasons: config.lostReasons || [],
       activityTypes: config.activityTypes || [],
       activityResults: config.activityResults || {},

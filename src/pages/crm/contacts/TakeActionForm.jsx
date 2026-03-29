@@ -171,7 +171,7 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
         )}
         {/* Activity type chips */}
         <div className="flex gap-1.5 flex-wrap mb-2.5">
-          {activityTypes.map(v => (
+          {(activityTypes || []).map(v => (
             <button key={v.key} onClick={() => setAct('type', v.key)}
               className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
                 actForm.type === v.key

@@ -240,7 +240,7 @@ export default function SalesForecastPage() {
           </div>
 
           {/* Department */}
-          {departments.length > 0 && (
+          {(departments || []).length > 0 && (
             <div style={{ position: 'relative' }}>
               <select
                 value={deptFilter}
@@ -253,7 +253,7 @@ export default function SalesForecastPage() {
                 }}
               >
                 <option value="all">{isRTL ? 'كل الأقسام' : 'All Departments'}</option>
-                {departments.map(d => (
+                {(departments || []).map(d => (
                   <option key={d} value={d}>
                     {DEPT_LABELS[d] ? (isRTL ? DEPT_LABELS[d].ar : DEPT_LABELS[d].en) : d}
                   </option>

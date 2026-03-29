@@ -173,7 +173,7 @@ export default function EmployeesPage() {
   const SMART_FIELDS = useMemo(() => [
     {
       id: 'department', label: 'القسم', labelEn: 'Department', type: 'select',
-      options: departments.map(d => ({ value: d.id, label: d.name_ar, labelEn: d.name_en })),
+      options: (departments || []).map(d => ({ value: d.id, label: d.name_ar, labelEn: d.name_en })),
     },
     {
       id: 'employment_type', label: 'نوع العقد', labelEn: 'Contract Type', type: 'select',
@@ -315,7 +315,7 @@ export default function EmployeesPage() {
           <tbody>
             {paged.map(emp => {
               const name   = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
-              const dept   = departments.find(d => d.id === emp.department);
+              const dept   = (departments || []).find(d => d.id === emp.department);
               const deptName = dept ? (isRTL ? dept.name_ar : dept.name_en) : '—';
               const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
               const avatarColors = ['#1B3347','#2B4C6F','#4A7AAB','#6B8DB5','#8BA8C8'];
@@ -518,7 +518,7 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
           <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'القسم' : 'Department'}</label>
           <select value={form.department || ''} onChange={e => set('department', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
             <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-            {departments.map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
+            {(departments || []).map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
           </select>
         </div>
         <div>

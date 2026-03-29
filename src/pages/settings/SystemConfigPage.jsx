@@ -190,7 +190,7 @@ function SourcesTab({ config, updateSection, isRTL, toast }) {
       </div>
 
       <div className="mb-4 space-y-2">
-        {sources.map((src, idx) => (
+        {(sources || []).map((src, idx) => (
           <div key={src.key || idx} className="flex items-center gap-2.5 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg">
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
               <Input value={src.label_en} onChange={e => handleChange(idx, 'label_en', e.target.value)} placeholder="English" size="sm" />
@@ -626,7 +626,7 @@ function CloseReasonsTab({ config, updateSection, isRTL, toast }) {
           <ThumbsDown size={16} className="text-red-500" />
           {isRTL ? 'أسباب الخسارة' : 'Lost Reasons'}
           <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 font-semibold">
-            {lostReasons.length}
+            {(lostReasons || []).length}
           </span>
         </h3>
         <Button variant="primary" size="sm" onClick={handleSave}>
@@ -635,7 +635,7 @@ function CloseReasonsTab({ config, updateSection, isRTL, toast }) {
       </div>
 
       <div className="mb-4 space-y-2">
-        {lostReasons.map((r, idx) => (
+        {(lostReasons || []).map((r, idx) => (
           <div key={r.key || idx} className="flex items-center gap-2.5 p-2.5 bg-surface-input dark:bg-surface-input-dark border border-edge dark:border-edge-dark rounded-lg" style={{ borderInlineStartWidth: 3, borderInlineStartColor: '#EF4444' }}>
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
               <Input value={r.label_en} onChange={e => changeLost(idx, 'label_en', e.target.value)} placeholder="English" size="sm" />
