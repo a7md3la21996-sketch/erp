@@ -101,7 +101,8 @@ export function AuthProvider({ children }) {
         }
       }, 8000);
 
-      // Listen for auth state changes (sign-in, sign-out, token refresh)
+      // Listen for auth state changes (sign-out and token refresh only)
+      // SIGNED_IN is handled by the login() function directly to avoid race conditions
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session) => {
           if (!isMounted) return;
@@ -113,19 +114,18 @@ export function AuthProvider({ children }) {
             setIsImpersonating(false);
             setOriginalProfile(null);
             localStorage.removeItem('platform_mock_user');
+            setLoading(false);
             return;
           }
 
-          if (session?.user) {
-            try {
-              const profileData = await fetchSupabaseProfile(session.user.id);
-              setUser({ id: session.user.id, email: session.user.email });
-              setProfile(profileData);
-              setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
-            } catch (err) {
-              console.error('Failed to fetch profile on auth change:', err);
-            }
+          // TOKEN_REFRESHED: update session silently
+          if (event === 'TOKEN_REFRESHED' && session?.user) {
+            // Session refreshed — profile is already loaded, no need to re-fetch
+            return;
           }
+
+          // INITIAL_SESSION: handled by initSession() above
+          if (event === 'INITIAL_SESSION') return;
         }
       );
 
