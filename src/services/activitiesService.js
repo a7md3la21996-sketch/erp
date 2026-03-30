@@ -34,7 +34,7 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50 }
   try {
     let query = supabase
       .from('activities')
-      .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en), contacts (full_name, phone)`)
+      .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en), contacts!fk_act_contact (full_name, phone)`)
       .order('created_at', { ascending: false })
       .limit(limit);
 
