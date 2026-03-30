@@ -116,18 +116,20 @@ export default function ActivitiesPage() {
     { label: 'مقابلات', labelEn: 'Meetings', filters: [{ field: 'type', operator: 'is', value: 'meeting' }] },
   ], []);
 
-  const load = async () => {
+  const [totalCount, setTotalCount] = useState(0);
+
+  const load = async (pg = page) => {
     setLoading(true);
     try {
-      const data = await fetchActivities({ limit: 200 });
-      setActivities(data || []);
+      const result = await fetchActivities({ page: pg, pageSize });
+      setActivities(result?.data || []);
+      setTotalCount(result?.count || 0);
     } catch {
-      // fetchActivities handles fallback internally, but guard against unexpected errors
       setActivities([]);
     } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(page); }, [page, pageSize]);
 
   // Realtime: granular update — apply only the changed record
   useRealtimeSubscription('activities', useCallback((payload) => {
@@ -161,9 +163,9 @@ export default function ActivitiesPage() {
     return list;
   }, [activities, search, smartFilters, SMART_FIELDS, globalFilter?.department, globalFilter?.agentName]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered;
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [smartFilters, search, pageSize]);
 
@@ -174,7 +176,7 @@ export default function ActivitiesPage() {
     const byType = {};
     (activities || []).forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
     const topType = Object.entries(byType).sort((a,b) => b[1]-a[1])[0] || null;
-    return { total: (activities || []).length, today: today.length, topType };
+    return { total: totalCount || (activities || []).length, today: today.length, topType };
   }, [activities]);
 
   const handleAdd = async () => {

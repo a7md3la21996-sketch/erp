@@ -29,21 +29,29 @@ export const MEETING_SUBTYPES = {
 };
 
 // ── Service Functions ───────────────────────────────────────────────────────
-export async function fetchActivities({ entityType, entityId, dept, limit = 50 } = {}) {
+export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize } = {}) {
   let supaData = [];
+  const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
+
   try {
     let query = supabase
       .from('activities')
-      .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en), contacts!fk_act_contact (full_name, phone)`)
-      .order('created_at', { ascending: false })
-      .limit(limit);
+      .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en), contacts!fk_act_contact (full_name, phone)`, isServerPaginated ? { count: 'exact' } : {})
+      .order('created_at', { ascending: false });
 
     if (entityId)   query = query.eq(`${entityType}_id`, entityId);
     if (entityType && !entityId) query = query.eq('entity_type', entityType);
     if (dept)       query = query.eq('dept', dept);
 
-    const { data, error } = await query;
-    if (error) { /* silent — activities page handles empty state */ }
+    if (isServerPaginated) {
+      const from = (page - 1) * pageSize;
+      query = query.range(from, from + pageSize - 1);
+    } else {
+      query = query.limit(limit);
+    }
+
+    const { data, error, count } = await query;
+    if (error) { /* silent */ }
     if (!error && data?.length) supaData = data.map(a => ({
       ...a,
       user_name_ar: a.users?.full_name_ar || a.user_name_ar,
@@ -51,7 +59,10 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50 }
       entity_name: a.contacts?.full_name || a.entity_name || '',
       contact_phone: a.contacts?.phone || '',
     }));
+
+    if (isServerPaginated) return { data: supaData, count: count || 0 };
   } catch (err) {
+    if (isServerPaginated) return { data: [], count: 0 };
     return [];
   }
 
