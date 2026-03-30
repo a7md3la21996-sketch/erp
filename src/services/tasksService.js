@@ -26,16 +26,27 @@ export const TASK_TYPES = {
   general:   { ar: 'عامة',        en: 'General',     icon: 'CheckSquare'  },
 };
 
-export async function fetchTasks({ contactId, dept, status } = {}) {
+export async function fetchTasks({ contactId, dept, status, page, pageSize } = {}) {
+  const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
   try {
-    let query = supabase.from('tasks').select('*').order('due_date', { ascending: true }).range(0, 499);
+    let query = supabase.from('tasks').select('*', isServerPaginated ? { count: 'exact' } : {}).order('due_date', { ascending: true });
     if (contactId) query = query.eq('contact_id', contactId);
     if (dept)      query = query.eq('dept', dept);
     if (status)    query = query.eq('status', status);
+
+    if (isServerPaginated) {
+      const from = (page - 1) * pageSize;
+      query = query.range(from, from + pageSize - 1);
+      const { data, error, count } = await query;
+      if (error) return { data: [], count: 0 };
+      return { data: data || [], count: count || 0 };
+    }
+
+    query = query.range(0, 999);
     const { data, error } = await query;
-    if (error) { reportError('tasksService', 'fetchTasks', error); return []; }
+    if (error) return [];
     return data || [];
-  } catch (err) { reportError('tasksService', 'fetchTasks', err); return []; }
+  } catch { return isServerPaginated ? { data: [], count: 0 } : []; }
 }
 
 export async function createTask(data) {

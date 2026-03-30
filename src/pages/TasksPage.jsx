@@ -639,13 +639,18 @@ export default function TasksPage() {
 
   const [sortBy, setSortBy] = useState('due_date_asc');
 
-  const load = async () => {
+  const [totalCount, setTotalCount] = useState(0);
+
+  const load = async (pg = page) => {
     setLoading(true);
-    try { setTasks(await fetchTasks()); }
-    finally { setLoading(false); }
+    try {
+      const result = await fetchTasks({ page: pg, pageSize });
+      setTasks(result?.data || []);
+      setTotalCount(result?.count || 0);
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(page); }, [page, pageSize]);
 
   const filtered = useMemo(() => {
     let result = applySmartFilters(tasks, smartFilters, SMART_FIELDS);
@@ -672,14 +677,14 @@ export default function TasksPage() {
     return result;
   }, [tasks, smartFilters, SMART_FIELDS, search, sortBy, globalFilter?.agentName]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered;
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [search, smartFilters, sortBy]);
 
   const stats = useMemo(() => ({
-    total:   (tasks || []).length,
+    total:   totalCount || (tasks || []).length,
     pending: (tasks || []).filter(t => t.status === 'pending').length,
     overdue: (tasks || []).filter(t => t.status !== 'done' && new Date(t.due_date) < new Date()).length,
     done:    (tasks || []).filter(t => t.status === 'done').length,
