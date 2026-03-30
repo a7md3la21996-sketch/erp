@@ -43,9 +43,7 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50 }
     if (dept)       query = query.eq('dept', dept);
 
     const { data, error } = await query;
-    if (error) {
-      reportError('activitiesService', 'fetchActivities', error);
-    }
+    if (error) { /* silent — activities page handles empty state */ }
     if (!error && data?.length) supaData = data.map(a => ({
       ...a,
       user_name_ar: a.users?.full_name_ar || a.user_name_ar,
@@ -54,7 +52,6 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50 }
       contact_phone: a.contacts?.phone || '',
     }));
   } catch (err) {
-    reportError('activitiesService', 'fetchActivities', err);
     return [];
   }
 
