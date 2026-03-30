@@ -783,7 +783,7 @@ export default function OpportunityDrawer({
                         </div>
                         <div className="flex-1 min-w-0 pb-3 ps-2.5 pt-0.5 group">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-content dark:text-content-dark text-xs font-semibold">{act.description || (isRTL ? 'نشاط' : 'Activity')}</span>
+                            <span className="text-content dark:text-content-dark text-xs font-semibold">{act.notes || act.description || (isRTL ? 'نشاط' : 'Activity')}</span>
                             {resultConfig && (
                               <span className="text-[9px] font-bold px-1.5 py-px rounded-md" style={{ background: `${resultConfig.color}18`, color: resultConfig.color }}>
                                 {isRTL ? resultConfig.label_ar : resultConfig.label_en}
