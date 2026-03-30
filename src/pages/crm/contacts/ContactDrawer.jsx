@@ -591,7 +591,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         return (
           <>
             <div className="flex items-center gap-2">
-              <div className="text-xs font-semibold text-content dark:text-content-dark leading-snug flex-1">{item.description || (isRTL ? 'نشاط' : 'Activity')}</div>
+              <div className="text-xs font-semibold text-content dark:text-content-dark leading-snug flex-1">{item.notes || item.description || (isRTL ? 'نشاط' : 'Activity')}</div>
               {actStatus !== 'completed' && (
                 <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold shrink-0" style={{ background: STATUS_COLORS[actStatus] + '22', color: STATUS_COLORS[actStatus] }}>
                   {isRTL ? STATUS_LABELS[actStatus]?.ar : STATUS_LABELS[actStatus]?.en}
