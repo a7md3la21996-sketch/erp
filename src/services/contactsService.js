@@ -257,7 +257,6 @@ export async function fetchContactActivities(contactId) {
     if (error) throw error;
     return data || [];
   } catch (err) {
-    reportError('contactsService', 'fetchContactActivities', err);
     return [];
   }
 }
