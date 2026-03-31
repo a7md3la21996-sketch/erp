@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { NAV_ITEMS, ROLE_NAV_GROUPS } from '../../config/navigation';
-import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star } from 'lucide-react';
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, X, Star, Settings } from 'lucide-react';
 import { getFavorites, toggleFavorite, isFavorite as checkFavorite } from '../../services/favoritesService';
 import { getUnreadCount as getAnnouncementUnread } from '../../services/announcementService';
 import { getEmailStats } from '../../services/emailService';
@@ -349,6 +349,35 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           borderTop: `1px solid ${isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)'}`,
           flexShrink: 0,
         }}>
+          {/* Settings shortcut */}
+          <Link
+            to="/settings"
+            onClick={handleNavClick}
+            title={isRTL ? 'الإعدادات' : 'Settings'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: collapsed ? '8px 0' : '8px 10px',
+              marginBottom: 4,
+              borderRadius: 10,
+              textDecoration: 'none',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              background: location.pathname.startsWith('/settings')
+                ? (isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)')
+                : 'transparent',
+              transition: 'background 0.15s',
+            }}
+          >
+            <Settings size={18} style={{ color: location.pathname.startsWith('/settings') ? '#4A7AAB' : (isDark ? '#64748b' : '#94a3b8'), flexShrink: 0 }} />
+            {!collapsed && (
+              <span style={{ fontSize: 13, fontWeight: 500, color: location.pathname.startsWith('/settings') ? '#4A7AAB' : (isDark ? '#94a3b8' : '#64748b') }}>
+                {isRTL ? 'الإعدادات' : 'Settings'}
+              </span>
+            )}
+          </Link>
+
+          {/* Profile */}
           <Link
             to="/profile"
             onClick={handleNavClick}

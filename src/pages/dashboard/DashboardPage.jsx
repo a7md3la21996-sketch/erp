@@ -878,8 +878,8 @@ export default function DashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
             {taskStats && (
               <>
-                <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#F59E0B" onClick={() => navigate('/crm/opportunities')} />
-                <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#EF4444' : '#10B981'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} onClick={() => navigate('/crm/opportunities')} />
+                <DashKpiCard icon={Clock} label={lang === 'ar' ? 'مهام اليوم' : 'Due Today'} value={taskStats.dueToday} color="#F59E0B" onClick={() => navigate('/tasks')} />
+                <DashKpiCard icon={AlertTriangle} label={lang === 'ar' ? 'مهام متأخرة' : 'Overdue'} value={taskStats.overdue} color={taskStats.overdue > 0 ? '#EF4444' : '#10B981'} trend={taskStats.overdue > 0 ? (lang === 'ar' ? 'تحتاج متابعة' : 'Needs attention') : undefined} onClick={() => navigate('/tasks')} />
               </>
             )}
             {activityStats && (
@@ -986,9 +986,15 @@ export default function DashboardPage() {
                   ))}
                 </div>
                 <div className="mt-3.5 pt-3 border-t border-edge dark:border-edge-dark">
-                  <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span><span className="text-xs font-bold text-brand-500">{targetPct}%</span></div>
-                  <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: targetPct + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
-                  <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{((filteredCrm.revenue || 0) / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{((salesTarget || 0) / 1000).toFixed(0)}K EGP</span></div>
+                  <div className={`flex justify-between mb-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'التارجت الشهري' : 'Monthly Target'}</span>
+                    {salesTarget > 0
+                      ? <span className="text-xs font-bold text-brand-500">{targetPct}%</span>
+                      : <a href="/settings/system" className="text-[10px] text-brand-500 hover:underline cursor-pointer" style={{ textDecoration: 'none' }}>{lang === 'ar' ? 'حدد التارجت ←' : 'Set target →'}</a>
+                    }
+                  </div>
+                  <div className="h-2 rounded bg-gray-200 dark:bg-white/[0.08] overflow-hidden"><div className="h-full rounded" style={{ width: (targetPct || 0) + '%', background: 'linear-gradient(90deg, #2B4C6F, #4A7AAB)' }} /></div>
+                  <div className={`flex justify-between mt-1 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{((filteredCrm.revenue || 0) / 1000).toFixed(0)}K</span><span className="text-[10px] text-content-muted dark:text-content-muted-dark">{salesTarget > 0 ? ((salesTarget / 1000).toFixed(0) + 'K EGP') : (lang === 'ar' ? 'غير محدد' : 'Not set')}</span></div>
                 </div>
               </>
             )}
