@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Filter, X } from 'lucide-react';
 import { useGlobalFilter } from '../../contexts/GlobalFilterContext';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
+import supabase from '../../lib/supabase';
 
 const DEPARTMENTS = [
   { value: 'all', ar: 'كل الأقسام', en: 'All Departments' },
@@ -22,15 +23,26 @@ export default function GlobalFilterBar() {
   const [expanded, setExpanded] = useState(false);
   const [agents, setAgents] = useState([]);
 
+  const [teamsMap, setTeamsMap] = useState({});
+
   useEffect(() => {
     fetchSalesAgents().then(data => setAgents(data || []));
+    supabase.from('departments').select('id, name_ar, name_en').then(({ data }) => {
+      const m = {};
+      (data || []).forEach(t => { m[t.id] = t; });
+      setTeamsMap(m);
+    });
   }, []);
 
   const uniqueTeams = useMemo(() => {
     const teams = new Set();
     agents.forEach(a => { if (a.team_id) teams.add(a.team_id); });
-    return [...teams].sort();
-  }, [agents]);
+    return [...teams].sort((a, b) => {
+      const na = teamsMap[a]?.name_en || '';
+      const nb = teamsMap[b]?.name_en || '';
+      return na.localeCompare(nb);
+    });
+  }, [agents, teamsMap]);
 
   const filteredAgents = useMemo(() => {
     let list = agents;
@@ -103,7 +115,7 @@ export default function GlobalFilterBar() {
       >
         <option value="all">{isRTL ? 'كل الفرق' : 'All Teams'}</option>
         {uniqueTeams.map(t => (
-          <option key={t} value={t}>{t}</option>
+          <option key={t} value={t}>{isRTL ? (teamsMap[t]?.name_ar || t) : (teamsMap[t]?.name_en || t)}</option>
         ))}
       </select>
 
