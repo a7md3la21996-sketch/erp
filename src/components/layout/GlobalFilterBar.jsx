@@ -24,37 +24,52 @@ export default function GlobalFilterBar() {
   const [agents, setAgents] = useState([]);
 
   const [teamsMap, setTeamsMap] = useState({});
+  const [allTeams, setAllTeams] = useState([]);
+  const [managerId, setManagerId] = useState('all');
 
   useEffect(() => {
     fetchSalesAgents().then(data => setAgents(data || []));
-    supabase.from('departments').select('id, name_ar, name_en').then(({ data }) => {
+    supabase.from('departments').select('id, name_ar, name_en, parent_id').then(({ data }) => {
       const m = {};
       (data || []).forEach(t => { m[t.id] = t; });
       setTeamsMap(m);
+      setAllTeams(data || []);
     });
   }, []);
 
-  const uniqueTeams = useMemo(() => {
-    const teams = new Set();
-    agents.forEach(a => { if (a.team_id) teams.add(a.team_id); });
-    return [...teams].sort((a, b) => {
-      const na = teamsMap[a]?.name_en || '';
-      const nb = teamsMap[b]?.name_en || '';
-      return na.localeCompare(nb);
-    });
-  }, [agents, teamsMap]);
+  // Managers = sales_manager role users
+  const managers = useMemo(() => {
+    return (agents || []).filter(a => a.role === 'sales_manager');
+  }, [agents]);
+
+  // Teams filtered by selected manager
+  const visibleTeams = useMemo(() => {
+    if (managerId === 'all') {
+      // Show all teams that have agents
+      const teamIds = new Set();
+      (agents || []).forEach(a => { if (a.team_id) teamIds.add(a.team_id); });
+      return [...teamIds].sort((a, b) => (teamsMap[a]?.name_en || '').localeCompare(teamsMap[b]?.name_en || ''));
+    }
+    // Find manager's team
+    const manager = (agents || []).find(a => a.id === managerId);
+    if (!manager?.team_id) return [];
+    const managerTeamId = manager.team_id;
+    // Get manager's own team + child teams (where parent_id = manager's team)
+    const childTeams = (allTeams || []).filter(t => t.parent_id === managerTeamId).map(t => t.id);
+    return [managerTeamId, ...childTeams];
+  }, [managerId, agents, allTeams, teamsMap]);
 
   const filteredAgents = useMemo(() => {
-    let list = agents;
-    if (department !== 'all') {
-      // Filter agents by role heuristic based on department
-      // Since the users table has role field, we keep all for now as agents are sales-focused
+    let list = agents || [];
+    if (managerId !== 'all') {
+      const teamIds = new Set(visibleTeams);
+      list = list.filter(a => teamIds.has(a.team_id));
     }
     if (teamId !== 'all') {
       list = list.filter(a => a.team_id === teamId);
     }
     return list;
-  }, [agents, department, teamId]);
+  }, [agents, managerId, teamId, visibleTeams]);
 
   const selectClass = `
     h-[28px] md:h-[30px] px-1.5 md:px-2 text-[11px] md:text-xs rounded-lg border border-edge dark:border-edge-dark
@@ -106,6 +121,21 @@ export default function GlobalFilterBar() {
         ))}
       </select>
 
+      {/* Manager */}
+      {managers.length > 0 && (
+        <select
+          value={managerId}
+          onChange={e => { setManagerId(e.target.value); setTeamId('all'); setAgentName('all'); }}
+          className={selectClass}
+          dir={isRTL ? 'rtl' : 'ltr'}
+        >
+          <option value="all">{isRTL ? 'كل المديرين' : 'All Managers'}</option>
+          {managers.map(m => (
+            <option key={m.id} value={m.id}>{isRTL ? (m.full_name_ar || m.full_name_en) : (m.full_name_en || m.full_name_ar)}</option>
+          ))}
+        </select>
+      )}
+
       {/* Team */}
       <select
         value={teamId}
@@ -114,7 +144,7 @@ export default function GlobalFilterBar() {
         dir={isRTL ? 'rtl' : 'ltr'}
       >
         <option value="all">{isRTL ? 'كل الفرق' : 'All Teams'}</option>
-        {uniqueTeams.map(t => (
+        {visibleTeams.map(t => (
           <option key={t} value={t}>{isRTL ? (teamsMap[t]?.name_ar || t) : (teamsMap[t]?.name_en || t)}</option>
         ))}
       </select>
