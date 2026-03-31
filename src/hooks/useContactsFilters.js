@@ -106,7 +106,9 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       if (filterType !== 'all' && c.contact_type !== filterType) return false;
       if (search) {
         const q = search.toLowerCase();
-        return (c.full_name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q) || c.campaign_name?.toLowerCase().includes(q) || String(c.id).toLowerCase().includes(q));
+        const qDigits = q.replace(/\D/g, '');
+        const phoneMatch = qDigits.length >= 4 && (c.phone?.replace(/\D/g, '').includes(qDigits) || c.phone2?.replace(/\D/g, '').includes(qDigits));
+        return (c.full_name?.toLowerCase().includes(q) || phoneMatch || c.phone?.includes(q) || c.email?.toLowerCase().includes(q) || c.campaign_name?.toLowerCase().includes(q) || String(c.id).toLowerCase().includes(q));
       }
       return true;
     });

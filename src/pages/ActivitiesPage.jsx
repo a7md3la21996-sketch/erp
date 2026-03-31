@@ -171,13 +171,13 @@ export default function ActivitiesPage() {
 
   // Stats
   const stats = useMemo(() => {
-    const startOfToday = new Date(); startOfToday.setHours(0, 0, 0, 0);
-    const today = (activities || []).filter(a => a.created_at && new Date(a.created_at) >= startOfToday);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const today = (activities || []).filter(a => a.created_at?.startsWith(todayStr));
     const byType = {};
     (activities || []).forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
     const topType = Object.entries(byType).sort((a,b) => b[1]-a[1])[0] || null;
     return { total: totalCount || (activities || []).length, today: today.length, topType };
-  }, [activities]);
+  }, [activities, totalCount]);
 
   const handleAdd = async () => {
     if (!form.notes.trim()) return;

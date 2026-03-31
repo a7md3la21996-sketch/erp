@@ -25,7 +25,7 @@ export default function KpiCard({ icon: Icon, label, value, sub, color = '#4A7AA
 
       <div className="flex items-start justify-between px-3 sm:px-5 py-3 sm:py-4">
         <div className="min-w-0 flex-1">
-          <p className="m-0 mb-1 sm:mb-1.5 text-[10px] sm:text-xs font-medium text-content-muted dark:text-content-muted-dark truncate">{safeVal(label)}</p>
+          <p className="m-0 mb-1 sm:mb-1.5 text-[10px] sm:text-xs font-medium text-content-muted dark:text-content-muted-dark truncate" title={safeVal(label)}>{safeVal(label)}</p>
           <p className="m-0 text-lg sm:text-2xl font-extrabold leading-none text-content dark:text-content-dark">{safeVal(value)}</p>
           {sub && <p className="m-0 mt-1 text-[10px] sm:text-[11px] text-content-muted dark:text-content-muted-dark truncate">{safeVal(sub)}</p>}
         </div>

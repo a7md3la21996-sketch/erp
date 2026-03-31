@@ -19,7 +19,8 @@ export default function ConversionFunnel({ isRTL, isDark, showFunnel, setShowFun
       {showFunnel && (
         <div className="mt-2 flex flex-wrap gap-1.5 px-1" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
           {funnelData.map((stage) => {
-            const pct = total > 0 ? Math.round((stage.count / total) * 100) : 0;
+            const count = stage?.count || 0;
+            const pct = total > 0 ? Math.round((count / total) * 100) : 0;
             return (
               <span
                 key={stage.id}
