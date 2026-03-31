@@ -40,15 +40,17 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       .select('*', isServerPaginated ? { count: 'exact' } : {})
       .order('last_activity_at', { ascending: false });
 
-    if (role === 'sales_agent') {
-      query = query.eq('opportunities.assigned_to', userId);
+    if (role === 'sales_agent' && userId) {
+      // Get agent's name to filter by assigned_to_name
+      const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
+      if (agentUser) {
+        const name = agentUser.full_name_en || agentUser.full_name_ar;
+        if (name) query = query.eq('assigned_to_name', name);
+      }
     } else if (role === 'team_leader' && teamId) {
-      const { data: teamMembers } = await supabase
-        .from('users')
-        .select('id')
-        .eq('team_id', teamId);
-      const ids = teamMembers?.map(m => m.id) || [];
-      query = query.in('opportunities.assigned_to', ids);
+      const { data: teamMembers } = await supabase.from('users').select('full_name_en').eq('team_id', teamId);
+      const names = (teamMembers || []).map(m => m.full_name_en).filter(Boolean);
+      if (names.length) query = query.in('assigned_to_name', names);
     }
 
     if (filters.search) {
@@ -78,21 +80,27 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       return { data: data || [], count: count || 0 };
     }
 
-    // Fetch all contacts in pages of 1000 (Supabase default max)
+    // Fetch all matching contacts in pages of 1000
     let allData = [];
     let offset = 0;
     const PAGE = 1000;
     while (true) {
-      const { data: batch, error: batchErr } = await supabase
-        .from('contacts')
-        .select('*')
-        .order('last_activity_at', { ascending: false })
-        .range(offset, offset + PAGE - 1);
+      const { data: batch, error: batchErr } = await query.range(offset, offset + PAGE - 1);
       if (batchErr) throw batchErr;
       if (!batch || batch.length === 0) break;
       allData = allData.concat(batch);
       if (batch.length < PAGE) break;
       offset += PAGE;
+      // Rebuild query for next page (Supabase mutates query object)
+      query = supabase.from('contacts').select('*').order('last_activity_at', { ascending: false });
+      if (filters.search) { const s = filters.search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, ''); if (s.length > 0) query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`); }
+      if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
+      if (filters.source) query = query.eq('source', filters.source);
+      if (filters.temperature) query = query.eq('temperature', filters.temperature);
+      if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
+      if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
+      if (filters.department) query = query.eq('department', filters.department);
+      if (filters.assigned_to_name) query = query.eq('assigned_to_name', filters.assigned_to_name);
     }
     // Ensure array fields are never null (prevents .map() crashes)
     allData.forEach(c => {

@@ -679,7 +679,7 @@ export default function TasksPage() {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered;
+  const paged = filtered.slice(0, pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [search, smartFilters, sortBy]);
 
@@ -969,7 +969,7 @@ export default function TasksPage() {
             onPageChange={setPage}
             pageSize={pageSize}
             onPageSizeChange={v => { setPageSize(v); setPage(1); }}
-            totalItems={filtered.length}
+            totalItems={totalCount}
             safePage={safePage}
           />
         </>

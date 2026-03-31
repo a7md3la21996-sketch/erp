@@ -165,7 +165,7 @@ export default function ActivitiesPage() {
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered;
+  const paged = filtered.slice(0, pageSize);
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [smartFilters, search, pageSize]);
 
@@ -460,7 +460,7 @@ export default function ActivitiesPage() {
         )}
       </Card>
 
-      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
+      <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={totalCount} />
 
       {/* Activity Detail Drawer */}
       {selectedActivity && (

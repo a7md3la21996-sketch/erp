@@ -61,9 +61,9 @@ async function enrichOpps(opps) {
   // Attach to each opp
   return opps.map(o => ({
     ...o,
-    contacts: contactMap[o.contact_id] || o.contacts || null,
-    users: userMap[o.assigned_to] || o.users || null,
-    projects: projectMap[o.project_id] || o.projects || null,
+    contacts: contactMap[o.contact_id] || o.contacts || { full_name: o.contact_name || '—' },
+    users: userMap[o.assigned_to] || o.users || { full_name_ar: o.assigned_to_name || '—', full_name_en: o.assigned_to_name || '—' },
+    projects: projectMap[o.project_id] || o.projects || { name_ar: o.project_name || '', name_en: o.project_name || '' },
   }));
 }
 
