@@ -346,8 +346,6 @@ export default function UsersPage() {
         const updates = {
           full_name_ar: form.full_name_ar,
           full_name_en: form.full_name_en,
-          name_ar: form.full_name_ar,
-          name_en: form.full_name_en,
           role: form.role,
           department: form.department,
           team_id: form.team_id || null,

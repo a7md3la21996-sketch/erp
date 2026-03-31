@@ -71,7 +71,7 @@ export const scoreColor = (s) => s >= 70 ? '#10B981' : s >= 40 ? '#F59E0B' : '#E
 export const scoreLabel = (s, isRTL) => s >= 70 ? (isRTL ? 'ساخن' : 'Hot') : s >= 40 ? (isRTL ? 'دافئ' : 'Warm') : (isRTL ? 'بارد' : 'Cold');
 
 // ─── Budget formatting ───
-export const fmtBudget = (n) => { if (!n) return "-"; if (n >= 1000000) return (n / 1000000).toFixed(1) + "M"; if (n >= 1000) return (n / 1000).toFixed(0) + "K"; return n.toLocaleString(); };
+export const fmtBudget = (n) => { if (!n || n <= 0) return "—"; if (n >= 1000000) return (n / 1000000).toFixed(1) + "M"; if (n >= 1000) return (n / 1000).toFixed(0) + "K"; return n.toLocaleString(); };
 
 // ─── Date helpers ───
 export const daysSince = (date) => date ? Math.floor((Date.now() - new Date(date).getTime()) / 86400000) : 999;
