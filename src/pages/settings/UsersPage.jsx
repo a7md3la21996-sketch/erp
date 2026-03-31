@@ -155,8 +155,16 @@ export default function UsersPage() {
   const [formErrors, setFormErrors] = useState({});
 
   const { auditFields, applyAuditFilters } = useAuditFilter('user');
+  const [teamsList, setTeamsList] = useState([]);
 
   const USE_SUPABASE = !!import.meta.env.VITE_SUPABASE_URL;
+
+  // Fetch teams
+  useEffect(() => {
+    supabase.from('departments').select('id, name_ar, name_en').order('name_en').then(({ data }) => {
+      setTeamsList(data || []);
+    }).catch(() => {});
+  }, []);
 
   /* ── Fetch users ── */
   const loadUsers = useCallback(async () => {
@@ -477,6 +485,7 @@ export default function UsersPage() {
               lang === 'ar' ? 'المستخدم'       : 'User',
               lang === 'ar' ? 'البريد الإلكتروني' : 'Email',
               lang === 'ar' ? 'الدور'           : 'Role',
+              lang === 'ar' ? 'الفريق'          : 'Team',
               lang === 'ar' ? 'الحالة'          : 'Status',
               lang === 'ar' ? 'آخر تسجيل دخول'  : 'Last Login',
               lang === 'ar' ? 'تاريخ الإنشاء'   : 'Created At',
@@ -510,6 +519,11 @@ export default function UsersPage() {
                 </Td>
                 <Td>
                   <RoleBadge role={user.role} lang={lang} />
+                </Td>
+                <Td>
+                  <span className="text-xs text-content-muted dark:text-content-muted-dark">
+                    {(() => { const t = (teamsList || []).find(t => t.id === user.team_id); return t ? (isRTL ? t.name_ar : t.name_en) : '—'; })()}
+                  </span>
                 </Td>
                 <Td>
                   <StatusBadge status={user.status} lang={lang} />
@@ -705,14 +719,19 @@ export default function UsersPage() {
             </Select>
           </Field>
 
-          {/* Team ID */}
-          <Field label={lang === 'ar' ? 'الفريق' : 'Team ID'}>
-            <Input
-              type="text"
-              placeholder={lang === 'ar' ? 'اختياري' : 'Optional'}
-              value={form.team_id}
-              onChange={(e) => setField('team_id', e.target.value)}
-            />
+          {/* Team */}
+          <Field label={lang === 'ar' ? 'الفريق' : 'Team'}>
+            <Select
+              value={form.team_id || ''}
+              onChange={(e) => setField('team_id', e.target.value || null)}
+            >
+              <option value="">{lang === 'ar' ? '— بدون فريق —' : '— No Team —'}</option>
+              {(teamsList || []).map(t => (
+                <option key={t.id} value={t.id}>
+                  {lang === 'ar' ? t.name_ar : t.name_en}
+                </option>
+              ))}
+            </Select>
           </Field>
 
           {/* Phone */}
