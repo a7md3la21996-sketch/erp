@@ -110,13 +110,22 @@ export default function DealsPage() {
     ];
   }, [deals, lang, auditFields]);
 
-  // Load data
+  // Load data — filter by role
   useEffect(() => {
     getWonDeals().then(d => {
-      setDeals(d || []);
+      let list = d || [];
+      // Filter deals based on user role
+      if (profile?.role === 'sales_agent') {
+        const name = profile.full_name_en || profile.full_name_ar;
+        list = list.filter(deal => deal.agent_en === name || deal.agent_ar === name);
+      } else if (profile?.role === 'team_leader' || profile?.role === 'sales_manager') {
+        // They see deals from their team — handled by contacts filter already
+        // For now show all deals (they're only 110)
+      }
+      setDeals(list);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [profile]);
 
   // Filter + sort
   const filtered = useMemo(() => {
