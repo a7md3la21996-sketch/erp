@@ -345,6 +345,13 @@ export default function UsersPage() {
   /* ── Save Handler ── */
   const handleSave = async () => {
     if (!validate()) return;
+
+    // Prevent non-admins from creating/editing admin users
+    if (form.role === 'admin' && profile?.role !== 'admin') {
+      toast.error(lang === 'ar' ? 'لا يمكنك إنشاء أو تعديل مستخدم بصلاحية Admin' : 'Only admins can create admin users');
+      return;
+    }
+
     setSaving(true);
     const isEdit = !!editingUser;
 
@@ -696,7 +703,7 @@ export default function UsersPage() {
               onChange={(e) => setField('role', e.target.value)}
               className={errClass('role')}
             >
-              {ROLE_OPTIONS.map(r => (
+              {ROLE_OPTIONS.filter(r => profile?.role === 'admin' || r.value !== 'admin').map(r => (
                 <option key={r.value} value={r.value}>
                   {lang === 'ar' ? r.ar : r.en}
                 </option>
