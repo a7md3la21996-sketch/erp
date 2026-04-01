@@ -173,6 +173,8 @@ export const ROLE_PERMISSIONS = {
     P.DEALS_VIEW_OWN,
     // Marketing
     P.CAMPAIGNS_VIEW,
+    // Lead Distribution
+    P.POOL_VIEW, P.POOL_MANAGE, P.POOL_ASSIGN,
     // Common
     P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE,
     P.PROJECTS_VIEW, P.UNITS_VIEW,
