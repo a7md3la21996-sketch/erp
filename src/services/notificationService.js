@@ -251,7 +251,7 @@ export async function searchNotifications(query) {
 
   try {
     // Fetch all and filter client-side for text search flexibility
-    const { data, error } = await supabase.from('notifications').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(200);
     if (error) throw error;
     if (data && data.length > 0) {
       return data.filter(n => {

@@ -16,7 +16,7 @@ export default function BottomNav({ onMoreClick }) {
   const lang = i18n.language === 'ar' ? 'ar' : 'en';
 
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-surface-card dark:bg-surface-card-dark border-t border-edge dark:border-edge-dark">
+    <nav className="fixed bottom-0 inset-x-0 z-40 md:hidden bg-surface-card dark:bg-surface-card-dark border-t border-edge dark:border-edge-dark" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
       <div className="flex items-stretch justify-around h-[60px]" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
         {NAV_ITEMS.map(item => {
           const Icon = item.icon;

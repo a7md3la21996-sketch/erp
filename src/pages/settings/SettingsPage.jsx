@@ -50,25 +50,25 @@ const TIMEZONES = [
 
 // ── Settings sidebar items ──
 const SETTINGS_TABS = [
-  { key: 'general',      icon: Settings,          ar: 'إعدادات عامة',        en: 'General' },
-  { key: 'system',       icon: SlidersHorizontal, ar: 'إعدادات النظام',      en: 'System Config' },
-  { key: 'users',        icon: Users,             ar: 'المستخدمين',          en: 'Users' },
-  { key: 'roles',        icon: Shield,            ar: 'الأدوار والصلاحيات',   en: 'Roles & Permissions' },
-  { key: 'audit',        icon: Eye,               ar: 'سجل التدقيق',         en: 'Audit Log' },
-  { key: 'tracking',     icon: Activity,          ar: 'تتبع المستخدمين',     en: 'User Tracking' },
-  { key: 'triggers',     icon: Zap,               ar: 'المشغلات التلقائية',   en: 'Triggers' },
-  { key: 'workflows',    icon: GitBranch,         ar: 'سير العمل',           en: 'Workflows' },
-  { key: 'custom-fields',icon: FileText,          ar: 'حقول مخصصة',          en: 'Custom Fields' },
-  { key: 'sms-templates',icon: Mail,              ar: 'قوالب الرسائل',       en: 'SMS Templates' },
-  { key: 'print',        icon: Printer,           ar: 'إعدادات الطباعة',     en: 'Print Settings' },
-  { key: 'scheduled',    icon: Clock,             ar: 'تقارير مجدولة',       en: 'Scheduled Reports' },
-  { key: 'security',     icon: Lock,              ar: 'الأمان',              en: 'Security' },
-  { key: 'backup',       icon: Database,          ar: 'النسخ الاحتياطي',     en: 'Backup' },
-  { key: 'health',       icon: BarChart2,         ar: 'حالة النظام',         en: 'System Health' },
-  { key: 'sla',          icon: ThumbsDown,        ar: 'اتفاقيات SLA',        en: 'SLA Management' },
-  { key: 'ads',          icon: Megaphone,         ar: 'ربط الإعلانات',       en: 'Ads Integration' },
-  { key: 'api-docs',     icon: FileText,          ar: 'توثيق API',           en: 'API Docs' },
-  { key: 'export-import',icon: Database,          ar: 'سجل التصدير',         en: 'Export/Import' },
+  { key: 'general',      icon: Settings,          ar: 'إعدادات عامة',        en: 'General',              adminOnly: false },
+  { key: 'system',       icon: SlidersHorizontal, ar: 'إعدادات النظام',      en: 'System Config',        adminOnly: true },
+  { key: 'users',        icon: Users,             ar: 'المستخدمين',          en: 'Users',                adminOnly: false, perm: 'users.manage' },
+  { key: 'roles',        icon: Shield,            ar: 'الأدوار والصلاحيات',   en: 'Roles & Permissions',  adminOnly: true },
+  { key: 'audit',        icon: Eye,               ar: 'سجل التدقيق',         en: 'Audit Log',            adminOnly: true },
+  { key: 'tracking',     icon: Activity,          ar: 'تتبع المستخدمين',     en: 'User Tracking',        adminOnly: true },
+  { key: 'triggers',     icon: Zap,               ar: 'المشغلات التلقائية',   en: 'Triggers',             adminOnly: true },
+  { key: 'workflows',    icon: GitBranch,         ar: 'سير العمل',           en: 'Workflows',            adminOnly: true },
+  { key: 'custom-fields',icon: FileText,          ar: 'حقول مخصصة',          en: 'Custom Fields',        adminOnly: true },
+  { key: 'sms-templates',icon: Mail,              ar: 'قوالب الرسائل',       en: 'SMS Templates',        adminOnly: true },
+  { key: 'print',        icon: Printer,           ar: 'إعدادات الطباعة',     en: 'Print Settings',       adminOnly: true },
+  { key: 'scheduled',    icon: Clock,             ar: 'تقارير مجدولة',       en: 'Scheduled Reports',    adminOnly: true },
+  { key: 'security',     icon: Lock,              ar: 'الأمان',              en: 'Security',             adminOnly: true },
+  { key: 'backup',       icon: Database,          ar: 'النسخ الاحتياطي',     en: 'Backup',               adminOnly: true },
+  { key: 'health',       icon: BarChart2,         ar: 'حالة النظام',         en: 'System Health',        adminOnly: true },
+  { key: 'sla',          icon: ThumbsDown,        ar: 'اتفاقيات SLA',        en: 'SLA Management',       adminOnly: true },
+  { key: 'ads',          icon: Megaphone,         ar: 'ربط الإعلانات',       en: 'Ads Integration',      adminOnly: false },
+  { key: 'api-docs',     icon: FileText,          ar: 'توثيق API',           en: 'API Docs',             adminOnly: true },
+  { key: 'export-import',icon: Database,          ar: 'سجل التصدير',         en: 'Export/Import',        adminOnly: true },
 ];
 
 // ── General Tab (Company Info + Appearance) ──
@@ -204,7 +204,11 @@ export default function SettingsPage() {
           </h2>
         </div>
         <div className="p-2">
-          {SETTINGS_TABS.map(tab => {
+          {SETTINGS_TABS.filter(tab => {
+            if (tab.adminOnly && profile?.role !== 'admin') return false;
+            if (tab.perm && !hasPermission(tab.perm) && profile?.role !== 'admin') return false;
+            return true;
+          }).map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
             return (
@@ -224,7 +228,11 @@ export default function SettingsPage() {
       {/* Mobile tab selector */}
       <div className="md:hidden fixed top-[72px] left-0 right-0 z-50 bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark px-3 py-2 overflow-x-auto">
         <div className="flex gap-1.5" style={{ minWidth: 'max-content' }}>
-          {SETTINGS_TABS.map(tab => {
+          {SETTINGS_TABS.filter(tab => {
+            if (tab.adminOnly && profile?.role !== 'admin') return false;
+            if (tab.perm && !hasPermission(tab.perm) && profile?.role !== 'admin') return false;
+            return true;
+          }).map(tab => {
             const isActive = activeTab === tab.key;
             return (
               <button

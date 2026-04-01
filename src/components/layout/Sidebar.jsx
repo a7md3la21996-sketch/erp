@@ -257,7 +257,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               <div key={item.id} className="mb-0.5">
                 {item.path && !hasChildren ? (
                   <div style={{ position: 'relative' }} className="group">
-                  <Link to={item.path} onClick={handleNavClick} className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg no-underline text-sm font-medium transition-colors ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'}`}>
+                  <Link to={item.path} onClick={handleNavClick} title={!showLabels ? item.label[lang] : undefined} className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 py-2.5 px-3 rounded-lg no-underline text-sm font-medium transition-colors ${active ? 'bg-brand-50 dark:bg-brand-500/20 text-brand-800 dark:text-brand-400' : 'bg-transparent text-gray-500 dark:text-gray-400'}`}>
                     <span style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}>
                       <Icon size={20} />
                       {(() => { const bc = getBadgeCount(item); return !showLabels && bc > 0 ? (
