@@ -144,6 +144,13 @@ export async function createContact(contactData) {
       if (import.meta.env.DEV) console.error('[createContact] Supabase error:', error.message, error.details, error.hint);
       throw error;
     }
+    // Auto-generate contact_number
+    if (!data.contact_number) {
+      const { count } = await supabase.from('contacts').select('id', { count: 'exact', head: true });
+      const num = 'C-' + String(count || 1).padStart(5, '0');
+      await supabase.from('contacts').update({ contact_number: num }).eq('id', data.id);
+      data.contact_number = num;
+    }
     logCreate('contact', data.id, data);
     return data;
   } catch (err) {

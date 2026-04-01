@@ -318,6 +318,7 @@ export default function ContactsTable({
                         <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                           {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
+                        {c.contact_number && <span className="text-[9px] font-mono text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark px-1.5 py-px rounded">{c.contact_number}</span>}
                         {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">

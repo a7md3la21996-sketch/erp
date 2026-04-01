@@ -865,7 +865,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             <div className="flex-1 min-w-0">
               <div className={`text-sm font-bold leading-snug mb-0.5 flex items-center gap-1.5 ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                 <span>{contact.prefix ? <span className="text-[#6B8DB5] me-1">{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</span>
-                {contact.id && <span className="text-[9px] font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.08] px-1.5 py-0.5 rounded-full shrink-0">#{(contact.id || '').slice(-5)}</span>}
+                {contact.contact_number && <span className="text-[9px] font-mono font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.08] px-1.5 py-0.5 rounded-full shrink-0">{contact.contact_number}</span>}
               </div>
               <div className="flex gap-1.5 items-center flex-wrap mb-1.5">
                 {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
