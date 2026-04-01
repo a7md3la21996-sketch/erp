@@ -404,7 +404,7 @@ export default function MarketingPage() {
 
   // ── Skeleton ─────────────────────────────────────
   if (loading) return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16">
       <div className="animate-pulse space-y-4">
         <div className="h-10 bg-brand-500/10 rounded-xl w-1/3" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">{[1,2,3,4].map(i => <div key={i} className="h-20 bg-brand-500/10 rounded-xl" />)}</div>
@@ -414,7 +414,7 @@ export default function MarketingPage() {
   );
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16">
 
       {/* ═══ Header ═══ */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">

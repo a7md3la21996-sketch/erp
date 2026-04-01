@@ -365,7 +365,7 @@ export default function CommissionsPage() {
 
   // ──────────────── RENDER ────────────────
   return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* ── Header ── */}
       <div className="mb-5 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">

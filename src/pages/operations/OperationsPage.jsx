@@ -835,7 +835,7 @@ export default function OperationsPage() {
 
   // ── Main Render ─────────────────────────────────────────────────────
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 min-h-screen bg-surface-bg dark:bg-surface-bg-dark">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 min-h-screen pb-16 bg-surface-bg dark:bg-surface-bg-dark">
       {/* Page Header */}
       <div className={`flex flex-wrap justify-between items-center gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`flex items-center gap-3.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>

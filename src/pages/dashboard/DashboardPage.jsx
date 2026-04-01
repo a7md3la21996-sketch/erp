@@ -1300,7 +1300,7 @@ export default function DashboardPage() {
   const noCardWidgets = ['kpi_overview', 'recent_activities', 'hr_overview'];
 
   return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Hero banner */}
       <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-4 py-4 md:px-7 md:py-6 mb-5 flex flex-wrap md:flex-nowrap justify-between items-center gap-4 relative overflow-hidden ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className={`absolute w-40 h-40 rounded-full bg-white/[0.04] pointer-events-none ${isRTL ? '-left-5 top-[-40px]' : '-right-5 top-[-40px]'}`} />
