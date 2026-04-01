@@ -370,33 +370,20 @@ export default function ContactsPage() {
     { value: 'other', label: isRTL ? 'سبب آخر' : 'Other' },
   ];
 
-  // Load contacts
+  // Load contacts with server-side pagination
   const loadContactsData = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await fetchContacts({
+      const result = await fetchContacts({
         role: profile?.role,
         userId: profile?.id,
         teamId: profile?.team_id,
         filters: {},
+        page: 1,
+        pageSize: 1000,
       });
-      const contactsList = Array.isArray(data) ? data : [];
+      const contactsList = Array.isArray(result?.data) ? result.data : (Array.isArray(result) ? result : []);
       setContacts(contactsList);
-      // Fetch last feedback for visible contacts in background
-      try {
-        const { data: recentActs } = await supabase
-          .from('activities')
-          .select('contact_id, notes, user_name_ar, user_name_en, created_at')
-          .not('notes', 'is', null)
-          .neq('notes', '')
-          .order('created_at', { ascending: false })
-          .range(0, 999);
-        if (recentActs?.length) {
-          const lastByContact = {};
-          recentActs.forEach(a => { if (a.contact_id && !lastByContact[a.contact_id]) lastByContact[a.contact_id] = a; });
-          setContacts(prev => prev.map(c => ({ ...c, _lastNote: lastByContact[c.id] || null })));
-        }
-      } catch { /* best effort */ }
     } catch {
       setContacts([]);
     } finally {
@@ -420,14 +407,23 @@ export default function ContactsPage() {
     }
   }, [profile, loadContactsData]));
 
-  // Handle highlight query param
+  // Handle highlight query param — open contact drawer directly
   useEffect(() => {
-    if (!highlightId || loading || !contacts.length) return;
+    if (!highlightId || loading) return;
     const contact = contacts.find(c => String(c.id) === String(highlightId));
     if (contact) {
       setSelected(contact);
       searchParams.delete('highlight');
       setSearchParams(searchParams, { replace: true });
+    } else if (highlightId && !loading) {
+      // Contact not in current page — fetch directly from Supabase
+      supabase.from('contacts').select('*').eq('id', highlightId).maybeSingle().then(({ data }) => {
+        if (data) {
+          setSelected(data);
+          searchParams.delete('highlight');
+          setSearchParams(searchParams, { replace: true });
+        }
+      });
     }
   }, [highlightId, loading, contacts]);
 

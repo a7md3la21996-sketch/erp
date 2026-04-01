@@ -417,9 +417,6 @@ export default function ActivitiesPage() {
                         {act.entity_name || (isRTL ? 'عميل' : 'Contact')}
                       </span>
                     )}
-                    {act.contact_phone && (
-                      <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-mono">{act.contact_phone}</span>
-                    )}
                     {(act.user_name_ar || act.user_name_en) && (
                       <span className="flex items-center gap-1 text-[11px] text-content-muted dark:text-content-muted-dark">
                         <User size={10} />

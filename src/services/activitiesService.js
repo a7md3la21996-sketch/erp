@@ -57,7 +57,6 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
       user_name_ar: a.users?.full_name_ar || a.user_name_ar,
       user_name_en: a.users?.full_name_en || a.user_name_en,
       entity_name: a.contacts?.full_name || a.entity_name || '',
-      contact_phone: a.contacts?.phone || '',
     }));
 
     if (isServerPaginated) return { data: supaData, count: count || 0 };
