@@ -380,7 +380,7 @@ export default function SmartFilter({
 
         {/* Quick Filters */}
         {quickFilters.length > 0 && (
-          <div className="flex gap-1.5 items-center">
+          <div className="flex gap-1.5 items-center overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
             <Zap size={12} className="text-[#6B8DB5] shrink-0" />
             {quickFilters.map((qf, i) => {
               const active = isQuickFilterActive(qf);
@@ -388,7 +388,7 @@ export default function SmartFilter({
                 <button
                   key={i}
                   onClick={() => applyQuickFilter(qf)}
-                  className={`px-2.5 py-1 rounded-full text-[11px] border cursor-pointer transition-colors ${
+                  className={`px-2.5 py-1 rounded-full text-[11px] border cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
                     active
                       ? 'border-brand-500 bg-brand-500/10 text-brand-500 font-semibold'
                       : 'border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'
