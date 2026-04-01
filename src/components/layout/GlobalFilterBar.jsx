@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Filter, X } from 'lucide-react';
 import { useGlobalFilter } from '../../contexts/GlobalFilterContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import supabase from '../../lib/supabase';
 
@@ -18,6 +19,7 @@ export default function GlobalFilterBar() {
   const { i18n } = useTranslation();
   const lang = i18n.language;
   const isRTL = lang === 'ar';
+  const { profile } = useAuth();
   const { department, setDepartment, managerId, setManagerId, teamId, setTeamId, agentName, setAgentName, period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo, isFiltered, clearFilters } = useGlobalFilter();
 
   const [expanded, setExpanded] = useState(false);
@@ -27,19 +29,41 @@ export default function GlobalFilterBar() {
   const [allTeams, setAllTeams] = useState([]);
 
   useEffect(() => {
-    fetchSalesAgents().then(data => setAgents(data || []));
+    fetchSalesAgents().then(data => {
+      let filtered = data || [];
+      // Filter agents based on current user's role
+      if (profile?.role === 'sales_manager' && profile?.team_id) {
+        // Manager sees their team + child teams only
+        supabase.from('departments').select('id').eq('parent_id', profile.team_id).then(({ data: children }) => {
+          const allowedTeams = new Set([profile.team_id, ...((children || []).map(c => c.id))]);
+          setAgents(filtered.filter(a => allowedTeams.has(a.team_id)));
+        });
+      } else if (profile?.role === 'team_leader' && profile?.team_id) {
+        // TL sees their team only
+        setAgents(filtered.filter(a => a.team_id === profile.team_id));
+      } else if (profile?.role === 'sales_agent') {
+        // Agent sees only themselves
+        setAgents(filtered.filter(a => a.id === profile.id));
+      } else {
+        // Admin/operations see all
+        setAgents(filtered);
+      }
+    });
     supabase.from('departments').select('id, name_ar, name_en, parent_id').then(({ data }) => {
       const m = {};
       (data || []).forEach(t => { m[t.id] = t; });
       setTeamsMap(m);
       setAllTeams(data || []);
     });
-  }, []);
+  }, [profile?.role, profile?.team_id, profile?.id]);
 
-  // Managers = sales_manager role users
+  // Managers = sales_manager role users (only visible to admin/operations)
   const managers = useMemo(() => {
-    return (agents || []).filter(a => a.role === 'sales_manager');
-  }, [agents]);
+    if (profile?.role === 'admin' || profile?.role === 'operations') {
+      return (agents || []).filter(a => a.role === 'sales_manager');
+    }
+    return [];
+  }, [agents, profile?.role]);
 
   // Teams filtered by selected manager
   const visibleTeams = useMemo(() => {
