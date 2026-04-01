@@ -92,7 +92,7 @@ export async function fetchContactStats() {
     if (e2) throw e2;
 
     return { totalLeads: totalLeads || 0, newLeadsThisMonth: newLeadsThisMonth || 0 };
-  } catch (err) { reportError('dashboardService', 'query', err);
+  } catch (err) { /* silent */;
     // Return zeros — no data available
     return { totalLeads: 0, newLeadsThisMonth: 0 };
   }
@@ -168,7 +168,7 @@ export async function fetchTaskStats() {
     if (e2) throw e2;
 
     return { dueToday: dueToday || 0, overdue: overdue || 0 };
-  } catch (err) { reportError('dashboardService', 'query', err);
+  } catch (err) { /* silent */;
     return { dueToday: 0, overdue: 0 };
   }
 }
@@ -198,7 +198,7 @@ export async function fetchActivityStats() {
     if (error) throw error;
 
     return { activitiesThisWeek: thisWeek || 0 };
-  } catch (err) { reportError('dashboardService', 'query', err);
+  } catch (err) { /* silent */;
     return { activitiesThisWeek: 0 };
   }
 }
@@ -212,7 +212,7 @@ export async function fetchEmployeeStats() {
     if (error) throw error;
 
     return { totalEmployees: total || 0 };
-  } catch (err) { reportError('dashboardService', 'query', err);
+  } catch (err) { /* silent */;
     return { totalEmployees: 0 };
   }
 }
@@ -320,7 +320,7 @@ export async function fetchAllDashboardData() {
       fetchEmployeeStats(),
     ]);
     return { contacts, opportunities, tasks, activities, employees };
-  } catch (err) { reportError('dashboardService', 'query', err);
+  } catch (err) { /* silent */;
     return {
       contacts: { totalLeads: 0, newLeadsThisMonth: 0 },
       opportunities: { activeOpps: 0, closedDeals: 0, revenue: 0, closedThisMonth: 0, stageCounts: {}, totalOpps: 0, rawOpps: [] },

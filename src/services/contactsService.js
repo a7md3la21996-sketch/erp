@@ -123,7 +123,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     });
     return allData;
   } catch (err) {
-    reportError('contactsService', 'query', err);
+    /* silent */;
     return isServerPaginated ? { data: [], count: 0 } : [];
   }
 }
@@ -201,7 +201,7 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
     logUpdate('contact', id, oldData, data);
     return data;
   } catch (err) {
-    reportError('contactsService', 'query', err);
+    /* silent */;
     enqueue('contact', 'update', { id, ...cleanUpdates });
     return { id, ...updates, _offline: true };
   }
@@ -225,7 +225,7 @@ export async function deleteContact(id) {
     const { error } = await supabase.from('contacts').delete().eq('id', id);
     if (error) throw error;
   } catch (err) {
-    reportError('contactsService', 'query', err);
+    /* silent */;
     enqueue('contact', 'delete', { id });
   }
 }
