@@ -370,20 +370,17 @@ export default function ContactsPage() {
     { value: 'other', label: isRTL ? 'سبب آخر' : 'Other' },
   ];
 
-  // Load contacts with server-side pagination
+  // Load contacts
   const loadContactsData = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await fetchContacts({
+      const data = await fetchContacts({
         role: profile?.role,
         userId: profile?.id,
         teamId: profile?.team_id,
         filters: {},
-        page: 1,
-        pageSize: 1000,
       });
-      const contactsList = Array.isArray(result?.data) ? result.data : (Array.isArray(result) ? result : []);
-      setContacts(contactsList);
+      setContacts(Array.isArray(data) ? data : []);
     } catch {
       setContacts([]);
     } finally {
