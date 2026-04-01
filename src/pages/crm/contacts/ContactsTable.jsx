@@ -271,15 +271,14 @@ export default function ContactsTable({
               <th className={thCls}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>
               <th className={thCls}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
               <th className={thCls}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>
-              <th className={thCls}>{isRTL ? 'الفرص / السيلز' : 'Opps / Sales'}</th>
               <th className={`${thCls} text-center`}>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+              <tr><td colSpan={7} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={8} className="p-0 border-none">
+              <tr><td colSpan={7} className="p-0 border-none">
                 <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                     <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -364,35 +363,6 @@ export default function ContactsTable({
                       </div>
                     </div>
                   ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
-                </td>
-
-                {/* Opps / Sales — highest stage only */}
-                <td className={tdCls}>
-                  {(() => {
-                    const opps = c.opportunities || [];
-                    if (!(opps || []).length) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
-                    const dept = c.department || 'sales';
-                    const stages = getDeptStages(dept);
-                    const STAGE_COLORS = { closed_won: '#10B981', closed_lost: '#EF4444', contracted: '#10B981', reserved: '#1B3347', negotiation: '#F59E0B', proposal: '#4A7AAB', qualification: '#6B8DB5' };
-                    const getStageColor = (stageId) => STAGE_COLORS[stageId] || stages.find(s => s.id === stageId)?.color || '#6B8DB5';
-                    // Find the opportunity with the highest stage
-                    let best = null; let bestIdx = -1;
-                    (opps || []).forEach(o => {
-                      const si = stages.findIndex(s => s.id === o.stage);
-                      if (si > bestIdx) { bestIdx = si; best = o; }
-                    });
-                    if (!best) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
-                    const name = best.users ? (isRTL ? (best.users.full_name_ar || best.users.full_name_en) : (best.users.full_name_en || best.users.full_name_ar)) : (best.assigned_to_name || (isRTL ? 'غير معين' : 'Unassigned'));
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1 }}>
-                        <span className="text-[10px] font-semibold text-content dark:text-content-dark truncate max-w-[80px]" title={name}>{name}</span>
-                        <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: `${getStageColor(best.stage)}18`, border: `1px solid ${getStageColor(best.stage)}30`, color: getStageColor(best.stage), fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {deptStageLabel(best.stage, dept, isRTL)}
-                        </span>
-                        {(opps || []).length > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{(opps || []).length - 1}</span>}
-                      </div>
-                    );
-                  })()}
                 </td>
 
                 {/* Actions — 3 visible + menu */}
