@@ -573,7 +573,7 @@ export default function ContactsPage() {
         <div>
           <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
           <p className="mt-1 mb-0 text-xs text-content-muted dark:text-content-muted-dark">
-            {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${filtered.length} ${isRTL ? 'نتيجة' : (filtered.length === 1 ? 'result' : 'results')}`}
+            {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${totalContacts.toLocaleString()} ${isRTL ? 'جهة اتصال' : 'contacts'}`}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -628,7 +628,7 @@ export default function ContactsPage() {
         sortOptions={SORT_OPTIONS}
         sortBy={sortBy}
         onSortChange={setSortBy}
-        resultsCount={filtered.length}
+        resultsCount={totalContacts}
         quickFilters={[
           { label: 'ليدز جدد', labelEn: 'New Leads', filters: [{ field: 'contact_type', operator: 'is', value: 'lead' }, { field: 'created_at', operator: 'last_7' }] },
           { label: 'بدون نشاط', labelEn: 'No Activity 30d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) }] },
