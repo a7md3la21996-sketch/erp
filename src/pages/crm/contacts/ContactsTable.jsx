@@ -268,6 +268,7 @@ export default function ContactsTable({
               <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
               <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>
               <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>
+              <th className={thCls}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>
               <th className={thCls}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
               <th className={thCls}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>
               <th className={thCls}>{isRTL ? 'الفرص / السيلز' : 'Opps / Sales'}</th>
@@ -276,9 +277,9 @@ export default function ContactsTable({
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+              <tr><td colSpan={8} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="p-0 border-none">
+              <tr><td colSpan={8} className="p-0 border-none">
                 <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                     <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -332,6 +333,11 @@ export default function ContactsTable({
                 <td className={tdCls} onClick={e => e.stopPropagation()}>
                   <PhoneCell phone={c.phone} />
                   {c.phone2 && <PhoneCell phone={c.phone2} small />}
+                </td>
+
+                {/* Assigned To */}
+                <td className={tdCls}>
+                  <span className="text-xs font-medium text-content dark:text-content-dark">{c.assigned_to_name || '—'}</span>
                 </td>
 
                 {/* Source + Date */}
