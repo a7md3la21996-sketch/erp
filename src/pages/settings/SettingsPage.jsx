@@ -167,7 +167,7 @@ function GeneralTab({ isRTL, isDark, toggleTheme, lang, handleLangToggle, profil
 // ── Main Settings Page ──
 export default function SettingsPage() {
   const { i18n } = useTranslation();
-  const { profile } = useAuth();
+  const { profile, hasPermission } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
@@ -179,7 +179,7 @@ export default function SettingsPage() {
     i18n.changeLanguage(newLang).then(() => window.location.reload());
   };
 
-  if (profile?.role !== 'admin') {
+  if (!hasPermission('settings.view') && profile?.role !== 'admin') {
     return (
       <div className="flex items-center justify-center h-[50vh]">
         <div className="text-center">
