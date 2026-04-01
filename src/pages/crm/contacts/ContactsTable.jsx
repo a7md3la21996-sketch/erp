@@ -337,7 +337,15 @@ export default function ContactsTable({
 
                 {/* Assigned To */}
                 <td className={`${tdCls} hidden md:table-cell`}>
-                  <span className="text-xs font-medium text-content dark:text-content-dark">{c.assigned_to_name || '—'}</span>
+                  {Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {c.assigned_to_names.map((name, i) => (
+                        <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${i === 0 ? 'bg-brand-500/10 text-brand-500' : 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark'}`}>{name}</span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-xs font-medium text-content dark:text-content-dark">{c.assigned_to_name || '—'}</span>
+                  )}
                 </td>
 
                 {/* Source + Date */}

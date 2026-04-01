@@ -41,24 +41,30 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       .order('last_activity_at', { ascending: false });
 
     if (role === 'sales_agent' && userId) {
-      // Agent sees only their contacts
+      // Agent sees contacts where their name is in assigned_to_names
       const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
       if (agentUser) {
         const name = agentUser.full_name_en || agentUser.full_name_ar;
-        if (name) query = query.eq('assigned_to_name', name);
+        if (name) query = query.contains('assigned_to_names', [name]);
       }
     } else if (role === 'team_leader' && teamId) {
-      // TL sees their team's contacts
-      const { data: teamMembers } = await supabase.from('users').select('full_name_en, full_name_ar').eq('team_id', teamId);
-      const names = [...new Set((teamMembers || []).flatMap(m => [m.full_name_en, m.full_name_ar]).filter(Boolean))];
-      if (names.length) query = query.in('assigned_to_name', names);
+      // TL sees contacts assigned to any of their team members
+      const { data: teamMembers } = await supabase.from('users').select('full_name_en').eq('team_id', teamId);
+      const names = (teamMembers || []).map(m => m.full_name_en).filter(Boolean);
+      if (names.length) {
+        const orConditions = names.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
+        query = query.or(orConditions);
+      }
     } else if (role === 'sales_manager' && teamId) {
-      // Manager sees their team + child teams' contacts
+      // Manager sees contacts assigned to their team + child teams
       const { data: childTeams } = await supabase.from('departments').select('id').eq('parent_id', teamId);
       const allTeamIds = [teamId, ...((childTeams || []).map(t => t.id))];
-      const { data: allMembers } = await supabase.from('users').select('full_name_en, full_name_ar').in('team_id', allTeamIds);
-      const names = [...new Set((allMembers || []).flatMap(m => [m.full_name_en, m.full_name_ar]).filter(Boolean))];
-      if (names.length) query = query.in('assigned_to_name', names);
+      const { data: allMembers } = await supabase.from('users').select('full_name_en').in('team_id', allTeamIds);
+      const names = (allMembers || []).map(m => m.full_name_en).filter(Boolean);
+      if (names.length) {
+        const orConditions = names.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
+        query = query.or(orConditions);
+      }
     }
 
     if (filters.search) {
@@ -73,7 +79,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
     if (filters.department) query = query.eq('department', filters.department);
-    if (filters.assigned_to_name) query = query.eq('assigned_to_name', filters.assigned_to_name);
+    if (filters.assigned_to_name) query = query.contains('assigned_to_names', [filters.assigned_to_name]);
 
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
@@ -108,7 +114,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
       if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
       if (filters.department) query = query.eq('department', filters.department);
-      if (filters.assigned_to_name) query = query.eq('assigned_to_name', filters.assigned_to_name);
+      if (filters.assigned_to_name) query = query.contains('assigned_to_names', [filters.assigned_to_name]);
     }
     // Ensure array fields are never null (prevents .map() crashes)
     allData.forEach(c => {
