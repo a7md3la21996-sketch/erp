@@ -177,9 +177,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
         <div className={`h-[72px] flex items-center ${collapsed ? 'md:justify-center' : 'justify-between'} border-b border-edge dark:border-edge-dark ${collapsed ? 'md:p-2 p-2' : 'py-2 px-4'} overflow-hidden gap-2`}>
           {/* Mobile: always show full header with close button */}
           <div className="flex items-center justify-between w-full md:hidden">
-            <div className="flex-1 flex items-center justify-center px-1 min-w-0">
+            <Link to="/dashboard" onClick={handleNavClick} className="flex-1 flex items-center justify-center px-1 min-w-0">
               <img src={isDark ? "/logo-white.webp" : "/logo.webp"} alt={isRTL ? 'بلاتفورم للعقارات' : 'Platform Real Estate'} className="w-full h-auto max-h-14 object-contain" />
-            </div>
+            </Link>
             <button onClick={onMobileClose} className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border-none cursor-pointer bg-brand-500/[0.06] dark:bg-brand-500/10 text-content-muted dark:text-brand-400 transition-colors">
               <X size={16} />
             </button>
@@ -195,9 +195,9 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
               </div>
             ) : (
               <div className="flex items-center justify-between w-full">
-                <div className="flex-1 flex items-center justify-center px-1 min-w-0">
+                <Link to="/dashboard" className="flex-1 flex items-center justify-center px-1 min-w-0">
                   <img src={isDark ? "/logo-white.webp" : "/logo.webp"} alt={isRTL ? 'بلاتفورم للعقارات' : 'Platform Real Estate'} className="w-full h-auto max-h-14 object-contain" />
-                </div>
+                </Link>
                 <button onClick={onToggle} className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center border-none cursor-pointer bg-brand-500/[0.06] dark:bg-brand-500/10 text-content-muted dark:text-brand-400 transition-colors">
                   <ToggleIcon size={16} />
                 </button>
