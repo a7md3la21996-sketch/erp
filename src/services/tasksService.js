@@ -26,13 +26,27 @@ export const TASK_TYPES = {
   general:   { ar: 'عامة',        en: 'General',     icon: 'CheckSquare'  },
 };
 
-export async function fetchTasks({ contactId, dept, status, page, pageSize } = {}) {
+export async function fetchTasks({ contactId, dept, status, page, pageSize, role, userId, teamId } = {}) {
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
   try {
     let query = supabase.from('tasks').select('*', isServerPaginated ? { count: 'exact' } : {}).order('due_date', { ascending: true });
     if (contactId) query = query.eq('contact_id', contactId);
     if (dept)      query = query.eq('dept', dept);
     if (status)    query = query.eq('status', status);
+
+    // Role-based filtering
+    if (role === 'sales_agent' && userId) {
+      query = query.eq('assigned_to', userId);
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const teamIds = [teamId];
+      if (role === 'sales_manager') {
+        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+        if (children) teamIds.push(...children.map(c => c.id));
+      }
+      const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+      const ids = (members || []).map(m => m.id).filter(Boolean);
+      if (ids.length) query = query.in('assigned_to', ids);
+    }
 
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;

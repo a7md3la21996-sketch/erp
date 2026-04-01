@@ -645,7 +645,7 @@ export default function TasksPage() {
   const load = async (pg = page) => {
     setLoading(true);
     try {
-      const result = await fetchTasks({ page: pg, pageSize });
+      const result = await fetchTasks({ page: pg, pageSize, role: profile?.role, userId: profile?.id, teamId: profile?.team_id });
       setTasks(result?.data || []);
       setTotalCount(result?.count || 0);
     } finally { setLoading(false); }

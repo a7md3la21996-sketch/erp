@@ -121,7 +121,7 @@ export default function ActivitiesPage() {
   const load = async (pg = page) => {
     setLoading(true);
     try {
-      const result = await fetchActivities({ page: pg, pageSize });
+      const result = await fetchActivities({ page: pg, pageSize, role: profile?.role, userId: profile?.id, teamId: profile?.team_id });
       setActivities(result?.data || []);
       setTotalCount(result?.count || 0);
     } catch {

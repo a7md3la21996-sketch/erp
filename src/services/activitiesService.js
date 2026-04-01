@@ -29,7 +29,7 @@ export const MEETING_SUBTYPES = {
 };
 
 // ── Service Functions ───────────────────────────────────────────────────────
-export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize } = {}) {
+export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId } = {}) {
   let supaData = [];
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
 
@@ -42,6 +42,20 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
     if (entityId)   query = query.eq(`${entityType}_id`, entityId);
     if (entityType && !entityId) query = query.eq('entity_type', entityType);
     if (dept)       query = query.eq('dept', dept);
+
+    // Role-based filtering
+    if (role === 'sales_agent' && userId) {
+      query = query.eq('user_id', userId);
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const teamIds = [teamId];
+      if (role === 'sales_manager') {
+        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+        if (children) teamIds.push(...children.map(c => c.id));
+      }
+      const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+      const ids = (members || []).map(m => m.id).filter(Boolean);
+      if (ids.length) query = query.in('user_id', ids);
+    }
 
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
