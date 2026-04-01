@@ -244,7 +244,7 @@ export function saveConfig(config) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   } catch (e) {
-    console.error('Failed to save system config:', e);
+    if (import.meta.env.DEV) console.error('Failed to save system config:', e);
   }
   // Also persist to Supabase (non-blocking)
   import('../lib/supabase').then(({ default: supabase }) => {
@@ -278,7 +278,7 @@ export function importConfig(jsonString) {
     saveConfig(merged);
     return merged;
   } catch (e) {
-    console.error('Failed to import config:', e);
+    if (import.meta.env.DEV) console.error('Failed to import config:', e);
     throw new Error('Invalid configuration JSON');
   }
 }

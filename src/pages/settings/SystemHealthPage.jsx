@@ -34,7 +34,7 @@ export default function SystemHealthPage() {
       setHealth(data);
       setErrorLog(getErrorLog());
     } catch (e) {
-      console.error('Health check failed:', e);
+      if (import.meta.env.DEV) console.error('Health check failed:', e);
     }
     setLoading(false);
   }, []);

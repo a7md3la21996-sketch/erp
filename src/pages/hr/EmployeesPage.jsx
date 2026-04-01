@@ -86,7 +86,7 @@ export default function EmployeesPage() {
       setEmployees(prev => [result, ...prev]);
       return result;
     } catch (err) {
-      console.error('Create employee failed:', err);
+      if (import.meta.env.DEV) console.error('Create employee failed:', err);
       throw err;
     }
   };
@@ -108,7 +108,7 @@ export default function EmployeesPage() {
       setEmployees(prev => prev.map(e => e.id === id ? result : e));
       return result;
     } catch (err) {
-      console.error('Update employee failed:', err);
+      if (import.meta.env.DEV) console.error('Update employee failed:', err);
       throw err;
     }
   };
@@ -131,7 +131,7 @@ export default function EmployeesPage() {
       // Soft delete: update status in local state instead of removing
       setEmployees(prev => prev.map(e => e.id === id ? { ...e, is_active: false, deleted_at: new Date().toISOString(), status: 'inactive' } : e));
     } catch (err) {
-      console.error('Delete employee failed:', err);
+      if (import.meta.env.DEV) console.error('Delete employee failed:', err);
     } finally {
       setDeleting(false);
       setDeleteTarget(null);
@@ -155,7 +155,7 @@ export default function EmployeesPage() {
       setEmployees(prev => prev.map(e => e.id === id ? result : e));
       return result;
     } catch (err) {
-      console.error('Status change failed:', err);
+      if (import.meta.env.DEV) console.error('Status change failed:', err);
       throw err;
     }
   };

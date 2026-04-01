@@ -141,13 +141,13 @@ export async function createContact(contactData) {
       .select('*')
       .single();
     if (error) {
-      console.error('[createContact] Supabase error:', error.message, error.details, error.hint);
+      if (import.meta.env.DEV) console.error('[createContact] Supabase error:', error.message, error.details, error.hint);
       throw error;
     }
     logCreate('contact', data.id, data);
     return data;
   } catch (err) {
-    console.error('[createContact] Failed:', err.message || err);
+    if (import.meta.env.DEV) console.error('[createContact] Failed:', err.message || err);
     reportError('contactsService', 'createContact', err);
     const tempId = 'temp_' + Date.now();
     const offlineContact = { ...sanitized, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };

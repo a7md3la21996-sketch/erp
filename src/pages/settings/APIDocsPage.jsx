@@ -70,10 +70,9 @@ await updateOpportunity(opps[0].id, { stage: 'negotiation' });`,
     file: 'src/services/dealsService.js',
     storageKey: 'platform_deals / Supabase: deals',
     functions: [
-      { name: 'getWonDeals', params: '', returns: 'Promise<Deal[]>', desc: { en: 'Fetch all won deals from Supabase with localStorage fallback.', ar: 'جلب جميع الصفقات الرابحة.' } },
-      { name: 'getWonDealsSync', params: '', returns: 'Deal[]', desc: { en: 'Synchronously get deals from localStorage.', ar: 'جلب الصفقات من التخزين المحلي بشكل متزامن.' } },
+      { name: 'getWonDeals', params: '', returns: 'Promise<Deal[]>', desc: { en: 'Fetch all won deals from Supabase.', ar: 'جلب جميع الصفقات الرابحة.' } },
       { name: 'createDealFromOpportunity', params: 'opp, existingDeals', returns: 'Promise<Deal>', desc: { en: 'Create a deal record from a won opportunity.', ar: 'إنشاء صفقة من فرصة رابحة.' } },
-      { name: 'dealExistsForOpportunity', params: 'oppId', returns: 'boolean', desc: { en: 'Check if a deal already exists for an opportunity.', ar: 'التحقق من وجود صفقة لفرصة معينة.' } },
+      { name: 'dealExistsForOpportunity', params: 'oppId', returns: 'Promise<boolean>', desc: { en: 'Check if a deal already exists for an opportunity.', ar: 'التحقق من وجود صفقة لفرصة معينة.' } },
     ],
     example: `import { getWonDeals, createDealFromOpportunity } from './services/dealsService';
 
