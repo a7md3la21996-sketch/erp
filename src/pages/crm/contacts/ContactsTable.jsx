@@ -269,15 +269,16 @@ export default function ContactsTable({
               <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>
               <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>
               <th className={thCls}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
+              <th className={thCls}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>
               <th className={thCls}>{isRTL ? 'الفرص / السيلز' : 'Opps / Sales'}</th>
               <th className={`${thCls} text-center`}>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+              <tr><td colSpan={7} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
             ) : filtered.length === 0 ? (
-              <tr><td colSpan={6} className="p-0 border-none">
+              <tr><td colSpan={7} className="p-0 border-none">
                 <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                     <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -343,6 +344,19 @@ export default function ContactsTable({
                       📝 {c.notes.slice(0, 40)}{c.notes.length > 40 ? '...' : ''}
                     </span>
                   )}
+                </td>
+
+                {/* Last Feedback */}
+                <td className={tdCls}>
+                  {c._lastNote ? (
+                    <div className="max-w-[180px]">
+                      <p className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={c._lastNote.notes}>{c._lastNote.notes}</p>
+                      <div className="flex items-center gap-1 mt-0.5 text-[10px] text-content-muted dark:text-content-muted-dark">
+                        <span>{c._lastNote.user_name_en || c._lastNote.user_name_ar || ''}</span>
+                        {c._lastNote.created_at && <span>· {new Date(c._lastNote.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>}
+                      </div>
+                    </div>
+                  ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
                 </td>
 
                 {/* Opps / Sales — highest stage only */}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
+import supabase from '../../lib/supabase';
 import { fetchOpportunities, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects } from '../../services/opportunitiesService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
@@ -356,10 +357,30 @@ export default function OpportunitiesPage() {
     setOpps(enriched);
     setAgents(agentsData);
     setProjects(projectsData);
-    setHasMore(oppsData.length >= 200); // if we got a full page, there might be more
+    setHasMore(oppsData.length >= 200);
     setServerPage(0);
     setLoading(false);
     setRefreshing(false);
+
+    // Fetch last activity notes for opportunities in background
+    try {
+      const contactIds = [...new Set(enriched.map(o => o.contact_id).filter(Boolean))];
+      if (contactIds.length) {
+        const { data: recentActs } = await supabase
+          .from('activities')
+          .select('contact_id, notes, user_name_ar, user_name_en, created_at')
+          .in('contact_id', contactIds.slice(0, 100))
+          .not('notes', 'is', null)
+          .neq('notes', '')
+          .order('created_at', { ascending: false })
+          .range(0, 499);
+        if (recentActs?.length) {
+          const lastByContact = {};
+          recentActs.forEach(a => { if (a.contact_id && !lastByContact[a.contact_id]) lastByContact[a.contact_id] = a; });
+          setOpps(prev => (prev || []).map(o => ({ ...o, _lastNote: lastByContact[o.contact_id] || null })));
+        }
+      }
+    } catch { /* best effort */ }
   }, [profile?.role, profile?.id, profile?.team_id]);
 
   const loadMore = useCallback(async () => {

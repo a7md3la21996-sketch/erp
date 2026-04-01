@@ -64,9 +64,9 @@ export default function OppTable({
                 {opp.budget > 0 && <span className="text-[11px] font-bold text-brand-500">{fmtBudget(opp.budget)} {isRTL ? '\u062C' : 'EGP'}</span>}
                 <span className="text-[10px] ms-auto" style={{ color: scoreColor(score) }}>{score} pts</span>
               </div>
-              {opp.notes && (
-                <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[200px] block mt-1">
-                  📝 {opp.notes.slice(0, 40)}{opp.notes.length > 40 ? '...' : ''}
+              {(opp._lastNote?.notes || opp.notes) && (
+                <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[200px] block mt-1" title={opp._lastNote?.notes || opp.notes}>
+                  📝 {(opp._lastNote?.notes || opp.notes).slice(0, 40)}{(opp._lastNote?.notes || opp.notes).length > 40 ? '...' : ''}
                 </span>
               )}
               {opp.contacts?.phone && (

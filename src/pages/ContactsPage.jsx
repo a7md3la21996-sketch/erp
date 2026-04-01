@@ -10,6 +10,7 @@ import {
   fetchContacts, createContact, updateContact, deleteContact,
   blacklistContact, createActivity, recordAssignment,
 } from '../services/contactsService';
+import supabase from '../lib/supabase';
 import { logAction } from '../services/auditService';
 import { bulkSend } from '../services/smsTemplateService';
 import { createNotification } from '../services/notificationsService';
@@ -379,7 +380,23 @@ export default function ContactsPage() {
         teamId: profile?.team_id,
         filters: {},
       });
-      setContacts(Array.isArray(data) ? data : []);
+      const contactsList = Array.isArray(data) ? data : [];
+      setContacts(contactsList);
+      // Fetch last feedback for visible contacts in background
+      try {
+        const { data: recentActs } = await supabase
+          .from('activities')
+          .select('contact_id, notes, user_name_ar, user_name_en, created_at')
+          .not('notes', 'is', null)
+          .neq('notes', '')
+          .order('created_at', { ascending: false })
+          .range(0, 999);
+        if (recentActs?.length) {
+          const lastByContact = {};
+          recentActs.forEach(a => { if (a.contact_id && !lastByContact[a.contact_id]) lastByContact[a.contact_id] = a; });
+          setContacts(prev => prev.map(c => ({ ...c, _lastNote: lastByContact[c.id] || null })));
+        }
+      } catch { /* best effort */ }
     } catch {
       setContacts([]);
     } finally {
