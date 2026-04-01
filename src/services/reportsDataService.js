@@ -17,7 +17,7 @@ import { fetchDeals, fetchInstallments, fetchHandovers, fetchTickets } from './o
  * Fetch all data needed for reports
  */
 export async function fetchReportsData(profile) {
-  const opts = { role: profile?.role, userId: profile?.id };
+  const opts = { role: profile?.role, userId: profile?.id, teamId: profile?.team_id };
   const [contacts, opportunities, deals, activities, campaigns, employees, attendance, invoices, expenses, opsDeals, opsInstallments, opsHandovers, opsTickets] = await Promise.all([
     fetchContacts(opts).catch(() => []),
     fetchOpportunities(opts).catch(() => []),

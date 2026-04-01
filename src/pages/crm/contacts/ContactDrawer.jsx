@@ -446,7 +446,26 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       icon: Users,
       color: '#F59E0B',
       rows: [
-        show('assigned_to_name') && { label: isRTL ? 'المسؤول' : 'Assigned', val: Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0 ? contact.assigned_to_names.join(' · ') : (contact.assigned_to_name || '—') },
+        show('assigned_to_name') && {
+          label: isRTL ? 'المسؤول' : 'Assigned',
+          val: Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
+            ? contact.assigned_to_names.join(' · ')
+            : (contact.assigned_to_name || '—'),
+          action: onUpdate ? {
+            label: isRTL ? 'تعديل' : 'Edit',
+            onClick: () => {
+              const current = Array.isArray(contact.assigned_to_names) ? contact.assigned_to_names : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
+              const input = prompt(
+                (isRTL ? 'أدخل أسماء المسؤولين (مفصولين بفاصلة):' : 'Enter assignee names (comma-separated):'),
+                current.join(', ')
+              );
+              if (input !== null) {
+                const names = input.split(',').map(n => n.trim()).filter(Boolean);
+                onUpdate({ ...contact, assigned_to_names: names, assigned_to_name: names[0] || null });
+              }
+            }
+          } : null,
+        },
         show('assigned_by_name') && { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', val: contact.assigned_by_name || '—' },
         show('created_by_name') && { label: isRTL ? 'أنشأها' : 'Created By', val: contact.created_by_name || '—' },
         show('source') && { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
@@ -1425,7 +1444,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         {group.rows.map(r => (
                           <div key={r.label} className={rowCls}>
                             <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
-                            <span className="text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis">{r.val}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis" style={r.color ? { color: r.color } : undefined}>{r.val}</span>
+                              {r.action && <button onClick={r.action.onClick} className="text-[9px] text-brand-500 bg-brand-500/10 px-1.5 py-0.5 rounded border-none cursor-pointer">{r.action.label}</button>}
+                            </div>
                           </div>
                         ))}
                       </div>
