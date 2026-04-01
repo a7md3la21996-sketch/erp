@@ -446,7 +446,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       icon: Users,
       color: '#F59E0B',
       rows: [
-        show('assigned_to_name') && { label: isRTL ? 'المسؤول' : 'Assigned', val: contact.assigned_to_name || '—' },
+        show('assigned_to_name') && { label: isRTL ? 'المسؤول' : 'Assigned', val: Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0 ? contact.assigned_to_names.join(' · ') : (contact.assigned_to_name || '—') },
         show('assigned_by_name') && { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', val: contact.assigned_by_name || '—' },
         show('created_by_name') && { label: isRTL ? 'أنشأها' : 'Created By', val: contact.created_by_name || '—' },
         show('source') && { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? SOURCE_LABELS[contact.source] : (SOURCE_EN[contact.source] || contact.source) },
