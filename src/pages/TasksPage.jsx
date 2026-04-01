@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import useDebouncedSearch from '../hooks/useDebouncedSearch';
@@ -651,6 +652,9 @@ export default function TasksPage() {
   };
 
   useEffect(() => { load(page); }, [page, pageSize]);
+
+  // Realtime: reload when tasks change from another user
+  useRealtimeSubscription('tasks', useCallback(() => { load(page); }, [page, pageSize]));
 
   const filtered = useMemo(() => {
     let result = applySmartFilters(tasks, smartFilters, SMART_FIELDS);
