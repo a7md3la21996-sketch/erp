@@ -48,8 +48,8 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
         if (name) query = query.eq('assigned_to_name', name);
       }
     } else if (role === 'team_leader' && teamId) {
-      const { data: teamMembers } = await supabase.from('users').select('full_name_en').eq('team_id', teamId);
-      const names = (teamMembers || []).map(m => m.full_name_en).filter(Boolean);
+      const { data: teamMembers } = await supabase.from('users').select('full_name_en, full_name_ar').eq('team_id', teamId);
+      const names = [...new Set((teamMembers || []).flatMap(m => [m.full_name_en, m.full_name_ar]).filter(Boolean))];
       if (names.length) query = query.in('assigned_to_name', names);
     }
 
@@ -144,10 +144,9 @@ export async function createContact(contactData) {
       if (import.meta.env.DEV) console.error('[createContact] Supabase error:', error.message, error.details, error.hint);
       throw error;
     }
-    // Auto-generate contact_number
+    // Auto-generate contact_number using timestamp to avoid race condition
     if (!data.contact_number) {
-      const { count } = await supabase.from('contacts').select('id', { count: 'exact', head: true });
-      const num = 'C-' + String(count || 1).padStart(5, '0');
+      const num = 'C-' + Date.now().toString(36).toUpperCase();
       await supabase.from('contacts').update({ contact_number: num }).eq('id', data.id);
       data.contact_number = num;
     }
@@ -279,10 +278,9 @@ export async function fetchContactActivities(contactId) {
 export async function createActivity(activityData) {
   // Try Supabase FIRST — source of truth
   try {
-    const { user_id, ...cleanData } = activityData;
     const { data, error } = await supabase
       .from('activities')
-      .insert([stripInternalFields(cleanData)])
+      .insert([stripInternalFields(activityData)])
       .select('*')
       .single();
     if (error) throw error;
