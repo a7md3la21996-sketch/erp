@@ -191,30 +191,7 @@ export default function SettingsPage() {
     );
   }
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'general': return <GeneralTab isRTL={isRTL} isDark={isDark} toggleTheme={toggleTheme} lang={lang} handleLangToggle={handleLangToggle} profile={profile} />;
-      case 'system': return <SystemConfigPage />;
-      case 'users': return <UsersPage />;
-      case 'roles': return <RolesPage />;
-      case 'audit': return <AuditLogPage />;
-      case 'tracking': return <UserTrackingPage />;
-      case 'triggers': return <TriggersPage />;
-      case 'workflows': return <WorkflowBuilderPage />;
-      case 'custom-fields': return <CustomFieldsPage />;
-      case 'sms-templates': return <SMSTemplatesPage />;
-      case 'print': return <PrintSettingsPage />;
-      case 'scheduled': return <ScheduledReportsPage />;
-      case 'security': return <SecurityPage />;
-      case 'backup': return <BackupPage />;
-      case 'health': return <SystemHealthPage />;
-      case 'sla': return <SLAManagementPage />;
-      case 'ads': return <AdsIntegrationPage />;
-      case 'api-docs': return <APIDocsPage />;
-      case 'export-import': return <ExportImportHistoryPage />;
-      default: return null;
-    }
-  };
+  // Content rendered inline with display:none for persistence
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="flex min-h-screen bg-surface-bg dark:bg-surface-bg-dark">
@@ -265,7 +242,25 @@ export default function SettingsPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 md:p-6 md:pt-6 pt-16">
         <Suspense fallback={<PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />}>
-          {renderContent()}
+          <div style={{ display: activeTab === 'general' ? 'block' : 'none' }}><GeneralTab isRTL={isRTL} isDark={isDark} toggleTheme={toggleTheme} lang={lang} handleLangToggle={handleLangToggle} profile={profile} /></div>
+          <div style={{ display: activeTab === 'system' ? 'block' : 'none' }}><SystemConfigPage /></div>
+          <div style={{ display: activeTab === 'users' ? 'block' : 'none' }}><UsersPage /></div>
+          {activeTab === 'roles' && <RolesPage />}
+          {activeTab === 'audit' && <AuditLogPage />}
+          {activeTab === 'tracking' && <UserTrackingPage />}
+          {activeTab === 'triggers' && <TriggersPage />}
+          {activeTab === 'workflows' && <WorkflowBuilderPage />}
+          {activeTab === 'custom-fields' && <CustomFieldsPage />}
+          {activeTab === 'sms-templates' && <SMSTemplatesPage />}
+          {activeTab === 'print' && <PrintSettingsPage />}
+          {activeTab === 'scheduled' && <ScheduledReportsPage />}
+          {activeTab === 'security' && <SecurityPage />}
+          {activeTab === 'backup' && <BackupPage />}
+          {activeTab === 'health' && <SystemHealthPage />}
+          {activeTab === 'sla' && <SLAManagementPage />}
+          {activeTab === 'ads' && <AdsIntegrationPage />}
+          {activeTab === 'api-docs' && <APIDocsPage />}
+          {activeTab === 'export-import' && <ExportImportHistoryPage />}
         </Suspense>
       </div>
     </div>
