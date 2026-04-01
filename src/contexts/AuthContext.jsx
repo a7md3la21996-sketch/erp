@@ -37,6 +37,7 @@ async function fetchSupabaseProfile(userId, authUser = null) {
         email: data.email,
         role: data.role,
         department: data.department,
+        team_id: data.team_id,
         full_name_ar: data.full_name_ar,
         full_name_en: data.full_name_en,
         status: data.status,
