@@ -20,6 +20,7 @@ function getDateRange(period) {
 
 export function GlobalFilterProvider({ children }) {
   const [department, setDepartment] = useState('all');
+  const [managerId, setManagerId] = useState('all');
   const [teamId, setTeamId] = useState('all');
   const [agentName, setAgentName] = useState('all');
   const [period, setPeriod] = useState('all');
@@ -36,14 +37,15 @@ export function GlobalFilterProvider({ children }) {
   return (
     <GlobalFilterContext.Provider value={{
       department, setDepartment,
+      managerId, setManagerId,
       teamId, setTeamId,
       agentName, setAgentName,
       period, setPeriod,
       customFrom, setCustomFrom,
       customTo, setCustomTo,
       dateRange,
-      isFiltered: department !== 'all' || teamId !== 'all' || agentName !== 'all' || period !== 'all',
-      clearFilters: () => { setDepartment('all'); setTeamId('all'); setAgentName('all'); setPeriod('all'); setCustomFrom(''); setCustomTo(''); },
+      isFiltered: department !== 'all' || managerId !== 'all' || teamId !== 'all' || agentName !== 'all' || period !== 'all',
+      clearFilters: () => { setDepartment('all'); setManagerId('all'); setTeamId('all'); setAgentName('all'); setPeriod('all'); setCustomFrom(''); setCustomTo(''); },
     }}>
       {children}
     </GlobalFilterContext.Provider>

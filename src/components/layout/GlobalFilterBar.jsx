@@ -18,14 +18,13 @@ export default function GlobalFilterBar() {
   const { i18n } = useTranslation();
   const lang = i18n.language;
   const isRTL = lang === 'ar';
-  const { department, setDepartment, teamId, setTeamId, agentName, setAgentName, period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo, isFiltered, clearFilters } = useGlobalFilter();
+  const { department, setDepartment, managerId, setManagerId, teamId, setTeamId, agentName, setAgentName, period, setPeriod, customFrom, setCustomFrom, customTo, setCustomTo, isFiltered, clearFilters } = useGlobalFilter();
 
   const [expanded, setExpanded] = useState(false);
   const [agents, setAgents] = useState([]);
 
   const [teamsMap, setTeamsMap] = useState({});
   const [allTeams, setAllTeams] = useState([]);
-  const [managerId, setManagerId] = useState('all');
 
   useEffect(() => {
     fetchSalesAgents().then(data => setAgents(data || []));
