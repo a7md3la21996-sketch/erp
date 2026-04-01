@@ -370,23 +370,34 @@ export default function ContactsPage() {
     { value: 'other', label: isRTL ? 'سبب آخر' : 'Other' },
   ];
 
-  // Load contacts
-  const loadContactsData = useCallback(async () => {
+  const [totalContacts, setTotalContacts] = useState(0);
+
+  // Load contacts with server-side pagination
+  const loadContactsData = useCallback(async (pg) => {
     setLoading(true);
     try {
-      const data = await fetchContacts({
+      const currentPage = pg || page || 1;
+      const result = await fetchContacts({
         role: profile?.role,
         userId: profile?.id,
         teamId: profile?.team_id,
-        filters: {},
+        filters: {
+          search: search || undefined,
+          contact_type: filterType !== 'all' ? filterType : undefined,
+          showBlacklisted: showBlacklisted || undefined,
+        },
+        page: currentPage,
+        pageSize,
       });
-      setContacts(Array.isArray(data) ? data : []);
+      const list = Array.isArray(result?.data) ? result.data : [];
+      setContacts(list);
+      setTotalContacts(result?.count || list.length);
     } catch {
       setContacts([]);
     } finally {
       setLoading(false);
     }
-  }, [profile?.role, profile?.id, profile?.team_id]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted]);
 
   useEffect(() => {
     if (profile) loadContactsData();
@@ -424,9 +435,9 @@ export default function ContactsPage() {
     }
   }, [highlightId, loading, contacts]);
 
-  // Stats
+  // Stats — use server total, page counts for type breakdown
   const stats = useMemo(() => {
-    const counts = { total: contacts.length, blacklisted: 0, disqualified: 0 };
+    const counts = { total: totalContacts || contacts.length, blacklisted: 0, disqualified: 0 };
     Object.keys(TYPE).forEach(k => { counts[k] = 0; });
     contacts.forEach(c => {
       if (c.contact_type && counts[c.contact_type] !== undefined) counts[c.contact_type]++;
@@ -434,7 +445,7 @@ export default function ContactsPage() {
       if (c.contact_status === 'disqualified') counts.disqualified++;
     });
     return counts;
-  }, [contacts]);
+  }, [contacts, totalContacts]);
 
   // Clear selection when filters change
   useEffect(() => { setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);
@@ -713,8 +724,8 @@ export default function ContactsPage() {
       {/* Table */}
       <ContactsTable
         loading={loading}
-        filtered={filtered}
-        paged={paged}
+        filtered={contacts}
+        paged={contacts}
         pinnedIds={pinnedIds}
         selectedIds={selectedIds}
         selectedIdSet={selectedIdSet}
@@ -744,11 +755,11 @@ export default function ContactsPage() {
         onEdit={(c) => { setSelected(c); setOpenWithAction(false); }}
         perms={perms}
         tdCls={tdCls}
-        safePage={safePage}
-        totalPages={totalPages}
+        safePage={page}
+        totalPages={Math.max(1, Math.ceil(totalContacts / pageSize))}
         setPage={setPage}
         pageSize={pageSize}
-        setPageSize={setPageSize}
+        setPageSize={(s) => { setPageSize(s); setPage(1); }}
         isRTL={isRTL}
       />
 
