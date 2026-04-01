@@ -122,10 +122,10 @@ export default function ContactsTable({
         </div>
       )}
       {/* ═══ MOBILE CARD VIEW ═══ */}
-      <div className="md:hidden">
+      <div className="md:hidden pb-16">
         {loading ? (
           <div className="text-center p-10 text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
-        ) : filtered.length === 0 ? (
+        ) : (paged || []).length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
               <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -134,125 +134,47 @@ export default function ContactsTable({
           </div>
         ) : (
           <div className="divide-y divide-edge/50 dark:divide-edge-dark/50">
-            {paged.map(c => {
-              const isPinned = pinnedIds.includes(c.id);
+            {(paged || []).map(c => {
               const typeInfo = TYPE[c.contact_type];
               const typeBorderColor = typeInfo?.color || '#4A7AAB';
               return (
                 <div key={c.id}
-                  onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < MERGE_LIMIT ? [...prev, c.id] : prev) : setSelected(c)}
-                  className={`px-4 py-3.5 cursor-pointer transition-colors ${selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'active:bg-surface-bg dark:active:bg-brand-500/[0.06]'}`}
+                  onClick={() => setSelected(c)}
+                  className={`px-4 py-3 cursor-pointer active:bg-surface-bg dark:active:bg-brand-500/[0.06]`}
                   style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
                 >
-                  {/* Row 1: Avatar + Name + Actions */}
+                  {/* Row 1: Avatar + Name + Call/WA buttons */}
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center text-sm font-bold"
                       style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
                       {c.is_blacklisted ? <Ban size={15} /> : initials(c.full_name)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
-                          {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
-                        </span>
-                        <span className="text-[9px] font-mono text-content-muted dark:text-content-muted-dark opacity-50" title={`ID: ${c.id}`}>
-                          #{String(c.id).slice(-6)}
-                        </span>
-                        {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                        {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
-                        {c.department && <span className="text-[10px] px-2 py-px rounded-full bg-brand-500/[0.06] text-[#6B8DB5] font-medium">{DEPT_LABELS[c.department] || c.department}</span>}
-                        <span className={`text-[10px] px-2 py-px rounded-full font-medium ${c.contact_status === 'disqualified' ? 'bg-red-500/10 text-red-500' : (!c.contact_status || c.contact_status === 'new') ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'}`}>{c.contact_status === 'disqualified' ? (isRTL ? 'غير مؤهل' : 'DQ') : (!c.contact_status || c.contact_status === 'new') ? (isRTL ? 'جديد' : 'New') : (isRTL ? 'تم التواصل' : 'Contacted')}</span>
-                        {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
-                      </div>
+                      <span className={`font-semibold text-sm block truncate ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                        {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                      </span>
+                      <span className="text-xs text-content-muted dark:text-content-muted-dark font-mono block mt-0.5">{c.phone || '—'}</span>
                     </div>
-                    {/* Quick actions */}
-                    <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
-                      <button onClick={(e) => { e.stopPropagation(); setQuickActionTarget(quickActionTarget?.id === c.id ? null : c); setQuickActionForm({ type: 'call', result: '', description: '' }); }} title={isRTL ? 'إجراء سريع' : 'Quick Action'}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${quickActionTarget?.id === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 hover:bg-brand-500/[0.15]'}`}>
-                        <Zap size={14} />
-                      </button>
+                    {/* Call + WhatsApp buttons */}
+                    <div className="flex gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
                       {c.phone && (
-                        <a href={`tel:${normalizePhone(c.phone)}`} className="w-8 h-8 flex items-center justify-center bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg text-emerald-500 no-underline">
-                          <Phone size={14} />
+                        <a href={`tel:${normalizePhone(c.phone)}`} className="w-10 h-10 flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-500 no-underline">
+                          <Phone size={16} />
                         </a>
                       )}
                       {c.phone && (
-                        <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="w-8 h-8 flex items-center justify-center bg-[#25D366]/[0.08] border border-[#25D366]/20 rounded-lg text-[#25D366] no-underline">
-                          <MessageCircle size={14} />
+                        <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center bg-[#25D366]/10 border border-[#25D366]/20 rounded-xl text-[#25D366] no-underline">
+                          <MessageCircle size={16} />
                         </a>
                       )}
-                      <button onClick={() => togglePin(c.id)} disabled={!isPinned && pinnedIds.length >= MAX_PINS}
-                        className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${isPinned ? 'bg-amber-500/[0.15] border border-amber-500/30 text-amber-500' : !isPinned && pinnedIds.length >= MAX_PINS ? 'bg-transparent border border-edge dark:border-edge-dark text-content-muted/30 cursor-not-allowed' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
-                        <Pin size={14} />
-                      </button>
-                      <div>
-                        <button ref={getMenuBtnRef(`m-${c.id}`)} onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
-                          className={`w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${openMenuId === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
-                          <MoreVertical size={14} />
-                        </button>
-                        <FixedDropdown btnRef={{ current: menuBtnRefs.current[`m-${c.id}`] }} isOpen={openMenuId === c.id} isRTL={isRTL}>
-                          <div className="p-1">
-                            <button onClick={() => { onEdit?.(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                              <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل' : 'Edit'}
-                            </button>
-                            <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                              <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
-                            </button>
-                            <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                              <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
-                            </button>
-                            <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر'] : ['Name','Phone','Type','Source']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                              <FileDown size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'تصدير' : 'Export'}
-                            </button>
-                            <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                              <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
-                            </button>
-                          </div>
-                          {!c.is_blacklisted && (<><div className="h-px bg-edge dark:bg-edge-dark mx-1" /><div className="p-1">
-                            <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
-                              <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
-                            </button>
-                          </div></>)}
-                        </FixedDropdown>
-                      </div>
                     </div>
                   </div>
-
-                  {/* Row 2: Phone + Source + Date */}
-                  {(c.phone || c.source) && (
-                    <div className="flex items-center gap-3 mt-2 ms-[52px] text-[11px] text-content-muted dark:text-content-muted-dark">
-                      {c.phone && <span className="font-mono">{c.phone.slice(0, 6)}****</span>}
-                      {c.source && <><span className="opacity-30">·</span><span>{isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)}</span></>}
-                      {c.campaign_name && <><span className="opacity-30">·</span><span className="text-brand-500/70 dark:text-brand-400/70">{c.campaign_name}</span></>}
-                      {c.created_at && <><span className="opacity-30">·</span><span>{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</span></>}
-                    </div>
-                  )}
-                  {/* Notes preview */}
-                  {c.notes && (
-                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[150px] block mt-1 ms-[52px]">
-                      📝 {c.notes.slice(0, 40)}{c.notes.length > 40 ? '...' : ''}
-                    </span>
-                  )}
-                  {/* Opps / Sales — highest stage on mobile */}
-                  {c.opportunities?.length > 0 && (() => {
-                    const opps = c.opportunities;
-                    const dept = c.department || 'sales';
-                    const stages = getDeptStages(dept);
-                    let best = null; let bestIdx = -1;
-                    (opps || []).forEach(o => { const si = stages.findIndex(s => s.id === o.stage); if (si > bestIdx) { bestIdx = si; best = o; } });
-                    if (!best) return null;
-                    const name = best.users ? (isRTL ? (best.users.full_name_ar || best.users.full_name_en) : (best.users.full_name_en || best.users.full_name_ar)) : (best.assigned_to_name || '?');
-                    return (
-                      <div className="flex flex-wrap items-center gap-1.5 mt-1.5 ms-[52px]">
-                        <span className="text-[9px] px-1.5 py-px rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold">
-                          {name}: {deptStageLabel(best.stage, dept, isRTL)}
-                        </span>
-                        {(opps || []).length > 1 && <span className="text-[9px] text-content-muted dark:text-content-muted-dark">+{(opps || []).length - 1}</span>}
-                      </div>
-                    );
-                  })()}
+                  {/* Row 2: Tags */}
+                  <div className="flex items-center gap-1.5 mt-2 ms-[52px] flex-wrap">
+                    {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
+                    {c.assigned_to_name && <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/[0.06] text-brand-500 font-medium">{c.assigned_to_name}</span>}
+                    {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd')}</span>; })()}
+                  </div>
                 </div>
               );
             })}
