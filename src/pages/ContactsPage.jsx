@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
+import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact, deleteContact,
@@ -372,6 +373,8 @@ export default function ContactsPage() {
 
   const [totalContacts, setTotalContacts] = useState(0);
 
+  const globalFilter = useGlobalFilter();
+
   // Load contacts with server-side pagination
   const loadContactsData = useCallback(async (pg) => {
     setLoading(true);
@@ -385,6 +388,7 @@ export default function ContactsPage() {
           search: search || undefined,
           contact_type: filterType !== 'all' ? filterType : undefined,
           showBlacklisted: showBlacklisted || undefined,
+          assigned_to_name: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
         },
         page: currentPage,
         pageSize,
@@ -411,7 +415,7 @@ export default function ContactsPage() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted, globalFilter?.agentName]);
 
   useEffect(() => {
     if (profile) loadContactsData();
