@@ -112,19 +112,30 @@ export default function DealsPage() {
 
   // Load data — filter by role
   useEffect(() => {
-    getWonDeals().then(d => {
-      let list = d || [];
-      // Filter deals based on user role
-      if (profile?.role === 'sales_agent') {
-        const name = profile.full_name_en || profile.full_name_ar;
-        list = list.filter(deal => deal.agent_en === name || deal.agent_ar === name);
-      } else if (profile?.role === 'team_leader' || profile?.role === 'sales_manager') {
-        // They see deals from their team — handled by contacts filter already
-        // For now show all deals (they're only 110)
-      }
-      setDeals(list);
+    (async () => {
+      try {
+        const d = await getWonDeals();
+        let list = d || [];
+
+        if (profile?.role === 'sales_agent') {
+          const name = profile.full_name_en || profile.full_name_ar;
+          list = list.filter(deal => deal.agent_en === name || deal.agent_ar === name);
+        } else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
+          const supabase = (await import('../../lib/supabase')).default;
+          let teamIds = [profile.team_id];
+          if (profile.role === 'sales_manager') {
+            const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
+            if (children) teamIds.push(...children.map(c => c.id));
+          }
+          const { data: members } = await supabase.from('users').select('full_name_en, full_name_ar').in('team_id', teamIds);
+          const names = new Set((members || []).flatMap(m => [m.full_name_en, m.full_name_ar]).filter(Boolean));
+          list = list.filter(deal => names.has(deal.agent_en) || names.has(deal.agent_ar));
+        }
+
+        setDeals(list);
+      } catch {}
       setLoading(false);
-    }).catch(() => setLoading(false));
+    })();
   }, [profile]);
 
   // Filter + sort
