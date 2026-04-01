@@ -527,7 +527,10 @@ function evaluateFilter(item, f, fields) {
   const val = item[field.id];
 
   switch (f.operator) {
-    case 'is': return String(val) === String(f.value);
+    case 'is': {
+      if (field.type === 'date' && val) return String(val).slice(0, 10) === String(f.value).slice(0, 10);
+      return String(val) === String(f.value);
+    }
     case 'is_not': return String(val) !== String(f.value);
     case 'in': return Array.isArray(f.value) && f.value.includes(String(val));
     case 'not_in': return Array.isArray(f.value) && !f.value.includes(String(val));
