@@ -262,15 +262,15 @@ export default function ContactsTable({
 
       {/* ═══ DESKTOP TABLE VIEW ═══ */}
       <div className="hidden md:block overflow-x-auto">
-        <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[700px]">
+        <table dir={isRTL ? 'rtl' : 'ltr'} className="w-full border-collapse min-w-[500px]">
           <thead>
             <tr>
               <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
               <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>
               <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>
-              <th className={thCls}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>
-              <th className={thCls}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
-              <th className={thCls}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>
+              <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>
+              <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
+              <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>
               <th className={`${thCls} text-center`}>{t('common.actions')}</th>
             </tr>
           </thead>
@@ -336,12 +336,12 @@ export default function ContactsTable({
                 </td>
 
                 {/* Assigned To */}
-                <td className={tdCls}>
+                <td className={`${tdCls} hidden md:table-cell`}>
                   <span className="text-xs font-medium text-content dark:text-content-dark">{c.assigned_to_name || '—'}</span>
                 </td>
 
                 {/* Source + Date */}
-                <td className={tdCls}>
+                <td className={`${tdCls} hidden lg:table-cell`}>
                   <div className="text-xs text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
                   {c.campaign_name && <div className="text-[10px] text-brand-500/70 dark:text-brand-400/70 mt-0.5 truncate max-w-[160px]" title={c.campaign_name}>{c.campaign_name}</div>}
                   {c.created_at && <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60 mt-0.5">{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
@@ -353,7 +353,7 @@ export default function ContactsTable({
                 </td>
 
                 {/* Last Feedback */}
-                <td className={tdCls}>
+                <td className={`${tdCls} hidden lg:table-cell`}>
                   {c._lastNote ? (
                     <div className="max-w-[180px]">
                       <p className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={c._lastNote.notes}>{c._lastNote.notes}</p>
