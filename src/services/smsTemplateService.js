@@ -63,7 +63,7 @@ function uid() {
 // ── CRUD ───────────────────────────────────────────────────────────────
 export async function getTemplates(filters = {}) {
   try {
-    let query = supabase.from('sms_templates').select('*');
+    let query = supabase.from('sms_templates').select('*').limit(100);
     if (filters.category) query = query.eq('category', filters.category);
     query = query.order('created_at', { ascending: false });
     const { data, error } = await query;
@@ -101,7 +101,7 @@ export async function getTemplates(filters = {}) {
 
 export async function getTemplateById(id) {
   try {
-    const { data, error } = await supabase.from('sms_templates').select('*').eq('id', id).single();
+    const { data, error } = await supabase.from('sms_templates').select('*').limit(100).eq('id', id).single();
     if (error) throw error;
     if (data) return data;
   } catch (err) {
@@ -233,7 +233,7 @@ export async function sendSMS(phone, message, templateId = null, templateName = 
 
 export async function getSMSLog(filters = {}) {
   try {
-    let query = supabase.from('sms_log').select('*').order('sent_at', { ascending: false });
+    let query = supabase.from('sms_log').select('*').limit(200).order('sent_at', { ascending: false });
     if (filters.template_id) query = query.eq('template_id', filters.template_id);
     const { data, error } = await query;
     if (error) throw error;

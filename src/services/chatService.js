@@ -119,7 +119,7 @@ export async function getComments(entity, entityId) {
       .select('*')
       .eq('entity', entity)
       .eq('entity_id', entityId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }).limit(200);
     if (error) throw error;
     if (data && data.length > 0) return data;
     // Fall through to localStorage if Supabase returns empty
@@ -160,7 +160,7 @@ export async function getMentions(userId) {
       .from('chat_messages')
       .select('*')
       .contains('mentions', [{ id: userId }])
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false }).limit(200);
     if (error) throw error;
     if (data && data.length > 0) return data;
   } catch (err) {
