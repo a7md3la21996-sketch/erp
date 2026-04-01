@@ -41,15 +41,23 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       .order('last_activity_at', { ascending: false });
 
     if (role === 'sales_agent' && userId) {
-      // Get agent's name to filter by assigned_to_name
+      // Agent sees only their contacts
       const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
       if (agentUser) {
         const name = agentUser.full_name_en || agentUser.full_name_ar;
         if (name) query = query.eq('assigned_to_name', name);
       }
     } else if (role === 'team_leader' && teamId) {
+      // TL sees their team's contacts
       const { data: teamMembers } = await supabase.from('users').select('full_name_en, full_name_ar').eq('team_id', teamId);
       const names = [...new Set((teamMembers || []).flatMap(m => [m.full_name_en, m.full_name_ar]).filter(Boolean))];
+      if (names.length) query = query.in('assigned_to_name', names);
+    } else if (role === 'sales_manager' && teamId) {
+      // Manager sees their team + child teams' contacts
+      const { data: childTeams } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+      const allTeamIds = [teamId, ...((childTeams || []).map(t => t.id))];
+      const { data: allMembers } = await supabase.from('users').select('full_name_en, full_name_ar').in('team_id', allTeamIds);
+      const names = [...new Set((allMembers || []).flatMap(m => [m.full_name_en, m.full_name_ar]).filter(Boolean))];
       if (names.length) query = query.in('assigned_to_name', names);
     }
 
