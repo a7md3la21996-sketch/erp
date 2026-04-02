@@ -398,7 +398,15 @@ export default function ContactsPage() {
           showBlacklisted: showBlacklisted || undefined,
           assigned_to_name: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
           contact_status: statusFilter?.value || undefined,
-          agentNameForStatus: statusFilter?.value && (profile?.role === 'sales_agent' || profile?.role === 'team_leader' || profile?.role === 'sales_manager') ? (profile?.full_name_en || profile?.full_name_ar) : undefined,
+          agentNameForStatus: statusFilter?.value ? (
+            // If admin selected an agent in Global Filter, use that agent's name
+            (globalFilter?.agentName && globalFilter.agentName !== 'all')
+              ? globalFilter.agentName
+              // Otherwise, non-admin users use their own name
+              : (profile?.role !== 'admin' && profile?.role !== 'operations')
+                ? (profile?.full_name_en || profile?.full_name_ar)
+                : undefined
+          ) : undefined,
         },
         page: currentPage,
         pageSize,
