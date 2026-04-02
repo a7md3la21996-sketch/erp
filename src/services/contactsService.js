@@ -45,7 +45,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
       if (agentUser) {
         const name = agentUser.full_name_en || agentUser.full_name_ar;
-        if (name) query = query.contains('assigned_to_names', [name]);
+        if (name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([name]));
       }
     } else if (role === 'team_leader' && teamId) {
       // TL sees contacts assigned to any of their team members
@@ -79,7 +79,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
     if (filters.department) query = query.eq('department', filters.department);
-    if (filters.assigned_to_name) query = query.contains('assigned_to_names', [filters.assigned_to_name]);
+    if (filters.assigned_to_name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
 
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
@@ -114,7 +114,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
       if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
       if (filters.department) query = query.eq('department', filters.department);
-      if (filters.assigned_to_name) query = query.contains('assigned_to_names', [filters.assigned_to_name]);
+      if (filters.assigned_to_name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
     }
     // Ensure array fields are never null (prevents .map() crashes)
     allData.forEach(c => {
@@ -123,7 +123,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     });
     return allData;
   } catch (err) {
-    /* silent */;
+    console.error('fetchContacts error:', err?.message || err);
     return isServerPaginated ? { data: [], count: 0 } : [];
   }
 }
