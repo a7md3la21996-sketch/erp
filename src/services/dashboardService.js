@@ -2,6 +2,34 @@ import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 
+// ── Team cache ────────────────────────────────────────────────────────────
+const _teamCache = { key: null, ids: null, names: null, ts: 0 };
+async function getTeamMemberIds(role, teamId) {
+  if (!teamId) return [];
+  const ck = `${role}:${teamId}`;
+  if (_teamCache.key === ck && _teamCache.ids && Date.now() - _teamCache.ts < 60000) return _teamCache.ids;
+  const teamIds = [teamId];
+  if (role === 'sales_manager') {
+    const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+    if (ch) teamIds.push(...ch.map(c => c.id));
+  }
+  const { data: members } = await supabase.from('users').select('id, full_name_en').in('team_id', teamIds);
+  const ids = (members || []).map(m => m.id).filter(Boolean);
+  const names = (members || []).map(m => m.full_name_en).filter(Boolean);
+  _teamCache.key = ck; _teamCache.ids = ids; _teamCache.names = names; _teamCache.ts = Date.now();
+  return ids;
+}
+
+async function applyRoleFilter(query, field, { role, userId, teamId } = {}) {
+  if (role === 'sales_agent' && userId) {
+    return query.eq(field, userId);
+  } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+    const ids = await getTeamMemberIds(role, teamId);
+    if (ids.length) return query.in(field, ids);
+  }
+  return query;
+}
+
 /**
  * Dashboard KPI service — fetches real-time stats from localStorage first,
  * then Supabase. Each function returns a safe fallback so the UI never breaks.
@@ -54,70 +82,62 @@ function getLocalOpportunities() { return []; }
 function getLocalActivities() { return []; }
 
 // ── Contacts KPIs ────────────────────────────────────────────────────────────
-export async function fetchContactStats() {
-  // Try localStorage first (primary data source)
-  const localContacts = getLocalContacts();
-  if (localContacts.length > 0) {
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-
-    // Only count actual leads/qualified/nurturing — exclude suppliers, developers, partners, applicants
-    const LEAD_TYPES = ['lead', 'cold', 'qualified', 'nurturing', 'converted', 'customer', 'repeat_buyer', 'referrer', 'vip'];
-    const leads = localContacts.filter(c => LEAD_TYPES.includes(c.contact_type) || c.department === 'sales');
-    const totalLeads = leads.length;
-
-    const newLeadsThisMonth = leads.filter(c => {
-      const created = new Date(c.created_at);
-      return created >= monthStart;
-    }).length;
-
-    return { totalLeads, newLeadsThisMonth };
-  }
-
-  // Fallback to Supabase
+export async function fetchContactStats({ role, userId, teamId } = {}) {
   try {
-    const { count: totalLeads, error: e1 } = await supabase
-      .from('contacts')
-      .select('*', { count: 'exact', head: true });
+    let q1 = supabase.from('contacts').select('*', { count: 'exact', head: true });
+    // Role-based: filter by assigned_to_names
+    if (role === 'sales_agent' && userId) {
+      const { data: u } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+      if (u?.full_name_en) q1 = q1.filter('assigned_to_names', 'cs', JSON.stringify([u.full_name_en]));
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const names = _teamCache.key === `${role}:${teamId}` && _teamCache.names ? _teamCache.names : [];
+      if (!names.length) await getTeamMemberIds(role, teamId);
+      const teamNames = _teamCache.names || [];
+      if (teamNames.length) {
+        const orConditions = teamNames.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
+        q1 = q1.or(orConditions);
+      }
+    }
+    const { count: totalLeads, error: e1 } = await q1;
     if (e1) throw e1;
 
     const monthStart = new Date();
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
-    const { count: newLeadsThisMonth, error: e2 } = await supabase
-      .from('contacts')
-      .select('*', { count: 'exact', head: true })
-      .gte('created_at', monthStart.toISOString());
+    let q2 = supabase.from('contacts').select('*', { count: 'exact', head: true }).gte('created_at', monthStart.toISOString());
+    if (role === 'sales_agent' && userId) {
+      const { data: u } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+      if (u?.full_name_en) q2 = q2.filter('assigned_to_names', 'cs', JSON.stringify([u.full_name_en]));
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const teamNames = _teamCache.names || [];
+      if (teamNames.length) {
+        const orConditions = teamNames.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
+        q2 = q2.or(orConditions);
+      }
+    }
+    const { count: newLeadsThisMonth, error: e2 } = await q2;
     if (e2) throw e2;
 
     return { totalLeads: totalLeads || 0, newLeadsThisMonth: newLeadsThisMonth || 0 };
-  } catch (err) { /* silent */;
-    // Return zeros — no data available
+  } catch {
     return { totalLeads: 0, newLeadsThisMonth: 0 };
   }
 }
 
 // ── Opportunities KPIs ───────────────────────────────────────────────────────
-export async function fetchOpportunityStats() {
-  // Try localStorage first
-  const localOpps = getLocalOpportunities();
-  if (localOpps.length > 0) {
-    return computeOppStats(localOpps);
-  }
-
-  // Fallback to Supabase
+export async function fetchOpportunityStats({ role, userId, teamId } = {}) {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('opportunities')
       .select('id, stage, budget, created_at, stage_changed_at, assigned_to');
+    query = await applyRoleFilter(query, 'assigned_to', { role, userId, teamId });
+    const { data, error } = await query;
     if (error) throw error;
     if (data?.length) {
       return computeOppStats(data);
     }
   } catch { /* fallback */ }
 
-  // Return zeros — no data available
   return { activeOpps: 0, closedDeals: 0, revenue: 0, closedThisMonth: 0, stageCounts: {}, totalOpps: 0, rawOpps: [] };
 }
 
@@ -144,61 +164,46 @@ function computeOppStats(opps) {
 }
 
 // ── Tasks KPIs ───────────────────────────────────────────────────────────────
-export async function fetchTaskStats() {
+export async function fetchTaskStats({ role, userId, teamId } = {}) {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    const { count: dueToday, error: e1 } = await supabase
-      .from('tasks')
-      .select('*', { count: 'exact', head: true })
-      .gte('due_date', today.toISOString())
-      .lte('due_date', todayEnd.toISOString())
-      .neq('status', 'done');
+    let q1 = supabase.from('tasks').select('*', { count: 'exact', head: true })
+      .gte('due_date', today.toISOString()).lte('due_date', todayEnd.toISOString()).neq('status', 'done');
+    q1 = await applyRoleFilter(q1, 'assigned_to', { role, userId, teamId });
+    const { count: dueToday, error: e1 } = await q1;
     if (e1) throw e1;
 
-    const { count: overdue, error: e2 } = await supabase
-      .from('tasks')
-      .select('*', { count: 'exact', head: true })
-      .lt('due_date', today.toISOString())
-      .neq('status', 'done')
-      .neq('status', 'cancelled');
+    let q2 = supabase.from('tasks').select('*', { count: 'exact', head: true })
+      .lt('due_date', today.toISOString()).neq('status', 'done').neq('status', 'cancelled');
+    q2 = await applyRoleFilter(q2, 'assigned_to', { role, userId, teamId });
+    const { count: overdue, error: e2 } = await q2;
     if (e2) throw e2;
 
     return { dueToday: dueToday || 0, overdue: overdue || 0 };
-  } catch (err) { /* silent */;
+  } catch {
     return { dueToday: 0, overdue: 0 };
   }
 }
 
 // ── Activities KPIs ──────────────────────────────────────────────────────────
-export async function fetchActivityStats() {
-  // Try localStorage first
-  const localActivities = getLocalActivities();
-  if (localActivities.length > 0) {
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    weekStart.setHours(0, 0, 0, 0);
-    const thisWeek = localActivities.filter(a => new Date(a.created_at) >= weekStart).length;
-    return { activitiesThisWeek: thisWeek };
-  }
-
-  // Fallback to Supabase
+export async function fetchActivityStats({ role, userId, teamId } = {}) {
   try {
     const weekStart = new Date();
     weekStart.setDate(weekStart.getDate() - weekStart.getDay());
     weekStart.setHours(0, 0, 0, 0);
 
-    const { count: thisWeek, error } = await supabase
-      .from('activities')
-      .select('*', { count: 'exact', head: true })
+    let query = supabase.from('activities').select('*', { count: 'exact', head: true })
       .gte('created_at', weekStart.toISOString());
+    query = await applyRoleFilter(query, 'user_id', { role, userId, teamId });
+    const { count: thisWeek, error } = await query;
     if (error) throw error;
 
     return { activitiesThisWeek: thisWeek || 0 };
-  } catch (err) { /* silent */;
+  } catch {
     return { activitiesThisWeek: 0 };
   }
 }
@@ -310,13 +315,14 @@ export function filterStatsByRange(rawOpps, dateRange) {
 }
 
 // ── Fetch all dashboard data in parallel ─────────────────────────────────────
-export async function fetchAllDashboardData() {
+export async function fetchAllDashboardData({ role, userId, teamId } = {}) {
   try {
+    const rp = { role, userId, teamId };
     const [contacts, opportunities, tasks, activities, employees] = await Promise.all([
-      fetchContactStats(),
-      fetchOpportunityStats(),
-      fetchTaskStats(),
-      fetchActivityStats(),
+      fetchContactStats(rp),
+      fetchOpportunityStats(rp),
+      fetchTaskStats(rp),
+      fetchActivityStats(rp),
       fetchEmployeeStats(),
     ]);
     return { contacts, opportunities, tasks, activities, employees };

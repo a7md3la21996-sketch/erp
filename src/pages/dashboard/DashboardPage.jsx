@@ -731,14 +731,14 @@ export default function DashboardPage() {
     runTemperatureDecay().catch(() => {});
     checkContactBirthdays(userId).catch(() => {});
 
-    fetchAllDashboardData().then(data => {
+    fetchAllDashboardData({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(data => {
       setDashData(data);
       setDashLoading(false);
     }).catch(() => {
       setDashLoading(false);
       toast.error(lang === 'ar' ? 'فشل تحميل بيانات لوحة التحكم' : 'Failed to load dashboard data');
     });
-  }, []);
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   const crm = useMemo(() => {
     const c = dashData?.contacts;
