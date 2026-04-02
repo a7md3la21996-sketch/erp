@@ -366,7 +366,7 @@ export default function OpportunitiesPage() {
     try {
       const contactIds = [...new Set(enriched.map(o => o.contact_id).filter(Boolean))];
       if (contactIds.length) {
-        const { data: recentActs } = await supabase
+        let actQuery = supabase
           .from('activities')
           .select('contact_id, notes, user_name_ar, user_name_en, created_at')
           .in('contact_id', contactIds.slice(0, 100))
@@ -374,6 +374,20 @@ export default function OpportunitiesPage() {
           .neq('notes', '')
           .order('created_at', { ascending: false })
           .range(0, 499);
+        // Role-based filter
+        if (profile?.role === 'sales_agent' && profile?.id) {
+          actQuery = actQuery.eq('user_id', profile.id);
+        } else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
+          const teamIds = [profile.team_id];
+          if (profile.role === 'sales_manager') {
+            const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
+            if (children) teamIds.push(...children.map(c => c.id));
+          }
+          const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+          const memberIds = (members || []).map(m => m.id).filter(Boolean);
+          if (memberIds.length) actQuery = actQuery.in('user_id', memberIds);
+        }
+        const { data: recentActs } = await actQuery;
         if (recentActs?.length) {
           const lastByContact = {};
           recentActs.forEach(a => { if (a.contact_id && !lastByContact[a.contact_id]) lastByContact[a.contact_id] = a; });
@@ -408,11 +422,14 @@ export default function OpportunitiesPage() {
   // Realtime: granular update — apply only the changed record instead of full re-fetch
   useRealtimeSubscription('opportunities', useCallback((payload) => {
     if (payload?.eventType) {
+      const newRec = payload.new;
+      // Skip records not assigned to this user/team
+      if (profile?.role === 'sales_agent' && newRec?.assigned_to && newRec.assigned_to !== profile?.id) return;
       setOpps(prev => applyRealtimePayload(prev, payload));
     } else {
       loadData(true);
     }
-  }, [loadData]));
+  }, [loadData, profile?.role, profile?.id]));
 
   const scoreMap = useMemo(() => {
     const m = {};

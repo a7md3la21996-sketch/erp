@@ -443,6 +443,12 @@ export default function ContactsPage() {
   useRealtimeSubscription('contacts', useCallback((payload) => {
     // Smart upsert: apply only the changed record instead of full re-fetch
     if (payload?.eventType) {
+      const newRec = payload.new;
+      // For sales agents, skip contacts not assigned to them
+      if (profile?.role === 'sales_agent' && newRec?.assigned_to_names) {
+        const myName = profile?.full_name_en || profile?.full_name_ar;
+        if (myName && !newRec.assigned_to_names.includes(myName)) return;
+      }
       setContacts(prev => applyRealtimePayload(prev, payload));
     } else if (profile) {
       loadContactsData(); // fallback for old-style callbacks
