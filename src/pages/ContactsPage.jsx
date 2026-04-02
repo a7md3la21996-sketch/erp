@@ -376,8 +376,11 @@ export default function ContactsPage() {
   const globalFilter = useGlobalFilter();
 
   // Load contacts with server-side pagination
+  const hasLoadedOnce = useReactRef(false);
+  const [searching, setSearching] = useState(false);
   const loadContactsData = useCallback(async (pg) => {
-    setLoading(true);
+    // First load: full skeleton. Subsequent: subtle indicator only
+    if (!hasLoadedOnce.current) setLoading(true); else setSearching(true);
     try {
       const currentPage = pg || page || 1;
       // Extract contact_status from smartFilters for server-side filtering
@@ -430,6 +433,8 @@ export default function ContactsPage() {
       setContacts([]);
     } finally {
       setLoading(false);
+      setSearching(false);
+      hasLoadedOnce.current = true;
     }
   }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted, globalFilter?.agentName, smartFilters]);
 
@@ -764,6 +769,7 @@ export default function ContactsPage() {
       )}
 
       {/* Table */}
+      <div style={{ opacity: searching ? 0.5 : 1, transition: 'opacity 0.15s', pointerEvents: searching ? 'none' : 'auto' }}>
       <ContactsTable
         loading={loading}
         filtered={contacts}
@@ -805,6 +811,7 @@ export default function ContactsPage() {
         isRTL={isRTL}
         isSalesAgent={profile?.role === 'sales_agent'}
       />
+      </div>
 
       {/* Quick Action Popover */}
       <QuickActionPopover
