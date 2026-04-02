@@ -210,8 +210,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   const handleSaveActivity = async (form) => {
     try {
-      const { user_id, ...formData } = form;
-      const act = await createActivity({ ...formData, contact_id: contact.id });
+      const act = await createActivity({
+        ...form,
+        contact_id: contact.id,
+        user_id: profile?.id || null,
+        user_name_ar: profile?.full_name_ar || '',
+        user_name_en: profile?.full_name_en || '',
+      });
       setActivities(prev => [act, ...prev]);
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch (err) {

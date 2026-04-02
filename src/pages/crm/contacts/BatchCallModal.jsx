@@ -220,7 +220,7 @@ export default function BatchCallModal({
             <Button size="sm" className="flex-[2] justify-center" onClick={async () => {
               if (batchCallResult) {
                 const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
-                const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, created_at: new Date().toISOString() };
+                const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
                 try { await createActivity(activity); } catch { /* optimistic */ }
                 const statusUpdate = batchCallResult === 'no_answer'
                   ? { last_activity_at: new Date().toISOString(), contact_status: 'no_answer' }

@@ -83,6 +83,9 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
       next_action: addFollowup ? (isRTL ? 'متابعة' : 'Follow up') : '',
       next_action_date: addFollowup ? followupDate : '',
       contact_id: contact.id,
+      user_id: profile?.id || null,
+      user_name_ar: profile?.full_name_ar || '',
+      user_name_en: profile?.full_name_en || '',
       created_at: new Date().toISOString(),
     };
     try { await createActivity(activity); } catch { /* saved optimistically */ }
