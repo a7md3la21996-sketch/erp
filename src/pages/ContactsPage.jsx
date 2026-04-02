@@ -558,7 +558,15 @@ export default function ContactsPage() {
     const cfValues = form._customFieldValues;
     const { _customFieldValues, ...cleanForm } = form;
     try {
-      const saved = await createContact({ ...cleanForm, campaign_interactions });
+      const saved = await createContact({
+        ...cleanForm,
+        campaign_interactions,
+        assigned_to_name: profile?.full_name_en || profile?.full_name_ar || null,
+        assigned_to_names: [profile?.full_name_en || profile?.full_name_ar].filter(Boolean),
+        assigned_by_name: profile?.full_name_ar || profile?.full_name_en || null,
+        created_by: profile?.id || null,
+        created_by_name: profile?.full_name_ar || profile?.full_name_en || null,
+      });
       const updated = [{ ...saved, campaign_interactions }, ...contacts];
       setContacts(updated);
       saveContactsLocal(updated);
