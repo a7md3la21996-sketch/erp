@@ -405,9 +405,18 @@ export default function ContactsPage() {
         let feedbackQuery = supabase.from('activities').select('contact_id, notes, user_name_ar, user_name_en, created_at')
           .in('contact_id', ids).not('notes', 'is', null).neq('notes', '')
           .order('created_at', { ascending: false }).range(0, 499);
-        // Sales agents only see their own feedback
+        // Role-based: only see own/team feedback
         if (profile?.role === 'sales_agent' && profile?.id) {
           feedbackQuery = feedbackQuery.eq('user_id', profile.id);
+        } else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
+          const teamIds = [profile.team_id];
+          if (profile.role === 'sales_manager') {
+            const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
+            if (children) teamIds.push(...children.map(c => c.id));
+          }
+          const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+          const memberIds = (members || []).map(m => m.id).filter(Boolean);
+          if (memberIds.length) feedbackQuery = feedbackQuery.in('user_id', memberIds);
         }
         feedbackQuery.then(({ data: acts }) => {
             if (acts?.length) {

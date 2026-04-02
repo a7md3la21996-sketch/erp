@@ -276,7 +276,7 @@ export async function checkDuplicate(phone) {
   return null;
 }
 
-export async function fetchContactActivities(contactId, { role, userId } = {}) {
+export async function fetchContactActivities(contactId, { role, userId, teamId } = {}) {
   try {
     let query = supabase
       .from('activities')
@@ -284,9 +284,18 @@ export async function fetchContactActivities(contactId, { role, userId } = {}) {
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50);
-    // Sales agents only see their own activities
+    // Role-based filtering
     if (role === 'sales_agent' && userId) {
       query = query.eq('user_id', userId);
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const teamIds = [teamId];
+      if (role === 'sales_manager') {
+        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+        if (children) teamIds.push(...children.map(c => c.id));
+      }
+      const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+      const ids = (members || []).map(m => m.id).filter(Boolean);
+      if (ids.length) query = query.in('user_id', ids);
     }
     const { data, error } = await query;
     if (error) throw error;
@@ -340,7 +349,7 @@ export async function updateActivity(id, updates) {
   }
 }
 
-export async function fetchContactOpportunities(contactId, { role, userId } = {}) {
+export async function fetchContactOpportunities(contactId, { role, userId, teamId } = {}) {
   try {
     let query = supabase
       .from('opportunities')
@@ -351,9 +360,18 @@ export async function fetchContactOpportunities(contactId, { role, userId } = {}
       `)
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false });
-    // Sales agents only see their own opportunities
+    // Role-based filtering
     if (role === 'sales_agent' && userId) {
       query = query.eq('assigned_to', userId);
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const teamIds = [teamId];
+      if (role === 'sales_manager') {
+        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+        if (children) teamIds.push(...children.map(c => c.id));
+      }
+      const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+      const ids = (members || []).map(m => m.id).filter(Boolean);
+      if (ids.length) query = query.in('assigned_to', ids);
     }
     const { data, error } = await query;
     if (error) throw error;

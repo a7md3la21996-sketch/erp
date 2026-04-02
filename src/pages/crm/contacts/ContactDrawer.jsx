@@ -175,9 +175,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     let cancelled = false;
     setLoadingData(true);
     Promise.allSettled([
-      fetchContactActivities(contact.id, { role: profile?.role, userId: profile?.id }),
+      fetchContactActivities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
       fetchTasks({ contactId: contact.id, role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-      fetchContactOpportunities(contact.id, { role: profile?.role, userId: profile?.id }),
+      fetchContactOpportunities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
     ]).then(([actsRes, tasksRes, oppsRes]) => {
       if (cancelled) return;
       if (actsRes.status === 'fulfilled') setActivities(actsRes.value);
