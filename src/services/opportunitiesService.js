@@ -4,6 +4,23 @@ import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { addToSyncQueue } from './syncService';
 
+// ── Team cache ────────────────────────────────────────────────────────────
+const _teamCache = { key: null, ids: null, ts: 0 };
+async function getTeamMemberIds(role, teamId) {
+  if (!teamId) return [];
+  const ck = `${role}:${teamId}`;
+  if (_teamCache.key === ck && _teamCache.ids && Date.now() - _teamCache.ts < 60000) return _teamCache.ids;
+  const teamIds = [teamId];
+  if (role === 'sales_manager') {
+    const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+    if (ch) teamIds.push(...ch.map(c => c.id));
+  }
+  const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+  const ids = (members || []).map(m => m.id).filter(Boolean);
+  _teamCache.key = ck; _teamCache.ids = ids; _teamCache.ts = Date.now();
+  return ids;
+}
+
 // ── Unit blocking helpers ──
 export async function checkUnitAvailability(unitId) {
   if (!unitId) return { available: true };
@@ -77,15 +94,8 @@ export async function fetchOpportunities({ role, userId, teamId, page = 0, pageS
 
     if (role === 'sales_agent') {
       query = query.eq('assigned_to', userId);
-    } else if (role === 'team_leader' && teamId) {
-      const { data: teamMembers } = await supabase.from('users').select('id').eq('team_id', teamId);
-      const ids = (teamMembers || []).map(m => m.id);
-      if (ids.length) query = query.in('assigned_to', ids);
-    } else if (role === 'sales_manager' && teamId) {
-      const { data: childTeams } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-      const allTeamIds = [teamId, ...((childTeams || []).map(t => t.id))];
-      const { data: allMembers } = await supabase.from('users').select('id').in('team_id', allTeamIds);
-      const ids = (allMembers || []).map(m => m.id);
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const ids = await getTeamMemberIds(role, teamId);
       if (ids.length) query = query.in('assigned_to', ids);
     }
 

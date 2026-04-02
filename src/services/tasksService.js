@@ -4,6 +4,23 @@ import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
 
+// ── Team cache ────────────────────────────────────────────────────────────
+const _teamCache = { key: null, ids: null, ts: 0 };
+async function getTeamMemberIds(role, teamId) {
+  if (!teamId) return [];
+  const ck = `${role}:${teamId}`;
+  if (_teamCache.key === ck && _teamCache.ids && Date.now() - _teamCache.ts < 60000) return _teamCache.ids;
+  const teamIds = [teamId];
+  if (role === 'sales_manager') {
+    const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+    if (ch) teamIds.push(...ch.map(c => c.id));
+  }
+  const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+  const ids = (members || []).map(m => m.id).filter(Boolean);
+  _teamCache.key = ck; _teamCache.ids = ids; _teamCache.ts = Date.now();
+  return ids;
+}
+
 export const TASK_PRIORITIES = {
   high:   { ar: 'عالية',   en: 'High',   color: '#EF4444' },
   medium: { ar: 'متوسطة',  en: 'Medium', color: '#F97316' },
@@ -38,13 +55,7 @@ export async function fetchTasks({ contactId, dept, status, page, pageSize, role
     if (role === 'sales_agent' && userId) {
       query = query.eq('assigned_to', userId);
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const teamIds = [teamId];
-      if (role === 'sales_manager') {
-        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-        if (children) teamIds.push(...children.map(c => c.id));
-      }
-      const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
-      const ids = (members || []).map(m => m.id).filter(Boolean);
+      const ids = await getTeamMemberIds(role, teamId);
       if (ids.length) query = query.in('assigned_to', ids);
     }
 

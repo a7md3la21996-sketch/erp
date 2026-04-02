@@ -4,6 +4,32 @@ import { logCreate, logUpdate } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
 import { reportError } from '../utils/errorReporter';
 
+// ── Team members cache (avoids repeated DB lookups) ───────────────────────
+const _teamCache = { key: null, ids: null, names: null, ts: 0 };
+const TEAM_CACHE_TTL = 60000; // 1 minute
+
+async function getTeamMemberIds(role, teamId) {
+  if (!teamId) return [];
+  const cacheKey = `${role}:${teamId}`;
+  if (_teamCache.key === cacheKey && _teamCache.ids && Date.now() - _teamCache.ts < TEAM_CACHE_TTL) return _teamCache.ids;
+  const teamIds = [teamId];
+  if (role === 'sales_manager') {
+    const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+    if (children) teamIds.push(...children.map(c => c.id));
+  }
+  const { data: members } = await supabase.from('users').select('id, full_name_en').in('team_id', teamIds);
+  const ids = (members || []).map(m => m.id).filter(Boolean);
+  const names = (members || []).map(m => m.full_name_en).filter(Boolean);
+  _teamCache.key = cacheKey; _teamCache.ids = ids; _teamCache.names = names; _teamCache.ts = Date.now();
+  return ids;
+}
+
+async function getTeamMemberNames(role, teamId) {
+  if (!teamId) return [];
+  await getTeamMemberIds(role, teamId); // ensures cache is populated
+  return _teamCache.names || [];
+}
+
 // ── Assignment History ─────────────────────────────────────────────────────
 
 /** @deprecated Assignment history now comes from activities (type='reassignment') via fetchContactActivities */
@@ -42,25 +68,15 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
 
     if (role === 'sales_agent' && userId) {
       // Agent sees contacts where their name is in assigned_to_names
+      const names = await getTeamMemberNames('sales_agent', null);
+      // For agent, we need their own name — get from cache or fetch once
       const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
       if (agentUser) {
         const name = agentUser.full_name_en || agentUser.full_name_ar;
         if (name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([name]));
       }
-    } else if (role === 'team_leader' && teamId) {
-      // TL sees contacts assigned to any of their team members
-      const { data: teamMembers } = await supabase.from('users').select('full_name_en').eq('team_id', teamId);
-      const names = (teamMembers || []).map(m => m.full_name_en).filter(Boolean);
-      if (names.length) {
-        const orConditions = names.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
-        query = query.or(orConditions);
-      }
-    } else if (role === 'sales_manager' && teamId) {
-      // Manager sees contacts assigned to their team + child teams
-      const { data: childTeams } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-      const allTeamIds = [teamId, ...((childTeams || []).map(t => t.id))];
-      const { data: allMembers } = await supabase.from('users').select('full_name_en').in('team_id', allTeamIds);
-      const names = (allMembers || []).map(m => m.full_name_en).filter(Boolean);
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const names = await getTeamMemberNames(role, teamId);
       if (names.length) {
         const orConditions = names.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
         query = query.or(orConditions);
@@ -288,13 +304,7 @@ export async function fetchContactActivities(contactId, { role, userId, teamId }
     if (role === 'sales_agent' && userId) {
       query = query.eq('user_id', userId);
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const teamIds = [teamId];
-      if (role === 'sales_manager') {
-        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-        if (children) teamIds.push(...children.map(c => c.id));
-      }
-      const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
-      const ids = (members || []).map(m => m.id).filter(Boolean);
+      const ids = await getTeamMemberIds(role, teamId);
       if (ids.length) query = query.in('user_id', ids);
     }
     const { data, error } = await query;
@@ -364,13 +374,7 @@ export async function fetchContactOpportunities(contactId, { role, userId, teamI
     if (role === 'sales_agent' && userId) {
       query = query.eq('assigned_to', userId);
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const teamIds = [teamId];
-      if (role === 'sales_manager') {
-        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-        if (children) teamIds.push(...children.map(c => c.id));
-      }
-      const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
-      const ids = (members || []).map(m => m.id).filter(Boolean);
+      const ids = await getTeamMemberIds(role, teamId);
       if (ids.length) query = query.in('assigned_to', ids);
     }
     const { data, error } = await query;

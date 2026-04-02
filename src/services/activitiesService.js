@@ -4,6 +4,23 @@ import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';
 import { enqueue } from '../lib/offlineQueue';
 
+// ── Team cache (shared with contactsService pattern) ──────────────────────
+const _teamCache = { key: null, ids: null, ts: 0 };
+async function getTeamMemberIds(role, teamId) {
+  if (!teamId) return [];
+  const ck = `${role}:${teamId}`;
+  if (_teamCache.key === ck && _teamCache.ids && Date.now() - _teamCache.ts < 60000) return _teamCache.ids;
+  const teamIds = [teamId];
+  if (role === 'sales_manager') {
+    const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+    if (ch) teamIds.push(...ch.map(c => c.id));
+  }
+  const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
+  const ids = (members || []).map(m => m.id).filter(Boolean);
+  _teamCache.key = ck; _teamCache.ids = ids; _teamCache.ts = Date.now();
+  return ids;
+}
+
 // ── Activity Types ─────────────────────────────────────────────────────────
 export const ACTIVITY_TYPES = {
   call:          { ar: 'مكالمة',        en: 'Call',          icon: 'Phone',        color: '#4A7AAB', dept: ['crm','sales','finance'] },
@@ -47,13 +64,7 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
     if (role === 'sales_agent' && userId) {
       query = query.eq('user_id', userId);
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const teamIds = [teamId];
-      if (role === 'sales_manager') {
-        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-        if (children) teamIds.push(...children.map(c => c.id));
-      }
-      const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
-      const ids = (members || []).map(m => m.id).filter(Boolean);
+      const ids = await getTeamMemberIds(role, teamId);
       if (ids.length) query = query.in('user_id', ids);
     }
 
