@@ -24,16 +24,15 @@ function lazyRetry(importFn) {
     importFn().catch((err) => {
       const msg = err?.message || '';
       const isChunkError = msg.includes('Failed to fetch') || msg.includes('Loading chunk')
-        || msg.includes('MIME type') || msg.includes('Importing a module script')
-        || err?.name === 'ChunkLoadError' || err?.name === 'TypeError';
-      // Only auto-reload once to avoid infinite loops
-      const reloaded = sessionStorage.getItem('chunk_reload');
-      if (!reloaded && isChunkError) {
-        sessionStorage.setItem('chunk_reload', '1');
+        || msg.includes('MIME type') || msg.includes('Importing a module')
+        || msg.includes('dynamically imported') || err?.name === 'ChunkLoadError';
+      // Only auto-reload once per 30 seconds to avoid infinite loops
+      const lastReload = Number(sessionStorage.getItem('chunk_reload') || '0');
+      if (isChunkError && Date.now() - lastReload > 30000) {
+        sessionStorage.setItem('chunk_reload', String(Date.now()));
         window.location.reload();
-        return new Promise(() => {}); // never resolves — page is reloading
+        return new Promise(() => {});
       }
-      sessionStorage.removeItem('chunk_reload');
       throw err; // let ErrorBoundary handle it
     })
   );
