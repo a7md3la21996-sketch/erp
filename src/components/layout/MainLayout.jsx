@@ -59,7 +59,7 @@ export default function MainLayout() {
         onMobileClose={() => setSidebarOpen(false)}
       />
       <div
-        className="transition-[margin] duration-300"
+        className="transition-[margin] duration-300 overflow-x-hidden"
         style={{ marginInlineStart: isMobile ? 0 : (collapsed ? 72 : 260) }}
       >
         <Header onMenuClick={() => setSidebarOpen(true)} />
