@@ -126,7 +126,7 @@ export default function MarketingPage() {
         return [];
       }),
       fetchOpportunities({ role: profile?.role, userId: profile?.id }).catch(() => []),
-      getWonDeals().catch(() => []),
+      getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar }).catch(() => []),
     ]).then(([c, ct, opps, d]) => {
       setCampaigns(c);
       setContacts(ct);

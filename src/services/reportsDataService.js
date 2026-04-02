@@ -21,7 +21,7 @@ export async function fetchReportsData(profile) {
   const [contacts, opportunities, deals, activities, campaigns, employees, attendance, invoices, expenses, opsDeals, opsInstallments, opsHandovers, opsTickets] = await Promise.all([
     fetchContacts(opts).catch(() => []),
     fetchOpportunities(opts).catch(() => []),
-    getWonDeals().catch(() => []),
+    getWonDeals({ ...opts, userName: profile?.full_name_en || profile?.full_name_ar }).catch(() => []),
     fetchActivities(opts).catch(() => []),
     fetchCampaigns().catch(() => []),
     fetchEmployees().catch(() => []),

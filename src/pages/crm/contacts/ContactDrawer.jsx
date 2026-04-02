@@ -325,7 +325,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         const [comments, documents, allDeals] = await Promise.all([
           getComments('contact', cid).catch(() => []),
           getDocumentsByEntity('contact', cid).catch(() => []),
-          getWonDeals().catch(() => []),
+          getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar }).catch(() => []),
         ]);
         const { data: allAudits } = await getLocalAuditLogs({ limit: 500, entity: 'contact' });
         const audits = (Array.isArray(allAudits) ? allAudits : []).filter(a => String(a.entity_id) === cid);

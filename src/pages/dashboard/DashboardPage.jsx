@@ -762,9 +762,9 @@ export default function DashboardPage() {
   const rawOpps = dashData?.opportunities?.rawOpps;
 
   const [wonDeals, setWonDeals] = useState([]);
-  useEffect(() => { getWonDeals().then(d => setWonDeals(d || [])).catch(() => {
+  useEffect(() => { getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar }).then(d => setWonDeals(d || [])).catch(() => {
     toast.error(lang === 'ar' ? 'فشل تحميل الصفقات' : 'Failed to load deals');
-  }); }, []);
+  }); }, [profile?.role, profile?.id, profile?.team_id]);
 
   const rangeStats = useMemo(() => {
     if (!rawOpps?.length) return null;
