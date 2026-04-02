@@ -79,6 +79,7 @@ export default function ContactsTable({
   pageSize,
   setPageSize,
   isRTL,
+  isSalesAgent,
 }) {
   const { t } = useTranslation();
   const menuBtnRefs = useRef({});
@@ -172,7 +173,7 @@ export default function ContactsTable({
                   {/* Row 2: Tags */}
                   <div className="flex items-center gap-1.5 mt-2 ms-[52px] flex-wrap">
                     {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
-                    {c.assigned_to_name && <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/[0.06] text-brand-500 font-medium">{c.assigned_to_name}</span>}
+                    {!isSalesAgent && c.assigned_to_name && <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/[0.06] text-brand-500 font-medium">{c.assigned_to_name}</span>}
                     {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd')}</span>; })()}
                   </div>
                 </div>
@@ -190,7 +191,7 @@ export default function ContactsTable({
               <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
               <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>
               <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>
-              <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>
+              {!isSalesAgent && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>}
               <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
               <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>
               <th className={`${thCls} text-center`}>{t('common.actions')}</th>
@@ -258,7 +259,7 @@ export default function ContactsTable({
                 </td>
 
                 {/* Assigned To */}
-                <td className={`${tdCls} hidden md:table-cell`}>
+                {!isSalesAgent && <td className={`${tdCls} hidden md:table-cell`}>
                   {Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1 ? (
                     <div className="flex flex-wrap gap-1">
                       {c.assigned_to_names.map((name, i) => (
@@ -268,7 +269,7 @@ export default function ContactsTable({
                   ) : (
                     <span className="text-xs font-medium text-content dark:text-content-dark">{c.assigned_to_name || '—'}</span>
                   )}
-                </td>
+                </td>}
 
                 {/* Source + Date */}
                 <td className={`${tdCls} hidden lg:table-cell`}>

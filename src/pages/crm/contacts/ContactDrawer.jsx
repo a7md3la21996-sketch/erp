@@ -446,7 +446,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       icon: Users,
       color: '#F59E0B',
       rows: [
-        show('assigned_to_name') && {
+        show('assigned_to_name') && !isSalesAgent && {
           label: isRTL ? 'المسؤول' : 'Assigned',
           val: Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
             ? contact.assigned_to_names.join(' · ')

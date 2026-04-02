@@ -796,6 +796,7 @@ export default function ContactsPage() {
         pageSize={pageSize}
         setPageSize={(s) => { setPageSize(s); setPage(1); }}
         isRTL={isRTL}
+        isSalesAgent={profile?.role === 'sales_agent'}
       />
 
       {/* Quick Action Popover */}
