@@ -444,6 +444,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         show('budget') && { label: isRTL ? 'الميزانية' : 'Budget', val: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
         show('preferred_location') && { label: isRTL ? 'الموقع' : 'Location', val: contact.preferred_location || '—' },
         show('interested_in_type') && { label: isRTL ? 'نوع العقار' : 'Property', val: (isRTL ? { residential: 'سكني', commercial: 'تجاري', administrative: 'إداري' } : { residential: 'Residential', commercial: 'Commercial', administrative: 'Administrative' })[contact.interested_in_type] || '—' },
+        contact.gender && { label: isRTL ? 'النوع' : 'Gender', val: (isRTL ? { male: 'ذكر', female: 'أنثى' } : { male: 'Male', female: 'Female' })[contact.gender] || contact.gender },
+        contact.nationality && { label: isRTL ? 'الجنسية' : 'Nationality', val: contact.nationality },
+        contact.birth_date && { label: isRTL ? 'تاريخ الميلاد' : 'Birth Date', val: new Date(contact.birth_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) },
+        contact.prefix && { label: isRTL ? 'اللقب' : 'Prefix', val: contact.prefix },
       ].filter(Boolean),
     },
     {
@@ -494,8 +498,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       icon: Star,
       color: '#6B21A8',
       rows: [
-        show('contact_status') && { label: isRTL ? 'الحالة' : 'Status', val: contact.contact_status ? ((isRTL ? { new: 'جديد', contacted: 'تم التواصل', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' })[contact.contact_status] || contact.contact_status) : '—', color: contact.contact_status === 'disqualified' ? '#EF4444' : contact.contact_status === 'interested' ? '#10B981' : undefined },
+        show('contact_status') && { label: isRTL ? 'الحالة' : 'Status', val: contact.contact_status ? ((isRTL ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' })[contact.contact_status] || contact.contact_status) : '—', color: contact.contact_status === 'disqualified' ? '#EF4444' : contact.contact_status === 'interested' ? '#10B981' : contact.contact_status === 'no_answer' ? '#F59E0B' : undefined },
         show('lead_score') && { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
+        contact.contact_type && { label: isRTL ? 'النوع' : 'Type', val: tp ? (isRTL ? tp.label : tp.labelEn) : contact.contact_type },
+        contact.department && { label: isRTL ? 'القسم' : 'Department', val: (isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : {})[contact.department] || contact.department },
+        contact.contact_number && { label: isRTL ? 'رقم التعريف' : 'Contact #', val: contact.contact_number },
       ].filter(Boolean),
     },
     {
@@ -1452,7 +1459,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           <div key={r.label} className={rowCls}>
                             <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-content dark:text-content-dark font-medium max-w-[55%] text-end whitespace-nowrap overflow-hidden text-ellipsis" style={r.color ? { color: r.color } : undefined}>{r.val}</span>
+                              <span className="text-content dark:text-content-dark font-medium max-w-[65%] text-end break-words" style={r.color ? { color: r.color } : undefined}>{r.val}</span>
                               {r.action && <button onClick={r.action.onClick} className="text-[9px] text-brand-500 bg-brand-500/10 px-1.5 py-0.5 rounded border-none cursor-pointer">{r.action.label}</button>}
                             </div>
                           </div>
