@@ -28,7 +28,12 @@ export default function GlobalFilterBar() {
   const [teamsMap, setTeamsMap] = useState({});
   const [allTeams, setAllTeams] = useState([]);
 
+  // Only fetch agents/teams when the filter bar is expanded
+  const [dataLoaded, setDataLoaded] = useState(false);
   useEffect(() => {
+    if (!expanded && !dataLoaded) return; // defer until opened
+    if (dataLoaded) return; // already loaded
+    setDataLoaded(true);
     fetchSalesAgents().then(data => {
       let filtered = data || [];
       // Filter agents based on current user's role
@@ -55,7 +60,7 @@ export default function GlobalFilterBar() {
       setTeamsMap(m);
       setAllTeams(data || []);
     });
-  }, [profile?.role, profile?.team_id, profile?.id]);
+  }, [expanded, dataLoaded, profile?.role, profile?.team_id, profile?.id]);
 
   // Managers = sales_manager role users (only visible to admin/operations)
   const managers = useMemo(() => {
