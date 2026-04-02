@@ -462,17 +462,30 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               ? contact.assigned_to_names.join(' · ')
               : (contact.assigned_to_name || '—'))
             : (contact.assigned_to_name || '—'),
-          action: (profile?.role === 'admin' || profile?.role === 'operations') && onUpdate ? {
+          action: onUpdate ? {
             label: isRTL ? 'تعديل' : 'Edit',
             onClick: () => {
               const current = Array.isArray(contact.assigned_to_names) ? contact.assigned_to_names : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
               const input = prompt(
-                (isRTL ? 'أدخل أسماء المسؤولين (مفصولين بفاصلة):' : 'Enter assignee names (comma-separated):'),
+                (isRTL ? 'أدخل اسم المسؤول:' : 'Enter assignee name:'),
                 current.join(', ')
               );
               if (input !== null) {
                 const names = input.split(',').map(n => n.trim()).filter(Boolean);
-                onUpdate({ ...contact, assigned_to_names: names, assigned_to_name: names[0] || null });
+                const newAssignee = names[0] || null;
+                onUpdate({ ...contact, assigned_to_names: names, assigned_to_name: newAssignee });
+                // Send notification to the new assignee
+                if (newAssignee && newAssignee !== (profile?.full_name_en || profile?.full_name_ar)) {
+                  import('../../../services/notificationService').then(({ notifyLeadAssigned }) => {
+                    notifyLeadAssigned({
+                      contactName: contact.full_name || contact.phone || '—',
+                      contactId: contact.id,
+                      agentId: newAssignee,
+                      agentName: newAssignee,
+                      assignedBy: profile?.full_name_ar || profile?.full_name_en || '—',
+                    });
+                  });
+                }
               }
             }
           } : null,
