@@ -286,7 +286,7 @@ export default function ContactsPage() {
     // Record assignment history for each contact
     contacts.filter(c => selectedIds.includes(c.id)).forEach(c => {
       recordAssignment(c.id, { fromAgent: c.assigned_to_name, toAgent: agentName, assignedBy: assignedByName });
-      notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', agentId: agentName, agentName, assignedBy: assignedByName });
+      notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', contactId: c.id, agentId: agentName, agentName, assignedBy: assignedByName });
     });
     // Opportunities reassignment is handled via Supabase in updateContact
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
@@ -466,17 +466,23 @@ export default function ContactsPage() {
 
   // Realtime: auto-refresh contacts when any row changes in Supabase
   useRealtimeSubscription('contacts', useCallback((payload) => {
-    // Smart upsert: apply only the changed record instead of full re-fetch
     if (payload?.eventType) {
       const newRec = payload.new;
-      // For sales agents, skip contacts not assigned to them
-      if (profile?.role === 'sales_agent' && newRec?.assigned_to_names) {
+      const names = newRec?.assigned_to_names || [];
+      // Skip contacts not relevant to this user's role
+      if (profile?.role === 'sales_agent') {
         const myName = profile?.full_name_en || profile?.full_name_ar;
-        if (myName && !newRec.assigned_to_names.includes(myName)) return;
+        if (myName && !names.includes(myName)) return;
+      } else if (profile?.role === 'team_leader' || profile?.role === 'sales_manager') {
+        // For TL/Manager: only accept if contact is already in our list (existing) or skip INSERT from other teams
+        if (payload.eventType === 'INSERT') {
+          // Don't auto-add new contacts from realtime — let the next page load pick them up
+          return;
+        }
       }
       setContacts(prev => applyRealtimePayload(prev, payload));
     } else if (profile) {
-      loadContactsData(); // fallback for old-style callbacks
+      loadContactsData();
     }
   }, [profile, loadContactsData]));
 

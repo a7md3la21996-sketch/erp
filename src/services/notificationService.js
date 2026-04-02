@@ -69,9 +69,10 @@ function dispatch() {
 /**
  * Get notifications with filtering
  */
-export async function getNotifications({ limit = 50, offset = 0, unreadOnly = false, type = null, priority = null } = {}) {
+export async function getNotifications({ limit = 50, offset = 0, unreadOnly = false, type = null, priority = null, userId = null } = {}) {
   try {
     let query = supabase.from('notifications').select('*', { count: 'exact' });
+    if (userId) query = query.or(`for_user_id.eq.${userId},for_user_id.eq.all`);
     if (unreadOnly) query = query.eq('read', false);
     if (type) query = query.eq('type', type);
     if (priority) query = query.eq('priority', priority);
@@ -95,13 +96,12 @@ export async function getNotifications({ limit = 50, offset = 0, unreadOnly = fa
 /**
  * Add a new notification
  */
-export async function addNotification({ type, title, titleEn, message, messageEn, entity, entityId, priority = 'medium', actionUrl, icon }) {
+export async function addNotification({ type, title, titleEn, message, messageEn, entity, entityId, priority = 'medium', actionUrl, icon, forUserId }) {
   const notification = {
     id: String(Date.now()) + '_' + Math.random().toString(36).slice(2, 8),
     type: type || 'system_alert',
     title: title || '',
     titleEn: titleEn || '',
-    // Map to legacy fields too for backward compat
     title_ar: title || '',
     title_en: titleEn || '',
     message: message || '',
@@ -117,7 +117,7 @@ export async function addNotification({ type, title, titleEn, message, messageEn
     created_at: new Date().toISOString(),
     action_url: actionUrl || null,
     icon: icon || null,
-    for_user_id: 'all',
+    for_user_id: forUserId || 'all',
   };
 
   const list = load();
@@ -211,16 +211,17 @@ export async function clearAll() {
 /**
  * Get unread count
  */
-export async function getUnreadCount() {
+export async function getUnreadCount(userId) {
   try {
-    const { count, error } = await supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('read', false);
+    let query = supabase.from('notifications').select('id', { count: 'exact', head: true }).eq('read', false);
+    if (userId) query = query.or(`for_user_id.eq.${userId},for_user_id.eq.all`);
+    const { count, error } = await query;
     if (error) throw error;
     if (count !== null) return count;
   } catch (err) {
-    console.warn('Supabase count (unread notifications) failed, falling back to localStorage:', err);
+    console.warn('Supabase count (unread notifications) failed:', err);
   }
-
-  return load().filter(n => !n.read).length;
+  return 0;
 }
 
 /**
@@ -308,6 +309,7 @@ export function notifyLeadAssigned({ contactName, contactId, agentId, agentName,
     entityId: contactId,
     actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
     priority: 'high',
+    forUserId: agentId || null,
   });
 }
 

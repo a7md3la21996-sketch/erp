@@ -55,7 +55,7 @@ export default function Header({ onMenuClick }) {
 
   // Keep unread count in sync
   useEffect(() => {
-    const refresh = () => { getUnreadCount().then(c => setUnreadCount(c)).catch(() => {}); };
+    const refresh = () => { getUnreadCount(profile?.id).then(c => setUnreadCount(c)).catch(() => {}); };
     refresh();
     window.addEventListener('platform_notification', refresh);
     window.addEventListener('platform_notification_changed', refresh);
@@ -68,7 +68,7 @@ export default function Header({ onMenuClick }) {
   // Also refresh when dropdown closes
   useEffect(() => {
     if (!showNotifications) {
-      getUnreadCount().then(c => setUnreadCount(c)).catch(() => {});
+      getUnreadCount(profile?.id).then(c => setUnreadCount(c)).catch(() => {});
     }
   }, [showNotifications]);
 
