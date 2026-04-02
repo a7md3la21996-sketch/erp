@@ -474,16 +474,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 isAdminOrOps ? current.join(', ') : ''
               );
               if (input !== null && input.trim()) {
-                let names;
-                if (isAdminOrOps) {
-                  // Admin: full control over the names list
-                  names = input.split(',').map(n => n.trim()).filter(Boolean);
-                } else {
-                  // TL/Manager: add new name to existing list (don't remove others)
-                  const newName = input.trim();
-                  names = current.includes(newName) ? current : [...current, newName];
-                }
-                const newAssignee = names[names.length - 1] || null;
+                const names = input.split(',').map(n => n.trim()).filter(Boolean);
+                const newAssignee = names[0] || null;
                 onUpdate({ ...contact, assigned_to_names: names, assigned_to_name: newAssignee });
                 // Send notification to the new assignee
                 if (newAssignee && newAssignee !== (profile?.full_name_en || profile?.full_name_ar)) {
