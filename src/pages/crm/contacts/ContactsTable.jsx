@@ -156,18 +156,31 @@ export default function ContactsTable({
                         {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                       </span>
                       <span className="text-xs text-content-muted dark:text-content-muted-dark font-mono block mt-0.5">{c.phone || '—'}</span>
+                      {c.phone2 && <span className="text-[11px] text-content-muted/70 dark:text-content-muted-dark/70 font-mono block">{c.phone2}</span>}
                     </div>
                     {/* Call + WhatsApp buttons */}
-                    <div className="flex gap-1.5 shrink-0" onClick={e => e.stopPropagation()}>
-                      {c.phone && (
-                        <a href={`tel:${normalizePhone(c.phone)}`} className="w-10 h-10 flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-500 no-underline">
-                          <Phone size={16} />
-                        </a>
-                      )}
-                      {c.phone && (
-                        <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center bg-[#25D366]/10 border border-[#25D366]/20 rounded-xl text-[#25D366] no-underline">
-                          <MessageCircle size={16} />
-                        </a>
+                    <div className="flex flex-col gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                      <div className="flex gap-1.5">
+                        {c.phone && (
+                          <a href={`tel:${normalizePhone(c.phone)}`} className="w-10 h-10 flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-500 no-underline">
+                            <Phone size={16} />
+                          </a>
+                        )}
+                        {c.phone && (
+                          <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center bg-[#25D366]/10 border border-[#25D366]/20 rounded-xl text-[#25D366] no-underline">
+                            <MessageCircle size={16} />
+                          </a>
+                        )}
+                      </div>
+                      {c.phone2 && (
+                        <div className="flex gap-1.5">
+                          <a href={`tel:${normalizePhone(c.phone2)}`} className="w-10 h-10 flex items-center justify-center bg-emerald-500/8 border border-emerald-500/15 rounded-xl text-emerald-400 no-underline">
+                            <Phone size={14} />
+                          </a>
+                          <a href={`https://wa.me/${normalizePhone(c.phone2).replace('+', '')}`} target="_blank" rel="noreferrer" className="w-10 h-10 flex items-center justify-center bg-[#25D366]/8 border border-[#25D366]/15 rounded-xl text-[#25D366]/70 no-underline">
+                            <MessageCircle size={14} />
+                          </a>
+                        </div>
                       )}
                     </div>
                   </div>

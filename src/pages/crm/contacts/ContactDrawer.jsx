@@ -919,10 +919,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   {contact.job_title && <span>{contact.job_title}</span>}
                 </div>
               )}
-              <div className="flex items-center gap-3 text-[11px] text-content-muted dark:text-content-muted-dark">
+              <div className="flex items-center gap-3 text-[11px] text-content-muted dark:text-content-muted-dark flex-wrap">
                 {contact.phone && (
                   <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-content-muted dark:text-content-muted-dark no-underline hover:text-brand-500 transition-colors" dir="ltr">
                     <Phone size={10} className="opacity-50" /> {contact.phone}
+                  </a>
+                )}
+                {contact.phone2 && (
+                  <a href={`tel:${contact.phone2}`} className="flex items-center gap-1 text-content-muted dark:text-content-muted-dark no-underline hover:text-brand-500 transition-colors" dir="ltr">
+                    <Phone size={10} className="opacity-50" /> {contact.phone2}
                   </a>
                 )}
                 {!loadingData && agentCount > 0 && (
@@ -969,7 +974,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           )}
 
           {/* Quick Actions — compact icons with labels */}
-          <div className="flex gap-2 px-5 pb-2.5">
+          <div className="flex gap-2 px-5 pb-1.5">
             {contact.phone && (
               <a href={`tel:${contact.phone}`} className="flex-1 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-500 text-[11px] font-semibold text-center no-underline flex items-center justify-center gap-1">
                 <Phone size={12} /> {isRTL ? 'اتصال' : 'Call'}
@@ -991,6 +996,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </button>
             )}
           </div>
+          {contact.phone2 && (
+            <div className="flex gap-2 px-5 pb-2.5">
+              <a href={`tel:${contact.phone2}`} className="flex-1 py-1.5 bg-emerald-500/8 border border-emerald-500/15 rounded-lg text-emerald-400 text-[10px] font-semibold text-center no-underline flex items-center justify-center gap-1">
+                <Phone size={11} /> {isRTL ? 'اتصال 2' : 'Call 2'}
+              </a>
+              <a href={`https://wa.me/${normalizePhone(contact.phone2).replace('+', '')}`} target="_blank" rel="noreferrer" className="flex-1 py-1.5 bg-[#25D366]/8 border border-[#25D366]/15 rounded-lg text-[#25D366]/70 text-[10px] font-semibold text-center no-underline flex items-center justify-center gap-1">
+                <MessageCircle size={11} /> {isRTL ? 'واتساب 2' : 'WA 2'}
+              </a>
+            </div>
+          )}
 
           {/* WhatsApp Quick Send Popup */}
           {showWAPopup && contact.phone && (
