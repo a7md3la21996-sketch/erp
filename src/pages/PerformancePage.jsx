@@ -8,6 +8,7 @@ import {
 import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
 import { getAttendanceForMonth } from '../data/attendanceStore';
 import { useAuditFilter } from '../hooks/useAuditFilter';
+import { useAuth } from '../contexts/AuthContext';
 import { fetchOpportunities } from '../services/opportunitiesService';
 import { fetchActivities } from '../services/activitiesService';
 import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton, Th, Td, Tr, FilterPill, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
@@ -119,6 +120,7 @@ const BOX_COLORS = [
 
 export default function PerformancePage() {
   const { i18n } = useTranslation();
+  const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
 
@@ -198,8 +200,8 @@ export default function PerformancePage() {
     async function loadCrmData() {
       try {
         const [opps, acts] = await Promise.all([
-          fetchOpportunities(),
-          fetchActivities({ limit: 500 }),
+          fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
+          fetchActivities({ limit: 500, role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
         ]);
         if (cancelled) return;
         setCrmData(buildCrmMap(opps, acts, period));
@@ -207,7 +209,7 @@ export default function PerformancePage() {
     }
     loadCrmData();
     return () => { cancelled = true; };
-  }, [period]);
+  }, [period, profile?.role, profile?.id, profile?.team_id]);
 
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const empData = useMemo(() =>

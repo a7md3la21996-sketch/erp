@@ -78,9 +78,9 @@ export async function createInstallment(data) {
     installment_number: Number(data.installment_number) || 1,
     installments_total: Number(data.installments_total) || 1,
     amount: Number(data.amount) || 0,
-    due_date: data.due_date || '',
+    due_date: data.due_date || null,
     status: data.status || 'pending',
-    paid_date: data.paid_date || '',
+    paid_date: data.paid_date || null,
     notes: data.notes || '',
     created_at: new Date().toISOString(),
   };

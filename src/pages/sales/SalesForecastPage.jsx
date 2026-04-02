@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   TrendingUp, DollarSign, Target, BarChart3, Percent,
   ChevronDown, Filter, Calendar,
@@ -12,8 +13,9 @@ import {
 import { KpiCard, SmartFilter, applySmartFilters, Pagination, PageSkeleton } from '../../components/ui';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { fmtMoney, fmtFull } from '../../utils/formatting';
+import { fetchOpportunities } from '../../services/opportunitiesService';
 import {
-  loadOpportunities, computeForecast, computeMonthlyForecast,
+  computeForecast, computeMonthlyForecast,
   computeStageFunnel, computeAccuracy, getDateRange, getDepartments,
   STAGE_PROBABILITIES,
 } from '../../services/forecastService';
@@ -88,6 +90,7 @@ const SMART_FIELDS = [
 export default function SalesForecastPage() {
   const { i18n } = useTranslation();
   const { theme } = useTheme();
+  const { profile } = useAuth();
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
   const { auditFields, applyAuditFilters } = useAuditFilter('opportunity');
@@ -102,13 +105,22 @@ export default function SalesForecastPage() {
 
   // Load data
   useEffect(() => {
-    setLoading(true);
-    try {
-      const data = loadOpportunities();
-      setOpportunities(data);
-    } catch { /* ignore */ }
-    setLoading(false);
-  }, []);
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const data = await fetchOpportunities({
+          role: profile?.role,
+          userId: profile?.id,
+          teamId: profile?.team_id,
+        });
+        if (!cancelled) setOpportunities(data);
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   // All SmartFilter fields
   const allSmartFields = useMemo(() => [...SMART_FIELDS, ...auditFields], [auditFields]);
