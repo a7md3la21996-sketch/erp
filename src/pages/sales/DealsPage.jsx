@@ -110,33 +110,21 @@ export default function DealsPage() {
     ];
   }, [deals, lang, auditFields]);
 
-  // Load data — filter by role
+  // Load data — server-side role filtering
   useEffect(() => {
     (async () => {
       try {
-        const d = await getWonDeals();
-        let list = d || [];
-
-        if (profile?.role === 'sales_agent') {
-          const name = profile.full_name_en || profile.full_name_ar;
-          list = list.filter(deal => deal.agent_en === name || deal.agent_ar === name);
-        } else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
-          const supabase = (await import('../../lib/supabase')).default;
-          let teamIds = [profile.team_id];
-          if (profile.role === 'sales_manager') {
-            const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
-            if (children) teamIds.push(...children.map(c => c.id));
-          }
-          const { data: members } = await supabase.from('users').select('full_name_en, full_name_ar').in('team_id', teamIds);
-          const names = new Set((members || []).flatMap(m => [m.full_name_en, m.full_name_ar]).filter(Boolean));
-          list = list.filter(deal => names.has(deal.agent_en) || names.has(deal.agent_ar));
-        }
-
-        setDeals(list);
+        const list = await getWonDeals({
+          role: profile?.role,
+          userId: profile?.id,
+          teamId: profile?.team_id,
+          userName: profile?.full_name_en || profile?.full_name_ar,
+        });
+        setDeals(list || []);
       } catch {}
       setLoading(false);
     })();
-  }, [profile]);
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   // Filter + sort
   const filtered = useMemo(() => {

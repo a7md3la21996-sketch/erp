@@ -4,17 +4,46 @@ import { logCreate } from './auditService';
 import { reportError } from '../utils/errorReporter';
 import { addToSyncQueue } from './syncService';
 
+// ── Team cache ────────────────────────────────────────────────────────────
+const _teamCache = { key: null, names: null, ts: 0 };
+async function getTeamMemberNames(role, teamId) {
+  if (!teamId) return [];
+  const ck = `${role}:${teamId}`;
+  if (_teamCache.key === ck && _teamCache.names && Date.now() - _teamCache.ts < 60000) return _teamCache.names;
+  const teamIds = [teamId];
+  if (role === 'sales_manager') {
+    const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+    if (ch) teamIds.push(...ch.map(c => c.id));
+  }
+  const { data: members } = await supabase.from('users').select('full_name_en, full_name_ar').in('team_id', teamIds);
+  const names = (members || []).flatMap(m => [m.full_name_en, m.full_name_ar]).filter(Boolean);
+  _teamCache.key = ck; _teamCache.names = names; _teamCache.ts = Date.now();
+  return names;
+}
+
 /**
- * Get all deals created from won opportunities
+ * Get deals filtered by role
  */
-export async function getWonDeals() {
+export async function getWonDeals({ role, userId, teamId, userName } = {}) {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('deals')
       .select('*')
       .not('opportunity_id', 'is', null)
       .order('created_at', { ascending: false })
       .range(0, 499);
+
+    if (role === 'sales_agent' && userName) {
+      query = query.or(`agent_en.eq.${userName},agent_ar.eq.${userName}`);
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const names = await getTeamMemberNames(role, teamId);
+      if (names.length) {
+        const or = names.map(n => `agent_en.eq.${n},agent_ar.eq.${n}`).join(',');
+        query = query.or(or);
+      }
+    }
+
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   } catch (err) {
