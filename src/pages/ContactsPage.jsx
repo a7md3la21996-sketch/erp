@@ -402,7 +402,24 @@ export default function ContactsPage() {
         page: currentPage,
         pageSize,
       });
-      const list = Array.isArray(result?.data) ? result.data : [];
+      let list = Array.isArray(result?.data) ? result.data : [];
+      // For TL/Manager: show their team member's name, not the first assignee
+      if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
+        try {
+          const teamIds = [profile.team_id];
+          if (profile.role === 'sales_manager') {
+            const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
+            if (ch) teamIds.push(...ch.map(c => c.id));
+          }
+          const { data: members } = await supabase.from('users').select('full_name_en').in('team_id', teamIds);
+          const teamNames = new Set((members || []).map(m => m.full_name_en).filter(Boolean));
+          list = list.map(c => {
+            const names = c.assigned_to_names || [];
+            const teamMember = names.find(n => teamNames.has(n));
+            return teamMember ? { ...c, assigned_to_name: teamMember } : c;
+          });
+        } catch { /* ignore */ }
+      }
       setContacts(list);
       setTotalContacts(result?.count || list.length);
       // Fetch last feedback for this page's contacts
