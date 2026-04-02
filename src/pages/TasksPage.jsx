@@ -698,7 +698,7 @@ export default function TasksPage() {
     if (!form.title.trim() || !form.due_date) return;
     setSaving(true);
     try {
-      const t = await createTask({ ...form, assigned_to_name_ar: 'أنت', assigned_to_name_en: 'You' });
+      const t = await createTask({ ...form, assigned_to: profile?.id || null, assigned_to_name_ar: profile?.full_name_ar || '', assigned_to_name_en: profile?.full_name_en || '' });
       logAction({ action: 'create', entity: 'task', entityId: t.id, entityName: t.title || '', description: 'Created task', userName: profile?.full_name_ar || profile?.full_name_en || '' });
       notifyTaskAssigned({ taskTitle: t.title, assigneeId: t.assigned_to || profile?.id || 'all', assignedBy: profile?.full_name_ar || profile?.full_name_en || '' });
       setTasks(prev => [t, ...prev]);

@@ -185,6 +185,9 @@ export default function ContactsPage() {
         description: desc || (isRTL ? 'إجراء سريع' : 'Quick action'),
         contact_id: contact.id,
         created_at: new Date().toISOString(),
+        user_id: profile?.id || null,
+        user_name_ar: profile?.full_name_ar || '',
+        user_name_en: profile?.full_name_en || '',
       });
       if (contact.contact_status === 'new' || !contact.contact_status) {
         const updated = { ...contact, contact_status: 'contacted' };

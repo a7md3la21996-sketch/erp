@@ -38,7 +38,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await fetchActivities({ entityType, entityId, dept: entityId ? undefined : dept });
+      const data = await fetchActivities({ entityType, entityId, dept: entityId ? undefined : dept, role: user?.role, userId: user?.id, teamId: user?.team_id });
       setActivities(data);
     } finally { setLoading(false); }
   };

@@ -654,7 +654,7 @@ export default function OpportunityDrawer({
                   }}
                   onSaveTask={async (taskData) => {
                     try {
-                      await createTask(taskData);
+                      await createTask({ ...taskData, assigned_to: viewerProfile?.id || null, assigned_to_name_ar: viewerProfile?.full_name_ar || '', assigned_to_name_en: viewerProfile?.full_name_en || '' });
                       toast.success(isRTL ? 'تم إنشاء المهمة' : 'Task created');
                     } catch {
                       toast.error(isRTL ? 'فشل إنشاء المهمة' : 'Failed to create task');

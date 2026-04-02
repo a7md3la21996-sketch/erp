@@ -7,6 +7,7 @@ import {
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_TYPES } from '../services/tasksService';
 import { fetchReminders, createReminder } from '../services/remindersService';
 import { fetchActivities, ACTIVITY_TYPES } from '../services/activitiesService';
+import { useAuth } from '../contexts/AuthContext';
 import { Button, Card, Badge, Modal, ModalFooter, Input, Select, Textarea, PageSkeleton } from '../components/ui';
 
 const DAYS_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -41,6 +42,7 @@ function dateKey(d) {
 
 export default function CalendarPage() {
   const { i18n } = useTranslation();
+  const { profile } = useAuth();
   const lang = i18n.language;
   const isRTL = lang === 'ar';
 
@@ -171,8 +173,9 @@ export default function CalendarPage() {
           ...taskForm,
           status: 'pending',
           dept: 'crm',
-          assigned_to_name_ar: 'أنت',
-          assigned_to_name_en: 'You',
+          assigned_to: profile?.id || null,
+          assigned_to_name_ar: profile?.full_name_ar || '',
+          assigned_to_name_en: profile?.full_name_en || '',
         });
         setTasks(prev => [t, ...prev]);
         setTaskForm({ title: '', type: 'general', priority: 'medium', due_date: '', notes: '' });

@@ -52,6 +52,7 @@ export async function recordAssignment(contactId, { fromAgent, toAgent, assigned
     contact_id: contactId,
     notes: `${fromAgent || '—'} → ${toAgent}${notes ? ': ' + notes : ''}`,
     user_id: null,
+    user_name_en: assignedBy || null,
     status: 'completed',
     created_at: entry.at,
   }]).then(() => {}).catch((err) => { reportError('contactsService', 'recordAssignment', err); });
@@ -123,6 +124,8 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       if (batch.length < PAGE) break;
       offset += PAGE;
       // Rebuild query for next page (Supabase mutates query object)
+      // NOTE: Role filters (sales_agent assigned_to_names, TL/manager or conditions) are applied only on the initial query above.
+      // This non-paginated path is deprecated — ContactsPage always uses server pagination.
       query = supabase.from('contacts').select('*').order('last_activity_at', { ascending: false });
       if (filters.search) { const s = filters.search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, ''); if (s.length > 0) query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`); }
       if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);

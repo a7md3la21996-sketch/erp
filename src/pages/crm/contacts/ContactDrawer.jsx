@@ -237,7 +237,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   const handleSaveTask = async (taskData) => {
     try {
-      const savedTask = await createTask(taskData);
+      const savedTask = await createTask({ ...taskData, assigned_to: profile?.id || null, assigned_to_name_ar: profile?.full_name_ar || '', assigned_to_name_en: profile?.full_name_en || '' });
       setTasks(prev => [savedTask, ...prev]);
     } catch (err) {
       const localTask = { id: String(Date.now()), ...taskData, status: 'todo', created_at: new Date().toISOString() };
@@ -286,8 +286,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     }
   };
 
-  if (!contact) return null;
   const { drawerFields: df } = useSystemConfig();
+  if (!contact) return null;
   const show = (key) => !df || df[key] !== false; // default show if not configured
 
   const tempInfo = contact.temperature ? TEMP[contact.temperature] : null;
