@@ -521,9 +521,29 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       rows: [
         show('contact_status') && (() => {
           const myName = profile?.full_name_en || profile?.full_name_ar;
-          const myStatus = (contact.agent_statuses || {})[myName] || contact.contact_status;
+          const statuses = contact.agent_statuses || {};
           const statusLabels = isRTL ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' };
-          return { label: isRTL ? 'الحالة' : 'Status', val: myStatus ? (statusLabels[myStatus] || myStatus) : '—', color: myStatus === 'disqualified' ? '#EF4444' : myStatus === 'interested' ? '#10B981' : myStatus === 'no_answer' ? '#F59E0B' : undefined };
+          const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'interested' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : undefined;
+          const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
+          if (isAdminOrOps && Object.keys(statuses).length > 0) {
+            // Admin sees all agents' statuses
+            return { label: isRTL ? 'الحالة' : 'Status', val: Object.entries(statuses).map(([name, s]) => `${name}: ${statusLabels[s] || s}`).join(' · ') };
+          }
+          const myStatus = statuses[myName] || contact.contact_status;
+          return { label: isRTL ? 'حالتي' : 'My Status', val: myStatus ? (statusLabels[myStatus] || myStatus) : '—', color: statusColor(myStatus) };
+        })(),
+        // For TL/Manager: show team members' statuses
+        ...(() => {
+          if (isSalesAgent || profile?.role === 'admin' || profile?.role === 'operations') return [];
+          const statuses = contact.agent_statuses || {};
+          const statusLabels = isRTL ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' };
+          const entries = Object.entries(statuses);
+          if (entries.length <= 1) return [];
+          return entries.map(([name, s]) => ({
+            label: name,
+            val: statusLabels[s] || s,
+            color: s === 'disqualified' ? '#EF4444' : s === 'interested' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : undefined,
+          }));
         })(),
         show('lead_score') && { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
         contact.contact_type && { label: isRTL ? 'النوع' : 'Type', val: tp ? (isRTL ? tp.label : tp.labelEn) : contact.contact_type },
