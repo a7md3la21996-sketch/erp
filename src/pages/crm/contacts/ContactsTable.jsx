@@ -155,8 +155,8 @@ export default function ContactsTable({
                       <span className={`font-semibold text-sm block truncate ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                         {c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                       </span>
-                      <span className="text-xs text-content-muted dark:text-content-muted-dark font-mono block mt-0.5">{c.phone || '—'}</span>
-                      {c.phone2 && <span className="text-[11px] text-content-muted/70 dark:text-content-muted-dark/70 font-mono block">{c.phone2}</span>}
+                      <div className="mt-0.5" onClick={e => e.stopPropagation()}><PhoneCell phone={c.phone} small /></div>
+                      {c.phone2 && <div onClick={e => e.stopPropagation()}><PhoneCell phone={c.phone2} small /></div>}
                     </div>
                     {/* Call + WhatsApp buttons */}
                     <div className="flex flex-col gap-1 shrink-0" onClick={e => e.stopPropagation()}>
