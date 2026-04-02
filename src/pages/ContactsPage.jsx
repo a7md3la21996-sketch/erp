@@ -107,7 +107,7 @@ export default function ContactsPage() {
     initialFilterType: searchParams.get('type') || 'all',
     initialShowBlacklisted: searchParams.get('blacklist') === 'true',
     initialSortBy: searchParams.get('sort') || 'created',
-    initialPage: parseInt(searchParams.get('page')) || 1,
+    initialPage: 1,
   });
 
   // Sync filters to URL
@@ -117,7 +117,7 @@ export default function ContactsPage() {
     if (filterType !== 'all') params.set('type', filterType);
     if (showBlacklisted) params.set('blacklist', 'true');
     if (sortBy !== 'created') params.set('sort', sortBy);
-    if (page > 1) params.set('page', String(page));
+    // Don't persist page in URL — always start from page 1 on refresh
     setSearchParams(params, { replace: true });
   }, [search, filterType, showBlacklisted, sortBy, page, setSearchParams]);
 
