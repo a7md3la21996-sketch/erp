@@ -813,6 +813,7 @@ export default function ContactsPage() {
         setPageSize={(s) => { setPageSize(s); setPage(1); }}
         isRTL={isRTL}
         isSalesAgent={profile?.role === 'sales_agent'}
+        isAdmin={profile?.role === 'admin' || profile?.role === 'operations'}
       />
       </div>
 

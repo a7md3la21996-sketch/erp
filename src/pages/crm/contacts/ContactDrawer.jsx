@@ -453,10 +453,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       rows: [
         show('assigned_to_name') && !isSalesAgent && {
           label: isRTL ? 'المسؤول' : 'Assigned',
-          val: Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
-            ? contact.assigned_to_names.join(' · ')
+          val: (profile?.role === 'admin' || profile?.role === 'operations')
+            ? (Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
+              ? contact.assigned_to_names.join(' · ')
+              : (contact.assigned_to_name || '—'))
             : (contact.assigned_to_name || '—'),
-          action: onUpdate ? {
+          action: (profile?.role === 'admin' || profile?.role === 'operations') && onUpdate ? {
             label: isRTL ? 'تعديل' : 'Edit',
             onClick: () => {
               const current = Array.isArray(contact.assigned_to_names) ? contact.assigned_to_names : (contact.assigned_to_name ? [contact.assigned_to_name] : []);

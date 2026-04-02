@@ -80,6 +80,7 @@ export default function ContactsTable({
   setPageSize,
   isRTL,
   isSalesAgent,
+  isAdmin,
 }) {
   const { t } = useTranslation();
   const menuBtnRefs = useRef({});
@@ -258,9 +259,9 @@ export default function ContactsTable({
                   {c.phone2 && <PhoneCell phone={c.phone2} small />}
                 </td>
 
-                {/* Assigned To */}
+                {/* Assigned To — admin sees all names, TL/manager sees single name */}
                 {!isSalesAgent && <td className={`${tdCls} hidden md:table-cell`}>
-                  {Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1 ? (
+                  {isAdmin && Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1 ? (
                     <div className="flex flex-wrap gap-1">
                       {c.assigned_to_names.map((name, i) => (
                         <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${i === 0 ? 'bg-brand-500/10 text-brand-500' : 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark'}`}>{name}</span>
