@@ -134,9 +134,12 @@ export async function processQueue(onProgress) {
     for (let i = 0; i < currentQueue.length; i++) {
       const item = currentQueue[i];
 
-      // Skip items that exceeded max retries
+      // Remove items that exceeded max retries — they won't succeed
       if ((item.retries || 0) > MAX_RETRIES) {
+        const cleaned = getQueue().filter(q => q.id !== item.id);
+        saveQueue(cleaned);
         skipped++;
+        notifyListeners();
         continue;
       }
 
@@ -304,6 +307,23 @@ export function subscribe(fn) {
 function notifyListeners() {
   const count = getPendingCount();
   listeners.forEach(fn => fn(count));
+}
+
+// ── Auto-cleanup: remove items older than 24h or with too many retries ────
+
+if (typeof window !== 'undefined') {
+  try {
+    const queue = getQueue();
+    const now = Date.now();
+    const cleaned = queue.filter(item => {
+      if ((item.retries || 0) > MAX_RETRIES) return false; // exceeded retries
+      if (now - (item.timestamp || 0) > 24 * 60 * 60 * 1000) return false; // older than 24h
+      return true;
+    });
+    if (cleaned.length !== queue.length) {
+      saveQueue(cleaned);
+    }
+  } catch { /* ignore */ }
 }
 
 // ── Auto-sync on online event ─────────────────────────────────────────────

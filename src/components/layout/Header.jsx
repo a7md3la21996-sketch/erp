@@ -176,15 +176,6 @@ export default function Header({ onMenuClick }) {
             )}
           </div>
         )}
-        {isOnline && pendingCount > 0 && !isSyncing && (
-          <button onClick={() => { import('../../lib/offlineQueue').then(m => { m.clearQueue(); window.location.reload(); }); }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[11px] font-semibold me-1 cursor-pointer"
-            title={isRTL ? 'مسح العمليات المعلقة' : 'Clear pending operations'}>
-            <AlertTriangle size={13} />
-            <span className="hidden sm:inline">{pendingCount} {isRTL ? 'معلق' : 'pending'}</span>
-            <X size={11} />
-          </button>
-        )}
         {isOnline && isSyncing && (
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-500 text-[11px] font-semibold me-1">
             <RefreshCw size={13} className="animate-spin" />
