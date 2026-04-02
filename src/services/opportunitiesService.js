@@ -123,11 +123,12 @@ export async function createOpportunity(oppData) {
   if (oppData.budget && (isNaN(Number(oppData.budget)) || Number(oppData.budget) < 0)) {
     throw new Error('Invalid budget value');
   }
-  // Sanitize string fields
+  // Sanitize string fields + convert empty strings to null
   const sanitize = (v) => typeof v === 'string' ? v.replace(/<[^>]*>/g, '').trim() : v;
   const sanitized = {};
   for (const [k, v] of Object.entries(oppData)) {
-    sanitized[k] = sanitize(v);
+    const val = sanitize(v);
+    sanitized[k] = val === '' ? null : val;
   }
 
   // Block if unit is already reserved or sold
@@ -162,9 +163,7 @@ export async function createOpportunity(oppData) {
     return enriched;
   } catch (err) {
     reportError('opportunitiesService', 'createOpportunity', err);
-    const localOpp = { ...sanitized, id: Date.now().toString(), created_at: now, _offline: true };
-    addToSyncQueue('opportunities', 'create', localOpp);
-    return localOpp;
+    throw err;
   }
 }
 
