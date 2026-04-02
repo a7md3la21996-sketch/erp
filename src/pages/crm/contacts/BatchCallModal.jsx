@@ -222,9 +222,11 @@ export default function BatchCallModal({
                 const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
                 const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, created_at: new Date().toISOString() };
                 try { await createActivity(activity); } catch { /* optimistic */ }
-                const statusUpdate = (current.contact_status === 'new' || !current.contact_status)
-                  ? { last_activity_at: new Date().toISOString(), contact_status: 'contacted' }
-                  : { last_activity_at: new Date().toISOString() };
+                const statusUpdate = batchCallResult === 'no_answer'
+                  ? { last_activity_at: new Date().toISOString(), contact_status: 'no_answer' }
+                  : (current.contact_status === 'new' || current.contact_status === 'no_answer' || !current.contact_status)
+                    ? { last_activity_at: new Date().toISOString(), contact_status: 'contacted' }
+                    : { last_activity_at: new Date().toISOString() };
                 try { await updateContact(current.id, statusUpdate); } catch { /* ignore */ }
                 setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
                 setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);

@@ -70,6 +70,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'contact_status', label: 'الحالة', labelEn: 'Status', type: 'select', options: [
       { value: 'new', label: 'جديد', labelEn: 'New' },
       { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted' },
+      { value: 'no_answer', label: 'لا يرد', labelEn: 'No Answer' },
       { value: 'interested', label: 'مهتم', labelEn: 'Interested' },
       { value: 'not_interested', label: 'غير مهتم', labelEn: 'Not Interested' },
       { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified' },

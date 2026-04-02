@@ -79,6 +79,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
     if (filters.department) query = query.eq('department', filters.department);
+    if (filters.contact_status) query = query.eq('contact_status', filters.contact_status);
     if (filters.assigned_to_name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
 
     if (isServerPaginated) {
@@ -114,6 +115,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
       if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
       if (filters.department) query = query.eq('department', filters.department);
+      if (filters.contact_status) query = query.eq('contact_status', filters.contact_status);
       if (filters.assigned_to_name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
     }
     // Ensure array fields are never null (prevents .map() crashes)

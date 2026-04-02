@@ -380,6 +380,8 @@ export default function ContactsPage() {
     setLoading(true);
     try {
       const currentPage = pg || page || 1;
+      // Extract contact_status from smartFilters for server-side filtering
+      const statusFilter = smartFilters.find(f => f.field === 'contact_status' && f.operator === 'is');
       const result = await fetchContacts({
         role: profile?.role,
         userId: profile?.id,
@@ -389,6 +391,7 @@ export default function ContactsPage() {
           contact_type: filterType !== 'all' ? filterType : undefined,
           showBlacklisted: showBlacklisted || undefined,
           assigned_to_name: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
+          contact_status: statusFilter?.value || undefined,
         },
         page: currentPage,
         pageSize,
@@ -415,7 +418,7 @@ export default function ContactsPage() {
     } finally {
       setLoading(false);
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted, globalFilter?.agentName]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted, globalFilter?.agentName, smartFilters]);
 
   useEffect(() => {
     if (profile) loadContactsData();
@@ -653,6 +656,7 @@ export default function ContactsPage() {
           { label: 'عملاء مبيعات', labelEn: 'Sales Clients', filters: [{ field: 'contact_type', operator: 'is', value: 'client' }, { field: 'department', operator: 'is', value: 'sales' }] },
           { label: 'موردين', labelEn: 'Suppliers', filters: [{ field: 'contact_type', operator: 'is', value: 'supplier' }] },
           { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: '_opp_count', operator: 'eq', value: '0' }] },
+          { label: 'لا يرد', labelEn: 'No Answer', filters: [{ field: 'contact_status', operator: 'is', value: 'no_answer' }] },
           { label: 'غير مؤهل', labelEn: 'Disqualified', filters: [{ field: 'contact_status', operator: 'is', value: 'disqualified' }] },
         ]}
       />

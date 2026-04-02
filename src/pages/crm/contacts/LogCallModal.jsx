@@ -87,9 +87,15 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
     };
     try { await createActivity(activity); } catch { /* saved optimistically */ }
 
-    // Auto-change status from 'new' to 'contacted' on first call
-    if (onUpdate && (contact.contact_status === 'new' || !contact.contact_status)) {
-      onUpdate({ ...contact, contact_status: 'contacted' });
+    // Auto-update contact_status based on call result
+    if (onUpdate) {
+      if (callResult === 'no_answer') {
+        onUpdate({ ...contact, contact_status: 'no_answer' });
+      } else if (callResult === 'answered' && (contact.contact_status === 'new' || contact.contact_status === 'no_answer' || !contact.contact_status)) {
+        onUpdate({ ...contact, contact_status: 'contacted' });
+      } else if (contact.contact_status === 'new' || !contact.contact_status) {
+        onUpdate({ ...contact, contact_status: 'contacted' });
+      }
     }
 
     if (addFollowup && followupDate) {
