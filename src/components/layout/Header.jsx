@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift, Shield, ArrowLeft } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift, Shield, ArrowLeft, AlertTriangle, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
@@ -175,6 +175,15 @@ export default function Header({ onMenuClick }) {
               </span>
             )}
           </div>
+        )}
+        {isOnline && pendingCount > 0 && !isSyncing && (
+          <button onClick={() => { import('../../lib/offlineQueue').then(m => { m.clearQueue(); window.location.reload(); }); }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 text-[11px] font-semibold me-1 cursor-pointer"
+            title={isRTL ? 'مسح العمليات المعلقة' : 'Clear pending operations'}>
+            <AlertTriangle size={13} />
+            <span className="hidden sm:inline">{pendingCount} {isRTL ? 'معلق' : 'pending'}</span>
+            <X size={11} />
+          </button>
         )}
         {isOnline && isSyncing && (
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-500 text-[11px] font-semibold me-1">
