@@ -37,6 +37,33 @@ export function getAssignmentHistory() {
   return [];
 }
 
+/**
+ * Get the per-agent status for a contact.
+ * Falls back to contact_status if agent_statuses is empty.
+ */
+export function getAgentStatus(contact, agentName) {
+  if (!agentName) return contact?.contact_status || null;
+  const statuses = contact?.agent_statuses || {};
+  return statuses[agentName] || contact?.contact_status || null;
+}
+
+/**
+ * Update per-agent status on a contact.
+ * Sets both agent_statuses[agentName] and contact_status (for backward compat).
+ */
+export async function updateAgentStatus(contactId, agentName, newStatus) {
+  try {
+    // Fetch current agent_statuses
+    const { data: current } = await supabase.from('contacts').select('agent_statuses').eq('id', contactId).maybeSingle();
+    const statuses = { ...(current?.agent_statuses || {}), [agentName]: newStatus };
+    await supabase.from('contacts').update({ agent_statuses: statuses, contact_status: newStatus }).eq('id', contactId);
+    return statuses;
+  } catch (err) {
+    reportError('contactsService', 'updateAgentStatus', err);
+    throw err;
+  }
+}
+
 export async function recordAssignment(contactId, { fromAgent, toAgent, assignedBy, notes = '' }) {
   const entry = {
     from: fromAgent || null,

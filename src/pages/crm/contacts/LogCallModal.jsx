@@ -90,14 +90,17 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
     };
     try { await createActivity(activity); } catch { /* saved optimistically */ }
 
-    // Auto-update contact_status based on call result
+    // Auto-update contact_status based on call result (per-agent)
     if (onUpdate) {
-      if (callResult === 'no_answer') {
-        onUpdate({ ...contact, contact_status: 'no_answer' });
-      } else if (callResult === 'answered' && (contact.contact_status === 'new' || contact.contact_status === 'no_answer' || !contact.contact_status)) {
-        onUpdate({ ...contact, contact_status: 'contacted' });
-      } else if (contact.contact_status === 'new' || !contact.contact_status) {
-        onUpdate({ ...contact, contact_status: 'contacted' });
+      const myName = profile?.full_name_en || profile?.full_name_ar;
+      const myStatus = (contact.agent_statuses || {})[myName] || contact.contact_status;
+      let newStatus = myStatus;
+      if (callResult === 'no_answer') newStatus = 'no_answer';
+      else if (callResult === 'answered' && (myStatus === 'new' || myStatus === 'no_answer' || !myStatus)) newStatus = 'contacted';
+      else if (myStatus === 'new' || !myStatus) newStatus = 'contacted';
+      if (newStatus !== myStatus) {
+        const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
+        onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });
       }
     }
 

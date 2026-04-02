@@ -229,9 +229,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       setActivities(prev => [localAct, ...prev]);
       toast.success(isRTL ? 'تم حفظ النشاط محلياً' : 'Activity saved locally');
     }
-    // Auto-change status from 'new' to 'contacted' on first activity
-    if (contact.contact_status === 'new' || !contact.contact_status) {
-      if (onUpdate) onUpdate({ ...contact, contact_status: 'contacted' });
+    // Auto-change status from 'new' to 'contacted' on first activity (per-agent)
+    const myName = profile?.full_name_en || profile?.full_name_ar;
+    const myStatus = (contact.agent_statuses || {})[myName] || contact.contact_status;
+    if (myStatus === 'new' || !myStatus) {
+      const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'contacted' };
+      if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: 'contacted' });
     }
   };
 
@@ -246,10 +249,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     }
   };
 
-  // Handle contact status change from TakeActionForm
+  // Handle contact status change from TakeActionForm (per-agent)
   const handleStatusChange = (newStatus) => {
     if (onUpdate) {
-      onUpdate({ ...contact, contact_status: newStatus });
+      const myName = profile?.full_name_en || profile?.full_name_ar;
+      const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
+      onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });
       toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Contact status updated');
     }
   };
@@ -514,7 +519,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       icon: Star,
       color: '#6B21A8',
       rows: [
-        show('contact_status') && { label: isRTL ? 'الحالة' : 'Status', val: contact.contact_status ? ((isRTL ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' })[contact.contact_status] || contact.contact_status) : '—', color: contact.contact_status === 'disqualified' ? '#EF4444' : contact.contact_status === 'interested' ? '#10B981' : contact.contact_status === 'no_answer' ? '#F59E0B' : undefined },
+        show('contact_status') && (() => {
+          const myName = profile?.full_name_en || profile?.full_name_ar;
+          const myStatus = (contact.agent_statuses || {})[myName] || contact.contact_status;
+          const statusLabels = isRTL ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' };
+          return { label: isRTL ? 'الحالة' : 'Status', val: myStatus ? (statusLabels[myStatus] || myStatus) : '—', color: myStatus === 'disqualified' ? '#EF4444' : myStatus === 'interested' ? '#10B981' : myStatus === 'no_answer' ? '#F59E0B' : undefined };
+        })(),
         show('lead_score') && { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
         contact.contact_type && { label: isRTL ? 'النوع' : 'Type', val: tp ? (isRTL ? tp.label : tp.labelEn) : contact.contact_type },
         contact.department && { label: isRTL ? 'القسم' : 'Department', val: (isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : {})[contact.department] || contact.department },

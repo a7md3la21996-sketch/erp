@@ -222,11 +222,13 @@ export default function BatchCallModal({
                 const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
                 const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
                 try { await createActivity(activity); } catch { /* optimistic */ }
-                const statusUpdate = batchCallResult === 'no_answer'
-                  ? { last_activity_at: new Date().toISOString(), contact_status: 'no_answer' }
-                  : (current.contact_status === 'new' || current.contact_status === 'no_answer' || !current.contact_status)
-                    ? { last_activity_at: new Date().toISOString(), contact_status: 'contacted' }
-                    : { last_activity_at: new Date().toISOString() };
+                const myName = profile?.full_name_en || profile?.full_name_ar;
+                const myStatus = (current.agent_statuses || {})[myName] || current.contact_status;
+                let newStatus = myStatus;
+                if (batchCallResult === 'no_answer') newStatus = 'no_answer';
+                else if (myStatus === 'new' || myStatus === 'no_answer' || !myStatus) newStatus = 'contacted';
+                const newStatuses = { ...(current.agent_statuses || {}), [myName]: newStatus };
+                const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus, agent_statuses: newStatuses };
                 try { await updateContact(current.id, statusUpdate); } catch { /* ignore */ }
                 setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
                 setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);
