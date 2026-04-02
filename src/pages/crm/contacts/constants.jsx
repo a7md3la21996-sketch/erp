@@ -75,7 +75,13 @@ export const DEPT_STAGES = {
     { id: 'closed_lost',          label_ar: 'مرفوض',          label_en: 'Rejected',         color: '#EF4444' },
   ],
 };
-export const getDeptStages = (dept) => DEPT_STAGES[dept] || DEPT_STAGES.sales;
+// Allow SystemConfig to override stages at runtime
+let _configStages = null;
+export function setConfigStages(stages) { _configStages = stages; }
+export const getDeptStages = (dept) => {
+  if (_configStages && _configStages[dept]?.length) return _configStages[dept];
+  return DEPT_STAGES[dept] || DEPT_STAGES.sales;
+};
 
 /**
  * Stage gates: required activity types before entering a stage.

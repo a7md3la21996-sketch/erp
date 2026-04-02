@@ -1,18 +1,28 @@
 import { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { loadConfig, loadConfigFromServer, saveSection, resetConfig } from '../services/systemConfigService';
 import { supabase } from '../lib/supabase';
+import { setConfigStages } from '../pages/crm/contacts/constants';
 
 const SystemConfigContext = createContext(null);
 
 export function SystemConfigProvider({ children }) {
-  const [config, setConfig] = useState(() => loadConfig());
+  const [config, setConfig] = useState(() => {
+    const c = loadConfig();
+    if (c.pipelineStages) setConfigStages(c.pipelineStages);
+    return c;
+  });
 
-  const reloadConfig = useCallback(() => setConfig(loadConfig()), []);
+  const reloadConfig = useCallback(() => {
+    const c = loadConfig();
+    if (c.pipelineStages) setConfigStages(c.pipelineStages);
+    setConfig(c);
+  }, []);
 
   // Reload from Supabase (used when realtime change detected from another user)
   const reloadFromServer = useCallback(async () => {
     try {
       const serverConfig = await loadConfigFromServer();
+      if (serverConfig.pipelineStages) setConfigStages(serverConfig.pipelineStages);
       setConfig(serverConfig);
     } catch {
       reloadConfig(); // fallback to localStorage
