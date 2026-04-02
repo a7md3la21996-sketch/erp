@@ -96,5 +96,5 @@ export const ROLE_NAV_GROUPS = {
   marketing:      ['dashboard', 'contacts', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
   hr:             ['dashboard', 'hr', 'workspace', 'communication', 'help-center'],
   finance:        ['dashboard', 'finance', 'sales', 'operations', 'workspace', 'communication', 'help-center'],
-  operations:     ['dashboard', 'operations', 'sales', 'contacts', 'workspace', 'communication', 'help-center'],
+  operations:     ['dashboard', 'operations', 'sales', 'contacts', 'crm', 'activities', 'real-estate', 'workspace', 'communication', 'help-center'],
 };
