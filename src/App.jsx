@@ -22,9 +22,13 @@ import './i18n';
 function lazyRetry(importFn) {
   return lazy(() =>
     importFn().catch((err) => {
+      const msg = err?.message || '';
+      const isChunkError = msg.includes('Failed to fetch') || msg.includes('Loading chunk')
+        || msg.includes('MIME type') || msg.includes('Importing a module script')
+        || err?.name === 'ChunkLoadError' || err?.name === 'TypeError';
       // Only auto-reload once to avoid infinite loops
       const reloaded = sessionStorage.getItem('chunk_reload');
-      if (!reloaded) {
+      if (!reloaded && isChunkError) {
         sessionStorage.setItem('chunk_reload', '1');
         window.location.reload();
         return new Promise(() => {}); // never resolves — page is reloading
@@ -110,6 +114,17 @@ function PageLoader() {
 class AppErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, error: null }; }
   static getDerivedStateFromError(error) { return { hasError: true, error }; }
+  componentDidCatch(error) {
+    const msg = error?.message || '';
+    const isChunkError = msg.includes('MIME type') || msg.includes('Failed to fetch')
+      || msg.includes('Loading chunk') || msg.includes('Importing a module');
+    if (isChunkError && !sessionStorage.getItem('app_error_reload')) {
+      sessionStorage.setItem('app_error_reload', '1');
+      window.location.reload();
+    } else {
+      sessionStorage.removeItem('app_error_reload');
+    }
+  }
   render() {
     if (this.state.hasError) {
       return (
