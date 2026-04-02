@@ -188,12 +188,16 @@ export async function createContact(contactData) {
     logCreate('contact', data.id, data);
     return data;
   } catch (err) {
-    if (import.meta.env.DEV) console.error('[createContact] Failed:', err.message || err);
+    console.error('[createContact] Failed:', err.message || err);
     reportError('contactsService', 'createContact', err);
-    const tempId = 'temp_' + Date.now();
-    const offlineContact = { ...sanitized, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };
-    enqueue('contact', 'create', offlineContact);
-    return offlineContact;
+    // Only queue offline if it's a network error, not a data/validation error
+    if (!navigator.onLine || err?.message?.includes('Failed to fetch') || err?.message?.includes('NetworkError')) {
+      const tempId = 'temp_' + Date.now();
+      const offlineContact = { ...sanitized, id: tempId, last_activity_at: new Date().toISOString(), _offline: true };
+      enqueue('contact', 'create', offlineContact);
+      return offlineContact;
+    }
+    throw err;
   }
 }
 
@@ -334,15 +338,18 @@ export async function createActivity(activityData) {
     return data;
   } catch (err) {
     reportError('contactsService', 'createActivity', err);
-    const mock = {
-      ...activityData,
-      id: Date.now().toString(),
-      created_at: activityData.created_at || new Date().toISOString(),
-      users: { full_name_ar: 'أنت', full_name_en: 'You' },
-      _offline: true,
-    };
-    enqueue('activity', 'create', mock);
-    return mock;
+    if (!navigator.onLine || err?.message?.includes('Failed to fetch') || err?.message?.includes('NetworkError')) {
+      const mock = {
+        ...activityData,
+        id: Date.now().toString(),
+        created_at: activityData.created_at || new Date().toISOString(),
+        users: { full_name_ar: 'أنت', full_name_en: 'You' },
+        _offline: true,
+      };
+      enqueue('activity', 'create', mock);
+      return mock;
+    }
+    throw err;
   }
 }
 
