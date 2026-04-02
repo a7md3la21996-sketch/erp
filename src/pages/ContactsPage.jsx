@@ -398,6 +398,7 @@ export default function ContactsPage() {
           showBlacklisted: showBlacklisted || undefined,
           assigned_to_name: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
           contact_status: statusFilter?.value || undefined,
+          agentNameForStatus: statusFilter?.value && (profile?.role === 'sales_agent' || profile?.role === 'team_leader' || profile?.role === 'sales_manager') ? (profile?.full_name_en || profile?.full_name_ar) : undefined,
         },
         page: currentPage,
         pageSize,
