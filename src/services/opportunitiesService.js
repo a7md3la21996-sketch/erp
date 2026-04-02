@@ -206,9 +206,8 @@ export async function updateOpportunity(id, updates) {
     logUpdate('opportunity', id, oldData, enriched);
     return enriched;
   } catch (err) {
-    reportError('opportunitiesService', 'query', err);
-    addToSyncQueue('opportunities', 'update', { _id: id, ...updates, updated_at: new Date().toISOString() });
-    return { id, ...updates, _offline: true };
+    reportError('opportunitiesService', 'updateOpportunity', err);
+    throw err;
   }
 }
 
@@ -220,9 +219,8 @@ export async function deleteOpportunity(id) {
     if (error) throw error;
     logDelete('opportunity', id, oldData);
   } catch (err) {
-    reportError('opportunitiesService', 'query', err);
-    addToSyncQueue('opportunities', 'delete', { id });
-    throw new Error('Delete failed - queued for retry');
+    reportError('opportunitiesService', 'deleteOpportunity', err);
+    throw err;
   }
 }
 

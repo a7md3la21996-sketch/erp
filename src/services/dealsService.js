@@ -141,15 +141,7 @@ export async function createDealFromOpportunity(opp, existingDeals = [], extraFi
     return data;
   } catch (err) {
     reportError('dealsService', 'createDealFromOpportunity', err);
-    // Queue for retry
-    const deal = {
-      ...dealData,
-      id: `deal-opp-${opp.id}`,
-      created_at: new Date().toISOString().split('T')[0],
-      _offline: true,
-    };
-    addToSyncQueue('deals', 'create', deal);
-    return deal;
+    throw err;
   }
 }
 
