@@ -166,6 +166,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
           transition-all duration-300
           ${/* Mobile: slide in/out drawer, always full width (260px) */''}
           ${mobileOpen ? 'translate-x-0' : (isRTL ? 'translate-x-full' : '-translate-x-full')}
+          ${!mobileOpen ? 'invisible md:visible' : ''}
           w-[260px]
           ${/* Desktop: always visible, respect collapsed state */''}
           md:translate-x-0

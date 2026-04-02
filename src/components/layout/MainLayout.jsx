@@ -51,7 +51,7 @@ export default function MainLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen bg-surface-bg dark:bg-surface-bg-dark overflow-x-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
       <Sidebar
         collapsed={collapsed}
         onToggle={toggleCollapsed}
