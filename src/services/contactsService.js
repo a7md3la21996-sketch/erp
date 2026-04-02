@@ -160,13 +160,15 @@ export async function createContact(contactData) {
   if (!contactData.department) {
     throw new Error('Department is required');
   }
-  // Sanitize string fields to prevent XSS + remove internal fields
+  // Sanitize string fields to prevent XSS + remove internal fields + convert empty strings to null
   const sanitize = (v) => typeof v === 'string' ? v.replace(/<[^>]*>|javascript\s*:|on\w+\s*=|data\s*:/gi, '').trim() : v;
   const INTERNAL_FIELDS = ['_customFieldValues', '_offline', '_campaign_count', '_country', '_opp_count', '_aging_level', 'countryCode', 'country'];
   const sanitized = {};
   for (const [k, v] of Object.entries(contactData)) {
-    if (INTERNAL_FIELDS.includes(k)) continue; // skip internal fields
-    sanitized[k] = sanitize(v);
+    if (INTERNAL_FIELDS.includes(k)) continue;
+    const val = sanitize(v);
+    // Convert empty strings to null (Supabase rejects '' for date/number columns)
+    sanitized[k] = val === '' ? null : val;
   }
 
   try {

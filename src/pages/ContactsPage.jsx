@@ -573,13 +573,9 @@ export default function ContactsPage() {
       if (cfValues) setCFValues('contact', saved.id, cfValues);
       logAction({ action: 'create', entity: 'contact', entityId: saved.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
       evaluateTriggers('contact', 'created', saved);
-    } catch {
-      const updated = [newContact, ...contacts];
-      setContacts(updated);
-      saveContactsLocal(updated);
-      if (cfValues) setCFValues('contact', newContact.id, cfValues);
-      logAction({ action: 'create', entity: 'contact', entityId: newContact.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
-      evaluateTriggers('contact', 'created', newContact);
+    } catch (err) {
+      console.error('[handleSave] Failed to create contact:', err?.message || err);
+      toast.error(isRTL ? 'فشل حفظ جهة الاتصال: ' + (err?.message || 'خطأ غير معروف') : 'Failed to save contact: ' + (err?.message || 'Unknown error'));
     }
   };
 
