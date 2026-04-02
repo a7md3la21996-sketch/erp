@@ -279,7 +279,7 @@ export default function ContactsPage() {
     const assignedByName = profile?.full_name_ar || '—';
     const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
     const idsToUpdate = [...selectedIds];
-    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_by_name: assignedByName } : c);
+    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName } : c);
     setContacts(updated);
     saveContactsLocal(updated);
     logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
@@ -293,7 +293,7 @@ export default function ContactsPage() {
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
-    Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_by_name: assignedByName }).catch(() => {}))).catch(() => {});
+    Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName }).catch(() => {}))).catch(() => {});
   };
 
   const handleBulkChangeField = async (field, value, actionLabel) => {
