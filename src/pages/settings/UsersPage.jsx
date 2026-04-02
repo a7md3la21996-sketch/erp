@@ -137,7 +137,7 @@ export default function UsersPage() {
   const lang = i18n.language;
   const toast = useToast();
 
-  const { register } = useAuth();
+  const { register, profile } = useAuth();
 
   const [search, setSearch] = useState('');
   const [smartFilters, setSmartFilters] = useState([]);
