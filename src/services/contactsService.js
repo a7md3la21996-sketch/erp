@@ -276,14 +276,19 @@ export async function checkDuplicate(phone) {
   return null;
 }
 
-export async function fetchContactActivities(contactId) {
+export async function fetchContactActivities(contactId, { role, userId } = {}) {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('activities')
       .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en)`)
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50);
+    // Sales agents only see their own activities
+    if (role === 'sales_agent' && userId) {
+      query = query.eq('user_id', userId);
+    }
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -335,9 +340,9 @@ export async function updateActivity(id, updates) {
   }
 }
 
-export async function fetchContactOpportunities(contactId) {
+export async function fetchContactOpportunities(contactId, { role, userId } = {}) {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('opportunities')
       .select(`
         *,
@@ -346,6 +351,11 @@ export async function fetchContactOpportunities(contactId) {
       `)
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false });
+    // Sales agents only see their own opportunities
+    if (role === 'sales_agent' && userId) {
+      query = query.eq('assigned_to', userId);
+    }
+    const { data, error } = await query;
     if (error) throw error;
     return data || [];
   } catch (err) {

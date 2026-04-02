@@ -402,10 +402,14 @@ export default function ContactsPage() {
       // Fetch last feedback for this page's contacts
       if (list.length) {
         const ids = list.map(c => c.id).filter(Boolean);
-        supabase.from('activities').select('contact_id, notes, user_name_ar, user_name_en, created_at')
+        let feedbackQuery = supabase.from('activities').select('contact_id, notes, user_name_ar, user_name_en, created_at')
           .in('contact_id', ids).not('notes', 'is', null).neq('notes', '')
-          .order('created_at', { ascending: false }).range(0, 499)
-          .then(({ data: acts }) => {
+          .order('created_at', { ascending: false }).range(0, 499);
+        // Sales agents only see their own feedback
+        if (profile?.role === 'sales_agent' && profile?.id) {
+          feedbackQuery = feedbackQuery.eq('user_id', profile.id);
+        }
+        feedbackQuery.then(({ data: acts }) => {
             if (acts?.length) {
               const lastByContact = {};
               acts.forEach(a => { if (a.contact_id && !lastByContact[a.contact_id]) lastByContact[a.contact_id] = a; });
