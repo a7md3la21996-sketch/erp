@@ -46,7 +46,7 @@ export const TASK_TYPES = {
 export async function fetchTasks({ contactId, dept, status, page, pageSize, role, userId, teamId } = {}) {
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
   try {
-    let query = supabase.from('tasks').select('*', isServerPaginated ? { count: 'exact' } : {}).order('due_date', { ascending: true });
+    let query = supabase.from('tasks').select('*, contacts!tasks_contact_id_fkey (full_name, phone)', isServerPaginated ? { count: 'exact' } : {}).order('due_date', { ascending: true });
     if (contactId) query = query.eq('contact_id', contactId);
     if (dept)      query = query.eq('dept', dept);
     if (status)    query = query.eq('status', status);
@@ -59,18 +59,23 @@ export async function fetchTasks({ contactId, dept, status, page, pageSize, role
       if (ids.length) query = query.in('assigned_to', ids);
     }
 
+    const enrich = (tasks) => (tasks || []).map(t => ({
+      ...t,
+      contact_name: t.contact_name || t.contacts?.full_name || null,
+    }));
+
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
       query = query.range(from, from + pageSize - 1);
       const { data, error, count } = await query;
       if (error) return { data: [], count: 0 };
-      return { data: data || [], count: count || 0 };
+      return { data: enrich(data), count: count || 0 };
     }
 
     query = query.range(0, 999);
     const { data, error } = await query;
     if (error) return [];
-    return data || [];
+    return enrich(data);
   } catch { return isServerPaginated ? { data: [], count: 0 } : []; }
 }
 
