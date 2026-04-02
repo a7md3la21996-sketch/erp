@@ -2,14 +2,14 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
-import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, WifiOff, RefreshCw, CheckCircle2, CloudOff, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift, Shield, ArrowLeft, AlertTriangle, X } from 'lucide-react';
+import { Sun, Moon, Globe, Bell, Search, LogOut, User, Command, Menu, Keyboard, Monitor, Clock, ChevronDown, Check, Lightbulb, Star, Gift, Shield, ArrowLeft, AlertTriangle, X } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import GlobalSearch from './GlobalSearch';
 import NotificationsDropdown from './NotificationsDropdown';
 import FavoritesDropdown from '../ui/FavoritesDropdown';
 import RecentItemsDropdown from '../ui/RecentItemsDropdown';
 import SyncIndicator from '../ui/SyncIndicator';
-import { useOfflineSync } from '../../hooks/useOfflineSync';
+
 import { getUnreadCount } from '../../services/notificationService';
 import { isPushSupported, getPushPermission, requestPushPermission } from '../../services/pushService';
 import { getSuggestionsCount } from '../../services/suggestionsService';
@@ -42,7 +42,7 @@ export default function Header({ onMenuClick }) {
   const recentRef = useRef(null);
   const ref = useRef(null);
   const isRTL = i18n.language === 'ar';
-  const { isOnline, pendingCount, isSyncing, syncResult } = useOfflineSync();
+
   const [unreadCount, setUnreadCount] = useState(0);
   const [suggestionsCount, setSuggestionsCount] = useState(0);
   const [changelogUnseen, setChangelogUnseen] = useState(0);
@@ -132,24 +132,6 @@ export default function Header({ onMenuClick }) {
           <Menu size={22} />
         </button>
 
-        {/* Connection dot indicator */}
-        <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: isOnline ? '#22c55e' : '#ef4444',
-            display: 'inline-block',
-            flexShrink: 0,
-            boxShadow: isOnline ? '0 0 4px rgba(34,197,94,0.4)' : '0 0 4px rgba(239,68,68,0.4)',
-            transition: 'background 0.3s, box-shadow 0.3s',
-          }}
-          title={isOnline
-            ? (isRTL ? 'متصل' : 'Online')
-            : (isRTL ? 'غير متصل' : 'Offline')
-          }
-        />
-
         {/* Search button - full on desktop, icon-only on mobile */}
         <button data-tour="search" onClick={() => setShowSearch(true)} className={`hidden md:flex w-full h-10 rounded-[10px] items-center gap-2.5 border border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-input-dark cursor-pointer text-content-muted dark:text-brand-400 text-sm font-[inherit] ps-3.5 pe-2.5`}>
           <Search size={16} className="shrink-0" />
@@ -164,32 +146,6 @@ export default function Header({ onMenuClick }) {
         </button>
       </div>
       <div className="flex items-center gap-1">
-        {/* Offline / Syncing / Synced indicator */}
-        {!isOnline && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-[11px] font-semibold me-1">
-            <WifiOff size={13} />
-            <span className="hidden sm:inline">{isRTL ? 'غير متصل' : 'Offline'}</span>
-            {pendingCount > 0 && (
-              <span className="bg-red-500 text-white text-[10px] rounded-full px-1.5 py-0 min-w-[18px] text-center leading-[18px]">
-                {pendingCount}
-              </span>
-            )}
-          </div>
-        )}
-        {isOnline && isSyncing && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-500 text-[11px] font-semibold me-1">
-            <RefreshCw size={13} className="animate-spin" />
-            <span className="hidden sm:inline">
-              {isRTL ? `مزامنة ${pendingCount}...` : `Syncing ${pendingCount}...`}
-            </span>
-          </div>
-        )}
-        {isOnline && !isSyncing && syncResult && syncResult.success > 0 && (
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold me-1">
-            <CheckCircle2 size={13} />
-            <span className="hidden sm:inline">{isRTL ? 'تمت المزامنة' : 'Synced'}</span>
-          </div>
-        )}
         <div ref={favRef} className="relative">
           <button
             data-tour="favorites"

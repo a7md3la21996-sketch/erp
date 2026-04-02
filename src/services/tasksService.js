@@ -2,7 +2,7 @@ import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
-import { enqueue } from '../lib/offlineQueue';
+
 
 // ── Team cache ────────────────────────────────────────────────────────────
 const _teamCache = { key: null, ids: null, ts: 0 };
@@ -88,9 +88,7 @@ export async function createTask(data) {
     return d;
   } catch (err) {
     reportError('tasksService', 'createTask', err);
-    const mock = { ...data, id: 'temp_' + Date.now(), created_at: new Date().toISOString(), _offline: true };
-    enqueue('task', 'create', mock);
-    return mock;
+    throw err;
   }
 }
 
@@ -103,8 +101,7 @@ export async function updateTask(id, updates) {
     return data;
   } catch (err) {
     reportError('tasksService', 'updateTask', err);
-    enqueue('task', 'update', { _id: id, ...updates });
-    return { id, ...updates, _offline: true };
+    throw err;
   }
 }
 
@@ -115,6 +112,6 @@ export async function deleteTask(id) {
     logDelete('task', id, oldData);
   } catch (err) {
     reportError('tasksService', 'deleteTask', err);
-    enqueue('task', 'delete', { id });
+    throw err;
   }
 }

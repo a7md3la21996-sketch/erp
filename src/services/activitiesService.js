@@ -2,7 +2,7 @@ import { reportError } from '../utils/errorReporter';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';
-import { enqueue } from '../lib/offlineQueue';
+
 
 // ── Team cache (shared with contactsService pattern) ──────────────────────
 const _teamCache = { key: null, ids: null, ts: 0 };
@@ -190,10 +190,7 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
     }
     return data;
   } catch (err) { reportError('activitiesService', 'query', err);
-    const tempId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    const tempActivity = { ...payload, id: tempId, user_name_ar: 'أنت', user_name_en: 'You', _offline: true };
-    enqueue('activity', 'create', tempActivity);
-    return tempActivity;
+    throw err;
   }
 }
 
@@ -208,7 +205,7 @@ export async function updateActivity(id, updates) {
     if (error) throw error;
     return data;
   } catch (err) { reportError('activitiesService', 'query', err);
-    return { id, ...updates, _offline: true };
+    throw err;
   }
 }
 
@@ -219,6 +216,6 @@ export async function deleteActivity(id) {
     if (error) throw error;
     logDelete('activity', id, oldData);
   } catch (err) { reportError('activitiesService', 'query', err);
-    enqueue('activity', 'delete', { id });
+    throw err;
   }
 }

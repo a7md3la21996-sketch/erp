@@ -1,7 +1,7 @@
 import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
-import { enqueue } from '../lib/offlineQueue';
+
 
 export async function fetchUnitsByContact(contactId) {
   try {
@@ -50,9 +50,7 @@ export async function createUnit(unitData) {
     return data;
   } catch (err) {
     reportError('resaleUnitsService', 'createUnit', err);
-    unit._offline = true;
-    enqueue('resale_units', 'create', unit);
-    return unit;
+    throw err;
   }
 }
 
