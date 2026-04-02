@@ -524,7 +524,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     },
   ].filter(s => s.rows.length > 0);
 
-  const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.06] text-xs';
+  const rowCls = 'flex justify-between items-center py-2 border-b border-brand-500/[0.06] text-xs gap-3';
 
   // ── Date grouping helper ────────────────────────────────────────────
   const getDateGroup = (dateStr) => {
@@ -1457,9 +1457,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       <div className="px-3.5">
                         {group.rows.map(r => (
                           <div key={r.label} className={rowCls}>
-                            <span className="text-content-muted dark:text-content-muted-dark">{r.label}</span>
+                            <span className="text-content-muted dark:text-content-muted-dark shrink-0">{r.label}</span>
                             <div className="flex items-center gap-1.5">
-                              <span className="text-content dark:text-content-dark font-medium max-w-[65%] text-end break-words" style={r.color ? { color: r.color } : undefined}>{r.val}</span>
+                              <span className="text-content dark:text-content-dark font-medium text-end whitespace-nowrap" style={r.color ? { color: r.color } : undefined}>{r.val}</span>
                               {r.action && <button onClick={r.action.onClick} className="text-[9px] text-brand-500 bg-brand-500/10 px-1.5 py-0.5 rounded border-none cursor-pointer">{r.action.label}</button>}
                             </div>
                           </div>
