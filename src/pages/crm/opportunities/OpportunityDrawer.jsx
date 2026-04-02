@@ -346,7 +346,7 @@ export default function OpportunityDrawer({
     let cancelled = false;
     setLoadingActivities(true);
     setActivityLimit(5);
-    fetchContactActivities(selectedOpp.contact_id)
+    fetchContactActivities(selectedOpp.contact_id, { role: viewerProfile?.role, userId: viewerProfile?.id, teamId: viewerProfile?.team_id })
       .then(data => { if (!cancelled) { setAllActivities(data || []); setDrawerActivities((data || []).slice(0, 5)); } })
       .catch(() => { if (!cancelled) { setAllActivities([]); setDrawerActivities([]); } })
       .finally(() => { if (!cancelled) setLoadingActivities(false); });
@@ -642,6 +642,9 @@ export default function OpportunityDrawer({
                         contact_id: selectedOpp.contact_id,
                         entity_type: 'opportunity',
                         entity_id: selectedOpp.id,
+                        user_id: viewerProfile?.id || null,
+                        user_name_ar: viewerProfile?.full_name_ar || '',
+                        user_name_en: viewerProfile?.full_name_en || '',
                       });
                       setAllActivities(prev => [act, ...prev]);
                       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
