@@ -564,8 +564,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
     // Get who created this item
     const createdBy = (() => {
-      if (item._type === 'activity') return isRTL ? (item.users?.full_name_ar || 'مجهول') : (item.users?.full_name_en || item.users?.full_name_ar || 'Unknown');
-      if (item._type === 'task') return isRTL ? (item.users?.full_name_ar || item.created_by_name || 'مجهول') : (item.users?.full_name_en || item.users?.full_name_ar || item.created_by_name || 'Unknown');
+      if (item._type === 'activity') return isRTL ? (item.users?.full_name_ar || item.user_name_ar || item.user_name_en || 'مجهول') : (item.users?.full_name_en || item.user_name_en || item.users?.full_name_ar || item.user_name_ar || 'Unknown');
+      if (item._type === 'task') return isRTL ? (item.users?.full_name_ar || item.assigned_to_name_ar || item.created_by_name || 'مجهول') : (item.users?.full_name_en || item.assigned_to_name_en || item.users?.full_name_ar || item.created_by_name || 'Unknown');
       if (item._type === 'opportunity') return isRTL ? (item.users?.full_name_ar || item.agent_name || 'مجهول') : (item.users?.full_name_en || item.users?.full_name_ar || item.agent_name || 'Unknown');
       if (item._type === 'comment') return item.author_name || (isRTL ? 'مجهول' : 'Unknown');
       if (item._type === 'document') return item.uploaded_by || (isRTL ? 'النظام' : 'System');
