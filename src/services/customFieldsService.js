@@ -1,3 +1,4 @@
+// TODO: Migrate to Supabase — currently reads from localStorage, writes sync to system_config
 // ── Custom Fields Service ────────────────────────────────────────────────
 // localStorage with Supabase sync for custom field definitions and values
 

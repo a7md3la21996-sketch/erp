@@ -36,12 +36,13 @@ export function printElement(elementId) {
   const el = document.getElementById(elementId);
   if (!el) return;
   const printWindow = window.open('', '_blank');
-  printWindow.document.write(`
-    <!DOCTYPE html><html><head><title>Print</title>
-    <style>body{margin:0;padding:0;} @media print{body{margin:0;}}</style>
-    </head><body>${el.innerHTML}</body></html>
-  `);
-  printWindow.document.close();
+  const doc = printWindow.document;
+  doc.open();
+  doc.write('<!DOCTYPE html><html><head><title>Print</title><style>body{margin:0;padding:0;} @media print{body{margin:0;}}</style></head><body></body></html>');
+  doc.close();
+  // Clone DOM instead of injecting innerHTML string to prevent XSS
+  const cloned = el.cloneNode(true);
+  doc.body.appendChild(cloned);
   printWindow.focus();
   printWindow.print();
   printWindow.close();

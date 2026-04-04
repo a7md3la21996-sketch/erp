@@ -52,36 +52,36 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
   const [annUnread, setAnnUnread] = useState(0);
   useEffect(() => {
     const userId = profile?.id || profile?.email || '';
-    if (userId) setAnnUnread(getAnnouncementUnread(userId));
-    const handler = () => { if (userId) setAnnUnread(getAnnouncementUnread(userId)); };
+    if (userId) getAnnouncementUnread(userId).then(c => setAnnUnread(c)).catch(() => {});
+    const handler = () => { if (userId) getAnnouncementUnread(userId).then(c => setAnnUnread(c)).catch(() => {}); };
     window.addEventListener('platform_announcement', handler);
     return () => window.removeEventListener('platform_announcement', handler);
   }, [profile]);
   // Refresh unread on location change (user may have read announcements)
   useEffect(() => {
     const userId = profile?.id || profile?.email || '';
-    if (userId) setAnnUnread(getAnnouncementUnread(userId));
+    if (userId) getAnnouncementUnread(userId).then(c => setAnnUnread(c)).catch(() => {});
   }, [location.pathname, profile]);
 
   // Approval pending count
   const [approvalPending, setApprovalPending] = useState(0);
   useEffect(() => {
-    setApprovalPending(getApprovalPendingCount());
-    const handler = () => setApprovalPending(getApprovalPendingCount());
+    getApprovalPendingCount().then(c => setApprovalPending(c)).catch(() => {});
+    const handler = () => getApprovalPendingCount().then(c => setApprovalPending(c)).catch(() => {});
     window.addEventListener('platform_approval_change', handler);
     return () => window.removeEventListener('platform_approval_change', handler);
   }, []);
-  useEffect(() => { setApprovalPending(getApprovalPendingCount()); }, [location.pathname]);
+  useEffect(() => { getApprovalPendingCount().then(c => setApprovalPending(c)).catch(() => {}); }, [location.pathname]);
 
   // Email unread count
   const [emailUnread, setEmailUnread] = useState(0);
   useEffect(() => {
-    setEmailUnread(getEmailStats().unread);
-    const handler = () => setEmailUnread(getEmailStats().unread);
+    getEmailStats().then(s => setEmailUnread(s.unread)).catch(() => {});
+    const handler = () => getEmailStats().then(s => setEmailUnread(s.unread)).catch(() => {});
     window.addEventListener('platform_emails_changed', handler);
     return () => window.removeEventListener('platform_emails_changed', handler);
   }, []);
-  useEffect(() => { setEmailUnread(getEmailStats().unread); }, [location.pathname]);
+  useEffect(() => { getEmailStats().then(s => setEmailUnread(s.unread)).catch(() => {}); }, [location.pathname]);
 
   // Flyout menu for collapsed sidebar
   const [flyoutMenu, setFlyoutMenu] = useState(null);

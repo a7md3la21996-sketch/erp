@@ -3,23 +3,7 @@ import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { addToSyncQueue } from './syncService';
-
-// ── Team cache ────────────────────────────────────────────────────────────
-const _teamCache = { key: null, ids: null, ts: 0 };
-async function getTeamMemberIds(role, teamId) {
-  if (!teamId) return [];
-  const ck = `${role}:${teamId}`;
-  if (_teamCache.key === ck && _teamCache.ids && Date.now() - _teamCache.ts < 60000) return _teamCache.ids;
-  const teamIds = [teamId];
-  if (role === 'sales_manager') {
-    const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-    if (ch) teamIds.push(...ch.map(c => c.id));
-  }
-  const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
-  const ids = (members || []).map(m => m.id).filter(Boolean);
-  _teamCache.key = ck; _teamCache.ids = ids; _teamCache.ts = Date.now();
-  return ids;
-}
+import { getTeamMemberIds } from '../utils/teamHelper';
 
 // ── Unit blocking helpers ──
 export async function checkUnitAvailability(unitId) {
@@ -30,7 +14,7 @@ export async function checkUnitAvailability(unitId) {
     if (unit.status === 'sold') return { available: false, reason: 'sold', unit };
     if (unit.status === 'reserved') return { available: false, reason: 'reserved', unit };
     return { available: true, unit };
-  } catch { return { available: true }; }
+  } catch (err) { reportError('opportunitiesService', 'checkUnitAvailability', err); return { available: true }; }
 }
 
 async function updateUnitStatus(unitId, newStatus) {
@@ -62,6 +46,9 @@ async function enrichOpps(opps) {
         ? supabase.from('projects').select('id, name_ar, name_en').in('id', projectIds)
         : { data: [] },
     ]);
+    if (contactsRes.error) reportError('opportunitiesService', 'enrichOpps.contacts', contactsRes.error);
+    if (usersRes.error) reportError('opportunitiesService', 'enrichOpps.users', usersRes.error);
+    if (projectsRes.error) reportError('opportunitiesService', 'enrichOpps.projects', projectsRes.error);
     contacts = contactsRes.data || [];
     users = usersRes.data || [];
     projects = projectsRes.data || [];

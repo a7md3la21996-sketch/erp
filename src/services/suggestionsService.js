@@ -1,3 +1,4 @@
+// TODO: Migrate to Supabase — currently reads CRM data from localStorage keys
 import { syncToSupabase } from '../utils/supabaseSync';
 /**
  * Smart Suggestions / AI Insights Engine

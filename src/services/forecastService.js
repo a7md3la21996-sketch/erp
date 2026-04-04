@@ -1,3 +1,4 @@
+// TODO: Migrate to Supabase — currently reads opportunities from localStorage
 import { syncToSupabase } from '../utils/supabaseSync';
 /**
  * Sales Forecasting Service

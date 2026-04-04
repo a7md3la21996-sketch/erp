@@ -1,24 +1,7 @@
 import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
-
-// ── Team cache ────────────────────────────────────────────────────────────
-const _teamCache = { key: null, ids: null, names: null, ts: 0 };
-async function getTeamMemberIds(role, teamId) {
-  if (!teamId) return [];
-  const ck = `${role}:${teamId}`;
-  if (_teamCache.key === ck && _teamCache.ids && Date.now() - _teamCache.ts < 60000) return _teamCache.ids;
-  const teamIds = [teamId];
-  if (role === 'sales_manager') {
-    const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-    if (ch) teamIds.push(...ch.map(c => c.id));
-  }
-  const { data: members } = await supabase.from('users').select('id, full_name_en').in('team_id', teamIds);
-  const ids = (members || []).map(m => m.id).filter(Boolean);
-  const names = (members || []).map(m => m.full_name_en).filter(Boolean);
-  _teamCache.key = ck; _teamCache.ids = ids; _teamCache.names = names; _teamCache.ts = Date.now();
-  return ids;
-}
+import { getTeamMemberIds } from '../utils/teamHelper';
 
 async function applyRoleFilter(query, field, { role, userId, teamId } = {}) {
   if (role === 'sales_agent' && userId) {

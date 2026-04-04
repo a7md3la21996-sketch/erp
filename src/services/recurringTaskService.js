@@ -1,3 +1,4 @@
+// TODO: Migrate to Supabase — currently entirely localStorage-based
 import { syncToSupabase } from '../utils/supabaseSync';
 import { createNotification } from './notificationsService';
 

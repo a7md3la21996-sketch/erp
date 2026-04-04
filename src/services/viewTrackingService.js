@@ -1,5 +1,6 @@
 import supabase from '../lib/supabase';
 import { parseDevice } from './sessionService';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 
 const STORAGE_KEY = 'platform_view_logs';
 const MAX_LOGS = 2000; // reduced from 5000 to prevent localStorage bloat
@@ -56,7 +57,7 @@ export async function logView({ entityType, entityId, entityName, viewer }) {
 
   // Try Supabase
   try {
-    await supabase.from('view_logs').insert(entry);
+    await supabase.from('view_logs').insert([stripInternalFields(entry)]);
   } catch {}
 
   return entry;

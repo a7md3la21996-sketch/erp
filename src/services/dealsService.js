@@ -3,6 +3,7 @@ import supabase from '../lib/supabase';
 import { logCreate } from './auditService';
 import { reportError } from '../utils/errorReporter';
 import { addToSyncQueue } from './syncService';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 
 // ── Team cache ────────────────────────────────────────────────────────────
 const _teamCache = { key: null, names: null, ts: 0 };
@@ -133,7 +134,7 @@ export async function createDealFromOpportunity(opp, existingDeals = [], extraFi
   try {
     const { data, error } = await supabase
       .from('deals')
-      .insert([{ ...dealData, created_at: new Date().toISOString() }])
+      .insert([stripInternalFields({ ...dealData, created_at: new Date().toISOString() })])
       .select('*')
       .single();
     if (error) throw error;

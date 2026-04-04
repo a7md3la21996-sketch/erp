@@ -2,24 +2,7 @@ import { reportError } from '../utils/errorReporter';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';
-
-
-// ── Team cache (shared with contactsService pattern) ──────────────────────
-const _teamCache = { key: null, ids: null, ts: 0 };
-async function getTeamMemberIds(role, teamId) {
-  if (!teamId) return [];
-  const ck = `${role}:${teamId}`;
-  if (_teamCache.key === ck && _teamCache.ids && Date.now() - _teamCache.ts < 60000) return _teamCache.ids;
-  const teamIds = [teamId];
-  if (role === 'sales_manager') {
-    const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', teamId);
-    if (ch) teamIds.push(...ch.map(c => c.id));
-  }
-  const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
-  const ids = (members || []).map(m => m.id).filter(Boolean);
-  _teamCache.key = ck; _teamCache.ids = ids; _teamCache.ts = Date.now();
-  return ids;
-}
+import { getTeamMemberIds } from '../utils/teamHelper';
 
 // ── Activity Types ─────────────────────────────────────────────────────────
 export const ACTIVITY_TYPES = {
@@ -76,7 +59,7 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
     }
 
     const { data, error, count } = await query;
-    if (error) { /* silent */ }
+    if (error) { reportError('activitiesService', 'fetchActivities', error); }
     if (!error && data?.length) supaData = data.map(a => ({
       ...a,
       user_name_ar: a.users?.full_name_ar || a.user_name_ar,
@@ -86,6 +69,7 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
 
     if (isServerPaginated) return { data: supaData, count: count || 0 };
   } catch (err) {
+    reportError('activitiesService', 'fetchActivities', err);
     if (isServerPaginated) return { data: [], count: 0 };
     return [];
   }
@@ -107,7 +91,7 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
         .limit(1)
         .maybeSingle();
       if (existing) scheduledActivityId = existing.id;
-    } catch {}
+    } catch (err) { reportError('activitiesService', 'createActivity.findScheduled', err); }
   }
 
   if (scheduledActivityId) {
@@ -131,13 +115,14 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
               updates.first_response_at = new Date().toISOString();
             }
             await supabase.from('contacts').update(updates).eq('id', entityId);
-          } catch {
+          } catch (err) {
+            reportError('activitiesService', 'createActivity.updateScore', err);
             await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
           }
         }
         return data;
       }
-    } catch {}
+    } catch (err) { reportError('activitiesService', 'createActivity.completeScheduled', err); }
   }
 
   // Auto-fetch user name from users table if not provided
@@ -147,7 +132,7 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
     try {
       const { data: userRow } = await supabase.from('users').select('full_name_ar, full_name_en').eq('id', userId).maybeSingle();
       if (userRow) { finalNameAr = userRow.full_name_ar; finalNameEn = userRow.full_name_en; }
-    } catch { /* best effort */ }
+    } catch (err) { reportError('activitiesService', 'createActivity.fetchUserName', err); }
   }
 
   const payload = {

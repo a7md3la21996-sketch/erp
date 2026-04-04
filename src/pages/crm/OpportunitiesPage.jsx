@@ -600,8 +600,8 @@ export default function OpportunitiesPage() {
           value: opp.budget ? `${Number(opp.budget).toLocaleString()} EGP` : '—',
           agentId: opp.assigned_to || 'all',
         });
-        const approvalThreshold = getAutoApproveThreshold();
-        if ((opp.budget || 0) >= approvalThreshold && !getApprovalByEntity('deal', opp.id)) {
+        const approvalThreshold = await getAutoApproveThreshold();
+        if ((opp.budget || 0) >= approvalThreshold && !(await getApprovalByEntity('deal', opp.id))) {
           createApprovalRequest({
             type: 'deal',
             entity_id: opp.id,
@@ -718,8 +718,8 @@ export default function OpportunitiesPage() {
         agentId: updates.assigned_to || selectedOpp?.assigned_to || 'all',
       });
       const budgetVal2 = Number(updates.budget) || Number(selectedOpp?.budget) || 0;
-      const approvalThreshold2 = getAutoApproveThreshold();
-      if (budgetVal2 >= approvalThreshold2 && !getApprovalByEntity('deal', oppId)) {
+      const approvalThreshold2 = await getAutoApproveThreshold();
+      if (budgetVal2 >= approvalThreshold2 && !(await getApprovalByEntity('deal', oppId))) {
         createApprovalRequest({
           type: 'deal',
           entity_id: oppId,

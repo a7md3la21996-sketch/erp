@@ -4,8 +4,10 @@
  * Max: 500 entries
  */
 
+import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { showPushNotification } from './pushService';
+import { stripInternalFields } from '../utils/sanitizeForSupabase';
 
 const STORAGE_KEY = 'platform_notifications';
 const PREFS_KEY = 'platform_notification_preferences';
@@ -81,7 +83,7 @@ export async function getNotifications({ limit = 50, offset = 0, unreadOnly = fa
     if (error) throw error;
     if (data) return { data, total: count || data.length };
   } catch (err) {
-    console.warn('Supabase fetch (notifications) failed, falling back to localStorage:', err);
+    reportError('notificationService', 'getNotifications', err);
   }
 
   // Existing localStorage logic
@@ -136,9 +138,9 @@ export async function addNotification({ type, title, titleEn, message, messageEn
 
   // Sync to Supabase
   try {
-    await supabase.from('notifications').insert([notification]);
+    await supabase.from('notifications').insert([stripInternalFields(notification)]);
   } catch (err) {
-    console.warn('Supabase insert (notifications) failed, localStorage used as fallback:', err);
+    reportError('notificationService', 'addNotification', err);
   }
 
   return notification;
@@ -156,7 +158,7 @@ export async function markAsRead(id) {
     const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id);
     if (error) throw error;
   } catch (err) {
-    console.warn('Supabase update (markAsRead notification) failed, localStorage used as fallback:', err);
+    reportError('notificationService', 'markAsRead', err);
   }
 }
 
@@ -173,7 +175,7 @@ export async function markAllAsRead() {
     const { error } = await supabase.from('notifications').update({ read: true }).eq('read', false);
     if (error) throw error;
   } catch (err) {
-    console.warn('Supabase update (markAllAsRead) failed, localStorage used as fallback:', err);
+    reportError('notificationService', 'markAllAsRead', err);
   }
 }
 
@@ -189,7 +191,7 @@ export async function deleteNotification(id) {
     const { error } = await supabase.from('notifications').delete().eq('id', id);
     if (error) throw error;
   } catch (err) {
-    console.warn('Supabase delete (notification) failed, localStorage used as fallback:', err);
+    reportError('notificationService', 'deleteNotification', err);
   }
 }
 
@@ -204,7 +206,7 @@ export async function clearAll() {
     const { error } = await supabase.from('notifications').delete().neq('id', '');
     if (error) throw error;
   } catch (err) {
-    console.warn('Supabase clearAll (notifications) failed, localStorage used as fallback:', err);
+    reportError('notificationService', 'clearAll', err);
   }
 }
 
@@ -219,7 +221,7 @@ export async function getUnreadCount(userId) {
     if (error) throw error;
     if (count !== null) return count;
   } catch (err) {
-    console.warn('Supabase count (unread notifications) failed:', err);
+    reportError('notificationService', 'getUnreadCount', err);
   }
   return 0;
 }
@@ -267,7 +269,7 @@ export async function searchNotifications(query) {
       });
     }
   } catch (err) {
-    console.warn('Supabase search (notifications) failed, falling back to localStorage:', err);
+    reportError('notificationService', 'searchNotifications', err);
   }
 
   return load().filter(n => {
