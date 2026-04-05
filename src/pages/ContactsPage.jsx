@@ -27,7 +27,7 @@ import useCrmPermissions from '../hooks/useCrmPermissions';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 
-import { SOURCE_LABELS, SOURCE_EN, TYPE, MOCK, normalizePhone } from './crm/contacts/constants';
+import { SOURCE_LABELS, SOURCE_EN, TYPE, TEMP, MOCK, normalizePhone } from './crm/contacts/constants';
 import AddContactModal from './crm/contacts/AddContactModal';
 import LogCallModal from './crm/contacts/LogCallModal';
 import QuickTaskModal from './crm/contacts/QuickTaskModal';
@@ -395,6 +395,7 @@ export default function ContactsPage() {
         filters: {
           search: search || undefined,
           contact_type: filterType !== 'all' ? filterType : undefined,
+          temperature: filterTemp !== 'all' ? filterTemp : undefined,
           showBlacklisted: showBlacklisted || undefined,
           department: (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined,
           assigned_to_name: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
@@ -466,7 +467,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted, globalFilter?.department, globalFilter?.agentName, smartFilters]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, showBlacklisted, globalFilter?.department, globalFilter?.agentName, smartFilters]);
 
   useEffect(() => {
     if (profile) loadContactsData();
@@ -517,13 +518,15 @@ export default function ContactsPage() {
   }, [highlightId, loading, contacts]);
 
   // Stats — use server total, page counts for type breakdown
+  const [filterTemp, setFilterTemp] = useState('all');
   const stats = useMemo(() => {
-    const counts = { total: totalContacts || contacts.length, blacklisted: 0, disqualified: 0 };
+    const counts = { total: totalContacts || contacts.length, blacklisted: 0, disqualified: 0, hot: 0, warm: 0, cool: 0, cold: 0 };
     Object.keys(TYPE).forEach(k => { counts[k] = 0; });
     contacts.forEach(c => {
       if (c.contact_type && counts[c.contact_type] !== undefined) counts[c.contact_type]++;
       if (c.is_blacklisted) counts.blacklisted++;
       if (c.contact_status === 'disqualified') counts.disqualified++;
+      if (c.temperature && counts[c.temperature] !== undefined) counts[c.temperature]++;
     });
     return counts;
   }, [contacts, totalContacts]);
@@ -690,6 +693,29 @@ export default function ContactsPage() {
         <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
           <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
         </button>
+      </div>
+
+      {/* Temperature Chips */}
+      <div className="flex gap-2 mb-3.5 flex-wrap items-center">
+        <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium me-1">{isRTL ? 'الحرارة:' : 'Temp:'}</span>
+        {[
+          { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB', Icon: null },
+          ...Object.entries(TEMP).map(([k, v]) => ({
+            label: isRTL ? v.labelAr : v.label, value: k, count: stats[k] || 0, color: v.color, Icon: v.Icon,
+          })),
+        ].map(s => {
+          const active = filterTemp === s.value;
+          return (
+          <button key={s.value} onClick={() => setFilterTemp(s.value)}
+            className={`px-3 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+            style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
+            {s.Icon && <s.Icon size={12} />}
+            {s.label} <span
+              className={`rounded-xl px-2 py-px text-[10px] ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+              style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
+          </button>
+          );
+        })}
       </div>
 
       {/* Smart Filter Bar */}
