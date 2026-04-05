@@ -519,7 +519,7 @@ export default function ContactsPage() {
     }
   }, [highlightId, loading, contacts]);
 
-  // Stats
+  // Stats — fetched from Supabase (real counts across all contacts)
   const STATUS_DEFS = [
     { value: 'new', label: 'جديد', labelEn: 'New', color: '#4A7AAB' },
     { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted', color: '#6B8DB5' },
@@ -529,16 +529,53 @@ export default function ContactsPage() {
     { value: 're_engage', label: 'إعادة تواصل', labelEn: 'Re-engage', color: '#8B5CF6' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
   ];
-  const stats = useMemo(() => {
-    const counts = { total: totalContacts || contacts.length, blacklisted: 0, hot: 0, warm: 0, cool: 0, cold: 0 };
-    STATUS_DEFS.forEach(s => { counts[s.value] = 0; });
-    contacts.forEach(c => {
-      if (c.contact_status && counts[c.contact_status] !== undefined) counts[c.contact_status]++;
-      if (c.is_blacklisted) counts.blacklisted++;
-      if (c.temperature && counts[c.temperature] !== undefined) counts[c.temperature]++;
-    });
-    return counts;
-  }, [contacts, totalContacts]);
+  const [stats, setStats] = useState({ total: 0, blacklisted: 0, hot: 0, warm: 0, cool: 0, cold: 0 });
+  const loadStats = useCallback(async () => {
+    try {
+      const deptFilter = (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : null;
+      const agentFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
+
+      // Base query builder
+      const baseQ = () => {
+        let q = supabase.from('contacts').select('id', { count: 'exact', head: true });
+        if (deptFilter) q = q.eq('department', deptFilter);
+        if (agentFilter) q = q.filter('assigned_to_names', 'cs', JSON.stringify([agentFilter]));
+        // Role-based filtering for sales_agent
+        if (profile?.role === 'sales_agent' && profile?.id) {
+          const myName = profile?.full_name_en || profile?.full_name_ar;
+          if (myName) q = q.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+        }
+        return q;
+      };
+
+      // Parallel count queries
+      const [totalRes, blacklistRes, ...statusRes] = await Promise.all([
+        baseQ(),
+        baseQ().eq('is_blacklisted', true),
+        ...STATUS_DEFS.map(s => baseQ().eq('contact_status', s.value)),
+      ]);
+
+      // Temperature counts
+      const tempKeys = ['hot', 'warm', 'cool', 'cold'];
+      const tempRes = await Promise.all(tempKeys.map(t => baseQ().eq('temperature', t)));
+
+      // Type counts
+      const typeKeys = Object.keys(TYPE);
+      const typeRes = await Promise.all(typeKeys.map(t => baseQ().eq('contact_type', t)));
+
+      const counts = {
+        total: totalRes.count || 0,
+        blacklisted: blacklistRes.count || 0,
+      };
+      STATUS_DEFS.forEach((s, i) => { counts[s.value] = statusRes[i].count || 0; });
+      tempKeys.forEach((t, i) => { counts[t] = tempRes[i].count || 0; });
+      typeKeys.forEach((t, i) => { counts[t] = typeRes[i].count || 0; });
+
+      setStats(counts);
+    } catch { /* ignore */ }
+  }, [profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar, globalFilter?.department, globalFilter?.agentName]);
+
+  useEffect(() => { if (profile) loadStats(); }, [profile, loadStats]);
 
   // Clear selection when filters change
   useEffect(() => { setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);
