@@ -38,7 +38,7 @@ import {
 import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
-  Chip, ScorePill, getDeptStages, deptStageLabel,
+  Chip, ScorePill, PhoneCell, getDeptStages, deptStageLabel,
 } from './constants';
 
 const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock };
@@ -848,51 +848,232 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     { key: 'data', label: isRTL ? 'البيانات' : 'Data', icon: Briefcase },
   ];
 
+  // ── Status helpers for hero section ──────────────────────────────────────
+  const getContactStatus = () => {
+    const myName = profile?.full_name_en || profile?.full_name_ar;
+    const statuses = contact.agent_statuses || {};
+    const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
+    const statusLabels = isRTL
+      ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' }
+      : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' };
+    const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'interested' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : s === 'follow_up' ? '#8B5CF6' : '#6B8DB5';
+    if (isAdminOrOps && Object.keys(statuses).length > 0) {
+      const entries = Object.entries(statuses);
+      const primary = entries[0];
+      return { label: statusLabels[primary[1]] || primary[1], color: statusColor(primary[1]) };
+    }
+    const myStatus = statuses[myName] || contact.contact_status || 'new';
+    return { label: statusLabels[myStatus] || myStatus, color: statusColor(myStatus) };
+  };
+  const contactStatus = getContactStatus();
+
+  // ── Info grid items (only non-empty) ───────────────────────────────────
+  const infoGridItems = [
+    contact.phone && { label: isRTL ? 'الهاتف' : 'Phone', val: contact.phone, isPhone: true },
+    contact.phone2 && { label: isRTL ? 'الهاتف 2' : 'Phone 2', val: contact.phone2, isPhone: true },
+    contact.email && { label: isRTL ? 'الإيميل' : 'Email', val: contact.email },
+    contact.company && { label: isRTL ? 'الشركة' : 'Company', val: contact.company },
+    contact.job_title && { label: isRTL ? 'المسمى' : 'Title', val: contact.job_title },
+    (contact.budget_min || contact.budget_max) && { label: isRTL ? 'الميزانية' : 'Budget', val: fmtBudget(contact.budget_min, contact.budget_max, isRTL) },
+    contact.source && { label: isRTL ? 'المصدر' : 'Source', val: isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source) },
+    contact.campaign_name && { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name },
+    contact.created_at && { label: isRTL ? 'الإنشاء' : 'Created', val: new Date(contact.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
+  ].filter(Boolean);
+
   return (
     <>
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); }} />}
     <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
-      <div onClick={onClose} className="flex-1 bg-black/45" />
-      <div className={`contact-drawer w-[440px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
+      {/* Backdrop */}
+      <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px]" />
 
-        {/* ═══ COMPACT HEADER ═══ */}
-        <div className="shrink-0 bg-gradient-to-b from-surface-bg to-surface-card dark:from-[#1B3347] dark:to-surface-card-dark">
-          {/* Top bar — close + edit */}
-          <div className="flex justify-between items-center px-5 pt-3.5 pb-0">
-            <div className="flex items-center gap-1">
-              <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><X size={18} /></button>
-              {onPrev && <button onClick={onPrev} title={isRTL ? 'السابق' : 'Previous'} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><ChevronUp size={18} /></button>}
-              {onNext && <button onClick={onNext} title={isRTL ? 'التالي' : 'Next'} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><ChevronDown size={18} /></button>}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={handleToggleFav}
-                title={isFav ? (isRTL ? 'إزالة من المفضلة' : 'Remove from Favorites') : (isRTL ? 'إضافة للمفضلة' : 'Add to Favorites')}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: 4,
-                  borderRadius: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  color: isFav ? '#F59E0B' : (undefined),
-                  transition: 'color 0.15s',
-                }}
-                className={isFav ? '' : 'text-content-muted dark:text-content-muted-dark'}
-              >
-                <Star size={16} fill={isFav ? '#F59E0B' : 'none'} />
-              </button>
-              <Button variant="secondary" size="sm" onClick={() => setShowEdit(true)} className="!text-xs !px-2.5 !py-1">
-                <Pencil size={12} /> {isRTL ? 'تعديل' : 'Edit'}
-              </Button>
-              <div className="relative">
-                <button onClick={() => setShowDrawerMenu(p => !p)} className={`p-1.5 rounded-lg cursor-pointer transition-colors border ${showDrawerMenu ? 'bg-brand-500 border-brand-500 text-white' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:bg-brand-500/10'}`}>
-                  <MoreVertical size={14} />
+      {/* Drawer Panel */}
+      <div className={`contact-drawer w-[480px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark`}>
+
+        {/* ═══ STICKY TOP BAR ═══ */}
+        <div className="shrink-0 sticky top-0 z-10 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark">
+          <div className="flex items-center justify-between h-11 px-3">
+            {/* Left: nav arrows */}
+            <div className="flex items-center gap-0.5">
+              {onPrev && (
+                <button onClick={onPrev} title={isRTL ? 'السابق' : 'Previous'}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
+                  <ChevronUp size={16} />
                 </button>
+              )}
+              {onNext && (
+                <button onClick={onNext} title={isRTL ? 'التالي' : 'Next'}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
+                  <ChevronDown size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Center: contact name */}
+            <span className="text-xs font-semibold text-content dark:text-content-dark truncate max-w-[200px] px-2">
+              {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+            </span>
+
+            {/* Right: close */}
+            <button onClick={onClose}
+              className="w-7 h-7 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-red-500/10 hover:text-red-500 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* ═══ SCROLLABLE CONTENT ═══ */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+
+          {/* ═══ HERO SECTION ═══ */}
+          <div className="px-5 pt-5 pb-4">
+            {/* Avatar + Name + Badges */}
+            <div className="flex flex-col items-center text-center mb-4">
+              {/* Large Avatar */}
+              <div className={`w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center text-lg font-bold mb-3 shadow-sm ${
+                contact.is_blacklisted
+                  ? 'bg-red-500/15 text-red-500 border border-red-500/25'
+                  : tp?.color
+                    ? ''
+                    : 'bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white'
+              }`}
+                style={!contact.is_blacklisted && tp?.color ? { background: `linear-gradient(135deg, ${tp.color}30, ${tp.color}15)`, color: tp.color, border: `1px solid ${tp.color}20` } : undefined}
+              >
+                {contact.is_blacklisted ? <Ban size={22} /> : initials(contact.full_name)}
+              </div>
+
+              {/* Full Name */}
+              <h2 className={`m-0 text-base font-bold leading-tight mb-1.5 ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                {contact.prefix && <span className="text-[#6B8DB5] font-medium me-1 text-sm">{contact.prefix}</span>}
+                {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+              </h2>
+
+              {/* Horizontal Chips Row */}
+              <div className="flex items-center gap-1.5 flex-wrap justify-center mb-2">
+                {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
+                {contact.department && (
+                  <Chip
+                    label={(isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : { sales: 'Sales', hr: 'HR', finance: 'Finance', marketing: 'Marketing', operations: 'Operations' })[contact.department] || contact.department}
+                    color="#8BA8C8" bg="rgba(139,168,200,0.1)"
+                  />
+                )}
+                {tempInfo && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ color: tempInfo.color, background: tempInfo.bg }}>
+                    {tempInfo.Icon && <tempInfo.Icon size={11} />}
+                    {isRTL ? tempInfo.labelAr : tempInfo.label}
+                  </span>
+                )}
+                {contact.lead_score != null && contact.lead_score > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500">
+                    {contact.lead_score}/100
+                  </span>
+                )}
+                {contact.contact_number && (
+                  <span className="text-[10px] font-mono font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.06] px-1.5 py-0.5 rounded-full">
+                    {contact.contact_number}
+                  </span>
+                )}
+              </div>
+
+              {/* Status Badge */}
+              <span className="inline-flex items-center text-[11px] font-bold px-3 py-1 rounded-full" style={{ color: contactStatus.color, background: contactStatus.color + '18', border: `1px solid ${contactStatus.color}25` }}>
+                {contactStatus.label}
+              </span>
+              {contact.is_blacklisted && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full mt-1.5 bg-red-500/10 text-red-500 border border-red-500/20">
+                  <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklisted'}
+                </span>
+              )}
+            </div>
+
+            {/* ═══ QUICK ACTIONS ROW ═══ */}
+            <div className="grid grid-cols-6 gap-1 mb-4">
+              {/* Call */}
+              {contact.phone ? (
+                <a href={`tel:${contact.phone}`} className="flex flex-col items-center gap-1 py-2 rounded-xl no-underline hover:bg-emerald-500/10 transition-colors group cursor-pointer">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
+                    <Phone size={16} className="text-emerald-500" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'اتصال' : 'Call'}</span>
+                </a>
+              ) : (
+                <div className="flex flex-col items-center gap-1 py-2 opacity-30">
+                  <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Phone size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
+                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'اتصال' : 'Call'}</span>
+                </div>
+              )}
+
+              {/* WhatsApp */}
+              {contact.phone ? (
+                <button onClick={() => setShowWAPopup(p => !p)} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-[#25D366]/10 transition-colors group">
+                  <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center group-hover:bg-[#25D366]/20 transition-colors">
+                    <MessageCircle size={16} className="text-[#25D366]" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'واتساب' : 'WA'}</span>
+                </button>
+              ) : (
+                <div className="flex flex-col items-center gap-1 py-2 opacity-30">
+                  <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><MessageCircle size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
+                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'واتساب' : 'WA'}</span>
+                </div>
+              )}
+
+              {/* Email */}
+              {contact.email ? (
+                <a href={`mailto:${contact.email}`} className="flex flex-col items-center gap-1 py-2 rounded-xl no-underline hover:bg-brand-500/10 transition-colors group cursor-pointer">
+                  <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
+                    <Mail size={16} className="text-brand-500" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'إيميل' : 'Email'}</span>
+                </a>
+              ) : (
+                <div className="flex flex-col items-center gap-1 py-2 opacity-30">
+                  <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Mail size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
+                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'إيميل' : 'Email'}</span>
+                </div>
+              )}
+
+              {/* Action */}
+              <button onClick={() => { setTab('activity'); setShowActionForm(true); }} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-brand-500/10 transition-colors group">
+                <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
+                  <Zap size={16} className="text-brand-500" />
+                </div>
+                <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'إجراء' : 'Action'}</span>
+              </button>
+
+              {/* SMS */}
+              {contact.phone ? (
+                <button onClick={() => setShowSMSModal(true)} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-brand-500/10 transition-colors group">
+                  <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
+                    <Send size={16} className="text-brand-500" />
+                  </div>
+                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'رسالة' : 'SMS'}</span>
+                </button>
+              ) : (
+                <div className="flex flex-col items-center gap-1 py-2 opacity-30">
+                  <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Send size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
+                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'رسالة' : 'SMS'}</span>
+                </div>
+              )}
+
+              {/* More menu */}
+              <div className="relative flex flex-col items-center gap-1 py-2">
+                <button onClick={() => setShowDrawerMenu(p => !p)} className="flex flex-col items-center gap-1 rounded-xl bg-transparent border-none cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors group w-full">
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${showDrawerMenu ? 'bg-brand-500 text-white' : 'bg-surface-bg dark:bg-brand-500/10 group-hover:bg-brand-500/15'}`}>
+                    <MoreVertical size={16} className={showDrawerMenu ? 'text-white' : 'text-content-muted dark:text-content-muted-dark'} />
+                  </div>
+                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'المزيد' : 'More'}</span>
+                </button>
+                {/* Dropdown Menu */}
                 {showDrawerMenu && (
-                  <div className={`absolute top-[36px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[180px] z-[100] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden`}>
+                  <div className="absolute top-[58px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[100] shadow-[0_12px_40px_rgba(27,51,71,0.18)] overflow-hidden">
                     <div className="p-1">
+                      <button onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                        <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Contact'}
+                      </button>
+                      <button onClick={handleToggleFav} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                        <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#F59E0B' : 'none'} /> {isFav ? (isRTL ? 'إزالة المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
+                      </button>
                       {onPin && (
                         <button onClick={() => { onPin(contact.id); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                           <Pin size={13} className={isPinned ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} /> {isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : (isRTL ? 'تثبيت' : 'Pin')}
@@ -908,11 +1089,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
                         </button>
                       )}
-                      {contact.phone && (
-                        <button onClick={() => { setShowSMSModal(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Send size={13} className="text-emerald-500" /> {isRTL ? 'إرسال SMS' : 'Send SMS'}
-                        </button>
-                      )}
                       <button onClick={() => { setShowPrintPreview(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                         <FileDown size={13} className="text-brand-500" /> {isRTL ? 'طباعة' : 'Print'}
                       </button>
@@ -923,7 +1099,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       )}
                       {!contact.is_blacklisted && (
                         <>
-                          <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
+                          <div className="h-px bg-edge dark:bg-edge-dark mx-1 my-0.5" />
                           <button onClick={() => { onBlacklist(contact); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
                             <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
                           </button>
@@ -934,722 +1110,705 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Avatar + Name + Company + Chips — horizontal */}
-          <div className="flex items-start gap-3.5 px-5 pt-3 pb-3">
-            <div className={`w-12 h-12 rounded-full shrink-0 flex items-center justify-center text-base font-bold ${contact.is_blacklisted ? 'bg-red-500/20 text-red-500' : 'bg-gradient-to-br from-[#2B4C6F] to-brand-500 text-white'}`}>
-              {contact.is_blacklisted ? <Ban size={20} /> : initials(contact.full_name)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className={`text-sm font-bold leading-snug mb-0.5 flex items-center gap-1.5 ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
-                <span>{contact.prefix ? <span className="text-[#6B8DB5] me-1">{contact.prefix}</span> : null}{contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}</span>
-                {contact.contact_number && <span className="text-[9px] font-mono font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.08] px-1.5 py-0.5 rounded-full shrink-0">{contact.contact_number}</span>}
-              </div>
-              <div className="flex gap-1.5 items-center flex-wrap mb-1.5">
-                {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
-                {contact.department && <Chip label={(isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : { sales: 'Sales', hr: 'HR', finance: 'Finance', marketing: 'Marketing', operations: 'Operations' })[contact.department] || contact.department} color="#8BA8C8" bg="rgba(139,168,200,0.1)" />}
-                {contact.is_blacklisted && <Chip label={isRTL ? "بلاك ليست" : "Blacklist"} color="#EF4444" bg="rgba(239,68,68,0.12)" />}
-              </div>
-              {contact.notes && (
-                <div className="text-[10.5px] text-content-muted dark:text-content-muted-dark bg-brand-500/[0.05] border border-brand-500/10 rounded-md px-2 py-1.5 mb-1.5 leading-relaxed line-clamp-2">
-                  {contact.notes}
-                </div>
-              )}
-              {(contact.source || contact.company || contact.job_title) && (
-                <div className="flex items-center gap-1.5 flex-wrap text-[10.5px] text-content-muted dark:text-content-muted-dark mb-1.5 opacity-80">
-                  {contact.source && <span>{isRTL ? (SOURCE_LABELS[contact.source] || contact.source) : (SOURCE_EN[contact.source] || contact.source)}</span>}
-                  {contact.source && (contact.company || contact.job_title) && <span className="opacity-40">·</span>}
-                  {contact.company && <span>{contact.company}</span>}
-                  {contact.company && contact.job_title && <span className="opacity-40">·</span>}
-                  {contact.job_title && <span>{contact.job_title}</span>}
-                </div>
-              )}
-              <div className="flex items-center gap-3 text-[11px] text-content-muted dark:text-content-muted-dark flex-wrap">
-                {contact.phone && (
-                  <a href={`tel:${contact.phone}`} className="flex items-center gap-1 text-content-muted dark:text-content-muted-dark no-underline hover:text-brand-500 transition-colors" dir="ltr">
-                    <Phone size={10} className="opacity-50" /> {contact.phone}
-                  </a>
-                )}
-                {contact.phone2 && (
-                  <a href={`tel:${contact.phone2}`} className="flex items-center gap-1 text-content-muted dark:text-content-muted-dark no-underline hover:text-brand-500 transition-colors" dir="ltr">
-                    <Phone size={10} className="opacity-50" /> {contact.phone2}
-                  </a>
-                )}
-                {!loadingData && agentCount > 0 && (
-                  <span className="flex items-center gap-1 opacity-70">
-                    <Users size={10} /> {agentCount} {isRTL ? 'موظف' : `agent${agentCount > 1 ? 's' : ''}`}
+            {/* ═══ WHATSAPP QUICK SEND POPUP ═══ */}
+            {showWAPopup && contact.phone && (
+              <div className="mb-4 rounded-xl border border-[#25D366]/20 bg-[#25D366]/[0.03] dark:bg-[#25D366]/[0.05] p-3.5">
+                <div className="flex items-center justify-between mb-2.5">
+                  <span className="text-xs font-bold text-[#25D366] flex items-center gap-1.5">
+                    <MessageCircle size={13} /> {isRTL ? 'إرسال واتساب' : 'Send WhatsApp'}
                   </span>
+                  <button onClick={() => setShowWAPopup(false)} className="w-6 h-6 rounded-md flex items-center justify-center bg-transparent border-0 cursor-pointer text-content-muted dark:text-content-muted-dark hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
+                    <X size={13} />
+                  </button>
+                </div>
+                <select
+                  value={waSelectedTpl}
+                  onChange={e => {
+                    setWaSelectedTpl(e.target.value);
+                    if (e.target.value) {
+                      const tpl = waTemplates.find(t => t.id === e.target.value);
+                      if (tpl) {
+                        const body = isRTL ? (tpl.body_ar || tpl.body) : tpl.body;
+                        const filled = fillTemplate(body, {
+                          name: contact.full_name || '',
+                          company: contact.company || '',
+                          amount: '',
+                          date: new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US'),
+                        });
+                        setWaMessage(filled);
+                      }
+                    }
+                  }}
+                  className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none mb-2 font-cairo"
+                >
+                  <option value="">{isRTL ? 'اختر قالب...' : 'Pick a template...'}</option>
+                  {waTemplates.map(t => (
+                    <option key={t.id} value={t.id}>{isRTL ? (t.name_ar || t.name) : t.name}</option>
+                  ))}
+                </select>
+                <textarea
+                  value={waMessage}
+                  onChange={e => setWaMessage(e.target.value)}
+                  placeholder={isRTL ? 'اكتب رسالة...' : 'Type a message...'}
+                  rows={3}
+                  className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none resize-none font-cairo"
+                  style={{ lineHeight: 1.5 }}
+                />
+                <div className="flex gap-2 mt-2.5">
+                  <button
+                    onClick={() => {
+                      const phone = normalizePhone(contact.phone).replace('+', '');
+                      const link = generateWhatsAppLink(phone, waMessage);
+                      logWhatsAppMessage({
+                        contact_id: contact.id,
+                        contact_name: contact.full_name,
+                        contact_phone: contact.phone,
+                        direction: 'outgoing',
+                        message: waMessage || '',
+                        template_id: waSelectedTpl || null,
+                        type: waSelectedTpl ? 'template' : 'text',
+                      });
+                      window.open(link, '_blank');
+                      setWaMessage('');
+                      setWaSelectedTpl('');
+                      setShowWAPopup(false);
+                    }}
+                    className="flex-1 py-2 rounded-lg border-0 text-white text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
+                    style={{ background: '#25D366' }}
+                  >
+                    <Send size={12} /> {isRTL ? 'إرسال' : 'Send'}
+                  </button>
+                  <a
+                    href={generateWhatsAppLink(normalizePhone(contact.phone).replace('+', ''))}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-2 px-4 rounded-lg border border-[#25D366]/25 text-[#25D366] text-xs font-semibold no-underline flex items-center justify-center gap-1.5 hover:bg-[#25D366]/5 transition-colors"
+                  >
+                    <ExternalLink size={12} /> {isRTL ? 'فتح' : 'Open'}
+                  </a>
+                </div>
+                {recentWAMessages.length > 0 && (
+                  <div className="mt-3 pt-2.5 border-t border-[#25D366]/10">
+                    <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">
+                      {isRTL ? 'آخر الرسائل' : 'Recent Messages'}
+                    </span>
+                    {recentWAMessages.map(m => (
+                      <div key={m.id} className="flex items-start gap-1.5 mt-1.5">
+                        {m.direction === 'outgoing' ? <Send size={9} className="text-[#25D366] mt-0.5 flex-shrink-0" /> : <Download size={9} className="text-brand-500 mt-0.5 flex-shrink-0" />}
+                        <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate flex-1">{m.message?.slice(0, 50)}</span>
+                        <span className="text-[9px] text-content-muted dark:text-content-muted-dark flex-shrink-0 opacity-60">
+                          {new Date(m.sent_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
+            )}
 
-          {/* Privacy notice: previous history hidden */}
-          {hidePreviousHistory && myAssignmentDate && (
-            <div className="mx-5 mb-2 px-3 py-2 rounded-lg bg-brand-500/[0.06] border border-brand-500/15">
-              <p className="m-0 text-[10px] text-brand-500 font-medium">
-                {isRTL
-                  ? `بتشوف الأنشطة من ${myAssignmentDate.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })} — الأنشطة السابقة مخفية`
-                  : `Showing activities from ${myAssignmentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} — previous history hidden`}
-              </p>
-            </div>
-          )}
-
-          {/* Assignment History Banner */}
-          {assignmentHistory.length > 0 && (
-            <div className="mx-5 mb-2.5 p-3 rounded-xl bg-amber-500/[0.06] border border-amber-500/20">
-              <div className={`flex items-center gap-2 mb-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                <History size={13} className="text-amber-500" />
-                <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                  {isRTL ? `تم تعيينه ${assignmentHistory.length} مرة` : `Reassigned ${assignmentHistory.length} time${assignmentHistory.length > 1 ? 's' : ''}`}
-                </span>
-              </div>
-              <div className="flex flex-col gap-1">
-                {assignmentHistory.slice(-3).map((h, i) => (
-                  <div key={i} className={`flex items-center gap-1.5 text-[10px] text-content-muted dark:text-content-muted-dark ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    <span className="font-semibold">{h.from || '—'}</span>
-                    <span>→</span>
-                    <span className="font-semibold text-brand-500">{h.to}</span>
-                    <span className="opacity-60">· {new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
-                    {h.by && <span className="opacity-50">({isRTL ? 'بواسطة' : 'by'} {h.by})</span>}
+            {/* ═══ INFO GRID ═══ */}
+            {infoGridItems.length > 0 && (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0 mb-4 px-1">
+                {infoGridItems.map((item, idx) => (
+                  <div key={idx} className="py-2 border-b border-edge/50 dark:border-edge-dark/50">
+                    <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-0.5 uppercase tracking-wide font-medium">{item.label}</div>
+                    {item.isPhone ? (
+                      <PhoneCell phone={item.val} />
+                    ) : (
+                      <div className="text-xs font-medium text-content dark:text-content-dark truncate">{item.val}</div>
+                    )}
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Quick Actions — compact icons with labels */}
-          <div className="flex gap-2 px-5 pb-1.5">
-            {contact.phone && (
-              <a href={`tel:${contact.phone}`} className="flex-1 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-500 text-[11px] font-semibold text-center no-underline flex items-center justify-center gap-1">
-                <Phone size={12} /> {isRTL ? 'اتصال' : 'Call'}
-              </a>
+            {/* Notes preview */}
+            {contact.notes && (
+              <div className="text-[11px] text-content-muted dark:text-content-muted-dark bg-surface-bg/50 dark:bg-surface-bg-dark/50 border border-edge/40 dark:border-edge-dark/40 rounded-lg px-3 py-2 mb-4 leading-relaxed line-clamp-2">
+                {contact.notes}
+              </div>
             )}
-            {contact.phone && (
-              <button onClick={() => setShowWAPopup(p => !p)} className="flex-1 py-1.5 bg-[#25D366]/10 border border-[#25D366]/25 rounded-lg text-[#25D366] text-[11px] font-semibold text-center cursor-pointer flex items-center justify-center gap-1 relative">
-                <MessageCircle size={12} /> {isRTL ? 'واتساب' : 'WA'}
-              </button>
-            )}
-            {contact.email && (
-              <a href={`mailto:${contact.email}`} className="flex-1 py-1.5 bg-brand-500/10 border border-brand-500/25 rounded-lg text-[#6B8DB5] text-[11px] font-semibold text-center no-underline flex items-center justify-center gap-1">
-                <Mail size={12} /> {isRTL ? 'إيميل' : 'Email'}
-              </a>
-            )}
-            {!contact.is_blacklisted && (
-              <button onClick={() => onBlacklist(contact)} className="flex-1 py-1.5 bg-red-500/[0.08] border border-red-500/25 rounded-lg text-red-500 text-[11px] font-semibold cursor-pointer flex items-center justify-center gap-1">
-                <Ban size={12} /> {isRTL ? 'بلاك' : 'Block'}
-              </button>
-            )}
-          </div>
-          {contact.phone2 && (
-            <div className="flex gap-2 px-5 pb-2.5">
-              <a href={`tel:${contact.phone2}`} className="flex-1 py-1.5 bg-emerald-500/8 border border-emerald-500/15 rounded-lg text-emerald-400 text-[10px] font-semibold text-center no-underline flex items-center justify-center gap-1">
-                <Phone size={11} /> {isRTL ? 'اتصال 2' : 'Call 2'}
-              </a>
-              <a href={`https://wa.me/${normalizePhone(contact.phone2).replace('+', '')}`} target="_blank" rel="noreferrer" className="flex-1 py-1.5 bg-[#25D366]/8 border border-[#25D366]/15 rounded-lg text-[#25D366]/70 text-[10px] font-semibold text-center no-underline flex items-center justify-center gap-1">
-                <MessageCircle size={11} /> {isRTL ? 'واتساب 2' : 'WA 2'}
-              </a>
-            </div>
-          )}
 
-          {/* WhatsApp Quick Send Popup */}
-          {showWAPopup && contact.phone && (
-            <div className="mx-5 mb-2.5 rounded-xl border border-[#25D366]/25 bg-[#25D366]/[0.04] dark:bg-[#25D366]/[0.06] p-3" style={{ position: 'relative' }}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#25D366] flex items-center gap-1.5">
-                  <MessageCircle size={13} /> {isRTL ? 'إرسال واتساب' : 'Send WhatsApp'}
-                </span>
-                <button onClick={() => setShowWAPopup(false)} className="w-5 h-5 rounded flex items-center justify-center bg-transparent border-0 cursor-pointer text-content-muted dark:text-content-muted-dark">
-                  <X size={12} />
-                </button>
+            {/* Privacy notice */}
+            {hidePreviousHistory && myAssignmentDate && (
+              <div className="mb-3 px-3 py-2 rounded-lg bg-brand-500/[0.05] border border-brand-500/10">
+                <p className="m-0 text-[10px] text-brand-500 font-medium">
+                  {isRTL
+                    ? `بتشوف الأنشطة من ${myAssignmentDate.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })} — الأنشطة السابقة مخفية`
+                    : `Showing activities from ${myAssignmentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} — previous history hidden`}
+                </p>
               </div>
-              {/* Template selector */}
-              <select
-                value={waSelectedTpl}
-                onChange={e => {
-                  setWaSelectedTpl(e.target.value);
-                  if (e.target.value) {
-                    const tpl = waTemplates.find(t => t.id === e.target.value);
-                    if (tpl) {
-                      const body = isRTL ? (tpl.body_ar || tpl.body) : tpl.body;
-                      const filled = fillTemplate(body, {
-                        name: contact.full_name || '',
-                        company: contact.company || '',
-                        amount: '',
-                        date: new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US'),
-                      });
-                      setWaMessage(filled);
-                    }
-                  }
-                }}
-                className="w-full px-2.5 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none mb-2 font-cairo"
-              >
-                <option value="">{isRTL ? 'اختر قالب...' : 'Pick a template...'}</option>
-                {waTemplates.map(t => (
-                  <option key={t.id} value={t.id}>{isRTL ? (t.name_ar || t.name) : t.name}</option>
-                ))}
-              </select>
-              {/* Message input */}
-              <textarea
-                value={waMessage}
-                onChange={e => setWaMessage(e.target.value)}
-                placeholder={isRTL ? 'اكتب رسالة...' : 'Type a message...'}
-                rows={3}
-                className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none resize-none font-cairo"
-                style={{ lineHeight: 1.5 }}
-              />
-              <div className="flex gap-2 mt-2">
-                <button
-                  onClick={() => {
-                    const phone = normalizePhone(contact.phone).replace('+', '');
-                    const link = generateWhatsAppLink(phone, waMessage);
-                    logWhatsAppMessage({
-                      contact_id: contact.id,
-                      contact_name: contact.full_name,
-                      contact_phone: contact.phone,
-                      direction: 'outgoing',
-                      message: waMessage || '',
-                      template_id: waSelectedTpl || null,
-                      type: waSelectedTpl ? 'template' : 'text',
-                    });
-                    window.open(link, '_blank');
-                    setWaMessage('');
-                    setWaSelectedTpl('');
-                    setShowWAPopup(false);
-                  }}
-                  className="flex-1 py-1.5 rounded-lg border-0 text-white text-[11px] font-semibold cursor-pointer flex items-center justify-center gap-1"
-                  style={{ background: '#25D366' }}
-                >
-                  <Send size={11} /> {isRTL ? 'إرسال' : 'Send'}
-                </button>
-                <a
-                  href={generateWhatsAppLink(normalizePhone(contact.phone).replace('+', ''))}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="py-1.5 px-3 rounded-lg border border-[#25D366]/25 text-[#25D366] text-[11px] font-semibold no-underline flex items-center justify-center gap-1"
-                >
-                  <ExternalLink size={11} /> {isRTL ? 'فتح' : 'Open'}
-                </a>
-              </div>
-              {/* Recent WA messages */}
-              {recentWAMessages.length > 0 && (
-                <div className="mt-2.5 pt-2 border-t border-[#25D366]/15">
-                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">
-                    {isRTL ? 'آخر الرسائل' : 'Recent Messages'}
+            )}
+
+            {/* Assignment History Banner */}
+            {assignmentHistory.length > 0 && (
+              <div className="mb-3 p-3 rounded-xl bg-amber-500/[0.04] border border-amber-500/15">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <History size={12} className="text-amber-500" />
+                  <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                    {isRTL ? `تم تعيينه ${assignmentHistory.length} مرة` : `Reassigned ${assignmentHistory.length} time${assignmentHistory.length > 1 ? 's' : ''}`}
                   </span>
-                  {recentWAMessages.map(m => (
-                    <div key={m.id} className="flex items-start gap-1.5 mt-1.5">
-                      {m.direction === 'outgoing' ? <Send size={9} className="text-[#25D366] mt-0.5 flex-shrink-0" /> : <Download size={9} className="text-brand-500 mt-0.5 flex-shrink-0" />}
-                      <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate flex-1">{m.message?.slice(0, 50)}</span>
-                      <span className="text-[9px] text-content-muted dark:text-content-muted-dark flex-shrink-0 opacity-60">
-                        {new Date(m.sent_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
-                      </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {assignmentHistory.slice(-3).map((h, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-[10px] text-content-muted dark:text-content-muted-dark">
+                      <span className="font-semibold">{h.from || '—'}</span>
+                      <span className="opacity-40">→</span>
+                      <span className="font-semibold text-brand-500">{h.to}</span>
+                      <span className="opacity-50">· {new Date(h.at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>
+                      {h.by && <span className="opacity-40">({isRTL ? 'بواسطة' : 'by'} {h.by})</span>}
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
-
-          {/* Stats Bar */}
-          <div className="flex gap-0 mx-5 mb-2.5 rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
-            <div className="flex-1 py-1.5 text-center bg-brand-500/[0.05]">
-              <span className="text-sm font-bold text-brand-500">{loadingData ? '…' : actCount}</span>
-              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'نشاط' : 'Activities'}</span>
-            </div>
-            <div className="w-px bg-edge dark:bg-edge-dark" />
-            <div className="flex-1 py-1.5 text-center bg-emerald-500/[0.05]">
-              <span className="text-sm font-bold text-emerald-500">{loadingData ? '…' : oppCount}</span>
-              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'فرصة' : 'Opps'}</span>
-            </div>
-            <div className="w-px bg-edge dark:bg-edge-dark" />
-            <div className="flex-1 py-1.5 text-center bg-amber-500/[0.05]">
-              <span className="text-sm font-bold text-amber-500">{loadingData ? '…' : openTaskCount}</span>
-              <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-1">{isRTL ? 'مهمة' : 'Tasks'}</span>
-            </div>
-          </div>
-
-          {/* ═══ TABS ═══ */}
-          <div className="flex border-b border-edge dark:border-edge-dark px-2">
-            {tabs.map(t => {
-              const TabIcon = t.icon;
-              const isActive = tab === t.key;
-              return (
-                <button key={t.key} onClick={() => setTab(t.key)} title={t.label}
-                  className={`flex-1 py-2.5 bg-transparent border-0 border-b-2 border-solid text-xs cursor-pointer flex items-center justify-center gap-1 transition-colors ${isActive ? 'border-b-brand-500 text-brand-500 font-bold' : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-normal hover:text-content dark:hover:text-content-dark'}`}>
-                  <TabIcon size={14} />
-                  <span className="hidden sm:inline truncate max-w-[60px]">{t.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ═══ Drawer Body ═══ */}
-        <div className="flex-1 overflow-auto p-5">
-
-          {/* ══════ ACTIVITY TAB (النشاط) ══════ */}
-          {tab === 'activity' && (
-            <div>
-              {/* Take Action Button */}
-              <div className="flex gap-2 mb-4">
-                <button onClick={() => setShowActionForm(p => !p)}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-colors ${showActionForm ? 'bg-brand-500 text-white border-brand-500' : 'bg-brand-500/[0.08] border-brand-500/25 text-brand-500'}`}>
-                  <Zap size={13} /> {isRTL ? 'اتخذ إجراء' : 'Take Action'}
-                </button>
-                <button onClick={() => setShowOppModal(true)}
-                  className="flex-1 py-2 rounded-lg text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border bg-emerald-500/[0.08] border-emerald-500/25 text-emerald-500 transition-colors">
-                  <Plus size={13} /> {isRTL ? 'فرصة جديدة' : 'New Opp'}
-                </button>
               </div>
+            )}
+          </div>
 
-              {/* Unified Take Action Form */}
-              {showActionForm && (
-                <TakeActionForm
-                  contact={contact}
-                  onSaveActivity={handleSaveActivity}
-                  onSaveTask={handleSaveTask}
-                  onStatusChange={handleStatusChange}
-                  onCancel={() => setShowActionForm(false)}
-                />
-              )}
-
-              {/* Timeline Filter Chips */}
-              {!loadingData && timeline.length > 0 && (
-                <div className="flex gap-1.5 mb-3 flex-wrap">
-                  {[
-                    { key: 'all', label: isRTL ? 'الكل' : 'All', count: timeline.length },
-                    { key: 'activity', label: isRTL ? 'نشاط' : 'Activities', count: activities.length },
-                    { key: 'task', label: isRTL ? 'مهام' : 'Tasks', count: (tasks || []).length },
-                    { key: 'opportunity', label: isRTL ? 'فرص' : 'Opps', count: opportunities.length },
-                    { key: 'comment', label: isRTL ? 'تعليقات' : 'Comments', count: extraSources.comments.length },
-                    { key: 'document', label: isRTL ? 'مستندات' : 'Docs', count: extraSources.documents.length },
-                    { key: 'deal', label: isRTL ? 'صفقات' : 'Deals', count: extraSources.deals.length },
-                    { key: 'audit', label: isRTL ? 'سجل' : 'Log', count: extraSources.audits.length },
-                  ].filter(f => f.key === 'all' || f.count > 0).map(f => (
-                    <button key={f.key} onClick={() => setTimelineFilter(f.key)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-colors ${timelineFilter === f.key ? 'bg-brand-500 text-white border-brand-500 font-bold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal hover:border-brand-500/40'}`}>
-                      {f.label} {f.count > 0 ? `(${f.count})` : ''}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Agent Filter Chips */}
-              {!loadingData && uniqueAgents.length > 1 && (
-                <div className="flex gap-1.5 mb-3 flex-wrap">
-                  <button
-                    onClick={() => setActivityAgentFilter('all')}
-                    className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-colors ${activityAgentFilter === 'all' ? 'bg-amber-500 text-white border-amber-500 font-bold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal hover:border-amber-500/40'}`}
-                  >
-                    {isRTL ? 'كل الموظفين' : 'All Agents'}
+          {/* ═══ TABS SECTION ═══ */}
+          <div className="sticky top-0 z-[5] bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark">
+            <div className="flex px-3 gap-0 overflow-x-auto scrollbar-none">
+              {tabs.map(t => {
+                const TabIcon = t.icon;
+                const isActive = tab === t.key;
+                const badge = t.key === 'activity' ? actCount : t.key === deptTab.key ? oppCount : t.key === 'comments' ? extraSources.comments.length : null;
+                return (
+                  <button key={t.key} onClick={() => setTab(t.key)} title={t.label}
+                    className={`relative flex items-center gap-1.5 px-3 py-2.5 bg-transparent border-0 border-b-2 border-solid text-[11px] cursor-pointer whitespace-nowrap transition-all ${
+                      isActive
+                        ? 'border-b-brand-500 text-brand-500 font-bold'
+                        : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-medium hover:text-content dark:hover:text-content-dark'
+                    }`}>
+                    <TabIcon size={13} />
+                    <span>{t.label}</span>
+                    {badge > 0 && (
+                      <span className={`text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 ${
+                        isActive ? 'bg-brand-500 text-white' : 'bg-surface-bg dark:bg-brand-500/15 text-content-muted dark:text-content-muted-dark'
+                      }`}>{badge}</span>
+                    )}
                   </button>
-                  {uniqueAgents.map(ag => (
-                    <button
-                      key={ag.id}
-                      onClick={() => setActivityAgentFilter(activityAgentFilter === ag.id ? 'all' : ag.id)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-colors ${activityAgentFilter === ag.id ? 'bg-amber-500 text-white border-amber-500 font-bold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal hover:border-amber-500/40'}`}
-                    >
-                      {ag.name} ({ag.count})
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Full Timeline */}
-              {loadingData ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
-              ) : filteredTimeline.length === 0 ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                  <Clock size={28} className="opacity-25 mb-2 mx-auto" />
-                  <p className="m-0 text-xs">{isRTL ? 'لا توجد سجلات بعد' : 'No records yet'}</p>
-                </div>
-              ) : (
-                <div>
-                  {groupedTimeline.map((group, gi) => (
-                    <div key={group.label}>
-                      {/* Date Header */}
-                      <div className="flex items-center gap-2 mb-2.5 mt-1">
-                        <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wide">{group.label}</span>
-                        <div className="flex-1 h-px bg-edge dark:bg-edge-dark" />
-                      </div>
-                      {/* Items */}
-                      {group.items.map((item, ii) => {
-                        const isLastInAll = gi === groupedTimeline.length - 1 && ii === group.items.length - 1;
-                        return renderTimelineItem(item, isLastInAll);
-                      })}
-                    </div>
-                  ))}
-                </div>
-              )}
+                );
+              })}
             </div>
-          )}
+          </div>
 
-          {/* ══════ DEPARTMENT-SPECIFIC TAB ══════ */}
-          {tab === deptTab.key && (
-            <div>
-              {/* Supplier always sees Invoices regardless of dept */}
-              {isSupplier ? (
-                <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                  <FileDown size={28} className="mb-2 opacity-30 mx-auto" />
-                  <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
-                  <p className="mt-1 mb-3 text-xs">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
+          {/* ═══ TAB CONTENT ═══ */}
+          <div className="p-5">
+
+            {/* ══════ ACTIVITY / TIMELINE TAB ══════ */}
+            {tab === 'activity' && (
+              <div>
+                {/* Take Action + New Opp Buttons */}
+                <div className="flex gap-2 mb-4">
+                  <button onClick={() => setShowActionForm(p => !p)}
+                    className={`flex-1 py-2.5 rounded-xl text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-all ${
+                      showActionForm
+                        ? 'bg-brand-500 text-white border-brand-500 shadow-sm shadow-brand-500/20'
+                        : 'bg-brand-500/[0.06] border-brand-500/20 text-brand-500 hover:bg-brand-500/[0.12]'
+                    }`}>
+                    <Zap size={14} /> {isRTL ? 'اتخذ إجراء' : 'Take Action'}
+                  </button>
+                  <button onClick={() => setShowOppModal(true)}
+                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border bg-emerald-500/[0.06] border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/[0.12] transition-all">
+                    <Plus size={14} /> {isRTL ? 'فرصة جديدة' : 'New Opp'}
+                  </button>
                 </div>
-              ) : (
-                <>
-                  {/* ── Sales: Opportunities ── */}
-                  {dept === 'sales' && (
-                    <>
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'الفرص' : 'Opportunities'} ({oppCount})</div>
-                        <button onClick={() => setShowOppModal(true)} className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-lg text-emerald-500 text-xs font-semibold cursor-pointer flex items-center gap-1.5">
-                          <Plus size={12} /> {isRTL ? 'فرصة جديدة' : 'New'}
-                        </button>
-                      </div>
-                      {loadingData ? (
-                        <div className="text-center p-8 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</div>
-                      ) : opportunities.length === 0 ? (
-                        <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                          <Target size={28} className="opacity-25 mb-2 mx-auto" />
-                          <p className="m-0 text-xs">{isRTL ? 'لا توجد فرص بعد' : 'No opportunities yet'}</p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-2.5">
-                          {opportunities.map(opp => (
-                            <button
-                              key={opp.id}
-                              onClick={() => navigate(`/crm/opportunities?highlight=${opp.id}`)}
-                              className="w-full text-start bg-emerald-500/[0.05] border border-emerald-500/15 rounded-xl p-3.5 cursor-pointer hover:bg-emerald-500/[0.10] transition-colors"
-                            >
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
-                                <Chip label={deptStageLabel(opp.stage, dept, isRTL)} color="#10B981" bg="rgba(16,185,129,0.1)" />
-                              </div>
-                              {opp.projects?.name_ar && (
-                                <div className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</div>
-                              )}
-                              {(opp.users || opp.assigned_to_name) && (
-                                <div className="text-[11px] font-semibold text-brand-500 mb-1">
-                                  {opp.users ? (isRTL ? (opp.users.full_name_ar || opp.users.full_name_en) : (opp.users.full_name_en || opp.users.full_name_ar)) : opp.assigned_to_name}
-                                </div>
-                              )}
-                              <div className="flex gap-3 text-[11px] text-content-muted dark:text-content-muted-dark">
-                                {opp.budget > 0 && <span>{fmtBudget(opp.budget, null, isRTL)} {isRTL ? 'ج.م' : 'EGP'}</span>}
-                                {opp.temperature && <span>{isRTL ? TEMP[opp.temperature]?.labelAr : TEMP[opp.temperature]?.label}</span>}
-                                <span>{opp.created_at?.slice(0, 10)}</span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
 
-                  {/* ── HR: Recruitment ── */}
-                  {dept === 'hr' && (
-                    <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                      <UserCheck size={28} className="mb-2 opacity-30 mx-auto" />
-                      <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد عمليات توظيف بعد' : 'No recruitment records yet'}</p>
-                      <p className="mt-1 mb-3 text-xs">{isRTL ? 'سجل عمليات التوظيف لهذا الشخص' : 'Track recruitment for this person'}</p>
+                {/* Take Action Form */}
+                {showActionForm && (
+                  <div className="mb-4">
+                    <TakeActionForm
+                      contact={contact}
+                      onSaveActivity={handleSaveActivity}
+                      onSaveTask={handleSaveTask}
+                      onStatusChange={handleStatusChange}
+                      onCancel={() => setShowActionForm(false)}
+                    />
+                  </div>
+                )}
+
+                {/* Timeline Filter Chips */}
+                {!loadingData && timeline.length > 0 && (
+                  <div className="flex gap-1.5 mb-3 flex-wrap">
+                    {[
+                      { key: 'all', label: isRTL ? 'الكل' : 'All', count: timeline.length },
+                      { key: 'activity', label: isRTL ? 'نشاط' : 'Activities', count: activities.length },
+                      { key: 'task', label: isRTL ? 'مهام' : 'Tasks', count: (tasks || []).length },
+                      { key: 'opportunity', label: isRTL ? 'فرص' : 'Opps', count: opportunities.length },
+                      { key: 'comment', label: isRTL ? 'تعليقات' : 'Comments', count: extraSources.comments.length },
+                      { key: 'document', label: isRTL ? 'مستندات' : 'Docs', count: extraSources.documents.length },
+                      { key: 'deal', label: isRTL ? 'صفقات' : 'Deals', count: extraSources.deals.length },
+                      { key: 'audit', label: isRTL ? 'سجل' : 'Log', count: extraSources.audits.length },
+                    ].filter(f => f.key === 'all' || f.count > 0).map(f => (
+                      <button key={f.key} onClick={() => setTimelineFilter(f.key)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-all ${
+                          timelineFilter === f.key
+                            ? 'bg-brand-500 text-white border-brand-500 font-bold shadow-sm shadow-brand-500/15'
+                            : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-medium hover:border-brand-500/30 hover:text-brand-500'
+                        }`}>
+                        {f.label} {f.count > 0 ? `(${f.count})` : ''}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Agent Filter Chips */}
+                {!loadingData && uniqueAgents.length > 1 && (
+                  <div className="flex gap-1.5 mb-4 flex-wrap">
+                    <button
+                      onClick={() => setActivityAgentFilter('all')}
+                      className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-all ${
+                        activityAgentFilter === 'all'
+                          ? 'bg-amber-500 text-white border-amber-500 font-bold'
+                          : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-medium hover:border-amber-500/30'
+                      }`}
+                    >
+                      {isRTL ? 'كل الموظفين' : 'All Agents'}
+                    </button>
+                    {uniqueAgents.map(ag => (
+                      <button
+                        key={ag.id}
+                        onClick={() => setActivityAgentFilter(activityAgentFilter === ag.id ? 'all' : ag.id)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-all ${
+                          activityAgentFilter === ag.id
+                            ? 'bg-amber-500 text-white border-amber-500 font-bold'
+                            : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-medium hover:border-amber-500/30'
+                        }`}
+                      >
+                        {ag.name} ({ag.count})
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Timeline Content */}
+                {loadingData ? (
+                  <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                    <div className="w-8 h-8 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin mb-3" />
+                    <span className="text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</span>
+                  </div>
+                ) : filteredTimeline.length === 0 ? (
+                  <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                    <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
+                      <Clock size={24} className="opacity-30" />
                     </div>
-                  )}
-
-                  {/* ── Marketing: Campaign Interactions ── */}
-                  {dept === 'marketing' && (() => {
-                    const interactions = contact.campaign_interactions?.length > 0
-                      ? contact.campaign_interactions
-                      : contact.campaign_name
-                        ? [{ campaign: contact.campaign_name, source: contact.source, platform: contact.platform, date: contact.created_at }]
-                        : [];
-
-                    if (interactions.length === 0) return (
-                      <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                        <Megaphone size={28} className="mb-2 opacity-30 mx-auto" />
-                        <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد تفاعلات بعد' : 'No campaign interactions yet'}</p>
-                      </div>
-                    );
-
-                    // Group by campaign for summary
-                    const campaignMap = {};
-                    interactions.forEach(i => {
-                      if (!campaignMap[i.campaign]) campaignMap[i.campaign] = { count: 0, source: i.source, first: i.date, last: i.date };
-                      campaignMap[i.campaign].count++;
-                      if (i.date < campaignMap[i.campaign].first) campaignMap[i.campaign].first = i.date;
-                      if (i.date > campaignMap[i.campaign].last) campaignMap[i.campaign].last = i.date;
-                    });
-                    const uniqueCampaigns = Object.entries(campaignMap);
-                    const firstSource = interactions.reduce((a, b) => a.date < b.date ? a : b);
-                    const lastSource = interactions.reduce((a, b) => a.date > b.date ? a : b);
-
-                    return (
-                      <div className="space-y-3">
-                        {/* Summary stats */}
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="p-2.5 bg-brand-500/[0.06] rounded-xl text-center">
-                            <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'إجمالي التفاعلات' : 'Total Interactions'}</p>
-                            <p className="m-0 text-sm font-bold text-brand-500">{interactions.length}</p>
-                          </div>
-                          <div className="p-2.5 bg-brand-500/[0.06] rounded-xl text-center">
-                            <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'أول مصدر' : 'First Source'}</p>
-                            <p className="m-0 text-[11px] font-bold text-content dark:text-content-dark truncate">{firstSource.campaign}</p>
-                          </div>
-                          <div className="p-2.5 bg-brand-500/[0.06] rounded-xl text-center">
-                            <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'آخر مصدر' : 'Last Source'}</p>
-                            <p className="m-0 text-[11px] font-bold text-content dark:text-content-dark truncate">{lastSource.campaign}</p>
-                          </div>
+                    <p className="m-0 text-xs font-medium">{isRTL ? 'لا توجد سجلات بعد' : 'No records yet'}</p>
+                    <p className="m-0 mt-1 text-[11px] opacity-60">{isRTL ? 'ابدأ بإضافة نشاط أو إجراء' : 'Start by adding an activity or action'}</p>
+                  </div>
+                ) : (
+                  <div>
+                    {groupedTimeline.map((group, gi) => (
+                      <div key={group.label}>
+                        {/* Date Group Header */}
+                        <div className="flex items-center gap-2.5 mb-3 mt-1">
+                          <span className="text-[10px] font-bold text-content-muted dark:text-content-muted-dark uppercase tracking-wider">{group.label}</span>
+                          <div className="flex-1 h-px bg-edge/60 dark:bg-edge-dark/60" />
                         </div>
+                        {/* Timeline Items */}
+                        {group.items.map((item, ii) => {
+                          const isLastInAll = gi === groupedTimeline.length - 1 && ii === group.items.length - 1;
+                          return renderTimelineItem(item, isLastInAll);
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
-                        {/* Per-campaign breakdown */}
-                        <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">
-                          {isRTL ? 'تفاصيل الحملات' : 'Campaign Breakdown'} <span className="text-brand-500">({uniqueCampaigns.length})</span>
-                        </p>
-                        {uniqueCampaigns.map(([name, data]) => (
-                          <div key={name} className="p-3 bg-brand-500/[0.05] border border-brand-500/10 rounded-xl">
-                            <div className="flex justify-between items-center">
-                              <div className="min-w-0 flex-1">
-                                <p className="m-0 text-xs font-bold text-content dark:text-content-dark truncate">{name}</p>
-                                <p className="m-0 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">
-                                  {isRTL ? (SOURCE_LABELS[data.source] || data.source) : (SOURCE_EN[data.source] || data.source)}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {data.count > 1 && (
-                                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
-                                    {data.count}x {isRTL ? 'تكرار' : 'repeat'}
-                                  </span>
-                                )}
-                                <span className="text-[10px] text-content-muted dark:text-content-muted-dark whitespace-nowrap">
-                                  {new Date(data.first).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
-                                </span>
-                              </div>
-                            </div>
+            {/* ══════ DEPARTMENT-SPECIFIC TAB ══════ */}
+            {tab === deptTab.key && (
+              <div>
+                {isSupplier ? (
+                  <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                    <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
+                      <FileDown size={24} className="opacity-30" />
+                    </div>
+                    <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
+                    <p className="mt-1 mb-0 text-[11px]">{isRTL ? 'أضف فاتورة لهذا المورد' : 'Add an invoice for this supplier'}</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* ── Sales: Opportunities ── */}
+                    {dept === 'sales' && (
+                      <>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'الفرص' : 'Opportunities'} <span className="text-content-muted dark:text-content-muted-dark font-normal">({oppCount})</span></div>
+                          <button onClick={() => setShowOppModal(true)} className="px-3 py-1.5 bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg text-emerald-500 text-xs font-semibold cursor-pointer flex items-center gap-1.5 hover:bg-emerald-500/[0.15] transition-colors">
+                            <Plus size={12} /> {isRTL ? 'فرصة جديدة' : 'New'}
+                          </button>
+                        </div>
+                        {loadingData ? (
+                          <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                            <div className="w-8 h-8 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin mb-3" />
+                            <span className="text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</span>
                           </div>
-                        ))}
-
-                        {/* Full interaction log */}
-                        <details className="mt-1">
-                          <summary className="text-[11px] text-brand-500 cursor-pointer font-semibold">{isRTL ? 'سجل التفاعلات الكامل' : 'Full Interaction Log'}</summary>
-                          <div className="mt-2 space-y-1">
-                            {interactions.sort((a, b) => new Date(b.date) - new Date(a.date)).map((int, idx) => (
-                              <div key={idx} className="flex items-center justify-between py-1.5 border-b border-brand-500/[0.06] text-[11px]">
-                                <span className="text-content dark:text-content-dark font-medium">{int.campaign}</span>
-                                <span className="text-content-muted dark:text-content-muted-dark">
-                                  {isRTL ? (SOURCE_LABELS[int.source] || int.source) : (SOURCE_EN[int.source] || int.source)} · {new Date(int.date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
-                                </span>
-                              </div>
+                        ) : opportunities.length === 0 ? (
+                          <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                            <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
+                              <Target size={24} className="opacity-30" />
+                            </div>
+                            <p className="m-0 text-xs">{isRTL ? 'لا توجد فرص بعد' : 'No opportunities yet'}</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2.5">
+                            {opportunities.map(opp => (
+                              <button
+                                key={opp.id}
+                                onClick={() => navigate(`/crm/opportunities?highlight=${opp.id}`)}
+                                className="w-full text-start bg-surface-bg/50 dark:bg-surface-bg-dark/50 border border-edge/60 dark:border-edge-dark/60 rounded-xl p-3.5 cursor-pointer hover:bg-emerald-500/[0.05] hover:border-emerald-500/20 transition-all group"
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
+                                  <Chip label={deptStageLabel(opp.stage, dept, isRTL)} color="#10B981" bg="rgba(16,185,129,0.1)" />
+                                </div>
+                                {opp.projects?.name_ar && (
+                                  <div className="text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</div>
+                                )}
+                                {(opp.users || opp.assigned_to_name) && (
+                                  <div className="text-[11px] font-semibold text-brand-500 mb-1.5">
+                                    {opp.users ? (isRTL ? (opp.users.full_name_ar || opp.users.full_name_en) : (opp.users.full_name_en || opp.users.full_name_ar)) : opp.assigned_to_name}
+                                  </div>
+                                )}
+                                <div className="flex gap-3 text-[11px] text-content-muted dark:text-content-muted-dark">
+                                  {opp.budget > 0 && <span className="font-medium">{fmtBudget(opp.budget, null, isRTL)} {isRTL ? 'ج.م' : 'EGP'}</span>}
+                                  {opp.temperature && (
+                                    <span style={{ color: TEMP[opp.temperature]?.color }}>{isRTL ? TEMP[opp.temperature]?.labelAr : TEMP[opp.temperature]?.label}</span>
+                                  )}
+                                  <span className="opacity-60">{opp.created_at?.slice(0, 10)}</span>
+                                </div>
+                              </button>
                             ))}
                           </div>
-                        </details>
+                        )}
+                      </>
+                    )}
+
+                    {/* ── HR: Recruitment ── */}
+                    {dept === 'hr' && (
+                      <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                        <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
+                          <UserCheck size={24} className="opacity-30" />
+                        </div>
+                        <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد عمليات توظيف بعد' : 'No recruitment records yet'}</p>
+                        <p className="mt-1 mb-0 text-[11px]">{isRTL ? 'سجل عمليات التوظيف لهذا الشخص' : 'Track recruitment for this person'}</p>
+                      </div>
+                    )}
+
+                    {/* ── Marketing: Campaign Interactions ── */}
+                    {dept === 'marketing' && (() => {
+                      const interactions = contact.campaign_interactions?.length > 0
+                        ? contact.campaign_interactions
+                        : contact.campaign_name
+                          ? [{ campaign: contact.campaign_name, source: contact.source, platform: contact.platform, date: contact.created_at }]
+                          : [];
+
+                      if (interactions.length === 0) return (
+                        <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                          <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
+                            <Megaphone size={24} className="opacity-30" />
+                          </div>
+                          <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد تفاعلات بعد' : 'No campaign interactions yet'}</p>
+                        </div>
+                      );
+
+                      const campaignMap = {};
+                      interactions.forEach(i => {
+                        if (!campaignMap[i.campaign]) campaignMap[i.campaign] = { count: 0, source: i.source, first: i.date, last: i.date };
+                        campaignMap[i.campaign].count++;
+                        if (i.date < campaignMap[i.campaign].first) campaignMap[i.campaign].first = i.date;
+                        if (i.date > campaignMap[i.campaign].last) campaignMap[i.campaign].last = i.date;
+                      });
+                      const uniqueCampaigns = Object.entries(campaignMap);
+                      const firstSource = interactions.reduce((a, b) => a.date < b.date ? a : b);
+                      const lastSource = interactions.reduce((a, b) => a.date > b.date ? a : b);
+
+                      return (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="p-3 bg-brand-500/[0.05] rounded-xl text-center border border-brand-500/10">
+                              <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">{isRTL ? 'التفاعلات' : 'Interactions'}</p>
+                              <p className="m-0 text-lg font-bold text-brand-500">{interactions.length}</p>
+                            </div>
+                            <div className="p-3 bg-brand-500/[0.05] rounded-xl text-center border border-brand-500/10">
+                              <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">{isRTL ? 'أول مصدر' : 'First'}</p>
+                              <p className="m-0 text-[11px] font-bold text-content dark:text-content-dark truncate mt-0.5">{firstSource.campaign}</p>
+                            </div>
+                            <div className="p-3 bg-brand-500/[0.05] rounded-xl text-center border border-brand-500/10">
+                              <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide">{isRTL ? 'آخر مصدر' : 'Last'}</p>
+                              <p className="m-0 text-[11px] font-bold text-content dark:text-content-dark truncate mt-0.5">{lastSource.campaign}</p>
+                            </div>
+                          </div>
+
+                          <p className="m-0 text-xs font-semibold text-content dark:text-content-dark mt-1">
+                            {isRTL ? 'تفاصيل الحملات' : 'Campaign Breakdown'} <span className="text-brand-500">({uniqueCampaigns.length})</span>
+                          </p>
+                          {uniqueCampaigns.map(([name, data]) => (
+                            <div key={name} className="p-3 bg-surface-bg/50 dark:bg-surface-bg-dark/50 border border-edge/60 dark:border-edge-dark/60 rounded-xl">
+                              <div className="flex justify-between items-center">
+                                <div className="min-w-0 flex-1">
+                                  <p className="m-0 text-xs font-bold text-content dark:text-content-dark truncate">{name}</p>
+                                  <p className="m-0 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">
+                                    {isRTL ? (SOURCE_LABELS[data.source] || data.source) : (SOURCE_EN[data.source] || data.source)}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {data.count > 1 && (
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
+                                      {data.count}x {isRTL ? 'تكرار' : 'repeat'}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark whitespace-nowrap">
+                                    {new Date(data.first).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          <details className="mt-1">
+                            <summary className="text-[11px] text-brand-500 cursor-pointer font-semibold">{isRTL ? 'سجل التفاعلات الكامل' : 'Full Interaction Log'}</summary>
+                            <div className="mt-2 space-y-1">
+                              {interactions.sort((a, b) => new Date(b.date) - new Date(a.date)).map((int, idx) => (
+                                <div key={idx} className="flex items-center justify-between py-1.5 border-b border-edge/40 dark:border-edge-dark/40 text-[11px]">
+                                  <span className="text-content dark:text-content-dark font-medium">{int.campaign}</span>
+                                  <span className="text-content-muted dark:text-content-muted-dark">
+                                    {isRTL ? (SOURCE_LABELS[int.source] || int.source) : (SOURCE_EN[int.source] || int.source)} · {new Date(int.date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ── Operations: Orders ── */}
+                    {dept === 'operations' && (
+                      <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                        <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
+                          <Settings size={24} className="opacity-30" />
+                        </div>
+                        <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد طلبات بعد' : 'No orders yet'}</p>
+                        <p className="mt-1 mb-0 text-[11px]">{isRTL ? 'سجل الطلبات لهذا الشخص' : 'Track orders for this person'}</p>
+                      </div>
+                    )}
+
+                    {/* ── Finance: Invoices ── */}
+                    {dept === 'finance' && (
+                      <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
+                        <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
+                          <FileDown size={24} className="opacity-30" />
+                        </div>
+                        <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
+                        <p className="mt-1 mb-0 text-[11px]">{isRTL ? 'أضف فاتورة لهذا الشخص' : 'Add an invoice for this person'}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ══════ RESALE UNITS TAB ══════ */}
+            {tab === 'units' && (
+              <ResaleUnitsTab contact={contact} isRTL={isRTL} />
+            )}
+
+            {/* ══════ COMMENTS TAB ══════ */}
+            {tab === 'comments' && (
+              <CommentsSection
+                entity="contact"
+                entityId={contact.id}
+                entityName={contact.full_name}
+              />
+            )}
+
+            {/* ══════ DOCUMENTS TAB ══════ */}
+            {tab === 'documents' && (
+              <DocumentsSection
+                entity="contact"
+                entityId={contact.id}
+                entityName={contact.full_name}
+              />
+            )}
+
+            {/* ══════ DATA / DETAILS TAB ══════ */}
+            {tab === 'data' && (
+              <div>
+                {/* Score & Temperature Cards */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-brand-500/[0.05] rounded-xl p-3.5 border border-brand-500/10">
+                    <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-2 font-medium">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
+                    <ScorePill score={contact.lead_score} />
+                  </div>
+                  <div className="rounded-xl p-3.5" style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.04)', border: `1px solid ${tempInfo?.color || '#4A7AAB'}15` }}>
+                    <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-1.5 font-medium">{isRTL ? 'الحرارة' : 'Temperature'}</div>
+                    {tempInfo?.Icon ? (
+                      <div className="flex items-center gap-1.5">
+                        <tempInfo.Icon size={15} color={tempInfo.color} />
+                        <span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-content-muted dark:text-content-muted-dark">--</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Grouped Data Sections */}
+                <div className="flex flex-col gap-3 mb-4">
+                  {dataGroups.map(group => {
+                    const GroupIcon = group.icon;
+                    return (
+                      <div key={group.title} className="rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden">
+                        <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-bg/60 dark:bg-surface-bg-dark/40 border-b border-edge/50 dark:border-edge-dark/50">
+                          <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: group.color + '15' }}>
+                            <GroupIcon size={12} style={{ color: group.color }} />
+                          </div>
+                          <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wider">{group.title}</span>
+                        </div>
+                        <div className="px-3.5">
+                          {group.rows.map(r => (
+                            <div key={r.label} className={rowCls}>
+                              <span className="text-content-muted dark:text-content-muted-dark shrink-0">{r.label}</span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-content dark:text-content-dark font-medium text-end whitespace-nowrap" style={r.color ? { color: r.color } : undefined}>{r.val}</span>
+                                {r.action && <button onClick={r.action.onClick} className="text-[9px] text-brand-500 bg-brand-500/10 px-1.5 py-0.5 rounded border-none cursor-pointer hover:bg-brand-500/20 transition-colors">{r.action.label}</button>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     );
-                  })()}
-
-                  {/* ── Operations: Orders ── */}
-                  {dept === 'operations' && (
-                    <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                      <Settings size={28} className="mb-2 opacity-30 mx-auto" />
-                      <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد طلبات بعد' : 'No orders yet'}</p>
-                      <p className="mt-1 mb-3 text-xs">{isRTL ? 'سجل الطلبات لهذا الشخص' : 'Track orders for this person'}</p>
-                    </div>
-                  )}
-
-                  {/* ── Finance: Invoices ── */}
-                  {dept === 'finance' && (
-                    <div className="text-center p-8 text-content-muted dark:text-content-muted-dark">
-                      <FileDown size={28} className="mb-2 opacity-30 mx-auto" />
-                      <p className="m-0 text-xs font-semibold text-content dark:text-content-dark">{isRTL ? 'لا توجد فواتير بعد' : 'No invoices yet'}</p>
-                      <p className="mt-1 mb-3 text-xs">{isRTL ? 'أضف فاتورة لهذا الشخص' : 'Add an invoice for this person'}</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* ══════ COMMENTS TAB (تعليقات) ══════ */}
-          {/* ══════ RESALE UNITS TAB (وحدات للبيع) ══════ */}
-          {tab === 'units' && (
-            <ResaleUnitsTab contact={contact} isRTL={isRTL} />
-          )}
-
-          {tab === 'comments' && (
-            <CommentsSection
-              entity="contact"
-              entityId={contact.id}
-              entityName={contact.full_name}
-            />
-          )}
-
-          {/* ══════ DOCUMENTS TAB (المستندات) ══════ */}
-          {tab === 'documents' && (
-            <DocumentsSection
-              entity="contact"
-              entityId={contact.id}
-              entityName={contact.full_name}
-            />
-          )}
-
-          {/* ══════ DATA TAB (البيانات) ══════ */}
-          {tab === 'data' && (
-            <div>
-              {/* Score & Temperature */}
-              <div className="grid grid-cols-2 gap-2.5 mb-4">
-                <div className="bg-brand-500/[0.07] rounded-xl p-3 border border-brand-500/[0.12]">
-                  <div className="text-content-muted dark:text-content-muted-dark text-xs mb-2">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
-                  <ScorePill score={contact.lead_score} />
+                  })}
                 </div>
-                <div className="rounded-xl p-3" style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.05)', border: `1px solid ${tempInfo?.color || 'transparent'}30` }}>
-                  <div className="text-content-muted dark:text-content-muted-dark text-xs mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</div>
-                  {tempInfo?.Icon ? <div className="flex items-center gap-1.5"><tempInfo.Icon size={14} color={tempInfo.color} /><span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span></div> : <span className="text-xs text-content-muted dark:text-content-muted-dark">—</span>}
-                </div>
-              </div>
 
-              {/* Grouped Sections */}
-              <div className="flex flex-col gap-3 mb-3">
-                {dataGroups.map(group => {
-                  const GroupIcon = group.icon;
+                {/* Blacklist reason */}
+                {contact.is_blacklisted && contact.blacklist_reason && (
+                  <div className="mb-4 px-3.5 py-2.5 bg-red-500/[0.06] border border-red-500/15 rounded-xl text-xs text-red-500 flex gap-2 items-start">
+                    <Ban size={13} className="shrink-0 mt-0.5" />
+                    <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
+                  </div>
+                )}
+
+                {/* Viewed By */}
+                {(() => {
+                  const viewers = getEntityViewers('contact', contact.id);
+                  if (viewers.length === 0) return null;
                   return (
-                    <div key={group.title} className="rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
-                      <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-input/50 dark:bg-surface-input-dark/50 border-b border-edge dark:border-edge-dark">
-                        <GroupIcon size={13} style={{ color: group.color }} />
-                        <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wide">{group.title}</span>
+                    <div className="rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden mb-4">
+                      <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-bg/60 dark:bg-surface-bg-dark/40 border-b border-edge/50 dark:border-edge-dark/50">
+                        <div className="w-5 h-5 rounded-md flex items-center justify-center bg-purple-500/15">
+                          <Star size={12} style={{ color: '#6B21A8' }} />
+                        </div>
+                        <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wider">{isRTL ? 'شوهد بواسطة' : 'Viewed By'}</span>
+                        <span className="text-[9px] text-content-muted dark:text-content-muted-dark ms-auto">{viewers.length} {isRTL ? 'مستخدم' : 'users'}</span>
                       </div>
-                      <div className="px-3.5">
-                        {group.rows.map(r => (
-                          <div key={r.label} className={rowCls}>
-                            <span className="text-content-muted dark:text-content-muted-dark shrink-0">{r.label}</span>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-content dark:text-content-dark font-medium text-end whitespace-nowrap" style={r.color ? { color: r.color } : undefined}>{r.val}</span>
-                              {r.action && <button onClick={r.action.onClick} className="text-[9px] text-brand-500 bg-brand-500/10 px-1.5 py-0.5 rounded border-none cursor-pointer">{r.action.label}</button>}
+                      <div className="px-3.5 py-1 max-h-[180px] overflow-y-auto">
+                        {viewers.map(v => (
+                          <div key={v.user_id} className="flex items-center justify-between py-1.5 border-b border-edge/30 dark:border-edge-dark/30 last:border-b-0 text-[11px]">
+                            <div>
+                              <span className="text-content dark:text-content-dark font-medium">{v.user_name}</span>
+                              {v.user_role && <span className="text-content-muted/50 dark:text-content-muted-dark/50 ms-1.5 text-[9px]">{v.user_role}</span>}
+                            </div>
+                            <div className="text-end">
+                              <span className="text-content-muted dark:text-content-muted-dark">
+                                {v.views}x · {new Date(v.last_view).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(v.last_view).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                })()}
 
-              {/* Notes removed — shown in header */}
+                {/* Custom Fields */}
+                <CustomFieldsRenderer entity="contact" entityId={contact.id} mode="edit" defaultCollapsed={false} />
 
-              {/* Blacklist reason */}
-              {contact.is_blacklisted && contact.blacklist_reason && (
-                <div className="mb-4 px-3.5 py-2.5 bg-red-500/[0.08] border border-red-500/20 rounded-xl text-xs text-red-500 flex gap-1.5 items-start">
-                  <Ban size={13} className="shrink-0 mt-0.5" /> <span className="overflow-hidden text-ellipsis">{isRTL ? 'سبب البلاك ليست:' : 'Blacklist Reason:'} {contact.blacklist_reason}</span>
-                </div>
-              )}
+                {/* Campaign History Analytics */}
+                {(() => {
+                  const interactions = contact.campaign_interactions || [];
+                  if (interactions.length === 0) return null;
 
-              {/* Viewed By */}
-              {(() => {
-                const viewers = getEntityViewers('contact', contact.id);
-                if (viewers.length === 0) return null;
-                return (
-                  <div className="rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
-                    <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-input/50 dark:bg-surface-input-dark/50 border-b border-edge dark:border-edge-dark">
-                      <Star size={13} style={{ color: '#6B21A8' }} />
-                      <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wide">{isRTL ? 'شوهد بواسطة' : 'Viewed By'}</span>
-                      <span className="text-[9px] text-content-muted dark:text-content-muted-dark ms-auto">{viewers.length} {isRTL ? 'مستخدم' : 'users'}</span>
-                    </div>
-                    <div className="px-3.5 py-1.5 max-h-[180px] overflow-y-auto">
-                      {viewers.map(v => (
-                        <div key={v.user_id} className="flex items-center justify-between py-1.5 border-b border-brand-500/[0.06] last:border-b-0 text-[11px]">
-                          <div>
-                            <span className="text-content dark:text-content-dark font-medium">{v.user_name}</span>
-                            {v.user_role && <span className="text-content-muted/50 dark:text-content-muted-dark/50 ms-1.5 text-[9px]">{v.user_role}</span>}
-                          </div>
-                          <div className="text-end">
-                            <span className="text-content-muted dark:text-content-muted-dark">
-                              {v.views}x · {new Date(v.last_view).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })} {new Date(v.last_view).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
+                  const campaignMap = {};
+                  interactions.forEach(i => {
+                    if (!campaignMap[i.campaign]) campaignMap[i.campaign] = { name: i.campaign, count: 0, dates: [] };
+                    campaignMap[i.campaign].count++;
+                    if (i.date) campaignMap[i.campaign].dates.push(i.date);
+                  });
+                  const chartData = Object.values(campaignMap).map(c => ({
+                    name: c.name.length > 18 ? c.name.slice(0, 16) + '...' : c.name,
+                    fullName: c.name,
+                    [isRTL ? 'تفاعلات' : 'Interactions']: c.count,
+                  }));
+                  const campaignList = Object.values(campaignMap).sort((a, b) => {
+                    const aLast = a.dates.length ? a.dates.sort().pop() : '';
+                    const bLast = b.dates.length ? b.dates.sort().pop() : '';
+                    return bLast.localeCompare(aLast);
+                  });
+
+                  return (
+                    <div className="mt-3 rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden">
+                      <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-bg/60 dark:bg-surface-bg-dark/40 border-b border-edge/50 dark:border-edge-dark/50">
+                        <div className="w-5 h-5 rounded-md flex items-center justify-center bg-brand-500/15">
+                          <Megaphone size={12} style={{ color: '#4A7AAB' }} />
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Custom Fields */}
-              <CustomFieldsRenderer entity="contact" entityId={contact.id} mode="edit" defaultCollapsed={false} />
-
-              {/* ── Campaign History Analytics ── */}
-              {(() => {
-                const interactions = contact.campaign_interactions || [];
-                if (interactions.length === 0) return null;
-
-                const campaignMap = {};
-                interactions.forEach(i => {
-                  if (!campaignMap[i.campaign]) campaignMap[i.campaign] = { name: i.campaign, count: 0, dates: [] };
-                  campaignMap[i.campaign].count++;
-                  if (i.date) campaignMap[i.campaign].dates.push(i.date);
-                });
-                const chartData = Object.values(campaignMap).map(c => ({
-                  name: c.name.length > 18 ? c.name.slice(0, 16) + '…' : c.name,
-                  fullName: c.name,
-                  [isRTL ? 'تفاعلات' : 'Interactions']: c.count,
-                }));
-                const campaignList = Object.values(campaignMap).sort((a, b) => {
-                  const aLast = a.dates.length ? a.dates.sort().pop() : '';
-                  const bLast = b.dates.length ? b.dates.sort().pop() : '';
-                  return bLast.localeCompare(aLast);
-                });
-
-                return (
-                  <div className="mt-3 rounded-xl border border-edge dark:border-edge-dark overflow-hidden">
-                    <div className="flex items-center gap-2 px-3.5 py-2 bg-surface-input/50 dark:bg-surface-input-dark/50 border-b border-edge dark:border-edge-dark">
-                      <Megaphone size={13} style={{ color: '#4A7AAB' }} />
-                      <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wide">
-                        {isRTL ? 'سجل الحملات' : 'Campaign History'}
-                      </span>
-                      <span className="text-[9px] text-content-muted dark:text-content-muted-dark ms-auto">
-                        {interactions.length} {isRTL ? 'تفاعل' : 'interactions'}
-                      </span>
-                    </div>
-                    <div className="px-3.5 py-3">
-                      {/* Bar Chart */}
-                      <div style={{ width: '100%', height: Math.max(120, chartData.length * 36) }} dir="ltr">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                            <XAxis type="number" hide allowDecimals={false} />
-                            <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10, fill: '#6B8DB5' }} />
-                            <Tooltip
-                              contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #e5e7eb' }}
-                              formatter={(value, name, props) => [value, props.payload.fullName]}
-                            />
-                            <Bar dataKey={isRTL ? 'تفاعلات' : 'Interactions'} fill="#4A7AAB" radius={[0, 4, 4, 0]} barSize={16} />
-                          </BarChart>
-                        </ResponsiveContainer>
+                        <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wider">
+                          {isRTL ? 'سجل الحملات' : 'Campaign History'}
+                        </span>
+                        <span className="text-[9px] text-content-muted dark:text-content-muted-dark ms-auto">
+                          {interactions.length} {isRTL ? 'تفاعل' : 'interactions'}
+                        </span>
                       </div>
-                      {/* Campaign List */}
-                      <div className="mt-2 border-t border-edge dark:border-edge-dark pt-2">
-                        {campaignList.map(c => (
-                          <div key={c.name} className="flex items-center justify-between py-1.5 border-b border-brand-500/[0.06] last:border-b-0 text-[11px]">
-                            <span className="text-content dark:text-content-dark font-medium truncate max-w-[60%]">{c.name}</span>
-                            <span className="text-content-muted dark:text-content-muted-dark whitespace-nowrap">
-                              {c.count}x
-                              {c.dates.length > 0 && ` · ${new Date(c.dates.sort().pop()).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}`}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="px-3.5 py-3">
+                        <div style={{ width: '100%', height: Math.max(120, chartData.length * 36) }} dir="ltr">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
+                              <XAxis type="number" hide allowDecimals={false} />
+                              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10, fill: '#6B8DB5' }} />
+                              <Tooltip
+                                contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #e5e7eb' }}
+                                formatter={(value, name, props) => [value, props.payload.fullName]}
+                              />
+                              <Bar dataKey={isRTL ? 'تفاعلات' : 'Interactions'} fill="#4A7AAB" radius={[0, 4, 4, 0]} barSize={16} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="mt-2.5 border-t border-edge/50 dark:border-edge-dark/50 pt-2">
+                          {campaignList.map(c => (
+                            <div key={c.name} className="flex items-center justify-between py-1.5 border-b border-edge/30 dark:border-edge-dark/30 last:border-b-0 text-[11px]">
+                              <span className="text-content dark:text-content-dark font-medium truncate max-w-[60%]">{c.name}</span>
+                              <span className="text-content-muted dark:text-content-muted-dark whitespace-nowrap">
+                                {c.count}x
+                                {c.dates.length > 0 && ` · ${new Date(c.dates.sort().pop()).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
-            </div>
-          )}
+                  );
+                })()}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
 
     {/* ═══ New Opportunity Modal ═══ */}
     {showOppModal && (
-      <div onClick={() => setShowOppModal(false)} className="fixed inset-0 z-[1100] flex items-center justify-center p-5 bg-black/50">
-        <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-xl p-6 w-full max-w-[420px] border border-edge dark:border-edge-dark">
+      <div onClick={() => setShowOppModal(false)} className="fixed inset-0 z-[1100] flex items-center justify-center p-5 bg-black/50 backdrop-blur-[2px]">
+        <div dir={isRTL ? 'rtl' : 'ltr'} onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl p-6 w-full max-w-[440px] border border-edge dark:border-edge-dark shadow-2xl">
           <div className="flex justify-between items-center mb-5">
-            <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL ? 'فرصة جديدة - ' : 'New Opportunity - '}{contact.full_name}</h3>
-            <button onClick={() => setShowOppModal(false)} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer text-lg">✕</button>
+            <h3 className="m-0 text-content dark:text-content-dark text-sm font-bold">{isRTL ? 'فرصة جديدة' : 'New Opportunity'}</h3>
+            <button onClick={() => setShowOppModal(false)} className="w-7 h-7 rounded-lg flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-red-500/10 hover:text-red-500 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+          <div className="mb-4 px-3 py-2 rounded-lg bg-brand-500/[0.05] border border-brand-500/10">
+            <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'جهة الاتصال:' : 'Contact:'}</span>
+            <span className="text-xs font-semibold text-content dark:text-content-dark ms-1.5">{contact.full_name}</span>
           </div>
           <div className="flex flex-col gap-3">
             {[
@@ -1658,27 +1817,26 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               { key: 'notes', label_ar: 'ملاحظات', label_en: 'Notes', type: 'text' },
             ].map(f => (
               <div key={f.key}>
-                <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? f.label_ar : f.label_en}</label>
+                <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1 text-start font-medium uppercase tracking-wide">{isRTL ? f.label_ar : f.label_en}</label>
                 <input type={f.type} value={newOpp[f.key]} onChange={e => setNewOpp(p => ({ ...p, [f.key]: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs outline-none box-border font-inherit"
+                  className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs outline-none box-border font-inherit focus:border-brand-500 transition-colors"
                   style={{ textAlign: isRTL ? 'right' : 'left', direction: isRTL ? 'rtl' : 'ltr' }} />
               </div>
             ))}
-            {/* Sales Agent Assignment */}
             <div>
-              <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
+              <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1 text-start font-medium uppercase tracking-wide">{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
               {isSalesAgent ? (
                 <Input value={newOpp.assigned_to_name} disabled className="w-full" />
               ) : (
                 <Select value={newOpp.assigned_to_name} onChange={e => setNewOpp(p => ({ ...p, assigned_to_name: e.target.value }))} className="w-full">
-                  <option value="">{isRTL ? '— اختر السيلز —' : '— Select Agent —'}</option>
+                  <option value="">{isRTL ? '-- اختر السيلز --' : '-- Select Agent --'}</option>
                   {selfName && <option value={selfName}>{selfName} {isRTL ? '(أنا)' : '(Me)'}</option>}
                   {agentsList.filter(a => a !== selfName).map(a => <option key={a} value={a}>{a}</option>)}
                 </Select>
               )}
             </div>
             <div>
-              <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? 'المرحلة' : 'Stage'}</label>
+              <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1 text-start font-medium uppercase tracking-wide">{isRTL ? 'المرحلة' : 'Stage'}</label>
               <Select value={newOpp.stage} onChange={e => setNewOpp(p => ({ ...p, stage: e.target.value }))} className="w-full">
                 {getDeptStages(dept).map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
               </Select>
@@ -1688,7 +1846,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               { key: 'priority', label_ar: 'الأولوية', label_en: 'Priority', options: [{ v: 'urgent', ar: 'عاجل', en: 'Urgent' }, { v: 'high', ar: 'عالي', en: 'High' }, { v: 'medium', ar: 'متوسط', en: 'Medium' }, { v: 'low', ar: 'منخفض', en: 'Low' }] },
             ].map(f => (
               <div key={f.key}>
-                <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1 text-start">{isRTL ? f.label_ar : f.label_en}</label>
+                <label className="text-[11px] text-content-muted dark:text-content-muted-dark block mb-1 text-start font-medium uppercase tracking-wide">{isRTL ? f.label_ar : f.label_en}</label>
                 <Select value={newOpp[f.key]} onChange={e => setNewOpp(p => ({ ...p, [f.key]: e.target.value }))} className="w-full">
                   {f.options.map(o => <option key={o.v} value={o.v}>{isRTL ? o.ar : o.en}</option>)}
                 </Select>
