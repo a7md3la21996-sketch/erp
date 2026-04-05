@@ -36,7 +36,7 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
   try {
     let query = supabase
       .from('activities')
-      .select(`*, users!activities_user_id_fkey (full_name_ar, full_name_en), contacts!fk_act_contact (full_name, phone)`, isServerPaginated ? { count: 'exact' } : {})
+      .select(`*, users!fk_act_user (full_name_ar, full_name_en), contacts!fk_act_contact (full_name, phone)`, isServerPaginated ? { count: 'exact' } : {})
       .order('created_at', { ascending: false });
 
     if (entityId)   query = query.eq(`${entityType}_id`, entityId);
