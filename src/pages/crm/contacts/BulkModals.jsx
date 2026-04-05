@@ -181,22 +181,82 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
 
 // ── Bulk Reassign Modal ──────────────────────────────────────────────
 export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, contacts, selectedIds, handleBulkReassign, isRTL }) {
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState(null);
+
   if (!bulkReassignModal) return null;
 
+  const agents = [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].sort();
+  const filtered = search ? agents.filter(a => a.toLowerCase().includes(search.toLowerCase())) : agents;
+
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: 'var(--surface-card, #fff)', border: '1px solid var(--edge, #e2e8f0)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 380 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>{isRTL ? `إعادة تعيين (${selectedIds.length})` : `Reassign (${selectedIds.length})`}</h3>
-          <button onClick={() => setBulkReassignModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={16} /></button>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1200] flex items-center justify-center p-5">
+      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[400px] overflow-hidden">
+        {/* Header */}
+        <div className="flex justify-between items-center px-5 py-4 border-b border-edge dark:border-edge-dark">
+          <div>
+            <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">
+              {isRTL ? 'إعادة تعيين' : 'Reassign'}
+            </h3>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mt-0.5">
+              {isRTL ? `${selectedIds.length} جهة اتصال محددة` : `${selectedIds.length} contacts selected`}
+            </p>
+          </div>
+          <button onClick={() => { setBulkReassignModal(false); setSearch(''); setSelected(null); }}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
+            <X size={16} />
+          </button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {[...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].map(agent => (
-            <button key={agent} onClick={() => handleBulkReassign(agent)}
-              style={{ padding: '10px 14px', background: 'rgba(74,122,171,0.06)', border: '1px solid var(--edge, #e2e8f0)', borderRadius: 8, fontSize: 12, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left' }}>
-              {agent}
+
+        {/* Search */}
+        <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
+          <input
+            type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder={isRTL ? 'ابحث عن سيلز...' : 'Search agent...'}
+            className="w-full px-3 py-2.5 rounded-xl bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark text-sm placeholder:text-content-muted/50 outline-none focus:border-brand-500"
+          />
+        </div>
+
+        {/* Agent List */}
+        <div className="max-h-[320px] overflow-y-auto px-3 py-2">
+          {filtered.length === 0 ? (
+            <p className="text-center text-xs text-content-muted dark:text-content-muted-dark py-6">
+              {isRTL ? 'مفيش نتائج' : 'No results'}
+            </p>
+          ) : filtered.map(agent => (
+            <button key={agent} onClick={() => setSelected(agent)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 border-none cursor-pointer text-start transition-colors ${
+                selected === agent
+                  ? 'bg-brand-500/10 ring-1 ring-brand-500'
+                  : 'bg-transparent hover:bg-surface-bg dark:hover:bg-surface-bg-dark'
+              }`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold ${
+                selected === agent ? 'bg-brand-500 text-white' : 'bg-brand-500/10 text-brand-500'
+              }`}>
+                {agent.charAt(0).toUpperCase()}
+              </div>
+              <span className={`text-sm font-semibold ${
+                selected === agent ? 'text-brand-500' : 'text-content dark:text-content-dark'
+              }`}>
+                {agent}
+              </span>
             </button>
           ))}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 border-t border-edge dark:border-edge-dark flex gap-3">
+          <button onClick={() => { setBulkReassignModal(false); setSearch(''); setSelected(null); }}
+            className="flex-1 px-4 py-2.5 rounded-xl bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark text-xs font-semibold cursor-pointer">
+            {isRTL ? 'إلغاء' : 'Cancel'}
+          </button>
+          <button onClick={() => { if (selected) { handleBulkReassign(selected); setSearch(''); setSelected(null); } }}
+            disabled={!selected}
+            className={`flex-1 px-4 py-2.5 rounded-xl border-none text-xs font-bold cursor-pointer transition-colors ${
+              selected ? 'bg-brand-500 text-white hover:bg-brand-600' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark cursor-not-allowed'
+            }`}>
+            {isRTL ? `تعيين لـ ${selected || '...'}` : `Assign to ${selected || '...'}`}
+          </button>
         </div>
       </div>
     </div>
