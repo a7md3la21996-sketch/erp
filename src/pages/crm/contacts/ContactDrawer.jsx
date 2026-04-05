@@ -1293,16 +1293,79 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           </div>
 
           {/* ═══ AGENT PROFILE SELECTOR ═══ */}
-          {(contact.assigned_to_names || []).length > 0 && (
+          {(() => {
+            const assignedNames = contact.assigned_to_names || [];
+            const [showAddAgent, setShowAddAgent] = useState(false);
+            const [addAgentSearch, setAddAgentSearch] = useState('');
+            return (
             <>
-              <div className="px-5 py-2 border-b border-edge/40 dark:border-edge-dark/40">
-                <select value={selectedAgent} onChange={e => setSelectedAgent(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark text-sm">
-                  <option value="all">{isRTL ? 'كل السيلز' : 'All Agents'}</option>
-                  {(contact.assigned_to_names || []).map(name => (
-                    <option key={name} value={name}>{name}</option>
+              <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide font-medium">
+                    {isRTL ? 'السيلز المعينين' : 'Assigned Agents'}
+                  </span>
+                  <button onClick={() => setSelectedAgent(selectedAgent === 'all' ? (assignedNames[0] || 'all') : 'all')}
+                    className="text-[10px] text-brand-500 bg-transparent border-none cursor-pointer font-semibold">
+                    {selectedAgent === 'all' ? (isRTL ? 'عرض بروفايل' : 'View Profile') : (isRTL ? 'عرض الكل' : 'View All')}
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {assignedNames.map(name => (
+                    <button key={name} onClick={() => setSelectedAgent(selectedAgent === name ? 'all' : name)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
+                        selectedAgent === name
+                          ? 'bg-brand-500 text-white border border-brand-500'
+                          : 'bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark hover:border-brand-500/30'
+                      }`}>
+                      <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold ${
+                        selectedAgent === name ? 'bg-white/20 text-white' : 'bg-brand-500/10 text-brand-500'
+                      }`}>{name.charAt(0)}</span>
+                      {name}
+                      {assignedNames.length > 1 && (
+                        <span onClick={e => {
+                          e.stopPropagation();
+                          const newNames = assignedNames.filter(n => n !== name);
+                          const updates = { assigned_to_names: newNames, assigned_to_name: newNames[0] || null };
+                          // Remove from agent_statuses and agent_temperatures
+                          const newStatuses = { ...(contact.agent_statuses || {}) }; delete newStatuses[name];
+                          const newTemps = { ...(contact.agent_temperatures || {}) }; delete newTemps[name];
+                          if (onUpdate) onUpdate({ ...contact, ...updates, agent_statuses: newStatuses, agent_temperatures: newTemps });
+                          if (selectedAgent === name) setSelectedAgent('all');
+                        }} className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] hover:bg-red-500 hover:text-white transition-colors ${
+                          selectedAgent === name ? 'text-white/60' : 'text-content-muted/40 dark:text-content-muted-dark/40'
+                        }`}>✕</span>
+                      )}
+                    </button>
                   ))}
-                </select>
+                  {/* Add Agent Button */}
+                  <div className="relative">
+                    <button onClick={() => setShowAddAgent(!showAddAgent)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer bg-transparent border border-dashed border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500 hover:text-brand-500 transition-colors">
+                      + {isRTL ? 'إضافة' : 'Add'}
+                    </button>
+                    {showAddAgent && (
+                      <div className="absolute top-full mt-1 start-0 z-20 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg w-56 overflow-hidden">
+                        <div className="p-2">
+                          <input type="text" value={addAgentSearch} onChange={e => setAddAgentSearch(e.target.value)}
+                            placeholder={isRTL ? 'ابحث...' : 'Search...'}
+                            className="w-full px-2.5 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none"
+                            autoFocus />
+                        </div>
+                        <div className="max-h-[180px] overflow-y-auto px-1 pb-1">
+                          {agentsList.filter(a => !assignedNames.includes(a) && (!addAgentSearch || a.toLowerCase().includes(addAgentSearch.toLowerCase()))).map(a => (
+                            <button key={a} onClick={() => {
+                              const newNames = [...assignedNames, a];
+                              if (onUpdate) onUpdate({ ...contact, assigned_to_names: newNames });
+                              setShowAddAgent(false); setAddAgentSearch('');
+                            }} className="w-full px-3 py-2 rounded-lg text-xs text-content dark:text-content-dark bg-transparent border-none cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
+                              {a}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
               {selectedAgent !== 'all' && (
                 <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
@@ -1370,7 +1433,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </div>
               )}
             </>
-          )}
+          );
+          })()}
 
           {/* ═══ TABS SECTION ═══ */}
           <div className="sticky top-0 z-[5] bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark">
