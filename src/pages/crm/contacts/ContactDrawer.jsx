@@ -288,10 +288,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       logAction({ action: 'create_opportunity', entity: 'opportunity', entityId: saved.id, description: `Created opportunity for ${contact.full_name} → ${newOpp.assigned_to_name}`, userName: profile?.full_name_ar });
       // Auto-set status to interested when opportunity is created
       const currentStatus = contact.contact_status || 'new';
-      if (currentStatus !== 'disqualified' && currentStatus !== 'interested') {
+      if (currentStatus !== 'disqualified' && currentStatus !== 'has_opportunity') {
         const myName = profile?.full_name_en || profile?.full_name_ar;
-        const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'interested' };
-        if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: 'interested' });
+        const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'has_opportunity' };
+        if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: 'has_opportunity' });
       }
     } catch (err) {
       const localOpp = {
@@ -540,7 +540,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           const myName = profile?.full_name_en || profile?.full_name_ar;
           const statuses = contact.agent_statuses || {};
           const statusLabels = isRTL ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' } : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' };
-          const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'interested' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : undefined;
+          const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : undefined;
           const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
           if (isAdminOrOps && Object.keys(statuses).length > 0) {
             // Admin sees all agents' statuses
@@ -559,7 +559,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           return entries.map(([name, s]) => ({
             label: name,
             val: statusLabels[s] || s,
-            color: s === 'disqualified' ? '#EF4444' : s === 'interested' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : undefined,
+            color: s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : undefined,
           }));
         })(),
         show('lead_score') && { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
@@ -873,7 +873,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     const statusLabels = isRTL
       ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' }
       : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' };
-    const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'interested' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : s === 'follow_up' ? '#8B5CF6' : '#6B8DB5';
+    const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : s === 'follow_up' ? '#8B5CF6' : '#6B8DB5';
     if (isAdminOrOps && Object.keys(statuses).length > 0) {
       const entries = Object.entries(statuses);
       const primary = entries[0];

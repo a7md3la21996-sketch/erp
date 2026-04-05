@@ -564,7 +564,7 @@ export default function ContactsPage() {
     { value: 'new', label: 'جديد', labelEn: 'New', color: '#4A7AAB' },
     { value: 'active', label: 'نشط', labelEn: 'Active', color: '#10B981' },
     { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' },
-    { value: 'interested', label: 'مهتم', labelEn: 'Interested', color: '#059669' },
+    { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity', color: '#059669' },
     { value: 'not_interested', label: 'غير مهتم', labelEn: 'Not Interested', color: '#EF4444' },
     { value: 're_engage', label: 'إعادة تواصل', labelEn: 'Re-engage', color: '#8B5CF6' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
