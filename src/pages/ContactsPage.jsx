@@ -684,7 +684,7 @@ export default function ContactsPage() {
       <div className="flex gap-2 mb-3 flex-wrap">
         {[
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
-          ...STATUS_DEFS.filter(s => stats[s.value] > 0 || s.value === 'new').map(s => ({
+          ...STATUS_DEFS.map(s => ({
             ...s, label: isRTL ? s.label : s.labelEn, count: stats[s.value] || 0,
           })),
         ].map(s => {
