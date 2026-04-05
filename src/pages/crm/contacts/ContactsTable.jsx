@@ -4,9 +4,9 @@ import { createPortal } from 'react-dom';
 import { Phone, MessageCircle, Search, Ban, Pin, PhoneCall, Merge, MoreVertical, Bell, FileDown, Trash2, Zap, X, Pencil } from 'lucide-react';
 import {
   SOURCE_LABELS, SOURCE_EN,
-  TYPE,
+  TYPE, TEMP,
   daysSince, initials, avatarColor, normalizePhone,
-  Chip, PhoneCell, getDeptStages, deptStageLabel,
+  Chip, PhoneCell, ScorePill, getDeptStages, deptStageLabel,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
@@ -81,11 +81,18 @@ export default function ContactsTable({
   isRTL,
   isSalesAgent,
   isAdmin,
+  deptView,
 }) {
   const { t } = useTranslation();
   const menuBtnRefs = useRef({});
   const getMenuBtnRef = useCallback((id) => (el) => { if (el) menuBtnRefs.current[id] = el; else delete menuBtnRefs.current[id]; }, []);
   const DEPT_LABELS = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
+  const cols = deptView?.columns || ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'actions'];
+  const hasCol = (id) => cols.includes(id);
+  const menuActions = deptView?.menuActions || null;
+  const hasMenuAction = (id) => !menuActions || menuActions.includes(id);
+  const rowActions = deptView?.rowActions || null;
+  const hasRowAction = (id) => !rowActions || rowActions.includes(id);
 
   // Close menu on outside click
   useEffect(() => {
@@ -203,12 +210,17 @@ export default function ContactsTable({
           <thead>
             <tr>
               <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
-              <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>
-              <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>
-              {!isSalesAgent && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>}
-              <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>
-              <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>
-              <th className={`${thCls} text-center`}>{t('common.actions')}</th>
+              {hasCol('contact') && <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>}
+              {hasCol('phone') && <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>}
+              {hasCol('assigned_to') && !isSalesAgent && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>}
+              {hasCol('temperature') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الحرارة' : 'Temperature'}</th>}
+              {hasCol('job_title') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسمى الوظيفي' : 'Job Title'}</th>}
+              {hasCol('company') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الشركة' : 'Company'}</th>}
+              {hasCol('contact_status') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الحالة' : 'Status'}</th>}
+              {hasCol('lead_score') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'النقاط' : 'Score'}</th>}
+              {hasCol('source_date') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'المصدر / التاريخ' : 'Source / Date'}</th>}
+              {hasCol('last_feedback') && <th className={`${thCls} hidden lg:table-cell`}>{isRTL ? 'آخر فيدباك' : 'Last Feedback'}</th>}
+              {hasCol('actions') && <th className={`${thCls} text-center`}>{t('common.actions')}</th>}
             </tr>
           </thead>
           <tbody>
@@ -243,7 +255,7 @@ export default function ContactsTable({
                 </td>
 
                 {/* Contact — Name + Type + Dept + Activity */}
-                <td className={tdCls}>
+                {hasCol('contact') && <td className={tdCls}>
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center text-xs font-bold"
                       style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
@@ -264,16 +276,16 @@ export default function ContactsTable({
                       </div>
                     </div>
                   </div>
-                </td>
+                </td>}
 
                 {/* Phone */}
-                <td className={tdCls} onClick={e => e.stopPropagation()}>
+                {hasCol('phone') && <td className={tdCls} onClick={e => e.stopPropagation()}>
                   <PhoneCell phone={c.phone} />
                   {c.phone2 && <PhoneCell phone={c.phone2} small />}
-                </td>
+                </td>}
 
                 {/* Assigned To — admin sees all names, TL/manager sees single name */}
-                {!isSalesAgent && <td className={`${tdCls} hidden md:table-cell`}>
+                {hasCol('assigned_to') && !isSalesAgent && <td className={`${tdCls} hidden md:table-cell`}>
                   {isAdmin && Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1 ? (
                     <div className="flex flex-wrap gap-1">
                       {c.assigned_to_names.map((name, i) => (
@@ -285,20 +297,53 @@ export default function ContactsTable({
                   )}
                 </td>}
 
+                {/* Temperature — Sales & Marketing */}
+                {hasCol('temperature') && <td className={`${tdCls} hidden md:table-cell`}>
+                  {c.temperature && TEMP[c.temperature] ? (
+                    <div className="flex items-center gap-1.5">
+                      {(() => { const t = TEMP[c.temperature]; const Icon = t.Icon; return <><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></>; })()}
+                    </div>
+                  ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
+                </td>}
+
+                {/* Job Title — HR */}
+                {hasCol('job_title') && <td className={`${tdCls} hidden md:table-cell`}>
+                  <span className="text-xs text-content dark:text-content-dark">{c.job_title || '—'}</span>
+                </td>}
+
+                {/* Company — Finance & Operations */}
+                {hasCol('company') && <td className={`${tdCls} hidden md:table-cell`}>
+                  <span className="text-xs text-content dark:text-content-dark">{c.company || '—'}</span>
+                </td>}
+
+                {/* Contact Status — HR, Finance, Operations */}
+                {hasCol('contact_status') && <td className={`${tdCls} hidden md:table-cell`}>
+                  {c.contact_status ? (
+                    <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-brand-500/[0.08] text-brand-600 dark:text-brand-400">
+                      {c.contact_status.replace(/_/g, ' ')}
+                    </span>
+                  ) : <span className="text-content-muted/50 text-[11px]">—</span>}
+                </td>}
+
+                {/* Lead Score — Marketing */}
+                {hasCol('lead_score') && <td className={`${tdCls} hidden lg:table-cell`}>
+                  <ScorePill score={c.lead_score} />
+                </td>}
+
                 {/* Source + Date */}
-                <td className={`${tdCls} hidden lg:table-cell`}>
+                {hasCol('source_date') && <td className={`${tdCls} hidden lg:table-cell`}>
                   <div className="text-xs text-content-muted dark:text-content-muted-dark">{c.source ? (isRTL ? SOURCE_LABELS[c.source] : (SOURCE_EN[c.source] || c.source)) : '—'}</div>
                   {c.campaign_name && <div className="text-[10px] text-brand-500/70 dark:text-brand-400/70 mt-0.5 truncate max-w-[160px]" title={c.campaign_name}>{c.campaign_name}</div>}
                   {c.created_at && <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60 mt-0.5">{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
                   {c.notes && (
                     <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[150px] block mt-0.5">
-                      📝 {c.notes.slice(0, 40)}{c.notes.length > 40 ? '...' : ''}
+                      {c.notes.slice(0, 40)}{c.notes.length > 40 ? '...' : ''}
                     </span>
                   )}
-                </td>
+                </td>}
 
                 {/* Last Feedback */}
-                <td className={`${tdCls} hidden lg:table-cell`}>
+                {hasCol('last_feedback') && <td className={`${tdCls} hidden lg:table-cell`}>
                   {c._lastNote ? (
                     <div className="max-w-[180px]">
                       <p className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={c._lastNote.notes}>{c._lastNote.notes}</p>
@@ -308,28 +353,28 @@ export default function ContactsTable({
                       </div>
                     </div>
                   ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
-                </td>
+                </td>}
 
-                {/* Actions — 3 visible + menu */}
-                <td className={tdCls} onClick={e => e.stopPropagation()}>
+                {/* Actions — visible buttons + menu */}
+                {hasCol('actions') && <td className={tdCls} onClick={e => e.stopPropagation()}>
                   <div className="flex gap-1 items-center justify-center">
-                    {c.phone && (
+                    {hasRowAction('call') && c.phone && (
                       <a href={`tel:${normalizePhone(c.phone)}`} title={isRTL ? "اتصال" : "Call"} className="w-7 h-7 flex items-center justify-center bg-emerald-500/[0.08] border border-emerald-500/20 rounded-lg text-emerald-500 no-underline hover:bg-emerald-500/[0.15] transition-colors">
                         <Phone size={13} />
                       </a>
                     )}
-                    {c.phone && (
+                    {hasRowAction('whatsapp') && c.phone && (
                       <a href={`https://wa.me/${normalizePhone(c.phone).replace('+', '')}`} target="_blank" rel="noreferrer" title="WhatsApp" className="w-7 h-7 flex items-center justify-center bg-[#25D366]/[0.08] border border-[#25D366]/20 rounded-lg text-[#25D366] no-underline hover:bg-[#25D366]/[0.15] transition-colors">
                         <MessageCircle size={13} />
                       </a>
                     )}
-                    <button onClick={(e) => { e.stopPropagation(); setQuickActionTarget(quickActionTarget?.id === c.id ? null : c); setQuickActionForm({ type: 'call', result: '', description: '' }); }} title={isRTL ? 'إجراء سريع' : 'Quick Action'}
+                    {hasRowAction('quickAction') && <button onClick={(e) => { e.stopPropagation(); setQuickActionTarget(quickActionTarget?.id === c.id ? null : c); setQuickActionForm({ type: 'call', result: '', description: '' }); }} title={isRTL ? 'إجراء سريع' : 'Quick Action'}
                       className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${quickActionTarget?.id === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 hover:bg-brand-500/[0.15]'}`}>
                       <Zap size={13} />
-                    </button>
-                    <button onClick={() => togglePin(c.id)} title={isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : pinnedIds.length >= MAX_PINS ? (isRTL ? `الحد الأقصى ${MAX_PINS} مثبتين` : `Max ${MAX_PINS} pins`) : (isRTL ? 'تثبيت' : 'Pin')} disabled={!isPinned && pinnedIds.length >= MAX_PINS} className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${isPinned ? 'bg-amber-500/[0.15] border border-amber-500/30 text-amber-500' : !isPinned && pinnedIds.length >= MAX_PINS ? 'bg-transparent border border-edge dark:border-edge-dark text-content-muted/30 dark:text-content-muted-dark/30 cursor-not-allowed' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
+                    </button>}
+                    {hasRowAction('pin') && <button onClick={() => togglePin(c.id)} title={isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : pinnedIds.length >= MAX_PINS ? (isRTL ? `الحد الأقصى ${MAX_PINS} مثبتين` : `Max ${MAX_PINS} pins`) : (isRTL ? 'تثبيت' : 'Pin')} disabled={!isPinned && pinnedIds.length >= MAX_PINS} className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${isPinned ? 'bg-amber-500/[0.15] border border-amber-500/30 text-amber-500' : !isPinned && pinnedIds.length >= MAX_PINS ? 'bg-transparent border border-edge dark:border-edge-dark text-content-muted/30 dark:text-content-muted-dark/30 cursor-not-allowed' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
                       <Pin size={13} />
-                    </button>
+                    </button>}
                     <div onClick={e => e.stopPropagation()}>
                       <button ref={getMenuBtnRef(`d-${c.id}`)} onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
                         className={`w-7 h-7 flex items-center justify-center rounded-lg cursor-pointer transition-colors ${openMenuId === c.id ? 'bg-brand-500 border border-brand-500 text-white' : 'bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/30'}`}>
@@ -337,35 +382,35 @@ export default function ContactsTable({
                       </button>
                       <FixedDropdown btnRef={{ current: menuBtnRefs.current[`d-${c.id}`] }} isOpen={openMenuId === c.id} isRTL={isRTL}>
                         <div className="p-1">
-                          <button onClick={() => { onEdit?.(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          {hasMenuAction('edit') && <button onClick={() => { onEdit?.(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                             <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل' : 'Edit'}
-                          </button>
-                          <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          </button>}
+                          {hasMenuAction('logCall') && <button onClick={() => { setLogCallTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                             <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
-                          </button>
-                          <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          </button>}
+                          {hasMenuAction('reminder') && <button onClick={() => { setReminderTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                             <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
-                          </button>
-                          {perms.canExportContacts && (
+                          </button>}
+                          {hasMenuAction('export') && perms.canExportContacts && (
                             <button onClick={() => { const hdr = isRTL ? ['الاسم','الهاتف','النوع','المصدر','الميزانية'] : ['Name','Phone','Type','Source','Budget']; const data = [hdr,[c.full_name,c.phone,c.contact_type,c.source,(c.budget_min||'')+'–'+(c.budget_max||'')]]; const csv = '\uFEFF'+data.map(r=>r.join(',')).join('\n'); const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv); a.download = c.full_name+'.csv'; a.click(); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                               <FileDown size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'تصدير' : 'Export'}
                             </button>
                           )}
-                          {perms.canDeleteContacts && (
+                          {hasMenuAction('delete') && perms.canDeleteContacts && (
                             <button onClick={() => { handleDelete(c.id); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                               <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
                             </button>
                           )}
                         </div>
-                        {(perms.canDeleteContacts || perms.canEditContact?.(c)) && <>
+                        {(hasMenuAction('disqualify') || hasMenuAction('blacklist')) && (perms.canDeleteContacts || perms.canEditContact?.(c)) && <>
                         <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
                         <div className="p-1">
-                          {perms.canEditContact?.(c) && c.contact_status !== 'disqualified' && (
+                          {hasMenuAction('disqualify') && perms.canEditContact?.(c) && c.contact_status !== 'disqualified' && (
                             <button onClick={() => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-amber-600 font-inherit hover:bg-amber-500/[0.05]">
                               <X size={13} /> {isRTL ? 'غير مؤهل' : 'Disqualify'}
                             </button>
                           )}
-                          {perms.canDeleteContacts && !c.is_blacklisted && (
+                          {hasMenuAction('blacklist') && perms.canDeleteContacts && !c.is_blacklisted && (
                             <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
                               <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
                             </button>
@@ -375,7 +420,7 @@ export default function ContactsTable({
                       </FixedDropdown>
                     </div>
                   </div>
-                </td>
+                </td>}
               </tr>
             ); })}
           </tbody>

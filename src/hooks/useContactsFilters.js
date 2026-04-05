@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { applySmartFilters } from '../components/ui';
 import { SOURCE_LABELS, SOURCE_EN, COUNTRY_CODES } from '../pages/crm/contacts/constants';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
+import { getDeptView, ALL_DEPT_VIEW } from '../config/departmentViews';
 
 const detectCountry = (phone) => {
   if (!phone) return '';
@@ -27,8 +28,10 @@ const COUNTRY_OPTIONS = COUNTRY_CODES
   .filter(c => ['EG','SA','AE','KW','QA','OM','BH','JO','IQ','LB','LY','MA','TN','SD'].includes(c.country))
   .map(c => ({ value: c.country, label: c.labelAr, labelEn: c.label }));
 
-export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAuditFilters, initialSearch = '', initialFilterType = 'all', initialShowBlacklisted = false, initialSortBy = 'created', initialPage = 1 }) {
+export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAuditFilters, initialSearch = '', initialFilterType = 'all', initialShowBlacklisted = false, initialSortBy, initialPage = 1 }) {
   const globalFilter = useGlobalFilter();
+  const activeDept = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
+  const deptView = activeDept ? getDeptView(activeDept) : ALL_DEPT_VIEW;
   const [searchInput, setSearchInput] = useState(initialSearch);
   const [search, setSearch] = useState(initialSearch);
   useEffect(() => {
@@ -38,12 +41,34 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
 
   const [filterType, setFilterType] = useState(initialFilterType);
   const [showBlacklisted, setShowBlacklisted] = useState(initialShowBlacklisted);
-  const [sortBy, setSortBy] = useState(initialSortBy);
+  const [sortBy, setSortBy] = useState(initialSortBy || deptView.defaultSort || 'created');
   const [page, setPage] = useState(initialPage);
   const [pageSize, setPageSize] = useState(25);
   const [smartFilters, setSmartFilters] = useState([]);
 
-  const SMART_FIELDS = useMemo(() => [
+  // All status options
+  const ALL_STATUS_OPTIONS = [
+    { value: 'new', label: 'جديد', labelEn: 'New' },
+    { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted' },
+    { value: 'no_answer', label: 'لا يرد', labelEn: 'No Answer' },
+    { value: 'interested', label: 'مهتم', labelEn: 'Interested' },
+    { value: 'not_interested', label: 'غير مهتم', labelEn: 'Not Interested' },
+    { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified' },
+    { value: 'follow_up', label: 'متابعة', labelEn: 'Follow Up' },
+  ];
+
+  // All contact type options
+  const ALL_TYPE_OPTIONS = [
+    { value: 'lead', label: 'فريش ليد', labelEn: 'Fresh Lead' },
+    { value: 'cold', label: 'كولد كول', labelEn: 'Cold Call' },
+    { value: 'supplier', label: 'مورد', labelEn: 'Supplier' },
+    { value: 'developer', label: 'مطور عقاري', labelEn: 'Developer' },
+    { value: 'applicant', label: 'متقدم لوظيفة', labelEn: 'Applicant' },
+    { value: 'partner', label: 'شريك', labelEn: 'Partner' },
+  ];
+
+  // Build all smart fields
+  const ALL_SMART_FIELDS = useMemo(() => [
     { id: 'prefix', label: 'اللقب', labelEn: 'Prefix', type: 'select', options: [
       { value: 'Mr.', label: 'Mr.', labelEn: 'Mr.' },
       { value: 'Mrs.', label: 'Mrs.', labelEn: 'Mrs.' },
@@ -51,14 +76,8 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       { value: 'Eng.', label: 'Eng.', labelEn: 'Eng.' },
       { value: 'أستاذ', label: 'أستاذ', labelEn: 'Prof.' },
     ]},
-    { id: 'contact_type', label: 'النوع', labelEn: 'Type', type: 'select', options: [
-      { value: 'lead', label: 'فريش ليد', labelEn: 'Fresh Lead' },
-      { value: 'cold', label: 'كولد كول', labelEn: 'Cold Call' },
-      { value: 'supplier', label: 'مورد', labelEn: 'Supplier' },
-      { value: 'developer', label: 'مطور عقاري', labelEn: 'Developer' },
-      { value: 'applicant', label: 'متقدم لوظيفة', labelEn: 'Applicant' },
-      { value: 'partner', label: 'شريك', labelEn: 'Partner' },
-    ]},
+    { id: 'contact_type', label: 'النوع', labelEn: 'Type', type: 'select',
+      options: deptView.contactTypes ? ALL_TYPE_OPTIONS.filter(o => deptView.contactTypes.includes(o.value)) : ALL_TYPE_OPTIONS },
     { id: 'source', label: 'المصدر', labelEn: 'Source', type: 'select', options: Object.entries(SOURCE_LABELS).map(([k, v]) => ({ value: k, label: v, labelEn: SOURCE_EN[k] || v })) },
     { id: 'department', label: 'القسم', labelEn: 'Department', type: 'select', options: [
       { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
@@ -67,15 +86,8 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       { value: 'marketing', label: 'التسويق', labelEn: 'Marketing' },
       { value: 'operations', label: 'العمليات', labelEn: 'Operations' },
     ]},
-    { id: 'contact_status', label: 'الحالة', labelEn: 'Status', type: 'select', options: [
-      { value: 'new', label: 'جديد', labelEn: 'New' },
-      { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted' },
-      { value: 'no_answer', label: 'لا يرد', labelEn: 'No Answer' },
-      { value: 'interested', label: 'مهتم', labelEn: 'Interested' },
-      { value: 'not_interested', label: 'غير مهتم', labelEn: 'Not Interested' },
-      { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified' },
-      { value: 'follow_up', label: 'متابعة', labelEn: 'Follow Up' },
-    ]},
+    { id: 'contact_status', label: 'الحالة', labelEn: 'Status', type: 'select',
+      options: deptView.statusOptions ? ALL_STATUS_OPTIONS.filter(o => deptView.statusOptions.includes(o.value)) : ALL_STATUS_OPTIONS },
     { id: 'full_name', label: 'الاسم', labelEn: 'Name', type: 'text' },
     { id: 'email', label: 'الإيميل', labelEn: 'Email', type: 'text' },
     { id: 'phone', label: 'الهاتف', labelEn: 'Phone', type: 'text' },
@@ -90,15 +102,25 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
     { id: '_opp_count', label: 'عدد الفرص', labelEn: 'Opportunities Count', type: 'number' },
     ...auditFields,
-  ], [contacts, auditFields]);
+  ], [contacts, auditFields, deptView]);
 
-  const SORT_OPTIONS = useMemo(() => [
+  // Filter smart fields based on department view
+  const SMART_FIELDS = useMemo(() => {
+    if (!deptView.smartFilterIds) return ALL_SMART_FIELDS;
+    return ALL_SMART_FIELDS.filter(f => deptView.smartFilterIds.includes(f.id));
+  }, [ALL_SMART_FIELDS, deptView]);
+
+  const ALL_SORT_OPTIONS = [
     { value: 'created', label: 'ترتيب: الأحدث', labelEn: 'Sort: Newest' },
     { value: 'last_activity', label: 'ترتيب: آخر نشاط', labelEn: 'Sort: Last Activity' },
     { value: 'score', label: 'ترتيب: Lead Score', labelEn: 'Sort: Lead Score' },
     { value: 'name', label: 'ترتيب: الاسم', labelEn: 'Sort: Name' },
     { value: 'stale', label: 'ترتيب: يحتاج متابعة', labelEn: 'Sort: Needs Follow-up' },
-  ], []);
+  ];
+  const SORT_OPTIONS = useMemo(() => {
+    if (!deptView.sortIds) return ALL_SORT_OPTIONS;
+    return ALL_SORT_OPTIONS.filter(o => deptView.sortIds.includes(o.value));
+  }, [deptView]);
 
   // Filter + Sort
   const filtered = useMemo(() => {
@@ -160,6 +182,8 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     totalPages,
     SMART_FIELDS,
     SORT_OPTIONS,
+    deptView,
+    activeDept,
     search,
     setSearch,
     searchInput,

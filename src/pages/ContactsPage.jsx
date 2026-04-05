@@ -93,7 +93,7 @@ export default function ContactsPage() {
   const { auditFields, applyAuditFilters } = useAuditFilter('contact');
   const {
     filtered, paged, safePage, totalPages,
-    SMART_FIELDS, SORT_OPTIONS,
+    SMART_FIELDS, SORT_OPTIONS, deptView, activeDept,
     search, setSearch, searchInput, setSearchInput,
     filterType, setFilterType, showBlacklisted, setShowBlacklisted,
     sortBy, setSortBy, smartFilters, setSmartFilters,
@@ -839,6 +839,7 @@ export default function ContactsPage() {
         isRTL={isRTL}
         isSalesAgent={profile?.role === 'sales_agent'}
         isAdmin={profile?.role === 'admin' || profile?.role === 'operations'}
+        deptView={deptView}
       />
       </div>
 
