@@ -220,21 +220,31 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       setActivities(prev => [act, ...prev]);
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch (err) {
-      const localAct = {
-        id: String(Date.now()),
-        ...form,
-        contact_id: contact.id,
-        users: { full_name_ar: 'أنت', full_name_en: 'You' },
-      };
-      setActivities(prev => [localAct, ...prev]);
-      toast.success(isRTL ? 'تم حفظ النشاط محلياً' : 'Activity saved locally');
+      toast.error(isRTL ? 'حدث خطأ في حفظ النشاط' : 'Failed to save activity');
     }
-    // Auto-change status from 'new' to 'contacted' on first activity (per-agent)
+    // Auto-update status based on activity (skip if disqualified)
     const myName = profile?.full_name_en || profile?.full_name_ar;
-    const myStatus = (contact.agent_statuses || {})[myName] || contact.contact_status;
-    if (myStatus === 'new' || !myStatus) {
-      const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'contacted' };
-      if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: 'contacted' });
+    const currentStatus = (contact.agent_statuses || {})[myName] || contact.contact_status || 'new';
+    let newStatus = null;
+
+    if (currentStatus !== 'disqualified') {
+      const result = form.result || '';
+      if (result === 'not_interested') {
+        newStatus = 'not_interested';
+      } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
+        newStatus = 'no_answer';
+      } else if (['no_answer', 'not_interested'].includes(currentStatus)) {
+        newStatus = 're_engage';
+      } else if (currentStatus === 'new' || !currentStatus) {
+        newStatus = 'contacted';
+      } else if (result === 'answered' || result === 'replied') {
+        newStatus = 'contacted';
+      }
+    }
+
+    if (newStatus && newStatus !== currentStatus) {
+      const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
+      if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });
     }
   };
 
@@ -276,6 +286,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         createNotification({ type: 'opportunity_assigned', title_ar: 'فرصة جديدة', title_en: 'New Opportunity Assigned', body_ar: `تم تعيين فرصة "${contact.full_name}" لك بواسطة ${selfName}`, body_en: `Opportunity "${contact.full_name}" assigned to you by ${selfName}`, for_user_name: newOpp.assigned_to_name, entity_type: 'opportunity', from_user: selfName });
       }
       logAction({ action: 'create_opportunity', entity: 'opportunity', entityId: saved.id, description: `Created opportunity for ${contact.full_name} → ${newOpp.assigned_to_name}`, userName: profile?.full_name_ar });
+      // Auto-set status to interested when opportunity is created
+      const currentStatus = contact.contact_status || 'new';
+      if (currentStatus !== 'disqualified' && currentStatus !== 'interested') {
+        const myName = profile?.full_name_en || profile?.full_name_ar;
+        const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'interested' };
+        if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: 'interested' });
+      }
     } catch (err) {
       const localOpp = {
         id: String(Date.now()),

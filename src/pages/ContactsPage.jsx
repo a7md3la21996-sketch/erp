@@ -160,15 +160,18 @@ export default function ContactsPage() {
         { value: 'no_answer', label_ar: 'لم يرد', label_en: 'No Answer', color: '#F59E0B' },
         { value: 'busy', label_ar: 'مشغول', label_en: 'Busy', color: '#EF4444' },
         { value: 'switched_off', label_ar: 'مغلق', label_en: 'Switched Off', color: '#6b7280' },
+        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#EF4444' },
       ],
       whatsapp: [
         { value: 'replied', label_ar: 'رد', label_en: 'Replied', color: '#10B981' },
         { value: 'seen', label_ar: 'شاف', label_en: 'Seen', color: '#3B82F6' },
         { value: 'delivered', label_ar: 'وصلت', label_en: 'Delivered', color: '#F59E0B' },
+        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#EF4444' },
       ],
       email: [
         { value: 'replied', label_ar: 'رد', label_en: 'Replied', color: '#10B981' },
         { value: 'sent', label_ar: 'تم الإرسال', label_en: 'Sent', color: '#F59E0B' },
+        { value: 'not_interested', label_ar: 'مش مهتم', label_en: 'Not Interested', color: '#EF4444' },
       ],
     };
   }, [configResults]);
@@ -191,10 +194,32 @@ export default function ContactsPage() {
         user_name_ar: profile?.full_name_ar || '',
         user_name_en: profile?.full_name_en || '',
       });
-      if (contact.contact_status === 'new' || !contact.contact_status) {
-        const updated = { ...contact, contact_status: 'contacted' };
-        setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); saveContactsLocal(next); return next; });
-        updateContact(updated.id, updated).catch(() => {});
+      // Auto-update contact_status based on action result (skip if disqualified)
+      const currentStatus = contact.contact_status || 'new';
+      const result = quickActionForm.result;
+      let newStatus = null;
+
+      if (currentStatus !== 'disqualified') {
+        if (result === 'not_interested') {
+          newStatus = 'not_interested';
+        } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
+          newStatus = 'no_answer';
+        } else if (['no_answer', 'not_interested'].includes(currentStatus)) {
+          // Any new activity on a no_answer/not_interested contact → re_engage
+          newStatus = 're_engage';
+        } else if (currentStatus === 'new' || !currentStatus) {
+          newStatus = 'contacted';
+        } else if (result === 'answered' || result === 'replied') {
+          newStatus = 'contacted';
+        }
+      }
+
+      if (newStatus && newStatus !== currentStatus) {
+        const myName = profile?.full_name_en || profile?.full_name_ar;
+        const newAgentStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
+        const updated = { ...contact, contact_status: newStatus, agent_statuses: newAgentStatuses };
+        setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
+        updateContact(updated.id, { contact_status: newStatus, agent_statuses: newAgentStatuses }).catch(() => {});
       }
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch {
