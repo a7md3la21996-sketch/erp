@@ -50,6 +50,7 @@ export default function ContactsPage() {
 
   const [contacts, setContacts] = useState([]);
   const [filterTemp, setFilterTemp] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [campaignsList, setCampaignsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -528,7 +529,6 @@ export default function ContactsPage() {
     { value: 're_engage', label: 'إعادة تواصل', labelEn: 'Re-engage', color: '#8B5CF6' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
   ];
-  const [filterStatus, setFilterStatus] = useState('all');
   const stats = useMemo(() => {
     const counts = { total: totalContacts || contacts.length, blacklisted: 0, hot: 0, warm: 0, cool: 0, cold: 0 };
     STATUS_DEFS.forEach(s => { counts[s.value] = 0; });
