@@ -202,10 +202,10 @@ export default function ContactsPage() {
 
       if (currentStatus !== 'disqualified') {
         if (result === 'not_interested') {
-          newStatus = 'not_interested';
+          newStatus = 'disqualified';
         } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
           newStatus = 'inactive';
-        } else if (['inactive', 'not_interested'].includes(currentStatus)) {
+        } else if (currentStatus === 'inactive') {
           newStatus = 're_engage';
         } else if (result === 'answered' || result === 'replied') {
           newStatus = 'active';
@@ -565,7 +565,6 @@ export default function ContactsPage() {
     { value: 'active', label: 'نشط', labelEn: 'Active', color: '#10B981' },
     { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' },
     { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity', color: '#059669' },
-    { value: 'not_interested', label: 'غير مهتم', labelEn: 'Not Interested', color: '#EF4444' },
     { value: 're_engage', label: 'إعادة تواصل', labelEn: 'Re-engage', color: '#8B5CF6' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
   ];
