@@ -95,6 +95,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   useEscClose(onClose);
   const [tab, setTab] = useState('activity');
   const [selectedAgent, setSelectedAgent] = useState('all');
+  const [showAddAgent, setShowAddAgent] = useState(false);
+  const [addAgentSearch, setAddAgentSearch] = useState('');
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -548,7 +550,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           const myName = profile?.full_name_en || profile?.full_name_ar;
           const statuses = contact.agent_statuses || {};
           const statusLabels = isRTL ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-          const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : undefined;
+          const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : undefined;
           const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
           if (isAdminOrOps && Object.keys(statuses).length > 0) {
             // Admin sees all agents' statuses
@@ -881,7 +883,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     const statusLabels = isRTL
       ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' }
       : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' };
-    const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : s === 'follow_up' ? '#8B5CF6' : '#6B8DB5';
+    const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
     if (isAdminOrOps && Object.keys(statuses).length > 0) {
       const entries = Object.entries(statuses);
       const primary = entries[0];
@@ -1293,8 +1295,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* ═══ AGENT PROFILE SELECTOR ═══ */}
           {(() => {
             const assignedNames = contact.assigned_to_names || [];
-            const [showAddAgent, setShowAddAgent] = useState(false);
-            const [addAgentSearch, setAddAgentSearch] = useState('');
             return (
             <>
               <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
@@ -1376,7 +1376,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         const statusLabels = isRTL
                           ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', follow_up: 'متابعة' }
                           : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', follow_up: 'Follow Up' };
-                        const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : s === 'contacted' ? '#4A7AAB' : s === 'follow_up' ? '#8B5CF6' : '#6B8DB5';
+                        const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
                         const color = statusColor(agentStatus);
                         return (
                           <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ color, background: color + '18' }}>

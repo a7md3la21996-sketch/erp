@@ -424,11 +424,9 @@ export default function ContactsPage() {
   ];
   const BULK_STATUS_OPTIONS = [
     { value: 'new', label: isRTL ? 'جديد' : 'New' },
-    { value: 'contacted', label: isRTL ? 'تم التواصل' : 'Contacted' },
-    { value: 'qualified', label: isRTL ? 'مؤهل' : 'Qualified' },
-    { value: 'negotiation', label: isRTL ? 'تفاوض' : 'Negotiation' },
-    { value: 'won', label: isRTL ? 'تم الإغلاق' : 'Won' },
-    { value: 'lost', label: isRTL ? 'خسارة' : 'Lost' },
+    { value: 'active', label: isRTL ? 'نشط' : 'Active' },
+    { value: 'inactive', label: isRTL ? 'غير نشط' : 'Inactive' },
+    { value: 'has_opportunity', label: isRTL ? 'لديه فرصة' : 'Has Opportunity' },
     { value: 'disqualified', label: isRTL ? 'غير مؤهل' : 'Disqualified' },
   ];
   const DQ_REASONS = [
@@ -709,9 +707,8 @@ export default function ContactsPage() {
       ...form,
       id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       lead_score: 0,
-      temperature: 'hot',
-      temperature_auto: true,
-      cold_status: form.contact_type === 'cold' ? 'not_contacted' : null,
+      temperature: 'warm',
+      contact_status: 'new',
       is_blacklisted: false,
       assigned_to_name: profile?.full_name_en || profile?.full_name_ar || '—',
       assigned_to_names: [profile?.full_name_en || profile?.full_name_ar].filter(Boolean),
@@ -890,10 +887,10 @@ export default function ContactsPage() {
         quickFilters={[
           { label: 'ليدز جدد', labelEn: 'New Leads', filters: [{ field: 'contact_type', operator: 'is', value: 'lead' }, { field: 'created_at', operator: 'last_7' }] },
           { label: 'بدون نشاط', labelEn: 'No Activity 30d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) }] },
-          { label: 'عملاء مبيعات', labelEn: 'Sales Clients', filters: [{ field: 'contact_type', operator: 'is', value: 'client' }, { field: 'department', operator: 'is', value: 'sales' }] },
+          { label: 'عملاء مبيعات', labelEn: 'Sales Clients', filters: [{ field: 'contact_type', operator: 'is', value: 'customer' }, { field: 'department', operator: 'is', value: 'sales' }] },
           { label: 'موردين', labelEn: 'Suppliers', filters: [{ field: 'contact_type', operator: 'is', value: 'supplier' }] },
           { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: '_opp_count', operator: 'eq', value: '0' }] },
-          { label: 'لا يرد', labelEn: 'No Answer', filters: [{ field: 'contact_status', operator: 'is', value: 'no_answer' }] },
+          { label: 'غير نشط', labelEn: 'Inactive', filters: [{ field: 'contact_status', operator: 'is', value: 'inactive' }] },
           { label: 'غير مؤهل', labelEn: 'Disqualified', filters: [{ field: 'contact_status', operator: 'is', value: 'disqualified' }] },
         ]}
       />
