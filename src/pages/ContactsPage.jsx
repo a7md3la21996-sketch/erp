@@ -396,6 +396,7 @@ export default function ContactsPage() {
           search: search || undefined,
           contact_type: filterType !== 'all' ? filterType : undefined,
           showBlacklisted: showBlacklisted || undefined,
+          department: (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined,
           assigned_to_name: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
           contact_status: statusFilter?.value || undefined,
           agentNameForStatus: statusFilter?.value ? (
@@ -465,7 +466,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted, globalFilter?.agentName, smartFilters]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, showBlacklisted, globalFilter?.department, globalFilter?.agentName, smartFilters]);
 
   useEffect(() => {
     if (profile) loadContactsData();
