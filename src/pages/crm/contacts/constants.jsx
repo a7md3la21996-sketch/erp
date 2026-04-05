@@ -115,7 +115,6 @@ export const TYPE = {
   repeat_buyer: { label: 'عميل متكرر',   labelEn: 'Repeat Buyer',  color: '#0D9488', bg: 'rgba(13,148,136,0.12)'  },
   vip:          { label: 'VIP',          labelEn: 'VIP',           color: '#DC2626', bg: 'rgba(220,38,38,0.12)'   },
   referrer:     { label: 'مُرشّح',       labelEn: 'Referrer',      color: '#D97706', bg: 'rgba(217,119,6,0.12)'   },
-  client:       { label: 'عميل',         labelEn: 'Client',        color: '#2B4C6F', bg: 'rgba(43,76,111,0.15)'   },
   cold:         { label: 'كولد كول',     labelEn: 'Cold Call',     color: '#6B8DB5', bg: 'rgba(107,141,181,0.12)' },
   supplier:     { label: 'مورد',         labelEn: 'Supplier',      color: '#0F766E', bg: 'rgba(15,118,110,0.12)'  },
   developer:    { label: 'مطور',         labelEn: 'Developer',     color: '#B45309', bg: 'rgba(180,83,9,0.12)'    },
