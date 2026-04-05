@@ -201,7 +201,7 @@ export default function ContactsPage() {
       let newStatus = null;
 
       if (currentStatus !== 'disqualified') {
-        if (result === 'not_interested') {
+        if (result === 'not_interested' && ['new', 'inactive'].includes(currentStatus)) {
           newStatus = 'disqualified';
         } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
           newStatus = 'inactive';

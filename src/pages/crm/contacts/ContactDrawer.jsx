@@ -229,7 +229,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
     if (currentStatus !== 'disqualified') {
       const result = form.result || '';
-      if (result === 'not_interested') {
+      if (result === 'not_interested' && ['new', 'inactive'].includes(currentStatus)) {
         newStatus = 'disqualified';
       } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
         newStatus = 'inactive';
