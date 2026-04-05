@@ -441,14 +441,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         return id === activityAgentFilter;
       });
     }
-    // Per-agent profile filter
+    // Per-agent profile filter — activities always shown, only filter opps/tasks
     if (selectedAgent !== 'all') {
       items = items.filter(item => {
-        if (item._type === 'activity') return item.user_name_en === selectedAgent || item.user_name_ar === selectedAgent || item.users?.full_name_en === selectedAgent || item.users?.full_name_ar === selectedAgent;
         if (item._type === 'opportunity') return item.assigned_to_name === selectedAgent;
         if (item._type === 'task') return item.assigned_to_name_en === selectedAgent || item.assigned_to_name_ar === selectedAgent;
-        if (item._type === 'comment') return item.author_name === selectedAgent;
-        return true; // show other types (audit, document, deal, assignment) always
+        return true; // activities, comments, audit, documents, deals — always shown
       });
     }
     return items;
