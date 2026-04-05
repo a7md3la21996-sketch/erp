@@ -31,11 +31,7 @@ export async function fetchLeaveRequests(filters = {}) {
   try {
     let query = supabase
       .from('leave_requests')
-      .select(`
-        *,
-        employees!leave_requests_employee_id_fkey ( id, full_name_ar, full_name_en, department_id ),
-        approver:employees!leave_requests_approved_by_fkey ( id, full_name_ar, full_name_en )
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
     if (filters.employeeId) query = query.eq('employee_id', filters.employeeId);

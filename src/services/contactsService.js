@@ -302,7 +302,7 @@ export async function fetchContactActivities(contactId, { role, userId, teamId }
   try {
     let query = supabase
       .from('activities')
-      .select(`*, users!fk_act_user (full_name_ar, full_name_en)`)
+      .select('*')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -362,11 +362,7 @@ export async function fetchContactOpportunities(contactId, { role, userId, teamI
   try {
     let query = supabase
       .from('opportunities')
-      .select(`
-        *,
-        users!fk_opp_assigned (full_name_ar, full_name_en),
-        projects (name_ar, name_en)
-      `)
+      .select('*')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false });
     // Role-based filtering

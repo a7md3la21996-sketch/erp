@@ -46,7 +46,7 @@ export const TASK_TYPES = {
 export async function fetchTasks({ contactId, dept, status, page, pageSize, role, userId, teamId } = {}) {
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
   try {
-    let query = supabase.from('tasks').select('*, contacts!tasks_contact_id_fkey (full_name, phone)', isServerPaginated ? { count: 'exact' } : {}).order('due_date', { ascending: true });
+    let query = supabase.from('tasks').select('*', isServerPaginated ? { count: 'exact' } : {}).order('due_date', { ascending: true });
     if (contactId) query = query.eq('contact_id', contactId);
     if (dept)      query = query.eq('dept', dept);
     if (status)    query = query.eq('status', status);

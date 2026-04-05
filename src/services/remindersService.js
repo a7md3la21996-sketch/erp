@@ -6,7 +6,7 @@ export async function fetchReminders({ userId, entityType, entityId, todayOnly =
   try {
     let query = supabase
       .from('reminders')
-      .select(`*, users!reminders_assigned_to_fkey (full_name_ar, full_name_en)`)
+      .select('*')
       .order('due_at', { ascending: true });
 
     if (userId) query = query.eq('assigned_to', userId);
