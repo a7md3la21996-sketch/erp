@@ -805,7 +805,7 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
 
 // ─── Tab: Contacts Settings ──────────────────────────────────────────
 function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
-  const [settings, setSettings] = useState(() => ({ mergeLimit: 2, maxPins: 5, ...(config.contactsSettings || {}) }));
+  const [settings, setSettings] = useState(() => ({ mergeLimit: 2, maxPins: 5, inactiveDays: 5, ...(config.contactsSettings || {}) }));
 
   // Privacy toggle: stored in system_config root level
   const [hideHistory, setHideHistory] = useState(() => {
@@ -826,6 +826,7 @@ function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
   const fields = [
     { key: 'mergeLimit', label_ar: 'الحد الأقصى لدمج جهات الاتصال', label_en: 'Max contacts to merge at once', min: 2, max: 10, desc_ar: 'عدد جهات الاتصال اللي ممكن تدمجهم مع بعض', desc_en: 'How many contacts can be merged together' },
     { key: 'maxPins', label_ar: 'الحد الأقصى للتثبيت', label_en: 'Max pinned contacts', min: 1, max: 20, desc_ar: 'عدد جهات الاتصال اللي ممكن تثبتهم فوق', desc_en: 'How many contacts can be pinned at the top' },
+    { key: 'inactiveDays', label_ar: 'أيام قبل اعتبار العميل غير نشط', label_en: 'Days before marking inactive', min: 1, max: 30, desc_ar: 'لو العميل كان active ومفيش نشاط لعدد الأيام دي بيتحول لـ inactive تلقائي', desc_en: 'Active contacts with no activity for this many days are auto-marked inactive' },
   ];
 
   return (

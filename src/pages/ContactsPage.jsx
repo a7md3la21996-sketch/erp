@@ -126,6 +126,7 @@ export default function ContactsPage() {
   const { activityResults: configResults, contactsSettings } = useSystemConfig();
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
+  const INACTIVE_DAYS = contactsSettings?.inactiveDays || 5;
   const saveContactsLocal = () => {}; // OFFLINE_MODE disabled — Supabase is single source of truth
 
   const deletedContactsRef = useReactRef(null);
@@ -457,6 +458,21 @@ export default function ContactsPage() {
           });
         } catch { /* ignore */ }
       }
+      // Auto-mark active contacts as inactive if no activity for INACTIVE_DAYS
+      const now = Date.now();
+      const inactiveThreshold = INACTIVE_DAYS * 86400000;
+      const toMarkInactive = list.filter(c =>
+        c.contact_status === 'active' &&
+        c.last_activity_at &&
+        (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold
+      );
+      if (toMarkInactive.length) {
+        toMarkInactive.forEach(c => {
+          c.contact_status = 'inactive';
+          updateContact(c.id, { contact_status: 'inactive' }).catch(() => {});
+        });
+      }
+
       setContacts(list);
       setTotalContacts(result?.count || list.length);
       // Fetch last feedback for this page's contacts
