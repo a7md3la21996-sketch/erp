@@ -405,7 +405,7 @@ export default function ContactsTable({
                         {(hasMenuAction('disqualify') || hasMenuAction('blacklist')) && (perms.canDeleteContacts || perms.canEditContact?.(c)) && <>
                         <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
                         <div className="p-1">
-                          {hasMenuAction('disqualify') && perms.canEditContact?.(c) && c.contact_status !== 'disqualified' && c.contact_status !== 'active' && c.contact_status !== 'has_opportunity' && (
+                          {hasMenuAction('disqualify') && perms.canEditContact?.(c) && c.contact_status !== 'disqualified' && c.contact_status !== 'has_opportunity' && !(c._opp_count > 0) && (
                             <button onClick={() => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-amber-600 font-inherit hover:bg-amber-500/[0.05]">
                               <X size={13} /> {isRTL ? 'غير مؤهل' : 'Disqualify'}
                             </button>
