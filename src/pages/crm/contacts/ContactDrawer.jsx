@@ -232,13 +232,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       if (result === 'not_interested') {
         newStatus = 'not_interested';
       } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
-        newStatus = 'no_answer';
-      } else if (['no_answer', 'not_interested'].includes(currentStatus)) {
+        newStatus = 'inactive';
+      } else if (['inactive', 'not_interested'].includes(currentStatus)) {
         newStatus = 're_engage';
-      } else if (currentStatus === 'new' || !currentStatus) {
-        newStatus = 'contacted';
       } else if (result === 'answered' || result === 'replied') {
-        newStatus = 'contacted';
+        newStatus = 'active';
+      } else if (currentStatus === 'new' || !currentStatus) {
+        newStatus = 'active';
       }
     }
 

@@ -203,14 +203,13 @@ export default function ContactsPage() {
         if (result === 'not_interested') {
           newStatus = 'not_interested';
         } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
-          newStatus = 'no_answer';
-        } else if (['no_answer', 'not_interested'].includes(currentStatus)) {
-          // Any new activity on a no_answer/not_interested contact → re_engage
+          newStatus = 'inactive';
+        } else if (['inactive', 'not_interested'].includes(currentStatus)) {
           newStatus = 're_engage';
-        } else if (currentStatus === 'new' || !currentStatus) {
-          newStatus = 'contacted';
         } else if (result === 'answered' || result === 'replied') {
-          newStatus = 'contacted';
+          newStatus = 'active';
+        } else if (currentStatus === 'new' || !currentStatus) {
+          newStatus = 'active';
         }
       }
 
@@ -547,10 +546,10 @@ export default function ContactsPage() {
   // Stats — fetched from Supabase (real counts across all contacts)
   const STATUS_DEFS = [
     { value: 'new', label: 'جديد', labelEn: 'New', color: '#4A7AAB' },
-    { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted', color: '#6B8DB5' },
-    { value: 'interested', label: 'مهتم', labelEn: 'Interested', color: '#10B981' },
+    { value: 'active', label: 'نشط', labelEn: 'Active', color: '#10B981' },
+    { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' },
+    { value: 'interested', label: 'مهتم', labelEn: 'Interested', color: '#059669' },
     { value: 'not_interested', label: 'غير مهتم', labelEn: 'Not Interested', color: '#EF4444' },
-    { value: 'no_answer', label: 'لا يرد', labelEn: 'No Answer', color: '#F59E0B' },
     { value: 're_engage', label: 'إعادة تواصل', labelEn: 'Re-engage', color: '#8B5CF6' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
   ];
