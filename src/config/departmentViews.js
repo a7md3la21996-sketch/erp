@@ -9,7 +9,7 @@ export const DEPT_VIEWS = {
     label_ar: 'المبيعات',
     label_en: 'Sales',
     // Table columns to show (ids match ContactsTable column slots)
-    columns: ['contact', 'phone', 'assigned_to', 'temperature', 'source_date', 'last_feedback', 'actions'],
+    columns: ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'actions'],
     // Smart filter fields relevant to this department
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
@@ -65,7 +65,7 @@ export const DEPT_VIEWS = {
   marketing: {
     label_ar: 'التسويق',
     label_en: 'Marketing',
-    columns: ['contact', 'phone', 'temperature', 'source_date', 'lead_score', 'last_feedback', 'actions'],
+    columns: ['contact', 'phone', 'source_date', 'lead_score', 'last_feedback', 'actions'],
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
       'created_at', 'last_activity_at', 'lead_score', 'campaign_name', '_country',
