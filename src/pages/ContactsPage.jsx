@@ -322,6 +322,48 @@ export default function ContactsPage() {
     Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName }).catch(() => {}))).catch(() => {});
   };
 
+  const handleBulkAddAgent = async (agentName) => {
+    const idsToUpdate = [...selectedIds];
+    const updated = contacts.map(c => {
+      if (!selectedIds.includes(c.id)) return c;
+      const names = c.assigned_to_names || [];
+      if (names.includes(agentName)) return c;
+      return { ...c, assigned_to_names: [...names, agentName] };
+    });
+    setContacts(updated);
+    toast.success(isRTL ? `تم إضافة ${agentName} لـ ${selectedIds.length} جهة اتصال` : `Added ${agentName} to ${selectedIds.length} contacts`);
+    setSelectedIds([]);
+    Promise.all(idsToUpdate.map(id => {
+      const c = contacts.find(ct => ct.id === id);
+      const names = c?.assigned_to_names || [];
+      if (names.includes(agentName)) return Promise.resolve();
+      return updateContact(id, { assigned_to_names: [...names, agentName] }).catch(() => {});
+    })).catch(() => {});
+  };
+
+  const handleBulkRemoveAgent = async (agentName) => {
+    const idsToUpdate = [...selectedIds];
+    const updated = contacts.map(c => {
+      if (!selectedIds.includes(c.id)) return c;
+      const names = (c.assigned_to_names || []).filter(n => n !== agentName);
+      if (names.length === 0) return c; // don't remove last agent
+      const newStatuses = { ...(c.agent_statuses || {}) }; delete newStatuses[agentName];
+      const newTemps = { ...(c.agent_temperatures || {}) }; delete newTemps[agentName];
+      return { ...c, assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps };
+    });
+    setContacts(updated);
+    toast.success(isRTL ? `تم شيل ${agentName} من ${selectedIds.length} جهة اتصال` : `Removed ${agentName} from ${selectedIds.length} contacts`);
+    setSelectedIds([]);
+    Promise.all(idsToUpdate.map(id => {
+      const c = contacts.find(ct => ct.id === id);
+      const names = (c?.assigned_to_names || []).filter(n => n !== agentName);
+      if (names.length === 0) return Promise.resolve();
+      const newStatuses = { ...(c?.agent_statuses || {}) }; delete newStatuses[agentName];
+      const newTemps = { ...(c?.agent_temperatures || {}) }; delete newTemps[agentName];
+      return updateContact(id, { assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps }).catch(() => {});
+    })).catch(() => {});
+  };
+
   const handleBulkChangeField = async (field, value, actionLabel) => {
     const count = selectedIds.length;
     const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
@@ -1147,6 +1189,8 @@ export default function ContactsPage() {
         setDqReason={setDqReason}
         setDqNote={setDqNote}
         MERGE_LIMIT={MERGE_LIMIT}
+        handleBulkAddAgent={handleBulkAddAgent}
+        handleBulkRemoveAgent={handleBulkRemoveAgent}
       />
 
       {/* Bulk SMS Modal */}

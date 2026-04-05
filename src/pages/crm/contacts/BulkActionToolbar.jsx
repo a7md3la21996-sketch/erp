@@ -1,4 +1,5 @@
-import { Phone, Download, PhoneCall, Merge, X, Users, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown, Briefcase, RefreshCw, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Phone, Download, PhoneCall, Merge, X, Users, UserPlus, UserMinus, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown, Briefcase, RefreshCw, Trash2 } from 'lucide-react';
 import { TYPE } from './constants';
 import { fetchProjects } from '../../../services/opportunitiesService';
 
@@ -35,8 +36,17 @@ export default function BulkActionToolbar({
   setDqReason,
   setDqNote,
   MERGE_LIMIT,
+  handleBulkAddAgent,
+  handleBulkRemoveAgent,
 }) {
+  const [addAgentOpen, setAddAgentOpen] = useState(false);
+  const [addAgentSearch, setAddAgentSearch] = useState('');
+  const [removeAgentOpen, setRemoveAgentOpen] = useState(false);
+  const [removeAgentSearch, setRemoveAgentSearch] = useState('');
+
   if (selectedIds.length === 0) return null;
+
+  const allAgents = [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].sort();
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'}
@@ -108,6 +118,64 @@ export default function BulkActionToolbar({
         style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
         <Users size={12} /> {isRTL ? 'إعادة تعيين' : 'Reassign'}
       </button>
+
+      {/* Add to Agent */}
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => { setAddAgentOpen(!addAgentOpen); setRemoveAgentOpen(false); setAddAgentSearch(''); }}
+          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: addAgentOpen ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.08)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+          <UserPlus size={12} /> {isRTL ? 'إضافة لسيلز' : 'Add Agent'}
+        </button>
+        {addAgentOpen && (
+          <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: 200, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+            <div style={{ padding: 8 }}>
+              <input type="text" value={addAgentSearch} onChange={e => setAddAgentSearch(e.target.value)}
+                placeholder={isRTL ? 'ابحث...' : 'Search...'}
+                style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(74,122,171,0.3)', background: '#0d1b2a', color: '#e2e8f0', fontSize: 11, outline: 'none' }}
+                autoFocus />
+            </div>
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+              {allAgents.filter(a => !addAgentSearch || a.toLowerCase().includes(addAgentSearch.toLowerCase())).map(agent => (
+                <button key={agent} onClick={() => { handleBulkAddAgent(agent); setAddAgentOpen(false); }}
+                  style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left', display: 'flex', alignItems: 'center', gap: 6 }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.15)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(16,185,129,0.2)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700 }}>{agent.charAt(0)}</span>
+                  {agent}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Remove from Agent */}
+      <div style={{ position: 'relative' }}>
+        <button onClick={() => { setRemoveAgentOpen(!removeAgentOpen); setAddAgentOpen(false); setRemoveAgentSearch(''); }}
+          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.4)', background: removeAgentOpen ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.08)', color: '#EF4444', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+          <UserMinus size={12} /> {isRTL ? 'شيل من سيلز' : 'Remove Agent'}
+        </button>
+        {removeAgentOpen && (
+          <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: 200, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+            <div style={{ padding: 8 }}>
+              <input type="text" value={removeAgentSearch} onChange={e => setRemoveAgentSearch(e.target.value)}
+                placeholder={isRTL ? 'ابحث...' : 'Search...'}
+                style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(74,122,171,0.3)', background: '#0d1b2a', color: '#e2e8f0', fontSize: 11, outline: 'none' }}
+                autoFocus />
+            </div>
+            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+              {allAgents.filter(a => !removeAgentSearch || a.toLowerCase().includes(removeAgentSearch.toLowerCase())).map(agent => (
+                <button key={agent} onClick={() => { handleBulkRemoveAgent(agent); setRemoveAgentOpen(false); }}
+                  style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left', display: 'flex', alignItems: 'center', gap: 6 }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(239,68,68,0.2)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700 }}>{agent.charAt(0)}</span>
+                  {agent}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Create Opportunities */}
       <button onClick={() => { setBulkOppModal(true); setBulkOppForm({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' }); fetchProjects().then(p => setProjectsList(p)); }}
