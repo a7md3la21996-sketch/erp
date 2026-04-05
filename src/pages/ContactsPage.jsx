@@ -400,7 +400,7 @@ export default function ContactsPage() {
           showBlacklisted: showBlacklisted || undefined,
           department: (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined,
           assigned_to_name: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
-          contact_status: statusFilter?.value || undefined,
+          contact_status: statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
           agentNameForStatus: statusFilter?.value ? (
             // If admin selected an agent in Global Filter, use that agent's name
             (globalFilter?.agentName && globalFilter.agentName !== 'all')
@@ -468,7 +468,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, showBlacklisted, globalFilter?.department, globalFilter?.agentName, smartFilters]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, showBlacklisted, globalFilter?.department, globalFilter?.agentName, smartFilters]);
 
   useEffect(() => {
     if (profile) loadContactsData();
@@ -518,14 +518,23 @@ export default function ContactsPage() {
     }
   }, [highlightId, loading, contacts]);
 
-  // Stats — use server total, page counts for type breakdown
+  // Stats
+  const STATUS_DEFS = [
+    { value: 'new', label: 'جديد', labelEn: 'New', color: '#4A7AAB' },
+    { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted', color: '#6B8DB5' },
+    { value: 'interested', label: 'مهتم', labelEn: 'Interested', color: '#10B981' },
+    { value: 'not_interested', label: 'غير مهتم', labelEn: 'Not Interested', color: '#EF4444' },
+    { value: 'no_answer', label: 'لا يرد', labelEn: 'No Answer', color: '#F59E0B' },
+    { value: 're_engage', label: 'إعادة تواصل', labelEn: 'Re-engage', color: '#8B5CF6' },
+    { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
+  ];
+  const [filterStatus, setFilterStatus] = useState('all');
   const stats = useMemo(() => {
-    const counts = { total: totalContacts || contacts.length, blacklisted: 0, disqualified: 0, hot: 0, warm: 0, cool: 0, cold: 0 };
-    Object.keys(TYPE).forEach(k => { counts[k] = 0; });
+    const counts = { total: totalContacts || contacts.length, blacklisted: 0, hot: 0, warm: 0, cool: 0, cold: 0 };
+    STATUS_DEFS.forEach(s => { counts[s.value] = 0; });
     contacts.forEach(c => {
-      if (c.contact_type && counts[c.contact_type] !== undefined) counts[c.contact_type]++;
+      if (c.contact_status && counts[c.contact_status] !== undefined) counts[c.contact_status]++;
       if (c.is_blacklisted) counts.blacklisted++;
-      if (c.contact_status === 'disqualified') counts.disqualified++;
       if (c.temperature && counts[c.temperature] !== undefined) counts[c.temperature]++;
     });
     return counts;
@@ -671,17 +680,17 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      {/* Type Chips */}
-      <div className="flex gap-2 mb-3.5 flex-wrap">
+      {/* Status Chips */}
+      <div className="flex gap-2 mb-3 flex-wrap">
         {[
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
-          ...Object.entries(TYPE).filter(([k]) => stats[k] > 0).map(([k, v]) => ({
-            label: isRTL ? v.label : v.labelEn, value: k, count: stats[k] || 0, color: v.color,
+          ...STATUS_DEFS.filter(s => stats[s.value] > 0 || s.value === 'new').map(s => ({
+            ...s, label: isRTL ? s.label : s.labelEn, count: stats[s.value] || 0,
           })),
         ].map(s => {
-          const active = filterType === s.value;
+          const active = filterStatus === s.value;
           return (
-          <button key={s.value} onClick={() => setFilterType(s.value)}
+          <button key={s.value} onClick={() => setFilterStatus(s.value)}
             className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
             style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
             {s.label} <span
