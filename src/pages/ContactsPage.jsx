@@ -680,6 +680,29 @@ export default function ContactsPage() {
         </div>
       </div>
 
+      {/* Type Chips (filtered by department) */}
+      {deptView.contactTypes && (
+      <div className="flex gap-2 mb-3 flex-wrap">
+        {[
+          { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
+          ...deptView.contactTypes.filter(k => TYPE[k]).map(k => ({
+            label: isRTL ? TYPE[k].label : TYPE[k].labelEn, value: k, count: stats[k] || 0, color: TYPE[k].color,
+          })),
+        ].map(s => {
+          const active = filterType === s.value;
+          return (
+          <button key={s.value} onClick={() => setFilterType(s.value)}
+            className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+            style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
+            {s.label} <span
+              className={`rounded-xl px-2 py-px text-[10px] mis-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+              style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
+          </button>
+          );
+        })}
+      </div>
+      )}
+
       {/* Status Chips */}
       <div className="flex gap-2 mb-3 flex-wrap">
         {[
