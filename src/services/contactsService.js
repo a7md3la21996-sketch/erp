@@ -98,6 +98,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
     if (filters.department) query = query.eq('department', filters.department);
+    if (filters.unassigned) query = query.or('assigned_to_name.is.null,assigned_to_name.eq.');
     if (filters.contact_status) {
       if (filters.agentNameForStatus) {
         query = query.filter('agent_statuses->>' + filters.agentNameForStatus, 'eq', filters.contact_status);

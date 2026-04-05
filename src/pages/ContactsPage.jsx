@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
-import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save } from 'lucide-react';
+import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact, deleteContact,
   blacklistContact, createActivity, recordAssignment,
@@ -51,6 +51,7 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState([]);
   const [filterTemp, setFilterTemp] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [showUnassigned, setShowUnassigned] = useState(false);
   const [campaignsList, setCampaignsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -422,6 +423,7 @@ export default function ContactsPage() {
           contact_type: filterType !== 'all' ? filterType : undefined,
           temperature: filterTemp !== 'all' ? filterTemp : undefined,
           showBlacklisted: showBlacklisted || undefined,
+          unassigned: showUnassigned || undefined,
           department: (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined,
           assigned_to_name: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
           contact_status: statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
@@ -507,7 +509,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, showBlacklisted, globalFilter?.department, globalFilter?.agentName, smartFilters]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters]);
 
   useEffect(() => {
     if (profile) loadContactsData();
@@ -599,9 +601,14 @@ export default function ContactsPage() {
       const typeKeys = Object.keys(TYPE);
       const typeRes = await Promise.all(typeKeys.map(t => baseQ().eq('contact_type', t)));
 
+      // Unassigned count
+      const unassignedRes = await supabase.from('contacts').select('id', { count: 'exact', head: true })
+        .or('assigned_to_name.is.null,assigned_to_name.eq.');
+
       const counts = {
         total: totalRes.count || 0,
         blacklisted: blacklistRes.count || 0,
+        unassigned: unassignedRes.count || 0,
       };
       STATUS_DEFS.forEach((s, i) => { counts[s.value] = statusRes[i].count || 0; });
       tempKeys.forEach((t, i) => { counts[t] = tempRes[i].count || 0; });
@@ -795,6 +802,9 @@ export default function ContactsPage() {
           </button>
           );
         })}
+        <button onClick={() => setShowUnassigned(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showUnassigned ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
+          <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
+        </button>
         <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
           <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
         </button>
