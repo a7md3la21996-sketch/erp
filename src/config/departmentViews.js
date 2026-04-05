@@ -17,7 +17,7 @@ export const DEPT_VIEWS = {
       'assigned_to_name', 'assigned_by_name', '_campaign_count', '_opp_count',
     ],
     // Contact types available in this department
-    contactTypes: ['lead', 'cold', 'developer', 'partner', 'qualified', 'customer', 'repeat_buyer', 'vip', 'referrer'],
+    contactTypes: ['lead', 'cold', 'developer', 'partner', 'customer', 'repeat_buyer', 'vip', 'referrer'],
     // Status options for filtering
     statusOptions: ['new', 'contacted', 'interested', 'not_interested', 'no_answer', 're_engage', 'disqualified'],
     // Sort options

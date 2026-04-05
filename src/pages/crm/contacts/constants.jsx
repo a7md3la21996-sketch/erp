@@ -108,7 +108,6 @@ export const TEMP = {
 };
 export const TYPE = {
   lead:         { label: 'ليد',          labelEn: 'Lead',          color: '#4A7AAB', bg: 'rgba(74,122,171,0.12)'  },
-  qualified:    { label: 'مؤهل',        labelEn: 'Qualified',     color: '#2563EB', bg: 'rgba(37,99,235,0.12)'   },
   nurturing:    { label: 'متابعة',      labelEn: 'Nurturing',     color: '#7C3AED', bg: 'rgba(124,58,237,0.12)'  },
   converted:    { label: 'محول',         labelEn: 'Converted',     color: '#059669', bg: 'rgba(5,150,105,0.12)'   },
   customer:     { label: 'عميل حالي',    labelEn: 'Customer',      color: '#10B981', bg: 'rgba(16,185,129,0.12)'  },
