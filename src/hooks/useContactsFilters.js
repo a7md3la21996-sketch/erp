@@ -52,7 +52,6 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { value: 'active', label: 'نشط', labelEn: 'Active' },
     { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive' },
     { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity' },
-    { value: 're_engage', label: 'إعادة تواصل', labelEn: 'Re-engage' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified' },
   ];
 

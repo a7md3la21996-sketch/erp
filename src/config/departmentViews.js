@@ -19,7 +19,7 @@ export const DEPT_VIEWS = {
     // Contact types available in this department
     contactTypes: ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'],
     // Status options for filtering
-    statusOptions: ['new', 'active', 'has_opportunity', 'inactive', 're_engage', 'disqualified'],
+    statusOptions: ['new', 'active', 'has_opportunity', 'inactive', 'disqualified'],
     // Sort options
     sortIds: ['created', 'last_activity', 'score', 'name', 'stale'],
     // Actions in the row menu

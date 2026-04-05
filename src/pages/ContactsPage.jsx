@@ -205,8 +205,6 @@ export default function ContactsPage() {
           newStatus = 'disqualified';
         } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
           newStatus = 'inactive';
-        } else if (currentStatus === 'inactive') {
-          newStatus = 're_engage';
         } else if (result === 'answered' || result === 'replied') {
           newStatus = 'active';
         } else if (currentStatus === 'new' || !currentStatus) {
@@ -565,7 +563,6 @@ export default function ContactsPage() {
     { value: 'active', label: 'نشط', labelEn: 'Active', color: '#10B981' },
     { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' },
     { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity', color: '#059669' },
-    { value: 're_engage', label: 'إعادة تواصل', labelEn: 'Re-engage', color: '#8B5CF6' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
   ];
   const [stats, setStats] = useState({ total: 0, blacklisted: 0, hot: 0, warm: 0, cool: 0, cold: 0 });
