@@ -4,7 +4,7 @@ import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
-import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Upload, Plus, Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Upload, Plus, Pencil, Trash2, ChevronDown, ChevronUp, Eraser } from 'lucide-react';
 import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton, ExportButton, Select, Button, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 import ImportAttendanceModal from '../../components/hr/ImportAttendanceModal';
 import supabase from '../../lib/supabase';
@@ -360,6 +360,31 @@ export default function AttendancePage() {
 
   const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
+  const handleClearMonth = async () => {
+    const monthName = MONTHS_AR[month - 1];
+    const msg = lang === 'ar'
+      ? `متأكد إنك عايز تمسح كل سجلات حضور شهر ${monthName} ${year}؟\n\nعدد السجلات: ${allRecords.length}\n\nالعملية دي مش ممكن التراجع عنها!`
+      : `Are you sure you want to delete all attendance records for ${monthName} ${year}?\n\nRecords: ${allRecords.length}\n\nThis cannot be undone!`;
+    if (!window.confirm(msg)) return;
+
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .delete()
+        .gte('date', startDate)
+        .lte('date', endDate);
+      if (error) throw error;
+      showToast(lang === 'ar' ? `تم مسح سجلات ${monthName}` : `${monthName} records cleared`, 'success');
+      refreshData();
+    } catch {
+      showToast(lang === 'ar' ? 'فشل في المسح' : 'Clear failed', 'error');
+    }
+  };
+
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
       <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={7} />
@@ -384,6 +409,11 @@ export default function AttendancePage() {
           <Select value={month} onChange={e => setMonth(+e.target.value)}>
             {MONTHS_AR.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </Select>
+          {allRecords.length > 0 && (
+            <Button variant="secondary" size="md" onClick={handleClearMonth} className="!text-red-500 !border-red-500/30 hover:!bg-red-500/10">
+              <Eraser size={14} />{lang === 'ar' ? 'مسح الشهر' : 'Clear Month'}
+            </Button>
+          )}
           <Button variant="secondary" size="md" onClick={() => { setEditRecord(null); setShowForm(true); }}>
             <Plus size={14} />{lang === 'ar' ? 'إضافة سجل' : 'Add Record'}
           </Button>
