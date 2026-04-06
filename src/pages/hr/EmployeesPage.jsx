@@ -8,7 +8,7 @@ import useDebouncedSearch from '../../hooks/useDebouncedSearch';
 import {
   Users, Plus, Eye, Edit2, FileText,
   AlertTriangle, Clock, Building2,
-  UserCheck, Trash2
+  UserCheck, Trash2, CheckSquare
 } from 'lucide-react';
 import { Button, Card, Badge, Modal, ModalFooter, KpiCard, Table, Th, Td, Tr, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 
@@ -60,6 +60,8 @@ export default function EmployeesPage() {
   const [deleting, setDeleting] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editTarget, setEditTarget] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [showBulkEdit, setShowBulkEdit] = useState(false);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('employee');
   const userName = profile?.full_name_ar || profile?.full_name_en || '';
@@ -295,10 +297,41 @@ export default function EmployeesPage() {
         resultsCount={filtered.length}
       />
 
+      {/* ── Bulk Selection Bar ── */}
+      {selectedIds.length > 0 && (
+        <div className={`flex items-center gap-3 mb-3 px-4 py-2.5 rounded-xl border border-brand-500/30 bg-brand-500/[0.07] ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <CheckSquare size={16} className="text-brand-500" />
+          <span className="text-sm font-semibold text-brand-500">
+            {lang === 'ar' ? `تم تحديد ${selectedIds.length} موظف` : `${selectedIds.length} selected`}
+          </span>
+          <Button size="sm" onClick={() => setShowBulkEdit(true)}>
+            {lang === 'ar' ? 'تعديل جماعي' : 'Bulk Edit'}
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setSelectedIds([])}>
+            {lang === 'ar' ? 'إلغاء التحديد' : 'Deselect All'}
+          </Button>
+        </div>
+      )}
+
       {/* ── Table ── */}
       <Table>
           <thead>
             <tr>
+              <Th className="w-10">
+                <input
+                  type="checkbox"
+                  checked={paged.length > 0 && paged.every(e => selectedIds.includes(e.id))}
+                  onChange={e => {
+                    if (e.target.checked) {
+                      setSelectedIds(prev => [...new Set([...prev, ...paged.map(emp => emp.id)])]);
+                    } else {
+                      const pageIds = paged.map(emp => emp.id);
+                      setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-edge cursor-pointer accent-brand-500"
+                />
+              </Th>
               {[
                 lang === 'ar' ? 'الموظف' : 'Employee',
                 lang === 'ar' ? 'القسم'  : 'Department',
@@ -323,6 +356,21 @@ export default function EmployeesPage() {
 
               return (
                 <Tr key={emp.id} onClick={() => setSelected(emp)} className="cursor-pointer">
+                  <Td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(emp.id)}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => {
+                        if (e.target.checked) {
+                          setSelectedIds(prev => [...prev, emp.id]);
+                        } else {
+                          setSelectedIds(prev => prev.filter(id => id !== emp.id));
+                        }
+                      }}
+                      className="w-4 h-4 rounded border-edge cursor-pointer accent-brand-500"
+                    />
+                  </Td>
                   <Td>
                     <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: avatarBg }}>
@@ -457,6 +505,22 @@ export default function EmployeesPage() {
           setEditTarget(null);
         }}
       />
+
+      {/* ── Bulk Edit Modal ── */}
+      <BulkEditModal
+        open={showBulkEdit}
+        selectedIds={selectedIds}
+        isRTL={isRTL}
+        lang={lang}
+        onClose={() => setShowBulkEdit(false)}
+        onSave={async (fields) => {
+          for (const id of selectedIds) {
+            await handleUpdateEmployee(id, fields);
+          }
+          setSelectedIds([]);
+          setShowBulkEdit(false);
+        }}
+      />
     </div>
   );
 }
@@ -470,12 +534,17 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
       if (employee) {
         setForm({ ...employee });
       } else {
-        setForm({ full_name_ar: '', full_name_en: '', email: '', phone: '', department: '', role: 'sales_agent', salary: '', employment_type: 'full_time', join_date: '' });
+        setForm({
+          full_name_ar: '', full_name_en: '', email: '', phone: '', department: '',
+          job_title_ar: '', employment_type: 'full_time', join_date: '', fingerprint_id: '',
+          salary: '', allowance_rate: '', allowance_fixed: '', tax_rate: '', insurance_rate: '',
+          tax_exempt: false, insurance_exempt: false,
+          shift_name: '', work_start: '', work_end: '', late_threshold: '', is_remote: false,
+        });
       }
     }
   }, [employee, open]);
 
-  // Reset form when modal opens
   if (!open) return null;
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -497,51 +566,277 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
     { value: 'probation', ar: 'فترة تجربة', en: 'Probation' },
   ];
 
+  const inputCls = "w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm";
+  const labelCls = "block text-xs text-content-muted dark:text-content-muted-dark mb-1";
+  const sectionCls = "text-sm font-bold text-content dark:text-content-dark mb-3 mt-5 pb-2 border-b border-edge dark:border-edge-dark";
+
   return (
-    <Modal open={open} onClose={onClose} title={employee ? (lang === 'ar' ? 'تعديل موظف' : 'Edit Employee') : (lang === 'ar' ? 'إضافة موظف' : 'New Employee')} width="max-w-lg">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-1">
-        <div>
-          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الاسم (عربي)' : 'Name (AR)'}</label>
-          <input value={form.full_name_ar || ''} onChange={e => set('full_name_ar', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+    <Modal open={open} onClose={onClose} title={employee ? (lang === 'ar' ? 'تعديل موظف' : 'Edit Employee') : (lang === 'ar' ? 'إضافة موظف' : 'New Employee')} width="max-w-2xl">
+      <div className="p-1 max-h-[70vh] overflow-y-auto">
+
+        {/* ── Section 1: Basic Info ── */}
+        <h3 className={sectionCls}>{lang === 'ar' ? 'بيانات أساسية' : 'Basic Info'}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'الاسم بالعربي' : 'Name (AR)'}</label>
+            <input value={form.full_name_ar || ''} onChange={e => set('full_name_ar', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'الاسم بالإنجليزي' : 'Name (EN)'}</label>
+            <input value={form.full_name_en || ''} onChange={e => set('full_name_en', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'البريد' : 'Email'}</label>
+            <input type="email" value={form.email || ''} onChange={e => set('email', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'الهاتف' : 'Phone'}</label>
+            <input value={form.phone || ''} onChange={e => set('phone', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'القسم' : 'Department'}</label>
+            <select value={form.department || ''} onChange={e => set('department', e.target.value)} className={inputCls}>
+              <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
+              {(departments || []).map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'المسمى الوظيفي' : 'Job Title'}</label>
+            <input value={form.job_title_ar || ''} onChange={e => set('job_title_ar', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'نوع التعاقد' : 'Employment Type'}</label>
+            <select value={form.employment_type || ''} onChange={e => set('employment_type', e.target.value)} className={inputCls}>
+              {WORK_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'تاريخ الالتحاق' : 'Hire Date'}</label>
+            <input type="date" value={form.join_date || form.hire_date || ''} onChange={e => set('join_date', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'كود البصمة' : 'Fingerprint ID'}</label>
+            <input value={form.fingerprint_id || ''} onChange={e => set('fingerprint_id', e.target.value)} className={inputCls} />
+          </div>
         </div>
-        <div>
-          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الاسم (إنجليزي)' : 'Name (EN)'}</label>
-          <input value={form.full_name_en || ''} onChange={e => set('full_name_en', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+
+        {/* ── Section 2: Salary & Deductions ── */}
+        <h3 className={sectionCls}>{lang === 'ar' ? 'المرتب والخصومات' : 'Salary & Deductions'}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary'}</label>
+            <input type="number" value={form.salary || ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'نسبة البدلات %' : 'Allowance Rate %'}</label>
+            <input type="number" value={form.allowance_rate || ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'أو بدلات مبلغ ثابت' : 'Or Fixed Allowance'}</label>
+            <input type="number" value={form.allowance_fixed || ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'نسبة الضرايب %' : 'Tax Rate %'}</label>
+            <input type="number" value={form.tax_rate || ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'نسبة التأمينات %' : 'Insurance Rate %'}</label>
+            <input type="number" value={form.insurance_rate || ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
+          </div>
+          <div className="flex items-center gap-6 sm:col-span-2 pt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!form.tax_exempt} onChange={e => set('tax_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'إعفاء من الضرايب' : 'Tax Exempt'}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!form.insurance_exempt} onChange={e => set('insurance_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'إعفاء من التأمينات' : 'Insurance Exempt'}</span>
+            </label>
+          </div>
         </div>
-        <div>
-          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'البريد' : 'Email'}</label>
-          <input type="email" value={form.email || ''} onChange={e => set('email', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+
+        {/* ── Section 3: Work Schedule ── */}
+        <h3 className={sectionCls}>{lang === 'ar' ? 'الدوام' : 'Work Schedule'}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'فترة الدوام' : 'Shift Name'}</label>
+            <input value={form.shift_name || ''} onChange={e => set('shift_name', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'ساعة البداية' : 'Work Start'}</label>
+            <input type="time" value={form.work_start || ''} onChange={e => set('work_start', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'ساعة النهاية' : 'Work End'}</label>
+            <input type="time" value={form.work_end || ''} onChange={e => set('work_end', e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'حد التأخير' : 'Late Threshold'}</label>
+            <input type="time" value={form.late_threshold || ''} onChange={e => set('late_threshold', e.target.value)} className={inputCls} />
+          </div>
+          <div className="flex items-center gap-2 pt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!form.is_remote} onChange={e => set('is_remote', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'شغل من البيت' : 'Remote Work'}</span>
+            </label>
+          </div>
         </div>
-        <div>
-          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الهاتف' : 'Phone'}</label>
-          <input value={form.phone || ''} onChange={e => set('phone', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
-        </div>
-        <div>
-          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'القسم' : 'Department'}</label>
-          <select value={form.department || ''} onChange={e => set('department', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
-            <option value="">{isRTL ? 'اختر...' : 'Select...'}</option>
-            {(departments || []).map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'نوع التعاقد' : 'Work Type'}</label>
-          <select value={form.employment_type || ''} onChange={e => set('employment_type', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
-            {WORK_TYPES.map(t => <option key={t.value} value={t.value}>{isRTL ? t.ar : t.en}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الراتب' : 'Salary'}</label>
-          <input type="number" value={form.salary || ''} onChange={e => set('salary', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
-        </div>
-        <div>
-          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'تاريخ الالتحاق' : 'Join Date'}</label>
-          <input type="date" value={form.join_date || ''} onChange={e => set('join_date', e.target.value)} className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
-        </div>
+
       </div>
       <ModalFooter>
         <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
         <Button onClick={handleSubmit} disabled={saving}>
           {saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (employee ? (isRTL ? 'حفظ التعديلات' : 'Save Changes') : (isRTL ? 'إضافة' : 'Add'))}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+/* ─── Bulk Edit Modal ─── */
+function BulkEditModal({ open, selectedIds, isRTL, lang, onClose, onSave }) {
+  const [form, setForm] = useState({});
+  const [enabled, setEnabled] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setForm({
+        salary: '', allowance_rate: '', allowance_fixed: '', tax_rate: '', insurance_rate: '',
+        tax_exempt: false, insurance_exempt: false,
+        shift_name: '', work_start: '', work_end: '', late_threshold: '', is_remote: false,
+      });
+      setEnabled({});
+    }
+  }, [open]);
+
+  if (!open) return null;
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const toggle = (k) => setEnabled(prev => ({ ...prev, [k]: !prev[k] }));
+
+  const handleSubmit = async () => {
+    const fields = {};
+    Object.keys(enabled).forEach(k => {
+      if (enabled[k]) fields[k] = form[k];
+    });
+    if (Object.keys(fields).length === 0) return;
+    setSaving(true);
+    try {
+      await onSave(fields);
+    } catch {} finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls = "w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm";
+  const labelCls = "block text-xs text-content-muted dark:text-content-muted-dark mb-1";
+  const sectionCls = "text-sm font-bold text-content dark:text-content-dark mb-3 mt-5 pb-2 border-b border-edge dark:border-edge-dark";
+  const disabledCls = "opacity-40 pointer-events-none";
+
+  const fieldRow = (key, label, input) => (
+    <div key={key}>
+      <div className="flex items-center gap-2 mb-1">
+        <input
+          type="checkbox"
+          checked={!!enabled[key]}
+          onChange={() => toggle(key)}
+          className="w-3.5 h-3.5 rounded border-edge accent-brand-500 cursor-pointer"
+        />
+        <label className={labelCls + ' !mb-0'}>{label}</label>
+      </div>
+      <div className={!enabled[key] ? disabledCls : ''}>
+        {input}
+      </div>
+    </div>
+  );
+
+  return (
+    <Modal open={open} onClose={onClose} title={lang === 'ar' ? `تعديل جماعي (${selectedIds.length} موظف)` : `Bulk Edit (${selectedIds.length} employees)`} width="max-w-2xl">
+      <div className="p-1 max-h-[70vh] overflow-y-auto">
+        <div className="bg-amber-500/[0.07] border border-amber-500/25 rounded-xl p-3 mb-4">
+          <p className="m-0 text-xs text-amber-700 dark:text-amber-400 font-medium">
+            {lang === 'ar'
+              ? 'فعّل الحقول اللي عايز تعدلها فقط. الحقول المفعّلة هتتطبق على كل الموظفين المحددين.'
+              : 'Enable only the fields you want to change. Enabled fields will be applied to all selected employees.'}
+          </p>
+        </div>
+
+        {/* ── Salary & Deductions ── */}
+        <h3 className={sectionCls}>{lang === 'ar' ? 'المرتب والخصومات' : 'Salary & Deductions'}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {fieldRow('salary', lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary',
+            <input type="number" value={form.salary || ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
+          )}
+          {fieldRow('allowance_rate', lang === 'ar' ? 'نسبة البدلات %' : 'Allowance Rate %',
+            <input type="number" value={form.allowance_rate || ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
+          )}
+          {fieldRow('allowance_fixed', lang === 'ar' ? 'بدلات مبلغ ثابت' : 'Fixed Allowance',
+            <input type="number" value={form.allowance_fixed || ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
+          )}
+          {fieldRow('tax_rate', lang === 'ar' ? 'نسبة الضرايب %' : 'Tax Rate %',
+            <input type="number" value={form.tax_rate || ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
+          )}
+          {fieldRow('insurance_rate', lang === 'ar' ? 'نسبة التأمينات %' : 'Insurance Rate %',
+            <input type="number" value={form.insurance_rate || ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
+          )}
+          <div className="flex items-center gap-6 sm:col-span-2 pt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!enabled.tax_exempt} onChange={() => toggle('tax_exempt')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
+              <span className={`text-xs ${!enabled.tax_exempt ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
+                {lang === 'ar' ? 'إعفاء من الضرايب' : 'Tax Exempt'}
+              </span>
+              {enabled.tax_exempt && (
+                <input type="checkbox" checked={!!form.tax_exempt} onChange={e => set('tax_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              )}
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!enabled.insurance_exempt} onChange={() => toggle('insurance_exempt')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
+              <span className={`text-xs ${!enabled.insurance_exempt ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
+                {lang === 'ar' ? 'إعفاء من التأمينات' : 'Insurance Exempt'}
+              </span>
+              {enabled.insurance_exempt && (
+                <input type="checkbox" checked={!!form.insurance_exempt} onChange={e => set('insurance_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              )}
+            </label>
+          </div>
+        </div>
+
+        {/* ── Work Schedule ── */}
+        <h3 className={sectionCls}>{lang === 'ar' ? 'الدوام' : 'Work Schedule'}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {fieldRow('shift_name', lang === 'ar' ? 'فترة الدوام' : 'Shift Name',
+            <input value={form.shift_name || ''} onChange={e => set('shift_name', e.target.value)} className={inputCls} />
+          )}
+          {fieldRow('work_start', lang === 'ar' ? 'ساعة البداية' : 'Work Start',
+            <input type="time" value={form.work_start || ''} onChange={e => set('work_start', e.target.value)} className={inputCls} />
+          )}
+          {fieldRow('work_end', lang === 'ar' ? 'ساعة النهاية' : 'Work End',
+            <input type="time" value={form.work_end || ''} onChange={e => set('work_end', e.target.value)} className={inputCls} />
+          )}
+          {fieldRow('late_threshold', lang === 'ar' ? 'حد التأخير' : 'Late Threshold',
+            <input type="time" value={form.late_threshold || ''} onChange={e => set('late_threshold', e.target.value)} className={inputCls} />
+          )}
+          <div className="flex items-center gap-2 pt-1">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!enabled.is_remote} onChange={() => toggle('is_remote')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
+              <span className={`text-xs ${!enabled.is_remote ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
+                {lang === 'ar' ? 'شغل من البيت' : 'Remote Work'}
+              </span>
+              {enabled.is_remote && (
+                <input type="checkbox" checked={!!form.is_remote} onChange={e => set('is_remote', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              )}
+            </label>
+          </div>
+        </div>
+
+      </div>
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+        <Button onClick={handleSubmit} disabled={saving || Object.values(enabled).filter(Boolean).length === 0}>
+          {saving
+            ? (lang === 'ar' ? 'جاري التطبيق...' : 'Applying...')
+            : (lang === 'ar' ? `تطبيق على ${selectedIds.length} موظف` : `Apply to ${selectedIds.length} employees`)}
         </Button>
       </ModalFooter>
     </Modal>

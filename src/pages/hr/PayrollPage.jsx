@@ -74,8 +74,15 @@ export default function PayrollPage() {
   const payrollData = useMemo(() => {
     return employees.map(emp => {
       const empAttendance = attendanceByEmp[emp.id] || [];
-      const shiftName = emp.shift || config.default_shift || 'فترة الدوام1';
-      const shiftConfig = config.shifts?.[shiftName] || config.shifts?.['فترة الدوام1'] || Object.values(config.shifts || {})[0];
+      const shiftName = emp.shift_name || emp.shift || config.default_shift || 'فترة الدوام1';
+      const globalShift = config.shifts?.[shiftName] || config.shifts?.['فترة الدوام1'] || Object.values(config.shifts || {})[0];
+      // Per-employee overrides for schedule
+      const shiftConfig = {
+        ...globalShift,
+        ...(emp.work_start && { official_start: emp.work_start }),
+        ...(emp.work_end && { official_end: emp.work_end }),
+        ...(emp.late_threshold && { late_threshold: emp.late_threshold }),
+      };
 
       const stats = calcEmployeeAttendance(empAttendance, shiftConfig);
 
@@ -96,12 +103,19 @@ export default function PayrollPage() {
       // Absent deduction
       const absentDeduction = Math.round(stats.absentDays * dailyRate);
 
-      // Allowances
-      const allowances = Math.round(baseSalary * (config.allowance_rate || 0.20));
+      // Allowances — per-employee override or global
+      const empAllowanceRate = emp.allowance_rate != null ? emp.allowance_rate / 100 : null;
+      const allowances = emp.allowance_fixed
+        ? Math.round(Number(emp.allowance_fixed))
+        : Math.round(baseSalary * (empAllowanceRate ?? config.allowance_rate ?? 0.20));
 
-      // Tax & Insurance
-      const tax = Math.round(baseSalary * (config.tax_rate || 0.14));
-      const socialInsurance = Math.round(baseSalary * (config.social_insurance_rate || 0.11));
+      // Tax & Insurance — per-employee override, exempt, or global
+      const tax = emp.tax_exempt
+        ? 0
+        : Math.round(baseSalary * ((emp.tax_rate != null ? emp.tax_rate / 100 : null) ?? config.tax_rate ?? 0.14));
+      const socialInsurance = emp.insurance_exempt
+        ? 0
+        : Math.round(baseSalary * ((emp.insurance_rate != null ? emp.insurance_rate / 100 : null) ?? config.social_insurance_rate ?? 0.11));
 
       // Total deductions
       const totalDeductions = tax + socialInsurance + lateDeduction + absentDeduction;
