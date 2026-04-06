@@ -284,6 +284,7 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
     let inserted = 0;
     let skipped = 0;
     let failed = 0;
+    const unmatchedNames = [];
 
     for (let i = 0; i < parsed.length; i++) {
       const emp = parsed[i];
@@ -303,6 +304,7 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
 
       if (!employeeId) {
         skipped++;
+        unmatchedNames.push({ id: emp.employee_id, name: emp.name, department: emp.department });
         continue;
       }
 
@@ -327,7 +329,7 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
       }
     }
 
-    setImportResult({ inserted, skipped, failed });
+    setImportResult({ inserted, skipped, failed, unmatchedNames });
     setStep('done');
     if (onImported) onImported();
   }, [parsed, onImported]);
@@ -494,31 +496,66 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
 
         {/* Done */}
         {step === 'done' && importResult && (
-          <div className="text-center py-8">
-            <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 size={24} className="text-green-500" />
-            </div>
-            <p className="m-0 text-sm font-bold text-content dark:text-content-dark mb-3">
-              {lang === 'ar' ? 'تم الاستيراد بنجاح' : 'Import Complete'}
-            </p>
-            <div className="flex justify-center gap-6 text-sm">
-              <div>
-                <span className="font-bold text-green-500">{importResult.inserted}</span>
-                <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'سجل تم إضافته' : 'records added'}</span>
+          <div className="py-6">
+            <div className="text-center mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 size={24} className="text-green-500" />
               </div>
-              {importResult.skipped > 0 && (
+              <p className="m-0 text-sm font-bold text-content dark:text-content-dark mb-3">
+                {lang === 'ar' ? 'تم الاستيراد' : 'Import Complete'}
+              </p>
+              <div className="flex justify-center gap-6 text-sm">
                 <div>
-                  <span className="font-bold text-yellow-500">{importResult.skipped}</span>
-                  <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'موظف لم يتطابق' : 'unmatched'}</span>
+                  <span className="font-bold text-green-500">{importResult.inserted}</span>
+                  <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'سجل تم إضافته' : 'records added'}</span>
                 </div>
-              )}
-              {importResult.failed > 0 && (
-                <div>
-                  <span className="font-bold text-red-500">{importResult.failed}</span>
-                  <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'سجل فشل' : 'failed'}</span>
-                </div>
-              )}
+                {importResult.skipped > 0 && (
+                  <div>
+                    <span className="font-bold text-yellow-500">{importResult.skipped}</span>
+                    <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'موظف لم يتطابق' : 'unmatched'}</span>
+                  </div>
+                )}
+                {importResult.failed > 0 && (
+                  <div>
+                    <span className="font-bold text-red-500">{importResult.failed}</span>
+                    <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'سجل فشل' : 'failed'}</span>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Unmatched employees list */}
+            {importResult.unmatchedNames?.length > 0 && (
+              <div className="mt-4 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-xl p-3">
+                <p className="m-0 text-sm font-bold text-yellow-700 dark:text-yellow-300 mb-2">
+                  <AlertCircle size={14} className="inline me-1" />
+                  {lang === 'ar' ? 'موظفين لم يتم التعرف عليهم (مش مسجلين على السيستم):' : 'Unmatched employees (not registered):'}
+                </p>
+                <div className="max-h-40 overflow-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="text-yellow-600 dark:text-yellow-400">
+                        <th className="px-2 py-1 text-start font-semibold">{lang === 'ar' ? 'الكود' : 'ID'}</th>
+                        <th className="px-2 py-1 text-start font-semibold">{lang === 'ar' ? 'الاسم' : 'Name'}</th>
+                        <th className="px-2 py-1 text-start font-semibold">{lang === 'ar' ? 'القسم' : 'Dept'}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importResult.unmatchedNames.map((emp, idx) => (
+                        <tr key={idx} className="border-t border-yellow-200/50 dark:border-yellow-500/20">
+                          <td className="px-2 py-1 text-yellow-800 dark:text-yellow-200 font-mono">{emp.id}</td>
+                          <td className="px-2 py-1 text-yellow-800 dark:text-yellow-200">{emp.name}</td>
+                          <td className="px-2 py-1 text-yellow-800 dark:text-yellow-200">{emp.department}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="m-0 text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                  {lang === 'ar' ? 'سجل الموظفين دول من صفحة الموظفين الأول وبعدين ارفع الشيت تاني.' : 'Add these employees from the Employees page first, then re-import.'}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>
