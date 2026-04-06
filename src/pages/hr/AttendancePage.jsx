@@ -341,7 +341,7 @@ export default function AttendancePage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (rec) => {
+  const handleDeleteRecord = async (rec) => {
     if (!rec.id) return;
     try {
       const { error } = await supabase.from('attendance').delete().eq('id', rec.id);
@@ -360,28 +360,53 @@ export default function AttendancePage() {
 
   const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
-  const handleClearMonth = async () => {
+  const [showDeleteMenu, setShowDeleteMenu] = useState(false);
+
+  const handleDelete = async (type, empId) => {
+    setShowDeleteMenu(false);
     const monthName = MONTHS_AR[month - 1];
-    const msg = lang === 'ar'
-      ? `متأكد إنك عايز تمسح كل سجلات حضور شهر ${monthName} ${year}؟\n\nعدد السجلات: ${allRecords.length}\n\nالعملية دي مش ممكن التراجع عنها!`
-      : `Are you sure you want to delete all attendance records for ${monthName} ${year}?\n\nRecords: ${allRecords.length}\n\nThis cannot be undone!`;
+
+    let msg, startDate, endDate;
+    const empName = empId ? ((employees.find(e => e.id === empId)?.full_name_ar) || '') : '';
+
+    if (type === 'month') {
+      msg = lang === 'ar'
+        ? `مسح كل سجلات شهر ${monthName} ${year}؟ (${allRecords.length} سجل)`
+        : `Delete all ${monthName} ${year} records? (${allRecords.length})`;
+    } else if (type === 'all') {
+      msg = lang === 'ar'
+        ? 'مسح كل سجلات الحضور بالكامل؟\n\nالعملية دي مش ممكن التراجع عنها!'
+        : 'Delete ALL attendance records?\n\nThis cannot be undone!';
+    } else if (type === 'employee') {
+      const empRecords = (attendance[empId] || []).length;
+      msg = lang === 'ar'
+        ? `مسح سجلات ${empName} لشهر ${monthName}؟ (${empRecords} سجل)`
+        : `Delete ${empName}'s ${monthName} records? (${empRecords})`;
+    }
+
     if (!window.confirm(msg)) return;
 
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDay = new Date(year, month, 0).getDate();
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
-
     try {
-      const { error } = await supabase
-        .from('attendance')
-        .delete()
-        .gte('date', startDate)
-        .lte('date', endDate);
+      let query = supabase.from('attendance').delete();
+
+      if (type === 'month') {
+        startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        endDate = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`;
+        query = query.gte('date', startDate).lte('date', endDate);
+      } else if (type === 'all') {
+        query = query.gte('date', '2000-01-01');
+      } else if (type === 'employee') {
+        startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        endDate = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`;
+        query = query.eq('employee_id', empId).gte('date', startDate).lte('date', endDate);
+      }
+
+      const { error } = await query;
       if (error) throw error;
-      showToast(lang === 'ar' ? `تم مسح سجلات ${monthName}` : `${monthName} records cleared`, 'success');
+      showToast(lang === 'ar' ? 'تم المسح بنجاح' : 'Deleted successfully', 'success');
       refreshData();
     } catch {
-      showToast(lang === 'ar' ? 'فشل في المسح' : 'Clear failed', 'error');
+      showToast(lang === 'ar' ? 'فشل في المسح' : 'Delete failed', 'error');
     }
   };
 
@@ -410,9 +435,46 @@ export default function AttendancePage() {
             {MONTHS_AR.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </Select>
           {allRecords.length > 0 && (
-            <Button variant="secondary" size="md" onClick={handleClearMonth} className="!text-red-500 !border-red-500/30 hover:!bg-red-500/10">
-              <Eraser size={14} />{lang === 'ar' ? 'مسح الشهر' : 'Clear Month'}
-            </Button>
+            <div className="relative">
+              <Button variant="secondary" size="md" onClick={() => setShowDeleteMenu(!showDeleteMenu)} className="!text-red-500 !border-red-500/30 hover:!bg-red-500/10">
+                <Trash2 size={14} />{lang === 'ar' ? 'مسح' : 'Delete'}<ChevronDown size={12} />
+              </Button>
+              {showDeleteMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowDeleteMenu(false)} />
+                  <div className={`absolute top-full mt-1 ${isRTL ? 'right-0' : 'left-0'} z-50 w-56 bg-surface dark:bg-surface-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg py-1 overflow-hidden`}>
+                    <button
+                      onClick={() => handleDelete('month')}
+                      className="w-full px-4 py-2.5 text-start text-sm hover:bg-red-500/10 text-content dark:text-content-dark flex items-center gap-2"
+                    >
+                      <Calendar size={14} className="text-red-500" />
+                      {lang === 'ar' ? `مسح شهر ${MONTHS_AR[month - 1]}` : `Clear ${MONTHS_AR[month - 1]}`}
+                      <span className="ms-auto text-xs text-content-muted dark:text-content-muted-dark">{allRecords.length}</span>
+                    </button>
+                    {expandedEmp && (
+                      <button
+                        onClick={() => handleDelete('employee', expandedEmp)}
+                        className="w-full px-4 py-2.5 text-start text-sm hover:bg-red-500/10 text-content dark:text-content-dark flex items-center gap-2"
+                      >
+                        <Users size={14} className="text-red-500" />
+                        {lang === 'ar'
+                          ? `مسح ${(employees.find(e => e.id === expandedEmp)?.full_name_ar || '').split(' ')[0]}`
+                          : `Clear ${(employees.find(e => e.id === expandedEmp)?.full_name_en || '').split(' ')[0]}`}
+                        <span className="ms-auto text-xs text-content-muted dark:text-content-muted-dark">{(attendance[expandedEmp] || []).length}</span>
+                      </button>
+                    )}
+                    <div className="border-t border-edge dark:border-edge-dark my-1" />
+                    <button
+                      onClick={() => handleDelete('all')}
+                      className="w-full px-4 py-2.5 text-start text-sm hover:bg-red-500/10 text-red-500 font-semibold flex items-center gap-2"
+                    >
+                      <Eraser size={14} />
+                      {lang === 'ar' ? 'مسح الكل' : 'Clear All'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
           <Button variant="secondary" size="md" onClick={() => { setEditRecord(null); setShowForm(true); }}>
             <Plus size={14} />{lang === 'ar' ? 'إضافة سجل' : 'Add Record'}
@@ -483,7 +545,7 @@ export default function AttendancePage() {
                 expanded={expandedEmp === emp.id}
                 onToggle={() => setExpandedEmp(expandedEmp === emp.id ? null : emp.id)}
                 onEdit={handleEdit}
-                onDelete={handleDelete}
+                onDelete={handleDeleteRecord}
               />
             ))}
           </tbody>
