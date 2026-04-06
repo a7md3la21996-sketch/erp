@@ -571,7 +571,13 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
             <Button variant="secondary" onClick={reset}>
               {lang === 'ar' ? 'رجوع' : 'Back'}
             </Button>
-            <Button onClick={handleImport} disabled={!parsed?.length}>
+            <Button onClick={() => {
+              const monthName = MONTHS_AR[month - 1];
+              const msg = lang === 'ar'
+                ? `هيتم رفع ${totalRecords} سجل حضور لشهر ${monthName} ${year}.\n\nمتأكد إن الشهر صح؟`
+                : `${totalRecords} records will be imported for ${monthName} ${year}.\n\nAre you sure the month is correct?`;
+              if (window.confirm(msg)) handleImport();
+            }} disabled={!parsed?.length}>
               {lang === 'ar' ? `استيراد ${totalRecords} سجل` : `Import ${totalRecords} records`}
             </Button>
           </>
