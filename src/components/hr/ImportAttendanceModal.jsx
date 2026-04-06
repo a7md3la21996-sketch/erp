@@ -33,20 +33,38 @@ function excelTimeToString(val) {
 }
 
 async function parseFingerPrintExcel(file, selectedMonth, selectedYear) {
-  const ExcelJS = (await import('exceljs')).default;
-  const workbook = new ExcelJS.Workbook();
   const buffer = await file.arrayBuffer();
-  await workbook.xlsx.load(buffer);
+  const fileName = file.name.toLowerCase();
+
+  let rows = [];
+
+  if (fileName.endsWith('.xls') && !fileName.endsWith('.xlsx')) {
+    // Use SheetJS (xlsx) for .xls files
+    const XLSX = (await import('xlsx')).default || (await import('xlsx'));
+    const wb = XLSX.read(buffer, { type: 'array' });
+    const sheetName = wb.SheetNames[0];
+    if (!sheetName) return { employees: [], errors: ['لا يوجد شيت في الملف'] };
+    const ws = wb.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+    jsonData.forEach((row, idx) => {
+      // Shift values to 1-indexed to match ExcelJS format
+      const values = [null, ...row];
+      rows.push({ rowNum: idx + 1, values });
+    });
+  } else {
+    // Use ExcelJS for .xlsx files
+    const ExcelJS = (await import('exceljs')).default;
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const sheet = workbook.worksheets[0];
+    if (!sheet) return { employees: [], errors: ['لا يوجد شيت في الملف'] };
+    sheet.eachRow({ includeEmpty: true }, (row, rowNum) => {
+      rows.push({ rowNum, values: row.values });
+    });
+  }
 
   const employees = [];
-  const sheet = workbook.worksheets[0];
-  if (!sheet) return { employees: [], errors: ['لا يوجد شيت في الملف'] };
-
   const errors = [];
-  const rows = [];
-  sheet.eachRow({ includeEmpty: true }, (row, rowNum) => {
-    rows.push({ rowNum, values: row.values });
-  });
 
   let i = 0;
   while (i < rows.length) {
