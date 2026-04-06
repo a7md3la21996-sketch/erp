@@ -5,7 +5,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { Clock, Plus, Pencil, Trash2, Star } from 'lucide-react';
 import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton } from '../../components/ui';
 
-const EMPTY_FORM = { name: '', name_ar: '', description: '', official_start: '', official_end: '', late_threshold: '' };
+const DAY_LABELS = { ar: ['أحد','اثنين','ثلاثاء','أربعاء','خميس','جمعة','سبت'], en: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] };
+const EMPTY_FORM = { name: '', name_ar: '', description: '', official_start: '', official_end: '', late_threshold: '', working_days: [0,1,2,3,4,6], late_penalty_multiplier: 2, required_hours: 8, break_minutes: 60 };
 
 export default function ShiftsPage() {
   const { i18n } = useTranslation();
@@ -51,6 +52,10 @@ export default function ShiftsPage() {
       official_start: shift.official_start || '',
       official_end: shift.official_end || '',
       late_threshold: shift.late_threshold || '',
+      working_days: shift.working_days || [0,1,2,3,4,6],
+      late_penalty_multiplier: shift.late_penalty_multiplier ?? 2,
+      required_hours: shift.required_hours ?? 8,
+      break_minutes: shift.break_minutes ?? 60,
     });
     setModalOpen(true);
   };
@@ -286,6 +291,88 @@ export default function ShiftsPage() {
               onChange={e => setForm(f => ({ ...f, late_threshold: e.target.value }))}
               className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
             />
+          </div>
+          {/* Working Days */}
+          <div className="col-span-full">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-2">
+              {lang === 'ar' ? 'أيام العمل' : 'Working Days'}
+            </label>
+            <div className="flex gap-2 flex-wrap">
+              {[0,1,2,3,4,5,6].map(d => {
+                const active = (form.working_days || []).includes(d);
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => {
+                      setForm(f => ({
+                        ...f,
+                        working_days: active
+                          ? f.working_days.filter(x => x !== d)
+                          : [...(f.working_days || []), d].sort(),
+                      }));
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      active
+                        ? 'bg-brand-500/15 text-brand-500 border-brand-500/30'
+                        : 'bg-surface dark:bg-surface-dark text-content-muted dark:text-content-muted-dark border-edge dark:border-edge-dark'
+                    }`}
+                  >
+                    {DAY_LABELS[lang === 'ar' ? 'ar' : 'en'][d]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Late Penalty Multiplier */}
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'مضاعف التأخير' : 'Late Penalty ×'}
+            </label>
+            <input
+              type="number"
+              step="0.5"
+              value={form.late_penalty_multiplier}
+              onChange={e => setForm(f => ({ ...f, late_penalty_multiplier: +e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+              placeholder="2"
+            />
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mt-1">
+              {lang === 'ar' ? 'مثال: 2 = الدقيقة تأخير تتحسب دقيقتين خصم' : 'e.g. 2 = each late minute counts as 2'}
+            </p>
+          </div>
+
+          {/* Required Hours */}
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'ساعات العمل المطلوبة' : 'Required Hours'}
+            </label>
+            <input
+              type="number"
+              step="0.5"
+              value={form.required_hours}
+              onChange={e => setForm(f => ({ ...f, required_hours: +e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+              placeholder="8"
+            />
+          </div>
+
+          {/* Break Minutes */}
+          <div className="col-span-full">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'وقت البريك (دقيقة)' : 'Break Time (minutes)'}
+            </label>
+            <input
+              type="number"
+              value={form.break_minutes}
+              onChange={e => setForm(f => ({ ...f, break_minutes: +e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+              placeholder="60"
+            />
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mt-1">
+              {lang === 'ar' ? 'وقت الراحة اللي مش بيتحسب من ساعات العمل' : 'Break time not counted in work hours'}
+            </p>
           </div>
         </div>
         <ModalFooter className="justify-end">
