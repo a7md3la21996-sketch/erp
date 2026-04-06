@@ -150,9 +150,15 @@ function parseDayTimes(dayValues, timeValues, month, year) {
     if (!val) continue;
 
     const valStr = String(val).trim();
-    const parts = valStr.split(/\s+/);
-    if (parts.length >= 2 && isTimeValue(parts[0]) && isTimeValue(parts[1])) {
-      records.push({ day, date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, check_in: parts[0], check_out: parts[1] });
+    // Extract all HH:MM timestamps from the cell
+    const allTimes = valStr.match(/\d{1,2}:\d{2}/g);
+    if (allTimes && allTimes.length >= 2) {
+      // First timestamp = check_in, last = check_out (handles 3+ punches)
+      records.push({ day, date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, check_in: allTimes[0], check_out: allTimes[allTimes.length - 1] });
+      continue;
+    }
+    if (allTimes && allTimes.length === 1) {
+      records.push({ day, date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, check_in: allTimes[0], check_out: null });
       continue;
     }
 
