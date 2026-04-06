@@ -64,6 +64,7 @@ export default function EmployeesPage() {
   const [showBulkEdit, setShowBulkEdit] = useState(false);
   const [terminateTarget, setTerminateTarget] = useState(null);
   const [viewMode, setViewMode] = useState('active'); // active | former
+  const [showBulkShift, setShowBulkShift] = useState(false);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('employee');
   const userName = profile?.full_name_ar || profile?.full_name_en || '';
@@ -349,6 +350,9 @@ export default function EmployeesPage() {
           <Button size="sm" onClick={() => setShowBulkEdit(true)}>
             {lang === 'ar' ? 'تعديل جماعي' : 'Bulk Edit'}
           </Button>
+          <Button size="sm" variant="secondary" onClick={() => setShowBulkShift(true)}>
+            {lang === 'ar' ? 'تعيين شيفت' : 'Assign Shift'}
+          </Button>
           <Button size="sm" variant="secondary" onClick={() => setSelectedIds([])}>
             {lang === 'ar' ? 'إلغاء التحديد' : 'Deselect All'}
           </Button>
@@ -548,6 +552,18 @@ export default function EmployeesPage() {
           setShowBulkEdit(false);
         }}
       />
+
+      {/* ── Bulk Shift Assignment Modal ── */}
+      {showBulkShift && (
+        <BulkShiftModal
+          open={showBulkShift}
+          selectedIds={selectedIds}
+          lang={lang}
+          isRTL={isRTL}
+          onClose={() => setShowBulkShift(false)}
+          onDone={() => { setShowBulkShift(false); setSelectedIds([]); loadEmployees(); }}
+        />
+      )}
     </div>
   );
 }
@@ -1051,6 +1067,77 @@ function TerminationModal({ emp, onClose, onConfirm, lang, isRTL }) {
         <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
         <Button onClick={handleSubmit} disabled={saving} className="!bg-red-500 hover:!bg-red-600 !text-white !border-red-500">
           {saving ? (lang === 'ar' ? 'جاري الإنهاء...' : 'Processing...') : (lang === 'ar' ? 'تأكيد إنهاء الخدمة' : 'Confirm Termination')}
+        </Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ── Bulk Shift Assignment Modal ──────────────────────────────
+
+function BulkShiftModal({ open, selectedIds, lang, isRTL, onClose, onDone }) {
+  const [shifts, setShifts] = useState([]);
+  const [shiftId, setShiftId] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (open) {
+      import('../../services/shiftsService').then(({ fetchShifts }) => fetchShifts().then(setShifts));
+    }
+  }, [open]);
+
+  const handleSubmit = async () => {
+    if (!shiftId || !startDate) return;
+    setSaving(true);
+    try {
+      const { assignShiftBulk } = await import('../../services/employeeShiftsService');
+      await assignShiftBulk(selectedIds, shiftId, startDate, endDate || null, notes || null);
+      showToast(lang === 'ar' ? `تم تعيين الشيفت لـ ${selectedIds.length} موظف` : `Shift assigned to ${selectedIds.length} employees`, 'success');
+      onDone();
+    } catch {
+      showToast(lang === 'ar' ? 'فشل التعيين' : 'Assignment failed', 'error');
+    }
+    setSaving(false);
+  };
+
+  if (!open) return null;
+  const inputCls = 'w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm';
+
+  return (
+    <Modal open onClose={onClose} title={lang === 'ar' ? `تعيين شيفت لـ ${selectedIds.length} موظف` : `Assign shift to ${selectedIds.length} employees`} width="max-w-md">
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="space-y-3">
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'فترة الدوام' : 'Shift'}</label>
+          <select value={shiftId} onChange={e => setShiftId(e.target.value)} className={inputCls}>
+            <option value="">{lang === 'ar' ? 'اختر فترة...' : 'Select shift...'}</option>
+            {shifts.map(s => (
+              <option key={s.id} value={s.id}>{isRTL ? (s.name_ar || s.name) : s.name} ({s.official_start} - {s.official_end})</option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'من تاريخ' : 'Start Date'}</label>
+            <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'لتاريخ (اختياري)' : 'End Date (optional)'}</label>
+            <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className={inputCls} />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'ملاحظات' : 'Notes'}</label>
+          <input value={notes} onChange={e => setNotes(e.target.value)} className={inputCls} placeholder={lang === 'ar' ? 'مثلاً: شيفت رمضان' : 'e.g. Ramadan shift'} />
+        </div>
+      </div>
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+        <Button onClick={handleSubmit} disabled={saving || !shiftId || !startDate}>
+          {saving ? (lang === 'ar' ? 'جاري التعيين...' : 'Assigning...') : (lang === 'ar' ? 'تعيين' : 'Assign')}
         </Button>
       </ModalFooter>
     </Modal>

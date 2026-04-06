@@ -4,6 +4,7 @@ import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
 import { loadPayrollConfig, savePayrollConfig, calcEmployeeAttendance, calcProRatedSalary, DEFAULT_PAYROLL_CONFIG } from '../../config/payrollConfig';
 import { fetchHolidays } from '../../services/holidaysService';
+import { fetchAllEmployeeShifts, getActiveShift } from '../../services/employeeShiftsService';
 import supabase from '../../lib/supabase';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
@@ -31,6 +32,7 @@ export default function PayrollPage() {
   const [detailEmp, setDetailEmp] = useState(null);
   const [salaryHistories, setSalaryHistories] = useState({});
   const [configHistories, setConfigHistories] = useState({});
+  const [shiftAssignments, setShiftAssignments] = useState({});
   const [holidayDates, setHolidayDates] = useState(new Set());
 
   // Load data
@@ -43,9 +45,10 @@ export default function PayrollPage() {
       setConfig(cfgData);
 
       // Load salary history and config history for all employees
-      const [salaryRes, configRes] = await Promise.all([
+      const [salaryRes, configRes, shiftRes] = await Promise.all([
         supabase.from('salary_history').select('*').order('effective_date', { ascending: true }),
         supabase.from('employee_config_history').select('*').order('effective_date', { ascending: true }),
+        fetchAllEmployeeShifts(),
       ]);
 
       const salaryGrouped = {};
@@ -61,6 +64,13 @@ export default function PayrollPage() {
         configGrouped[h.employee_id].push(h);
       });
       setConfigHistories(configGrouped);
+
+      const shiftGrouped = {};
+      (shiftRes || []).forEach(s => {
+        if (!shiftGrouped[s.employee_id]) shiftGrouped[s.employee_id] = [];
+        shiftGrouped[s.employee_id].push(s);
+      });
+      setShiftAssignments(shiftGrouped);
 
       setLoading(false);
     });
@@ -102,14 +112,22 @@ export default function PayrollPage() {
       // Use historical config for this month
       const emp = getEmpConfigForMonth(empRaw, month, year);
       const empAttendance = attendanceByEmp[empRaw.id] || [];
+
+      // Get shift: check dated assignments first, then employee default, then global
+      const empShiftAssignments = shiftAssignments[empRaw.id] || [];
+      const midMonthDate = `${year}-${String(month).padStart(2, '0')}-15`;
+      const assignedShift = getActiveShift(empShiftAssignments, midMonthDate);
+
       const shiftName = emp.shift_name || emp.shift || config.default_shift || 'فترة الدوام1';
       const globalShift = config.shifts?.[shiftName] || config.shifts?.['فترة الدوام1'] || Object.values(config.shifts || {})[0];
+      const baseShift = assignedShift || globalShift;
+
       // Per-employee overrides for schedule
       const shiftConfig = {
-        ...globalShift,
-        ...(emp.work_start && { official_start: emp.work_start }),
-        ...(emp.work_end && { official_end: emp.work_end }),
-        ...(emp.late_threshold && { late_threshold: emp.late_threshold }),
+        ...baseShift,
+        ...(emp.work_start && !assignedShift && { official_start: emp.work_start }),
+        ...(emp.work_end && !assignedShift && { official_end: emp.work_end }),
+        ...(emp.late_threshold && !assignedShift && { late_threshold: emp.late_threshold }),
       };
 
       const isRemote = emp.work_mode === 'remote';
@@ -191,7 +209,7 @@ export default function PayrollPage() {
         hasAttendance: empAttendance.length > 0,
       };
     });
-  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, month, year, holidayDates]);
+  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, shiftAssignments, month, year, holidayDates]);
 
   const totalSalaries = useMemo(() => payrollData.reduce((s, e) => s + e.baseSalary, 0), [payrollData]);
   const totalNet = useMemo(() => payrollData.reduce((s, e) => s + e.netSalary, 0), [payrollData]);
