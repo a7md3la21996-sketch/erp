@@ -62,15 +62,25 @@ export default function EmployeesPage() {
   const [editTarget, setEditTarget] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [showBulkEdit, setShowBulkEdit] = useState(false);
+  const [terminateTarget, setTerminateTarget] = useState(null);
+  const [viewMode, setViewMode] = useState('active'); // active | former
 
   const { auditFields, applyAuditFilters } = useAuditFilter('employee');
   const userName = profile?.full_name_ar || profile?.full_name_en || '';
 
-  useEffect(() => {
-    Promise.all([fetchEmployees(), fetchDepartments()])
-      .then(([emps, depts]) => { setEmployees(emps); setDepartments(depts); })
-      .finally(() => setLoading(false));
-  }, []);
+  const loadEmployees = () => {
+    setLoading(true);
+    Promise.all([
+      fetchEmployees(),
+      fetchEmployees({ includeDeleted: true }),
+      fetchDepartments(),
+    ]).then(([active, all, depts]) => {
+      setEmployees(all);
+      setDepartments(depts);
+    }).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { loadEmployees(); }, []);
 
   /* ─── Mutation handlers with audit logging ─── */
 
@@ -115,29 +125,53 @@ export default function EmployeesPage() {
     }
   };
 
-  const confirmDeleteEmployee = async () => {
-    if (!deleteTarget) return;
-    const id = deleteTarget.id;
-    setDeleting(true);
+  const handleTerminate = async (terminationData) => {
+    const id = terminateTarget.id;
     try {
-      const emp = (employees || []).find(e => e.id === id);
-      await deleteEmployee(id);
+      const result = await updateEmployee(id, {
+        status: 'terminated',
+        is_active: false,
+        termination_date: terminationData.date,
+        termination_reason: terminationData.reason,
+        termination_notes: terminationData.notes,
+        deleted_at: new Date().toISOString(),
+      });
       logAction({
-        action: 'delete',
+        action: 'terminate',
         entity: 'employee',
         entityId: id,
-        entityName: emp?.full_name_ar || emp?.full_name_en || '',
-        description: `Soft-deleted employee: ${emp?.full_name_ar || emp?.full_name_en || ''}`,
+        entityName: terminateTarget.full_name_ar || terminateTarget.full_name_en || '',
+        description: `Terminated: ${terminationData.reason} — ${terminateTarget.full_name_ar || ''}`,
         userName,
       });
-      // Soft delete: update status in local state instead of removing
-      setEmployees(prev => prev.map(e => e.id === id ? { ...e, is_active: false, deleted_at: new Date().toISOString(), status: 'inactive' } : e));
+      setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...result, is_active: false, status: 'terminated' } : e));
+      setTerminateTarget(null);
     } catch (err) {
-      if (import.meta.env.DEV) console.error('Delete employee failed:', err);
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
+      if (import.meta.env.DEV) console.error('Terminate failed:', err);
     }
+  };
+
+  const handleReinstate = async (emp) => {
+    if (!window.confirm(lang === 'ar' ? `إعادة تعيين ${emp.full_name_ar || emp.full_name_en}؟` : `Reinstate ${emp.full_name_en || emp.full_name_ar}?`)) return;
+    try {
+      const result = await updateEmployee(emp.id, {
+        status: 'active',
+        is_active: true,
+        termination_date: null,
+        termination_reason: null,
+        termination_notes: null,
+        deleted_at: null,
+      });
+      logAction({
+        action: 'reinstate',
+        entity: 'employee',
+        entityId: emp.id,
+        entityName: emp.full_name_ar || emp.full_name_en || '',
+        description: `Reinstated employee: ${emp.full_name_ar || ''}`,
+        userName,
+      });
+      setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, ...result, is_active: true, status: 'active' } : e));
+    } catch {}
   };
 
   const handleStatusChange = async (id, newStatus) => {
@@ -198,9 +232,17 @@ export default function EmployeesPage() {
     ...auditFields,
   ], [departments, auditFields]);
 
+  const activeCount = (employees || []).filter(e => e.is_active !== false).length;
+  const formerCount = (employees || []).filter(e => e.is_active === false || e.status === 'terminated').length;
+
   const filtered = useMemo(() => {
-    // Exclude soft-deleted employees unless explicitly filtering for inactive
-    let result = (employees || []).filter(e => !e.deleted_at);
+    let result = (employees || []);
+    // Filter by view mode
+    if (viewMode === 'active') {
+      result = result.filter(e => e.is_active !== false);
+    } else {
+      result = result.filter(e => e.is_active === false || e.status === 'terminated');
+    }
 
     // Apply smart filters
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
@@ -313,6 +355,22 @@ export default function EmployeesPage() {
         </div>
       )}
 
+      {/* ── Active / Former Tabs ── */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => { setViewMode('active'); setPage(1); }}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${viewMode === 'active' ? 'bg-brand-500 text-white' : 'bg-surface dark:bg-surface-dark text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark'}`}
+        >
+          {lang === 'ar' ? 'موظفين حاليين' : 'Active'} ({activeCount})
+        </button>
+        <button
+          onClick={() => { setViewMode('former'); setPage(1); }}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${viewMode === 'former' ? 'bg-red-500 text-white' : 'bg-surface dark:bg-surface-dark text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark'}`}
+        >
+          {lang === 'ar' ? 'موظفين سابقين' : 'Former'} ({formerCount})
+        </button>
+      </div>
+
       {/* ── Table ── */}
       <Table>
           <thead>
@@ -410,7 +468,11 @@ export default function EmployeesPage() {
                       <IconBtn icon={Eye}     onClick={() => setSelected(emp)} title={lang === 'ar' ? 'عرض' : 'View'} />
                       <IconBtn icon={Edit2}   onClick={() => setEditTarget(emp)} title={lang === 'ar' ? 'تعديل' : 'Edit'} />
                       <IconBtn icon={FileText} onClick={() => {}} title={lang === 'ar' ? 'Payslip' : 'Payslip'} color="#6B8DB5" />
-                      <IconBtn icon={Trash2}  onClick={() => setDeleteTarget(emp)} title={lang === 'ar' ? 'حذف' : 'Delete'} color="#EF4444" />
+                      {emp.is_active !== false ? (
+                        <IconBtn icon={Trash2} onClick={() => setTerminateTarget(emp)} title={lang === 'ar' ? 'إنهاء خدمة' : 'Terminate'} color="#EF4444" />
+                      ) : (
+                        <IconBtn icon={UserCheck} onClick={() => handleReinstate(emp)} title={lang === 'ar' ? 'إعادة تعيين' : 'Reinstate'} color="#22C55E" />
+                      )}
                     </div>
                   </Td>
                 </Tr>
@@ -441,51 +503,16 @@ export default function EmployeesPage() {
       {/* ── Employee Detail Modal ── */}
       <EmployeeModal emp={selected} onClose={() => setSelected(null)} isRTL={isRTL} lang={lang} />
 
-      {/* ── Delete Confirmation Modal ── */}
-      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={lang === 'ar' ? 'تأكيد حذف الموظف' : 'Confirm Employee Deletion'} width="max-w-sm">
-        {deleteTarget && (
-          <>
-            <div className={`flex items-center gap-3 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
-              <div className="w-10 h-10 rounded-xl bg-red-500/[0.12] flex items-center justify-center shrink-0">
-                <AlertTriangle size={20} className="text-red-500" />
-              </div>
-              <div className="text-start">
-                <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
-                  {lang === 'ar' ? 'هل أنت متأكد من حذف هذا الموظف؟' : 'Are you sure you want to delete this employee?'}
-                </p>
-                <p className="m-0 mt-1 text-xs font-semibold text-red-500">
-                  {(isRTL ? deleteTarget.full_name_ar : deleteTarget.full_name_en) || deleteTarget.full_name_ar}
-                </p>
-              </div>
-            </div>
-            <div className="bg-amber-500/[0.07] border border-amber-500/25 rounded-lg p-3 mb-4">
-              <p className="m-0 text-xs text-amber-700 dark:text-amber-400 font-medium mb-1.5">
-                {lang === 'ar' ? 'سيتم تعطيل حساب الموظف مع الاحتفاظ بالبيانات التالية:' : 'The employee account will be deactivated. The following data will be preserved:'}
-              </p>
-              <ul className={`m-0 text-xs text-amber-700 dark:text-amber-400 ${isRTL ? 'pr-4' : 'pl-4'}`} style={{ listStyleType: 'disc' }}>
-                <li>{lang === 'ar' ? 'سجلات الحضور والانصراف' : 'Attendance records'}</li>
-                <li>{lang === 'ar' ? 'سجلات الإجازات' : 'Leave records'}</li>
-                <li>{lang === 'ar' ? 'سجلات الرواتب' : 'Payroll history'}</li>
-              </ul>
-            </div>
-            <ModalFooter>
-              <Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>
-                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
-              </Button>
-              <Button
-                onClick={confirmDeleteEmployee}
-                disabled={deleting}
-                className="!bg-red-500 hover:!bg-red-600 !text-white !border-red-500"
-              >
-                {deleting
-                  ? (lang === 'ar' ? 'جارٍ الحذف...' : 'Deleting...')
-                  : (lang === 'ar' ? 'تأكيد الحذف' : 'Confirm Delete')
-                }
-              </Button>
-            </ModalFooter>
-          </>
-        )}
-      </Modal>
+      {/* ── Termination Modal ── */}
+      {terminateTarget && (
+        <TerminationModal
+          emp={terminateTarget}
+          onClose={() => setTerminateTarget(null)}
+          onConfirm={handleTerminate}
+          lang={lang}
+          isRTL={isRTL}
+        />
+      )}
 
       {/* ── Create / Edit Employee Modal ── */}
       <EmployeeFormModal
@@ -947,6 +974,84 @@ function EmployeeModal({ emp, onClose, isRTL, lang }) {
       ))}
       <ModalFooter>
         <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إغلاق' : 'Close'}</Button>
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ── Termination Modal ────────────────────────────────────────
+
+function TerminationModal({ emp, onClose, onConfirm, lang, isRTL }) {
+  const [form, setForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    reason: 'resignation',
+    notes: '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
+
+  const REASONS = [
+    { value: 'resignation', ar: 'استقالة', en: 'Resignation' },
+    { value: 'termination', ar: 'فصل', en: 'Termination' },
+    { value: 'contract_end', ar: 'انتهاء عقد', en: 'Contract End' },
+    { value: 'mutual', ar: 'اتفاق مشترك', en: 'Mutual Agreement' },
+    { value: 'other', ar: 'أخرى', en: 'Other' },
+  ];
+
+  const handleSubmit = async () => {
+    setSaving(true);
+    await onConfirm(form);
+    setSaving(false);
+  };
+
+  return (
+    <Modal open onClose={onClose} title={lang === 'ar' ? 'إنهاء خدمة موظف' : 'Terminate Employee'} width="max-w-md">
+      <div dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className={`flex items-center gap-3 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="w-10 h-10 rounded-xl bg-red-500/[0.12] flex items-center justify-center shrink-0">
+            <AlertTriangle size={20} className="text-red-500" />
+          </div>
+          <div className="text-start">
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{name}</p>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{emp.employee_number}</p>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'تاريخ المغادرة' : 'Last Working Day'}</label>
+            <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'السبب' : 'Reason'}</label>
+            <select value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
+              {REASONS.map(r => <option key={r.value} value={r.value}>{lang === 'ar' ? r.ar : r.en}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'ملاحظات' : 'Notes'}</label>
+            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={3}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm resize-none" />
+          </div>
+        </div>
+
+        <div className="bg-amber-500/[0.07] border border-amber-500/25 rounded-lg p-3 mt-4">
+          <p className="m-0 text-xs text-amber-700 dark:text-amber-400 font-medium">
+            {lang === 'ar'
+              ? 'بيانات الموظف والحضور والمرتبات هتفضل محفوظة. تقدر تعمل إعادة تعيين في أي وقت.'
+              : 'All employee data, attendance and payroll records will be preserved. You can reinstate anytime.'}
+          </p>
+        </div>
+      </div>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+        <Button onClick={handleSubmit} disabled={saving} className="!bg-red-500 hover:!bg-red-600 !text-white !border-red-500">
+          {saving ? (lang === 'ar' ? 'جاري الإنهاء...' : 'Processing...') : (lang === 'ar' ? 'تأكيد إنهاء الخدمة' : 'Confirm Termination')}
+        </Button>
       </ModalFooter>
     </Modal>
   );
