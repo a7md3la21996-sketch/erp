@@ -737,6 +737,11 @@ export default function ContactsPage() {
       if (cfValues) setCFValues('contact', saved.id, cfValues);
       logAction({ action: 'create', entity: 'contact', entityId: saved.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
       evaluateTriggers('contact', 'created', saved);
+      // Notify assigned agent about new lead
+      const assignedName = profile?.full_name_en || profile?.full_name_ar;
+      if (assignedName) {
+        notifyLeadAssigned({ contactName: cleanForm.full_name || cleanForm.phone || '—', contactId: saved.id, agentId: assignedName, agentName: assignedName, assignedBy: profile?.full_name_ar || '—' });
+      }
     } catch (err) {
       console.error('[handleSave] Failed to create contact:', err?.message || err);
       toast.error(isRTL ? 'فشل حفظ جهة الاتصال: ' + (err?.message || 'خطأ غير معروف') : 'Failed to save contact: ' + (err?.message || 'Unknown error'));
@@ -898,6 +903,7 @@ export default function ContactsPage() {
           { label: 'بدون نشاط', labelEn: 'No Activity 30d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) }] },
           { label: 'عملاء مبيعات', labelEn: 'Sales Clients', filters: [{ field: 'contact_type', operator: 'is', value: 'customer' }, { field: 'department', operator: 'is', value: 'sales' }] },
           { label: 'موردين', labelEn: 'Suppliers', filters: [{ field: 'contact_type', operator: 'is', value: 'supplier' }] },
+          { label: 'محتاج متابعة', labelEn: 'Needs Follow-up', filters: [{ field: 'contact_status', operator: 'is', value: 'active' }, { field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10) }] },
           { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: '_opp_count', operator: 'eq', value: '0' }] },
           { label: 'غير نشط', labelEn: 'Inactive', filters: [{ field: 'contact_status', operator: 'is', value: 'inactive' }] },
           { label: 'غير مؤهل', labelEn: 'Disqualified', filters: [{ field: 'contact_status', operator: 'is', value: 'disqualified' }] },
