@@ -30,6 +30,7 @@ export default function PayrollPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [detailEmp, setDetailEmp] = useState(null);
   const [salaryHistories, setSalaryHistories] = useState({});
+  const [configHistories, setConfigHistories] = useState({});
   const [holidayDates, setHolidayDates] = useState(new Set());
 
   // Load data
@@ -41,18 +42,25 @@ export default function PayrollPage() {
       setEmployees(empData);
       setConfig(cfgData);
 
-      // Load salary history for all employees
-      const { data: allHistory } = await supabase
-        .from('salary_history')
-        .select('*')
-        .order('effective_date', { ascending: true });
+      // Load salary history and config history for all employees
+      const [salaryRes, configRes] = await Promise.all([
+        supabase.from('salary_history').select('*').order('effective_date', { ascending: true }),
+        supabase.from('employee_config_history').select('*').order('effective_date', { ascending: true }),
+      ]);
 
-      const grouped = {};
-      (allHistory || []).forEach(h => {
-        if (!grouped[h.employee_id]) grouped[h.employee_id] = [];
-        grouped[h.employee_id].push(h);
+      const salaryGrouped = {};
+      (salaryRes.data || []).forEach(h => {
+        if (!salaryGrouped[h.employee_id]) salaryGrouped[h.employee_id] = [];
+        salaryGrouped[h.employee_id].push(h);
       });
-      setSalaryHistories(grouped);
+      setSalaryHistories(salaryGrouped);
+
+      const configGrouped = {};
+      (configRes.data || []).forEach(h => {
+        if (!configGrouped[h.employee_id]) configGrouped[h.employee_id] = [];
+        configGrouped[h.employee_id].push(h);
+      });
+      setConfigHistories(configGrouped);
 
       setLoading(false);
     });
@@ -73,10 +81,27 @@ export default function PayrollPage() {
     return grouped;
   }, [attendance]);
 
+  // Get employee config for a specific month (from history or current)
+  const getEmpConfigForMonth = (emp, m, y) => {
+    const history = configHistories[emp.id];
+    if (!history || history.length === 0) return emp; // use current
+
+    const monthEnd = `${y}-${String(m).padStart(2, '0')}-${new Date(y, m, 0).getDate()}`;
+    // Find the latest config that was active on or before month end
+    let activeConfig = null;
+    for (const h of history) {
+      if (h.effective_date <= monthEnd) activeConfig = h.config;
+    }
+    if (!activeConfig) return emp;
+    return { ...emp, ...activeConfig };
+  };
+
   // Calculate payroll for each employee
   const payrollData = useMemo(() => {
-    return employees.map(emp => {
-      const empAttendance = attendanceByEmp[emp.id] || [];
+    return employees.map(empRaw => {
+      // Use historical config for this month
+      const emp = getEmpConfigForMonth(empRaw, month, year);
+      const empAttendance = attendanceByEmp[empRaw.id] || [];
       const shiftName = emp.shift_name || emp.shift || config.default_shift || 'فترة الدوام1';
       const globalShift = config.shifts?.[shiftName] || config.shifts?.['فترة الدوام1'] || Object.values(config.shifts || {})[0];
       // Per-employee overrides for schedule
@@ -146,7 +171,9 @@ export default function PayrollPage() {
       const netSalary = baseSalary + allowances + overtimeBonus - totalDeductions;
 
       return {
+        ...empRaw,
         ...emp,
+        id: empRaw.id,
         stats,
         baseSalary,
         allowances,
@@ -164,7 +191,7 @@ export default function PayrollPage() {
         hasAttendance: empAttendance.length > 0,
       };
     });
-  }, [employees, attendanceByEmp, config, salaryHistories, month, year, holidayDates]);
+  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, month, year, holidayDates]);
 
   const totalSalaries = useMemo(() => payrollData.reduce((s, e) => s + e.baseSalary, 0), [payrollData]);
   const totalNet = useMemo(() => payrollData.reduce((s, e) => s + e.netSalary, 0), [payrollData]);

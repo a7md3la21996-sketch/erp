@@ -89,6 +89,31 @@ export async function updateEmployee(id, updates) {
       });
     }
 
+    // Track any config change in employee_config_history
+    const CONFIG_FIELDS = [
+      'salary','allowance_rate','allowance_fixed','tax_rate','insurance_rate',
+      'tax_exempt','insurance_exempt','shift_id','shift_name','work_start','work_end',
+      'late_threshold','work_mode','annual_leave_days','leave_balance',
+      'deduct_absence_from_leave','monthly_grace_hours','grace_hours_enabled',
+      'overtime_enabled','overtime_rate'
+    ];
+    const changedFields = CONFIG_FIELDS.filter(f => {
+      const oldVal = old?.[f];
+      const newVal = data?.[f];
+      return String(oldVal ?? '') !== String(newVal ?? '');
+    });
+    if (changedFields.length > 0) {
+      const config = {};
+      CONFIG_FIELDS.forEach(f => { if (data[f] != null) config[f] = data[f]; });
+      await supabase.from('employee_config_history').insert({
+        employee_id: id,
+        effective_date: new Date().toISOString().slice(0, 10),
+        config,
+        changed_fields: changedFields,
+        notes: `Changed: ${changedFields.join(', ')}`,
+      }).catch(() => {});
+    }
+
     await logUpdate('employee', id, old, data);
     return data;
   } catch (err) { reportError('employeesService', 'query', err);
