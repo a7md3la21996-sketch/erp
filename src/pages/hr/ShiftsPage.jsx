@@ -5,7 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { Clock, Plus, Pencil, Trash2, Star } from 'lucide-react';
 import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton } from '../../components/ui';
 
-const EMPTY_FORM = { name: '', name_ar: '', official_start: '', official_end: '', late_threshold: '' };
+const EMPTY_FORM = { name: '', name_ar: '', description: '', official_start: '', official_end: '', late_threshold: '' };
 
 export default function ShiftsPage() {
   const { i18n } = useTranslation();
@@ -47,6 +47,7 @@ export default function ShiftsPage() {
     setForm({
       name: shift.name || '',
       name_ar: shift.name_ar || '',
+      description: shift.description || '',
       official_start: shift.official_start || '',
       official_end: shift.official_end || '',
       late_threshold: shift.late_threshold || '',
@@ -137,6 +138,7 @@ export default function ShiftsPage() {
               <Th>{lang === 'ar' ? 'بداية' : 'Start'}</Th>
               <Th>{lang === 'ar' ? 'نهاية' : 'End'}</Th>
               <Th>{lang === 'ar' ? 'حد التأخير' : 'Late Threshold'}</Th>
+              <Th>{lang === 'ar' ? 'الوصف' : 'Description'}</Th>
               <Th>{lang === 'ar' ? 'افتراضي' : 'Default'}</Th>
               <Th>{lang === 'ar' ? 'إجراءات' : 'Actions'}</Th>
             </tr>
@@ -144,7 +146,7 @@ export default function ShiftsPage() {
           <tbody>
             {shifts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-16 px-5">
+                <td colSpan={8} className="text-center py-16 px-5">
                   <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                     <Clock size={24} color="#4A7AAB" />
                   </div>
@@ -163,6 +165,7 @@ export default function ShiftsPage() {
                 <Td>{shift.official_start || '-'}</Td>
                 <Td>{shift.official_end || '-'}</Td>
                 <Td>{shift.late_threshold || '-'}</Td>
+                <Td className="text-xs text-content-muted dark:text-content-muted-dark">{shift.description || '-'}</Td>
                 <Td>
                   {shift.is_default && (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-brand-500/[0.12] text-brand-500">
@@ -259,6 +262,18 @@ export default function ShiftsPage() {
               value={form.official_end}
               onChange={e => setForm(f => ({ ...f, official_end: e.target.value }))}
               className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+            />
+          </div>
+          <div className="col-span-full">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'الوصف' : 'Description'}
+            </label>
+            <input
+              type="text"
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+              placeholder={lang === 'ar' ? 'مثال: فترة رمضان المسائية' : 'e.g. Ramadan evening shift'}
             />
           </div>
           <div className="col-span-full">
