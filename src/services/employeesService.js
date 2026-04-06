@@ -16,6 +16,11 @@ export async function fetchEmployees(filters = {}) {
       `)
       .order('full_name_ar', { ascending: true });
 
+    // By default, exclude deleted employees unless explicitly requested
+    if (!filters.includeDeleted) {
+      query = query.eq('is_active', true);
+    }
+
     if (filters.department) query = query.eq('department_id', filters.department);
     if (filters.status)     query = query.eq('status', filters.status);
     if (filters.search) {
@@ -91,6 +96,8 @@ export async function deleteEmployee(id) {
       .update({ is_active: false, deleted_at: now, status: 'inactive', updated_at: now })
       .eq('id', id);
     if (error) throw error;
+    // Clean up attendance records for deleted employee
+    await supabase.from('attendance').delete().eq('employee_id', id);
     await logDelete('employee', id, old);
   } catch (err) { reportError('employeesService', 'query', err);
     const idx = MOCK_EMPLOYEES.findIndex(e => e.id === id);
