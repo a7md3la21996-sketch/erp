@@ -52,6 +52,7 @@ const EmployeesPage = lazyRetry(() => import('./pages/hr/EmployeesPage'));
 const HRPoliciesPage = lazyRetry(() => import('./pages/hr/HRPoliciesPage'));
 const AttendancePage = lazyRetry(() => import('./pages/hr/AttendancePage'));
 const ShiftsPage = lazyRetry(() => import('./pages/hr/ShiftsPage'));
+const HolidaysPage = lazyRetry(() => import('./pages/hr/HolidaysPage'));
 const LeavePage = lazyRetry(() => import('./pages/hr/LeavePage'));
 const PayrollPage = lazyRetry(() => import('./pages/hr/PayrollPage'));
 const CompetenciesPage = lazyRetry(() => import('./pages/hr/CompetenciesPage'));
@@ -219,6 +220,7 @@ export default function App() {
                 <Route path="/hr/employees" element={<Guarded><EmployeesPage /></Guarded>} />
                 <Route path="/hr/policies" element={<Guarded><HRPoliciesPage /></Guarded>} />
                 <Route path="/hr/shifts" element={<Guarded><ShiftsPage /></Guarded>} />
+                <Route path="/hr/holidays" element={<Guarded><HolidaysPage /></Guarded>} />
                 <Route path="/hr/attendance" element={<Guarded><AttendancePage /></Guarded>} />
                 <Route path="/hr/leave" element={<Guarded><LeavePage /></Guarded>} />
                 <Route path="/hr/payroll" element={<Guarded><PayrollPage /></Guarded>} />

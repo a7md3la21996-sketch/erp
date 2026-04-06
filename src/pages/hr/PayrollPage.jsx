@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
 import { loadPayrollConfig, savePayrollConfig, calcEmployeeAttendance, calcProRatedSalary, DEFAULT_PAYROLL_CONFIG } from '../../config/payrollConfig';
+import { fetchHolidays } from '../../services/holidaysService';
 import supabase from '../../lib/supabase';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
@@ -29,6 +30,7 @@ export default function PayrollPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [detailEmp, setDetailEmp] = useState(null);
   const [salaryHistories, setSalaryHistories] = useState({});
+  const [holidayDates, setHolidayDates] = useState(new Set());
 
   // Load data
   useEffect(() => {
@@ -58,6 +60,7 @@ export default function PayrollPage() {
 
   useEffect(() => {
     fetchAttendance({ month, year }).then(setAttendance);
+    fetchHolidays(year, month).then(data => setHolidayDates(new Set(data.map(h => h.date))));
   }, [month, year]);
 
   // Group attendance by employee
@@ -84,7 +87,7 @@ export default function PayrollPage() {
         ...(emp.late_threshold && { late_threshold: emp.late_threshold }),
       };
 
-      const stats = calcEmployeeAttendance(empAttendance, shiftConfig);
+      const stats = calcEmployeeAttendance(empAttendance, shiftConfig, { holidayDates, month, year });
 
       const empHistory = salaryHistories[emp.id] || [];
       const baseSalary = empHistory.length > 0
@@ -141,7 +144,7 @@ export default function PayrollPage() {
         hasAttendance: empAttendance.length > 0,
       };
     });
-  }, [employees, attendanceByEmp, config, salaryHistories, month, year]);
+  }, [employees, attendanceByEmp, config, salaryHistories, month, year, holidayDates]);
 
   const totalSalaries = useMemo(() => payrollData.reduce((s, e) => s + e.baseSalary, 0), [payrollData]);
   const totalNet = useMemo(() => payrollData.reduce((s, e) => s + e.netSalary, 0), [payrollData]);

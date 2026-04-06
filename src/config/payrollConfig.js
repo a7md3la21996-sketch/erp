@@ -156,55 +156,87 @@ export function timeToMinutes(timeStr) {
 
 // ── Calculate attendance stats for one employee in a month ───
 
-export function calcEmployeeAttendance(records, shiftConfig) {
+export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
   if (!shiftConfig) shiftConfig = DEFAULT_PAYROLL_CONFIG.shifts['فترة الدوام1'];
 
   const lateThreshold = timeToMinutes(shiftConfig.late_threshold || shiftConfig.official_start);
   const officialStart = timeToMinutes(shiftConfig.official_start);
   const officialEnd = timeToMinutes(shiftConfig.official_end);
   const officialHours = officialEnd - officialStart;
+  const breakMinutes = shiftConfig.break_minutes || 0;
+
+  const { holidayDates, month, year, workingDays } = options;
+  const shiftWorkingDays = workingDays || shiftConfig.working_days || [0,1,2,3,4,6];
 
   let presentDays = 0;
   let absentDays = 0;
+  let holidayDaysOff = 0;
   let totalLateMinutes = 0;
   let totalOvertimeMinutes = 0;
   let totalWorkedMinutes = 0;
+
+  // Build set of dates employee was present
+  const presentDatesSet = new Set();
 
   for (const rec of records) {
     const checkIn = timeToMinutes(rec.check_in);
     const checkOut = timeToMinutes(rec.check_out);
 
     if (checkIn == null && checkOut == null) {
-      // Check if this was a working day — if record exists with absent flag
       if (rec.absent) absentDays++;
       continue;
     }
 
     presentDays++;
+    if (rec.date) presentDatesSet.add(rec.date);
 
     if (checkIn != null && checkOut != null) {
-      const worked = checkOut - checkIn;
+      const worked = Math.max(0, checkOut - checkIn - breakMinutes);
       totalWorkedMinutes += worked;
 
-      // Late calculation
       if (checkIn > lateThreshold) {
         totalLateMinutes += checkIn - lateThreshold;
       }
 
-      // Overtime (after official end)
       if (checkOut > officialEnd) {
         totalOvertimeMinutes += checkOut - officialEnd;
       }
     }
   }
 
+  // Calculate absent days: working days in month - present days - holidays
+  if (month && year) {
+    const daysInMonth = new Date(year, month, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayOfWeek = new Date(year, month - 1, d).getDay();
+
+      // Skip non-working days
+      if (!shiftWorkingDays.includes(dayOfWeek)) continue;
+
+      // Skip holidays
+      if (holidayDates && holidayDates.has(dateStr)) {
+        holidayDaysOff++;
+        continue;
+      }
+
+      // If not present and not already counted as absent from records
+      if (!presentDatesSet.has(dateStr)) {
+        absentDays++;
+      }
+    }
+    // Reset absentDays to calculated value (override the one from records)
+    // absentDays is already calculated above
+  }
+
   return {
     presentDays,
     absentDays,
+    holidayDaysOff,
     totalLateMinutes,
     totalOvertimeMinutes,
     totalWorkedMinutes,
     totalWorkedHours: Math.round(totalWorkedMinutes / 60 * 10) / 10,
-    officialHoursPerDay: officialHours / 60,
+    officialHoursPerDay: (officialHours - breakMinutes) / 60,
   };
 }
