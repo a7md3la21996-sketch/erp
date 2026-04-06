@@ -42,6 +42,7 @@ export const NAV_ITEMS = [
     { id: 'employees',    label: { ar: 'الموظفين',        en: 'Employees' },    path: '/hr/employees',    permission: P.HR_VIEW_OWN },
     { id: 'performance', label: { ar: 'الأداء', en: 'Performance' }, path: '/hr/performance', permission: P.HR_VIEW_OWN },
     { id: 'goals', label: { ar: 'الأهداف', en: 'Goals & OKRs' }, path: '/hr/goals', permission: P.HR_VIEW_OWN },
+    { id: 'shifts',       label: { ar: 'فترات الدوام',    en: 'Shifts' },       path: '/hr/shifts',       permission: P.HR_VIEW_ALL },
     { id: 'attendance',   label: { ar: 'الحضور',          en: 'Attendance' },   path: '/hr/attendance',   permission: P.ATTEND_VIEW_OWN },
     { id: 'leave',        label: { ar: 'الإجازات',        en: 'Leave' },        path: '/hr/leave',        permission: P.LEAVE_REQUEST },
     { id: 'payroll',      label: { ar: 'الرواتب',         en: 'Payroll' },      path: '/hr/payroll',      permission: P.PAYROLL_VIEW },

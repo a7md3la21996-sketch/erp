@@ -528,6 +528,15 @@ export default function EmployeesPage() {
 function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, onSave }) {
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [shifts, setShifts] = useState([]);
+
+  useEffect(() => {
+    if (open) {
+      import('../../services/shiftsService').then(({ fetchShifts }) => {
+        fetchShifts().then(setShifts);
+      });
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -659,8 +668,26 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
         <h3 className={sectionCls}>{lang === 'ar' ? 'الدوام' : 'Work Schedule'}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
-            <label className={labelCls}>{lang === 'ar' ? 'فترة الدوام' : 'Shift Name'}</label>
-            <input value={form.shift_name || ''} onChange={e => set('shift_name', e.target.value)} className={inputCls} />
+            <label className={labelCls}>{lang === 'ar' ? 'فترة الدوام' : 'Shift'}</label>
+            <select
+              value={form.shift_id || ''}
+              onChange={e => {
+                const s = shifts.find(sh => sh.id === e.target.value);
+                set('shift_id', e.target.value);
+                if (s) {
+                  set('shift_name', s.name);
+                  set('work_start', s.official_start);
+                  set('work_end', s.official_end);
+                  set('late_threshold', s.late_threshold);
+                }
+              }}
+              className={inputCls}
+            >
+              <option value="">{lang === 'ar' ? 'اختر فترة...' : 'Select shift...'}</option>
+              {shifts.map(s => (
+                <option key={s.id} value={s.id}>{isRTL ? (s.name_ar || s.name) : s.name} ({s.official_start} - {s.official_end})</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'ساعة البداية' : 'Work Start'}</label>
