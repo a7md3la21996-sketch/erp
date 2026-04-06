@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
-import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar } from 'lucide-react';
-import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Select, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
+import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Upload } from 'lucide-react';
+import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, PageSkeleton, ExportButton, Select, Button, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
+import ImportAttendanceModal from '../../components/hr/ImportAttendanceModal';
 
 function AttendanceRow({ emp, attendance, isRTL }) {
   const recs = attendance[emp.employee_id] || [];
@@ -56,8 +57,15 @@ export default function AttendancePage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [smartFilters, setSmartFilters] = useState([]);
+  const [showImport, setShowImport] = useState(false);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('attendance');
+
+  const refreshData = () => {
+    setLoading(true);
+    fetchEmployees().then(data => { setEmployees(data); setLoading(false); });
+    fetchAttendance({ month, year }).then(setAllRecords);
+  };
 
   useEffect(() => {
     fetchEmployees().then(data => { setEmployees(data); setLoading(false); });
@@ -131,6 +139,9 @@ export default function AttendancePage() {
           <Select value={month} onChange={e=>setMonth(+e.target.value)}>
             {MONTHS_AR.map((m,i)=><option key={i} value={i+1}>{m}</option>)}
           </Select>
+          <Button size="md" onClick={() => setShowImport(true)}>
+            <Upload size={14} />{lang === 'ar' ? 'استيراد البصمة' : 'Import'}
+          </Button>
           <ExportButton
             data={allRecords}
             filename={isRTL ? 'الحضور' : 'attendance'}
@@ -183,6 +194,12 @@ export default function AttendancePage() {
         </Table>
         <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
       </Card>
+
+      <ImportAttendanceModal
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onImported={refreshData}
+      />
     </div>
   );
 }

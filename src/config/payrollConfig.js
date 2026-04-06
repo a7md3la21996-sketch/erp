@@ -1,0 +1,145 @@
+import supabase from '../lib/supabase';
+
+// ── Default Payroll Configuration ────────────────────────────
+// Supports multiple shifts, per-employee overrides, and configurable rates
+
+export const DEFAULT_PAYROLL_CONFIG = {
+  // Global rates (can be overridden per employee)
+  tax_rate: 0.14,
+  social_insurance_rate: 0.11,
+  allowance_rate: 0.20,
+
+  // Late penalty
+  late_penalty_multiplier: 2, // each late minute = 2 minutes deduction
+
+  // Deduction per minute (EGP) — calculated from salary if 0
+  late_deduction_per_minute: 0,
+
+  // Shifts
+  shifts: {
+    'فترة الدوام1': {
+      name_ar: 'فترة الدوام 1',
+      name_en: 'Shift 1',
+      official_start: '10:00',
+      official_end: '18:00',
+      late_threshold: '10:30',
+      working_days: [0, 1, 2, 3, 4, 6], // 0=Sun..6=Sat — Friday(5) off
+    },
+    'فترة الدوام2': {
+      name_ar: 'فترة الدوام 2',
+      name_en: 'Shift 2',
+      official_start: '10:30',
+      official_end: '18:30',
+      late_threshold: '11:00',
+      working_days: [0, 1, 2, 3, 4, 6],
+    },
+  },
+
+  // Default shift for employees without one
+  default_shift: 'فترة الدوام1',
+};
+
+// ── Load config from Supabase ────────────────────────────────
+
+let _cachedConfig = null;
+
+export async function loadPayrollConfig() {
+  if (_cachedConfig) return _cachedConfig;
+  try {
+    const { data, error } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', 'payroll_config')
+      .single();
+    if (error || !data?.value) throw error;
+    _cachedConfig = { ...DEFAULT_PAYROLL_CONFIG, ...data.value };
+    return _cachedConfig;
+  } catch {
+    _cachedConfig = { ...DEFAULT_PAYROLL_CONFIG };
+    return _cachedConfig;
+  }
+}
+
+// ── Save config to Supabase ──────────────────────────────────
+
+export async function savePayrollConfig(config) {
+  _cachedConfig = { ...config };
+  try {
+    const { error } = await supabase
+      .from('system_config')
+      .upsert(
+        { key: 'payroll_config', value: config, updated_at: new Date().toISOString() },
+        { onConflict: 'key' }
+      );
+    if (error) throw error;
+    return true;
+  } catch (err) {
+    console.error('Failed to save payroll config:', err);
+    return false;
+  }
+}
+
+// ── Helper: parse "HH:MM" to minutes since midnight ─────────
+
+export function timeToMinutes(timeStr) {
+  if (!timeStr) return null;
+  const clean = String(timeStr).trim();
+  const match = clean.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  return parseInt(match[1]) * 60 + parseInt(match[2]);
+}
+
+// ── Calculate attendance stats for one employee in a month ───
+
+export function calcEmployeeAttendance(records, shiftConfig) {
+  if (!shiftConfig) shiftConfig = DEFAULT_PAYROLL_CONFIG.shifts['فترة الدوام1'];
+
+  const lateThreshold = timeToMinutes(shiftConfig.late_threshold || shiftConfig.official_start);
+  const officialStart = timeToMinutes(shiftConfig.official_start);
+  const officialEnd = timeToMinutes(shiftConfig.official_end);
+  const officialHours = officialEnd - officialStart;
+
+  let presentDays = 0;
+  let absentDays = 0;
+  let totalLateMinutes = 0;
+  let totalOvertimeMinutes = 0;
+  let totalWorkedMinutes = 0;
+
+  for (const rec of records) {
+    const checkIn = timeToMinutes(rec.check_in);
+    const checkOut = timeToMinutes(rec.check_out);
+
+    if (checkIn == null && checkOut == null) {
+      // Check if this was a working day — if record exists with absent flag
+      if (rec.absent) absentDays++;
+      continue;
+    }
+
+    presentDays++;
+
+    if (checkIn != null && checkOut != null) {
+      const worked = checkOut - checkIn;
+      totalWorkedMinutes += worked;
+
+      // Late calculation
+      if (checkIn > lateThreshold) {
+        totalLateMinutes += checkIn - lateThreshold;
+      }
+
+      // Overtime (after official end)
+      if (checkOut > officialEnd) {
+        totalOvertimeMinutes += checkOut - officialEnd;
+      }
+    }
+  }
+
+  return {
+    presentDays,
+    absentDays,
+    totalLateMinutes,
+    totalOvertimeMinutes,
+    totalWorkedMinutes,
+    totalWorkedHours: Math.round(totalWorkedMinutes / 60 * 10) / 10,
+    officialHoursPerDay: officialHours / 60,
+  };
+}
