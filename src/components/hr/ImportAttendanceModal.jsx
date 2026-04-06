@@ -1,7 +1,7 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, ModalFooter, Button, Card } from '../ui';
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Users, Calendar, X } from 'lucide-react';
+import { Modal, ModalFooter, Button } from '../ui';
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Users, Calendar, X, Link2 } from 'lucide-react';
 import supabase from '../../lib/supabase';
 
 // ── Parse fingerprint Excel ──────────────────────────────────
@@ -14,14 +14,12 @@ function isTimeValue(val) {
 }
 
 function excelTimeToString(val) {
-  // ExcelJS may return Date objects for time cells
   if (val instanceof Date) {
     const h = String(val.getHours()).padStart(2, '0');
     const m = String(val.getMinutes()).padStart(2, '0');
     return `${h}:${m}`;
   }
   if (typeof val === 'number' && val < 1) {
-    // Excel time fraction (0.4375 = 10:30)
     const totalMinutes = Math.round(val * 24 * 60);
     const h = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
     const m = String(totalMinutes % 60).padStart(2, '0');
@@ -39,7 +37,6 @@ async function parseFingerPrintExcel(file, selectedMonth, selectedYear) {
   let rows = [];
 
   if (fileName.endsWith('.xls') && !fileName.endsWith('.xlsx')) {
-    // Use SheetJS (xlsx) for .xls files
     const XLSX = (await import('xlsx')).default || (await import('xlsx'));
     const wb = XLSX.read(buffer, { type: 'array' });
     const sheetName = wb.SheetNames[0];
@@ -47,12 +44,10 @@ async function parseFingerPrintExcel(file, selectedMonth, selectedYear) {
     const ws = wb.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
     jsonData.forEach((row, idx) => {
-      // Shift values to 1-indexed to match ExcelJS format
       const values = [null, ...row];
       rows.push({ rowNum: idx + 1, values });
     });
   } else {
-    // Use ExcelJS for .xlsx files
     const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
@@ -71,20 +66,17 @@ async function parseFingerPrintExcel(file, selectedMonth, selectedYear) {
     const row = rows[i];
     const firstCell = String(row.values[1] || '');
 
-    // Detect employee header row: contains "رقم هوية" or "رقم" or ID-like pattern
     if (firstCell.includes('رقم هوية') || firstCell.includes('رقم') || firstCell.match(/^(No|ID|رقم)/i)) {
       const headerText = row.values.filter(Boolean).join(' ');
       const emp = parseEmployeeHeader(headerText);
 
       if (emp) {
-        // Look for day numbers row and times row(s) below
         const dayRow = rows[i + 1];
         const timeRow = rows[i + 2];
 
         if (dayRow && timeRow) {
           const attendance = parseDayTimes(dayRow.values, timeRow.values, selectedMonth, selectedYear);
 
-          // Check if there's a second time row (some exports split check-in/check-out)
           let timeRow2 = rows[i + 3];
           if (timeRow2 && !isEmployeeHeaderRow(String(timeRow2.values[1] || '')) && !isDayNumberRow(timeRow2.values)) {
             const extra = parseDayTimesSecondRow(dayRow.values, timeRow.values, timeRow2.values, selectedMonth, selectedYear);
@@ -94,10 +86,7 @@ async function parseFingerPrintExcel(file, selectedMonth, selectedYear) {
             }
           }
 
-          employees.push({
-            ...emp,
-            attendance,
-          });
+          employees.push({ ...emp, attendance });
           i += 3;
           continue;
         }
@@ -127,7 +116,6 @@ function isDayNumberRow(values) {
 }
 
 function parseEmployeeHeader(text) {
-  // Format: "رقم هوية:12 الاسم:SaraRamadan القسم:مكتب فترة الدوام:فترة الدوام1"
   const idMatch = text.match(/(?:رقم هوية|رقم|No|ID)[:\s]*(\S+)/i);
   const nameMatch = text.match(/(?:الاسم|Name)[:\s]*(\S+)/i);
   const deptMatch = text.match(/(?:القسم|Dept|Department)[:\s]*(\S+)/i);
@@ -145,16 +133,13 @@ function parseEmployeeHeader(text) {
 
 function parseDayTimes(dayValues, timeValues, month, year) {
   const records = [];
-  const dayMap = {}; // col index → day number
+  const dayMap = {};
 
-  // Map columns to day numbers
   for (let c = 1; c < dayValues.length; c++) {
     const v = Number(dayValues[c]);
     if (v >= 1 && v <= 31) dayMap[c] = v;
   }
 
-  // Parse times — each day column may have "HH:MM" for check-in
-  // and the next column has check-out, OR single cell has "HH:MM HH:MM"
   const dayCols = Object.keys(dayMap).map(Number).sort((a, b) => a - b);
 
   for (let d = 0; d < dayCols.length; d++) {
@@ -165,41 +150,21 @@ function parseDayTimes(dayValues, timeValues, month, year) {
     if (!val) continue;
 
     const valStr = String(val).trim();
-
-    // Try "HH:MM HH:MM" in single cell
     const parts = valStr.split(/\s+/);
     if (parts.length >= 2 && isTimeValue(parts[0]) && isTimeValue(parts[1])) {
-      records.push({
-        day,
-        date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        check_in: parts[0],
-        check_out: parts[1],
-      });
+      records.push({ day, date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, check_in: parts[0], check_out: parts[1] });
       continue;
     }
 
-    // Single time in this cell — check next cell for check-out
     const t1 = excelTimeToString(val);
     if (t1) {
       const nextCol = col + 1;
       const t2 = timeValues[nextCol] ? excelTimeToString(timeValues[nextCol]) : null;
 
-      // If next column is NOT a day column, it's likely the check-out
       if (t2 && !dayMap[nextCol]) {
-        records.push({
-          day,
-          date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-          check_in: t1,
-          check_out: t2,
-        });
+        records.push({ day, date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, check_in: t1, check_out: t2 });
       } else {
-        // Just check-in, no check-out
-        records.push({
-          day,
-          date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-          check_in: t1,
-          check_out: null,
-        });
+        records.push({ day, date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, check_in: t1, check_out: null });
       }
     }
   }
@@ -208,7 +173,6 @@ function parseDayTimes(dayValues, timeValues, month, year) {
 }
 
 function parseDayTimesSecondRow(dayValues, timeRow1, timeRow2, month, year) {
-  // Format where row1 = check-in times, row2 = check-out times
   const records = [];
   const dayMap = {};
 
@@ -223,16 +187,58 @@ function parseDayTimesSecondRow(dayValues, timeRow1, timeRow2, month, year) {
     const t2 = excelTimeToString(timeRow2[c]);
 
     if (t1 || t2) {
-      records.push({
-        day,
-        date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
-        check_in: t1 || null,
-        check_out: t2 || null,
-      });
+      records.push({ day, date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`, check_in: t1 || null, check_out: t2 || null });
     }
   }
 
   return records;
+}
+
+// ── Match employees against Supabase ─────────────────────────
+
+async function matchEmployees(parsedEmployees) {
+  // Load all active employees
+  const { data: dbEmployees } = await supabase
+    .from('employees')
+    .select('id, employee_number, full_name_ar, full_name_en, fingerprint_id, is_active')
+    .eq('is_active', true);
+
+  const matched = [];
+  const unmatched = [];
+
+  for (const emp of parsedEmployees) {
+    let match = null;
+
+    // 1. Match by fingerprint_id (highest priority — previously linked)
+    if (emp.employee_id) {
+      match = dbEmployees?.find(e => e.fingerprint_id === emp.employee_id);
+    }
+
+    // 2. Match by employee_number
+    if (!match && emp.employee_id) {
+      match = dbEmployees?.find(e => e.employee_number === emp.employee_id);
+    }
+
+    // 3. Match by name (exact or contains)
+    if (!match && emp.name) {
+      const nameLower = emp.name.toLowerCase().replace(/\s/g, '');
+      match = dbEmployees?.find(e => {
+        const arName = (e.full_name_ar || '').toLowerCase().replace(/\s/g, '');
+        const enName = (e.full_name_en || '').toLowerCase().replace(/\s/g, '');
+        return arName === nameLower || enName === nameLower ||
+               arName.includes(nameLower) || enName.includes(nameLower) ||
+               nameLower.includes(arName) || nameLower.includes(enName);
+      });
+    }
+
+    if (match) {
+      matched.push({ ...emp, dbEmployee: match, dbEmployeeId: match.id });
+    } else {
+      unmatched.push({ ...emp, dbEmployee: null, dbEmployeeId: null });
+    }
+  }
+
+  return { matched, unmatched, dbEmployees: dbEmployees || [] };
 }
 
 // ── Component ────────────────────────────────────────────────
@@ -243,7 +249,8 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
   const lang = i18n.language;
   const fileRef = useRef(null);
 
-  const [step, setStep] = useState('upload'); // upload | preview | importing | done
+  // Steps: upload → preview → mapping → importing → done
+  const [step, setStep] = useState('upload');
   const [file, setFile] = useState(null);
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const [year, setYear] = useState(() => new Date().getFullYear());
@@ -252,21 +259,45 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
   const [importProgress, setImportProgress] = useState(0);
   const [importResult, setImportResult] = useState(null);
 
+  // Matching state
+  const [matched, setMatched] = useState([]);
+  const [unmatched, setUnmatched] = useState([]);
+  const [dbEmployees, setDbEmployees] = useState([]);
+  const [manualMapping, setManualMapping] = useState({}); // { sheetIndex: dbEmployeeId }
+
   const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
   const handleFile = useCallback(async (f) => {
     if (!f) return;
     setFile(f);
-    setStep('preview');
     setErrors([]);
 
     try {
       const result = await parseFingerPrintExcel(f, month, year);
       setParsed(result.employees);
-      if (result.errors.length) setErrors(result.errors);
+      if (result.errors.length) {
+        setErrors(result.errors);
+        setStep('upload');
+        return;
+      }
+
+      // Auto-match employees
+      const matchResult = await matchEmployees(result.employees);
+      setMatched(matchResult.matched);
+      setUnmatched(matchResult.unmatched);
+      setDbEmployees(matchResult.dbEmployees);
+      setManualMapping({});
+
+      // If all matched → go to preview, otherwise → mapping step
+      if (matchResult.unmatched.length === 0) {
+        setStep('preview');
+      } else {
+        setStep('mapping');
+      }
     } catch (err) {
       setErrors([`خطأ في قراءة الملف: ${err.message}`]);
       setParsed(null);
+      setStep('upload');
     }
   }, [month, year]);
 
@@ -276,36 +307,55 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
     if (f) handleFile(f);
   }, [handleFile]);
 
+  // Get employees not already matched (available for manual mapping)
+  const availableEmployees = dbEmployees.filter(e => {
+    const alreadyMatched = matched.some(m => m.dbEmployeeId === e.id);
+    const alreadyMapped = Object.values(manualMapping).includes(e.id);
+    return !alreadyMatched && !alreadyMapped;
+  });
+
+  const handleConfirmMapping = () => {
+    // Move manually mapped employees to matched list
+    const newMatched = [...matched];
+    const stillUnmatched = [];
+
+    unmatched.forEach((emp, idx) => {
+      const mappedId = manualMapping[idx];
+      if (mappedId) {
+        const dbEmp = dbEmployees.find(e => e.id === mappedId);
+        newMatched.push({ ...emp, dbEmployee: dbEmp, dbEmployeeId: mappedId });
+      } else {
+        stillUnmatched.push(emp);
+      }
+    });
+
+    setMatched(newMatched);
+    setUnmatched(stillUnmatched);
+    setStep('preview');
+  };
+
   const handleImport = useCallback(async () => {
-    if (!parsed || !parsed.length) return;
+    if (!matched.length) return;
     setStep('importing');
     setImportProgress(0);
 
     let inserted = 0;
-    let skipped = 0;
     let failed = 0;
-    const unmatchedNames = [];
+    const savedFingerprints = [];
 
-    for (let i = 0; i < parsed.length; i++) {
-      const emp = parsed[i];
-      setImportProgress(Math.round(((i + 1) / parsed.length) * 100));
+    for (let i = 0; i < matched.length; i++) {
+      const emp = matched[i];
+      setImportProgress(Math.round(((i + 1) / matched.length) * 100));
 
-      // Try to find employee in Supabase by employee_number or name
-      let employeeId = null;
-      try {
-        const { data } = await supabase
-          .from('employees')
-          .select('id, employee_number, full_name_ar, full_name_en')
-          .or(`employee_number.eq.${emp.employee_id},full_name_en.ilike.%${emp.name}%,full_name_ar.ilike.%${emp.name}%`)
-          .limit(1)
-          .single();
-        if (data) employeeId = data.id;
-      } catch { /* no match */ }
-
-      if (!employeeId) {
-        skipped++;
-        unmatchedNames.push({ id: emp.employee_id, name: emp.name, department: emp.department });
-        continue;
+      // Save fingerprint_id if not already set
+      if (emp.employee_id && emp.dbEmployee && emp.dbEmployee.fingerprint_id !== emp.employee_id) {
+        try {
+          await supabase
+            .from('employees')
+            .update({ fingerprint_id: emp.employee_id })
+            .eq('id', emp.dbEmployeeId);
+          savedFingerprints.push(emp.dbEmployee.full_name_en || emp.dbEmployee.full_name_ar);
+        } catch { /* ignore */ }
       }
 
       // Insert attendance records
@@ -314,7 +364,7 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
           const { error } = await supabase
             .from('attendance')
             .upsert({
-              employee_id: employeeId,
+              employee_id: emp.dbEmployeeId,
               date: rec.date,
               check_in: rec.check_in,
               check_out: rec.check_out,
@@ -329,10 +379,17 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
       }
     }
 
-    setImportResult({ inserted, skipped, failed, unmatchedNames });
+    setImportResult({
+      inserted,
+      matched: matched.length,
+      skipped: unmatched.length,
+      failed,
+      savedFingerprints,
+      unmatchedNames: unmatched.map(e => ({ id: e.employee_id, name: e.name, department: e.department })),
+    });
     setStep('done');
     if (onImported) onImported();
-  }, [parsed, onImported]);
+  }, [matched, unmatched, onImported]);
 
   const reset = () => {
     setStep('upload');
@@ -341,6 +398,9 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
     setErrors([]);
     setImportProgress(0);
     setImportResult(null);
+    setMatched([]);
+    setUnmatched([]);
+    setManualMapping({});
   };
 
   const handleClose = () => {
@@ -350,13 +410,13 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
 
   if (!open) return null;
 
-  const totalRecords = parsed ? parsed.reduce((s, e) => s + e.attendance.length, 0) : 0;
+  const totalMatchedRecords = matched.reduce((s, e) => s + e.attendance.length, 0);
 
   return (
     <Modal open={open} onClose={handleClose} title={lang === 'ar' ? 'استيراد شيت البصمة' : 'Import Fingerprint Sheet'} size="lg">
       <div dir={isRTL ? 'rtl' : 'ltr'} className="space-y-4">
 
-        {/* Month/Year selector */}
+        {/* Step 1: Upload */}
         {step === 'upload' && (
           <>
             <div className="flex gap-3 items-center">
@@ -378,7 +438,6 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
               />
             </div>
 
-            {/* Drop zone */}
             <div
               onDragOver={e => e.preventDefault()}
               onDrop={handleDrop}
@@ -417,8 +476,60 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
           </div>
         )}
 
-        {/* Preview */}
-        {step === 'preview' && parsed && (
+        {/* Step 2: Mapping — link unmatched employees */}
+        {step === 'mapping' && (
+          <>
+            <div className="flex items-center gap-2 mb-2">
+              <Link2 size={18} className="text-yellow-500" />
+              <span className="text-sm font-bold text-content dark:text-content-dark">
+                {lang === 'ar' ? `${unmatched.length} موظف محتاج ربط يدوي` : `${unmatched.length} employees need manual matching`}
+              </span>
+            </div>
+
+            {matched.length > 0 && (
+              <div className="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-lg p-2 text-xs text-green-700 dark:text-green-300">
+                <CheckCircle2 size={12} className="inline me-1" />
+                {lang === 'ar' ? `${matched.length} موظف تم التعرف عليهم تلقائياً` : `${matched.length} employees auto-matched`}
+              </div>
+            )}
+
+            <div className="max-h-72 overflow-auto space-y-2">
+              {unmatched.map((emp, idx) => (
+                <div key={idx} className="flex items-center gap-3 border border-edge dark:border-edge-dark rounded-xl p-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="m-0 text-sm font-bold text-content dark:text-content-dark truncate">
+                      {emp.name}
+                    </p>
+                    <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+                      {lang === 'ar' ? 'كود البصمة:' : 'Fingerprint ID:'} {emp.employee_id} · {emp.department} · {emp.attendance.length} {lang === 'ar' ? 'يوم' : 'days'}
+                    </p>
+                  </div>
+                  <select
+                    value={manualMapping[idx] || ''}
+                    onChange={e => setManualMapping(prev => ({ ...prev, [idx]: e.target.value || null }))}
+                    className="w-48 px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-xs text-content dark:text-content-dark"
+                  >
+                    <option value="">{lang === 'ar' ? '— اختر الموظف —' : '— Select employee —'}</option>
+                    {availableEmployees.map(e => (
+                      <option key={e.id} value={e.id}>
+                        {(isRTL ? e.full_name_ar : e.full_name_en) || e.full_name_ar} ({e.employee_number})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+              {lang === 'ar'
+                ? 'اربط كل موظف في الشيت بالموظف المقابل في السيستم. الربط بيتحفظ تلقائي ومش هتحتاج تعمله تاني.'
+                : 'Link each sheet employee to their system match. This is saved automatically for future imports.'}
+            </p>
+          </>
+        )}
+
+        {/* Step 3: Preview */}
+        {step === 'preview' && (
           <>
             <div className="flex items-center gap-2 mb-3">
               <FileSpreadsheet size={18} className="text-brand-500" />
@@ -428,16 +539,15 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
               </button>
             </div>
 
-            {/* Summary cards */}
             <div className="grid grid-cols-3 gap-3">
               <div className="bg-brand-500/5 rounded-xl p-3 text-center">
                 <Users size={18} className="text-brand-500 mx-auto mb-1" />
-                <p className="m-0 text-lg font-bold text-content dark:text-content-dark">{parsed.length}</p>
-                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'موظف' : 'Employees'}</p>
+                <p className="m-0 text-lg font-bold text-content dark:text-content-dark">{matched.length}</p>
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'موظف متطابق' : 'Matched'}</p>
               </div>
               <div className="bg-brand-500/5 rounded-xl p-3 text-center">
                 <Calendar size={18} className="text-brand-500 mx-auto mb-1" />
-                <p className="m-0 text-lg font-bold text-content dark:text-content-dark">{totalRecords}</p>
+                <p className="m-0 text-lg font-bold text-content dark:text-content-dark">{totalMatchedRecords}</p>
                 <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سجل حضور' : 'Records'}</p>
               </div>
               <div className="bg-brand-500/5 rounded-xl p-3 text-center">
@@ -447,35 +557,41 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
               </div>
             </div>
 
-            {/* Employee preview table */}
             <div className="max-h-64 overflow-auto rounded-xl border border-edge dark:border-edge-dark">
               <table className="w-full text-sm">
                 <thead className="bg-surface-bg dark:bg-surface-bg-dark sticky top-0">
                   <tr>
-                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'الكود' : 'ID'}</th>
-                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'الاسم' : 'Name'}</th>
-                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'القسم' : 'Dept'}</th>
-                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'الفترة' : 'Shift'}</th>
-                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'أيام الحضور' : 'Days'}</th>
+                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'كود البصمة' : 'FP ID'}</th>
+                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'الاسم (الشيت)' : 'Sheet Name'}</th>
+                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'الموظف (السيستم)' : 'System Match'}</th>
+                    <th className="px-3 py-2 text-start text-xs font-bold text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'أيام' : 'Days'}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {parsed.map((emp, idx) => (
+                  {matched.map((emp, idx) => (
                     <tr key={idx} className="border-t border-edge dark:border-edge-dark">
-                      <td className="px-3 py-2 text-content dark:text-content-dark font-mono">{emp.employee_id}</td>
-                      <td className="px-3 py-2 text-content dark:text-content-dark font-medium">{emp.name}</td>
-                      <td className="px-3 py-2 text-content-muted dark:text-content-muted-dark">{emp.department}</td>
-                      <td className="px-3 py-2 text-content-muted dark:text-content-muted-dark">{emp.shift}</td>
-                      <td className="px-3 py-2 font-bold text-brand-500">{emp.attendance.length}</td>
+                      <td className="px-3 py-2 text-content dark:text-content-dark font-mono text-xs">{emp.employee_id}</td>
+                      <td className="px-3 py-2 text-content-muted dark:text-content-muted-dark text-xs">{emp.name}</td>
+                      <td className="px-3 py-2 text-content dark:text-content-dark font-medium text-xs">
+                        {(isRTL ? emp.dbEmployee?.full_name_ar : emp.dbEmployee?.full_name_en) || emp.dbEmployee?.full_name_ar}
+                      </td>
+                      <td className="px-3 py-2 font-bold text-brand-500 text-xs">{emp.attendance.length}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+
+            {unmatched.length > 0 && (
+              <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-lg p-2 text-xs text-yellow-700 dark:text-yellow-300">
+                <AlertCircle size={12} className="inline me-1" />
+                {lang === 'ar' ? `${unmatched.length} موظف لم يتم ربطهم وهيتم تخطيهم` : `${unmatched.length} unlinked employees will be skipped`}
+              </div>
+            )}
           </>
         )}
 
-        {/* Importing progress */}
+        {/* Step 4: Importing */}
         {step === 'importing' && (
           <div className="text-center py-8">
             <div className="w-14 h-14 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4 animate-pulse">
@@ -485,16 +601,13 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
               {lang === 'ar' ? 'جاري الاستيراد...' : 'Importing...'}
             </p>
             <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
-              <div
-                className="h-full bg-brand-500 rounded-full transition-all duration-300"
-                style={{ width: `${importProgress}%` }}
-              />
+              <div className="h-full bg-brand-500 rounded-full transition-all duration-300" style={{ width: `${importProgress}%` }} />
             </div>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mt-2">{importProgress}%</p>
           </div>
         )}
 
-        {/* Done */}
+        {/* Step 5: Done */}
         {step === 'done' && importResult && (
           <div className="py-6">
             <div className="text-center mb-4">
@@ -509,51 +622,49 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
                   <span className="font-bold text-green-500">{importResult.inserted}</span>
                   <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'سجل تم إضافته' : 'records added'}</span>
                 </div>
+                <div>
+                  <span className="font-bold text-brand-500">{importResult.matched}</span>
+                  <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'موظف متطابق' : 'matched'}</span>
+                </div>
                 {importResult.skipped > 0 && (
                   <div>
                     <span className="font-bold text-yellow-500">{importResult.skipped}</span>
-                    <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'موظف لم يتطابق' : 'unmatched'}</span>
+                    <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'لم يتطابق' : 'skipped'}</span>
                   </div>
                 )}
                 {importResult.failed > 0 && (
                   <div>
                     <span className="font-bold text-red-500">{importResult.failed}</span>
-                    <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'سجل فشل' : 'failed'}</span>
+                    <span className="text-content-muted dark:text-content-muted-dark ms-1">{lang === 'ar' ? 'فشل' : 'failed'}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Unmatched employees list */}
+            {importResult.savedFingerprints?.length > 0 && (
+              <div className="bg-brand-500/5 border border-brand-500/20 rounded-xl p-3 mb-3">
+                <p className="m-0 text-xs text-brand-600 dark:text-brand-400">
+                  <Link2 size={12} className="inline me-1" />
+                  {lang === 'ar'
+                    ? `تم حفظ كود البصمة لـ ${importResult.savedFingerprints.length} موظف — المرة الجاية هيتعرف عليهم تلقائي`
+                    : `Fingerprint ID saved for ${importResult.savedFingerprints.length} employees — they'll auto-match next time`}
+                </p>
+              </div>
+            )}
+
             {importResult.unmatchedNames?.length > 0 && (
-              <div className="mt-4 bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-xl p-3">
+              <div className="bg-yellow-50 dark:bg-yellow-500/10 border border-yellow-200 dark:border-yellow-500/30 rounded-xl p-3">
                 <p className="m-0 text-sm font-bold text-yellow-700 dark:text-yellow-300 mb-2">
                   <AlertCircle size={14} className="inline me-1" />
-                  {lang === 'ar' ? 'موظفين لم يتم التعرف عليهم (مش مسجلين على السيستم):' : 'Unmatched employees (not registered):'}
+                  {lang === 'ar' ? 'موظفين لم يتم ربطهم:' : 'Unlinked employees:'}
                 </p>
-                <div className="max-h-40 overflow-auto">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="text-yellow-600 dark:text-yellow-400">
-                        <th className="px-2 py-1 text-start font-semibold">{lang === 'ar' ? 'الكود' : 'ID'}</th>
-                        <th className="px-2 py-1 text-start font-semibold">{lang === 'ar' ? 'الاسم' : 'Name'}</th>
-                        <th className="px-2 py-1 text-start font-semibold">{lang === 'ar' ? 'القسم' : 'Dept'}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {importResult.unmatchedNames.map((emp, idx) => (
-                        <tr key={idx} className="border-t border-yellow-200/50 dark:border-yellow-500/20">
-                          <td className="px-2 py-1 text-yellow-800 dark:text-yellow-200 font-mono">{emp.id}</td>
-                          <td className="px-2 py-1 text-yellow-800 dark:text-yellow-200">{emp.name}</td>
-                          <td className="px-2 py-1 text-yellow-800 dark:text-yellow-200">{emp.department}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="max-h-32 overflow-auto">
+                  {importResult.unmatchedNames.map((emp, idx) => (
+                    <p key={idx} className="m-0 text-xs text-yellow-800 dark:text-yellow-200">
+                      {emp.id} — {emp.name} ({emp.department})
+                    </p>
+                  ))}
                 </div>
-                <p className="m-0 text-xs text-yellow-600 dark:text-yellow-400 mt-2">
-                  {lang === 'ar' ? 'سجل الموظفين دول من صفحة الموظفين الأول وبعدين ارفع الشيت تاني.' : 'Add these employees from the Employees page first, then re-import.'}
-                </p>
               </div>
             )}
           </div>
@@ -566,6 +677,18 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
             {lang === 'ar' ? 'إلغاء' : 'Cancel'}
           </Button>
         )}
+        {step === 'mapping' && (
+          <>
+            <Button variant="secondary" onClick={reset}>
+              {lang === 'ar' ? 'رجوع' : 'Back'}
+            </Button>
+            <Button onClick={handleConfirmMapping}>
+              {lang === 'ar'
+                ? `تأكيد الربط (${Object.values(manualMapping).filter(Boolean).length + matched.length} موظف)`
+                : `Confirm (${Object.values(manualMapping).filter(Boolean).length + matched.length} matched)`}
+            </Button>
+          </>
+        )}
         {step === 'preview' && (
           <>
             <Button variant="secondary" onClick={reset}>
@@ -574,11 +697,11 @@ export default function ImportAttendanceModal({ open, onClose, onImported }) {
             <Button onClick={() => {
               const monthName = MONTHS_AR[month - 1];
               const msg = lang === 'ar'
-                ? `هيتم رفع ${totalRecords} سجل حضور لشهر ${monthName} ${year}.\n\nمتأكد إن الشهر صح؟`
-                : `${totalRecords} records will be imported for ${monthName} ${year}.\n\nAre you sure the month is correct?`;
+                ? `هيتم رفع ${totalMatchedRecords} سجل حضور لشهر ${monthName} ${year}.\n\nمتأكد إن الشهر صح؟`
+                : `${totalMatchedRecords} records will be imported for ${monthName} ${year}.\n\nIs the month correct?`;
               if (window.confirm(msg)) handleImport();
-            }} disabled={!parsed?.length}>
-              {lang === 'ar' ? `استيراد ${totalRecords} سجل` : `Import ${totalRecords} records`}
+            }} disabled={!matched.length}>
+              {lang === 'ar' ? `استيراد ${totalMatchedRecords} سجل` : `Import ${totalMatchedRecords} records`}
             </Button>
           </>
         )}
