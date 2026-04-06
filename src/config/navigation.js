@@ -40,6 +40,7 @@ export const NAV_ITEMS = [
   ]},
   { id: 'hr', label: { ar: 'الموارد البشرية', en: 'HR' }, icon: UserCog, permission: P.HR_VIEW_OWN, children: [
     { id: 'employees',    label: { ar: 'الموظفين',        en: 'Employees' },    path: '/hr/employees',    permission: P.HR_VIEW_OWN },
+    { id: 'departments',  label: { ar: 'الأقسام',         en: 'Departments' },  path: '/hr/departments',  permission: P.HR_VIEW_ALL },
     { id: 'performance', label: { ar: 'الأداء', en: 'Performance' }, path: '/hr/performance', permission: P.HR_VIEW_OWN },
     { id: 'goals', label: { ar: 'الأهداف', en: 'Goals & OKRs' }, path: '/hr/goals', permission: P.HR_VIEW_OWN },
     { id: 'shifts',       label: { ar: 'فترات الدوام',    en: 'Shifts' },       path: '/hr/shifts',       permission: P.HR_VIEW_ALL },
