@@ -27,6 +27,7 @@ export default function PayrollPage() {
   const [pageSize, setPageSize] = useState(25);
   const [smartFilters, setSmartFilters] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [detailEmp, setDetailEmp] = useState(null);
   const [salaryHistories, setSalaryHistories] = useState({});
 
   // Load data
@@ -314,7 +315,7 @@ export default function PayrollPage() {
           </thead>
           <tbody>
             {paged.map(emp => (
-              <PayrollRow key={emp.id} emp={emp} isRTL={isRTL} lang={lang} config={config} />
+              <PayrollRow key={emp.id} emp={emp} isRTL={isRTL} lang={lang} config={config} onDetail={() => setDetailEmp(emp)} />
             ))}
           </tbody>
         </Table>
@@ -331,19 +332,33 @@ export default function PayrollPage() {
           isRTL={isRTL}
         />
       )}
+
+      {/* Payroll Detail Modal */}
+      {detailEmp && (
+        <PayrollDetailModal
+          emp={detailEmp}
+          config={config}
+          onClose={() => setDetailEmp(null)}
+          lang={lang}
+          isRTL={isRTL}
+          month={month}
+          year={year}
+          MONTHS_AR={MONTHS_AR}
+        />
+      )}
     </div>
   );
 }
 
 // ── Payroll Row ──────────────────────────────────────────────
 
-function PayrollRow({ emp, isRTL, lang, config }) {
+function PayrollRow({ emp, isRTL, lang, config, onDetail }) {
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
   const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
   const penaltyMult = config.late_penalty_multiplier || 2;
 
   return (
-    <Tr>
+    <Tr className="cursor-pointer hover:bg-brand-500/5 transition-colors" onClick={onDetail}>
       <Td>
         <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <div className="w-8 h-8 rounded-lg bg-brand-800 flex items-center justify-center shrink-0">
@@ -395,11 +410,94 @@ function PayrollRow({ emp, isRTL, lang, config }) {
         </span>
       </Td>
       <Td>
-        <Button variant="ghost" size="sm">
-          <FileText size={12} />Payslip
+        <Button variant="ghost" size="sm" onClick={e => { e.stopPropagation(); onDetail(); }}>
+          <FileText size={12} />{lang === 'ar' ? 'تفاصيل' : 'Details'}
         </Button>
       </Td>
     </Tr>
+  );
+}
+
+// ── Payroll Detail Modal ─────────────────────────────────────
+
+function PayrollDetailModal({ emp, config, onClose, lang, isRTL, month, year, MONTHS_AR }) {
+  const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
+  const penaltyMult = config.late_penalty_multiplier || 2;
+
+  const rows = [
+    { label: lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary', value: emp.baseSalary, type: 'base' },
+    { label: lang === 'ar' ? 'البدلات' : 'Allowances', value: emp.allowances, pct: `${Math.round((config.allowance_rate || 0.2) * 100)}%`, type: 'add' },
+    { label: lang === 'ar' ? 'بونص Overtime' : 'Overtime Bonus', value: emp.overtimeBonus, sub: `${emp.stats.totalOvertimeMinutes} ${lang === 'ar' ? 'دقيقة' : 'min'}`, type: 'add', hide: !emp.overtimeBonus },
+    { type: 'divider' },
+    { label: lang === 'ar' ? 'إجمالي المستحق' : 'Gross Pay', value: emp.baseSalary + emp.allowances + emp.overtimeBonus, type: 'subtotal' },
+    { type: 'divider' },
+    { label: lang === 'ar' ? 'ضرايب' : 'Tax', value: emp.tax, pct: `${Math.round((config.tax_rate || 0.14) * 100)}%`, type: 'deduct' },
+    { label: lang === 'ar' ? 'تأمينات اجتماعية' : 'Social Insurance', value: emp.socialInsurance, pct: `${Math.round((config.social_insurance_rate || 0.11) * 100)}%`, type: 'deduct' },
+    { label: lang === 'ar' ? 'خصم التأخير' : 'Late Deduction', value: emp.lateDeduction, sub: `${emp.stats.totalLateMinutes} ${lang === 'ar' ? 'د' : 'min'} × ${penaltyMult}`, type: 'deduct', hide: !emp.lateDeduction },
+    { label: lang === 'ar' ? 'خصم الغياب' : 'Absent Deduction', value: emp.absentDeduction, sub: `${emp.stats.absentDays} ${lang === 'ar' ? 'يوم' : 'days'}`, type: 'deduct', hide: !emp.absentDeduction },
+    { type: 'divider' },
+    { label: lang === 'ar' ? 'إجمالي الاستقطاعات' : 'Total Deductions', value: emp.totalDeductions, type: 'subtotal-red' },
+    { type: 'divider' },
+    { label: lang === 'ar' ? 'صافي المرتب' : 'Net Salary', value: emp.netSalary, type: 'total' },
+  ].filter(r => !r.hide);
+
+  return (
+    <Modal open onClose={onClose} title={lang === 'ar' ? `تفاصيل مرتب ${name}` : `${name}'s Payslip`} size="md">
+      <div dir={isRTL ? 'rtl' : 'ltr'}>
+        {/* Header info */}
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="bg-brand-500/5 rounded-xl p-3 text-center">
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'الشهر' : 'Month'}</p>
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{MONTHS_AR[month - 1]} {year}</p>
+          </div>
+          <div className="bg-green-500/5 rounded-xl p-3 text-center">
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'أيام الحضور' : 'Present'}</p>
+            <p className="m-0 text-sm font-bold text-green-600">{emp.stats.presentDays}</p>
+          </div>
+          <div className="bg-blue-500/5 rounded-xl p-3 text-center">
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'ساعات العمل' : 'Hours'}</p>
+            <p className="m-0 text-sm font-bold text-blue-600">{emp.stats.totalWorkedHours}</p>
+          </div>
+        </div>
+
+        {/* Breakdown table */}
+        <div className="border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
+          {rows.map((row, idx) => {
+            if (row.type === 'divider') {
+              return <div key={idx} className="border-t border-edge dark:border-edge-dark" />;
+            }
+
+            const isTotal = row.type === 'total';
+            const isSubtotal = row.type === 'subtotal' || row.type === 'subtotal-red';
+
+            return (
+              <div key={idx} className={`flex justify-between items-center px-4 py-2.5 ${isTotal ? 'bg-brand-500/5' : ''} ${isSubtotal ? 'bg-surface-bg dark:bg-surface-bg-dark' : ''}`}>
+                <div>
+                  <span className={`text-sm ${isTotal ? 'font-bold text-content dark:text-content-dark' : isSubtotal ? 'font-semibold text-content dark:text-content-dark' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                    {row.label}
+                  </span>
+                  {row.pct && <span className="text-xs text-content-muted dark:text-content-muted-dark ms-1">({row.pct})</span>}
+                  {row.sub && <span className="text-xs text-content-muted dark:text-content-muted-dark ms-1">— {row.sub}</span>}
+                </div>
+                <span className={`text-sm font-bold ${
+                  isTotal ? 'text-brand-500 text-base' :
+                  row.type === 'subtotal-red' ? 'text-red-500' :
+                  row.type === 'deduct' ? 'text-red-500' :
+                  row.type === 'add' ? 'text-green-600' :
+                  'text-content dark:text-content-dark'
+                }`}>
+                  {row.type === 'deduct' ? '-' : row.type === 'add' ? '+' : ''}{row.value.toLocaleString()} {isTotal ? 'ج.م' : ''}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إغلاق' : 'Close'}</Button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
