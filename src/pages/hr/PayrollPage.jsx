@@ -87,6 +87,7 @@ export default function PayrollPage() {
         ...(emp.late_threshold && { late_threshold: emp.late_threshold }),
       };
 
+      const isRemote = emp.work_mode === 'remote';
       const stats = calcEmployeeAttendance(empAttendance, shiftConfig, { holidayDates, month, year });
 
       const empHistory = salaryHistories[emp.id] || [];
@@ -99,12 +100,25 @@ export default function PayrollPage() {
         : 8;
       const minuteRate = baseSalary / (30 * hoursPerDay * 60);
 
-      // Late deduction: late minutes × penalty multiplier × minute rate
-      const penaltyMultiplier = config.late_penalty_multiplier || 2;
-      const lateDeduction = Math.round(stats.totalLateMinutes * penaltyMultiplier * minuteRate);
+      // Grace hours: subtract from late minutes before penalty
+      const graceMinutes = emp.grace_hours_enabled ? (emp.monthly_grace_hours || 0) * 60 : 0;
+      const effectiveLateMinutes = Math.max(0, stats.totalLateMinutes - graceMinutes);
 
-      // Absent deduction
-      const absentDeduction = Math.round(stats.absentDays * dailyRate);
+      // Late deduction — skip for remote workers
+      const penaltyMultiplier = shiftConfig.late_penalty_multiplier || config.late_penalty_multiplier || 2;
+      const lateDeduction = isRemote ? 0 : Math.round(effectiveLateMinutes * penaltyMultiplier * minuteRate);
+
+      // Absent deduction — either from leave balance or salary
+      let absentDeduction = 0;
+      let absentFromLeave = 0;
+      if (emp.deduct_absence_from_leave && emp.leave_balance > 0) {
+        // Deduct from leave balance first, remainder from salary
+        absentFromLeave = Math.min(stats.absentDays, emp.leave_balance || 0);
+        const absentFromSalary = Math.max(0, stats.absentDays - absentFromLeave);
+        absentDeduction = Math.round(absentFromSalary * dailyRate);
+      } else {
+        absentDeduction = isRemote ? 0 : Math.round(stats.absentDays * dailyRate);
+      }
 
       // Allowances — per-employee override or global
       const empAllowanceRate = emp.allowance_rate != null ? emp.allowance_rate / 100 : null;
@@ -123,8 +137,10 @@ export default function PayrollPage() {
       // Total deductions
       const totalDeductions = tax + socialInsurance + lateDeduction + absentDeduction;
 
-      // Overtime bonus (if any)
-      const overtimeBonus = Math.round(stats.totalOvertimeMinutes * minuteRate * 1.5);
+      // Overtime bonus — only if enabled for this employee
+      const overtimeBonus = emp.overtime_enabled
+        ? Math.round(stats.totalOvertimeMinutes * minuteRate * (emp.overtime_rate || 1.5))
+        : 0;
 
       // Net salary
       const netSalary = baseSalary + allowances + overtimeBonus - totalDeductions;
@@ -138,9 +154,13 @@ export default function PayrollPage() {
         socialInsurance,
         lateDeduction,
         absentDeduction,
+        absentFromLeave,
         overtimeBonus,
         totalDeductions,
         netSalary,
+        effectiveLateMinutes,
+        graceMinutes,
+        penaltyMultiplier,
         hasAttendance: empAttendance.length > 0,
       };
     });
@@ -441,17 +461,25 @@ function PayrollDetailModal({ emp, config, onClose, lang, isRTL, month, year, MO
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
   const penaltyMult = config.late_penalty_multiplier || 2;
 
+  const graceInfo = emp.grace_hours_enabled && emp.graceMinutes > 0
+    ? `${lang === 'ar' ? 'سماح' : 'grace'}: ${(emp.graceMinutes / 60).toFixed(1)}${lang === 'ar' ? 'س' : 'h'}`
+    : '';
+  const lateInfo = emp.effectiveLateMinutes > 0
+    ? `${emp.stats.totalLateMinutes}${lang === 'ar' ? 'د' : 'm'}${graceInfo ? ' - ' + graceInfo : ''} = ${emp.effectiveLateMinutes}${lang === 'ar' ? 'د' : 'm'} × ${emp.penaltyMultiplier}`
+    : '';
+
   const rows = [
     { label: lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary', value: emp.baseSalary, type: 'base' },
-    { label: lang === 'ar' ? 'البدلات' : 'Allowances', value: emp.allowances, pct: `${Math.round((config.allowance_rate || 0.2) * 100)}%`, type: 'add' },
-    { label: lang === 'ar' ? 'بونص Overtime' : 'Overtime Bonus', value: emp.overtimeBonus, sub: `${emp.stats.totalOvertimeMinutes} ${lang === 'ar' ? 'دقيقة' : 'min'}`, type: 'add', hide: !emp.overtimeBonus },
+    { label: lang === 'ar' ? 'البدلات' : 'Allowances', value: emp.allowances, type: 'add' },
+    { label: lang === 'ar' ? 'أوفرتايم' : 'Overtime', value: emp.overtimeBonus, sub: emp.overtime_enabled ? `${emp.stats.totalOvertimeMinutes} ${lang === 'ar' ? 'د' : 'min'} × ${emp.overtime_rate || 1.5}` : '', type: 'add', hide: !emp.overtimeBonus },
     { type: 'divider' },
     { label: lang === 'ar' ? 'إجمالي المستحق' : 'Gross Pay', value: emp.baseSalary + emp.allowances + emp.overtimeBonus, type: 'subtotal' },
     { type: 'divider' },
-    { label: lang === 'ar' ? 'ضرايب' : 'Tax', value: emp.tax, pct: `${Math.round((config.tax_rate || 0.14) * 100)}%`, type: 'deduct' },
-    { label: lang === 'ar' ? 'تأمينات اجتماعية' : 'Social Insurance', value: emp.socialInsurance, pct: `${Math.round((config.social_insurance_rate || 0.11) * 100)}%`, type: 'deduct' },
-    { label: lang === 'ar' ? 'خصم التأخير' : 'Late Deduction', value: emp.lateDeduction, sub: `${emp.stats.totalLateMinutes} ${lang === 'ar' ? 'د' : 'min'} × ${penaltyMult}`, type: 'deduct', hide: !emp.lateDeduction },
-    { label: lang === 'ar' ? 'خصم الغياب' : 'Absent Deduction', value: emp.absentDeduction, sub: `${emp.stats.absentDays} ${lang === 'ar' ? 'يوم' : 'days'}`, type: 'deduct', hide: !emp.absentDeduction },
+    { label: lang === 'ar' ? 'ضرايب' : 'Tax', value: emp.tax, sub: emp.tax_exempt ? (lang === 'ar' ? 'معفى' : 'Exempt') : '', type: 'deduct', hide: !emp.tax && emp.tax_exempt },
+    { label: lang === 'ar' ? 'تأمينات' : 'Insurance', value: emp.socialInsurance, sub: emp.insurance_exempt ? (lang === 'ar' ? 'معفى' : 'Exempt') : '', type: 'deduct', hide: !emp.socialInsurance && emp.insurance_exempt },
+    { label: lang === 'ar' ? 'خصم التأخير' : 'Late Deduction', value: emp.lateDeduction, sub: lateInfo, type: 'deduct', hide: !emp.lateDeduction && !emp.effectiveLateMinutes },
+    { label: lang === 'ar' ? 'خصم الغياب (من المرتب)' : 'Absent (from salary)', value: emp.absentDeduction, sub: `${emp.stats.absentDays - (emp.absentFromLeave || 0)} ${lang === 'ar' ? 'يوم' : 'days'}`, type: 'deduct', hide: !emp.absentDeduction },
+    { label: lang === 'ar' ? 'غياب من رصيد الإجازات' : 'Absent (from leave)', value: 0, sub: `${emp.absentFromLeave || 0} ${lang === 'ar' ? 'يوم' : 'days'}`, type: 'info', hide: !emp.absentFromLeave },
     { type: 'divider' },
     { label: lang === 'ar' ? 'إجمالي الاستقطاعات' : 'Total Deductions', value: emp.totalDeductions, type: 'subtotal-red' },
     { type: 'divider' },

@@ -548,7 +548,10 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
           job_title_ar: '', employment_type: 'full_time', join_date: '', fingerprint_id: '',
           salary: '', allowance_rate: '', allowance_fixed: '', tax_rate: '', insurance_rate: '',
           tax_exempt: false, insurance_exempt: false,
-          shift_name: '', work_start: '', work_end: '', late_threshold: '', is_remote: false,
+          shift_id: '', shift_name: '', work_start: '', work_end: '', late_threshold: '', work_mode: 'office',
+          annual_leave_days: 21, leave_balance: 21, deduct_absence_from_leave: false,
+          monthly_grace_hours: 0, grace_hours_enabled: false,
+          overtime_enabled: false, overtime_rate: 1.5,
         });
       }
     }
@@ -701,10 +704,49 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
             <label className={labelCls}>{lang === 'ar' ? 'حد التأخير' : 'Late Threshold'}</label>
             <input type="time" value={form.late_threshold || ''} onChange={e => set('late_threshold', e.target.value)} className={inputCls} />
           </div>
-          <div className="flex items-center gap-2 pt-1">
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'مكان العمل' : 'Work Mode'}</label>
+            <select value={form.work_mode || 'office'} onChange={e => set('work_mode', e.target.value)} className={inputCls}>
+              <option value="office">{lang === 'ar' ? 'من الشركة' : 'Office'}</option>
+              <option value="remote">{lang === 'ar' ? 'من البيت' : 'Remote'}</option>
+              <option value="flexible">{lang === 'ar' ? 'مرن' : 'Flexible'}</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Section 4: Leave & Attendance Policy */}
+        <h3 className={sectionCls}>{lang === 'ar' ? 'الإجازات والحضور' : 'Leave & Attendance'}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'الإجازات السنوية (أيام)' : 'Annual Leave Days'}</label>
+            <input type="number" value={form.annual_leave_days ?? 21} onChange={e => set('annual_leave_days', +e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'الرصيد المتبقي' : 'Leave Balance'}</label>
+            <input type="number" step="0.5" value={form.leave_balance ?? 21} onChange={e => set('leave_balance', +e.target.value)} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'ساعات السماح الشهرية' : 'Monthly Grace Hours'}</label>
+            <input type="number" step="0.5" value={form.monthly_grace_hours ?? 0} onChange={e => set('monthly_grace_hours', +e.target.value)} className={inputCls}
+              placeholder={lang === 'ar' ? 'مثلاً 4 ساعات' : 'e.g. 4 hours'} />
+          </div>
+          <div>
+            <label className={labelCls}>{lang === 'ar' ? 'نسبة الأوفرتايم' : 'Overtime Rate'}</label>
+            <input type="number" step="0.1" value={form.overtime_rate ?? 1.5} onChange={e => set('overtime_rate', +e.target.value)} className={inputCls}
+              placeholder="1.5" />
+          </div>
+          <div className="col-span-full flex flex-wrap gap-4 pt-1">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={!!form.is_remote} onChange={e => set('is_remote', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
-              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'شغل من البيت' : 'Remote Work'}</span>
+              <input type="checkbox" checked={!!form.deduct_absence_from_leave} onChange={e => set('deduct_absence_from_leave', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'خصم الغياب من رصيد الإجازات' : 'Deduct absence from leave balance'}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!form.grace_hours_enabled} onChange={e => set('grace_hours_enabled', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'تفعيل ساعات السماح' : 'Enable grace hours'}</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!form.overtime_enabled} onChange={e => set('overtime_enabled', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'تفعيل الأوفرتايم' : 'Enable overtime pay'}</span>
             </label>
           </div>
         </div>
