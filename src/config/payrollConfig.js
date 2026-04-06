@@ -5,8 +5,8 @@ import supabase from '../lib/supabase';
 
 export const DEFAULT_PAYROLL_CONFIG = {
   // Global rates (can be overridden per employee)
-  tax_rate: 0.14,
-  social_insurance_rate: 0.11,
+  tax_rate: 0,
+  social_insurance_rate: 0,
   allowance_rate: 0.20,
 
   // Late penalty
