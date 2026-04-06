@@ -76,6 +76,19 @@ export async function updateEmployee(id, updates) {
       .select('*')
       .single();
     if (error) throw error;
+
+    // Track salary change in salary_history
+    const oldSalary = Number(old?.salary) || 0;
+    const newSalary = Number(updates.salary) || 0;
+    if (newSalary && newSalary !== oldSalary) {
+      await supabase.from('salary_history').insert({
+        employee_id: id,
+        salary: newSalary,
+        effective_date: new Date().toISOString().slice(0, 10),
+        notes: oldSalary ? `Changed from ${oldSalary} to ${newSalary}` : 'Initial salary',
+      });
+    }
+
     await logUpdate('employee', id, old, data);
     return data;
   } catch (err) { reportError('employeesService', 'query', err);

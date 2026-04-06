@@ -79,6 +79,71 @@ export async function savePayrollConfig(config) {
   }
 }
 
+// ── Fetch salary history for an employee ─────────────────────
+
+export async function fetchSalaryHistory(employeeId) {
+  try {
+    const { data, error } = await supabase
+      .from('salary_history')
+      .select('*')
+      .eq('employee_id', employeeId)
+      .order('effective_date', { ascending: true });
+    if (error) throw error;
+    return data || [];
+  } catch {
+    return [];
+  }
+}
+
+// ── Calculate pro-rated salary for a month ───────────────────
+// If salary changed mid-month, calculates weighted average
+
+export function calcProRatedSalary(salaryHistory, month, year, currentSalary) {
+  if (!salaryHistory || salaryHistory.length === 0) return currentSalary || 0;
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const monthStart = `${year}-${String(month).padStart(2, '0')}-01`;
+  const monthEnd = `${year}-${String(month).padStart(2, '0')}-${daysInMonth}`;
+
+  // Get salary changes relevant to this month
+  // Sort by effective_date ascending
+  const sorted = [...salaryHistory].sort((a, b) => a.effective_date.localeCompare(b.effective_date));
+
+  // Find what salary was active at month start
+  let activeSalary = 0;
+  for (const rec of sorted) {
+    if (rec.effective_date <= monthStart) {
+      activeSalary = Number(rec.salary);
+    }
+  }
+
+  // Get changes within this month
+  const midMonthChanges = sorted.filter(r => r.effective_date > monthStart && r.effective_date <= monthEnd);
+
+  if (midMonthChanges.length === 0) {
+    // No changes during the month — use the active salary
+    return activeSalary || currentSalary || 0;
+  }
+
+  // Pro-rate: calculate weighted average
+  let totalWeighted = 0;
+  let prevDay = 1;
+  let prevSalary = activeSalary;
+
+  for (const change of midMonthChanges) {
+    const changeDay = parseInt(change.effective_date.split('-')[2]);
+    const daysAtPrev = changeDay - prevDay;
+    totalWeighted += prevSalary * daysAtPrev;
+    prevDay = changeDay;
+    prevSalary = Number(change.salary);
+  }
+
+  // Remaining days at last salary
+  totalWeighted += prevSalary * (daysInMonth - prevDay + 1);
+
+  return Math.round(totalWeighted / daysInMonth);
+}
+
 // ── Helper: parse "HH:MM" to minutes since midnight ─────────
 
 export function timeToMinutes(timeStr) {

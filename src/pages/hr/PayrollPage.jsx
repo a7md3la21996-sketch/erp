@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
-import { loadPayrollConfig, savePayrollConfig, calcEmployeeAttendance, DEFAULT_PAYROLL_CONFIG } from '../../config/payrollConfig';
+import { loadPayrollConfig, savePayrollConfig, calcEmployeeAttendance, calcProRatedSalary, DEFAULT_PAYROLL_CONFIG } from '../../config/payrollConfig';
+import supabase from '../../lib/supabase';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download, Settings, Clock, AlertTriangle } from 'lucide-react';
@@ -26,15 +27,30 @@ export default function PayrollPage() {
   const [pageSize, setPageSize] = useState(25);
   const [smartFilters, setSmartFilters] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [salaryHistories, setSalaryHistories] = useState({});
 
   // Load data
   useEffect(() => {
     Promise.all([
       fetchEmployees(),
       loadPayrollConfig(),
-    ]).then(([empData, cfgData]) => {
+    ]).then(async ([empData, cfgData]) => {
       setEmployees(empData);
       setConfig(cfgData);
+
+      // Load salary history for all employees
+      const { data: allHistory } = await supabase
+        .from('salary_history')
+        .select('*')
+        .order('effective_date', { ascending: true });
+
+      const grouped = {};
+      (allHistory || []).forEach(h => {
+        if (!grouped[h.employee_id]) grouped[h.employee_id] = [];
+        grouped[h.employee_id].push(h);
+      });
+      setSalaryHistories(grouped);
+
       setLoading(false);
     });
   }, []);
@@ -62,7 +78,10 @@ export default function PayrollPage() {
 
       const stats = calcEmployeeAttendance(empAttendance, shiftConfig);
 
-      const baseSalary = emp.salary || emp.base_salary || 0;
+      const empHistory = salaryHistories[emp.id] || [];
+      const baseSalary = empHistory.length > 0
+        ? calcProRatedSalary(empHistory, month, year, emp.salary)
+        : (emp.salary || emp.base_salary || 0);
       const dailyRate = baseSalary / 30;
       const hoursPerDay = shiftConfig
         ? (parseInt(shiftConfig.official_end) || 18) - (parseInt(shiftConfig.official_start) || 10)
@@ -107,7 +126,7 @@ export default function PayrollPage() {
         hasAttendance: empAttendance.length > 0,
       };
     });
-  }, [employees, attendanceByEmp, config]);
+  }, [employees, attendanceByEmp, config, salaryHistories, month, year]);
 
   const totalSalaries = useMemo(() => payrollData.reduce((s, e) => s + e.baseSalary, 0), [payrollData]);
   const totalNet = useMemo(() => payrollData.reduce((s, e) => s + e.netSalary, 0), [payrollData]);
