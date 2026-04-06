@@ -44,8 +44,8 @@ async function parseFingerPrintExcel(file, selectedMonth, selectedYear) {
     const ws = wb.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
     jsonData.forEach((row, idx) => {
-      const values = [null, ...row];
-      rows.push({ rowNum: idx + 1, values });
+      // Keep 0-indexed — do NOT prepend null, SheetJS rows already start at col 0
+      rows.push({ rowNum: idx + 1, values: row });
     });
   } else {
     const ExcelJS = (await import('exceljs')).default;
@@ -64,7 +64,7 @@ async function parseFingerPrintExcel(file, selectedMonth, selectedYear) {
   let i = 0;
   while (i < rows.length) {
     const row = rows[i];
-    const firstCell = String(row.values[1] || '');
+    const firstCell = String(row.values[0] || row.values[1] || '');
 
     if (firstCell.includes('رقم هوية') || firstCell.includes('رقم') || firstCell.match(/^(No|ID|رقم)/i)) {
       const headerText = row.values.filter(Boolean).join(' ');
@@ -108,7 +108,7 @@ function isEmployeeHeaderRow(text) {
 
 function isDayNumberRow(values) {
   let numCount = 0;
-  for (let c = 1; c < values.length; c++) {
+  for (let c = 0; c < values.length; c++) {
     const v = Number(values[c]);
     if (v >= 1 && v <= 31) numCount++;
   }
@@ -135,7 +135,7 @@ function parseDayTimes(dayValues, timeValues, month, year) {
   const records = [];
   const dayMap = {};
 
-  for (let c = 1; c < dayValues.length; c++) {
+  for (let c = 0; c < dayValues.length; c++) {
     const v = Number(dayValues[c]);
     if (v >= 1 && v <= 31) dayMap[c] = v;
   }
@@ -176,7 +176,7 @@ function parseDayTimesSecondRow(dayValues, timeRow1, timeRow2, month, year) {
   const records = [];
   const dayMap = {};
 
-  for (let c = 1; c < dayValues.length; c++) {
+  for (let c = 0; c < dayValues.length; c++) {
     const v = Number(dayValues[c]);
     if (v >= 1 && v <= 31) dayMap[c] = v;
   }
