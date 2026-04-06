@@ -465,11 +465,13 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
 
-  useState(() => {
-    if (employee) {
-      setForm({ ...employee });
-    } else {
-      setForm({ full_name_ar: '', full_name_en: '', email: '', phone: '', department: '', role: 'sales_agent', salary: '', employment_type: 'full_time', join_date: '' });
+  useEffect(() => {
+    if (open) {
+      if (employee) {
+        setForm({ ...employee });
+      } else {
+        setForm({ full_name_ar: '', full_name_en: '', email: '', phone: '', department: '', role: 'sales_agent', salary: '', employment_type: 'full_time', join_date: '' });
+      }
     }
   }, [employee, open]);
 
