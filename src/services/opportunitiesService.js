@@ -3,7 +3,7 @@ import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { addToSyncQueue } from './syncService';
-import { getTeamMemberIds } from '../utils/teamHelper';
+import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
 
 // ── Unit blocking helpers ──
 export async function checkUnitAvailability(unitId) {
@@ -80,10 +80,18 @@ export async function fetchOpportunities({ role, userId, teamId, page = 0, pageS
       .order('created_at', { ascending: false });
 
     if (role === 'sales_agent') {
-      query = query.eq('assigned_to', userId);
+      // Filter by name since assigned_to UUID may not always be set
+      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+      if (agentUser?.full_name_en) {
+        query = query.eq('assigned_to_name', agentUser.full_name_en);
+      } else {
+        query = query.eq('assigned_to', userId);
+      }
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const ids = await getTeamMemberIds(role, teamId);
-      if (ids.length) query = query.in('assigned_to', ids);
+      const names = await getTeamMemberNames(role, teamId);
+      if (names.length) {
+        query = query.in('assigned_to_name', names);
+      }
     }
 
     const from = page * pageSize;
