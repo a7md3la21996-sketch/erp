@@ -598,14 +598,30 @@ export default function ContactsPage() {
       const deptFilter = (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : null;
       const agentFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
 
-      // Base query builder
+      // Base query builder — respects role-based filtering
+      let teamNames = null;
+      if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
+        try {
+          const teamIds = [profile.team_id];
+          if (profile.role === 'sales_manager') {
+            const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
+            if (children) teamIds.push(...children.map(c => c.id));
+          }
+          const { data: members } = await supabase.from('users').select('full_name_en').in('team_id', teamIds);
+          teamNames = (members || []).map(m => m.full_name_en).filter(Boolean);
+        } catch {}
+      }
+
       const baseQ = () => {
         let q = supabase.from('contacts').select('id', { count: 'exact', head: true });
         if (deptFilter) q = q.eq('department', deptFilter);
         if (agentFilter) q = q.filter('assigned_to_names', 'cs', JSON.stringify([agentFilter]));
-        if (profile?.role === 'sales_agent' && profile?.id) {
+        if (profile?.role === 'sales_agent') {
           const myName = profile?.full_name_en || profile?.full_name_ar;
           if (myName) q = q.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+        } else if (teamNames && teamNames.length && !agentFilter) {
+          const orConds = teamNames.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
+          q = q.or(orConds);
         }
         return q;
       };
