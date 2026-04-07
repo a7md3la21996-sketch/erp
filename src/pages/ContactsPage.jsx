@@ -1197,6 +1197,7 @@ export default function ContactsPage() {
         MERGE_LIMIT={MERGE_LIMIT}
         handleBulkAddAgent={handleBulkAddAgent}
         handleBulkRemoveAgent={handleBulkRemoveAgent}
+        perms={perms}
       />
 
       {/* Bulk SMS Modal */}

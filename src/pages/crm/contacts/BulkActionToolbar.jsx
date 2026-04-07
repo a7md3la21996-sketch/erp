@@ -38,6 +38,7 @@ export default function BulkActionToolbar({
   MERGE_LIMIT,
   handleBulkAddAgent,
   handleBulkRemoveAgent,
+  perms = {},
 }) {
   const [addAgentOpen, setAddAgentOpen] = useState(false);
   const [addAgentSearch, setAddAgentSearch] = useState('');
@@ -113,14 +114,14 @@ export default function BulkActionToolbar({
         )}
       </div>
 
-      {/* Reassign */}
-      <button onClick={() => setBulkReassignModal(true)}
+      {/* Reassign — admin/manager only */}
+      {perms.canBulkContacts && <button onClick={() => setBulkReassignModal(true)}
         style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
         <Users size={12} /> {isRTL ? 'إعادة تعيين' : 'Reassign'}
-      </button>
+      </button>}
 
-      {/* Add to Agent */}
-      <div style={{ position: 'relative' }}>
+      {/* Add to Agent — admin/manager only */}
+      {perms.canBulkContacts && <div style={{ position: 'relative' }}>
         <button onClick={() => { setAddAgentOpen(!addAgentOpen); setRemoveAgentOpen(false); setAddAgentSearch(''); }}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: addAgentOpen ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.08)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
           <UserPlus size={12} /> {isRTL ? 'إضافة لسيلز' : 'Add Agent'}
@@ -146,10 +147,10 @@ export default function BulkActionToolbar({
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
-      {/* Remove from Agent */}
-      <div style={{ position: 'relative' }}>
+      {/* Remove from Agent — admin/manager only */}
+      {perms.canBulkContacts && <div style={{ position: 'relative' }}>
         <button onClick={() => { setRemoveAgentOpen(!removeAgentOpen); setAddAgentOpen(false); setRemoveAgentSearch(''); }}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.4)', background: removeAgentOpen ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.08)', color: '#EF4444', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
           <UserMinus size={12} /> {isRTL ? 'شيل من سيلز' : 'Remove Agent'}
@@ -175,7 +176,7 @@ export default function BulkActionToolbar({
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Create Opportunities */}
       <button onClick={() => { setBulkOppModal(true); setBulkOppForm({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' }); fetchProjects().then(p => setProjectsList(p)); }}
