@@ -854,7 +854,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Temperature Chips — only when department is selected */}
-      {<div className="flex gap-2 mb-3.5 flex-wrap items-center">
+      <div className="flex gap-2 mb-3.5 flex-wrap items-center">
         <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium me-1">{isRTL ? 'الحرارة:' : 'Temp:'}</span>
         {[
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB', Icon: null },
