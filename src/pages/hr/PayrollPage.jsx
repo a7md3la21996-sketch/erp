@@ -130,10 +130,12 @@ export default function PayrollPage() {
         ...(emp.late_threshold && !assignedShift && { late_threshold: emp.late_threshold }),
       };
 
-      const isRemote = emp.work_mode === 'remote';
+      const workMode = emp.work_mode || 'office';
+      const isRemote = workMode === 'remote';
+      const isFlexible = workMode === 'flexible' || workMode === 'field';
       const stats = calcEmployeeAttendance(empAttendance, shiftConfig, { holidayDates, month, year });
 
-      const empHistory = salaryHistories[emp.id] || [];
+      const empHistory = salaryHistories[empRaw.id] || [];
       const baseSalary = empHistory.length > 0
         ? calcProRatedSalary(empHistory, month, year, emp.salary)
         : (emp.salary || emp.base_salary || 0);
@@ -143,24 +145,33 @@ export default function PayrollPage() {
         : 8;
       const minuteRate = baseSalary / (30 * hoursPerDay * 60);
 
-      // Grace hours: subtract from late minutes before penalty
-      const graceMinutes = emp.grace_hours_enabled ? (emp.monthly_grace_hours || 0) * 60 : 0;
+      // Grace hours: flexible always gets grace, others only if enabled
+      const graceMinutes = isFlexible
+        ? Math.max((emp.monthly_grace_hours || 4) * 60, (emp.grace_hours_enabled ? (emp.monthly_grace_hours || 0) * 60 : 240))
+        : (emp.grace_hours_enabled ? (emp.monthly_grace_hours || 0) * 60 : 0);
       const effectiveLateMinutes = Math.max(0, stats.totalLateMinutes - graceMinutes);
 
-      // Late deduction — skip for remote workers
+      // Late deduction
+      // Remote: no late deduction
+      // Flexible: late only after grace hours
+      // Office: normal late deduction
       const penaltyMultiplier = shiftConfig.late_penalty_multiplier || config.late_penalty_multiplier || 2;
       const lateDeduction = isRemote ? 0 : Math.round(effectiveLateMinutes * penaltyMultiplier * minuteRate);
 
-      // Absent deduction — either from leave balance or salary
+      // Absent deduction
+      // Remote: no absent deduction
+      // Flexible: only if didn't show up the entire day (no check-in at all)
+      // Office: normal absent deduction
       let absentDeduction = 0;
       let absentFromLeave = 0;
-      if (emp.deduct_absence_from_leave && emp.leave_balance > 0) {
-        // Deduct from leave balance first, remainder from salary
+      if (isRemote) {
+        absentDeduction = 0;
+      } else if (emp.deduct_absence_from_leave && emp.leave_balance > 0) {
         absentFromLeave = Math.min(stats.absentDays, emp.leave_balance || 0);
         const absentFromSalary = Math.max(0, stats.absentDays - absentFromLeave);
         absentDeduction = Math.round(absentFromSalary * dailyRate);
       } else {
-        absentDeduction = isRemote ? 0 : Math.round(stats.absentDays * dailyRate);
+        absentDeduction = Math.round(stats.absentDays * dailyRate);
       }
 
       // Allowances — per-employee override or global
