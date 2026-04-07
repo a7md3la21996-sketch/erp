@@ -1296,8 +1296,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             )}
           </div>
 
-          {/* ═══ AGENT PROFILE SELECTOR ═══ */}
-          {(() => {
+          {/* ═══ AGENT PROFILE SELECTOR — hidden for sales_agent ═══ */}
+          {!isSalesAgent && (() => {
             const assignedNames = contact.assigned_to_names || [];
             return (
             <>
