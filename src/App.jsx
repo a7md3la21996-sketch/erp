@@ -62,6 +62,10 @@ const ContractsPage = lazyRetry(() => import('./pages/hr/ContractsPage'));
 const LeaveCarryoverPage = lazyRetry(() => import('./pages/hr/LeaveCarryoverPage'));
 const OvertimePage = lazyRetry(() => import('./pages/hr/OvertimePage'));
 const BonusesPage = lazyRetry(() => import('./pages/hr/BonusesPage'));
+const OrgChartPage = lazyRetry(() => import('./pages/hr/OrgChartPage'));
+const DocumentsPage = lazyRetry(() => import('./pages/hr/DocumentsPage'));
+const ATSPage = lazyRetry(() => import('./pages/hr/ATSPage'));
+const PerformanceReviewPage = lazyRetry(() => import('./pages/hr/PerformanceReviewPage'));
 const CompetenciesPage = lazyRetry(() => import('./pages/hr/CompetenciesPage'));
 const RecruitmentPage = lazyRetry(() => import('./pages/hr/RecruitmentPage'));
 const DisciplinaryPage = lazyRetry(() => import('./pages/hr/DisciplinaryPage'));
@@ -246,6 +250,10 @@ export default function App() {
                 <Route path="/hr/overtime" element={<Guarded><OvertimePage /></Guarded>} />
                 <Route path="/hr/bonuses" element={<Guarded><BonusesPage /></Guarded>} />
                 <Route path="/hr/reports" element={<Guarded><HRReportsPage /></Guarded>} />
+                <Route path="/hr/org-chart" element={<Guarded><OrgChartPage /></Guarded>} />
+                <Route path="/hr/documents" element={<Guarded><DocumentsPage /></Guarded>} />
+                <Route path="/hr/ats" element={<Guarded><ATSPage /></Guarded>} />
+                <Route path="/hr/reviews" element={<Guarded><PerformanceReviewPage /></Guarded>} />
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
                 <Route path="/operations" element={<Guarded><OperationsPage /></Guarded>} />
                 <Route path="/operations/*" element={<Guarded><OperationsPage /></Guarded>} />
