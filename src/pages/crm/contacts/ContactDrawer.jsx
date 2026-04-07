@@ -224,7 +224,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       setActivities(prev => [act, ...prev]);
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch (err) {
-      toast.error(isRTL ? 'حدث خطأ في حفظ النشاط' : 'Failed to save activity');
+      console.error('Activity save error:', err?.message || err);
+      toast.error(isRTL ? `حدث خطأ: ${err?.message || 'غير معروف'}` : `Error: ${err?.message || 'Unknown'}`);
     }
     // Auto-update status based on activity (skip if disqualified)
     const myName = profile?.full_name_en || profile?.full_name_ar;
