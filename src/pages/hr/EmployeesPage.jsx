@@ -541,6 +541,7 @@ export default function EmployeesPage() {
       <BulkEditModal
         open={showBulkEdit}
         selectedIds={selectedIds}
+        departments={departments}
         isRTL={isRTL}
         lang={lang}
         onClose={() => setShowBulkEdit(false)}
@@ -806,10 +807,17 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
 }
 
 /* ─── Bulk Edit Modal ─── */
-function BulkEditModal({ open, selectedIds, isRTL, lang, onClose, onSave }) {
+function BulkEditModal({ open, selectedIds, departments, isRTL, lang, onClose, onSave }) {
   const [form, setForm] = useState({});
   const [enabled, setEnabled] = useState({});
   const [saving, setSaving] = useState(false);
+  const [shifts, setShifts] = useState([]);
+
+  useEffect(() => {
+    if (open) {
+      import('../../services/shiftsService').then(({ fetchShifts }) => fetchShifts().then(setShifts));
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -932,6 +940,17 @@ function BulkEditModal({ open, selectedIds, isRTL, lang, onClose, onSave }) {
           {fieldRow('department', lang === 'ar' ? 'القسم' : 'Department',
             <select value={form.department || ''} onChange={e => set('department', e.target.value)} className={inputCls}>
               <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
+              {(departments || []).map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
+            </select>
+          )}
+          {fieldRow('shift_id', lang === 'ar' ? 'فترة الدوام' : 'Shift',
+            <select value={form.shift_id || ''} onChange={e => {
+              set('shift_id', e.target.value);
+              const s = shifts.find(sh => sh.id === e.target.value);
+              if (s) { set('shift_name', s.name); set('work_start', s.official_start); set('work_end', s.official_end); set('late_threshold', s.late_threshold); }
+            }} className={inputCls}>
+              <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
+              {shifts.map(s => <option key={s.id} value={s.id}>{isRTL ? (s.name_ar || s.name) : s.name} ({s.official_start} - {s.official_end})</option>)}
             </select>
           )}
         </div>
