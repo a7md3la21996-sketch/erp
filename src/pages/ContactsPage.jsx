@@ -498,43 +498,28 @@ export default function ContactsPage() {
           });
         } catch { /* ignore */ }
       }
-      // Auto-mark active contacts as inactive if no activity for INACTIVE_DAYS
-      const now = Date.now();
-      const inactiveThreshold = INACTIVE_DAYS * 86400000;
-      const toMarkInactive = list.filter(c =>
-        c.contact_status === 'active' &&
-        c.last_activity_at &&
-        (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold
-      );
-      if (toMarkInactive.length) {
-        toMarkInactive.forEach(c => {
-          c.contact_status = 'inactive';
-          updateContact(c.id, { contact_status: 'inactive' }).catch(() => {});
-        });
-      }
-
+      // Show contacts immediately, then load feedback in background
       setContacts(list);
       setTotalContacts(result?.count || list.length);
-      // Fetch last feedback for this page's contacts
+
+      // Background: auto-mark inactive + fetch feedback (non-blocking)
       if (list.length) {
-        const ids = list.map(c => c.id).filter(Boolean);
-        let feedbackQuery = supabase.from('activities').select('contact_id, notes, user_name_ar, user_name_en, created_at')
-          .in('contact_id', ids).not('notes', 'is', null).neq('notes', '')
-          .order('created_at', { ascending: false }).range(0, 499);
-        // Role-based: only see own/team feedback
-        if (profile?.role === 'sales_agent' && profile?.id) {
-          feedbackQuery = feedbackQuery.eq('user_id', profile.id);
-        } else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
-          const teamIds = [profile.team_id];
-          if (profile.role === 'sales_manager') {
-            const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
-            if (children) teamIds.push(...children.map(c => c.id));
+        // Auto-inactive (fire and forget)
+        const now = Date.now();
+        const inactiveThreshold = INACTIVE_DAYS * 86400000;
+        list.forEach(c => {
+          if (c.contact_status === 'active' && c.last_activity_at && (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold) {
+            c.contact_status = 'inactive';
+            updateContact(c.id, { contact_status: 'inactive' }).catch(() => {});
           }
-          const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
-          const memberIds = (members || []).map(m => m.id).filter(Boolean);
-          if (memberIds.length) feedbackQuery = feedbackQuery.in('user_id', memberIds);
-        }
-        feedbackQuery.then(({ data: acts }) => {
+        });
+
+        // Fetch last feedback (non-blocking)
+        const ids = list.map(c => c.id).filter(Boolean);
+        supabase.from('activities').select('contact_id, notes, user_name_ar, user_name_en, created_at')
+          .in('contact_id', ids).not('notes', 'is', null).neq('notes', '')
+          .order('created_at', { ascending: false }).range(0, 199)
+          .then(({ data: acts }) => {
             if (acts?.length) {
               const lastByContact = {};
               acts.forEach(a => { if (a.contact_id && !lastByContact[a.contact_id]) lastByContact[a.contact_id] = a; });
