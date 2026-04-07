@@ -897,13 +897,10 @@ export default function ContactsPage() {
         resultsCount={totalContacts}
         quickFilters={[
           { label: 'ليدز جدد', labelEn: 'New Leads', filters: [{ field: 'contact_type', operator: 'is', value: 'lead' }, { field: 'created_at', operator: 'last_7' }] },
-          { label: 'بدون نشاط', labelEn: 'No Activity 30d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) }] },
-          { label: 'عملاء مبيعات', labelEn: 'Sales Clients', filters: [{ field: 'contact_type', operator: 'is', value: 'customer' }, { field: 'department', operator: 'is', value: 'sales' }] },
-          { label: 'موردين', labelEn: 'Suppliers', filters: [{ field: 'contact_type', operator: 'is', value: 'supplier' }] },
+          { label: 'بدون نشاط 30 يوم', labelEn: 'No Activity 30d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) }] },
           { label: 'محتاج متابعة', labelEn: 'Needs Follow-up', filters: [{ field: 'contact_status', operator: 'is', value: 'active' }, { field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10) }] },
           { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: '_opp_count', operator: 'eq', value: '0' }] },
-          { label: 'غير نشط', labelEn: 'Inactive', filters: [{ field: 'contact_status', operator: 'is', value: 'inactive' }] },
-          { label: 'غير مؤهل', labelEn: 'Disqualified', filters: [{ field: 'contact_status', operator: 'is', value: 'disqualified' }] },
+          { label: 'عملاء حاليين', labelEn: 'Customers', filters: [{ field: 'contact_type', operator: 'is', value: 'customer' }] },
         ]}
       />
 
