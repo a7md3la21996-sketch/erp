@@ -95,9 +95,18 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
       const myName = profile?.full_name_en || profile?.full_name_ar;
       const myStatus = (contact.agent_statuses || {})[myName] || contact.contact_status;
       let newStatus = myStatus;
-      if (callResult === 'no_answer') newStatus = 'no_answer';
-      else if (callResult === 'answered' && (myStatus === 'new' || myStatus === 'no_answer' || !myStatus)) newStatus = 'contacted';
-      else if (myStatus === 'new' || !myStatus) newStatus = 'contacted';
+      // disqualified → never auto-change
+      if (myStatus === 'disqualified') {
+        newStatus = myStatus;
+      } else if (['no_answer', 'busy', 'switched_off'].includes(callResult)) {
+        newStatus = 'inactive';
+      } else if (callResult === 'answered') {
+        newStatus = 'active';
+      } else if (callResult === 'not_interested' && myStatus !== 'has_opportunity' && myStatus !== 'active') {
+        newStatus = 'disqualified';
+      } else if (myStatus === 'new' || !myStatus) {
+        newStatus = 'active';
+      }
       if (newStatus !== myStatus) {
         const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
         onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });

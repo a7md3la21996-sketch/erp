@@ -572,7 +572,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           return entries.map(([name, s]) => ({
             label: name,
             val: statusLabels[s] || s,
-            color: s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#10B981' : s === 'no_answer' ? '#F59E0B' : undefined,
+            color: s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5',
           }));
         })(),
         show('lead_score') && { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
@@ -884,8 +884,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     const statuses = contact.agent_statuses || {};
     const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
     const statusLabels = isRTL
-      ? { new: 'جديد', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', disqualified: 'غير مؤهل', follow_up: 'متابعة' }
-      : { new: 'New', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', disqualified: 'Disqualified', follow_up: 'Follow Up' };
+      ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
+      : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
     const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
     if (isAdminOrOps && Object.keys(statuses).length > 0) {
       const entries = Object.entries(statuses);
@@ -1377,8 +1377,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       {(() => {
                         const agentStatus = (contact.agent_statuses || {})[selectedAgent];
                         const statusLabels = isRTL
-                          ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل', contacted: 'تم التواصل', no_answer: 'لا يرد', interested: 'مهتم', not_interested: 'غير مهتم', follow_up: 'متابعة' }
-                          : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified', contacted: 'Contacted', no_answer: 'No Answer', interested: 'Interested', not_interested: 'Not Interested', follow_up: 'Follow Up' };
+                          ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
+                          : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
                         const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
                         const color = statusColor(agentStatus);
                         return (
