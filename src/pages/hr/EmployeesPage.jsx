@@ -650,7 +650,7 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'القسم' : 'Department'}</label>
-            <select value={form.department || ''} onChange={e => set('department', e.target.value)} className={inputCls}>
+            <select value={form.department || form.department_id || ''} onChange={e => { set('department', e.target.value); set('department_id', e.target.value); }} className={inputCls}>
               <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
               {(departments || []).map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : d.name_en}</option>)}
             </select>
@@ -680,23 +680,23 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary'}</label>
-            <input type="number" value={form.salary || ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
+            <input type="number" value={form.salary ?? ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'نسبة البدلات %' : 'Allowance Rate %'}</label>
-            <input type="number" value={form.allowance_rate || ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
+            <input type="number" value={form.allowance_rate ?? ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'أو بدلات مبلغ ثابت' : 'Or Fixed Allowance'}</label>
-            <input type="number" value={form.allowance_fixed || ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
+            <input type="number" value={form.allowance_fixed ?? ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'نسبة الضرايب %' : 'Tax Rate %'}</label>
-            <input type="number" value={form.tax_rate || ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
+            <input type="number" value={form.tax_rate ?? ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
           </div>
           <div>
             <label className={labelCls}>{lang === 'ar' ? 'نسبة التأمينات %' : 'Insurance Rate %'}</label>
-            <input type="number" value={form.insurance_rate || ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
+            <input type="number" value={form.insurance_rate ?? ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
           </div>
           <div className="flex items-center gap-6 sm:col-span-2 pt-1">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -878,19 +878,19 @@ function BulkEditModal({ open, selectedIds, isRTL, lang, onClose, onSave }) {
         <h3 className={sectionCls}>{lang === 'ar' ? 'المرتب والخصومات' : 'Salary & Deductions'}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {fieldRow('salary', lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary',
-            <input type="number" value={form.salary || ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
+            <input type="number" value={form.salary ?? ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
           )}
           {fieldRow('allowance_rate', lang === 'ar' ? 'نسبة البدلات %' : 'Allowance Rate %',
-            <input type="number" value={form.allowance_rate || ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
+            <input type="number" value={form.allowance_rate ?? ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
           )}
           {fieldRow('allowance_fixed', lang === 'ar' ? 'بدلات مبلغ ثابت' : 'Fixed Allowance',
-            <input type="number" value={form.allowance_fixed || ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
+            <input type="number" value={form.allowance_fixed ?? ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
           )}
           {fieldRow('tax_rate', lang === 'ar' ? 'نسبة الضرايب %' : 'Tax Rate %',
-            <input type="number" value={form.tax_rate || ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
+            <input type="number" value={form.tax_rate ?? ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
           )}
           {fieldRow('insurance_rate', lang === 'ar' ? 'نسبة التأمينات %' : 'Insurance Rate %',
-            <input type="number" value={form.insurance_rate || ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
+            <input type="number" value={form.insurance_rate ?? ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
           )}
           <div className="flex items-center gap-6 sm:col-span-2 pt-1">
             <label className="flex items-center gap-2 cursor-pointer">
