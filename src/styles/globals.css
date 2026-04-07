@@ -128,7 +128,7 @@ html.dark textarea, body.dark textarea {
 
 /* ── Mobile touch targets (44px minimum on touch devices) ───── */
 @media (pointer: coarse) {
-  button, a, [role="button"], select, input[type="checkbox"], input[type="radio"] {
+  button, a, [role="button"], select {
     min-height: 44px;
     min-width: 44px;
   }
