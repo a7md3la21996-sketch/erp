@@ -618,7 +618,6 @@ export default function ContactsPage() {
         let q = supabase.from('contacts').select('id', { count: 'exact', head: true });
         if (deptFilter) q = q.eq('department', deptFilter);
         if (agentFilter) q = q.filter('assigned_to_names', 'cs', JSON.stringify([agentFilter]));
-        // Role-based filtering for sales_agent
         if (profile?.role === 'sales_agent' && profile?.id) {
           const myName = profile?.full_name_en || profile?.full_name_ar;
           if (myName) q = q.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
@@ -626,33 +625,31 @@ export default function ContactsPage() {
         return q;
       };
 
-      // Parallel count queries
-      const [totalRes, blacklistRes, ...statusRes] = await Promise.all([
-        baseQ(),
-        baseQ().eq('is_blacklisted', true),
-        ...STATUS_DEFS.map(s => baseQ().eq('contact_status', s.value)),
-      ]);
-
-      // Temperature counts
+      // ALL count queries in ONE parallel batch
+      const statusKeys = STATUS_DEFS.map(s => s.value);
       const tempKeys = ['hot', 'warm', 'cool', 'cold'];
-      const tempRes = await Promise.all(tempKeys.map(t => baseQ().eq('temperature', t)));
-
-      // Type counts
       const typeKeys = Object.keys(TYPE);
-      const typeRes = await Promise.all(typeKeys.map(t => baseQ().eq('contact_type', t)));
 
-      // Unassigned count
-      const unassignedRes = await supabase.from('contacts').select('id', { count: 'exact', head: true })
-        .or('assigned_to_name.is.null,assigned_to_name.eq.');
+      const allQueries = [
+        baseQ(), // total
+        baseQ().eq('is_blacklisted', true), // blacklisted
+        supabase.from('contacts').select('id', { count: 'exact', head: true }).or('assigned_to_name.is.null,assigned_to_name.eq.'), // unassigned
+        ...statusKeys.map(s => baseQ().eq('contact_status', s)),
+        ...tempKeys.map(t => baseQ().eq('temperature', t)),
+        ...typeKeys.map(t => baseQ().eq('contact_type', t)),
+      ];
 
+      const results = await Promise.all(allQueries);
+
+      let i = 0;
       const counts = {
-        total: totalRes.count || 0,
-        blacklisted: blacklistRes.count || 0,
-        unassigned: unassignedRes.count || 0,
+        total: results[i++].count || 0,
+        blacklisted: results[i++].count || 0,
+        unassigned: results[i++].count || 0,
       };
-      STATUS_DEFS.forEach((s, i) => { counts[s.value] = statusRes[i].count || 0; });
-      tempKeys.forEach((t, i) => { counts[t] = tempRes[i].count || 0; });
-      typeKeys.forEach((t, i) => { counts[t] = typeRes[i].count || 0; });
+      statusKeys.forEach(s => { counts[s] = results[i++].count || 0; });
+      tempKeys.forEach(t => { counts[t] = results[i++].count || 0; });
+      typeKeys.forEach(t => { counts[t] = results[i++].count || 0; });
 
       setStats(counts);
     } catch { /* ignore */ }
