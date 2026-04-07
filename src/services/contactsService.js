@@ -307,13 +307,8 @@ export async function fetchContactActivities(contactId, { role, userId, teamId }
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50);
-    // Role-based filtering
-    if (role === 'sales_agent' && userId) {
-      query = query.eq('user_id', userId);
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const ids = await getTeamMemberIds(role, teamId);
-      if (ids.length) query = query.in('user_id', ids);
-    }
+    // No role filtering — all activities on the contact are visible
+    // The contact itself is already filtered by role (assigned_to_names)
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
