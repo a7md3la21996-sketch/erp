@@ -203,7 +203,10 @@ export default function ContactsPage() {
 
       if (currentStatus !== 'disqualified') {
         if (result === 'not_interested' && currentStatus !== 'has_opportunity' && currentStatus !== 'active') {
-          newStatus = 'disqualified';
+          // Open disqualify modal instead of auto-setting
+          setDisqualifyModal(contact);
+          setDqReason('not_interested');
+          setDqNote('');
         } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
           newStatus = 'inactive';
         } else if (result === 'answered' || result === 'replied') {

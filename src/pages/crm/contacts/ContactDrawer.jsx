@@ -235,7 +235,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     if (currentStatus !== 'disqualified') {
       const result = form.result || '';
       if (result === 'not_interested' && currentStatus !== 'has_opportunity' && currentStatus !== 'active') {
-        newStatus = 'disqualified';
+        // Don't auto-disqualify — let the user choose from disqualify in the menu
+        toast.warning(isRTL ? 'اختر "غير مؤهل" من القائمة لتحديد السبب' : 'Use "Disqualify" from menu to select a reason');
       } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
         newStatus = 'inactive';
       } else if (result === 'answered' || result === 'replied') {
@@ -264,6 +265,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   // Handle contact status change from TakeActionForm (per-agent)
   const handleStatusChange = (newStatus) => {
+    if (newStatus === 'disqualified') {
+      toast.warning(isRTL ? 'اختر "غير مؤهل" من القائمة لتحديد السبب' : 'Use "Disqualify" from menu to select a reason');
+      return;
+    }
     if (onUpdate) {
       const myName = profile?.full_name_en || profile?.full_name_ar;
       const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
