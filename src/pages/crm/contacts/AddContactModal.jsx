@@ -128,11 +128,23 @@ function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCamp
   );
 }
 
-export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity, onAddInteraction, campaigns = [], onCreateCampaign }) {
+export default function AddContactModal({ onClose, onSave, checkDup, onOpenOpportunity, onAddInteraction, campaigns = [], onCreateCampaign, profile }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   const { contactTypes } = useSystemConfig();
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'operations';
+  const [agentsList, setAgentsList] = useState([]);
+  const [assignTo, setAssignTo] = useState('');
+  useEffect(() => {
+    if (isAdmin) {
+      import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
+        fetchSalesAgents().then(agents => {
+          setAgentsList(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
+        }).catch(() => {});
+      }).catch(() => {});
+    }
+  }, [isAdmin]);
   useEscClose(onClose);
   const dupTimer = useRef(null);
   useEffect(() => () => clearTimeout(dupTimer.current), []);
@@ -253,6 +265,11 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         extra_phones: validExtras.length > 0 ? validExtras : null,
         _customFieldValues: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined,
       };
+      // If admin selected a specific agent, override the default assignment
+      if (isAdmin && assignTo) {
+        saveData.assigned_to_name = assignTo;
+        saveData.assigned_to_names = [assignTo];
+      }
       await onSave(saveData);
       setSavedContact({ full_name: form.full_name, phone: fullPhone });
     } catch (err) {
@@ -308,6 +325,17 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         <div className="flex-1 overflow-auto px-6 py-5">
           {step === 1 ? (
             <div className="modal-grid grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {/* تعيين لسيلز — admin only */}
+              {isAdmin && agentsList.length > 0 && (
+              <div className="col-span-2">
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'تعيين لسيلز' : 'Assign to Agent'}</label>
+                <Select value={assignTo} onChange={e => setAssignTo(e.target.value)}>
+                  <option value="">{isRTL ? 'تلقائي (أنا)' : 'Auto (me)'}</option>
+                  {agentsList.map(a => <option key={a} value={a}>{a}</option>)}
+                </Select>
+              </div>
+              )}
+
               {/* القسم والنوع */}
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'القسم' : 'Department'} <span className="text-red-500">*</span></label>
