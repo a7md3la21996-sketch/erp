@@ -806,12 +806,15 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      {/* Type Chips */}
-      {(deptView.contactTypes || Object.keys(TYPE)).length > 0 && (
+      {/* Type Chips — Sales/Leads types only */}
+      {(() => {
+        const LEAD_TYPES = ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'];
+        const types = deptView.contactTypes || LEAD_TYPES;
+        return types.length > 0 && (
       <div className="flex gap-2 mb-3 flex-wrap">
         {[
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
-          ...(deptView.contactTypes || Object.keys(TYPE)).filter(k => TYPE[k]).map(k => ({
+          ...types.filter(k => TYPE[k]).map(k => ({
             label: isRTL ? TYPE[k].label : TYPE[k].labelEn, value: k, count: stats[k] || 0, color: TYPE[k].color,
           })),
         ].map(s => {
@@ -827,7 +830,8 @@ export default function ContactsPage() {
           );
         })}
       </div>
-      )}
+      );
+      })()}
 
       {/* Status Chips */}
       <div className="flex gap-2 mb-3 flex-wrap">
