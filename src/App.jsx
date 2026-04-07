@@ -57,6 +57,7 @@ const HolidaysPage = lazyRetry(() => import('./pages/hr/HolidaysPage'));
 const LeavePage = lazyRetry(() => import('./pages/hr/LeavePage'));
 const PayrollPage = lazyRetry(() => import('./pages/hr/PayrollPage'));
 const LoansPage = lazyRetry(() => import('./pages/hr/LoansPage'));
+const HRReportsPage = lazyRetry(() => import('./pages/hr/HRReportsPage'));
 const CompetenciesPage = lazyRetry(() => import('./pages/hr/CompetenciesPage'));
 const RecruitmentPage = lazyRetry(() => import('./pages/hr/RecruitmentPage'));
 const DisciplinaryPage = lazyRetry(() => import('./pages/hr/DisciplinaryPage'));
@@ -236,6 +237,7 @@ export default function App() {
                 <Route path="/hr/assets" element={<Guarded><AssetsPage /></Guarded>} />
                 <Route path="/hr/onboarding" element={<Guarded><OnboardingPage /></Guarded>} />
                 <Route path="/hr/expense-claims" element={<Guarded><ExpenseClaimsPage /></Guarded>} />
+                <Route path="/hr/reports" element={<Guarded><HRReportsPage /></Guarded>} />
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
                 <Route path="/operations" element={<Guarded><OperationsPage /></Guarded>} />
                 <Route path="/operations/*" element={<Guarded><OperationsPage /></Guarded>} />

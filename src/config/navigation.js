@@ -49,6 +49,7 @@ export const NAV_ITEMS = [
     { id: 'leave',        label: { ar: 'الإجازات',        en: 'Leave' },        path: '/hr/leave',        permission: P.LEAVE_REQUEST },
     { id: 'payroll',      label: { ar: 'الرواتب',         en: 'Payroll' },      path: '/hr/payroll',      permission: P.PAYROLL_VIEW },
     { id: 'loans',        label: { ar: 'السلف والقروض',  en: 'Loans' },        path: '/hr/loans',        permission: P.PAYROLL_VIEW },
+    { id: 'hr-reports',   label: { ar: 'تقارير HR',       en: 'HR Reports' },   path: '/hr/reports',      permission: P.PAYROLL_VIEW },
     { id: 'competencies', label: { ar: 'الكفاءات',        en: 'Competencies' }, path: '/hr/competencies', permission: P.HR_VIEW_OWN },
     { id: 'recruitment',  label: { ar: 'التوظيف',         en: 'Recruitment' },  path: '/hr/recruitment',  permission: P.HR_VIEW_ALL },
     { id: 'disciplinary',   label: { ar: 'الإجراءات التأديبية', en: 'Disciplinary' },          path: '/hr/disciplinary',   permission: P.HR_VIEW_ALL },
