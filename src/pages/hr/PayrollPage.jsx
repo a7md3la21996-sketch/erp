@@ -5,10 +5,11 @@ import { fetchAttendance } from '../../services/attendanceService';
 import { loadPayrollConfig, savePayrollConfig, calcEmployeeAttendance, calcProRatedSalary, DEFAULT_PAYROLL_CONFIG } from '../../config/payrollConfig';
 import { fetchHolidays } from '../../services/holidaysService';
 import { fetchAllEmployeeShifts, getActiveShift } from '../../services/employeeShiftsService';
+import { savePayrollRun, fetchPayrollRun, fetchActiveLoans, fetchAdjustments } from '../../services/payrollService';
 import supabase from '../../lib/supabase';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
-import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download, Settings, Clock, AlertTriangle } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download, Settings, Clock, AlertTriangle, Printer } from 'lucide-react';
 import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select, Modal, ModalFooter, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
@@ -34,6 +35,8 @@ export default function PayrollPage() {
   const [configHistories, setConfigHistories] = useState({});
   const [shiftAssignments, setShiftAssignments] = useState({});
   const [holidayDates, setHolidayDates] = useState(new Set());
+  const [loans, setLoans] = useState([]);
+  const [adjustments, setAdjustments] = useState([]);
 
   // Load data
   useEffect(() => {
@@ -79,6 +82,8 @@ export default function PayrollPage() {
   useEffect(() => {
     fetchAttendance({ month, year }).then(setAttendance);
     fetchHolidays(year, month).then(data => setHolidayDates(new Set(data.map(h => h.date))));
+    fetchActiveLoans().then(setLoans);
+    fetchAdjustments(month, year).then(setAdjustments);
   }, [month, year]);
 
   // Group attendance by employee
@@ -188,8 +193,17 @@ export default function PayrollPage() {
         ? 0
         : Math.round(baseSalary * ((emp.insurance_rate != null ? emp.insurance_rate / 100 : null) ?? config.social_insurance_rate ?? 0.11));
 
+      // Loan deductions
+      const empLoans = loans.filter(l => l.employee_id === empRaw.id);
+      const loanDeduction = empLoans.reduce((s, l) => s + (Number(l.monthly_deduction) || 0), 0);
+
+      // Adjustments (additions & deductions)
+      const empAdj = adjustments.filter(a => a.employee_id === empRaw.id);
+      const otherAdditions = empAdj.filter(a => a.type === 'addition' || a.type === 'bonus').reduce((s, a) => s + Number(a.amount), 0);
+      const otherDeductions = empAdj.filter(a => a.type === 'deduction' || a.type === 'penalty').reduce((s, a) => s + Number(a.amount), 0);
+
       // Total deductions
-      const totalDeductions = tax + socialInsurance + lateDeduction + absentDeduction;
+      const totalDeductions = tax + socialInsurance + lateDeduction + absentDeduction + loanDeduction + otherDeductions;
 
       // Overtime bonus — only if enabled for this employee
       const overtimeBonus = emp.overtime_enabled
@@ -197,7 +211,7 @@ export default function PayrollPage() {
         : 0;
 
       // Net salary
-      const netSalary = baseSalary + allowances + overtimeBonus - totalDeductions;
+      const netSalary = baseSalary + allowances + overtimeBonus + otherAdditions - totalDeductions;
 
       return {
         ...empRaw,
@@ -212,6 +226,9 @@ export default function PayrollPage() {
         absentDeduction,
         absentFromLeave,
         overtimeBonus,
+        loanDeduction,
+        otherAdditions,
+        otherDeductions,
         totalDeductions,
         netSalary,
         effectiveLateMinutes,
@@ -220,7 +237,7 @@ export default function PayrollPage() {
         hasAttendance: empAttendance.length > 0,
       };
     });
-  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, shiftAssignments, month, year, holidayDates]);
+  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, shiftAssignments, month, year, holidayDates, loans, adjustments]);
 
   const totalSalaries = useMemo(() => payrollData.reduce((s, e) => s + e.baseSalary, 0), [payrollData]);
   const totalNet = useMemo(() => payrollData.reduce((s, e) => s + e.netSalary, 0), [payrollData]);
@@ -248,54 +265,57 @@ export default function PayrollPage() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [month, smartFilters]);
 
-  const handleRunPayroll = useCallback(() => {
+  const handleRunPayroll = useCallback(async () => {
     if (!payrollData.length) return;
     const activeEmployees = payrollData.filter(emp => emp.status === 'active' || !emp.status);
 
-    const payrollRun = {
-      id: `PR-${Date.now()}`,
+    const runData = {
       month,
       year,
-      run_date: new Date().toISOString(),
       total_employees: activeEmployees.length,
-      total_net: activeEmployees.reduce((sum, e) => sum + e.netSalary, 0),
-      total_gross: activeEmployees.reduce((sum, e) => sum + e.baseSalary + e.allowances, 0),
+      total_gross: activeEmployees.reduce((sum, e) => sum + e.baseSalary + e.allowances + e.overtimeBonus + e.otherAdditions, 0),
       total_deductions: activeEmployees.reduce((sum, e) => sum + e.totalDeductions, 0),
-      items: activeEmployees.map(e => ({
-        employee_id: e.id,
-        employee_name_ar: e.full_name_ar,
-        employee_name_en: e.full_name_en,
-        department: e.department,
-        base_salary: e.baseSalary,
-        allowances: e.allowances,
-        tax: e.tax,
-        social_insurance: e.socialInsurance,
-        late_deduction: e.lateDeduction,
-        absent_deduction: e.absentDeduction,
-        overtime_bonus: e.overtimeBonus,
-        total_deductions: e.totalDeductions,
-        net_salary: e.netSalary,
-        present_days: e.stats.presentDays,
-        absent_days: e.stats.absentDays,
-        late_minutes: e.stats.totalLateMinutes,
-        overtime_minutes: e.stats.totalOvertimeMinutes,
-      })),
-      status: 'completed',
+      total_net: activeEmployees.reduce((sum, e) => sum + e.netSalary, 0),
     };
 
-    import('../../lib/supabase').then(({ default: supabase }) => {
-      supabase.from('system_config')
-        .upsert({ key: `payroll_run_${year}_${month}`, value: payrollRun, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-        .catch(() => {});
-    }).catch(() => {});
+    const items = activeEmployees.map(e => ({
+      employee_id: e.id,
+      employee_name: (isRTL ? e.full_name_ar : e.full_name_en) || e.full_name_ar,
+      department: e.department,
+      base_salary: e.baseSalary,
+      allowances: e.allowances,
+      tax: e.tax,
+      social_insurance: e.socialInsurance,
+      late_deduction: e.lateDeduction,
+      absent_deduction: e.absentDeduction,
+      overtime_bonus: e.overtimeBonus,
+      loan_deduction: e.loanDeduction,
+      other_additions: e.otherAdditions,
+      other_deductions: e.otherDeductions,
+      total_deductions: e.totalDeductions,
+      net_salary: e.netSalary,
+      present_days: e.stats.presentDays,
+      absent_days: e.stats.absentDays,
+      late_minutes: e.stats.totalLateMinutes,
+      overtime_minutes: e.stats.totalOvertimeMinutes,
+      absent_from_leave: e.absentFromLeave || 0,
+    }));
 
-    showToast(
-      lang === 'ar'
-        ? `تم تشغيل مسير رواتب ${MONTHS_AR[month - 1]} بنجاح - ${activeEmployees.length} موظف`
-        : `Payroll for ${MONTHS_AR[month - 1]} processed successfully - ${activeEmployees.length} employees`,
-      'success'
-    );
-  }, [payrollData, month, year, lang, showToast]);
+    try {
+      await savePayrollRun(runData, items);
+      showToast(
+        lang === 'ar'
+          ? `تم تشغيل مسير رواتب ${MONTHS_AR[month - 1]} بنجاح - ${activeEmployees.length} موظف`
+          : `Payroll for ${MONTHS_AR[month - 1]} processed successfully - ${activeEmployees.length} employees`,
+        'success'
+      );
+    } catch {
+      showToast(
+        lang === 'ar' ? 'فشل حفظ المسير' : 'Failed to save payroll run',
+        'error'
+      );
+    }
+  }, [payrollData, month, year, lang, isRTL, showToast]);
 
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
@@ -536,6 +556,9 @@ function PayrollDetailModal({ emp, config, onClose, lang, isRTL, month, year, MO
     { label: lang === 'ar' ? 'خصم التأخير' : 'Late Deduction', value: emp.lateDeduction, sub: lateInfo, type: 'deduct', hide: !emp.lateDeduction && !emp.effectiveLateMinutes },
     { label: lang === 'ar' ? 'خصم الغياب (من المرتب)' : 'Absent (from salary)', value: emp.absentDeduction, sub: `${emp.stats.absentDays - (emp.absentFromLeave || 0)} ${lang === 'ar' ? 'يوم' : 'days'}`, type: 'deduct', hide: !emp.absentDeduction },
     { label: lang === 'ar' ? 'غياب من رصيد الإجازات' : 'Absent (from leave)', value: 0, sub: `${emp.absentFromLeave || 0} ${lang === 'ar' ? 'يوم' : 'days'}`, type: 'info', hide: !emp.absentFromLeave },
+    { label: lang === 'ar' ? 'خصم سلف' : 'Loan Deduction', value: emp.loanDeduction, type: 'deduct', hide: !emp.loanDeduction },
+    { label: lang === 'ar' ? 'إضافات أخرى' : 'Other Additions', value: emp.otherAdditions, type: 'add', hide: !emp.otherAdditions },
+    { label: lang === 'ar' ? 'خصومات أخرى' : 'Other Deductions', value: emp.otherDeductions, type: 'deduct', hide: !emp.otherDeductions },
     { type: 'divider' },
     { label: lang === 'ar' ? 'إجمالي الاستقطاعات' : 'Total Deductions', value: emp.totalDeductions, type: 'subtotal-red' },
     { type: 'divider' },
@@ -597,6 +620,42 @@ function PayrollDetailModal({ emp, config, onClose, lang, isRTL, month, year, MO
 
       <ModalFooter>
         <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إغلاق' : 'Close'}</Button>
+        <Button onClick={() => {
+          const printWin = window.open('', '_blank');
+          const dir = isRTL ? 'rtl' : 'ltr';
+          const monthName = MONTHS_AR[month - 1];
+          printWin.document.write(`<html dir="${dir}"><head><title>Payslip - ${name}</title>
+            <style>body{font-family:system-ui,sans-serif;padding:40px;max-width:600px;margin:auto;color:#1a1a1a}
+            h2{margin:0 0 5px;font-size:18px}p{margin:0;font-size:12px;color:#666}
+            .header{border-bottom:2px solid #1B3347;padding-bottom:15px;margin-bottom:20px}
+            .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:13px}
+            .row.total{border-top:2px solid #1B3347;border-bottom:none;font-weight:bold;font-size:15px;padding-top:12px}
+            .row.sub{background:#f8f8f8;font-weight:600}.add{color:#16a34a}.ded{color:#dc2626}
+            .info{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px}
+            .info div{background:#f5f5f5;padding:10px;border-radius:8px;text-align:center}
+            .info div span{display:block;font-size:11px;color:#888}.info div strong{font-size:14px}
+            @media print{body{padding:20px}}</style></head><body>
+            <div class="header"><h2>كشف مرتب — ${name}</h2><p>${monthName} ${year}</p></div>
+            <div class="info">
+              <div><span>${lang === 'ar' ? 'أيام الحضور' : 'Present'}</span><strong>${emp.stats.presentDays}</strong></div>
+              <div><span>${lang === 'ar' ? 'أيام الغياب' : 'Absent'}</span><strong>${emp.stats.absentDays}</strong></div>
+              <div><span>${lang === 'ar' ? 'ساعات العمل' : 'Hours'}</span><strong>${emp.stats.totalWorkedHours}</strong></div>
+            </div>
+            ${rows.map(r => {
+              if (r.type === 'divider') return '<div style="border-top:1px solid #ddd;margin:4px 0"></div>';
+              const cls = r.type === 'total' ? 'row total' : r.type?.includes('subtotal') ? 'row sub' : 'row';
+              const valCls = r.type === 'deduct' ? 'ded' : r.type === 'add' ? 'add' : '';
+              const sign = r.type === 'deduct' ? '-' : r.type === 'add' ? '+' : '';
+              return '<div class="' + cls + '"><span>' + r.label + (r.sub ? ' <small style="color:#888">(' + r.sub + ')</small>' : '') + '</span><span class="' + valCls + '">' + sign + r.value.toLocaleString() + (r.type === 'total' ? ' ج.م' : '') + '</span></div>';
+            }).join('')}
+            <div style="margin-top:40px;display:flex;justify-content:space-between;font-size:11px;color:#aaa">
+              <span>Platform ERP</span><span>${new Date().toLocaleDateString()}</span>
+            </div></body></html>`);
+          printWin.document.close();
+          printWin.print();
+        }}>
+          <Printer size={14} />{lang === 'ar' ? 'طباعة' : 'Print'}
+        </Button>
       </ModalFooter>
     </Modal>
   );
