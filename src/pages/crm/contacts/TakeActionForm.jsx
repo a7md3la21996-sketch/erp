@@ -53,7 +53,6 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
     { id: 'active', ar: 'نشط', en: 'Active', color: '#10B981' },
     { id: 'inactive', ar: 'غير نشط', en: 'Inactive', color: '#F59E0B' },
     { id: 'has_opportunity', ar: 'لديه فرصة', en: 'Has Opportunity', color: '#059669' },
-    { id: 'disqualified', ar: 'غير مؤهل', en: 'Disqualified', color: '#EF4444' },
   ];
   const [changeStatus, setChangeStatus] = useState(false);
   const [newStatus, setNewStatus] = useState(contact?.contact_status || '');

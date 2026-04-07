@@ -806,8 +806,8 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      {/* Type Chips — Sales/Leads types only */}
-      {(() => {
+      {/* Type Chips — hidden for now, status + temp chips are sufficient */}
+      {false && (() => {
         const LEAD_TYPES = ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'];
         const types = deptView.contactTypes || LEAD_TYPES;
         return types.length > 0 && (
