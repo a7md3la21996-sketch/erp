@@ -1301,9 +1301,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             )}
           </div>
 
-          {/* ═══ AGENT PROFILE SELECTOR — admin only ═══ */}
-          {(profile?.role === 'admin' || profile?.role === 'operations') && (() => {
-            const assignedNames = contact.assigned_to_names || [];
+          {/* ═══ AGENT PROFILE SELECTOR — admin sees all, TL/manager sees team only, agent sees nothing ═══ */}
+          {!isSalesAgent && (() => {
+            const allNames = contact.assigned_to_names || [];
+            const isAdmin = profile?.role === 'admin' || profile?.role === 'operations';
+            // TL/Manager: only show team members from agentsList
+            const assignedNames = isAdmin ? allNames : allNames.filter(n => agentsList.includes(n) || n === (profile?.full_name_en || profile?.full_name_ar));
             return (
             <>
               <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
@@ -1328,7 +1331,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         selectedAgent === name ? 'bg-white/20 text-white' : 'bg-brand-500/10 text-brand-500'
                       }`}>{name.charAt(0)}</span>
                       {name}
-                      {assignedNames.length > 1 && (
+                      {isAdmin && assignedNames.length > 1 && (
                         <span onClick={e => {
                           e.stopPropagation();
                           const newNames = assignedNames.filter(n => n !== name);
@@ -1344,8 +1347,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       )}
                     </button>
                   ))}
-                  {/* Add Agent Button */}
-                  <div className="relative">
+                  {/* Add Agent Button — admin only */}
+                  {isAdmin && <div className="relative">
                     <button onClick={() => setShowAddAgent(!showAddAgent)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer bg-transparent border border-dashed border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500 hover:text-brand-500 transition-colors">
                       + {isRTL ? 'إضافة' : 'Add'}
@@ -1371,7 +1374,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         </div>
                       </div>
                     )}
-                  </div>
+                  </div>}
                 </div>
               </div>
               {selectedAgent !== 'all' && (
