@@ -883,15 +883,12 @@ export default function TasksPage() {
                   ${isDone ? 'opacity-65' : 'opacity-100'}
                   transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.06]
                 `}>
-                  {/* Done toggle */}
-                  <button onClick={() => handleStatus(task, isDone ? 'pending' : 'done')} className={`
-                    w-5 h-5 rounded-[5px] border-2 flex items-center justify-center cursor-pointer shrink-0 mt-0.5
-                    ${isDone
-                      ? 'border-brand-500 bg-brand-500'
-                      : 'border-edge dark:border-edge-dark bg-transparent'}
+                  {/* Status indicator */}
+                  <div className={`w-5 h-5 rounded-[5px] border-2 flex items-center justify-center shrink-0 mt-0.5
+                    ${isDone ? 'border-brand-500 bg-brand-500' : 'border-edge dark:border-edge-dark bg-transparent'}
                   `}>
                     {isDone && <Check size={11} color="#fff" />}
-                  </button>
+                  </div>
 
                   {/* Type icon */}
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
