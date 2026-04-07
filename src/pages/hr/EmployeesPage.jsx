@@ -816,7 +816,11 @@ function BulkEditModal({ open, selectedIds, isRTL, lang, onClose, onSave }) {
       setForm({
         salary: '', allowance_rate: '', allowance_fixed: '', tax_rate: '', insurance_rate: '',
         tax_exempt: false, insurance_exempt: false,
-        shift_name: '', work_start: '', work_end: '', late_threshold: '', is_remote: false,
+        shift_name: '', work_start: '', work_end: '', late_threshold: '',
+        work_mode: 'office', department: '',
+        annual_leave_days: 21, leave_balance: 21, deduct_absence_from_leave: false,
+        monthly_grace_hours: 0, grace_hours_enabled: false,
+        overtime_enabled: false, overtime_rate: 1.5,
       });
       setEnabled({});
     }
@@ -917,26 +921,62 @@ function BulkEditModal({ open, selectedIds, isRTL, lang, onClose, onSave }) {
         {/* ── Work Schedule ── */}
         <h3 className={sectionCls}>{lang === 'ar' ? 'الدوام' : 'Work Schedule'}</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {fieldRow('shift_name', lang === 'ar' ? 'فترة الدوام' : 'Shift Name',
-            <input value={form.shift_name || ''} onChange={e => set('shift_name', e.target.value)} className={inputCls} />
+          {fieldRow('work_mode', lang === 'ar' ? 'مكان العمل' : 'Work Mode',
+            <select value={form.work_mode || 'office'} onChange={e => set('work_mode', e.target.value)} className={inputCls}>
+              <option value="office">{lang === 'ar' ? 'من الشركة' : 'Office'}</option>
+              <option value="remote">{lang === 'ar' ? 'من البيت' : 'Remote'}</option>
+              <option value="flexible">{lang === 'ar' ? 'مرن' : 'Flexible'}</option>
+              <option value="field">{lang === 'ar' ? 'ميداني' : 'Field'}</option>
+            </select>
           )}
-          {fieldRow('work_start', lang === 'ar' ? 'ساعة البداية' : 'Work Start',
-            <input type="time" value={form.work_start || ''} onChange={e => set('work_start', e.target.value)} className={inputCls} />
+          {fieldRow('department', lang === 'ar' ? 'القسم' : 'Department',
+            <select value={form.department || ''} onChange={e => set('department', e.target.value)} className={inputCls}>
+              <option value="">{lang === 'ar' ? 'اختر...' : 'Select...'}</option>
+            </select>
           )}
-          {fieldRow('work_end', lang === 'ar' ? 'ساعة النهاية' : 'Work End',
-            <input type="time" value={form.work_end || ''} onChange={e => set('work_end', e.target.value)} className={inputCls} />
+        </div>
+
+        {/* ── Leave & Attendance ── */}
+        <h3 className={sectionCls}>{lang === 'ar' ? 'الإجازات والحضور' : 'Leave & Attendance'}</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {fieldRow('annual_leave_days', lang === 'ar' ? 'الإجازات السنوية (أيام)' : 'Annual Leave Days',
+            <input type="number" value={form.annual_leave_days ?? 21} onChange={e => set('annual_leave_days', +e.target.value)} className={inputCls} />
           )}
-          {fieldRow('late_threshold', lang === 'ar' ? 'حد التأخير' : 'Late Threshold',
-            <input type="time" value={form.late_threshold || ''} onChange={e => set('late_threshold', e.target.value)} className={inputCls} />
+          {fieldRow('leave_balance', lang === 'ar' ? 'الرصيد المتبقي' : 'Leave Balance',
+            <input type="number" step="0.5" value={form.leave_balance ?? 21} onChange={e => set('leave_balance', +e.target.value)} className={inputCls} />
           )}
-          <div className="flex items-center gap-2 pt-1">
+          {fieldRow('monthly_grace_hours', lang === 'ar' ? 'ساعات السماح الشهرية' : 'Monthly Grace Hours',
+            <input type="number" step="0.5" value={form.monthly_grace_hours ?? 0} onChange={e => set('monthly_grace_hours', +e.target.value)} className={inputCls} />
+          )}
+          {fieldRow('overtime_rate', lang === 'ar' ? 'نسبة الأوفرتايم' : 'Overtime Rate',
+            <input type="number" step="0.1" value={form.overtime_rate ?? 1.5} onChange={e => set('overtime_rate', +e.target.value)} className={inputCls} />
+          )}
+          <div className="flex flex-wrap items-center gap-4 sm:col-span-2 pt-1">
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={!!enabled.is_remote} onChange={() => toggle('is_remote')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
-              <span className={`text-xs ${!enabled.is_remote ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
-                {lang === 'ar' ? 'شغل من البيت' : 'Remote Work'}
+              <input type="checkbox" checked={!!enabled.deduct_absence_from_leave} onChange={() => toggle('deduct_absence_from_leave')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
+              <span className={`text-xs ${!enabled.deduct_absence_from_leave ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
+                {lang === 'ar' ? 'خصم الغياب من الإجازات' : 'Deduct absence from leave'}
               </span>
-              {enabled.is_remote && (
-                <input type="checkbox" checked={!!form.is_remote} onChange={e => set('is_remote', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              {enabled.deduct_absence_from_leave && (
+                <input type="checkbox" checked={!!form.deduct_absence_from_leave} onChange={e => set('deduct_absence_from_leave', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              )}
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!enabled.grace_hours_enabled} onChange={() => toggle('grace_hours_enabled')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
+              <span className={`text-xs ${!enabled.grace_hours_enabled ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
+                {lang === 'ar' ? 'تفعيل ساعات السماح' : 'Enable grace hours'}
+              </span>
+              {enabled.grace_hours_enabled && (
+                <input type="checkbox" checked={!!form.grace_hours_enabled} onChange={e => set('grace_hours_enabled', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              )}
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={!!enabled.overtime_enabled} onChange={() => toggle('overtime_enabled')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
+              <span className={`text-xs ${!enabled.overtime_enabled ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
+                {lang === 'ar' ? 'تفعيل الأوفرتايم' : 'Enable overtime'}
+              </span>
+              {enabled.overtime_enabled && (
+                <input type="checkbox" checked={!!form.overtime_enabled} onChange={e => set('overtime_enabled', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
               )}
             </label>
           </div>
