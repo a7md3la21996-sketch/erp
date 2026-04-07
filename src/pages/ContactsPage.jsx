@@ -787,12 +787,12 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      {/* Type Chips (filtered by department) */}
-      {deptView.contactTypes && (
+      {/* Type Chips */}
+      {(deptView.contactTypes || Object.keys(TYPE)).length > 0 && (
       <div className="flex gap-2 mb-3 flex-wrap">
         {[
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
-          ...deptView.contactTypes.filter(k => TYPE[k]).map(k => ({
+          ...(deptView.contactTypes || Object.keys(TYPE)).filter(k => TYPE[k]).map(k => ({
             label: isRTL ? TYPE[k].label : TYPE[k].labelEn, value: k, count: stats[k] || 0, color: TYPE[k].color,
           })),
         ].map(s => {
@@ -838,7 +838,7 @@ export default function ContactsPage() {
       </div>
 
       {/* Temperature Chips — only when department is selected */}
-      {activeDept && <div className="flex gap-2 mb-3.5 flex-wrap items-center">
+      {<div className="flex gap-2 mb-3.5 flex-wrap items-center">
         <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium me-1">{isRTL ? 'الحرارة:' : 'Temp:'}</span>
         {[
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB', Icon: null },
@@ -858,7 +858,7 @@ export default function ContactsPage() {
           </button>
           );
         })}
-      </div>}
+      </div>
 
       {/* Smart Filter Bar */}
       <SmartFilter
