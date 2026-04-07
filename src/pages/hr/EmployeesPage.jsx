@@ -73,10 +73,9 @@ export default function EmployeesPage() {
   const loadEmployees = () => {
     setLoading(true);
     Promise.all([
-      fetchEmployees(),
       fetchEmployees({ includeDeleted: true }),
       fetchDepartments(),
-    ]).then(([active, all, depts]) => {
+    ]).then(([all, depts]) => {
       setEmployees(all);
       setDepartments(depts);
     }).finally(() => setLoading(false));
