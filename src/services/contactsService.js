@@ -324,11 +324,16 @@ export async function fetchContactActivities(contactId, { role, userId, teamId }
 }
 
 export async function createActivity(activityData) {
+  // Clean: convert empty strings to null (Supabase rejects '' for date/number columns)
+  const cleaned = {};
+  for (const [k, v] of Object.entries(activityData)) {
+    cleaned[k] = v === '' ? null : v;
+  }
   // Try Supabase FIRST — source of truth
   try {
     const { data, error } = await supabase
       .from('activities')
-      .insert([stripInternalFields(activityData)])
+      .insert([stripInternalFields(cleaned)])
       .select('*')
       .single();
     if (error) throw error;
