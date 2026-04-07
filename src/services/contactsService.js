@@ -307,8 +307,22 @@ export async function fetchContactActivities(contactId, { role, userId, teamId }
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50);
-    // No role filtering — all activities on the contact are visible
-    // The contact itself is already filtered by role (assigned_to_names)
+    // Role-based filtering by name (not UUID, since imported activities may lack user_id)
+    if (role === 'sales_agent') {
+      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+      const myName = agentUser?.full_name_en;
+      if (myName) {
+        query = query.or(`user_name_en.eq.${myName},user_id.eq.${userId}`);
+      }
+    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      const names = await getTeamMemberNames(role, teamId);
+      const ids = await getTeamMemberIds(role, teamId);
+      if (names.length) {
+        const nameConds = names.map(n => `user_name_en.eq.${n}`).join(',');
+        const idConds = ids.map(id => `user_id.eq.${id}`).join(',');
+        query = query.or(`${nameConds},${idConds}`);
+      }
+    }
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
