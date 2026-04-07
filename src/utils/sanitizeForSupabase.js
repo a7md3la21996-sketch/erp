@@ -8,16 +8,25 @@ const INTERNAL_FIELDS = new Set([
   '_skipGate', '_touchStart',
   'countryCode', 'country',
   'contacts', 'users', 'projects', 'opportunities', 'departments',
-  'activities', 'tasks', 'deals',
+  'activities', 'tasks', 'deals', 'shifts',
 ]);
+
+// Map frontend field names to database column names
+const FIELD_MAP = {
+  department: 'department_id',
+  employment_type: 'contract_type',
+  join_date: 'hire_date',
+};
 
 export function stripInternalFields(data) {
   if (!data || typeof data !== 'object') return data;
   const clean = {};
   for (const [k, v] of Object.entries(data)) {
     if (INTERNAL_FIELDS.has(k)) continue;
-    if (k.startsWith('_')) continue; // skip all underscore-prefixed internal fields
-    clean[k] = v;
+    if (k.startsWith('_')) continue;
+    // Map field name if needed
+    const mappedKey = FIELD_MAP[k] || k;
+    clean[mappedKey] = v;
   }
   return clean;
 }
