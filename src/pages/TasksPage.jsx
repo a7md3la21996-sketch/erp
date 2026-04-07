@@ -552,12 +552,6 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
                           }}>
                             <Edit3 size={13} />
                           </button>
-                          <button onClick={() => handleDelete(task.id)} style={{
-                            padding: '4px 7px', borderRadius: 6, border: 'none', background: 'transparent',
-                            color: isDark ? '#94a3b8' : '#64748b', cursor: 'pointer', opacity: 0.7,
-                          }}>
-                            <Trash2 size={13} />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -958,9 +952,6 @@ export default function TasksPage() {
                         {lang==='ar'?'جارية':'Start'}
                       </Button>
                     )}
-                    <button onClick={() => handleDelete(task.id)} className="p-[4px_7px] rounded-md border-none bg-transparent text-content-muted dark:text-content-muted-dark cursor-pointer opacity-50 hover:opacity-100 transition-opacity">
-                      <Trash2 size={13} />
-                    </button>
                   </div>
                 </div>
               );
