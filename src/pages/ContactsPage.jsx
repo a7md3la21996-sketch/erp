@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useSystemConfig } from '../contexts/SystemConfigContext';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
-import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users } from 'lucide-react';
+import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact, deleteContact,
   blacklistContact, createActivity, recordAssignment,
@@ -806,31 +806,25 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      {/* Type Chips — hidden for now, status + temp chips are sufficient */}
-      {false && (() => {
+      {/* Type Filter — dropdown style */}
+      {(() => {
         const LEAD_TYPES = ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'];
         const types = deptView.contactTypes || LEAD_TYPES;
-        return types.length > 0 && (
-      <div className="flex gap-2 mb-3 flex-wrap">
-        {[
-          { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB' },
-          ...types.filter(k => TYPE[k]).map(k => ({
-            label: isRTL ? TYPE[k].label : TYPE[k].labelEn, value: k, count: stats[k] || 0, color: TYPE[k].color,
-          })),
-        ].map(s => {
-          const active = filterType === s.value;
-          return (
-          <button key={s.value} onClick={() => setFilterType(s.value)}
-            className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-            style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
-            {s.label} <span
-              className={`rounded-xl px-2 py-px text-[10px] mis-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-              style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
-          </button>
-          );
-        })}
-      </div>
-      );
+        const activeType = types.find(k => k === filterType);
+        const activeLabel = activeType && TYPE[activeType] ? (isRTL ? TYPE[activeType].label : TYPE[activeType].labelEn) : (isRTL ? 'كل الأنواع' : 'All Types');
+        return (
+          <div className="relative inline-block mb-3">
+            <select value={filterType} onChange={e => setFilterType(e.target.value)}
+              className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
+              style={activeType ? { borderColor: TYPE[activeType]?.color, color: TYPE[activeType]?.color } : undefined}>
+              <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
+              {types.filter(k => TYPE[k]).map(k => (
+                <option key={k} value={k}>{isRTL ? TYPE[k].label : TYPE[k].labelEn} ({stats[k] || 0})</option>
+              ))}
+            </select>
+            <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
+          </div>
+        );
       })()}
 
       {/* Status Chips */}
