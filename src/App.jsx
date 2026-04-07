@@ -58,6 +58,10 @@ const LeavePage = lazyRetry(() => import('./pages/hr/LeavePage'));
 const PayrollPage = lazyRetry(() => import('./pages/hr/PayrollPage'));
 const LoansPage = lazyRetry(() => import('./pages/hr/LoansPage'));
 const HRReportsPage = lazyRetry(() => import('./pages/hr/HRReportsPage'));
+const ContractsPage = lazyRetry(() => import('./pages/hr/ContractsPage'));
+const LeaveCarryoverPage = lazyRetry(() => import('./pages/hr/LeaveCarryoverPage'));
+const OvertimePage = lazyRetry(() => import('./pages/hr/OvertimePage'));
+const BonusesPage = lazyRetry(() => import('./pages/hr/BonusesPage'));
 const CompetenciesPage = lazyRetry(() => import('./pages/hr/CompetenciesPage'));
 const RecruitmentPage = lazyRetry(() => import('./pages/hr/RecruitmentPage'));
 const DisciplinaryPage = lazyRetry(() => import('./pages/hr/DisciplinaryPage'));
@@ -237,6 +241,10 @@ export default function App() {
                 <Route path="/hr/assets" element={<Guarded><AssetsPage /></Guarded>} />
                 <Route path="/hr/onboarding" element={<Guarded><OnboardingPage /></Guarded>} />
                 <Route path="/hr/expense-claims" element={<Guarded><ExpenseClaimsPage /></Guarded>} />
+                <Route path="/hr/contracts" element={<Guarded><ContractsPage /></Guarded>} />
+                <Route path="/hr/leave-carryover" element={<Guarded><LeaveCarryoverPage /></Guarded>} />
+                <Route path="/hr/overtime" element={<Guarded><OvertimePage /></Guarded>} />
+                <Route path="/hr/bonuses" element={<Guarded><BonusesPage /></Guarded>} />
                 <Route path="/hr/reports" element={<Guarded><HRReportsPage /></Guarded>} />
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
                 <Route path="/operations" element={<Guarded><OperationsPage /></Guarded>} />
