@@ -324,9 +324,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const uniqueAgents = useMemo(() => {
     const map = new Map();
     (activities || []).forEach(a => {
-      const id = a.user_id || a.users?.full_name_ar || a.users?.full_name_en;
+      const id = a.user_id || a.user_name_en || a.user_name_ar;
       if (!id) return;
-      const name = isRTL ? (a.users?.full_name_ar || a.users?.full_name_en || '—') : (a.users?.full_name_en || a.users?.full_name_ar || '—');
+      const name = isRTL
+        ? (a.user_name_ar || a.user_name_en || a.users?.full_name_ar || a.users?.full_name_en || '—')
+        : (a.user_name_en || a.user_name_ar || a.users?.full_name_en || a.users?.full_name_ar || '—');
+      if (name === '—') return;
       if (!map.has(id)) map.set(id, { id, name, count: 0 });
       map.get(id).count++;
     });
