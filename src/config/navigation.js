@@ -9,10 +9,10 @@ import {
 
 export const NAV_ITEMS = [
   { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD },
-  { id: 'contacts', label: { ar: 'العملاء المحتملين', en: 'Leads' }, icon: BookUser, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
-  { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.DASHBOARD },
   { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
+    { id: 'contacts', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
     { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
+    { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, path: '/activities', permission: P.DASHBOARD },
     { id: 'lead-pool', label: { ar: 'توزيع الليدز', en: 'Lead Distribution' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
   ]},
   { id: 'real-estate', label: { ar: 'العقارات', en: 'Real Estate' }, icon: Building2, permission: P.PROJECTS_VIEW, children: [
@@ -113,12 +113,12 @@ export const NAV_ITEMS = [
  * If a role is not listed, all permitted items are shown (admin default).
  */
 export const ROLE_NAV_GROUPS = {
-  sales_agent:    ['dashboard', 'contacts', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'help-center'],
-  team_leader:    ['dashboard', 'contacts', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
-  sales_manager:  ['dashboard', 'contacts', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
-  sales_director: ['dashboard', 'contacts', 'crm', 'sales', 'real-estate', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
-  marketing:      ['dashboard', 'contacts', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
+  sales_agent:    ['dashboard', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'help-center'],
+  team_leader:    ['dashboard', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
+  sales_manager:  ['dashboard', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
+  sales_director: ['dashboard', 'crm', 'sales', 'real-estate', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
+  marketing:      ['dashboard', 'crm', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
   hr:             ['dashboard', 'hr', 'workspace', 'communication', 'help-center'],
   finance:        ['dashboard', 'finance', 'sales', 'operations', 'workspace', 'communication', 'help-center'],
-  operations:     ['dashboard', 'operations', 'sales', 'contacts', 'crm', 'activities', 'real-estate', 'workspace', 'communication', 'help-center'],
+  operations:     ['dashboard', 'operations', 'sales', 'crm', 'real-estate', 'workspace', 'communication', 'help-center'],
 };
