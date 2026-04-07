@@ -116,7 +116,7 @@ export default function ContactsTable({
         <div className="px-4 py-2.5 bg-brand-800/[0.06] dark:bg-brand-800/[0.12] border-b border-edge dark:border-edge-dark flex items-center gap-2.5 justify-between">
           <span className="text-xs font-semibold text-brand-800">
             <Merge size={14} className="align-middle me-1.5 inline" />
-            {isRTL ? `اختر جهتي اتصال للدمج (${mergeTargets.length}/2)` : `Select 2 contacts to merge (${mergeTargets.length}/2)`}
+            {isRTL ? `اختر عميلين للدمج (${mergeTargets.length}/2)` : `Select 2 leads to merge (${mergeTargets.length}/2)`}
           </span>
           <div className="flex gap-2">
             {mergeTargets.length === 2 && (
@@ -210,7 +210,7 @@ export default function ContactsTable({
           <thead>
             <tr>
               <th className={`${thCls} w-9 !px-2.5`}><input type="checkbox" checked={paged.length > 0 && paged.every(c => selectedIdSet.has(c.id))} onChange={toggleSelectAll} className="cursor-pointer" /></th>
-              {hasCol('contact') && <th className={thCls}>{isRTL ? 'جهة الاتصال' : 'Contact'}</th>}
+              {hasCol('contact') && <th className={thCls}>{isRTL ? 'العميل' : 'Lead'}</th>}
               {hasCol('phone') && <th className={thCls}>{isRTL ? 'الهاتف' : 'Phone'}</th>}
               {hasCol('assigned_to') && !isSalesAgent && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'المسؤول' : 'Assigned To'}</th>}
               {hasCol('temperature') && <th className={`${thCls} hidden md:table-cell`}>{isRTL ? 'الحرارة' : 'Temperature'}</th>}

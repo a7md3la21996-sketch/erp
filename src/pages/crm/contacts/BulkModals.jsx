@@ -67,7 +67,7 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
             const updatedContacts = (contacts || []).map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
             setContacts(updatedContacts);
             logAction({ action: 'merge', entity: 'contact', entityId: c1.id, entityName: c1.full_name, description: `Merged "${c2.full_name}" (ID:${c2.id}) into "${c1.full_name}" (ID:${c1.id})`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
-            toast.success(isRTL ? 'تم دمج جهتي الاتصال بنجاح' : 'Contacts merged successfully');
+            toast.success(isRTL ? 'تم دمج العميلين بنجاح' : 'Leads merged successfully');
             setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
           }}>
             {isRTL ? 'تأكيد الدمج' : 'Confirm Merge'}
@@ -158,7 +158,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               setContacts(updated);
               await Promise.all(ids.map(id => updateContact(id, updates).catch(() => {})));
               logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
-              toast.success(isRTL ? `تم استبعاد ${ids.length} جهة اتصال` : `${ids.length} contacts disqualified`);
+              toast.success(isRTL ? `تم استبعاد ${ids.length} عميل` : `${ids.length} leads disqualified`);
               setSelectedIds([]);
             } else {
               const c = disqualifyModal;
@@ -199,7 +199,7 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
               {isRTL ? 'إعادة تعيين' : 'Reassign'}
             </h3>
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mt-0.5">
-              {isRTL ? `${selectedIds.length} جهة اتصال محددة` : `${selectedIds.length} contacts selected`}
+              {isRTL ? `${selectedIds.length} عميل محدد` : `${selectedIds.length} leads selected`}
             </p>
           </div>
           <button onClick={() => { setBulkReassignModal(false); setSearch(''); setSelected(null); }}
@@ -320,7 +320,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>{isRTL ? 'إنشاء فرص' : 'Create Opportunities'}</h3>
-              <span style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>{isRTL ? `${selContacts.length} جهة اتصال محددة` : `${selContacts.length} contacts selected`}</span>
+              <span style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>{isRTL ? `${selContacts.length} عميل محدد` : `${selContacts.length} leads selected`}</span>
             </div>
           </div>
           <button onClick={() => setBulkOppModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#64748b' : '#94a3b8', padding: 4 }}><X size={18} /></button>
@@ -509,7 +509,7 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
               {/* Skipped contacts list */}
               {withoutPhone.length > 0 && (
                 <div style={{ marginBottom: 16, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 8, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#EF4444', marginBottom: 4 }}>{isRTL ? 'جهات بدون رقم:' : 'Contacts without phone:'}</div>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: '#EF4444', marginBottom: 4 }}>{isRTL ? 'عملاء بدون رقم:' : 'Leads without phone:'}</div>
                   <div style={{ fontSize: 11, color: '#94a3b8' }}>
                     {withoutPhone.map(c => c.full_name || (isRTL ? 'بدون اسم' : 'No Name')).join(', ')}
                   </div>

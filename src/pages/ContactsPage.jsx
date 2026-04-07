@@ -280,10 +280,10 @@ export default function ContactsPage() {
 
   const BULK_WARN_THRESHOLD = 50;
   const handleDeleteSelected = () => {
-    const warnMsg = selectedIds.length > BULK_WARN_THRESHOLD ? (isRTL ? `\n⚠️ أنت على وشك حذف ${selectedIds.length} جهة اتصال دفعة واحدة!` : `\n⚠️ You are about to delete ${selectedIds.length} contacts at once!`) : '';
+    const warnMsg = selectedIds.length > BULK_WARN_THRESHOLD ? (isRTL ? `\n⚠️ أنت على وشك حذف ${selectedIds.length} عميل دفعة واحدة!` : `\n⚠️ You are about to delete ${selectedIds.length} leads at once!`) : '';
     setConfirmAction({
       title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
-      message: (isRTL ? `حذف ${selectedIds.length} جهة اتصال؟` : `Delete ${selectedIds.length} contacts?`) + warnMsg,
+      message: (isRTL ? `حذف ${selectedIds.length} عميل؟` : `Delete ${selectedIds.length} leads?`) + warnMsg,
       onConfirm: () => {
         const count = selectedIds.length;
         const deletedItems = contacts.filter(c => selectedIds.includes(c.id));
@@ -295,7 +295,7 @@ export default function ContactsPage() {
         logAction({ action: 'bulk_delete', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk deleted ${count} contacts: ${names}`, userName: profile?.full_name_ar });
         setSelectedIds([]);
         deletedContactsRef.current = deletedItems;
-        toast.show({ type: 'success', message: isRTL ? `تم حذف ${count} جهة اتصال` : `${count} contacts deleted`, duration: 5000, action: { label: isRTL ? 'تراجع' : 'Undo', onClick: () => restoreContacts(deletedItems) } });
+        toast.show({ type: 'success', message: isRTL ? `تم حذف ${count} عميل` : `${count} leads deleted`, duration: 5000, action: { label: isRTL ? 'تراجع' : 'Undo', onClick: () => restoreContacts(deletedItems) } });
         setConfirmAction(null);
       }
     });
@@ -315,7 +315,7 @@ export default function ContactsPage() {
       notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', contactId: c.id, agentId: agentName, agentName, assignedBy: assignedByName });
     });
     // Opportunities reassignment is handled via Supabase in updateContact
-    toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} جهة اتصال` : `${selectedIds.length} contacts reassigned`);
+    toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} عميل` : `${selectedIds.length} leads reassigned`);
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
@@ -331,7 +331,7 @@ export default function ContactsPage() {
       return { ...c, assigned_to_names: [...names, agentName] };
     });
     setContacts(updated);
-    toast.success(isRTL ? `تم إضافة ${agentName} لـ ${selectedIds.length} جهة اتصال` : `Added ${agentName} to ${selectedIds.length} contacts`);
+    toast.success(isRTL ? `تم إضافة ${agentName} لـ ${selectedIds.length} عميل` : `Added ${agentName} to ${selectedIds.length} leads`);
     setSelectedIds([]);
     Promise.all(idsToUpdate.map(id => {
       const c = contacts.find(ct => ct.id === id);
@@ -352,7 +352,7 @@ export default function ContactsPage() {
       return { ...c, assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps };
     });
     setContacts(updated);
-    toast.success(isRTL ? `تم شيل ${agentName} من ${selectedIds.length} جهة اتصال` : `Removed ${agentName} from ${selectedIds.length} contacts`);
+    toast.success(isRTL ? `تم شيل ${agentName} من ${selectedIds.length} عميل` : `Removed ${agentName} from ${selectedIds.length} leads`);
     setSelectedIds([]);
     Promise.all(idsToUpdate.map(id => {
       const c = contacts.find(ct => ct.id === id);
@@ -372,8 +372,8 @@ export default function ContactsPage() {
     setContacts(updated);
     saveContactsLocal(updated);
     logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: selectedIds.join(','), description: `Bulk changed ${field} to "${value}" for ${count} contacts: ${names}`, newValue: value, userName: profile?.full_name_ar });
-    createNotification({ type: 'system', title_en: `Bulk ${actionLabel}`, title_ar: `تغيير جماعي — ${actionLabel}`, body_en: `Changed ${field} to "${value}" for ${count} contacts`, body_ar: `تم تغيير ${field} إلى "${value}" لـ ${count} جهة اتصال`, for_user_id: 'all' });
-    toast.success(isRTL ? `تم تحديث ${count} جهة اتصال` : `${count} contacts updated`);
+    createNotification({ type: 'system', title_en: `Bulk ${actionLabel}`, title_ar: `تغيير جماعي — ${actionLabel}`, body_en: `Changed ${field} to "${value}" for ${count} leads`, body_ar: `تم تغيير ${field} إلى "${value}" لـ ${count} عميل`, for_user_id: 'all' });
+    toast.success(isRTL ? `تم تحديث ${count} عميل` : `${count} leads updated`);
     setSelectedIds([]);
     setBulkDropdownOpen(null);
     setShowBulkMenu(false);
@@ -388,7 +388,7 @@ export default function ContactsPage() {
     const results = bulkSend(templateId, smsContacts, lang);
     setBulkSMSState(s => ({ ...s, sending: false, progress: smsContacts.length, done: true, results }));
     logAction({ action: 'bulk_sms', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk SMS sent to ${results.length} contacts`, userName: profile?.full_name_ar });
-    createNotification({ type: 'system', title_en: 'Bulk SMS Sent', title_ar: 'تم إرسال رسائل جماعية', body_en: `Sent SMS to ${results.length} contacts`, body_ar: `تم إرسال رسائل لـ ${results.length} جهة اتصال`, for_user_id: 'all' });
+    createNotification({ type: 'system', title_en: 'Bulk SMS Sent', title_ar: 'تم إرسال رسائل جماعية', body_en: `Sent SMS to ${results.length} leads`, body_ar: `تم إرسال رسائل لـ ${results.length} عميل`, for_user_id: 'all' });
     toast.success(isRTL ? `تم إرسال ${results.length} رسالة` : `${results.length} messages sent`);
   };
 
@@ -396,7 +396,7 @@ export default function ContactsPage() {
     const list = contacts.filter(c => selectedIds.includes(c.id));
     exportCSVList(list);
     logAction({ action: 'export', entity: 'contact', description: `Exported ${list.length} selected contacts`, userName: profile?.full_name_ar || profile?.full_name_en || '' });
-    toast.success(isRTL ? `تم تصدير ${list.length} جهة اتصال` : `${list.length} contacts exported`);
+    toast.success(isRTL ? `تم تصدير ${list.length} عميل` : `${list.length} leads exported`);
     setBulkDropdownOpen(null);
     setShowBulkMenu(false);
   };
@@ -726,7 +726,7 @@ export default function ContactsPage() {
       }
     } catch (err) {
       console.error('[handleSave] Failed to create contact:', err?.message || err);
-      toast.error(isRTL ? 'فشل حفظ جهة الاتصال: ' + (err?.message || 'خطأ غير معروف') : 'Failed to save contact: ' + (err?.message || 'Unknown error'));
+      toast.error(isRTL ? 'فشل حفظ العميل: ' + (err?.message || 'خطأ غير معروف') : 'Failed to save lead: ' + (err?.message || 'Unknown error'));
     }
   };
 
@@ -746,7 +746,7 @@ export default function ContactsPage() {
     if (selected?.id === contact.id) setSelected(null);
     blacklistContact(contact.id, reason).catch(() => {});
     logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
-    toast.success(isRTL ? 'تم إضافة للقائمة السوداء' : 'Contact blacklisted');
+    toast.success(isRTL ? 'تم إضافة للقائمة السوداء' : 'Lead blacklisted');
   };
 
   const tdCls = `px-4 py-3.5 border-b border-edge/50 dark:border-edge-dark/50 align-middle text-xs text-content dark:text-content-dark text-start`;
@@ -764,9 +764,9 @@ export default function ContactsPage() {
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>
-          <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'جهات الاتصال' : 'Contacts'}</h1>
+          <h1 className="m-0 text-xl font-bold text-content dark:text-content-dark">{isRTL ? 'العملاء المحتملين' : 'Leads'}</h1>
           <p className="mt-1 mb-0 text-xs text-content-muted dark:text-content-muted-dark">
-            {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${totalContacts.toLocaleString()} ${isRTL ? 'جهة اتصال' : 'contacts'}`}
+            {loading ? (isRTL ? 'جاري التحميل...' : 'Loading...') : `${totalContacts.toLocaleString()} ${isRTL ? 'عميل' : 'leads'}`}
           </p>
         </div>
 
@@ -782,7 +782,7 @@ export default function ContactsPage() {
             </button>
           )}
           <Button size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus size={14} /> {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
+            <Plus size={14} /> {isRTL ? 'إضافة عميل' : 'Add Lead'}
           </Button>
         </div>
       </div>
@@ -1054,7 +1054,7 @@ export default function ContactsPage() {
         try {
           const inserted = await batchInsert('contacts', clean, 50);
           setContacts(prev => [...inserted, ...prev]);
-          toast.success(isRTL ? `تم استيراد ${inserted.length} جهة اتصال` : `${inserted.length} contacts imported`);
+          toast.success(isRTL ? `تم استيراد ${inserted.length} عميل` : `${inserted.length} leads imported`);
         } catch (err) {
           toast.error(isRTL ? 'فشل الاستيراد: ' + err.message : 'Import failed: ' + err.message);
         }

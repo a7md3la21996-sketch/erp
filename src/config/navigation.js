@@ -9,7 +9,7 @@ import {
 
 export const NAV_ITEMS = [
   { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD },
-  { id: 'contacts', label: { ar: 'جهات الاتصال', en: 'Contacts' }, icon: BookUser, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
+  { id: 'contacts', label: { ar: 'العملاء المحتملين', en: 'Leads' }, icon: BookUser, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
   { id: 'activities', label: { ar: 'الأنشطة', en: 'Activities' }, icon: ActivitySquare, path: '/activities', permission: P.DASHBOARD },
   { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
     { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },

@@ -114,7 +114,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
         {/* Header */}
         <div className="px-6 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center shrink-0">
           <div>
-            <h2 className="m-0 text-content dark:text-content-dark text-[17px] font-bold">{isRTL ? 'تعديل بيانات جهة الاتصال' : 'Edit Contact'}</h2>
+            <h2 className="m-0 text-content dark:text-content-dark text-[17px] font-bold">{isRTL ? 'تعديل بيانات العميل' : 'Edit Lead'}</h2>
             <p className="mt-[3px] mb-0 text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px]">{contact.full_name}</p>
           </div>
           <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1"><X size={18} /></button>

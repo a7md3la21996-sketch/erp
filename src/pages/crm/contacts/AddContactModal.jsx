@@ -229,7 +229,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const handleSave = async () => {
     const errs = {};
     if (!form.department) errs.department = isRTL ? 'يرجى اختيار القسم' : 'Please select a department';
-    if (!form.contact_type) errs.contact_type = isRTL ? 'يرجى اختيار نوع جهة الاتصال' : 'Please select contact type';
+    if (!form.contact_type) errs.contact_type = isRTL ? 'يرجى اختيار نوع العميل' : 'Please select lead type';
     const fullPhone = getFullPhone(form.phone, form.countryCode);
     if (!fullPhone || !validatePhone(fullPhone)) errs.phone = isRTL ? 'رقم الهاتف الأساسي غير صحيح' : 'Invalid primary phone number';
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email format';
@@ -270,7 +270,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               <CheckCircle size={32} className="text-emerald-500" />
             </div>
             <h3 className="m-0 text-lg font-bold text-content dark:text-content-dark mb-1">
-              {isRTL ? 'تم الحفظ بنجاح!' : 'Contact Saved!'}
+              {isRTL ? 'تم الحفظ بنجاح!' : 'Lead Saved!'}
             </h3>
             <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark mb-6">
               {savedContact.full_name || savedContact.phone}
@@ -291,7 +291,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <div>
             <h2 className="m-0 text-content dark:text-content-dark text-[17px] font-bold">
-              {isRTL ? 'إضافة جهة اتصال' : 'Add Contact'}
+              {isRTL ? 'إضافة عميل' : 'Add Lead'}
             </h2>
             <p className="mt-[3px] mb-0 text-xs text-content-muted dark:text-content-muted-dark">
               {step === 1 ? (isRTL ? 'البيانات الأساسية' : 'Basic Info') : (isRTL ? 'البيانات الإضافية' : 'Additional Info')}

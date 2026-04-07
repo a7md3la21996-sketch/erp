@@ -267,7 +267,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       const myName = profile?.full_name_en || profile?.full_name_ar;
       const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
       onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });
-      toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Contact status updated');
+      toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Lead status updated');
     }
   };
 
@@ -460,7 +460,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // Grouped contact info for data tab
   const dataGroups = [
     {
-      title: isRTL ? 'معلومات التواصل' : 'Contact Info',
+      title: isRTL ? 'معلومات التواصل' : 'Lead Info',
       icon: Phone,
       color: '#10B981',
       rows: [
@@ -578,7 +578,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         show('lead_score') && { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
         contact.contact_type && { label: isRTL ? 'النوع' : 'Type', val: tp ? (isRTL ? tp.label : tp.labelEn) : contact.contact_type },
         contact.department && { label: isRTL ? 'القسم' : 'Department', val: (isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : {})[contact.department] || contact.department },
-        contact.contact_number && { label: isRTL ? 'رقم التعريف' : 'Contact #', val: contact.contact_number },
+        contact.contact_number && { label: isRTL ? 'رقم التعريف' : 'Lead #', val: contact.contact_number },
       ].filter(Boolean),
     },
     {
@@ -1099,7 +1099,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   <div className="absolute top-[58px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[100] shadow-[0_12px_40px_rgba(27,51,71,0.18)] overflow-hidden">
                     <div className="p-1">
                       <button onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                        <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Contact'}
+                        <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Lead'}
                       </button>
                       <button onClick={handleToggleFav} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                         <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#F59E0B' : 'none'} /> {isFav ? (isRTL ? 'إزالة المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
@@ -1984,7 +1984,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </button>
           </div>
           <div className="mb-4 px-3 py-2 rounded-lg bg-brand-500/[0.05] border border-brand-500/10">
-            <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'جهة الاتصال:' : 'Contact:'}</span>
+            <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'العميل:' : 'Lead:'}</span>
             <span className="text-xs font-semibold text-content dark:text-content-dark ms-1.5">{contact.full_name}</span>
           </div>
           <div className="flex flex-col gap-3">
@@ -2057,7 +2057,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     {showPrintPreview && (
       <PrintPreview
         html={generateContactCardHTML(contact, getCompanyInfo(), isRTL ? 'ar' : 'en')}
-        title={isRTL ? 'بطاقة جهة اتصال' : 'Contact Card'}
+        title={isRTL ? 'بطاقة عميل' : 'Lead Card'}
         onClose={() => setShowPrintPreview(false)}
       />
     )}
