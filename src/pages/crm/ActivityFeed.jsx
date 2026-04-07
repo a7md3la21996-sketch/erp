@@ -195,13 +195,6 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
                     </div>
                   )}
                 </div>
-                {/* Delete */}
-                <button
-                  onClick={() => handleDelete(act.id)}
-                  className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark opacity-0 group-hover:opacity-100 transition-opacity duration-150 shrink-0"
-                >
-                  <Trash2 size={12} />
-                </button>
               </div>
             );
           })}
