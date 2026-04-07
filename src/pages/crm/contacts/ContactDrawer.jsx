@@ -762,9 +762,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               <span className="text-[10px] px-1.5 py-px rounded-[5px]" style={{ background: (st?.color || '#4A7AAB') + '22', color: st?.color || '#4A7AAB' }}>
                 {isRTL ? st?.ar : st?.en}
               </span>
-              {overdue && (
-                <span className="text-[10px] flex items-center gap-0.5 text-red-500">
-                  <Clock size={9} /> {isRTL ? 'متأخر' : 'Overdue'}
+              {item.due_date && (
+                <span className={`text-[10px] flex items-center gap-0.5 ${overdue ? 'text-red-500' : 'text-content-muted dark:text-content-muted-dark'}`}>
+                  <Clock size={9} /> {new Date(item.due_date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+                  {overdue && (isRTL ? ' (متأخر)' : ' (Overdue)')}
                 </span>
               )}
             </div>

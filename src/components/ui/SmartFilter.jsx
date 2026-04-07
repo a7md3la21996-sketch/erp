@@ -206,7 +206,7 @@ export default function SmartFilter({
   return (
     <div className="mb-4">
       {/* Main bar */}
-      <div className="flex gap-2 items-center flex-wrap bg-gray-50 dark:bg-brand-500/[0.08] px-3.5 py-2.5 rounded-xl border border-edge dark:border-edge-dark">
+      <div className="flex gap-2 items-center flex-wrap bg-gray-50 dark:bg-brand-500/[0.08] px-3.5 py-2.5 rounded-xl border border-edge dark:border-edge-dark overflow-x-auto max-w-full">
         {/* Search */}
         {onSearchChange && (
           <div className="relative flex-[1_1_180px] max-w-[320px]">
