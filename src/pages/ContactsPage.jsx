@@ -788,14 +788,6 @@ export default function ContactsPage() {
           </p>
         </div>
 
-        {/* Alert: New leads needing attention */}
-        {!loading && (stats.new || 0) > 0 && (
-          <button onClick={() => setFilterStatus('new')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-500/10 border border-brand-500/20 cursor-pointer hover:bg-brand-500/15 transition-colors">
-            <span className="w-7 h-7 rounded-lg bg-brand-500 text-white flex items-center justify-center text-xs font-bold">{stats.new}</span>
-            <span className="text-xs font-semibold text-brand-500">{isRTL ? 'أرقام جديدة محتاجة رد' : 'New leads need response'}</span>
-          </button>
-        )}
         <div className="flex gap-2 flex-wrap">
           {perms.canExportContacts && (
             <button onClick={() => exportCSV(filtered)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
