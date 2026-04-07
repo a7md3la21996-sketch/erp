@@ -191,9 +191,18 @@ export default function ContactsTable({
                       )}
                     </div>
                   </div>
-                  {/* Row 2: Tags */}
+                  {/* Row 2: Status + Temp + Activity */}
                   <div className="flex items-center gap-1.5 mt-2 ms-[52px] flex-wrap">
-                    {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
+                    {c.contact_status && (() => {
+                      const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, active: { label: 'نشط', labelEn: 'Active', color: '#10B981' }, inactive: { label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
+                      const s = statusMap[c.contact_status];
+                      return s ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: s.color, background: s.color + '18' }}>{isRTL ? s.label : s.labelEn}</span> : null;
+                    })()}
+                    {c.temperature && TEMP[c.temperature] && (() => {
+                      const t = TEMP[c.temperature];
+                      const Icon = t.Icon;
+                      return <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5" style={{ color: t.color, background: t.bg }}><Icon size={10} />{isRTL ? t.labelAr : t.label}</span>;
+                    })()}
                     {!isSalesAgent && c.assigned_to_name && <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/[0.06] text-brand-500 font-medium">{c.assigned_to_name}</span>}
                     {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd')}</span>; })()}
                   </div>
@@ -270,8 +279,16 @@ export default function ContactsTable({
                         {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {typeInfo && <Chip label={isRTL ? typeInfo.label : typeInfo.labelEn} color={typeInfo.color} bg={typeInfo.bg} />}
-                        {c.department && <span className="text-[10px] px-2 py-px rounded-full bg-brand-500/[0.06] text-[#6B8DB5] font-medium">{DEPT_LABELS[c.department] || c.department}</span>}
+                        {c.contact_status && (() => {
+                          const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, active: { label: 'نشط', labelEn: 'Active', color: '#10B981' }, inactive: { label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
+                          const s = statusMap[c.contact_status];
+                          return s ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: s.color, background: s.color + '18' }}>{isRTL ? s.label : s.labelEn}</span> : null;
+                        })()}
+                        {c.temperature && TEMP[c.temperature] && (() => {
+                          const t = TEMP[c.temperature];
+                          const Icon = t.Icon;
+                          return <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5" style={{ color: t.color, background: t.bg }}><Icon size={10} />{isRTL ? t.labelAr : t.label}</span>;
+                        })()}
                         {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
                       </div>
                     </div>
