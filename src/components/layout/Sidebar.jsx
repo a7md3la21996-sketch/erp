@@ -251,7 +251,7 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
             const hasChildren = item.children?.length > 0;
             const isOpen = openMenus[item.id] || isParentActive(item);
             const active = item.path ? isActive(item.path) : isParentActive(item);
-            const visibleChildren = hasChildren ? item.children.filter(c => hasPermission(c.permission)) : [];
+            const visibleChildren = hasChildren ? item.children.filter(c => c.group || hasPermission(c.permission)) : [];
             // On mobile, sidebar is always expanded (not collapsed)
             const showLabels = !collapsed || mobileOpen;
             return (
@@ -297,12 +297,21 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onMobileClose
                   </button>
                 )}
                 {showLabels && hasChildren && isOpen && visibleChildren.length > 0 && (
-                  <div className={`px-2 mt-1 border-s-2 ms-8 me-1 border-edge dark:border-edge-dark ${visibleChildren.length > 8 ? 'max-h-[320px] overflow-y-auto' : ''}`}>
-                    {visibleChildren.map(child => (
-                      <Link key={child.id} to={child.path} onClick={handleNavClick} className={`block py-2 px-3 rounded-lg no-underline text-[13px] text-start transition-colors ${isActive(child.path) ? 'font-semibold text-brand-800 dark:text-brand-400 bg-brand-50/25 dark:bg-brand-500/15' : 'font-normal text-gray-400 dark:text-gray-500 bg-transparent'}`}>
-                        {child.label[lang]}
-                      </Link>
-                    ))}
+                  <div className={`px-2 mt-1 border-s-2 ms-8 me-1 border-edge dark:border-edge-dark ${visibleChildren.length > 8 ? 'max-h-[400px] overflow-y-auto' : ''}`}>
+                    {visibleChildren.map(child => {
+                      if (child.group) {
+                        return (
+                          <div key={child.group.en} className="pt-3 pb-1 px-3 first:pt-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-600">{child.group[lang]}</span>
+                          </div>
+                        );
+                      }
+                      return (
+                        <Link key={child.id} to={child.path} onClick={handleNavClick} className={`block py-2 px-3 rounded-lg no-underline text-[13px] text-start transition-colors ${isActive(child.path) ? 'font-semibold text-brand-800 dark:text-brand-400 bg-brand-50/25 dark:bg-brand-500/15' : 'font-normal text-gray-400 dark:text-gray-500 bg-transparent'}`}>
+                          {child.label[lang]}
+                        </Link>
+                      );
+                    })}
                   </div>
                 )}
                 {/* Flyout menu for collapsed sidebar */}
