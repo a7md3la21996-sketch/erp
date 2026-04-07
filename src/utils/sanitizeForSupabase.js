@@ -12,8 +12,8 @@ const INTERNAL_FIELDS = new Set([
 ]);
 
 // Map frontend field names to database column names
+// NOTE: 'department' is NOT mapped — contacts table uses 'department', employees uses 'department_id'
 const FIELD_MAP = {
-  department: 'department_id',
   employment_type: 'contract_type',
   join_date: 'hire_date',
 };
