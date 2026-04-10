@@ -868,7 +868,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   // ── Dept-specific tab labels ─────────────────────────────────────────────
   const tabs = [
-    { key: 'activity', label: isRTL ? 'النشاط' : 'Activity', icon: Clock },
+    { key: 'activity', label: isRTL ? 'السجل' : 'Timeline', icon: Clock },
     { key: deptTab.key, label: isRTL ? deptTab.label_ar : deptTab.label_en, icon: deptTab.icon },
     { key: 'units', label: isRTL ? 'وحدات للبيع' : 'Units', icon: Building2 },
     { key: 'comments', label: isRTL ? 'تعليقات' : 'Comments', icon: MessageSquare },
