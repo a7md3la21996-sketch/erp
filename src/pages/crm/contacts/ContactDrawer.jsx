@@ -264,9 +264,23 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   };
 
   // Handle contact status change from TakeActionForm (per-agent)
+  const [showDqModal, setShowDqModal] = useState(false);
+  const [dqReason, setDqReason] = useState('');
+  const [dqNote, setDqNote] = useState('');
+  const DQ_REASONS = [
+    { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not interested' },
+    { value: 'no_budget', label: isRTL ? 'ميزانية غير مناسبة' : 'No budget' },
+    { value: 'wrong_audience', label: isRTL ? 'جمهور خاطئ' : 'Wrong audience' },
+    { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong number' },
+    { value: 'duplicate', label: isRTL ? 'مكرر' : 'Duplicate' },
+    { value: 'other', label: isRTL ? 'سبب آخر' : 'Other' },
+  ];
+
   const handleStatusChange = (newStatus) => {
     if (newStatus === 'disqualified') {
-      toast.warning(isRTL ? 'اختر "غير مؤهل" من القائمة لتحديد السبب' : 'Use "Disqualify" from menu to select a reason');
+      setShowDqModal(true);
+      setDqReason('');
+      setDqNote('');
       return;
     }
     if (onUpdate) {
@@ -275,6 +289,17 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });
       toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Lead status updated');
     }
+  };
+
+  const handleConfirmDq = () => {
+    if (!dqReason) return;
+    if (onUpdate) {
+      const myName = profile?.full_name_en || profile?.full_name_ar;
+      const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'disqualified' };
+      onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: 'disqualified', disqualify_reason: dqReason, disqualify_note: dqNote });
+      toast.success(isRTL ? 'تم استبعاد العميل' : 'Lead disqualified');
+    }
+    setShowDqModal(false);
   };
 
   const handleSaveOpp = async () => {
@@ -2057,6 +2082,30 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           setShowSMSModal(false);
         }}
       />
+    )}
+    {/* Disqualify Modal */}
+    {showDqModal && (
+      <div className="fixed inset-0 bg-black/50 z-[1300] flex items-center justify-center p-5" onClick={() => setShowDqModal(false)}>
+        <div onClick={e => e.stopPropagation()} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-5 w-full max-w-[380px]">
+          <h3 className="m-0 text-sm font-bold text-red-500 mb-3">{isRTL ? 'غير مؤهل' : 'Disqualify'}</h3>
+          <p className="text-xs text-content-muted dark:text-content-muted-dark mb-3">{isRTL ? 'اختر سبب الاستبعاد:' : 'Select reason:'}</p>
+          <div className="flex flex-col gap-1.5 mb-3">
+            {DQ_REASONS.map(r => (
+              <button key={r.value} onClick={() => setDqReason(r.value)}
+                className={`px-3 py-2.5 rounded-xl text-xs text-start cursor-pointer border transition-colors ${dqReason === r.value ? 'border-red-500 bg-red-500/10 text-red-500 font-bold' : 'border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark'}`}>
+                {r.label}
+              </button>
+            ))}
+          </div>
+          <textarea value={dqNote} onChange={e => setDqNote(e.target.value)} rows={2}
+            placeholder={isRTL ? 'ملاحظات (اختياري)...' : 'Notes (optional)...'}
+            className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-bg-dark text-xs text-content dark:text-content-dark outline-none resize-none mb-3" />
+          <div className="flex gap-2">
+            <button onClick={() => setShowDqModal(false)} className="flex-1 px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-transparent text-xs text-content-muted cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
+            <button onClick={handleConfirmDq} disabled={!dqReason} className={`flex-1 px-3 py-2 rounded-xl border-none text-xs font-bold cursor-pointer ${dqReason ? 'bg-red-500 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}>{isRTL ? 'تأكيد' : 'Confirm'}</button>
+          </div>
+        </div>
+      </div>
     )}
     {showPrintPreview && (
       <PrintPreview
