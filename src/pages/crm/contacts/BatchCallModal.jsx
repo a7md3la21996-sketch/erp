@@ -225,8 +225,18 @@ export default function BatchCallModal({
                 const myName = profile?.full_name_en || profile?.full_name_ar;
                 const myStatus = (current.agent_statuses || {})[myName] || current.contact_status;
                 let newStatus = myStatus;
-                if (batchCallResult === 'no_answer') newStatus = 'no_answer';
-                else if (myStatus === 'new' || myStatus === 'no_answer' || !myStatus) newStatus = 'contacted';
+                // disqualified → never auto-change
+                if (myStatus === 'disqualified') {
+                  newStatus = myStatus;
+                } else if (['no_answer', 'busy', 'switched_off'].includes(batchCallResult)) {
+                  newStatus = 'inactive';
+                } else if (batchCallResult === 'answered') {
+                  newStatus = 'active';
+                } else if (batchCallResult === 'not_interested' && myStatus !== 'has_opportunity' && myStatus !== 'active') {
+                  newStatus = 'disqualified';
+                } else if (myStatus === 'new' || !myStatus) {
+                  newStatus = 'active';
+                }
                 const newStatuses = { ...(current.agent_statuses || {}), [myName]: newStatus };
                 const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus, agent_statuses: newStatuses };
                 try { await updateContact(current.id, statusUpdate); } catch { /* ignore */ }

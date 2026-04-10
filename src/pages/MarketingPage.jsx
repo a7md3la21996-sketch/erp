@@ -175,11 +175,11 @@ export default function MarketingPage() {
 
       const spent = camp.spent || 0;
       const cpl = leads > 0 ? Math.round(spent / leads) : 0;
-      // Count how many became opportunities (have contact_status === 'contacted' or have opportunities)
-      const contactedLeads = contacts.filter(c => contactIds.has(c.id) && c.contact_status === 'contacted').length;
-      const conversionRate = leads > 0 ? Math.round((contactedLeads / leads) * 100) : 0;
+      // Count how many became active/has_opportunity (engaged leads)
+      const engagedLeads = contacts.filter(c => contactIds.has(c.id) && ['active', 'has_opportunity'].includes(c.contact_status)).length;
+      const conversionRate = leads > 0 ? Math.round((engagedLeads / leads) * 100) : 0;
 
-      stats[camp.id] = { leads, totalInteractions, repeats, cpl, contactedLeads, conversionRate, contactIds: [...contactIds] };
+      stats[camp.id] = { leads, totalInteractions, repeats, cpl, contactedLeads: engagedLeads, conversionRate, contactIds: [...contactIds] };
     });
     return stats;
   }, [campaigns, contacts]);
@@ -244,7 +244,7 @@ export default function MarketingPage() {
     const allLeadIds = new Set();
     Object.values(campaignStats).forEach(s => (s.contactIds || []).forEach(id => allLeadIds.add(id)));
     const totalLeadsFromCampaigns = allLeadIds.size;
-    const contactedLeads = contacts.filter(c => allLeadIds.has(c.id) && c.contact_status === 'contacted');
+    const engagedLeads = contacts.filter(c => allLeadIds.has(c.id) && ['active', 'has_opportunity'].includes(c.contact_status));
     const linkedOpps = opportunities.filter(o => {
       const contactId = o.contact_id || o.contact?.id;
       return contactId && allLeadIds.has(contactId);
@@ -255,11 +255,11 @@ export default function MarketingPage() {
     });
     return {
       total: totalLeadsFromCampaigns,
-      contacted: contactedLeads.length,
+      contacted: engagedLeads.length,
       opportunities: linkedOpps.length,
       deals: wonDeals2.length,
-      contactedPct: totalLeadsFromCampaigns > 0 ? Math.round((contactedLeads.length / totalLeadsFromCampaigns) * 100) : 0,
-      oppPct: contactedLeads.length > 0 ? Math.round((linkedOpps.length / contactedLeads.length) * 100) : 0,
+      contactedPct: totalLeadsFromCampaigns > 0 ? Math.round((engagedLeads.length / totalLeadsFromCampaigns) * 100) : 0,
+      oppPct: engagedLeads.length > 0 ? Math.round((linkedOpps.length / engagedLeads.length) * 100) : 0,
       dealPct: linkedOpps.length > 0 ? Math.round((wonDeals2.length / linkedOpps.length) * 100) : 0,
       overallPct: totalLeadsFromCampaigns > 0 ? Math.round((wonDeals2.length / totalLeadsFromCampaigns) * 100) : 0,
       // Per-channel funnel
@@ -268,7 +268,7 @@ export default function MarketingPage() {
         campaigns.filter(c => c.platform === p.id).forEach(camp => {
           (campaignStats[camp.id]?.contactIds || []).forEach(id => chLeadIds.add(id));
         });
-        const chContacted = contacts.filter(c => chLeadIds.has(c.id) && c.contact_status === 'contacted').length;
+        const chContacted = contacts.filter(c => chLeadIds.has(c.id) && ['active', 'has_opportunity'].includes(c.contact_status)).length;
         const chOpps = opportunities.filter(o => chLeadIds.has(o.contact_id || o.contact?.id)).length;
         const chDeals = deals.filter(d => chLeadIds.has(d.contact_id || d.contact?.id)).length;
         return { platform: p, leads: chLeadIds.size, contacted: chContacted, opps: chOpps, deals: chDeals };
@@ -588,7 +588,7 @@ export default function MarketingPage() {
           <div className="space-y-3">
             {[
               { label: isRTL ? 'الليدز' : 'Leads', value: funnelData.total, pct: 100, color: '#4A7AAB', width: 100 },
-              { label: isRTL ? 'تم التواصل' : 'Contacted', value: funnelData.contacted, pct: funnelData.contactedPct, color: '#F59E0B', width: Math.max(funnelData.contactedPct, 15) },
+              { label: isRTL ? 'نشط' : 'Active', value: funnelData.contacted, pct: funnelData.contactedPct, color: '#F59E0B', width: Math.max(funnelData.contactedPct, 15) },
               { label: isRTL ? 'فرص' : 'Opportunities', value: funnelData.opportunities, pct: funnelData.oppPct, color: '#6B21A8', width: Math.max(funnelData.total > 0 ? (funnelData.opportunities / funnelData.total) * 100 : 0, 10) },
               { label: isRTL ? 'صفقات' : 'Deals', value: funnelData.deals, pct: funnelData.dealPct, color: '#10B981', width: Math.max(funnelData.total > 0 ? (funnelData.deals / funnelData.total) * 100 : 0, 8) },
             ].map((stage, i) => (
@@ -868,7 +868,7 @@ export default function MarketingPage() {
       {/* Funnel KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <KpiCard icon={Users} label={isRTL ? 'إجمالي الليدز' : 'Total Leads'} value={funnelData.total} color="#4A7AAB" />
-        <KpiCard icon={Phone} label={isRTL ? 'تم التواصل' : 'Contacted'} value={`${funnelData.contacted} (${funnelData.contactedPct}%)`} color="#F59E0B" />
+        <KpiCard icon={Phone} label={isRTL ? 'نشط' : 'Active'} value={`${funnelData.contacted} (${funnelData.contactedPct}%)`} color="#F59E0B" />
         <KpiCard icon={Target} label={isRTL ? 'فرص' : 'Opportunities'} value={`${funnelData.opportunities} (${funnelData.oppPct}%)`} color="#6B21A8" />
         <KpiCard icon={DollarSign} label={isRTL ? 'صفقات' : 'Deals Won'} value={`${funnelData.deals} (${funnelData.overallPct}%)`} color="#10B981" />
       </div>
@@ -879,7 +879,7 @@ export default function MarketingPage() {
         <div className="space-y-3 max-w-[500px] mx-auto">
           {[
             { label: isRTL ? 'ليد جديد' : 'New Lead', value: funnelData.total, color: '#4A7AAB', w: 100 },
-            { label: isRTL ? 'تم التواصل' : 'Contacted', value: funnelData.contacted, color: '#F59E0B', w: funnelData.total > 0 ? Math.max((funnelData.contacted / funnelData.total) * 100, 20) : 20 },
+            { label: isRTL ? 'نشط' : 'Active', value: funnelData.contacted, color: '#F59E0B', w: funnelData.total > 0 ? Math.max((funnelData.contacted / funnelData.total) * 100, 20) : 20 },
             { label: isRTL ? 'فرصة' : 'Opportunity', value: funnelData.opportunities, color: '#6B21A8', w: funnelData.total > 0 ? Math.max((funnelData.opportunities / funnelData.total) * 100, 15) : 15 },
             { label: isRTL ? 'صفقة ناجحة' : 'Won Deal', value: funnelData.deals, color: '#10B981', w: funnelData.total > 0 ? Math.max((funnelData.deals / funnelData.total) * 100, 10) : 10 },
           ].map((stage, i) => (
@@ -1320,8 +1320,8 @@ export default function MarketingPage() {
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               {contactInteractions > 1 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-bold">{contactInteractions}x</span>}
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.contact_status === 'contacted' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                                {c.contact_status === 'contacted' ? (isRTL ? 'تم التواصل' : 'Contacted') : (isRTL ? 'جديد' : 'New')}
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${['active', 'has_opportunity'].includes(c.contact_status) ? 'bg-emerald-500/10 text-emerald-500' : c.contact_status === 'inactive' ? 'bg-gray-500/10 text-gray-500' : c.contact_status === 'disqualified' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                {['active', 'has_opportunity'].includes(c.contact_status) ? (isRTL ? 'نشط' : 'Active') : c.contact_status === 'inactive' ? (isRTL ? 'غير نشط' : 'Inactive') : c.contact_status === 'disqualified' ? (isRTL ? 'غير مؤهل' : 'Disqualified') : (isRTL ? 'جديد' : 'New')}
                               </span>
                             </div>
                           </div>

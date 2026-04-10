@@ -4,9 +4,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
   UserCheck, AlertTriangle, Star, Receipt, Banknote,
-  RefreshCw, CheckSquare, Plus, X, Clock, Trash2
+  RefreshCw, CheckSquare, Plus, X, Clock
 } from 'lucide-react';
-import { fetchActivities, createActivity, deleteActivity, ACTIVITY_TYPES } from '../../services/activitiesService';
+import { fetchActivities, createActivity, ACTIVITY_TYPES } from '../../services/activitiesService';
 import { Button, Badge, Textarea } from '../../components/ui';
 
 const ICONS = {
@@ -61,11 +61,6 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
       setAdding(false);
       load();
     } finally { setSaving(false); }
-  };
-
-  const handleDelete = async (id) => {
-    await deleteActivity(id);
-    setActivities(prev => prev.filter(a => a.id !== id));
   };
 
   // Filter types by dept

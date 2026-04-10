@@ -5,7 +5,7 @@ import {
   X, Phone, MessageCircle, Mail, Users, MapPin, FileText,
   UserCheck, AlertTriangle, Star, Receipt, Banknote,
   RefreshCw, CheckSquare, Clock, Link2, User, Pencil,
-  CloudOff, Calendar, Trash2,
+  CloudOff, Calendar,
 } from 'lucide-react';
 import { ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Textarea, Badge } from '../components/ui';
@@ -38,7 +38,7 @@ const DEPT_LABELS = {
   finance: { ar: 'المالية', en: 'Finance' },
 };
 
-export default function ActivityDrawer({ activity, onClose, onUpdate, onDelete }) {
+export default function ActivityDrawer({ activity, onClose, onUpdate }) {
   const { i18n } = useTranslation();
   const navigate = useNavigate();
   const lang = i18n.language;
@@ -303,20 +303,7 @@ export default function ActivityDrawer({ activity, onClose, onUpdate, onDelete }
           </div>
         </div>
 
-        {/* Footer */}
-        {onDelete && (
-          <div className="px-5 py-3 border-t border-edge dark:border-edge-dark bg-surface-bg dark:bg-surface-bg-dark">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 w-full justify-center"
-              onClick={() => onDelete(activity.id)}
-            >
-              <Trash2 size={14} />
-              {isRTL ? 'حذف النشاط' : 'Delete Activity'}
-            </Button>
-          </div>
-        )}
+        {/* Footer removed — delete not allowed */}
       </div>
     </>
   );

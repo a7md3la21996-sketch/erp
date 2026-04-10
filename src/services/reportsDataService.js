@@ -213,11 +213,11 @@ export function computeCampaignPerformance(contacts, opportunities) {
   contacts.forEach(c => {
     const camp = c.campaign_name;
     if (!camp) return;
-    if (!contactsByCampaign[camp]) contactsByCampaign[camp] = { contacts: 0, dq: 0, contacted: 0, source: c.source || 'other', contactIds: new Set() };
+    if (!contactsByCampaign[camp]) contactsByCampaign[camp] = { contacts: 0, dq: 0, engaged: 0, source: c.source || 'other', contactIds: new Set() };
     contactsByCampaign[camp].contacts++;
     contactsByCampaign[camp].contactIds.add(c.id);
     if (c.contact_status === 'disqualified') contactsByCampaign[camp].dq++;
-    if (c.contact_status === 'contacted' || c.last_activity_at) contactsByCampaign[camp].contacted++;
+    if (['active', 'has_opportunity'].includes(c.contact_status) || c.last_activity_at) contactsByCampaign[camp].engaged++;
     if (!contactsByCampaign[camp].source || contactsByCampaign[camp].source === 'other') contactsByCampaign[camp].source = c.source || 'other';
   });
 
@@ -237,7 +237,7 @@ export function computeCampaignPerformance(contacts, opportunities) {
       campaign: name,
       source: SOURCE_LABELS[v.source] || v.source,
       contacts: v.contacts,
-      contacted: v.contacted,
+      contacted: v.engaged,
       dq: v.dq,
       dq_rate: v.contacts > 0 ? Math.round((v.dq / v.contacts) * 100) : 0,
       opps: campOpps.length,
@@ -257,13 +257,13 @@ export function computeCampaignPerformance(contacts, opportunities) {
  */
 export function computeLeadsConversion(contacts, opportunities, deals) {
   const totalLeads = contacts.length;
-  const contacted = contacts.filter(c => c.contact_status === 'contacted' || c.last_activity_at).length;
+  const contacted = contacts.filter(c => ['active', 'has_opportunity'].includes(c.contact_status) || c.last_activity_at).length;
   const qualified = opportunities.length;
   const proposals = opportunities.filter(o => ['proposal', 'negotiation', 'closing', 'closed_won'].includes(o.stage)).length;
   const won = deals.length;
   return [
     { stage: 'New Leads', stage_ar: 'ليدز جديدة', count: totalLeads, rate: '100%' },
-    { stage: 'Contacted', stage_ar: 'تم التواصل', count: contacted, rate: totalLeads > 0 ? Math.round((contacted / totalLeads) * 100) + '%' : '0%' },
+    { stage: 'Active', stage_ar: 'نشط', count: contacted, rate: totalLeads > 0 ? Math.round((contacted / totalLeads) * 100) + '%' : '0%' },
     { stage: 'Qualified', stage_ar: 'مؤهل', count: qualified, rate: totalLeads > 0 ? Math.round((qualified / totalLeads) * 100) + '%' : '0%' },
     { stage: 'Proposal', stage_ar: 'عرض سعر', count: proposals, rate: totalLeads > 0 ? Math.round((proposals / totalLeads) * 100) + '%' : '0%' },
     { stage: 'Closed Won', stage_ar: 'تم الإغلاق', count: won, rate: totalLeads > 0 ? Math.round((won / totalLeads) * 100) + '%' : '0%' },
