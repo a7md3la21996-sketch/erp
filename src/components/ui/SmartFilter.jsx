@@ -206,7 +206,7 @@ export default function SmartFilter({
   return (
     <div className="mb-4">
       {/* Main bar */}
-      <div className="flex gap-2 items-center flex-wrap bg-gray-50 dark:bg-brand-500/[0.08] px-3.5 py-2.5 rounded-xl border border-edge dark:border-edge-dark overflow-x-auto max-w-full">
+      <div className="flex gap-2 items-center flex-wrap bg-gray-50 dark:bg-brand-500/[0.08] px-3.5 py-2.5 rounded-xl border border-edge dark:border-edge-dark">
         {/* Search */}
         {onSearchChange && (
           <div className="relative flex-[1_1_180px] max-w-[320px]">
@@ -242,7 +242,7 @@ export default function SmartFilter({
           {/* Popover */}
           {showAddRow && (
             <div
-              className="absolute top-[36px] start-0 z-[200] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-3 min-w-[280px] sm:min-w-[380px] max-w-[calc(100vw-2rem)] sm:max-w-[440px]"
+              className="absolute top-[40px] start-0 z-[200] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-4 min-w-[300px] sm:min-w-[400px] max-w-[calc(100vw-2rem)] sm:max-w-[480px]"
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               <div className="flex items-center justify-between mb-2.5">
