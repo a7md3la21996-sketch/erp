@@ -745,6 +745,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             <div className={`text-xs font-semibold text-content dark:text-content-dark leading-snug ${item.status === 'done' ? 'line-through opacity-60' : ''}`}>
               {item.title}
             </div>
+            {(item.notes || item.description) && (
+              <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 leading-relaxed">{item.notes || item.description}</div>
+            )}
             {metaLine}
             <div className="flex gap-1.5 flex-wrap mt-1">
               <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold" style={{ background: (pri?.color || '#4A7AAB') + '22', color: pri?.color || '#4A7AAB' }}>
