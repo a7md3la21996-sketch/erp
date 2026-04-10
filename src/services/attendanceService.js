@@ -22,7 +22,7 @@ export async function fetchAttendance({ month, year, employeeId } = {}) {
     }
     if (employeeId) query = query.eq('employee_id', employeeId);
 
-    const { data, error } = await query.range(0, 199);
+    const { data, error } = await query.range(0, 999);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('attendanceService', 'query', err);
@@ -110,7 +110,7 @@ export async function getAttendanceSummary(month, year) {
       .select('employee_id, status')
       .gte('date', startDate)
       .lte('date', endDate)
-      .range(0, 499);
+      .range(0, 999);
     if (error) throw error;
 
     const summary = { total: 0, present: 0, absent: 0, late: 0, leave: 0 };
