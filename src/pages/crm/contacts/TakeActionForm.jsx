@@ -60,9 +60,11 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
   const [saving, setSaving] = useState(false);
 
   const meetingSubRequired = actForm.type === 'meeting';
-  const canSave = actMode === 'schedule'
+  const taskDateRequired = addTask && !taskForm.due_date;
+  const canSave = (actMode === 'schedule'
     ? !!actForm.scheduled_date && (!meetingSubRequired || actForm.meeting_subtype)
-    : (!resultRequired || actForm.result) && (!meetingSubRequired || actForm.meeting_subtype);
+    : (!resultRequired || actForm.result) && (!meetingSubRequired || actForm.meeting_subtype))
+    && !taskDateRequired;
 
   const handleSaveAll = async () => {
     if (!canSave) return;
@@ -250,8 +252,8 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
             <Select value={taskForm.priority} onChange={e => setTaskForm(f => ({ ...f, priority: e.target.value }))} className="flex-1" size="sm">
               {Object.entries(TASK_PRIORITIES).map(([k, v]) => <option key={k} value={k}>{isRTL ? v.ar : v.en}</option>)}
             </Select>
-            <input type="datetime-local" value={taskForm.due_date} onChange={e => setTaskForm(f => ({ ...f, due_date: e.target.value }))}
-              className="flex-1 px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+            <input type="datetime-local" value={taskForm.due_date} onChange={e => setTaskForm(f => ({ ...f, due_date: e.target.value }))} required
+              className={`flex-1 px-2 py-1.5 rounded-lg border bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none ${taskDateRequired ? 'border-red-500' : 'border-edge dark:border-edge-dark'}`} />
           </div>
         </div>
       )}
