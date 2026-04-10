@@ -57,15 +57,25 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
   ];
   const [changeStatus, setChangeStatus] = useState(false);
   const [newStatus, setNewStatus] = useState(contact?.contact_status || '');
+  const [dqReason, setDqReason] = useState('');
+  const DQ_REASONS = [
+    { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not interested' },
+    { value: 'no_budget', label: isRTL ? 'ميزانية غير مناسبة' : 'No budget' },
+    { value: 'wrong_audience', label: isRTL ? 'جمهور خاطئ' : 'Wrong audience' },
+    { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong number' },
+    { value: 'duplicate', label: isRTL ? 'مكرر' : 'Duplicate' },
+    { value: 'other', label: isRTL ? 'سبب آخر' : 'Other' },
+  ];
 
   const [saving, setSaving] = useState(false);
 
   const meetingSubRequired = actForm.type === 'meeting';
   const taskDateRequired = addTask && !taskForm.due_date;
+  const dqReasonRequired = changeStatus && newStatus === 'disqualified' && !dqReason;
   const canSave = (actMode === 'schedule'
     ? !!actForm.scheduled_date && (!meetingSubRequired || actForm.meeting_subtype)
     : (!resultRequired || actForm.result) && (!meetingSubRequired || actForm.meeting_subtype))
-    && !taskDateRequired;
+    && !taskDateRequired && !dqReasonRequired;
 
   const handleSaveAll = async () => {
     if (!canSave) return;
@@ -267,7 +277,7 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
         <div className="ps-3 mb-3 mt-1">
           <div className="flex gap-1.5 flex-wrap">
             {CONTACT_STATUSES.map(s => (
-              <button key={s.id} onClick={() => setNewStatus(s.id)}
+              <button key={s.id} onClick={() => { setNewStatus(s.id); if (s.id !== 'disqualified') setDqReason(''); }}
                 className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors font-cairo ${
                   newStatus === s.id
                     ? ''
@@ -278,6 +288,16 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
               </button>
             ))}
           </div>
+          {newStatus === 'disqualified' && (
+            <div className="mt-2">
+              <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'السبب (إجباري)' : 'Reason (required)'} <span className="text-red-500">*</span></div>
+              <select value={dqReason} onChange={e => setDqReason(e.target.value)}
+                className={`w-full px-2 py-1.5 rounded-lg text-xs outline-none bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark ${!dqReason ? 'border-2 border-red-500' : 'border border-edge dark:border-edge-dark'}`}>
+                <option value="">{isRTL ? 'اختر السبب...' : 'Select reason...'}</option>
+                {DQ_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+              </select>
+            </div>
+          )}
         </div>
       )}
 
