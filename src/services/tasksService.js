@@ -51,12 +51,14 @@ export async function fetchTasks({ contactId, dept, status, page, pageSize, role
     if (dept)      query = query.eq('dept', dept);
     if (status)    query = query.eq('status', status);
 
-    // Role-based filtering
-    if (role === 'sales_agent' && userId) {
-      query = query.eq('assigned_to', userId);
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const ids = await getTeamMemberIds(role, teamId);
-      if (ids.length) query = query.in('assigned_to', ids);
+    // Role-based filtering — skip if fetching by contactId (contact is already role-filtered)
+    if (!contactId) {
+      if (role === 'sales_agent' && userId) {
+        query = query.eq('assigned_to', userId);
+      } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+        const ids = await getTeamMemberIds(role, teamId);
+        if (ids.length) query = query.in('assigned_to', ids);
+      }
     }
 
     const enrich = (tasks) => (tasks || []).map(t => ({
