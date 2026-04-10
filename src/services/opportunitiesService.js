@@ -122,6 +122,7 @@ export async function createOpportunity(oppData) {
   const sanitize = (v) => typeof v === 'string' ? v.replace(/<[^>]*>/g, '').trim() : v;
   const sanitized = {};
   for (const [k, v] of Object.entries(oppData)) {
+    if (v === undefined || v === null) continue;
     const val = sanitize(v);
     sanitized[k] = val === '' ? null : val;
   }

@@ -302,17 +302,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: 'has_opportunity' });
       }
     } catch (err) {
-      const localOpp = {
-        id: String(Date.now()),
-        ...oppData,
-        contactName: contact.full_name,
-        projects: { name_ar: newOpp.project, name_en: newOpp.project },
-        created_at: new Date().toISOString(),
-      };
-      setOpportunities(prev => [localOpp, ...prev]);
-      setShowOppModal(false);
-      resetForm();
-      toast.success(isRTL ? 'تم حفظ الفرصة محلياً' : 'Opportunity saved locally');
+      console.error('Opportunity save error:', err?.message || err);
+      toast.error(isRTL ? `خطأ: ${err?.message || 'غير معروف'}` : `Error: ${err?.message || 'Unknown'}`);
     }
   };
 
