@@ -6,6 +6,7 @@ import { loadPayrollConfig, savePayrollConfig, calcEmployeeAttendance, calcProRa
 import { fetchHolidays } from '../../services/holidaysService';
 import { fetchAllEmployeeShifts, getActiveShift } from '../../services/employeeShiftsService';
 import { savePayrollRun, fetchPayrollRun, fetchActiveLoans, fetchAdjustments } from '../../services/payrollService';
+import { loadRulesMap } from '../../services/payrollRulesService';
 import supabase from '../../lib/supabase';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
@@ -35,6 +36,7 @@ export default function PayrollPage() {
   const [configHistories, setConfigHistories] = useState({});
   const [shiftAssignments, setShiftAssignments] = useState({});
   const [allShiftsDb, setAllShiftsDb] = useState([]);
+  const [rulesMap, setRulesMap] = useState({});
   const [holidayDates, setHolidayDates] = useState(new Set());
   const [loans, setLoans] = useState([]);
   const [adjustments, setAdjustments] = useState([]);
@@ -49,9 +51,11 @@ export default function PayrollPage() {
       setConfig(cfgData);
 
       // Load salary history and config history for all employees
-      // Load all shifts from DB for auto-detection
+      // Load all shifts and payroll rules from DB
       const { data: shiftsFromDb } = await supabase.from('shifts').select('*');
       setAllShiftsDb(shiftsFromDb || []);
+      const rules = await loadRulesMap();
+      setRulesMap(rules);
 
       const [salaryRes, configRes, shiftRes] = await Promise.all([
         supabase.from('salary_history').select('*').order('effective_date', { ascending: true }),
@@ -155,84 +159,84 @@ export default function PayrollPage() {
         : 8;
       const minuteRate = baseSalary / (30 * hoursPerDay * 60);
 
-      // Grace hours
+      // ═══════════════════════════════════════════════
+      // DEDUCTION RULES (from payroll_rules table)
+      // ═══════════════════════════════════════════════
+      const R = rulesMap; // shorthand
+
+      // Grace hours (flexible workers get 4h default)
+      const defaultGrace = R.default_grace_minutes || 0;
       const graceMinutes = isFlexible
         ? Math.max((emp.monthly_grace_hours || 4) * 60, 240)
-        : (emp.grace_hours_enabled ? (emp.monthly_grace_hours || 0) * 60 : 0);
+        : (emp.grace_hours_enabled ? (emp.monthly_grace_hours || 0) * 60 : defaultGrace);
 
-      // Late deduction — tiered: x1 within tolerance, x2 beyond
+      // 1. LATE DEDUCTION — minute × multiplier (after grace hours)
+      const lateMultiplier = R.late_multiplier || 2;
       let lateDeduction = 0;
       let effectiveLateMinutes = 0;
-      let lateInTolerance = 0;
-      let lateBeyond = 0;
       if (!isRemote && stats.totalLateMinutes > 0) {
-        const withinGrace = Math.min(stats.totalLateMinutes, graceMinutes);
-        const beyondGrace = Math.max(0, stats.totalLateMinutes - graceMinutes);
-        lateInTolerance = withinGrace;
-        lateBeyond = beyondGrace;
-        effectiveLateMinutes = beyondGrace;
-        // x1 for within tolerance, x2 for beyond
-        lateDeduction = Math.round((withinGrace * 1 + beyondGrace * 2) * minuteRate);
+        effectiveLateMinutes = Math.max(0, stats.totalLateMinutes - graceMinutes);
+        lateDeduction = Math.round(effectiveLateMinutes * lateMultiplier * minuteRate);
       }
 
-      // Incomplete hours (deficit) — x2
-      const deficitDeduction = isRemote ? 0 : Math.round(stats.totalDeficitMinutes * 2 * minuteRate);
-
-      // Absent deduction — no notice = x2, prior notice = x1
+      // 2. ABSENT DEDUCTION
+      const absentNoNoticeX = R.absent_no_notice_multiplier || 2;
+      const absentPriorX = R.absent_prior_notice_multiplier || 1;
+      const unpaidLeaveX = R.unpaid_leave_multiplier || 1;
       let absentDeduction = 0;
-      let absentFromLeave = 0;
-      if (isRemote) {
-        absentDeduction = 0;
-      } else {
-        // Absent no notice: 1 day = 2 days deduction
-        const noNoticeDeduction = stats.absentNoNoticeDays * 2 * dailyRate;
-        // Absent prior notice: 1 day = 1 day deduction
-        const priorNoticeDeduction = stats.absentPriorNoticeDays * 1 * dailyRate;
-        // Unpaid leave: 1 day = 1 day
-        const unpaidDeduction = stats.unpaidLeaveDays * 1 * dailyRate;
-
-        // Leave from balance (annual, sick, marriage, maternity)
-        absentFromLeave = stats.leaveDays;
-
-        absentDeduction = Math.round(noNoticeDeduction + priorNoticeDeduction + unpaidDeduction);
+      let absentFromLeave = stats.leaveDays;
+      if (!isRemote) {
+        absentDeduction = Math.round(
+          (stats.absentNoNoticeDays * absentNoNoticeX * dailyRate) +
+          (stats.absentPriorNoticeDays * absentPriorX * dailyRate) +
+          (stats.unpaidLeaveDays * unpaidLeaveX * dailyRate)
+        );
       }
 
-      // Allowances — per-employee override or global
+      // 3. HALF DAY DEDUCTION — single punch
+      const halfDayX = R.single_punch_multiplier || 0.5;
+      const halfDayDeduction = isRemote ? 0 : Math.round(stats.halfDayDeductions * dailyRate * halfDayX);
+
+      // 4. ALLOWANCES
+      const defaultAllowanceRate = (R.default_allowance_rate || 20) / 100;
       const empAllowanceRate = emp.allowance_rate != null ? emp.allowance_rate / 100 : null;
       const allowances = emp.allowance_fixed
         ? Math.round(Number(emp.allowance_fixed))
-        : Math.round(baseSalary * (empAllowanceRate ?? config.allowance_rate ?? 0.20));
+        : Math.round(baseSalary * (empAllowanceRate ?? defaultAllowanceRate));
 
-      // Tax & Insurance — per-employee override, exempt, or global
-      const tax = emp.tax_exempt
-        ? 0
-        : Math.round(baseSalary * ((emp.tax_rate != null ? emp.tax_rate / 100 : null) ?? config.tax_rate ?? 0.14));
-      const socialInsurance = emp.insurance_exempt
-        ? 0
-        : Math.round(baseSalary * ((emp.insurance_rate != null ? emp.insurance_rate / 100 : null) ?? config.social_insurance_rate ?? 0.11));
+      // 5. TAX & INSURANCE
+      const defaultTaxRate = (R.default_tax_rate || 0) / 100;
+      const defaultInsRate = (R.default_insurance_rate || 0) / 100;
+      const tax = emp.tax_exempt ? 0
+        : Math.round(baseSalary * ((emp.tax_rate != null ? emp.tax_rate / 100 : null) ?? defaultTaxRate));
+      const socialInsurance = emp.insurance_exempt ? 0
+        : Math.round(baseSalary * ((emp.insurance_rate != null ? emp.insurance_rate / 100 : null) ?? defaultInsRate));
 
-      // Loan deductions
+      // 6. LOANS
       const empLoans = loans.filter(l => l.employee_id === empRaw.id);
       const loanDeduction = empLoans.reduce((s, l) => s + (Number(l.monthly_deduction) || 0), 0);
 
-      // Adjustments (additions & deductions)
+      // 7. ADJUSTMENTS (bonuses & penalties)
       const empAdj = adjustments.filter(a => a.employee_id === empRaw.id);
-      const otherAdditions = empAdj.filter(a => a.type === 'addition' || a.type === 'bonus').reduce((s, a) => s + Number(a.amount), 0);
+      const otherAdditions = empAdj.filter(a => a.type === 'addition' || a.type === 'bonus' || a.type === 'commission').reduce((s, a) => s + Number(a.amount), 0);
       const otherDeductions = empAdj.filter(a => a.type === 'deduction' || a.type === 'penalty').reduce((s, a) => s + Number(a.amount), 0);
 
-      // Half day deductions (single punch - no check-in or no check-out)
-      const halfDayDeduction = isRemote ? 0 : Math.round(stats.halfDayDeductions * dailyRate * 0.5);
-
-      // Total deductions
-      const totalDeductions = tax + socialInsurance + lateDeduction + deficitDeduction + absentDeduction + halfDayDeduction + loanDeduction + otherDeductions;
-
-      // Overtime bonus — only if enabled for this employee
+      // 8. OVERTIME (only if enabled)
+      const defaultOTRate = R.default_overtime_rate || 1.5;
       const overtimeBonus = emp.overtime_enabled
-        ? Math.round(stats.totalOvertimeMinutes * minuteRate * (emp.overtime_rate || 1.5))
+        ? Math.round(stats.totalOvertimeMinutes * minuteRate * (emp.overtime_rate || defaultOTRate))
         : 0;
 
-      // Net salary
-      const netSalary = baseSalary + allowances + overtimeBonus + otherAdditions - totalDeductions;
+      // ═══ TOTALS ═══
+      const gross = baseSalary + allowances + overtimeBonus + otherAdditions;
+      const rawDeductions = tax + socialInsurance + lateDeduction + absentDeduction + halfDayDeduction + loanDeduction + otherDeductions;
+
+      // Max deduction cap (default 70%)
+      const maxDeductionPercent = (R.max_deduction_percent || 70) / 100;
+      const totalDeductions = Math.min(rawDeductions, Math.round(gross * maxDeductionPercent));
+
+      // Net salary — never negative
+      const netSalary = Math.max(0, gross - totalDeductions);
 
       return {
         ...empRaw,
@@ -252,16 +256,13 @@ export default function PayrollPage() {
         otherDeductions,
         totalDeductions,
         netSalary,
-        deficitDeduction,
         halfDayDeduction,
         effectiveLateMinutes,
-        lateInTolerance,
-        lateBeyond,
         graceMinutes,
         hasAttendance: empAttendance.length > 0,
       };
     });
-  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, shiftAssignments, allShiftsDb, month, year, holidayDates, loans, adjustments]);
+  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, shiftAssignments, allShiftsDb, rulesMap, month, year, holidayDates, loans, adjustments]);
 
   const totalSalaries = useMemo(() => payrollData.reduce((s, e) => s + e.baseSalary, 0), [payrollData]);
   const totalNet = useMemo(() => payrollData.reduce((s, e) => s + e.netSalary, 0), [payrollData]);

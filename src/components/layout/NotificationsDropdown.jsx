@@ -111,12 +111,15 @@ export default function NotificationsDropdown({ show, onClose }) {
     };
   }, [activeTab]);
 
-  // Click outside
+  // Click outside — use click (not mousedown) so inner clicks work first
   useEffect(() => {
     if (!show) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose(); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) onClose();
+    };
+    // Small delay to avoid closing immediately on the same click that opened it
+    const timer = setTimeout(() => document.addEventListener('click', handler), 100);
+    return () => { clearTimeout(timer); document.removeEventListener('click', handler); };
   }, [show, onClose]);
 
   const handleMarkAllRead = () => {
@@ -124,12 +127,13 @@ export default function NotificationsDropdown({ show, onClose }) {
     refresh();
   };
 
-  const handleClickNotif = (n) => {
+  const handleClickNotif = (e, n) => {
+    e.stopPropagation();
     if (!n.read) markAsRead(n.id);
     const navUrl = n.url || n.action_url;
     if (navUrl) {
-      navigate(navUrl);
       onClose();
+      setTimeout(() => navigate(navUrl), 100);
     }
     refresh();
   };
@@ -164,13 +168,16 @@ export default function NotificationsDropdown({ show, onClose }) {
     <div
       ref={ref}
       dir={isRTL ? 'rtl' : 'ltr'}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
       style={{
-        position: 'absolute',
-        top: '100%',
-        marginTop: 8,
-        [isRTL ? 'left' : 'right']: 0,
-        width: 380,
-        maxHeight: 500,
+        position: 'fixed',
+        top: 56,
+        left: 8,
+        right: 8,
+        maxWidth: 400,
+        marginLeft: 'auto',
+        maxHeight: 'calc(100vh - 80px)',
         borderRadius: 14,
         background: isDark ? '#1a1f2e' : '#fff',
         border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
@@ -306,7 +313,7 @@ export default function NotificationsDropdown({ show, onClose }) {
               return (
                 <div
                   key={n.id}
-                  onClick={() => handleClickNotif(n)}
+                  onClick={(e) => handleClickNotif(e, n)}
                   onMouseEnter={() => setHoveredId(n.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   style={{
@@ -358,7 +365,7 @@ export default function NotificationsDropdown({ show, onClose }) {
                       {timeAgo(n.created_at, isRTL)}
                     </span>
                     {!n.read && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366f1' }} />}
-                    {isHovered && (
+                    {(
                       <button onClick={(e) => handleDelete(e, n.id)} title={isRTL ? 'حذف' : 'Delete'}
                         style={{
                           width: 22, height: 22, borderRadius: 5, display: 'flex',

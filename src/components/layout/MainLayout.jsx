@@ -69,27 +69,31 @@ export default function MainLayout() {
       });
     }).catch(() => {});
 
-    // 2. Supabase Realtime fallback (for when FCM isn't available)
+    // 2. Supabase Realtime for push notifications
     import('../../lib/supabase').then(({ default: supabase }) => {
       channel = supabase
         .channel('push-notifications')
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, async (payload) => {
+          console.log('[Push] Realtime notification received:', payload.new?.title_ar);
           const n = payload.new;
           if (!n) return;
+          // Update bell icon immediately
+          window.dispatchEvent(new CustomEvent('platform_notification_changed'));
+          window.dispatchEvent(new CustomEvent('platform_notification', { detail: n }));
+          // Show push notification
           if ('Notification' in window && Notification.permission === 'granted') {
             const title = n.title_ar || n.title_en || 'Platform ERP';
             const body = n.body_ar || n.body_en || '';
-            if (navigator.serviceWorker?.controller) {
-              navigator.serviceWorker.ready.then(reg => {
-                reg.showNotification(title, { body, icon: '/pwa-192.png', badge: '/pwa-192.png', dir: 'rtl', vibrate: [200, 100, 200], data: { url: n.url || '/' } });
-              });
-            } else {
-              try { new Notification(title, { body, icon: '/pwa-192.png', dir: 'rtl' }); } catch {}
-            }
+            console.log('[Push] Showing notification:', title);
+            try {
+              new Notification(title, { body, icon: '/pwa-192.png', dir: 'rtl', tag: n.id || String(Date.now()) });
+            } catch (e) { console.error('[Push] Notification error:', e); }
           }
         })
-        .subscribe();
-    }).catch(() => {});
+        .subscribe((status) => {
+          console.log('[Push] Realtime subscription status:', status);
+        });
+    }).catch((err) => console.error('[Push] Realtime setup failed:', err));
     return () => { if (channel) import('../../lib/supabase').then(({ default: supabase }) => supabase.removeChannel(channel)).catch(() => {}); };
   }, []);
 

@@ -203,7 +203,14 @@ function TargetTrackerTab({ lang, isRTL }) {
   const [sortBy, setSortBy] = useState('pct');
   const [targetDept, setTargetDept] = useState('all');
 
-  const allEmps = useMemo(() => MOCK_EMPLOYEES, []);
+  const [allEmps, setAllEmps] = useState([]);
+  useEffect(() => {
+    import('../lib/supabase').then(({ default: supabase }) => {
+      supabase.from('users').select('id, full_name_en, full_name_ar, role, team_id, department')
+        .in('role', ['sales_director','sales_manager','team_leader','sales_agent'])
+        .then(({ data }) => setAllEmps(data || []));
+    });
+  }, []);
 
   const monthData = useMemo(() => {
     return allEmps.map(emp => {
@@ -419,9 +426,14 @@ function KpiPerformanceTab({ lang, isRTL }) {
   const [editValue, setEditValue] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const salesEmployees = useMemo(() =>
-    MOCK_EMPLOYEES.filter(e => ['sales_director','sales_manager','team_leader','sales_agent'].includes(e.role)),
-  []);
+  const [salesEmployees, setSalesEmployees] = useState([]);
+  useEffect(() => {
+    import('../lib/supabase').then(({ default: supabase }) => {
+      supabase.from('users').select('id, full_name_en, full_name_ar, role, team_id')
+        .in('role', ['sales_director','sales_manager','team_leader','sales_agent'])
+        .then(({ data }) => setSalesEmployees(data || []));
+    });
+  }, []);
 
   const [teamKpis, setTeamKpis] = useState([]);
   useEffect(() => {

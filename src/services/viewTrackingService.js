@@ -37,7 +37,6 @@ export async function logView({ entityType, entityId, entityName, viewer }) {
 
   const device = parseDevice(navigator.userAgent);
   const entry = {
-    id: String(Date.now()) + '_' + Math.random().toString(36).slice(2, 6),
     entity_type: entityType,
     entity_id: entityId,
     entity_name: entityName || '',

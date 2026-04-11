@@ -54,6 +54,7 @@ export const NAV_ITEMS = [
     // ── المالي
     { group: { ar: 'المالي', en: 'Financial' } },
     { id: 'payroll',      label: { ar: 'الرواتب',         en: 'Payroll' },      path: '/hr/payroll',      permission: P.PAYROLL_VIEW },
+    { id: 'payroll-rules', label: { ar: 'قواعد المرتبات', en: 'Payroll Rules' }, path: '/hr/payroll-rules', permission: P.PAYROLL_VIEW },
     { id: 'loans',        label: { ar: 'السلف والقروض',  en: 'Loans' },        path: '/hr/loans',        permission: P.PAYROLL_VIEW },
     { id: 'bonuses',      label: { ar: 'المكافآت',        en: 'Bonuses' },      path: '/hr/bonuses',      permission: P.PAYROLL_VIEW },
     { id: 'expense-claims', label: { ar: 'طلبات المصروفات', en: 'Expenses' },   path: '/hr/expense-claims', permission: P.HR_VIEW_OWN },

@@ -194,6 +194,11 @@ export async function createContact(contactData) {
     sanitized[k] = val === '' ? null : val;
   }
 
+  // Remove non-UUID id (local temp IDs)
+  if (sanitized.id && !sanitized.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+    delete sanitized.id;
+  }
+
   try {
     const { data, error } = await supabase
       .from('contacts')

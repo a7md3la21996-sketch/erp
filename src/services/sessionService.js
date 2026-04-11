@@ -57,7 +57,6 @@ export async function logSession(user) {
   const ip = await getIP();
 
   const session = {
-    id: String(Date.now()) + '_' + Math.random().toString(36).slice(2, 6),
     user_id: user.id,
     user_name: user.full_name_ar || user.full_name_en || user.email,
     user_role: user.role,

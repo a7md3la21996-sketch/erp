@@ -51,7 +51,9 @@ export async function fetchCampaigns() {
 }
 
 export async function createCampaign(data) {
-  const campaign = { ...data, id: data.id || String(Date.now()), created_at: data.created_at || new Date().toISOString().slice(0, 10) };
+  const campaign = { ...data, created_at: data.created_at || new Date().toISOString().slice(0, 10) };
+  // Remove non-UUID id
+  if (campaign.id && !campaign.id.match(/^[0-9a-f]{8}-/i)) delete campaign.id;
   // Save to localStorage first (optimistic)
   try { const list = loadCampaigns(); list.unshift(campaign); saveCampaigns(list); } catch {}
   // Try Supabase

@@ -104,12 +104,13 @@ export default function RecentItemsDropdown({ show, onClose }) {
       ref={ref}
       dir={isRTL ? 'rtl' : 'ltr'}
       style={{
-        position: 'absolute',
-        top: '100%',
-        marginTop: 8,
-        [isRTL ? 'left' : 'right']: 0,
-        width: 340,
-        maxHeight: 460,
+        position: 'fixed',
+        top: 56,
+        left: 8,
+        right: 8,
+        maxWidth: 360,
+        marginLeft: 'auto',
+        maxHeight: 'calc(100vh - 80px)',
         background: isDark ? '#1a2332' : '#ffffff',
         border: `1px solid ${isDark ? 'rgba(148,163,184,0.15)' : 'rgba(0,0,0,0.1)'}`,
         borderRadius: 14,

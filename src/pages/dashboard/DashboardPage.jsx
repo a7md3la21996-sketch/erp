@@ -531,6 +531,118 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
 }
 
 
+/* ─── Team Activity Widget ───────────────────────────────────────────── */
+function TeamActivityWidget({ lang, isRTL, profile, CardTitle }) {
+  const [teamData, setTeamData] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        let query = supabase.from('activities').select('user_name_en, type').gte('created_at', todayStr + 'T00:00:00');
+        // Role filter
+        if (profile?.role === 'sales_agent') {
+          query = query.eq('user_name_en', profile?.full_name_en);
+        } else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
+          const teamIds = [profile.team_id];
+          if (profile.role === 'sales_manager') {
+            const { data: ch } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
+            if (ch) teamIds.push(...ch.map(c => c.id));
+          }
+          const { data: members } = await supabase.from('users').select('full_name_en').in('team_id', teamIds);
+          if (members?.length) {
+            const names = members.map(m => m.full_name_en).filter(Boolean);
+            query = query.in('user_name_en', names);
+          }
+        }
+        const { data } = await query;
+        if (data) {
+          const map = {};
+          data.forEach(a => {
+            const name = a.user_name_en || 'Unknown';
+            if (!map[name]) map[name] = { name, calls: 0, whatsapp: 0, meetings: 0, total: 0 };
+            if (a.type === 'call') map[name].calls++;
+            else if (a.type === 'whatsapp') map[name].whatsapp++;
+            else if (a.type === 'meeting') map[name].meetings++;
+            map[name].total++;
+          });
+          setTeamData(Object.values(map).sort((a, b) => b.total - a.total).slice(0, 8));
+        }
+      } catch {}
+    };
+    load();
+  }, [profile?.id]);
+
+  return (
+    <div>
+      <CardTitle icon={Users} title={lang === 'ar' ? 'نشاط الفريق اليوم' : "Team Activity Today"} />
+      {teamData.length === 0 ? (
+        <p className="text-xs text-content-muted dark:text-content-muted-dark text-center py-4">{lang === 'ar' ? 'لا نشاط اليوم بعد' : 'No activity yet today'}</p>
+      ) : (
+        <div className="space-y-2">
+          {teamData.map((t, i) => (
+            <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-bg dark:bg-white/[0.04] ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-xs font-bold text-brand-500">{t.name.charAt(0)}</div>
+              <div className="flex-1 min-w-0">
+                <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{t.name}</p>
+                <div className="flex gap-2 mt-0.5">
+                  {t.calls > 0 && <span className="text-[10px] text-emerald-500">📞 {t.calls}</span>}
+                  {t.whatsapp > 0 && <span className="text-[10px] text-green-500">💬 {t.whatsapp}</span>}
+                  {t.meetings > 0 && <span className="text-[10px] text-blue-500">👥 {t.meetings}</span>}
+                </div>
+              </div>
+              <span className="text-sm font-bold text-brand-500">{t.total}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Smart Alerts Widget ────────────────────────────────────────────── */
+function SmartAlertsWidget({ lang, isRTL, profile, navigate, CardTitle }) {
+  const [alerts, setAlerts] = useState([]);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+        const nowISO = new Date().toISOString();
+        // Queries respect RLS (opportunities filtered by role)
+        const [staleRes, overdueRes, hotRes] = await Promise.allSettled([
+          supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('contact_status', 'active').lt('last_activity_at', weekAgo),
+          supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO),
+          supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('temperature', 'hot').not('stage', 'in', '("closed_won","closed_lost")'),
+        ]);
+        const a = [];
+        const stale = staleRes.status === 'fulfilled' ? staleRes.value.count || 0 : 0;
+        if (stale > 0) a.push({ icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#F59E0B', link: '/contacts' });
+        const overdue = overdueRes.status === 'fulfilled' ? overdueRes.value.count || 0 : 0;
+        if (overdue > 0) a.push({ icon: '🔴', text: lang === 'ar' ? `${overdue} مهمة متأخرة` : `${overdue} overdue tasks`, color: '#EF4444', link: '/tasks' });
+        const hot = hotRes.status === 'fulfilled' ? hotRes.value.count || 0 : 0;
+        if (hot > 0) a.push({ icon: '🔥', text: lang === 'ar' ? `${hot} فرصة ساخنة مفتوحة` : `${hot} hot opportunities open`, color: '#10B981', link: '/crm/opportunities' });
+        if (a.length === 0) a.push({ icon: '✅', text: lang === 'ar' ? 'كل شيء تمام!' : 'All good!', color: '#10B981' });
+        setAlerts(a);
+      } catch {}
+    };
+    load();
+  }, [profile?.id]);
+
+  return (
+    <div>
+      <CardTitle icon={AlertTriangle} title={lang === 'ar' ? 'تنبيهات ذكية' : 'Smart Alerts'} />
+      <div className="space-y-2">
+        {alerts.map((a, i) => (
+          <div key={i} onClick={() => a.link && navigate(a.link)}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark ${a.link ? 'cursor-pointer hover:border-brand-500/30' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <span className="text-base">{a.icon}</span>
+            <span className="text-xs font-medium text-content dark:text-content-dark flex-1">{a.text}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
   const [stats, setStats] = useState({ followups: 0, overdue: 0, todayTasks: 0, newLeads: 0, needsFollowUp: 0 });
   const [loading, setLoading] = useState(true);
@@ -947,23 +1059,8 @@ export default function DashboardPage() {
         );
 
       case 'expense_summary':
-        if (!sections.showCRM) return null;
-        return (
-          <div>
-            <CardTitle icon={Wallet} title={lang === 'ar' ? 'توزيع المصروفات' : 'Expenses'} sub={new Date().toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })} />
-            <ResponsiveContainer width="100%" height={120}>
-              <PieChart><Pie data={EXPENSE_CATS} cx="50%" cy="50%" innerRadius={34} outerRadius={52} paddingAngle={3} dataKey="value">{EXPENSE_CATS.map((_, i) => <Cell key={i} fill={BRAND[i]} />)}</Pie><Tooltip formatter={v => [(v / 1000).toFixed(0) + 'K EGP']} /></PieChart>
-            </ResponsiveContainer>
-            <div className="flex flex-col gap-1.5 mt-1.5">
-              {EXPENSE_CATS.map((cat, i) => (
-                <div key={i} className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                  <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}><div className="w-[7px] h-[7px] rounded-full" style={{ background: BRAND[i] }} /><span className="text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? cat.name_ar : cat.name_en}</span></div>
-                  <span className="text-xs font-bold text-content dark:text-content-dark">{cat.pct}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
+        // Hidden — no real expense data yet
+        return null;
 
       case 'pipeline_chart':
         if (!sections.showSales) return null;
@@ -1034,7 +1131,7 @@ export default function DashboardPage() {
         );
 
       case 'hr_overview':
-        if (!sections.showHR) return null;
+        if (!sections.showHR || !employeeCount) return null;
         return (
           <div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-4">
@@ -1309,99 +1406,12 @@ export default function DashboardPage() {
         );
       }
 
-      case 'team_activity': {
+      case 'team_activity':
         if (!sections.showCRM) return null;
-        const [teamData, setTeamData] = useState([]);
-        useEffect(() => {
-          const load = async () => {
-            try {
-              const todayStr = new Date().toISOString().slice(0, 10);
-              const { data } = await supabase.from('activities')
-                .select('user_name_en, type')
-                .gte('created_at', todayStr + 'T00:00:00');
-              if (data) {
-                const map = {};
-                data.forEach(a => {
-                  const name = a.user_name_en || 'Unknown';
-                  if (!map[name]) map[name] = { name, calls: 0, whatsapp: 0, meetings: 0, total: 0 };
-                  if (a.type === 'call') map[name].calls++;
-                  else if (a.type === 'whatsapp') map[name].whatsapp++;
-                  else if (a.type === 'meeting') map[name].meetings++;
-                  map[name].total++;
-                });
-                setTeamData(Object.values(map).sort((a, b) => b.total - a.total).slice(0, 8));
-              }
-            } catch {}
-          };
-          load();
-        }, []);
-        return (
-          <div>
-            <CardTitle icon={Users} title={lang === 'ar' ? 'نشاط الفريق اليوم' : "Team Activity Today"} />
-            {teamData.length === 0 ? (
-              <p className="text-xs text-content-muted dark:text-content-muted-dark text-center py-4">{lang === 'ar' ? 'لا نشاط اليوم بعد' : 'No activity yet today'}</p>
-            ) : (
-              <div className="space-y-2">
-                {teamData.map((t, i) => (
-                  <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-bg dark:bg-white/[0.04] ${isRTL ? 'flex-row-reverse' : ''}`}>
-                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-xs font-bold text-brand-500">{t.name.charAt(0)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{t.name}</p>
-                      <div className="flex gap-2 mt-0.5">
-                        {t.calls > 0 && <span className="text-[10px] text-emerald-500">📞 {t.calls}</span>}
-                        {t.whatsapp > 0 && <span className="text-[10px] text-green-500">💬 {t.whatsapp}</span>}
-                        {t.meetings > 0 && <span className="text-[10px] text-blue-500">👥 {t.meetings}</span>}
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold text-brand-500">{t.total}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      }
+        return <TeamActivityWidget lang={lang} isRTL={isRTL} profile={profile} CardTitle={CardTitle} />;
 
-      case 'smart_alerts': {
-        const [alerts, setAlerts] = useState([]);
-        useEffect(() => {
-          const load = async () => {
-            try {
-              const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-              const nowISO = new Date().toISOString();
-              const [staleRes, overdueRes, hotRes] = await Promise.allSettled([
-                supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('contact_status', 'active').lt('last_activity_at', weekAgo),
-                supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO),
-                supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('temperature', 'hot').not('stage', 'in', '("closed_won","closed_lost")'),
-              ]);
-              const a = [];
-              const stale = staleRes.status === 'fulfilled' ? staleRes.value.count || 0 : 0;
-              if (stale > 0) a.push({ icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#F59E0B', link: '/contacts' });
-              const overdue = overdueRes.status === 'fulfilled' ? overdueRes.value.count || 0 : 0;
-              if (overdue > 0) a.push({ icon: '🔴', text: lang === 'ar' ? `${overdue} مهمة متأخرة` : `${overdue} overdue tasks`, color: '#EF4444', link: '/tasks' });
-              const hot = hotRes.status === 'fulfilled' ? hotRes.value.count || 0 : 0;
-              if (hot > 0) a.push({ icon: '🔥', text: lang === 'ar' ? `${hot} فرصة ساخنة مفتوحة` : `${hot} hot opportunities open`, color: '#10B981', link: '/crm/opportunities' });
-              if (a.length === 0) a.push({ icon: '✅', text: lang === 'ar' ? 'كل شيء تمام!' : 'All good!', color: '#10B981' });
-              setAlerts(a);
-            } catch {}
-          };
-          load();
-        }, []);
-        return (
-          <div>
-            <CardTitle icon={AlertTriangle} title={lang === 'ar' ? 'تنبيهات ذكية' : 'Smart Alerts'} />
-            <div className="space-y-2">
-              {alerts.map((a, i) => (
-                <div key={i} onClick={() => a.link && navigate(a.link)}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark ${a.link ? 'cursor-pointer hover:border-brand-500/30' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}>
-                  <span className="text-base">{a.icon}</span>
-                  <span className="text-xs font-medium text-content dark:text-content-dark flex-1">{a.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      }
+      case 'smart_alerts':
+        return <SmartAlertsWidget lang={lang} isRTL={isRTL} profile={profile} navigate={navigate} CardTitle={CardTitle} />;
 
       case 'conversion_funnel': {
         if (!sections.showCRM || !pipeData.length) return null;
