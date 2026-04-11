@@ -274,6 +274,7 @@ export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
   let totalOvertimeMinutes = 0;
   let totalWorkedMinutes = 0;
   let totalDeficitMinutes = 0;
+  let halfDayDeductions = 0;
 
   const presentDatesSet = new Set();
   const statusByDate = {};
@@ -315,6 +316,13 @@ export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
       const dayLateThreshold = timeToMinutes(dayShift.late_threshold || dayShift.official_start) || lateThreshold;
       const dayBreak = dayShift.break_minutes || breakMinutes;
       const dayRequired = ((dayShift.required_hours || ((dayEnd - dayStart) / 60)) * 60) - dayBreak;
+
+      // Single punch (check-in without check-out OR check-out without check-in)
+      // = half day deduction, no late calculation
+      if (checkOut == null) {
+        halfDayDeductions++;
+        continue;
+      }
 
       // Late calculation — based on detected shift
       // Skip if check-in is more than 4 hours after shift end (likely wrong punch)
@@ -372,6 +380,7 @@ export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
     remoteDays,
     fieldWorkDays,
     holidayDaysOff,
+    halfDayDeductions,
     totalLateMinutes,
     totalDeficitMinutes,
     totalOvertimeMinutes,

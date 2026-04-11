@@ -220,8 +220,11 @@ export default function PayrollPage() {
       const otherAdditions = empAdj.filter(a => a.type === 'addition' || a.type === 'bonus').reduce((s, a) => s + Number(a.amount), 0);
       const otherDeductions = empAdj.filter(a => a.type === 'deduction' || a.type === 'penalty').reduce((s, a) => s + Number(a.amount), 0);
 
+      // Half day deductions (single punch - no check-in or no check-out)
+      const halfDayDeduction = isRemote ? 0 : Math.round(stats.halfDayDeductions * dailyRate * 0.5);
+
       // Total deductions
-      const totalDeductions = tax + socialInsurance + lateDeduction + deficitDeduction + absentDeduction + loanDeduction + otherDeductions;
+      const totalDeductions = tax + socialInsurance + lateDeduction + deficitDeduction + absentDeduction + halfDayDeduction + loanDeduction + otherDeductions;
 
       // Overtime bonus — only if enabled for this employee
       const overtimeBonus = emp.overtime_enabled
@@ -250,6 +253,7 @@ export default function PayrollPage() {
         totalDeductions,
         netSalary,
         deficitDeduction,
+        halfDayDeduction,
         effectiveLateMinutes,
         lateInTolerance,
         lateBeyond,
