@@ -150,33 +150,46 @@ export default function PayrollPage() {
         : 8;
       const minuteRate = baseSalary / (30 * hoursPerDay * 60);
 
-      // Grace hours: flexible always gets grace, others only if enabled
+      // Grace hours
       const graceMinutes = isFlexible
-        ? Math.max((emp.monthly_grace_hours || 4) * 60, (emp.grace_hours_enabled ? (emp.monthly_grace_hours || 0) * 60 : 240))
+        ? Math.max((emp.monthly_grace_hours || 4) * 60, 240)
         : (emp.grace_hours_enabled ? (emp.monthly_grace_hours || 0) * 60 : 0);
-      const effectiveLateMinutes = Math.max(0, stats.totalLateMinutes - graceMinutes);
 
-      // Late deduction
-      // Remote: no late deduction
-      // Flexible: late only after grace hours
-      // Office: normal late deduction
-      const penaltyMultiplier = shiftConfig.late_penalty_multiplier || config.late_penalty_multiplier || 2;
-      const lateDeduction = isRemote ? 0 : Math.round(effectiveLateMinutes * penaltyMultiplier * minuteRate);
+      // Late deduction — tiered: x1 within tolerance, x2 beyond
+      let lateDeduction = 0;
+      let effectiveLateMinutes = 0;
+      let lateInTolerance = 0;
+      let lateBeyond = 0;
+      if (!isRemote && stats.totalLateMinutes > 0) {
+        const withinGrace = Math.min(stats.totalLateMinutes, graceMinutes);
+        const beyondGrace = Math.max(0, stats.totalLateMinutes - graceMinutes);
+        lateInTolerance = withinGrace;
+        lateBeyond = beyondGrace;
+        effectiveLateMinutes = beyondGrace;
+        // x1 for within tolerance, x2 for beyond
+        lateDeduction = Math.round((withinGrace * 1 + beyondGrace * 2) * minuteRate);
+      }
 
-      // Absent deduction
-      // Remote: no absent deduction
-      // Flexible: only if didn't show up the entire day (no check-in at all)
-      // Office: normal absent deduction
+      // Incomplete hours (deficit) — x2
+      const deficitDeduction = isRemote ? 0 : Math.round(stats.totalDeficitMinutes * 2 * minuteRate);
+
+      // Absent deduction — no notice = x2, prior notice = x1
       let absentDeduction = 0;
       let absentFromLeave = 0;
       if (isRemote) {
         absentDeduction = 0;
-      } else if (emp.deduct_absence_from_leave && emp.leave_balance > 0) {
-        absentFromLeave = Math.min(stats.absentDays, emp.leave_balance || 0);
-        const absentFromSalary = Math.max(0, stats.absentDays - absentFromLeave);
-        absentDeduction = Math.round(absentFromSalary * dailyRate);
       } else {
-        absentDeduction = Math.round(stats.absentDays * dailyRate);
+        // Absent no notice: 1 day = 2 days deduction
+        const noNoticeDeduction = stats.absentNoNoticeDays * 2 * dailyRate;
+        // Absent prior notice: 1 day = 1 day deduction
+        const priorNoticeDeduction = stats.absentPriorNoticeDays * 1 * dailyRate;
+        // Unpaid leave: 1 day = 1 day
+        const unpaidDeduction = stats.unpaidLeaveDays * 1 * dailyRate;
+
+        // Leave from balance (annual, sick, marriage, maternity)
+        absentFromLeave = stats.leaveDays;
+
+        absentDeduction = Math.round(noNoticeDeduction + priorNoticeDeduction + unpaidDeduction);
       }
 
       // Allowances — per-employee override or global
@@ -203,7 +216,7 @@ export default function PayrollPage() {
       const otherDeductions = empAdj.filter(a => a.type === 'deduction' || a.type === 'penalty').reduce((s, a) => s + Number(a.amount), 0);
 
       // Total deductions
-      const totalDeductions = tax + socialInsurance + lateDeduction + absentDeduction + loanDeduction + otherDeductions;
+      const totalDeductions = tax + socialInsurance + lateDeduction + deficitDeduction + absentDeduction + loanDeduction + otherDeductions;
 
       // Overtime bonus — only if enabled for this employee
       const overtimeBonus = emp.overtime_enabled
@@ -231,9 +244,11 @@ export default function PayrollPage() {
         otherDeductions,
         totalDeductions,
         netSalary,
+        deficitDeduction,
         effectiveLateMinutes,
+        lateInTolerance,
+        lateBeyond,
         graceMinutes,
-        penaltyMultiplier,
         hasAttendance: empAttendance.length > 0,
       };
     });

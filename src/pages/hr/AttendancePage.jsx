@@ -9,6 +9,31 @@ import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageS
 import ImportAttendanceModal from '../../components/hr/ImportAttendanceModal';
 import supabase from '../../lib/supabase';
 
+// ── Status Badge ─────────────────────────────────────────────
+
+const STATUS_MAP = {
+  present: { ar: 'حاضر', en: 'Present', cls: 'bg-green-500/15 text-green-600' },
+  absent_no_notice: { ar: 'غياب بدون إذن', en: 'No Notice', cls: 'bg-red-500/15 text-red-500' },
+  absent_prior_notice: { ar: 'غياب بإذن', en: 'With Notice', cls: 'bg-orange-500/15 text-orange-600' },
+  absent: { ar: 'غائب', en: 'Absent', cls: 'bg-red-500/15 text-red-500' },
+  late: { ar: 'متأخر', en: 'Late', cls: 'bg-yellow-500/15 text-yellow-600' },
+  annual_leave: { ar: 'إجازة سنوية', en: 'Annual', cls: 'bg-blue-500/15 text-blue-600' },
+  sick_leave: { ar: 'مرضية', en: 'Sick', cls: 'bg-blue-500/15 text-blue-600' },
+  marriage_leave: { ar: 'زواج', en: 'Marriage', cls: 'bg-pink-500/15 text-pink-600' },
+  maternity_leave: { ar: 'أمومة', en: 'Maternity', cls: 'bg-pink-500/15 text-pink-600' },
+  unpaid_leave: { ar: 'بدون مرتب', en: 'Unpaid', cls: 'bg-purple-500/15 text-purple-600' },
+  leave: { ar: 'إجازة', en: 'Leave', cls: 'bg-blue-500/15 text-blue-600' },
+  exception: { ar: 'استثناء', en: 'Exception', cls: 'bg-gray-500/15 text-gray-600' },
+  remote: { ar: 'من البيت', en: 'Remote', cls: 'bg-teal-500/15 text-teal-600' },
+  field_work: { ar: 'ميداني', en: 'Field', cls: 'bg-amber-500/15 text-amber-600' },
+  resigned: { ar: 'مستقيل', en: 'Resigned', cls: 'bg-gray-500/15 text-gray-500' },
+};
+
+function StatusBadge({ status, lang }) {
+  const s = STATUS_MAP[status] || { ar: status, en: status, cls: 'bg-slate-500/15 text-slate-500' };
+  return <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${s.cls}`}>{lang === 'ar' ? s.ar : s.en}</span>;
+}
+
 // ── Add/Edit Attendance Modal ────────────────────────────────
 
 function AttendanceFormModal({ open, onClose, onSaved, employees, record, lang, isRTL }) {
@@ -102,9 +127,16 @@ function AttendanceFormModal({ open, onClose, onSaved, employees, record, lang, 
           <div className="flex gap-2">
             {[
               { value: 'present', label: lang === 'ar' ? 'حاضر' : 'Present', color: 'bg-green-500/15 text-green-600 border-green-500/30' },
-              { value: 'absent', label: lang === 'ar' ? 'غائب' : 'Absent', color: 'bg-red-500/15 text-red-600 border-red-500/30' },
-              { value: 'late', label: lang === 'ar' ? 'متأخر' : 'Late', color: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30' },
-              { value: 'leave', label: lang === 'ar' ? 'إجازة' : 'Leave', color: 'bg-blue-500/15 text-blue-600 border-blue-500/30' },
+              { value: 'absent_no_notice', label: lang === 'ar' ? 'غياب بدون إذن' : 'Absent (No Notice)', color: 'bg-red-500/15 text-red-600 border-red-500/30' },
+              { value: 'absent_prior_notice', label: lang === 'ar' ? 'غياب بإذن' : 'Absent (Notice)', color: 'bg-orange-500/15 text-orange-600 border-orange-500/30' },
+              { value: 'annual_leave', label: lang === 'ar' ? 'إجازة سنوية' : 'Annual Leave', color: 'bg-blue-500/15 text-blue-600 border-blue-500/30' },
+              { value: 'sick_leave', label: lang === 'ar' ? 'إجازة مرضية' : 'Sick Leave', color: 'bg-blue-500/15 text-blue-600 border-blue-500/30' },
+              { value: 'unpaid_leave', label: lang === 'ar' ? 'بدون مرتب' : 'Unpaid Leave', color: 'bg-purple-500/15 text-purple-600 border-purple-500/30' },
+              { value: 'exception', label: lang === 'ar' ? 'استثناء' : 'Exception', color: 'bg-gray-500/15 text-gray-600 border-gray-500/30' },
+              { value: 'remote', label: lang === 'ar' ? 'من البيت' : 'Remote', color: 'bg-teal-500/15 text-teal-600 border-teal-500/30' },
+              { value: 'field_work', label: lang === 'ar' ? 'عمل ميداني' : 'Field Work', color: 'bg-amber-500/15 text-amber-600 border-amber-500/30' },
+              { value: 'marriage_leave', label: lang === 'ar' ? 'إجازة زواج' : 'Marriage', color: 'bg-pink-500/15 text-pink-600 border-pink-500/30' },
+              { value: 'maternity_leave', label: lang === 'ar' ? 'إجازة أمومة' : 'Maternity', color: 'bg-pink-500/15 text-pink-600 border-pink-500/30' },
             ].map(opt => (
               <button
                 key={opt.value}
@@ -178,19 +210,7 @@ function EmployeeDetailRows({ emp, records, isRTL, lang, onEdit, onDelete }) {
       <Td className="text-xs font-mono text-content dark:text-content-dark">{rec.check_in || '—'}</Td>
       <Td className="text-xs font-mono text-content dark:text-content-dark">{rec.check_out || '—'}</Td>
       <Td>
-        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${
-          rec.status === 'present' ? 'bg-green-500/15 text-green-600' :
-          rec.status === 'absent' ? 'bg-red-500/15 text-red-500' :
-          rec.status === 'late' ? 'bg-yellow-500/15 text-yellow-600' :
-          rec.status === 'leave' ? 'bg-blue-500/15 text-blue-600' :
-          'bg-slate-500/15 text-slate-500'
-        }`}>
-          {rec.status === 'present' ? (lang === 'ar' ? 'حاضر' : 'Present') :
-           rec.status === 'absent' ? (lang === 'ar' ? 'غائب' : 'Absent') :
-           rec.status === 'late' ? (lang === 'ar' ? 'متأخر' : 'Late') :
-           rec.status === 'leave' ? (lang === 'ar' ? 'إجازة' : 'Leave') :
-           rec.status}
-        </span>
+        <StatusBadge status={rec.status} lang={lang} />
       </Td>
       <Td>
         <div className="flex items-center gap-1">
