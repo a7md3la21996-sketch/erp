@@ -143,7 +143,7 @@ export default function PayrollPage() {
       const workMode = emp.work_mode || 'office';
       const isRemote = workMode === 'remote';
       const isFlexible = workMode === 'flexible' || workMode === 'field';
-      const stats = calcEmployeeAttendance(empAttendance, shiftConfig, { holidayDates, month, year, allShifts: allShiftsDb });
+      const stats = calcEmployeeAttendance(empAttendance, shiftConfig, { holidayDates, month, year, allShifts: allShiftsDb, empShiftAssignments });
 
       const empHistory = salaryHistories[empRaw.id] || [];
       const baseSalary = empHistory.length > 0

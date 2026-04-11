@@ -228,9 +228,25 @@ export function detectShiftForRecord(rec, allShifts, defaultShift) {
   return bestShift;
 }
 
+// ── Get shift for a specific date using assignments ──────────
+
+function getShiftForDate(date, empShiftAssignments, allShifts, defaultShift) {
+  if (!empShiftAssignments || empShiftAssignments.length === 0) return null;
+
+  // Find assignment active on this date
+  for (const a of empShiftAssignments) {
+    if (a.start_date <= date && (!a.end_date || a.end_date >= date)) {
+      // Return the shift object
+      if (a.shifts) return a.shifts;
+      if (a.shift_id && allShifts) return allShifts.find(s => s.id === a.shift_id) || null;
+    }
+  }
+  return null;
+}
+
 export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
   if (!shiftConfig) shiftConfig = DEFAULT_PAYROLL_CONFIG.shifts['فترة الدوام1'];
-  const { allShifts } = options;
+  const { allShifts, empShiftAssignments } = options;
 
   // Default shift values (used for absent day calculations)
   const lateThreshold = timeToMinutes(shiftConfig.late_threshold || shiftConfig.official_start);
@@ -291,8 +307,9 @@ export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
     if (rec.date) presentDatesSet.add(rec.date);
 
     if (checkIn != null) {
-      // Auto-detect which shift applies to this day based on check-in + check-out time
-      const dayShift = allShifts ? detectShiftForRecord(rec, allShifts, shiftConfig) : shiftConfig;
+      // 1. Check shift assignment for this date, 2. Auto-detect from punch times, 3. Use default
+      const assignedShift = rec.date ? getShiftForDate(rec.date, empShiftAssignments, allShifts, shiftConfig) : null;
+      const dayShift = assignedShift || (allShifts ? detectShiftForRecord(rec, allShifts, shiftConfig) : shiftConfig);
       const dayStart = timeToMinutes(dayShift.official_start) || officialStart;
       const dayEnd = timeToMinutes(dayShift.official_end) || officialEnd;
       const dayLateThreshold = timeToMinutes(dayShift.late_threshold || dayShift.official_start) || lateThreshold;
