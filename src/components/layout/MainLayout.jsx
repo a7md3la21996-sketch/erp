@@ -51,6 +51,33 @@ export default function MainLayout() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Realtime push: listen for new notifications in Supabase and show as browser push
+  useEffect(() => {
+    let channel;
+    import('../../lib/supabase').then(({ default: supabase }) => {
+      channel = supabase
+        .channel('push-notifications')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+          const n = payload.new;
+          if (!n) return;
+          // Show browser push notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            const title = n.title_ar || n.title_en || 'Platform ERP';
+            const body = n.body_ar || n.body_en || '';
+            if (navigator.serviceWorker?.controller) {
+              navigator.serviceWorker.ready.then(reg => {
+                reg.showNotification(title, { body, icon: '/pwa-192.png', badge: '/pwa-192.png', dir: 'rtl', vibrate: [200, 100, 200], data: { url: n.url || '/' } });
+              });
+            } else {
+              new Notification(title, { body, icon: '/pwa-192.png', dir: 'rtl' });
+            }
+          }
+        })
+        .subscribe();
+    }).catch(() => {});
+    return () => { if (channel) import('../../lib/supabase').then(({ default: supabase }) => supabase.removeChannel(channel)).catch(() => {}); };
+  }, []);
+
   // Global error banner for service failures
   const [serviceError, setServiceError] = useState(null);
   useEffect(() => {

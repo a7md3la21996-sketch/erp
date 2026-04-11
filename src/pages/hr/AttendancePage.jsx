@@ -44,6 +44,7 @@ function AttendanceFormModal({ open, onClose, onSaved, employees, record, lang, 
   const [checkIn, setCheckIn] = useState(record?.check_in || '');
   const [checkOut, setCheckOut] = useState(record?.check_out || '');
   const [status, setStatus] = useState(record?.status || 'present');
+  const [notes, setNotes] = useState(record?.notes || '');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -56,6 +57,7 @@ function AttendanceFormModal({ open, onClose, onSaved, employees, record, lang, 
       check_in: status === 'absent' ? null : (checkIn || null),
       check_out: status === 'absent' ? null : (checkOut || null),
       status,
+      notes: notes || null,
       updated_at: new Date().toISOString(),
     };
 
@@ -179,6 +181,20 @@ function AttendanceFormModal({ open, onClose, onSaved, employees, record, lang, 
             </div>
           </div>
         )}
+
+        {/* Notes */}
+        <div>
+          <label className="block text-xs font-medium text-content-muted dark:text-content-muted-dark mb-1">
+            {lang === 'ar' ? 'ملاحظات' : 'Notes'}
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-sm text-content dark:text-content-dark resize-none"
+            placeholder={lang === 'ar' ? 'أضف ملاحظات...' : 'Add notes...'}
+          />
+        </div>
       </div>
 
       <ModalFooter>
@@ -197,7 +213,7 @@ function EmployeeDetailRows({ emp, records, isRTL, lang, onEdit, onDelete, onQui
   if (!records.length) {
     return (
       <Tr>
-        <td colSpan={7} className="px-6 py-4 text-center text-xs text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark">
+        <td colSpan={9} className="px-6 py-4 text-center text-xs text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark">
           {lang === 'ar' ? 'لا توجد سجلات حضور لهذا الشهر' : 'No attendance records this month'}
         </td>
       </Tr>
@@ -247,9 +263,20 @@ function AttendanceRow({ emp, attendance, isRTL, lang, expanded, onToggle, onEdi
     const [h, m] = (r.check_in || '').split(':').map(Number);
     return h > 10 || (h === 10 && m > 30);
   }).length;
+  // Calculate total hours worked
+  const totalHours = recs.reduce((sum, r) => {
+    if (r.check_in && r.check_out) {
+      const [inH, inM] = r.check_in.split(':').map(Number);
+      const [outH, outM] = r.check_out.split(':').map(Number);
+      const hours = (outH + outM / 60) - (inH + inM / 60);
+      return sum + (hours > 0 ? hours : 0);
+    }
+    return sum;
+  }, 0);
   const total = recs.length || 1;
   const rate = Math.round((p / total) * 100);
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
+  const workMode = emp.work_mode || '';
   const ini = name.split(' ').map(w => w[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || '??';
 
   const rowBg = rate < 70 ? 'bg-red-500/5' : rate < 90 ? 'bg-yellow-500/5' : '';
@@ -279,6 +306,21 @@ function AttendanceRow({ emp, attendance, isRTL, lang, expanded, onToggle, onEdi
             </div>
             <span className="text-xs font-bold text-content dark:text-content-dark min-w-[32px]">{rate}%</span>
           </div>
+        </Td>
+        <Td className="text-xs font-mono text-content dark:text-content-dark">{totalHours.toFixed(1)}h</Td>
+        <Td>
+          {workMode && (
+            <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+              workMode === 'remote' ? 'bg-teal-500/15 text-teal-600' :
+              workMode === 'flexible' ? 'bg-purple-500/15 text-purple-600' :
+              workMode === 'field' ? 'bg-amber-500/15 text-amber-600' :
+              'bg-gray-500/15 text-gray-600'
+            }`}>
+              {workMode === 'remote' ? (lang === 'ar' ? 'عن بعد' : 'Remote') :
+               workMode === 'flexible' ? (lang === 'ar' ? 'مرن' : 'Flexible') :
+               workMode === 'field' ? (lang === 'ar' ? 'ميداني' : 'Field') : workMode}
+            </span>
+          )}
         </Td>
         <Td>
           <div className="flex items-center gap-1">
@@ -378,7 +420,7 @@ export default function AttendancePage() {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
-  const [year] = useState(() => new Date().getFullYear());
+  const [year, setYear] = useState(() => new Date().getFullYear());
   const [employees, setEmployees] = useState([]);
   const [allRecords, setAllRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -415,6 +457,16 @@ export default function AttendancePage() {
   }, [month, year]);
 
   useEffect(() => { refreshData(); }, [refreshData]);
+
+  // Auto-detect last month with data: if current month has no records, try previous month
+  useEffect(() => {
+    if (!loading && allRecords.length === 0 && month === new Date().getMonth() + 1 && year === new Date().getFullYear()) {
+      const prevMonth = month === 1 ? 12 : month - 1;
+      const prevYear = month === 1 ? year - 1 : year;
+      setMonth(prevMonth);
+      if (month === 1) setYear(prevYear);
+    }
+  }, [loading, allRecords.length]);
 
   const attendance = useMemo(() => {
     const grouped = {};
@@ -554,9 +606,21 @@ export default function AttendancePage() {
             : `${name} has only ${emp.leave_balance} leave days remaining`,
         });
       }
+      // Check new hire this month
+      if (emp.hire_date) {
+        const hireMonth = parseInt(emp.hire_date.split('-')[1]);
+        const hireYear = parseInt(emp.hire_date.split('-')[0]);
+        if (hireMonth === month && hireYear === year) {
+          const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
+          items.push({
+            type: 'info',
+            message: lang === 'ar' ? `${name} موظف جديد بدأ هذا الشهر` : `${name} is a new hire this month`,
+          });
+        }
+      }
     });
     return items;
-  }, [employees, attendance, isRTL, lang]);
+  }, [employees, attendance, isRTL, lang, month, year]);
 
   // Weekly view helpers
   const weekDays = useMemo(() => {
@@ -631,7 +695,7 @@ export default function AttendancePage() {
 
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
-      <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={7} />
+      <PageSkeleton hasKpis kpiCount={7} tableRows={6} tableCols={9} />
     </div>
   );
 
@@ -750,26 +814,95 @@ export default function AttendancePage() {
             <Upload size={14} />{lang === 'ar' ? 'استيراد البصمة' : 'Import'}
           </Button>
           <ExportButton
-            data={allRecords}
+            data={employees.map(emp => {
+              const recs = attendance[emp.id] || attendance[emp.employee_id] || [];
+              const present = recs.filter(r => r.status === 'present' || (r.check_in && r.status !== 'absent' && r.status !== 'leave')).length;
+              const absent = recs.filter(r => r.status === 'absent' || r.absent).length;
+              const lateRecs = recs.filter(r => {
+                if (r.status === 'late') return true;
+                if (!r.check_in || r.status === 'absent') return false;
+                const [h, m] = r.check_in.split(':').map(Number);
+                return h > 10 || (h === 10 && m > 30);
+              });
+              const lateMins = lateRecs.reduce((sum, r) => {
+                if (!r.check_in) return sum;
+                const [h, m] = r.check_in.split(':').map(Number);
+                const minsLate = (h * 60 + m) - (10 * 60 + 30);
+                return sum + (minsLate > 0 ? minsLate : 0);
+              }, 0);
+              const hours = recs.reduce((sum, r) => {
+                if (r.check_in && r.check_out) {
+                  const [inH, inM] = r.check_in.split(':').map(Number);
+                  const [outH, outM] = r.check_out.split(':').map(Number);
+                  const h = (outH + outM / 60) - (inH + inM / 60);
+                  return sum + (h > 0 ? h : 0);
+                }
+                return sum;
+              }, 0);
+              const rate = recs.length ? Math.round((present / recs.length) * 100) : 0;
+              return {
+                name: (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '',
+                department: emp.department_ar || emp.department || '',
+                present_days: present,
+                absent_days: absent,
+                late_days: lateRecs.length,
+                late_minutes: lateMins,
+                total_hours: hours.toFixed(1),
+                attendance_rate: rate + '%',
+                work_mode: emp.work_mode || '',
+              };
+            })}
             filename={isRTL ? 'الحضور' : 'attendance'}
             title={isRTL ? 'الحضور والغياب' : 'Attendance'}
             columns={[
-              { header: isRTL ? 'رقم الموظف' : 'Employee ID', key: 'employee_id' },
-              { header: isRTL ? 'التاريخ' : 'Date', key: 'date' },
-              { header: isRTL ? 'وقت الحضور' : 'Check In', key: 'check_in' },
-              { header: isRTL ? 'وقت الانصراف' : 'Check Out', key: 'check_out' },
-              { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
+              { header: isRTL ? 'الاسم' : 'Name', key: 'name' },
+              { header: isRTL ? 'القسم' : 'Department', key: 'department' },
+              { header: isRTL ? 'أيام الحضور' : 'Present Days', key: 'present_days' },
+              { header: isRTL ? 'أيام الغياب' : 'Absent Days', key: 'absent_days' },
+              { header: isRTL ? 'أيام التأخير' : 'Late Days', key: 'late_days' },
+              { header: isRTL ? 'دقائق التأخير' : 'Late Minutes', key: 'late_minutes' },
+              { header: isRTL ? 'إجمالي الساعات' : 'Total Hours', key: 'total_hours' },
+              { header: isRTL ? 'نسبة الحضور' : 'Attendance Rate', key: 'attendance_rate' },
+              { header: isRTL ? 'نمط العمل' : 'Work Mode', key: 'work_mode' },
             ]}
           />
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3.5 mb-5">
         <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'حاضر' : 'Present'} value={stats.present} color="#4A7AAB" />
         <KpiCard icon={XCircle} label={lang === 'ar' ? 'غائب' : 'Absent'} value={stats.absent} color="#EF4444" />
         <KpiCard icon={AlertCircle} label={lang === 'ar' ? 'متأخر' : 'Late'} value={stats.late} color="#6B8DB5" />
         <KpiCard icon={Calendar} label={lang === 'ar' ? 'إجازة' : 'Leave'} value={stats.leave} color="#8BA8C8" />
+        <KpiCard icon={Users} label={lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees'} value={employees.length} color="#6366F1" />
+        <KpiCard icon={Users} label={lang === 'ar' ? 'عن بعد' : 'Remote'} value={employees.filter(e => e.work_mode === 'remote').length} color="#14B8A6" />
+        <KpiCard icon={CheckCircle2} label={lang === 'ar' ? 'متوسط الحضور' : 'Avg Rate'} value={(() => {
+          if (!employees.length) return '0%';
+          const rates = employees.map(emp => {
+            const recs = attendance[emp.id] || attendance[emp.employee_id] || [];
+            const present = recs.filter(r => r.status === 'present' || (r.check_in && r.status !== 'absent' && r.status !== 'leave')).length;
+            return recs.length ? (present / recs.length) * 100 : 0;
+          });
+          return Math.round(rates.reduce((a, b) => a + b, 0) / employees.length) + '%';
+        })()} color="#F59E0B" />
+      </div>
+
+      {/* Mini Daily Attendance Chart */}
+      <div className="flex items-end gap-[2px] h-16 mb-5">
+        {Array.from({length: new Date(year, month, 0).getDate()}, (_, i) => i + 1).map(day => {
+          const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+          const dayRecords = allRecords.filter(r => r.date === dateStr && r.status === 'present');
+          const pct = employees.length ? (dayRecords.length / employees.length) * 100 : 0;
+          const dow = new Date(year, month-1, day).getDay();
+          const isFri = dow === 5;
+          return (
+            <div key={day} className="flex-1 flex flex-col items-center" title={`${day}: ${dayRecords.length} present`}>
+              <div style={{height: `${Math.max(pct, 4)}%`}} className={`w-full rounded-t-sm ${isFri ? 'bg-gray-300' : pct > 70 ? 'bg-green-400' : pct > 40 ? 'bg-yellow-400' : 'bg-red-400'}`} />
+              <span className="text-[7px] text-content-muted mt-0.5">{day}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Alerts Section */}
@@ -779,9 +912,11 @@ export default function AttendancePage() {
             <div key={i} className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium ${
               alert.type === 'danger'
                 ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                : alert.type === 'info'
+                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
                 : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/20'
             }`}>
-              <AlertTriangle size={14} />
+              {alert.type === 'info' ? <Users size={14} /> : <AlertTriangle size={14} />}
               {alert.message}
             </div>
           ))}
@@ -860,6 +995,8 @@ export default function AttendancePage() {
                 lang === 'ar' ? 'غائب' : 'Absent',
                 lang === 'ar' ? 'متأخر' : 'Late',
                 lang === 'ar' ? 'نسبة' : 'Rate',
+                lang === 'ar' ? 'ساعات' : 'Hours',
+                lang === 'ar' ? 'نمط العمل' : 'Work Mode',
                 '',
               ].map((h, i) => <Th key={i}>{h}</Th>)}
             </tr>
@@ -867,7 +1004,7 @@ export default function AttendancePage() {
           <tbody>
             {(employees || []).length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-16 px-5">
+                <td colSpan={9} className="text-center py-16 px-5">
                   <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                     <Clock size={24} color="#4A7AAB" />
                   </div>
