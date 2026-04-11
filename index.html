@@ -16,9 +16,9 @@
   <body>
     <div id="root"></div>
     <script>
-      // Register notification-only service worker (no caching)
+      // Register Firebase messaging service worker
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw-notify.js').catch(function() {});
+        navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(function() {});
       }
     </script>
     <script type="module" src="/src/main.jsx"></script>

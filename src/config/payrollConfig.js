@@ -182,9 +182,33 @@ export function getStatusConfig(status) {
 
 // ── Calculate attendance stats for one employee in a month ───
 
+// ── Auto-detect shift based on check-in time ────────────────
+
+export function detectShiftForRecord(rec, allShifts, defaultShift) {
+  if (!rec.check_in || !allShifts || allShifts.length <= 1) return defaultShift;
+  const checkInMin = timeToMinutes(rec.check_in);
+  if (checkInMin == null) return defaultShift;
+
+  // Find shift whose official_start is closest to check-in
+  let bestShift = defaultShift;
+  let bestDiff = Infinity;
+  for (const shift of allShifts) {
+    const shiftStart = timeToMinutes(shift.official_start);
+    if (shiftStart == null) continue;
+    const diff = Math.abs(checkInMin - shiftStart);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      bestShift = shift;
+    }
+  }
+  return bestShift;
+}
+
 export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
   if (!shiftConfig) shiftConfig = DEFAULT_PAYROLL_CONFIG.shifts['فترة الدوام1'];
+  const { allShifts } = options;
 
+  // Default shift values (used for absent day calculations)
   const lateThreshold = timeToMinutes(shiftConfig.late_threshold || shiftConfig.official_start);
   const officialStart = timeToMinutes(shiftConfig.official_start);
   const officialEnd = timeToMinutes(shiftConfig.official_end);
@@ -243,24 +267,31 @@ export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
     if (rec.date) presentDatesSet.add(rec.date);
 
     if (checkIn != null && checkOut != null) {
-      const worked = Math.max(0, checkOut - checkIn - breakMinutes);
+      // Auto-detect which shift applies to this day based on check-in time
+      const dayShift = allShifts ? detectShiftForRecord(rec, allShifts, shiftConfig) : shiftConfig;
+      const dayStart = timeToMinutes(dayShift.official_start) || officialStart;
+      const dayEnd = timeToMinutes(dayShift.official_end) || officialEnd;
+      const dayLateThreshold = timeToMinutes(dayShift.late_threshold || dayShift.official_start) || lateThreshold;
+      const dayBreak = dayShift.break_minutes || breakMinutes;
+      const dayRequired = ((dayShift.required_hours || ((dayEnd - dayStart) / 60)) * 60) - dayBreak;
+
+      const worked = Math.max(0, checkOut - checkIn - dayBreak);
       totalWorkedMinutes += worked;
 
-      // Late calculation — tiered
-      if (checkIn > lateThreshold) {
-        const lateMin = checkIn - lateThreshold;
-        // Within tolerance (grace hours handled in PayrollPage)
+      // Late calculation — based on detected shift
+      if (checkIn > dayLateThreshold) {
+        const lateMin = checkIn - dayLateThreshold;
         totalLateMinutes += lateMin;
       }
 
       // Incomplete hours (deficit)
-      if (worked < requiredMinutes) {
-        totalDeficitMinutes += requiredMinutes - worked;
+      if (worked < dayRequired) {
+        totalDeficitMinutes += dayRequired - worked;
       }
 
       // Overtime
-      if (checkOut > officialEnd) {
-        totalOvertimeMinutes += checkOut - officialEnd;
+      if (checkOut > dayEnd) {
+        totalOvertimeMinutes += checkOut - dayEnd;
       }
     }
   }

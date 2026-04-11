@@ -41,26 +41,41 @@ export default function MainLayout() {
     if (!isMobile) setSidebarOpen(false);
   }, [isMobile]);
 
-  // Auto-request push notification permission after 3 seconds
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-      }
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Realtime push: listen for new notifications in Supabase and show as browser push
+  // Firebase push notifications + Supabase realtime fallback
   useEffect(() => {
     let channel;
+    // 1. Setup Firebase FCM
+    import('../../lib/firebase').then(({ getFCMToken, onForegroundMessage }) => {
+      getFCMToken().then(token => {
+        if (token) {
+          // Save token to Supabase for targeted push later
+          import('../../lib/supabase').then(({ default: supabase }) => {
+            const userId = JSON.parse(localStorage.getItem('platform_system_config') || '{}')?.userId;
+            if (userId) {
+              supabase.from('users').update({ fcm_token: token }).eq('id', userId).then(() => {}).catch(() => {});
+            }
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+      // Handle foreground messages from FCM
+      onForegroundMessage((payload) => {
+        const title = payload.notification?.title || payload.data?.title || 'Platform ERP';
+        const body = payload.notification?.body || payload.data?.body || '';
+        if (navigator.serviceWorker?.controller) {
+          navigator.serviceWorker.ready.then(reg => {
+            reg.showNotification(title, { body, icon: '/pwa-192.png', badge: '/pwa-192.png', dir: 'rtl', vibrate: [200, 100, 200], data: { url: payload.data?.url || '/' } });
+          });
+        }
+      });
+    }).catch(() => {});
+
+    // 2. Supabase Realtime fallback (for when FCM isn't available)
     import('../../lib/supabase').then(({ default: supabase }) => {
       channel = supabase
         .channel('push-notifications')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
           const n = payload.new;
           if (!n) return;
-          // Show browser push notification
           if ('Notification' in window && Notification.permission === 'granted') {
             const title = n.title_ar || n.title_en || 'Platform ERP';
             const body = n.body_ar || n.body_en || '';
@@ -69,7 +84,7 @@ export default function MainLayout() {
                 reg.showNotification(title, { body, icon: '/pwa-192.png', badge: '/pwa-192.png', dir: 'rtl', vibrate: [200, 100, 200], data: { url: n.url || '/' } });
               });
             } else {
-              new Notification(title, { body, icon: '/pwa-192.png', dir: 'rtl' });
+              try { new Notification(title, { body, icon: '/pwa-192.png', dir: 'rtl' }); } catch {}
             }
           }
         })

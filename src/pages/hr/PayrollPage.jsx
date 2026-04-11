@@ -34,6 +34,7 @@ export default function PayrollPage() {
   const [salaryHistories, setSalaryHistories] = useState({});
   const [configHistories, setConfigHistories] = useState({});
   const [shiftAssignments, setShiftAssignments] = useState({});
+  const [allShiftsDb, setAllShiftsDb] = useState([]);
   const [holidayDates, setHolidayDates] = useState(new Set());
   const [loans, setLoans] = useState([]);
   const [adjustments, setAdjustments] = useState([]);
@@ -48,6 +49,10 @@ export default function PayrollPage() {
       setConfig(cfgData);
 
       // Load salary history and config history for all employees
+      // Load all shifts from DB for auto-detection
+      const { data: shiftsFromDb } = await supabase.from('shifts').select('*');
+      setAllShiftsDb(shiftsFromDb || []);
+
       const [salaryRes, configRes, shiftRes] = await Promise.all([
         supabase.from('salary_history').select('*').order('effective_date', { ascending: true }),
         supabase.from('employee_config_history').select('*').order('effective_date', { ascending: true }),
@@ -138,7 +143,7 @@ export default function PayrollPage() {
       const workMode = emp.work_mode || 'office';
       const isRemote = workMode === 'remote';
       const isFlexible = workMode === 'flexible' || workMode === 'field';
-      const stats = calcEmployeeAttendance(empAttendance, shiftConfig, { holidayDates, month, year });
+      const stats = calcEmployeeAttendance(empAttendance, shiftConfig, { holidayDates, month, year, allShifts: allShiftsDb });
 
       const empHistory = salaryHistories[empRaw.id] || [];
       const baseSalary = empHistory.length > 0
@@ -252,7 +257,7 @@ export default function PayrollPage() {
         hasAttendance: empAttendance.length > 0,
       };
     });
-  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, shiftAssignments, month, year, holidayDates, loans, adjustments]);
+  }, [employees, attendanceByEmp, config, salaryHistories, configHistories, shiftAssignments, allShiftsDb, month, year, holidayDates, loans, adjustments]);
 
   const totalSalaries = useMemo(() => payrollData.reduce((s, e) => s + e.baseSalary, 0), [payrollData]);
   const totalNet = useMemo(() => payrollData.reduce((s, e) => s + e.netSalary, 0), [payrollData]);
