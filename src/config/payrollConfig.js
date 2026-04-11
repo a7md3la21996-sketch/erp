@@ -187,17 +187,41 @@ export function getStatusConfig(status) {
 export function detectShiftForRecord(rec, allShifts, defaultShift) {
   if (!rec.check_in || !allShifts || allShifts.length <= 1) return defaultShift;
   const checkInMin = timeToMinutes(rec.check_in);
+  const checkOutMin = timeToMinutes(rec.check_out);
   if (checkInMin == null) return defaultShift;
 
-  // Find shift whose official_start is closest to check-in
+  // Strategy: use both check-in and check-out to determine shift
+  // If check-out is after 21:00, it's likely an evening shift
+  // If check-out is before 18:00, it's likely a morning shift
+  // Otherwise, find the shift where check-in falls within start-end range
+
   let bestShift = defaultShift;
-  let bestDiff = Infinity;
+  let bestScore = -Infinity;
+
   for (const shift of allShifts) {
     const shiftStart = timeToMinutes(shift.official_start);
-    if (shiftStart == null) continue;
-    const diff = Math.abs(checkInMin - shiftStart);
-    if (diff < bestDiff) {
-      bestDiff = diff;
+    const shiftEnd = timeToMinutes(shift.official_end);
+    if (shiftStart == null || shiftEnd == null) continue;
+
+    let score = 0;
+
+    // Check if check-in is within reasonable range of shift (within 3 hours before/after start)
+    const diffFromStart = Math.abs(checkInMin - shiftStart);
+    if (diffFromStart <= 180) score += 100 - diffFromStart; // closer = higher score
+
+    // Check if check-out aligns with shift end (if available)
+    if (checkOutMin != null) {
+      const diffFromEnd = Math.abs(checkOutMin - shiftEnd);
+      if (diffFromEnd <= 180) score += 100 - diffFromEnd; // closer = higher score
+
+      // Bonus: if check-in AND check-out both fall within shift range
+      if (checkInMin >= shiftStart - 120 && checkOutMin <= shiftEnd + 120) {
+        score += 200;
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
       bestShift = shift;
     }
   }
@@ -266,8 +290,8 @@ export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
     presentDays++;
     if (rec.date) presentDatesSet.add(rec.date);
 
-    if (checkIn != null && checkOut != null) {
-      // Auto-detect which shift applies to this day based on check-in time
+    if (checkIn != null) {
+      // Auto-detect which shift applies to this day based on check-in + check-out time
       const dayShift = allShifts ? detectShiftForRecord(rec, allShifts, shiftConfig) : shiftConfig;
       const dayStart = timeToMinutes(dayShift.official_start) || officialStart;
       const dayEnd = timeToMinutes(dayShift.official_end) || officialEnd;
@@ -275,23 +299,26 @@ export function calcEmployeeAttendance(records, shiftConfig, options = {}) {
       const dayBreak = dayShift.break_minutes || breakMinutes;
       const dayRequired = ((dayShift.required_hours || ((dayEnd - dayStart) / 60)) * 60) - dayBreak;
 
-      const worked = Math.max(0, checkOut - checkIn - dayBreak);
-      totalWorkedMinutes += worked;
-
       // Late calculation — based on detected shift
-      if (checkIn > dayLateThreshold) {
+      // Skip if check-in is more than 4 hours after shift end (likely wrong punch)
+      if (checkIn > dayLateThreshold && checkIn <= dayEnd + 240) {
         const lateMin = checkIn - dayLateThreshold;
         totalLateMinutes += lateMin;
       }
 
-      // Incomplete hours (deficit)
-      if (worked < dayRequired) {
-        totalDeficitMinutes += dayRequired - worked;
-      }
+      if (checkOut != null) {
+        const worked = Math.max(0, checkOut - checkIn - dayBreak);
+        totalWorkedMinutes += worked;
 
-      // Overtime
-      if (checkOut > dayEnd) {
-        totalOvertimeMinutes += checkOut - dayEnd;
+        // Incomplete hours (deficit)
+        if (worked < dayRequired) {
+          totalDeficitMinutes += dayRequired - worked;
+        }
+
+        // Overtime
+        if (checkOut > dayEnd) {
+          totalOvertimeMinutes += checkOut - dayEnd;
+        }
       }
     }
   }
