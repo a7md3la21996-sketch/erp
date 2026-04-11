@@ -312,17 +312,17 @@ export default function EmployeeAttendanceSummary() {
         <>
           {/* ── KPI Cards ──────────────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <KpiCard icon={CheckCircle2} label={isRTL ? 'أيام الحضور' : 'Present Days'} value={kpis.presentDays} color="#22C55E" />
-            <KpiCard icon={XCircle} label={isRTL ? 'أيام الغياب' : 'Absent Days'} value={kpis.absentDays} color="#EF4444" />
-            <KpiCard icon={Calendar} label={isRTL ? 'أيام الإجازة' : 'Leave Days'} value={kpis.leaveDays} color="#3B82F6" />
-            <KpiCard icon={AlertCircle} label={isRTL ? 'دقائق التأخير' : 'Late Minutes'} value={kpis.totalLateMinutes} color="#F59E0B" />
-            <KpiCard icon={Clock} label={isRTL ? 'إجمالي الساعات' : 'Total Hours'} value={kpis.totalHours} color="#4A7AAB" />
-            <KpiCard icon={CheckCircle2} label={isRTL ? 'نسبة الحضور' : 'Attendance %'} value={`${kpis.rate}%`} color="#22C55E" />
+            <KpiCard icon={CheckCircle2} label={isRTL ? 'أيام الحضور' : 'Present Days'} value={String(kpis.presentDays || 0)} color="#22C55E" />
+            <KpiCard icon={XCircle} label={isRTL ? 'أيام الغياب' : 'Absent Days'} value={String(kpis.absentDays || 0)} color="#EF4444" />
+            <KpiCard icon={Calendar} label={isRTL ? 'أيام الإجازة' : 'Leave Days'} value={String(kpis.leaveDays || 0)} color="#3B82F6" />
+            <KpiCard icon={AlertCircle} label={isRTL ? 'دقائق التأخير' : 'Late Minutes'} value={String(kpis.totalLateMinutes || 0)} color="#F59E0B" />
+            <KpiCard icon={Clock} label={isRTL ? 'إجمالي الساعات' : 'Total Hours'} value={String(kpis.totalHours || 0)} color="#4A7AAB" />
+            <KpiCard icon={CheckCircle2} label={isRTL ? 'نسبة الحضور' : 'Attendance %'} value={String(kpis.rate || 0) + '%'} color="#22C55E" />
           </div>
 
           {/* ── Section 1: Daily Attendance Table ──────────────── */}
           <Card>
-            <CardHeader title={isRTL ? 'سجل الحضور اليومي' : 'Daily Attendance Record'} icon={<Calendar size={16} />} />
+            <CardHeader><p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'سجل الحضور اليومي' : 'Daily Attendance Record'}</p></CardHeader>
             <div className="overflow-x-auto">
               <Table>
                 <thead>
@@ -371,7 +371,7 @@ export default function EmployeeAttendanceSummary() {
 
           {/* ── Section 2: Summary Cards ──────────────────────── */}
           <Card>
-            <CardHeader title={isRTL ? 'ملخص الشهر' : 'Monthly Summary'} icon={<Clock size={16} />} />
+            <CardHeader><p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'ملخص الشهر' : 'Monthly Summary'}</p></CardHeader>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
               {/* Present / Working Days */}
               <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
@@ -461,7 +461,7 @@ export default function EmployeeAttendanceSummary() {
 
           {/* ── Section 3: Leave Balance ──────────────────────── */}
           <Card>
-            <CardHeader title={isRTL ? 'رصيد الإجازات' : 'Leave Balance'} icon={<Calendar size={16} />} />
+            <CardHeader><p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'رصيد الإجازات' : 'Leave Balance'}</p></CardHeader>
             <div className="p-4">
               {leaveInfo ? (
                 <div className="space-y-4">
