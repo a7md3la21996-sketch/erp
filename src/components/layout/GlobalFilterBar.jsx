@@ -34,26 +34,21 @@ export default function GlobalFilterBar() {
     if (!expanded && !dataLoaded) return; // defer until opened
     if (dataLoaded) return; // already loaded
     setDataLoaded(true);
-    fetchSalesAgents().then(data => {
+    (async () => {
+      const data = await fetchSalesAgents();
       let filtered = data || [];
-      // Filter agents based on current user's role
       if (profile?.role === 'sales_manager' && profile?.team_id) {
-        // Manager sees their team + child teams only
-        supabase.from('departments').select('id').eq('parent_id', profile.team_id).then(({ data: children }) => {
-          const allowedTeams = new Set([profile.team_id, ...((children || []).map(c => c.id))]);
-          setAgents(filtered.filter(a => allowedTeams.has(a.team_id)));
-        });
+        const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
+        const allowedTeams = new Set([profile.team_id, ...((children || []).map(c => c.id))]);
+        setAgents(filtered.filter(a => allowedTeams.has(a.team_id)));
       } else if (profile?.role === 'team_leader' && profile?.team_id) {
-        // TL sees their team only
         setAgents(filtered.filter(a => a.team_id === profile.team_id));
       } else if (profile?.role === 'sales_agent') {
-        // Agent sees only themselves
         setAgents(filtered.filter(a => a.id === profile.id));
       } else {
-        // Admin/operations see all
         setAgents(filtered);
       }
-    });
+    })();
     supabase.from('departments').select('id, name_ar, name_en, parent_id').then(({ data }) => {
       const m = {};
       (data || []).forEach(t => { m[t.id] = t; });

@@ -16,11 +16,9 @@
   <body>
     <div id="root"></div>
     <script>
-      // Remove old service workers so users never get stale cache again
+      // Register notification-only service worker (no caching)
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(regs) {
-          regs.forEach(function(r) { r.unregister(); });
-        });
+        navigator.serviceWorker.register('/sw-notify.js').catch(function() {});
       }
     </script>
     <script type="module" src="/src/main.jsx"></script>

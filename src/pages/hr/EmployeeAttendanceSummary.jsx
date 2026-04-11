@@ -4,8 +4,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchAttendance } from '../../services/attendanceService';
 import { fetchHolidays } from '../../services/holidaysService';
-import { Clock, ArrowLeft, Printer, CheckCircle2, XCircle, Calendar, AlertCircle } from 'lucide-react';
-import { Button, Card, CardHeader, KpiCard, Table, Th, Td, Tr, Select, PageSkeleton } from '../../components/ui';
+import { Clock, ArrowLeft, Printer, CheckCircle2, XCircle, Calendar, AlertCircle, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { Button, Card, CardHeader, KpiCard, Table, Th, Td, Tr, Select, PageSkeleton, ExportButton } from '../../components/ui';
 import supabase from '../../lib/supabase';
 
 // ── Status config ───────────────────────────────────────────
@@ -73,6 +73,8 @@ export default function EmployeeAttendanceSummary() {
   const [holidays, setHolidays] = useState([]);
   const [leaveBalances, setLeaveBalances] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [prevAttendance, setPrevAttendance] = useState([]);
+  const [prevHolidays, setPrevHolidays] = useState([]);
 
   // Fetch employee data
   useEffect(() => {
@@ -98,12 +100,20 @@ export default function EmployeeAttendanceSummary() {
     async function loadData() {
       setLoading(true);
       try {
-        const [attData, holData] = await Promise.all([
+        // Compute previous month
+        const prevMonth = month === 1 ? 12 : month - 1;
+        const prevYear = month === 1 ? year - 1 : year;
+
+        const [attData, holData, prevAttData, prevHolData] = await Promise.all([
           fetchAttendance({ month, year, employeeId }),
           fetchHolidays(year, month),
+          fetchAttendance({ month: prevMonth, year: prevYear, employeeId }),
+          fetchHolidays(prevYear, prevMonth),
         ]);
         setAttendance(attData);
         setHolidays(holData);
+        setPrevAttendance(prevAttData);
+        setPrevHolidays(prevHolData);
 
         // Fetch leave balances
         const { data: lb } = await supabase
@@ -249,6 +259,72 @@ export default function EmployeeAttendanceSummary() {
     return { annualTotal, annualUsed, annualRemaining, monthLeave };
   }, [leaveBalances, dailyRows]);
 
+  // Build previous month rows for comparison
+  const prevDailyRows = useMemo(() => {
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+    const daysInMonth = new Date(prevYear, prevMonth, 0).getDate();
+    const holidayMap = {};
+    prevHolidays.forEach(h => { holidayMap[h.date] = h; });
+    const attMap = {};
+    prevAttendance.forEach(a => { attMap[a.date] = a; });
+
+    const rows = [];
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateObj = new Date(prevYear, prevMonth - 1, d);
+      const dateStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const dayOfWeek = dateObj.getDay();
+      const isFriday = dayOfWeek === 5;
+      const holiday = holidayMap[dateStr];
+      const rec = attMap[dateStr];
+      let status = rec?.status || null;
+      if (holiday && !status) status = 'holiday';
+      else if (isFriday && !status) status = 'weekend';
+      const checkIn = rec?.check_in || null;
+      const checkOut = rec?.check_out || null;
+      const hours = calcHours(checkIn, checkOut);
+      const late = status === 'present' || status === 'remote' || status === 'field_work' ? calcLateMinutes(checkIn) : 0;
+      rows.push({ day: d, dateStr, dayOfWeek, isFriday, isHoliday: !!holiday, status, checkIn, checkOut, hours, lateMinutes: late });
+    }
+    return rows;
+  }, [prevAttendance, prevHolidays, month, year]);
+
+  // Previous month KPIs for comparison
+  const prevKpis = useMemo(() => {
+    const workingDays = prevDailyRows.filter(r => !r.isFriday && !r.isHoliday);
+    const presentDays = prevDailyRows.filter(r => r.status === 'present' || r.status === 'remote' || r.status === 'field_work').length;
+    const absentDays = prevDailyRows.filter(r => r.status === 'absent' || r.status === 'absent_no_notice' || r.status === 'absent_prior_notice').length;
+    const leaveDays = prevDailyRows.filter(r => LEAVE_STATUSES.includes(r.status)).length;
+    const totalLateMinutes = prevDailyRows.reduce((sum, r) => sum + r.lateMinutes, 0);
+    const totalHours = prevDailyRows.reduce((sum, r) => sum + r.hours, 0);
+    return { presentDays, absentDays, leaveDays, totalLateMinutes, totalHours: totalHours.toFixed(1), workingDays: workingDays.length };
+  }, [prevDailyRows]);
+
+  // Hours summary
+  const hoursSummary = useMemo(() => {
+    const shiftHours = 8;
+    const requiredHours = kpis.workingDays * shiftHours;
+    const actualHours = parseFloat(kpis.totalHours);
+    const difference = actualHours - requiredHours;
+    const percentage = requiredHours > 0 ? Math.min(100, Math.round((actualHours / requiredHours) * 100)) : 0;
+    return { requiredHours, actualHours, difference, percentage };
+  }, [kpis]);
+
+  // Export data for ExportButton
+  const exportData = useMemo(() => {
+    return dailyRows.map(row => ({
+      [isRTL ? '#' : '#']: row.day,
+      [isRTL ? 'اليوم' : 'Day']: row.dayName,
+      [isRTL ? 'التاريخ' : 'Date']: row.dateStr,
+      [isRTL ? 'الحضور' : 'Check In']: row.checkIn || '—',
+      [isRTL ? 'الانصراف' : 'Check Out']: row.checkOut || '—',
+      [isRTL ? 'الساعات' : 'Hours']: row.hours > 0 ? row.hours.toFixed(1) : '—',
+      [isRTL ? 'تأخير (د)' : 'Late (m)']: row.lateMinutes > 0 ? row.lateMinutes : '—',
+      [isRTL ? 'الحالة' : 'Status']: row.status ? (STATUS_MAP[row.status] ? (isRTL ? STATUS_MAP[row.status].ar : STATUS_MAP[row.status].en) : row.status) : '—',
+      [isRTL ? 'ملاحظات' : 'Notes']: row.notes || '',
+    }));
+  }, [dailyRows, isRTL]);
+
   // Month/Year options
   const monthOptions = Array.from({ length: 12 }, (_, i) => ({
     value: String(i + 1),
@@ -259,8 +335,84 @@ export default function EmployeeAttendanceSummary() {
     return { value: String(y), label: String(y) };
   });
 
-  // Print handler
-  const handlePrint = () => window.print();
+  // Print handler — opens a formatted report in a new window
+  const handlePrint = () => {
+    const monthLabel = new Date(year, month - 1).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' });
+    const dir = isRTL ? 'rtl' : 'ltr';
+    const statusLabel = (s) => STATUS_MAP[s] ? (isRTL ? STATUS_MAP[s].ar : STATUS_MAP[s].en) : s || '—';
+
+    const tableRows = dailyRows.map(r => `
+      <tr style="border-bottom:1px solid #e5e7eb;">
+        <td style="padding:4px 8px;font-size:12px;text-align:center;">${r.day}</td>
+        <td style="padding:4px 8px;font-size:12px;text-align:center;">${r.dayName}</td>
+        <td style="padding:4px 8px;font-size:12px;text-align:center;font-family:monospace;">${r.dateStr}</td>
+        <td style="padding:4px 8px;font-size:12px;text-align:center;font-family:monospace;">${r.checkIn || '—'}</td>
+        <td style="padding:4px 8px;font-size:12px;text-align:center;font-family:monospace;">${r.checkOut || '—'}</td>
+        <td style="padding:4px 8px;font-size:12px;text-align:center;font-family:monospace;">${r.hours > 0 ? r.hours.toFixed(1) : '—'}</td>
+        <td style="padding:4px 8px;font-size:12px;text-align:center;font-family:monospace;">${r.lateMinutes > 0 ? r.lateMinutes : '—'}</td>
+        <td style="padding:4px 8px;font-size:12px;text-align:center;">${statusLabel(r.status)}</td>
+        <td style="padding:4px 8px;font-size:11px;">${r.notes || ''}</td>
+      </tr>
+    `).join('');
+
+    const leaveSection = leaveInfo ? `
+      <div style="margin-top:20px;padding:12px;border:1px solid #e5e7eb;border-radius:8px;">
+        <h3 style="margin:0 0 8px;font-size:14px;">${isRTL ? 'رصيد الإجازات' : 'Leave Balance'}</h3>
+        <p style="font-size:12px;margin:4px 0;">${isRTL ? 'الإجازة السنوية:' : 'Annual Leave:'} ${leaveInfo.annualUsed} / ${leaveInfo.annualTotal} ${isRTL ? 'مستخدمة' : 'used'} — ${leaveInfo.annualRemaining} ${isRTL ? 'متبقية' : 'remaining'}</p>
+      </div>
+    ` : '';
+
+    const html = `<!DOCTYPE html><html dir="${dir}"><head><meta charset="utf-8"><title>${isRTL ? 'تقرير الحضور' : 'Attendance Report'}</title>
+      <style>body{font-family:system-ui,-apple-system,sans-serif;margin:20px;color:#1a1a1a;font-size:13px;}
+      table{width:100%;border-collapse:collapse;margin-top:12px;}
+      th{background:#f3f4f6;padding:6px 8px;font-size:11px;text-align:center;border-bottom:2px solid #d1d5db;}
+      .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:16px 0;}
+      .kpi-box{padding:10px;border:1px solid #e5e7eb;border-radius:8px;text-align:center;}
+      .kpi-box .val{font-size:20px;font-weight:700;margin:4px 0;}
+      .kpi-box .lbl{font-size:10px;color:#6b7280;}
+      @media print{body{margin:10px;} .kpi-grid{grid-template-columns:repeat(6,1fr);}}</style></head><body>
+      <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:16px;">
+        <div>
+          <h1 style="margin:0;font-size:18px;">${empName}</h1>
+          <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">${deptName}${employee?.employee_number ? ` — ${employee.employee_number}` : ''}</p>
+        </div>
+        <div style="text-align:${isRTL ? 'left' : 'right'};">
+          <p style="margin:0;font-size:14px;font-weight:600;">${isRTL ? 'تقرير الحضور والغياب' : 'Attendance Report'}</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#6b7280;">${monthLabel}</p>
+        </div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi-box"><div class="val" style="color:#22c55e;">${kpis.presentDays}</div><div class="lbl">${isRTL ? 'أيام الحضور' : 'Present Days'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#ef4444;">${kpis.absentDays}</div><div class="lbl">${isRTL ? 'أيام الغياب' : 'Absent Days'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#3b82f6;">${kpis.leaveDays}</div><div class="lbl">${isRTL ? 'أيام الإجازة' : 'Leave Days'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#f59e0b;">${kpis.totalLateMinutes}</div><div class="lbl">${isRTL ? 'دقائق التأخير' : 'Late Minutes'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#4a7aab;">${kpis.totalHours}</div><div class="lbl">${isRTL ? 'إجمالي الساعات' : 'Total Hours'}</div></div>
+        <div class="kpi-box"><div class="val" style="color:#22c55e;">${kpis.rate}%</div><div class="lbl">${isRTL ? 'نسبة الحضور' : 'Attendance %'}</div></div>
+      </div>
+      <h3 style="font-size:14px;margin:16px 0 4px;">${isRTL ? 'سجل الحضور اليومي' : 'Daily Attendance Record'}</h3>
+      <table>
+        <thead><tr>
+          <th>#</th><th>${isRTL ? 'اليوم' : 'Day'}</th><th>${isRTL ? 'التاريخ' : 'Date'}</th><th>${isRTL ? 'الحضور' : 'Check In'}</th><th>${isRTL ? 'الانصراف' : 'Check Out'}</th><th>${isRTL ? 'الساعات' : 'Hours'}</th><th>${isRTL ? 'تأخير' : 'Late'}</th><th>${isRTL ? 'الحالة' : 'Status'}</th><th>${isRTL ? 'ملاحظات' : 'Notes'}</th>
+        </tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+      <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;">
+          <h3 style="margin:0 0 8px;font-size:14px;">${isRTL ? 'ملخص الشهر' : 'Monthly Summary'}</h3>
+          <p style="font-size:12px;margin:4px 0;">${isRTL ? 'أيام الحضور / أيام العمل:' : 'Present / Working Days:'} ${kpis.presentDays} / ${kpis.workingDays}</p>
+          <p style="font-size:12px;margin:4px 0;">${isRTL ? 'إجمالي التأخير:' : 'Total Late:'} ${summary.totalLateMinutes} ${isRTL ? 'دقيقة' : 'min'}</p>
+          <p style="font-size:12px;margin:4px 0;">${isRTL ? 'عجز الساعات:' : 'Deficit Hours:'} ${summary.totalDeficitHours} ${isRTL ? 'ساعة' : 'h'}</p>
+          <p style="font-size:12px;margin:4px 0;">${isRTL ? 'الساعات المطلوبة:' : 'Required Hours:'} ${hoursSummary.requiredHours}h — ${isRTL ? 'الفعلية:' : 'Actual:'} ${hoursSummary.actualHours.toFixed(1)}h</p>
+        </div>
+        ${leaveSection}
+      </div>
+      <script>window.onload=()=>{window.print();}</script>
+    </body></html>`;
+
+    const w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
+  };
 
   // Employee display
   const empName = employee ? (isRTL ? employee.full_name_ar : (employee.full_name_en || employee.full_name_ar)) : '';
@@ -303,6 +455,11 @@ export default function EmployeeAttendanceSummary() {
             <Printer size={14} className={isRTL ? 'ml-1' : 'mr-1'} />
             {isRTL ? 'طباعة' : 'Print'}
           </Button>
+          <ExportButton
+            data={exportData}
+            filename={isRTL ? `حضور_${empName}` : `attendance_${empName}`}
+            title={isRTL ? 'سجل الحضور' : 'Attendance Record'}
+          />
         </div>
       </div>
 
@@ -319,6 +476,43 @@ export default function EmployeeAttendanceSummary() {
             <KpiCard icon={Clock} label={isRTL ? 'إجمالي الساعات' : 'Total Hours'} value={String(kpis.totalHours || 0)} color="#4A7AAB" />
             <KpiCard icon={CheckCircle2} label={isRTL ? 'نسبة الحضور' : 'Attendance %'} value={String(kpis.rate || 0) + '%'} color="#22C55E" />
           </div>
+
+          {/* ── Attendance Chart ─────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <BarChart3 size={16} className="text-brand-500" />
+                <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'رسم بياني للحضور اليومي' : 'Daily Attendance Chart'}</p>
+              </div>
+            </CardHeader>
+            <div className="p-4">
+              <div className="flex items-end gap-0.5 h-32">
+                {dailyRows.map(day => {
+                  const isPresent = day.status === 'present' || day.status === 'remote' || day.status === 'field_work';
+                  const isAbsent = day.status === 'absent' || day.status === 'absent_no_notice' || day.status === 'absent_prior_notice';
+                  const isLeave = LEAVE_STATUSES.includes(day.status);
+                  const isOff = day.status === 'weekend' || day.status === 'holiday';
+                  const colorClass = isPresent ? 'bg-green-500' : isAbsent ? 'bg-red-500' : isLeave ? 'bg-blue-500' : isOff ? 'bg-gray-300 dark:bg-gray-600' : 'bg-gray-200 dark:bg-gray-700';
+                  const barHeight = isPresent && day.hours > 0 ? `${Math.min(100, (day.hours / 10) * 100)}%` : isAbsent ? '15%' : isLeave ? '30%' : isOff ? '10%' : '5%';
+                  return (
+                    <div key={day.dateStr} className="flex-1 flex flex-col items-center group relative" title={`${day.dateStr}: ${day.hours.toFixed(1)}h`}>
+                      <div
+                        style={{ height: barHeight }}
+                        className={`w-full min-h-[2px] rounded-t ${colorClass} transition-all hover:opacity-80`}
+                      />
+                      <span className="text-[8px] mt-1 text-content-muted dark:text-content-muted-dark">{day.day}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex items-center justify-center gap-4 mt-3 text-[10px] text-content-muted dark:text-content-muted-dark">
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-green-500 inline-block" /> {isRTL ? 'حاضر' : 'Present'}</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-500 inline-block" /> {isRTL ? 'غائب' : 'Absent'}</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-500 inline-block" /> {isRTL ? 'إجازة' : 'Leave'}</span>
+                <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-300 dark:bg-gray-600 inline-block" /> {isRTL ? 'عطلة' : 'Off'}</span>
+              </div>
+            </div>
+          </Card>
 
           {/* ── Section 1: Daily Attendance Table ──────────────── */}
           <Card>
@@ -456,6 +650,150 @@ export default function EmployeeAttendanceSummary() {
                 </p>
                 <p className="text-xl font-bold text-gray-600">{summary.exceptionDays} {isRTL ? 'يوم' : 'days'}</p>
               </div>
+            </div>
+          </Card>
+
+          {/* ── Hours Summary ────────────────────────────────── */}
+          <Card>
+            <CardHeader><p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'ملخص الساعات' : 'Hours Summary'}</p></CardHeader>
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="text-center">
+                  <p className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الساعات المطلوبة' : 'Required Hours'}</p>
+                  <p className="text-2xl font-bold text-content dark:text-content-dark">{hoursSummary.requiredHours}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الساعات الفعلية' : 'Actual Hours'}</p>
+                  <p className="text-2xl font-bold text-brand-500">{hoursSummary.actualHours.toFixed(1)}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الفرق' : 'Difference'}</p>
+                  <p className={`text-2xl font-bold ${hoursSummary.difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {hoursSummary.difference >= 0 ? '+' : ''}{hoursSummary.difference.toFixed(1)}
+                  </p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النسبة المئوية' : 'Percentage'}</p>
+                  <p className="text-2xl font-bold text-content dark:text-content-dark">{hoursSummary.percentage}%</p>
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-content-muted dark:text-content-muted-dark">
+                    {hoursSummary.actualHours.toFixed(1)} / {hoursSummary.requiredHours} {isRTL ? 'ساعة' : 'hours'}
+                  </span>
+                  <span className={`text-xs font-semibold ${hoursSummary.difference >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {hoursSummary.difference >= 0 ? (isRTL ? 'فائض' : 'Surplus') : (isRTL ? 'عجز' : 'Deficit')}
+                  </span>
+                </div>
+                <div className="w-full h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${hoursSummary.percentage >= 90 ? 'bg-green-500' : hoursSummary.percentage >= 70 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                    style={{ width: `${hoursSummary.percentage}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* ── Month Comparison ──────────────────────────────── */}
+          <Card>
+            <CardHeader><p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'مقارنة بالشهر السابق' : 'Previous Month Comparison'}</p></CardHeader>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+              {/* Present Days comparison */}
+              {(() => {
+                const diff = kpis.presentDays - prevKpis.presentDays;
+                const isUp = diff > 0;
+                const isDown = diff < 0;
+                return (
+                  <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
+                    <p className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'أيام الحضور' : 'Present Days'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-bold text-green-600">{kpis.presentDays}</p>
+                      <span className="text-sm text-content-muted dark:text-content-muted-dark">vs {prevKpis.presentDays}</span>
+                    </div>
+                    {diff !== 0 && (
+                      <div className={`flex items-center gap-1 mt-1 text-xs font-semibold ${isUp ? 'text-green-600' : 'text-red-600'}`}>
+                        {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        {isUp
+                          ? (isRTL ? `↑ ${diff} أيام حضور أكثر` : `↑ ${diff} more present days`)
+                          : (isRTL ? `↓ ${Math.abs(diff)} أيام حضور أقل` : `↓ ${Math.abs(diff)} fewer present days`)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Absent Days comparison */}
+              {(() => {
+                const diff = kpis.absentDays - prevKpis.absentDays;
+                const isUp = diff > 0;
+                return (
+                  <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/20">
+                    <p className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'أيام الغياب' : 'Absent Days'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-bold text-red-600">{kpis.absentDays}</p>
+                      <span className="text-sm text-content-muted dark:text-content-muted-dark">vs {prevKpis.absentDays}</span>
+                    </div>
+                    {diff !== 0 && (
+                      <div className={`flex items-center gap-1 mt-1 text-xs font-semibold ${isUp ? 'text-red-600' : 'text-green-600'}`}>
+                        {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        {isUp
+                          ? (isRTL ? `↑ ${diff} أيام غياب أكثر` : `↑ ${diff} more absent days`)
+                          : (isRTL ? `↓ ${Math.abs(diff)} أيام غياب أقل` : `↓ ${Math.abs(diff)} fewer absent days`)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Late Minutes comparison */}
+              {(() => {
+                const diff = kpis.totalLateMinutes - prevKpis.totalLateMinutes;
+                const isUp = diff > 0;
+                return (
+                  <div className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
+                    <p className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'دقائق التأخير' : 'Late Minutes'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-bold text-yellow-600">{kpis.totalLateMinutes}</p>
+                      <span className="text-sm text-content-muted dark:text-content-muted-dark">vs {prevKpis.totalLateMinutes}</span>
+                    </div>
+                    {diff !== 0 && (
+                      <div className={`flex items-center gap-1 mt-1 text-xs font-semibold ${isUp ? 'text-red-600' : 'text-green-600'}`}>
+                        {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        {isUp
+                          ? (isRTL ? `↑ ${diff} دقيقة تأخير أكثر` : `↑ ${diff} more late minutes`)
+                          : (isRTL ? `↓ ${Math.abs(diff)} دقيقة تأخير أقل` : `↓ ${Math.abs(diff)} fewer late minutes`)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Hours comparison */}
+              {(() => {
+                const curr = parseFloat(kpis.totalHours);
+                const prev = parseFloat(prevKpis.totalHours);
+                const diff = curr - prev;
+                const isUp = diff > 0;
+                return (
+                  <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+                    <p className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'ساعات العمل' : 'Hours Worked'}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xl font-bold text-blue-600">{kpis.totalHours}</p>
+                      <span className="text-sm text-content-muted dark:text-content-muted-dark">vs {prevKpis.totalHours}</span>
+                    </div>
+                    {Math.abs(diff) > 0.1 && (
+                      <div className={`flex items-center gap-1 mt-1 text-xs font-semibold ${isUp ? 'text-green-600' : 'text-red-600'}`}>
+                        {isUp ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                        {isUp
+                          ? (isRTL ? `↑ ${diff.toFixed(1)} ساعات أكثر` : `↑ ${diff.toFixed(1)} more hours`)
+                          : (isRTL ? `↓ ${Math.abs(diff).toFixed(1)} ساعات أقل` : `↓ ${Math.abs(diff).toFixed(1)} fewer hours`)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           </Card>
 

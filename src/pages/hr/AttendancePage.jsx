@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { fetchEmployees } from '../../services/employeesService';
+import { fetchEmployees, fetchDepartments } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
-import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Upload, Plus, Pencil, Trash2, ChevronDown, ChevronUp, Eraser } from 'lucide-react';
-import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton, ExportButton, Select, Button, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
+import { Clock, CheckCircle2, XCircle, AlertCircle, Calendar, Upload, Plus, Pencil, Trash2, ChevronDown, ChevronUp, Eraser, Search, Users, AlertTriangle } from 'lucide-react';
+import { KpiCard, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, PageSkeleton, ExportButton, Select, Button, Pagination, SmartFilter, applySmartFilters, Input } from '../../components/ui';
 import ImportAttendanceModal from '../../components/hr/ImportAttendanceModal';
 import supabase from '../../lib/supabase';
 
@@ -193,7 +193,7 @@ function AttendanceFormModal({ open, onClose, onSaved, employees, record, lang, 
 
 // ── Employee Detail Panel (inline expand) ────────────────────
 
-function EmployeeDetailRows({ emp, records, isRTL, lang, onEdit, onDelete }) {
+function EmployeeDetailRows({ emp, records, isRTL, lang, onEdit, onDelete, onQuickStatus }) {
   if (!records.length) {
     return (
       <Tr>
@@ -211,7 +211,15 @@ function EmployeeDetailRows({ emp, records, isRTL, lang, onEdit, onDelete }) {
       <Td className="text-xs font-mono text-content dark:text-content-dark">{rec.check_in || '—'}</Td>
       <Td className="text-xs font-mono text-content dark:text-content-dark">{rec.check_out || '—'}</Td>
       <Td>
-        <StatusBadge status={rec.status} lang={lang} />
+        <select
+          value={rec.status}
+          onChange={e => onQuickStatus(rec, e.target.value)}
+          className="text-xs px-1.5 py-0.5 rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-content dark:text-content-dark cursor-pointer"
+        >
+          {Object.entries(STATUS_MAP).map(([key, val]) => (
+            <option key={key} value={key}>{lang === 'ar' ? val.ar : val.en}</option>
+          ))}
+        </select>
       </Td>
       <Td>
         <div className="flex items-center gap-1">
@@ -229,7 +237,7 @@ function EmployeeDetailRows({ emp, records, isRTL, lang, onEdit, onDelete }) {
 
 // ── Attendance Row (with expand) ─────────────────────────────
 
-function AttendanceRow({ emp, attendance, isRTL, lang, expanded, onToggle, onEdit, onDelete }) {
+function AttendanceRow({ emp, attendance, isRTL, lang, expanded, onToggle, onEdit, onDelete, onQuickStatus }) {
   const recs = attendance[emp.id] || attendance[emp.employee_id] || [];
   const p = recs.filter(r => r.status === 'present' || (r.check_in && r.status !== 'absent' && r.status !== 'leave')).length;
   const a = recs.filter(r => r.status === 'absent' || r.absent).length;
@@ -244,9 +252,11 @@ function AttendanceRow({ emp, attendance, isRTL, lang, expanded, onToggle, onEdi
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
   const ini = name.split(' ').map(w => w[0]).filter(Boolean).join('').substring(0, 2).toUpperCase() || '??';
 
+  const rowBg = rate < 70 ? 'bg-red-500/5' : rate < 90 ? 'bg-yellow-500/5' : '';
+
   return (
     <>
-      <Tr className="cursor-pointer hover:bg-brand-500/5 transition-colors" onClick={onToggle}>
+      <Tr className={`cursor-pointer hover:bg-brand-500/5 transition-colors ${rowBg}`} onClick={onToggle}>
         <Td>
           <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className="w-8 h-8 rounded-[9px] bg-[#2B4C6F] flex items-center justify-center shrink-0">
@@ -280,9 +290,84 @@ function AttendanceRow({ emp, attendance, isRTL, lang, expanded, onToggle, onEdi
         </Td>
       </Tr>
       {expanded && (
-        <EmployeeDetailRows emp={emp} records={recs} isRTL={isRTL} lang={lang} onEdit={onEdit} onDelete={onDelete} />
+        <EmployeeDetailRows emp={emp} records={recs} isRTL={isRTL} lang={lang} onEdit={onEdit} onDelete={onDelete} onQuickStatus={onQuickStatus} />
       )}
     </>
+  );
+}
+
+// ── Bulk Mark Today Modal ───────────────────────────────────
+
+function BulkMarkTodayModal({ open, onClose, employees, onSaved, lang, isRTL }) {
+  const [checked, setChecked] = useState(() => employees.map(e => e.id));
+  const [saving, setSaving] = useState(false);
+
+  const toggle = (id) => {
+    setChecked(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const toggleAll = () => {
+    setChecked(prev => prev.length === employees.length ? [] : employees.map(e => e.id));
+  };
+
+  const handleSave = async () => {
+    if (!checked.length) return;
+    setSaving(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date().toTimeString().slice(0, 5);
+    const rows = checked.map(empId => ({
+      employee_id: empId,
+      date: today,
+      check_in: now,
+      status: 'present',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .upsert(rows, { onConflict: 'employee_id,date' });
+      if (error) throw error;
+      onSaved();
+      onClose();
+    } catch (err) {
+      console.error('Bulk mark failed:', err);
+    }
+    setSaving(false);
+  };
+
+  if (!open) return null;
+
+  return (
+    <Modal open={open} onClose={onClose} title={lang === 'ar' ? 'تسجيل حضور اليوم' : 'Mark Today\'s Attendance'} size="md">
+      <div dir={isRTL ? 'rtl' : 'ltr'} className="space-y-3">
+        <div className="flex items-center gap-2 mb-2">
+          <input type="checkbox" checked={checked.length === employees.length} onChange={toggleAll} className="rounded" />
+          <span className="text-xs font-bold text-content dark:text-content-dark">
+            {lang === 'ar' ? `تحديد الكل (${checked.length}/${employees.length})` : `Select All (${checked.length}/${employees.length})`}
+          </span>
+        </div>
+        <div className="max-h-64 overflow-y-auto space-y-1">
+          {employees.map(emp => {
+            const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
+            return (
+              <label key={emp.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-brand-500/5 cursor-pointer">
+                <input type="checkbox" checked={checked.includes(emp.id)} onChange={() => toggle(emp.id)} className="rounded" />
+                <span className="text-xs text-content dark:text-content-dark">{name}</span>
+                <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-auto">{emp.employee_number || ''}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+      <ModalFooter>
+        <Button variant="secondary" onClick={onClose}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+        <Button onClick={handleSave} disabled={saving || !checked.length}>
+          {saving ? (lang === 'ar' ? 'جاري التسجيل...' : 'Saving...') : (lang === 'ar' ? `تسجيل حضور ${checked.length} موظف` : `Mark ${checked.length} Present`)}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }
 
@@ -304,6 +389,13 @@ export default function AttendancePage() {
   const [showForm, setShowForm] = useState(false);
   const [editRecord, setEditRecord] = useState(null);
   const [expandedEmp, setExpandedEmp] = useState(null);
+  const [departments, setDepartments] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [viewMode, setViewMode] = useState('monthly'); // 'monthly' | 'weekly'
+  const [selectedWeek, setSelectedWeek] = useState(1);
+  const [showBulkModal, setShowBulkModal] = useState(false);
   const { showToast } = useToast();
 
   const { auditFields, applyAuditFilters } = useAuditFilter('attendance');
@@ -313,9 +405,11 @@ export default function AttendancePage() {
     Promise.all([
       fetchEmployees(),
       fetchAttendance({ month, year }),
-    ]).then(([empData, attData]) => {
+      fetchDepartments(),
+    ]).then(([empData, attData, deptData]) => {
       setEmployees(empData);
       setAllRecords(attData);
+      setDepartments(deptData);
       setLoading(false);
     });
   }, [month, year]);
@@ -353,8 +447,33 @@ export default function AttendancePage() {
     let result = employees;
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
     result = applyAuditFilters(result, smartFilters);
+    // Search by name
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      result = result.filter(emp =>
+        (emp.full_name_ar || '').toLowerCase().includes(q) ||
+        (emp.full_name_en || '').toLowerCase().includes(q) ||
+        (emp.employee_number || '').toLowerCase().includes(q)
+      );
+    }
+    // Department filter
+    if (deptFilter) {
+      result = result.filter(emp => String(emp.department_id) === String(deptFilter));
+    }
+    // Status filter (filter employees by their dominant status this month)
+    if (statusFilter) {
+      result = result.filter(emp => {
+        const recs = attendance[emp.id] || attendance[emp.employee_id] || [];
+        if (statusFilter === 'present') return recs.some(r => r.status === 'present');
+        if (statusFilter === 'absent') return recs.some(r => r.status === 'absent' || r.status === 'absent_no_notice' || r.status === 'absent_prior_notice');
+        if (statusFilter === 'late') return recs.some(r => r.status === 'late');
+        if (statusFilter === 'leave') return recs.some(r => r.status?.includes('leave'));
+        if (statusFilter === 'remote') return recs.some(r => r.status === 'remote');
+        return true;
+      });
+    }
     return result;
-  }, [employees, smartFilters, SMART_FIELDS]);
+  }, [employees, smartFilters, SMART_FIELDS, searchTerm, deptFilter, statusFilter, attendance]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -383,6 +502,80 @@ export default function AttendancePage() {
     setShowForm(false);
     setEditRecord(null);
   };
+
+  const handleQuickStatus = async (rec, newStatus) => {
+    if (!rec.id) return;
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', rec.id);
+      if (error) throw error;
+      showToast(lang === 'ar' ? 'تم تحديث الحالة' : 'Status updated', 'success');
+      refreshData();
+    } catch {
+      showToast(lang === 'ar' ? 'فشل التحديث' : 'Update failed', 'error');
+    }
+  };
+
+  // Alerts: consecutive absences & low leave balance
+  const alerts = useMemo(() => {
+    const items = [];
+    employees.forEach(emp => {
+      const recs = (attendance[emp.id] || attendance[emp.employee_id] || [])
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date));
+      // Check consecutive absences
+      let maxConsec = 0, consec = 0;
+      recs.forEach(r => {
+        if (r.status === 'absent' || r.status === 'absent_no_notice' || r.status === 'absent_prior_notice') {
+          consec++;
+          if (consec > maxConsec) maxConsec = consec;
+        } else {
+          consec = 0;
+        }
+      });
+      if (maxConsec >= 3) {
+        const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
+        items.push({
+          type: 'danger',
+          message: lang === 'ar'
+            ? `${name} غائب ${maxConsec} أيام متتالية`
+            : `${name} absent ${maxConsec} consecutive days`,
+        });
+      }
+      // Check low leave balance
+      if (emp.leave_balance !== undefined && emp.leave_balance !== null && emp.leave_balance < 3) {
+        const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
+        items.push({
+          type: 'warning',
+          message: lang === 'ar'
+            ? `${name} رصيد إجازاته ${emp.leave_balance} يوم فقط`
+            : `${name} has only ${emp.leave_balance} leave days remaining`,
+        });
+      }
+    });
+    return items;
+  }, [employees, attendance, isRTL, lang]);
+
+  // Weekly view helpers
+  const weekDays = useMemo(() => {
+    if (viewMode !== 'weekly') return [];
+    const firstDay = new Date(year, month - 1, 1);
+    const startOffset = (selectedWeek - 1) * 7;
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(firstDay);
+      d.setDate(d.getDate() + startOffset + i);
+      if (d.getMonth() === month - 1) {
+        days.push(d.toISOString().slice(0, 10));
+      }
+    }
+    return days;
+  }, [viewMode, selectedWeek, month, year]);
+
+  const DAY_NAMES_AR = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+  const DAY_NAMES_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const MONTHS_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
 
@@ -456,6 +649,51 @@ export default function AttendancePage() {
           </div>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
+          {/* Search */}
+          <div className="relative">
+            <Search size={14} className="absolute top-1/2 -translate-y-1/2 start-2.5 text-content-muted pointer-events-none" />
+            <input
+              type="text"
+              placeholder={lang === 'ar' ? 'بحث بالاسم...' : 'Search name...'}
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
+              className="ps-8 pe-3 py-1.5 text-xs rounded-lg border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark text-content dark:text-content-dark w-36"
+            />
+          </div>
+          {/* Department Filter */}
+          <Select value={deptFilter} onChange={e => { setDeptFilter(e.target.value); setPage(1); }}>
+            <option value="">{lang === 'ar' ? 'كل الأقسام' : 'All Depts'}</option>
+            {departments.map(d => <option key={d.id} value={d.id}>{isRTL ? d.name_ar : (d.name_en || d.name_ar)}</option>)}
+          </Select>
+          {/* Status Filter */}
+          <Select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
+            <option value="">{lang === 'ar' ? 'كل الحالات' : 'All Status'}</option>
+            <option value="present">{lang === 'ar' ? 'حاضر' : 'Present'}</option>
+            <option value="absent">{lang === 'ar' ? 'غائب' : 'Absent'}</option>
+            <option value="late">{lang === 'ar' ? 'متأخر' : 'Late'}</option>
+            <option value="leave">{lang === 'ar' ? 'إجازة' : 'Leave'}</option>
+            <option value="remote">{lang === 'ar' ? 'عن بعد' : 'Remote'}</option>
+          </Select>
+          {/* View Toggle */}
+          <div className="flex rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
+            <button
+              onClick={() => setViewMode('monthly')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'monthly' ? 'bg-brand-500 text-white' : 'bg-surface dark:bg-surface-dark text-content dark:text-content-dark hover:bg-brand-500/10'}`}
+            >
+              {lang === 'ar' ? 'شهري' : 'Monthly'}
+            </button>
+            <button
+              onClick={() => setViewMode('weekly')}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${viewMode === 'weekly' ? 'bg-brand-500 text-white' : 'bg-surface dark:bg-surface-dark text-content dark:text-content-dark hover:bg-brand-500/10'}`}
+            >
+              {lang === 'ar' ? 'أسبوعي' : 'Weekly'}
+            </button>
+          </div>
+          {viewMode === 'weekly' && (
+            <Select value={selectedWeek} onChange={e => setSelectedWeek(+e.target.value)}>
+              {[1, 2, 3, 4, 5].map(w => <option key={w} value={w}>{lang === 'ar' ? `أسبوع ${w}` : `Week ${w}`}</option>)}
+            </Select>
+          )}
           <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
           <Select value={month} onChange={e => setMonth(+e.target.value)}>
             {MONTHS_AR.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
@@ -502,6 +740,9 @@ export default function AttendancePage() {
               )}
             </div>
           )}
+          <Button variant="secondary" size="md" onClick={() => setShowBulkModal(true)}>
+            <CheckCircle2 size={14} />{lang === 'ar' ? 'تسجيل حضور اليوم' : 'Mark Today'}
+          </Button>
           <Button variant="secondary" size="md" onClick={() => { setEditRecord(null); setShowForm(true); }}>
             <Plus size={14} />{lang === 'ar' ? 'إضافة سجل' : 'Add Record'}
           </Button>
@@ -531,7 +772,80 @@ export default function AttendancePage() {
         <KpiCard icon={Calendar} label={lang === 'ar' ? 'إجازة' : 'Leave'} value={stats.leave} color="#8BA8C8" />
       </div>
 
-      {/* Attendance Table */}
+      {/* Alerts Section */}
+      {alerts.length > 0 && (
+        <div className="mb-5 space-y-2">
+          {alerts.map((alert, i) => (
+            <div key={i} className={`flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-xs font-medium ${
+              alert.type === 'danger'
+                ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20'
+                : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border border-yellow-500/20'
+            }`}>
+              <AlertTriangle size={14} />
+              {alert.message}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Weekly View */}
+      {viewMode === 'weekly' && (
+        <Card className="overflow-hidden mb-5">
+          <CardHeader>
+            <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
+              {lang === 'ar' ? `أسبوع ${selectedWeek} - ${MONTHS_AR[month - 1]}` : `Week ${selectedWeek} - ${MONTHS_AR[month - 1]}`}
+            </p>
+          </CardHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <thead>
+                <tr>
+                  <Th>{lang === 'ar' ? 'الموظف' : 'Employee'}</Th>
+                  {weekDays.map((d, i) => {
+                    const dayOfWeek = new Date(d).getDay();
+                    return (
+                      <Th key={d} className="text-center min-w-[80px]">
+                        <div className="text-xs">{isRTL ? DAY_NAMES_AR[dayOfWeek] : DAY_NAMES_EN[dayOfWeek]}</div>
+                        <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{d.slice(8)}</div>
+                      </Th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map(emp => {
+                  const recs = attendance[emp.id] || attendance[emp.employee_id] || [];
+                  const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar || '';
+                  return (
+                    <Tr key={emp.id}>
+                      <Td className="text-xs font-bold text-content dark:text-content-dark whitespace-nowrap">{name}</Td>
+                      {weekDays.map(d => {
+                        const rec = recs.find(r => r.date === d);
+                        return (
+                          <Td key={d} className="text-center">
+                            {rec ? (
+                              <div>
+                                {rec.check_in && <div className="text-[10px] font-mono text-content-muted dark:text-content-muted-dark">{rec.check_in}</div>}
+                                <StatusBadge status={rec.status} lang={lang} />
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-content-muted dark:text-content-muted-dark">—</span>
+                            )}
+                          </Td>
+                        );
+                      })}
+                    </Tr>
+                  );
+                })}
+              </tbody>
+            </Table>
+          </div>
+          <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
+        </Card>
+      )}
+
+      {/* Attendance Table (Monthly) */}
+      {viewMode === 'monthly' && (
       <Card className="overflow-hidden">
         <CardHeader>
           <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? `حضور ${MONTHS_AR[month - 1]}` : `${MONTHS_AR[month - 1]} Attendance`}</p>
@@ -572,12 +886,14 @@ export default function AttendancePage() {
                 onToggle={() => setExpandedEmp(expandedEmp === emp.id ? null : emp.id)}
                 onEdit={handleEdit}
                 onDelete={handleDeleteRecord}
+                onQuickStatus={handleQuickStatus}
               />
             ))}
           </tbody>
         </Table>
         <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
       </Card>
+      )}
 
       {/* Import Modal */}
       <ImportAttendanceModal
@@ -596,6 +912,18 @@ export default function AttendancePage() {
         lang={lang}
         isRTL={isRTL}
       />
+
+      {/* Bulk Mark Today Modal */}
+      {showBulkModal && (
+        <BulkMarkTodayModal
+          open={showBulkModal}
+          onClose={() => setShowBulkModal(false)}
+          employees={employees}
+          onSaved={() => { refreshData(); showToast(lang === 'ar' ? 'تم تسجيل الحضور' : 'Attendance marked', 'success'); }}
+          lang={lang}
+          isRTL={isRTL}
+        />
+      )}
     </div>
   );
 }

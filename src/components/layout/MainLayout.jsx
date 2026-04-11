@@ -41,6 +41,16 @@ export default function MainLayout() {
     if (!isMobile) setSidebarOpen(false);
   }, [isMobile]);
 
+  // Auto-request push notification permission after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Global error banner for service failures
   const [serviceError, setServiceError] = useState(null);
   useEffect(() => {

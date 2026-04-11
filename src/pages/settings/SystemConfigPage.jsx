@@ -11,6 +11,7 @@ import {
   Settings, Users, GitBranch, Building2, Briefcase, Shield,
   GripVertical, Plus, X, Trash2, RotateCcw, Save,
   ChevronDown, ChevronUp, ThumbsDown, Zap, SlidersHorizontal, XCircle,
+  Bell, Target, UserCog,
 } from 'lucide-react';
 
 // ─── Tab: Contact Types ───────────────────────────────────────────────
@@ -1099,6 +1100,234 @@ function DrawerFieldsTab({ config, updateSection, isRTL, toast }) {
   );
 }
 
+// ─── Tab: General Settings ────────────────────────────────────────────
+function GeneralSettingsTab({ config, updateSection, isRTL, toast }) {
+  const [settings, setSettings] = useState(() => ({
+    monthly_sales_target: config.monthly_sales_target || 0,
+    inactive_days: config.contactsSettings?.inactiveDays || 5,
+    hide_previous_agent_history: config.hide_previous_agent_history || false,
+    default_task_priority: config.default_task_priority || 'medium',
+    task_reminder_minutes: config.task_reminder_minutes || 30,
+  }));
+
+  const handleSave = () => {
+    updateSection('monthly_sales_target', settings.monthly_sales_target);
+    updateSection('hide_previous_agent_history', settings.hide_previous_agent_history);
+    updateSection('default_task_priority', settings.default_task_priority);
+    updateSection('task_reminder_minutes', settings.task_reminder_minutes);
+    updateSection('contactsSettings', { ...(config.contactsSettings || {}), inactiveDays: settings.inactive_days });
+    toast.success(isRTL ? 'تم الحفظ' : 'Saved');
+  };
+
+  const fields = [
+    { key: 'monthly_sales_target', label: isRTL ? 'تارجت المبيعات الشهري (EGP)' : 'Monthly Sales Target (EGP)', type: 'number', placeholder: '500000' },
+    { key: 'inactive_days', label: isRTL ? 'أيام الـ Inactive التلقائي' : 'Auto-Inactive Days', type: 'number', placeholder: '5', hint: isRTL ? 'بعد كام يوم بدون نشاط الليد يبقى inactive' : 'Days without activity before lead becomes inactive' },
+    { key: 'task_reminder_minutes', label: isRTL ? 'تذكير قبل المهمة (دقيقة)' : 'Task Reminder (minutes)', type: 'number', placeholder: '30' },
+    { key: 'default_task_priority', label: isRTL ? 'أولوية المهمة الافتراضية' : 'Default Task Priority', type: 'select', options: [
+      { value: 'high', label: isRTL ? 'عالية' : 'High' },
+      { value: 'medium', label: isRTL ? 'متوسطة' : 'Medium' },
+      { value: 'low', label: isRTL ? 'منخفضة' : 'Low' },
+    ]},
+    { key: 'hide_previous_agent_history', label: isRTL ? 'إخفاء تاريخ السيلز السابق' : 'Hide Previous Agent History', type: 'toggle', hint: isRTL ? 'السيلز الجديد مش يشوف أنشطة السيلز القديم' : 'New agent cannot see previous agent activities' },
+  ];
+
+  return (
+    <Card className="p-5">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
+          <Settings size={16} className="text-brand-500" />
+          {isRTL ? 'إعدادات عامة' : 'General Settings'}
+        </h3>
+        <Button variant="primary" size="sm" onClick={handleSave}><Save size={13} /> {isRTL ? 'حفظ' : 'Save'}</Button>
+      </div>
+      <div className="space-y-4">
+        {fields.map(f => (
+          <div key={f.key}>
+            <label className="block text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{f.label}</label>
+            {f.type === 'number' && (
+              <Input type="number" value={settings[f.key]} onChange={e => setSettings(p => ({ ...p, [f.key]: Number(e.target.value) || 0 }))} placeholder={f.placeholder} className="max-w-[300px]" />
+            )}
+            {f.type === 'select' && (
+              <select value={settings[f.key]} onChange={e => setSettings(p => ({ ...p, [f.key]: e.target.value }))}
+                className="px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm max-w-[300px] w-full">
+                {f.options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            )}
+            {f.type === 'toggle' && (
+              <button onClick={() => setSettings(p => ({ ...p, [f.key]: !p[f.key] }))}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold cursor-pointer transition-colors ${
+                  settings[f.key] ? 'bg-brand-500/10 border-brand-500/30 text-brand-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
+                }`}>
+                {settings[f.key] ? (isRTL ? '✓ مفعّل' : '✓ Enabled') : (isRTL ? '✗ معطّل' : '✗ Disabled')}
+              </button>
+            )}
+            {f.hint && <p className="m-0 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">{f.hint}</p>}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Tab: Notification Settings ──────────────────────────────────────
+function NotificationSettingsTab({ config, updateSection, isRTL, toast }) {
+  const NOTIF_TYPES = [
+    { key: 'lead_assigned', ar: 'تعيين ليد جديد', en: 'Lead Assigned' },
+    { key: 'task_assigned', ar: 'تعيين مهمة', en: 'Task Assigned' },
+    { key: 'task_overdue', ar: 'مهمة متأخرة', en: 'Task Overdue' },
+    { key: 'deal_won', ar: 'صفقة ناجحة', en: 'Deal Won' },
+    { key: 'opportunity_update', ar: 'تحديث فرصة', en: 'Opportunity Update' },
+    { key: 'stage_change', ar: 'تغيير مرحلة', en: 'Stage Change' },
+    { key: 'reminder', ar: 'تذكير', en: 'Reminder' },
+    { key: 'system', ar: 'إشعار نظام', en: 'System Alert' },
+  ];
+
+  const [prefs, setPrefs] = useState(() => {
+    const saved = config.notificationPreferences || {};
+    const defaults = {};
+    NOTIF_TYPES.forEach(t => { defaults[t.key] = saved[t.key] !== false; });
+    return defaults;
+  });
+
+  const handleSave = () => {
+    updateSection('notificationPreferences', prefs);
+    toast.success(isRTL ? 'تم الحفظ' : 'Saved');
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
+          <Bell size={16} className="text-amber-500" />
+          {isRTL ? 'إعدادات الإشعارات' : 'Notification Settings'}
+        </h3>
+        <Button variant="primary" size="sm" onClick={handleSave}><Save size={13} /> {isRTL ? 'حفظ' : 'Save'}</Button>
+      </div>
+      <div className="space-y-2">
+        {NOTIF_TYPES.map(t => (
+          <div key={t.key} className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-surface-bg dark:bg-surface-bg-dark">
+            <span className="text-xs font-medium text-content dark:text-content-dark">{isRTL ? t.ar : t.en}</span>
+            <button onClick={() => setPrefs(p => ({ ...p, [t.key]: !p[t.key] }))}
+              className={`w-10 h-5 rounded-full relative transition-colors cursor-pointer border-none ${prefs[t.key] ? 'bg-brand-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
+              <div className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-all ${prefs[t.key] ? 'end-0.5' : 'start-0.5'}`} />
+            </button>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ─── Tab: User Management ────────────────────────────────────────────
+function UserManagementTab({ isRTL, toast }) {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editUser, setEditUser] = useState(null);
+
+  useEffect(() => {
+    import('../../lib/supabase').then(({ default: supabase }) => {
+      supabase.from('users').select('id, full_name_en, full_name_ar, email, role, team_id')
+        .order('full_name_en').then(({ data }) => {
+          setUsers(data || []);
+          setLoading(false);
+        });
+    });
+  }, []);
+
+  const ROLES = [
+    { value: 'admin', label: 'Admin' },
+    { value: 'sales_director', label: 'Sales Director' },
+    { value: 'sales_manager', label: 'Sales Manager' },
+    { value: 'team_leader', label: 'Team Leader' },
+    { value: 'sales_agent', label: 'Sales Agent' },
+    { value: 'marketing', label: 'Marketing' },
+    { value: 'hr', label: 'HR' },
+    { value: 'finance', label: 'Finance' },
+    { value: 'operations', label: 'Operations' },
+  ];
+
+  const handleSaveUser = async (user) => {
+    try {
+      const { default: supabase } = await import('../../lib/supabase');
+      const { error } = await supabase.from('users').update({
+        full_name_en: user.full_name_en,
+        full_name_ar: user.full_name_ar,
+        role: user.role,
+      }).eq('id', user.id);
+      if (error) throw error;
+      setUsers(prev => prev.map(u => u.id === user.id ? { ...u, ...user } : u));
+      setEditUser(null);
+      toast.success(isRTL ? 'تم تحديث المستخدم' : 'User updated');
+    } catch (err) {
+      toast.error(isRTL ? 'فشل التحديث: ' + (err?.message || '') : 'Update failed: ' + (err?.message || ''));
+    }
+  };
+
+  return (
+    <Card className="p-5">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
+          <UserCog size={16} className="text-purple-500" />
+          {isRTL ? 'إدارة المستخدمين' : 'User Management'}
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-semibold">{users.length}</span>
+        </h3>
+      </div>
+      {loading ? (
+        <p className="text-xs text-content-muted dark:text-content-muted-dark text-center py-8">{isRTL ? 'جاري التحميل...' : 'Loading...'}</p>
+      ) : (
+        <div className="space-y-2">
+          {users.map(u => (
+            <div key={u.id} className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-surface-bg dark:bg-surface-bg-dark">
+              <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-xs font-bold text-brand-500">
+                {(u.full_name_en || u.full_name_ar || '?').charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{u.full_name_en || u.full_name_ar}</p>
+                <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark">{u.email || u.role}</p>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold shrink-0">{u.role}</span>
+              <button onClick={() => setEditUser({ ...u })}
+                className="text-xs text-brand-500 bg-transparent border-none cursor-pointer p-1 hover:bg-brand-500/10 rounded-md">
+                <Settings size={13} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editUser && (
+        <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" onClick={() => setEditUser(null)}>
+          <div onClick={e => e.stopPropagation()} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[400px] p-5">
+            <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark mb-4">{isRTL ? 'تعديل مستخدم' : 'Edit User'}</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الاسم (English)' : 'Name (EN)'}</label>
+                <Input value={editUser.full_name_en || ''} onChange={e => setEditUser(p => ({ ...p, full_name_en: e.target.value }))} />
+              </div>
+              <div>
+                <label className="block text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الاسم (عربي)' : 'Name (AR)'}</label>
+                <Input value={editUser.full_name_ar || ''} onChange={e => setEditUser(p => ({ ...p, full_name_ar: e.target.value }))} dir="rtl" />
+              </div>
+              <div>
+                <label className="block text-[11px] text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الدور' : 'Role'}</label>
+                <select value={editUser.role} onChange={e => setEditUser(p => ({ ...p, role: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm">
+                  {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4 justify-end">
+              <Button variant="secondary" size="sm" onClick={() => setEditUser(null)}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+              <Button variant="primary" size="sm" onClick={() => handleSaveUser(editUser)}>{isRTL ? 'حفظ' : 'Save'}</Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────
 const TABS = [
   { key: 'contactTypes', icon: Users, ar: 'أنواع جهات الاتصال', en: 'Contact Types' },
@@ -1111,7 +1340,10 @@ const TABS = [
   { key: 'stageWinRates', icon: SlidersHorizontal, ar: 'نسب الفوز', en: 'Stage Win Rates' },
   { key: 'contactsSettings', icon: SlidersHorizontal, ar: 'إعدادات جهات الاتصال', en: 'Contacts Settings' },
   { key: 'drawerFields', icon: SlidersHorizontal, ar: 'حقول بطاقة العميل', en: 'Contact Card Fields' },
+  { key: 'general', icon: Settings, ar: 'إعدادات عامة', en: 'General Settings' },
+  { key: 'notifications', icon: Bell, ar: 'الإشعارات', en: 'Notifications' },
   { key: 'company', icon: Briefcase, ar: 'بيانات الشركة', en: 'Company Info' },
+  { key: 'users', icon: UserCog, ar: 'المستخدمين', en: 'Users' },
   { key: 'roles', icon: Shield, ar: 'الأدوار والصلاحيات', en: 'Roles & Permissions' },
 ];
 
@@ -1173,8 +1405,14 @@ export default function SystemConfigPage() {
         return <ContactsSettingsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'drawerFields':
         return <DrawerFieldsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
+      case 'general':
+        return <GeneralSettingsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
+      case 'notifications':
+        return <NotificationSettingsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'company':
         return <CompanyInfoTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
+      case 'users':
+        return <UserManagementTab isRTL={isRTL} toast={toast} />;
       case 'roles':
         return <RolesPermissionsTab isRTL={isRTL} />;
       default:
