@@ -29,6 +29,7 @@ import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/f
 import { getComments } from '../../../services/chatService';
 import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
 import { getWonDeals } from '../../../services/dealsService';
+import { reportError } from '../../../utils/errorReporter';
 import { generateContactCardHTML, getCompanyInfo } from '../../../services/printService';
 import PrintPreview from '../../../components/ui/PrintPreview';
 import {
@@ -74,7 +75,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [waTemplates, setWaTemplates] = useState([]);
   useEffect(() => {
     const load = async () => {
-      try { const t = await getWhatsAppTemplates(true); setWaTemplates(Array.isArray(t) ? t : []); } catch { setWaTemplates([]); }
+      try { const t = await getWhatsAppTemplates(true); setWaTemplates(Array.isArray(t) ? t : []); } catch (err) { if (import.meta.env.DEV) console.warn('fetch WA templates:', err); setWaTemplates([]); }
     };
     load();
   }, []);
@@ -84,7 +85,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       try {
         const msgs = await getMessagesByContact(contact?.id);
         setRecentWAMessages(Array.isArray(msgs) ? msgs.slice(0, 5) : []);
-      } catch { setRecentWAMessages([]); }
+      } catch (err) { if (import.meta.env.DEV) console.warn('fetch WA messages:', err); setRecentWAMessages([]); }
     };
     if (contact?.id) load();
   }, [contact?.id]);
@@ -115,7 +116,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     try {
       const cfg = JSON.parse(localStorage.getItem('platform_system_config') || '{}');
       return cfg.hide_previous_agent_history === true;
-    } catch { return false; }
+    } catch (err) { if (import.meta.env.DEV) console.warn('parse system config:', err); return false; }
   }, [isSalesAgent]);
 
   // Find when current agent was assigned (to filter timeline)
@@ -135,8 +136,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
       fetchSalesAgents().then(agents => {
         setAgentsList(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
-      }).catch(() => {});
-    }).catch(() => {});
+      }).catch(err => { if (import.meta.env.DEV) console.warn('fetch sales agents:', err); });
+    }).catch(err => { if (import.meta.env.DEV) console.warn('import opportunitiesService:', err); });
   }, []);
 
   // Favorites
@@ -174,19 +175,31 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     setSelectedAgent('all');
   }, [contact.id]);
 
-  // Fetch all data on mount
+  // Fetch all data on mount — single parallel batch
   useEffect(() => {
     let cancelled = false;
     setLoadingData(true);
+    const cid = String(contact.id);
     Promise.allSettled([
       fetchContactActivities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
       fetchTasks({ contactId: contact.id, role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
       fetchContactOpportunities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-    ]).then(([actsRes, tasksRes, oppsRes]) => {
+      getComments('contact', cid).catch(() => []),
+      getDocumentsByEntity('contact', cid).catch(() => []),
+      getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar }).catch(() => []),
+      getLocalAuditLogs({ limit: 50, entity: 'contact', entityId: cid }).catch(() => ({ data: [] })),
+    ]).then(([actsRes, tasksRes, oppsRes, commentsRes, docsRes, dealsRes, auditsRes]) => {
       if (cancelled) return;
       if (actsRes.status === 'fulfilled') setActivities(actsRes.value);
       if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value);
       if (oppsRes.status === 'fulfilled') setOpportunities(oppsRes.value);
+      const comments = commentsRes.status === 'fulfilled' ? (Array.isArray(commentsRes.value) ? commentsRes.value : []) : [];
+      const documents = docsRes.status === 'fulfilled' ? (Array.isArray(docsRes.value) ? docsRes.value : []) : [];
+      const allDeals = dealsRes.status === 'fulfilled' ? (Array.isArray(dealsRes.value) ? dealsRes.value : []) : [];
+      const allAudits = auditsRes.status === 'fulfilled' ? (Array.isArray(auditsRes.value?.data) ? auditsRes.value.data : []) : [];
+      const audits = allAudits.filter(a => String(a.entity_id) === cid && a.action !== 'create');
+      const deals = allDeals.filter(d => String(d.contact_id) === cid);
+      setExtraSources({ comments, documents, audits, deals });
       setLoadingData(false);
     });
     return () => { cancelled = true; };
@@ -264,11 +277,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   };
 
   // Handle contact status change from TakeActionForm (per-agent)
-  const handleStatusChange = (newStatus) => {
+  const handleStatusChange = (newStatus, dqReason) => {
     if (onUpdate) {
       const myName = profile?.full_name_en || profile?.full_name_ar;
       const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-      onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });
+      const updates = { ...contact, agent_statuses: newStatuses, contact_status: newStatus };
+      if (newStatus === 'disqualified' && dqReason) {
+        updates.disqualify_reason = dqReason;
+      }
+      onUpdate(updates);
       toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Lead status updated');
     }
   };
@@ -337,32 +354,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // ── Extra timeline sources (comments, documents, audit, deals) ───────────
   const [extraSources, setExtraSources] = useState({ comments: [], documents: [], audits: [], deals: [] });
 
-  useEffect(() => {
-    if (!contact?.id) return;
-    const cid = String(contact.id);
-    const loadExtra = async () => {
-      try {
-        const [comments, documents, allDeals] = await Promise.all([
-          getComments('contact', cid).catch(() => []),
-          getDocumentsByEntity('contact', cid).catch(() => []),
-          getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar }).catch(() => []),
-        ]);
-        const { data: allAudits } = await getLocalAuditLogs({ limit: 500, entity: 'contact' });
-        const audits = (Array.isArray(allAudits) ? allAudits : []).filter(a => String(a.entity_id) === cid);
-        const meaningfulAudits = audits.filter(a => !['create'].includes(a.action));
-        const deals = (Array.isArray(allDeals) ? allDeals : []).filter(d => String(d.contact_id) === cid);
-        setExtraSources({
-          comments: Array.isArray(comments) ? comments : [],
-          documents: Array.isArray(documents) ? documents : [],
-          audits: meaningfulAudits,
-          deals,
-        });
-      } catch {
-        setExtraSources({ comments: [], documents: [], audits: [], deals: [] });
-      }
-    };
-    loadExtra();
-  }, [contact?.id]);
+  // Extra sources are now loaded in the main useEffect above
 
   // Listen for real-time updates
   useEffect(() => {
@@ -375,7 +367,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           getDocumentsByEntity('contact', cid).catch(() => []),
         ]);
         setExtraSources(prev => ({ ...prev, comments: Array.isArray(comments) ? comments : [], documents: Array.isArray(documents) ? documents : [] }));
-      } catch { /* ignore */ }
+      } catch (err) { if (import.meta.env.DEV) console.warn('refresh comments/docs:', err); }
     };
     window.addEventListener('platform_comment', refresh);
     window.addEventListener('platform_document', refresh);
@@ -393,7 +385,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       toast.success(isRTL
         ? (newStatus === 'completed' ? 'تم إكمال النشاط' : 'تم إلغاء النشاط')
         : (newStatus === 'completed' ? 'Activity completed' : 'Activity cancelled'));
-    } catch {
+    } catch (err) {
+      reportError('ContactDrawer', 'handleActivityStatusChange', err);
       toast.error(isRTL ? 'حدث خطأ' : 'Error updating activity');
     }
   };
@@ -493,31 +486,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           action: onUpdate ? {
             label: isRTL ? 'تعديل' : 'Edit',
             onClick: () => {
-              const current = Array.isArray(contact.assigned_to_names) ? contact.assigned_to_names : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
-              const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
-              const input = prompt(
-                isAdminOrOps
-                  ? (isRTL ? 'أدخل أسماء المسؤولين (مفصولين بفاصلة):' : 'Enter assignee names (comma-separated):')
-                  : (isRTL ? 'أدخل اسم المسؤول الجديد:' : 'Enter new assignee name:'),
-                isAdminOrOps ? current.join(', ') : ''
-              );
-              if (input !== null && input.trim()) {
-                const names = input.split(',').map(n => n.trim()).filter(Boolean);
-                const newAssignee = names[0] || null;
-                onUpdate({ ...contact, assigned_to_names: names, assigned_to_name: newAssignee });
-                // Send notification to the new assignee
-                if (newAssignee && newAssignee !== (profile?.full_name_en || profile?.full_name_ar)) {
-                  import('../../../services/notificationService').then(({ notifyLeadAssigned }) => {
-                    notifyLeadAssigned({
-                      contactName: contact.full_name || contact.phone || '—',
-                      contactId: contact.id,
-                      agentId: newAssignee,
-                      agentName: newAssignee,
-                      assignedBy: profile?.full_name_ar || profile?.full_name_en || '—',
-                    });
-                  });
-                }
-              }
+              setShowAddAgent(true); setAddAgentSearch('');
+              // Scroll to agent section in hero
+              setTimeout(() => { document.querySelector('[data-agent-picker]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
             }
           } : null,
         },
@@ -909,7 +880,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   return (
     <>
-    {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { onUpdate(updated); }} />}
+    {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { await onUpdate(updated); }} />}
     <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Backdrop */}
       <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px]" />
@@ -1339,7 +1310,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     </button>
                   ))}
                   {/* Add Agent Button — admin only */}
-                  {isAdmin && <div className="relative">
+                  {isAdmin && <div className="relative" data-agent-picker>
                     <button onClick={() => setShowAddAgent(!showAddAgent)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer bg-transparent border border-dashed border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500 hover:text-brand-500 transition-colors">
                       + {isRTL ? 'إضافة' : 'Add'}

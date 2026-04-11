@@ -123,7 +123,7 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
         contact_id: contact.id,
         contact_name: contact.full_name,
         due_date: followupDate,
-        dept: 'crm',
+        dept: 'sales',
         notes: callNotes ? `${isRTL ? 'من مكالمة سابقة' : 'From previous call'}: ${callNotes}` : '',
         assigned_to: profile?.id || null,
         assigned_to_name_ar: profile?.full_name_ar || '',

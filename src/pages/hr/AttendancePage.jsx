@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
@@ -270,7 +271,12 @@ function AttendanceRow({ emp, attendance, isRTL, lang, expanded, onToggle, onEdi
           </div>
         </Td>
         <Td>
-          {expanded ? <ChevronUp size={14} className="text-content-muted" /> : <ChevronDown size={14} className="text-content-muted" />}
+          <div className="flex items-center gap-1">
+            <Link to={`/hr/attendance/${emp.id}`} onClick={e => e.stopPropagation()} className="text-xs text-brand-500 hover:underline no-underline font-medium">
+              {lang === 'ar' ? 'ملخص' : 'Summary'}
+            </Link>
+            {expanded ? <ChevronUp size={14} className="text-content-muted" /> : <ChevronDown size={14} className="text-content-muted" />}
+          </div>
         </Td>
       </Tr>
       {expanded && (

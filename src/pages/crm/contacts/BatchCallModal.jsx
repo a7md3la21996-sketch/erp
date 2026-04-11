@@ -1,6 +1,6 @@
 import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { createActivity, updateContact, fetchContacts } from '../../../services/contactsService';
+import { createActivity, updateContact } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { logAction } from '../../../services/auditService';
 import {
@@ -8,6 +8,7 @@ import {
   daysSince, initials, avatarColor, normalizePhone,
   Chip,
 } from './constants';
+import { reportError } from '../../../utils/errorReporter';
 import { Button } from '../../../components/ui';
 
 export default function BatchCallModal({
@@ -221,7 +222,7 @@ export default function BatchCallModal({
               if (batchCallResult) {
                 const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
                 const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
-                try { await createActivity(activity); } catch { /* optimistic */ }
+                try { await createActivity(activity); } catch (err) { if (import.meta.env.DEV) console.warn('batch call create activity:', err); }
                 const myName = profile?.full_name_en || profile?.full_name_ar;
                 const myStatus = (current.agent_statuses || {})[myName] || current.contact_status;
                 let newStatus = myStatus;
@@ -232,14 +233,12 @@ export default function BatchCallModal({
                   newStatus = 'inactive';
                 } else if (batchCallResult === 'answered') {
                   newStatus = 'active';
-                } else if (batchCallResult === 'not_interested' && myStatus !== 'has_opportunity' && myStatus !== 'active') {
-                  newStatus = 'disqualified';
                 } else if (myStatus === 'new' || !myStatus) {
                   newStatus = 'active';
                 }
                 const newStatuses = { ...(current.agent_statuses || {}), [myName]: newStatus };
                 const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus, agent_statuses: newStatuses };
-                try { await updateContact(current.id, statusUpdate); } catch { /* ignore */ }
+                try { await updateContact(current.id, statusUpdate); } catch (err) { if (import.meta.env.DEV) console.warn('batch call update status:', err); }
                 setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
                 setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);
               }
@@ -252,7 +251,7 @@ export default function BatchCallModal({
                     priority: batchTaskForm.priority,
                     due_date: batchTaskForm.due || null,
                     status: 'pending',
-                    dept: 'crm',
+                    dept: 'sales',
                     contact_id: current.id,
                     contact_name: current.full_name,
                     assigned_to: profile?.id || null,
@@ -260,7 +259,7 @@ export default function BatchCallModal({
                     assigned_to_name_ar: profile?.full_name_ar || '',
                     assigned_to_name_en: profile?.full_name_en || '',
                   });
-                } catch { /* ignore */ }
+                } catch (err) { reportError('BatchCallModal', 'createFollowUpTask', err); }
               }
               // Reset task form for next contact
               setBatchTaskOpen(false);
@@ -274,8 +273,7 @@ export default function BatchCallModal({
                 setBatchCallLog(finalLog);
                 setBatchCallIndex(batchContacts.length); // trigger summary view
                 logAction({ action: 'batch_call', entity: 'contact', entityId: finalLog.map(l => l.id).join(','), description: `Batch called ${finalLog.length} contacts: ${finalLog.map(l => `${l.name}(${l.result})`).join(', ')}`, userName: profile?.full_name_ar || '' });
-                // Refresh contacts
-                try { const fresh = await fetchContacts({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }); setContacts(fresh); } catch { /* ignore */ }
+                // No full refresh needed — contacts state is already updated optimistically above
               }
             }}>
               {batchCallIndex < batchContacts.length - 1 ? (<>{isRTL ? 'التالي' : 'Next'} <SkipForward size={13} /></>) : (isRTL ? 'إنهاء' : 'Finish')}

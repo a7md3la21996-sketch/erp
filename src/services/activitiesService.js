@@ -6,18 +6,18 @@ import { getTeamMemberIds } from '../utils/teamHelper';
 
 // ── Activity Types ─────────────────────────────────────────────────────────
 export const ACTIVITY_TYPES = {
-  call:          { ar: 'مكالمة',        en: 'Call',          icon: 'Phone',        color: '#4A7AAB', dept: ['crm','sales','finance'] },
-  whatsapp:      { ar: 'واتساب',        en: 'WhatsApp',      icon: 'MessageCircle',color: '#2B4C6F', dept: ['crm','sales'] },
-  email:         { ar: 'إيميل',         en: 'Email',         icon: 'Mail',         color: '#6B8DB5', dept: ['crm','sales','hr','finance'] },
-  meeting:       { ar: 'مقابلة',        en: 'Meeting',       icon: 'Users',        color: '#2B4C6F', dept: ['crm','sales','hr','finance'] },
-  note:          { ar: 'ملاحظة',        en: 'Note',          icon: 'FileText',     color: '#8BA8C8', dept: ['crm','sales','hr','finance'] },
+  call:          { ar: 'مكالمة',        en: 'Call',          icon: 'Phone',        color: '#4A7AAB', dept: ['sales','finance'] },
+  whatsapp:      { ar: 'واتساب',        en: 'WhatsApp',      icon: 'MessageCircle',color: '#2B4C6F', dept: ['sales'] },
+  email:         { ar: 'إيميل',         en: 'Email',         icon: 'Mail',         color: '#6B8DB5', dept: ['sales','hr','finance'] },
+  meeting:       { ar: 'مقابلة',        en: 'Meeting',       icon: 'Users',        color: '#2B4C6F', dept: ['sales','hr','finance'] },
+  note:          { ar: 'ملاحظة',        en: 'Note',          icon: 'FileText',     color: '#8BA8C8', dept: ['sales','hr','finance'] },
   interview:     { ar: 'مقابلة',        en: 'Interview',     icon: 'UserCheck',    color: '#4A7AAB', dept: ['hr'] },
   warning:       { ar: 'إنذار',         en: 'Warning',       icon: 'AlertTriangle',color: '#EF4444', dept: ['hr'] },
   evaluation:    { ar: 'تقييم',         en: 'Evaluation',    icon: 'Star',         color: '#6B8DB5', dept: ['hr'] },
   invoice:       { ar: 'فاتورة',        en: 'Invoice',       icon: 'Receipt',      color: '#4A7AAB', dept: ['finance'] },
   payment:       { ar: 'دفعة',          en: 'Payment',       icon: 'Banknote',     color: '#2B4C6F', dept: ['finance'] },
-  status_change: { ar: 'تغيير حالة',    en: 'Status Change', icon: 'RefreshCw',   color: '#8BA8C8', dept: ['crm','sales','hr','finance'] },
-  task:          { ar: 'مهمة',          en: 'Task',          icon: 'CheckSquare',  color: '#6B8DB5', dept: ['crm','sales','hr','finance'] },
+  status_change: { ar: 'تغيير حالة',    en: 'Status Change', icon: 'RefreshCw',   color: '#8BA8C8', dept: ['sales','hr','finance'] },
+  task:          { ar: 'مهمة',          en: 'Task',          icon: 'CheckSquare',  color: '#6B8DB5', dept: ['sales','hr','finance'] },
 };
 
 // ── Meeting Subtypes ──────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ export const MEETING_SUBTYPES = {
 };
 
 // ── Service Functions ───────────────────────────────────────────────────────
-export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId } = {}) {
+export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentName, dateFrom } = {}) {
   let supaData = [];
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
 
@@ -42,13 +42,30 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
     if (entityId)   query = query.eq(`${entityType}_id`, entityId);
     if (entityType && !entityId) query = query.eq('entity_type', entityType);
     if (dept)       query = query.eq('dept', dept);
+    if (type)       query = query.eq('type', type);
+    if (dateFrom)   query = query.gte('created_at', dateFrom);
+    if (search) {
+      const s = search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
+      if (s.length > 0) query = query.or(`notes.ilike.%${s}%,description.ilike.%${s}%,user_name_en.ilike.%${s}%,user_name_ar.ilike.%${s}%,entity_name.ilike.%${s}%`);
+    }
+    if (agentName)  query = query.or(`user_name_en.eq.${agentName},user_name_ar.eq.${agentName}`);
 
-    // Role-based filtering
+    // Role-based filtering — by name (not UUID) since imported activities may lack user_id
     if (role === 'sales_agent' && userId) {
-      query = query.eq('user_id', userId);
+      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+      if (agentUser?.full_name_en) {
+        query = query.or(`user_name_en.eq.${agentUser.full_name_en},user_id.eq.${userId}`);
+      } else {
+        query = query.eq('user_id', userId);
+      }
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
       const ids = await getTeamMemberIds(role, teamId);
-      if (ids.length) query = query.in('user_id', ids);
+      const names = await import('../utils/teamHelper').then(m => m.getTeamMemberNames(role, teamId));
+      if (names.length) {
+        const nameConds = names.map(n => `user_name_en.eq.${n}`).join(',');
+        const idConds = ids.map(id => `user_id.eq.${id}`).join(',');
+        query = query.or(`${nameConds},${idConds}`);
+      }
     }
 
     if (isServerPaginated) {
@@ -60,12 +77,23 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
 
     const { data, error, count } = await query;
     if (error) { reportError('activitiesService', 'fetchActivities', error); }
-    if (!error && data?.length) supaData = data.map(a => ({
-      ...a,
-      user_name_ar: a.users?.full_name_ar || a.user_name_ar,
-      user_name_en: a.users?.full_name_en || a.user_name_en,
-      entity_name: a.contacts?.full_name || a.entity_name || '',
-    }));
+    if (!error && data?.length) {
+      // Fetch contact names for activities that have contact_id
+      const contactIds = [...new Set(data.filter(a => a.contact_id).map(a => a.contact_id))];
+      let contactMap = {};
+      if (contactIds.length) {
+        try {
+          const { data: contacts } = await supabase.from('contacts').select('id, full_name').in('id', contactIds);
+          if (contacts) contacts.forEach(c => { contactMap[c.id] = c.full_name; });
+        } catch { /* ignore */ }
+      }
+      supaData = data.map(a => ({
+        ...a,
+        user_name_ar: a.users?.full_name_ar || a.user_name_ar,
+        user_name_en: a.users?.full_name_en || a.user_name_en,
+        entity_name: contactMap[a.contact_id] || a.entity_name || '',
+      }));
+    }
 
     if (isServerPaginated) return { data: supaData, count: count || 0 };
   } catch (err) {

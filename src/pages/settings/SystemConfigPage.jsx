@@ -10,7 +10,7 @@ import { Card, Button, Input, Select, FilterPill } from '../../components/ui';
 import {
   Settings, Users, GitBranch, Building2, Briefcase, Shield,
   GripVertical, Plus, X, Trash2, RotateCcw, Save,
-  ChevronDown, ChevronUp, ThumbsDown, Zap, SlidersHorizontal,
+  ChevronDown, ChevronUp, ThumbsDown, Zap, SlidersHorizontal, XCircle,
 } from 'lucide-react';
 
 // ─── Tab: Contact Types ───────────────────────────────────────────────
@@ -664,6 +664,54 @@ function CloseReasonsTab({ config, updateSection, isRTL, toast }) {
   );
 }
 
+// ─── Tab: DQ Reasons ──────────────────────────────────────────────────
+function DQReasonsTab({ config, updateSection, isRTL, toast }) {
+  const [reasons, setReasons] = useState(() => [...(config.dqReasons || [
+    { key: 'existing_client', label_ar: 'عميل حالي (شاري)', label_en: 'Existing Client' },
+    { key: 'resale', label_ar: 'عايز يبيع وحدته', label_en: 'Wants to sell unit' },
+    { key: 'not_interested', label_ar: 'غير مهتم', label_en: 'Not interested' },
+    { key: 'no_answer_all_time', label_ar: 'لا يرد أبداً', label_en: 'No Answer All Time' },
+    { key: 'no_budget', label_ar: 'ميزانية غير مناسبة', label_en: 'No budget' },
+    { key: 'wrong_audience', label_ar: 'جمهور خاطئ', label_en: 'Wrong audience' },
+    { key: 'wrong_number', label_ar: 'رقم خاطئ', label_en: 'Wrong number' },
+    { key: 'duplicate', label_ar: 'مكرر', label_en: 'Duplicate' },
+    { key: 'other', label_ar: 'سبب آخر', label_en: 'Other' },
+  ])]);
+  const [newR, setNewR] = useState({ label_ar: '', label_en: '' });
+
+  const handleSave = () => { updateSection('dqReasons', reasons); toast.success(isRTL ? 'تم الحفظ' : 'Saved'); };
+  const addR = () => { if (!newR.label_en.trim()) return; setReasons(prev => [...prev, { key: newR.label_en.toLowerCase().replace(/\s+/g, '_'), ...newR }]); setNewR({ label_ar: '', label_en: '' }); };
+  const deleteR = (idx) => { if (!window.confirm(isRTL ? 'حذف؟' : 'Delete?')) return; setReasons(prev => prev.filter((_, i) => i !== idx)); };
+  const changeR = (idx, field, value) => { setReasons(prev => prev.map((r, i) => i === idx ? { ...r, [field]: value } : r)); };
+
+  return (
+    <Card className="p-5">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
+          <XCircle size={16} className="text-gray-500" />
+          {isRTL ? 'أسباب الاستبعاد' : 'Disqualify Reasons'}
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-500/10 text-gray-600 dark:text-gray-400 font-semibold">{reasons.length}</span>
+        </h3>
+        <Button variant="primary" size="sm" onClick={handleSave}><Save size={13} /> {isRTL ? 'حفظ' : 'Save'}</Button>
+      </div>
+      <div className="space-y-2 mb-4">
+        {reasons.map((r, i) => (
+          <div key={i} className="flex items-center gap-2 p-2.5 bg-surface-bg dark:bg-surface-bg-dark rounded-lg">
+            <Input value={r.label_ar} onChange={e => changeR(i, 'label_ar', e.target.value)} placeholder="عربي" className="flex-1 !text-xs" />
+            <Input value={r.label_en} onChange={e => changeR(i, 'label_en', e.target.value)} placeholder="English" className="flex-1 !text-xs" />
+            <button onClick={() => deleteR(i)} className="text-red-500 bg-transparent border-none cursor-pointer p-1 hover:bg-red-500/10 rounded-md"><Trash2 size={13} /></button>
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 items-end">
+        <div className="flex-1"><Input value={newR.label_ar} onChange={e => setNewR(p => ({ ...p, label_ar: e.target.value }))} placeholder={isRTL ? 'السبب (عربي)' : 'Reason (AR)'} className="!text-xs" /></div>
+        <div className="flex-1"><Input value={newR.label_en} onChange={e => setNewR(p => ({ ...p, label_en: e.target.value }))} placeholder={isRTL ? 'السبب (إنجليزي)' : 'Reason (EN)'} className="!text-xs" /></div>
+        <Button size="sm" onClick={addR}><Plus size={13} /></Button>
+      </div>
+    </Card>
+  );
+}
+
 // ─── Tab: Activity Types & Results ────────────────────────────────────
 function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
   const [types, setTypes] = useState(() => [...(config.activityTypes || [])]);
@@ -1059,6 +1107,7 @@ const TABS = [
   { key: 'departments', icon: Building2, ar: 'الأقسام', en: 'Departments' },
   { key: 'activityTypes', icon: Zap, ar: 'أنواع النشاط', en: 'Activity Types' },
   { key: 'closeReasons', icon: ThumbsDown, ar: 'أسباب الخسارة', en: 'Lost Reasons' },
+  { key: 'dqReasons', icon: XCircle, ar: 'أسباب الاستبعاد', en: 'DQ Reasons' },
   { key: 'stageWinRates', icon: SlidersHorizontal, ar: 'نسب الفوز', en: 'Stage Win Rates' },
   { key: 'contactsSettings', icon: SlidersHorizontal, ar: 'إعدادات جهات الاتصال', en: 'Contacts Settings' },
   { key: 'drawerFields', icon: SlidersHorizontal, ar: 'حقول بطاقة العميل', en: 'Contact Card Fields' },
@@ -1116,6 +1165,8 @@ export default function SystemConfigPage() {
         return <ActivityTypesTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'closeReasons':
         return <CloseReasonsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
+      case 'dqReasons':
+        return <DQReasonsTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'stageWinRates':
         return <StageWinRatesTab config={config} updateSection={updateSection} isRTL={isRTL} toast={toast} />;
       case 'contactsSettings':

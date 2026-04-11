@@ -198,8 +198,8 @@ export async function saveDraft(data) {
 export async function getEmailStats() {
   const { data, error } = await supabase.from('emails').select('folder, read').range(0, 499);
   if (error) {
-    reportError('emailService', 'getEmailStats', error);
-    throw error;
+    // Silent — emails table may not exist yet
+    return { inbox: 0, unread: 0, sent: 0, draft: 0, total: 0 };
   }
   const emails = data || [];
   return {

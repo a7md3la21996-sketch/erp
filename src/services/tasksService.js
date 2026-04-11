@@ -43,42 +43,82 @@ export const TASK_TYPES = {
   general:   { ar: 'عامة',        en: 'General',     icon: 'CheckSquare'  },
 };
 
-export async function fetchTasks({ contactId, dept, status, page, pageSize, role, userId, teamId } = {}) {
+export async function fetchTasks({ contactId, dept, status, priority, page, pageSize, role, userId, teamId, search, sortBy, agentName, dueDateFrom, dueDateTo, overdueOnly } = {}) {
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
   try {
-    let query = supabase.from('tasks').select('*', isServerPaginated ? { count: 'exact' } : {}).order('due_date', { ascending: true });
+    // Map sortBy to Supabase column + direction
+    const SORT_MAP = {
+      due_date_asc:    { column: 'due_date',   ascending: true },
+      due_date_desc:   { column: 'due_date',   ascending: false },
+      created_at_desc: { column: 'created_at', ascending: false },
+      created_at_asc:  { column: 'created_at', ascending: true },
+      priority_desc:   { column: 'priority',   ascending: true }, // high=0, low=2
+    };
+    const sort = SORT_MAP[sortBy] || SORT_MAP.due_date_asc;
+    let query = supabase.from('tasks').select('*', isServerPaginated ? { count: 'exact' } : {}).order(sort.column, { ascending: sort.ascending });
     if (contactId) query = query.eq('contact_id', contactId);
     if (dept)      query = query.eq('dept', dept);
     if (status)    query = query.eq('status', status);
+    if (priority)  query = query.eq('priority', priority);
+    if (search) {
+      const s = search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
+      if (s.length > 0) query = query.or(`title.ilike.%${s}%,contact_name.ilike.%${s}%,notes.ilike.%${s}%`);
+    }
+    if (agentName) query = query.or(`assigned_to_name_en.eq.${agentName},assigned_to_name_ar.eq.${agentName}`);
+    if (dueDateFrom) query = query.gte('due_date', dueDateFrom);
+    if (dueDateTo) query = query.lte('due_date', dueDateTo);
+    if (overdueOnly) query = query.lt('due_date', new Date().toISOString()).eq('status', 'pending');
 
-    // Role-based filtering — skip if fetching by contactId (contact is already role-filtered)
+    // Role-based filtering — by name + UUID (skip if fetching by contactId)
     if (!contactId) {
       if (role === 'sales_agent' && userId) {
-        query = query.eq('assigned_to', userId);
+        const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+        if (agentUser?.full_name_en) {
+          query = query.or(`assigned_to.eq.${userId},assigned_to_name_en.eq.${agentUser.full_name_en}`);
+        } else {
+          query = query.eq('assigned_to', userId);
+        }
       } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
         const ids = await getTeamMemberIds(role, teamId);
         if (ids.length) query = query.in('assigned_to', ids);
       }
     }
 
-    const enrich = (tasks) => (tasks || []).map(t => ({
-      ...t,
-      contact_name: t.contact_name || t.contacts?.full_name || null,
-    }));
+    const enrich = async (tasks) => {
+      if (!tasks?.length) return tasks || [];
+      // Fetch contact names + phones for tasks that have contact_id
+      const withContactId = tasks.filter(t => t.contact_id);
+      if (withContactId.length) {
+        const ids = [...new Set(withContactId.map(t => t.contact_id))];
+        try {
+          const { data: contacts } = await supabase.from('contacts').select('id, full_name, phone').in('id', ids);
+          if (contacts) {
+            const map = {};
+            contacts.forEach(c => { map[c.id] = c; });
+            return tasks.map(t => ({
+              ...t,
+              contact_name: t.contact_name || map[t.contact_id]?.full_name || null,
+              contact_phone: map[t.contact_id]?.phone || null,
+            }));
+          }
+        } catch { /* ignore */ }
+      }
+      return tasks;
+    };
 
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
       query = query.range(from, from + pageSize - 1);
       const { data, error, count } = await query;
-      if (error) return { data: [], count: 0 };
-      return { data: enrich(data), count: count || 0 };
+      if (error) { reportError('tasksService', 'fetchTasks', error); return { data: [], count: 0 }; }
+      return { data: await enrich(data), count: count || 0 };
     }
 
     query = query.range(0, 999);
     const { data, error } = await query;
-    if (error) return [];
-    return enrich(data);
-  } catch { return isServerPaginated ? { data: [], count: 0 } : []; }
+    if (error) { reportError('tasksService', 'fetchTasks', error); return []; }
+    return await enrich(data);
+  } catch (err) { reportError('tasksService', 'fetchTasks', err); return isServerPaginated ? { data: [], count: 0 } : []; }
 }
 
 export async function createTask(data) {

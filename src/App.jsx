@@ -26,14 +26,20 @@ function lazyRetry(importFn) {
       const isChunkError = msg.includes('Failed to fetch') || msg.includes('Loading chunk')
         || msg.includes('MIME type') || msg.includes('Importing a module')
         || msg.includes('dynamically imported') || err?.name === 'ChunkLoadError';
-      // Only auto-reload once per 30 seconds to avoid infinite loops
-      const lastReload = Number(sessionStorage.getItem('chunk_reload') || '0');
-      if (isChunkError && Date.now() - lastReload > 30000) {
-        sessionStorage.setItem('chunk_reload', String(Date.now()));
-        window.location.reload();
-        return new Promise(() => {});
+      if (isChunkError) {
+        // Force reload — clear caches and reload
+        const lastReload = Number(sessionStorage.getItem('chunk_reload') || '0');
+        if (Date.now() - lastReload > 10000) {
+          sessionStorage.setItem('chunk_reload', String(Date.now()));
+          // Try clearing caches first
+          if ('caches' in window) {
+            caches.keys().then(names => names.forEach(n => caches.delete(n))).catch(() => {});
+          }
+          window.location.reload(true);
+          return new Promise(() => {});
+        }
       }
-      throw err; // let ErrorBoundary handle it
+      throw err;
     })
   );
 }
@@ -116,6 +122,7 @@ const HelpCenterPage = lazyRetry(() => import('./pages/HelpCenterPage'));
 const KnowledgeBasePage = lazyRetry(() => import('./pages/KnowledgeBasePage'));
 const ComparisonReportsPage = lazyRetry(() => import('./pages/ComparisonReportsPage'));
 const ApprovalsPage = lazyRetry(() => import('./pages/ApprovalsPage'));
+const EmployeeAttendanceSummary = lazyRetry(() => import('./pages/hr/EmployeeAttendanceSummary'));
 
 
 function PageLoader() {
@@ -233,6 +240,7 @@ export default function App() {
                 <Route path="/hr/departments" element={<Guarded><DepartmentsPage /></Guarded>} />
                 <Route path="/hr/shifts" element={<Guarded><ShiftsPage /></Guarded>} />
                 <Route path="/hr/holidays" element={<Guarded><HolidaysPage /></Guarded>} />
+                <Route path="/hr/attendance/:employeeId" element={<Guarded><EmployeeAttendanceSummary /></Guarded>} />
                 <Route path="/hr/attendance" element={<Guarded><AttendancePage /></Guarded>} />
                 <Route path="/hr/leave" element={<Guarded><LeavePage /></Guarded>} />
                 <Route path="/hr/payroll" element={<Guarded><PayrollPage /></Guarded>} />

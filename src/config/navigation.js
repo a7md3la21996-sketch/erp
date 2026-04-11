@@ -113,12 +113,12 @@ export const NAV_ITEMS = [
  * If a role is not listed, all permitted items are shown (admin default).
  */
 export const ROLE_NAV_GROUPS = {
-  sales_agent:    ['dashboard', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'help-center'],
-  team_leader:    ['dashboard', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
-  sales_manager:  ['dashboard', 'crm', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
-  sales_director: ['dashboard', 'crm', 'sales', 'real-estate', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
-  marketing:      ['dashboard', 'crm', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
-  hr:             ['dashboard', 'hr', 'workspace', 'communication', 'help-center'],
-  finance:        ['dashboard', 'finance', 'sales', 'operations', 'workspace', 'communication', 'help-center'],
-  operations:     ['dashboard', 'operations', 'sales', 'crm', 'real-estate', 'workspace', 'communication', 'help-center'],
+  sales_agent:    ['dashboard', 'crm', 'activities', 'sales', 'real-estate', 'workspace', 'communication', 'help-center'],
+  team_leader:    ['dashboard', 'crm', 'activities', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
+  sales_manager:  ['dashboard', 'crm', 'activities', 'sales', 'real-estate', 'workspace', 'communication', 'reports', 'help-center'],
+  sales_director: ['dashboard', 'crm', 'activities', 'sales', 'real-estate', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
+  marketing:      ['dashboard', 'crm', 'activities', 'marketing', 'workspace', 'communication', 'reports', 'help-center'],
+  hr:             ['dashboard', 'hr', 'activities', 'workspace', 'communication', 'help-center'],
+  finance:        ['dashboard', 'finance', 'activities', 'sales', 'operations', 'workspace', 'communication', 'help-center'],
+  operations:     ['dashboard', 'operations', 'activities', 'sales', 'crm', 'real-estate', 'workspace', 'communication', 'help-center'],
 };

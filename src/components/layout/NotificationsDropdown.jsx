@@ -126,8 +126,9 @@ export default function NotificationsDropdown({ show, onClose }) {
 
   const handleClickNotif = (n) => {
     if (!n.read) markAsRead(n.id);
-    if (n.action_url) {
-      navigate(n.action_url);
+    const navUrl = n.url || n.action_url;
+    if (navUrl) {
+      navigate(navUrl);
       onClose();
     }
     refresh();

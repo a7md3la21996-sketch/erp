@@ -29,9 +29,11 @@ export function SystemConfigProvider({ children }) {
     }
   }, [reloadConfig]);
 
-  const updateSection = (key, data) => {
+  const updateSection = async (key, data) => {
     saveSection(key, data);
     reloadConfig();
+    // Force reload from server after a short delay to confirm save
+    setTimeout(() => reloadFromServer(), 1500);
   };
 
   const resetToDefaults = () => {

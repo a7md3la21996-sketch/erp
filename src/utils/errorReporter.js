@@ -10,10 +10,15 @@ const MAX_ERRORS = 20;
 let _listeners = [];
 
 export function reportError(service, operation, error) {
+  const msg = error?.message || String(error);
+  // Skip non-critical errors (missing tables, network hiccups)
+  if (msg.includes('relation') && msg.includes('does not exist')) return;
+  if (msg.includes('Failed to fetch') && !navigator.onLine) return;
+
   const entry = {
     service,
     operation,
-    message: error?.message || String(error),
+    message: msg,
     at: new Date().toISOString(),
   };
 

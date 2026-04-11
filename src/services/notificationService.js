@@ -99,51 +99,60 @@ export async function getNotifications({ limit = 50, offset = 0, unreadOnly = fa
  * Add a new notification
  */
 export async function addNotification({ type, title, titleEn, message, messageEn, entity, entityId, priority = 'medium', actionUrl, icon, forUserId }) {
-  const notification = {
-    id: String(Date.now()) + '_' + Math.random().toString(36).slice(2, 8),
+  // Build object matching Supabase columns exactly
+  const dbRecord = {
     type: type || 'system_alert',
-    title: title || '',
-    titleEn: titleEn || '',
     title_ar: title || '',
-    title_en: titleEn || '',
-    message: message || '',
-    messageEn: messageEn || '',
+    title_en: titleEn || title || '',
     body_ar: message || '',
-    body_en: messageEn || '',
-    entity: entity || null,
-    entityId: entityId || null,
+    body_en: messageEn || message || '',
     entity_type: entity || null,
-    entity_id: entityId || null,
-    priority: priority || 'medium',
+    priority: priority || 'normal',
     read: false,
-    created_at: new Date().toISOString(),
-    action_url: actionUrl || null,
-    icon: icon || null,
+    url: actionUrl || null,
     for_user_id: forUserId || 'all',
+    from_user: null,
+  };
+
+  // Local copy for UI (has extra fields)
+  const localNotification = {
+    ...dbRecord,
+    id: String(Date.now()) + '_' + Math.random().toString(36).slice(2, 8),
+    created_at: new Date().toISOString(),
   };
 
   const list = load();
-  list.unshift(notification);
+  list.unshift(localNotification);
   save(list);
   dispatch();
 
   // Trigger browser push notification if permitted
-  if (Notification.permission === 'granted') {
-    showPushNotification(notification.title_ar || notification.title_en || notification.title, {
-      body: notification.body_ar || notification.body_en || notification.message,
-      tag: notification.id,
-      data: { url: notification.action_url || '/' },
-    });
-  }
-
-  // Sync to Supabase
   try {
-    await supabase.from('notifications').insert([stripInternalFields(notification)]);
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      showPushNotification(dbRecord.title_ar || dbRecord.title_en, {
+        body: dbRecord.body_ar || dbRecord.body_en,
+        tag: localNotification.id,
+        data: { url: dbRecord.url || '/' },
+      });
+    }
+  } catch { /* ignore */ }
+
+  // Save to Supabase
+  try {
+    const { data, error } = await supabase.from('notifications').insert([dbRecord]).select('*').single();
+    if (error) throw error;
+    // Update local with real ID
+    if (data?.id) {
+      const updatedList = load();
+      const idx = updatedList.findIndex(n => n.id === localNotification.id);
+      if (idx !== -1) { updatedList[idx] = { ...updatedList[idx], ...data }; save(updatedList); }
+      return data;
+    }
   } catch (err) {
     reportError('notificationService', 'addNotification', err);
   }
 
-  return notification;
+  return localNotification;
 }
 
 /**

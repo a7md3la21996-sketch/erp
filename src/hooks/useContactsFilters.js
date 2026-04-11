@@ -90,6 +90,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'email', label: 'الإيميل', labelEn: 'Email', type: 'text' },
     { id: 'phone', label: 'الهاتف', labelEn: 'Phone', type: 'text' },
     { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
+    { id: 'assigned_at', label: 'تاريخ التوزيع', labelEn: 'Assignment Date', type: 'date' },
     { id: 'last_activity_at', label: 'آخر نشاط', labelEn: 'Last Activity', type: 'date' },
     { id: 'lead_score', label: 'Lead Score', labelEn: 'Lead Score', type: 'number' },
     { id: 'campaign_name', label: 'الحملة', labelEn: 'Campaign', type: 'text' },
@@ -99,6 +100,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set((contacts || []).map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
     { id: '_opp_count', label: 'عدد الفرص', labelEn: 'Opportunities Count', type: 'number' },
+    { id: '_agent_count', label: 'عدد المسؤولين', labelEn: 'Agent Count', type: 'number' },
     ...auditFields,
   ], [contacts, auditFields, deptView]);
 
@@ -110,6 +112,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
 
   const ALL_SORT_OPTIONS = [
     { value: 'created', label: 'ترتيب: الأحدث', labelEn: 'Sort: Newest' },
+    { value: 'assigned', label: 'ترتيب: تاريخ التوزيع', labelEn: 'Sort: Assignment Date' },
     { value: 'last_activity', label: 'ترتيب: آخر نشاط', labelEn: 'Sort: Last Activity' },
     { value: 'score', label: 'ترتيب: Lead Score', labelEn: 'Sort: Lead Score' },
     { value: 'name', label: 'ترتيب: الاسم', labelEn: 'Sort: Name' },
@@ -120,34 +123,23 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     return ALL_SORT_OPTIONS.filter(o => deptView.sortIds.includes(o.value));
   }, [deptView]);
 
-  // Filter + Sort
+  // Enrich + client-only filters + sort
+  // NOTE: search, filterType, showBlacklisted, department, agentName are already filtered server-side.
+  // This hook only applies: computed fields, smart filters (client-only), audit filters, date range, and sorting.
   const filtered = useMemo(() => {
-    let list = (contacts || []).filter(c => {
-      if (!showBlacklisted && c.is_blacklisted) return false;
-      if (filterType !== 'all' && c.contact_type !== filterType) return false;
-      if (search) {
-        const q = search.toLowerCase();
-        const qDigits = q.replace(/\D/g, '');
-        const phoneMatch = qDigits.length >= 4 && (c.phone?.replace(/\D/g, '').includes(qDigits) || c.phone2?.replace(/\D/g, '').includes(qDigits));
-        return (c.full_name?.toLowerCase().includes(q) || phoneMatch || c.phone?.includes(q) || c.email?.toLowerCase().includes(q) || c.campaign_name?.toLowerCase().includes(q) || String(c.id).toLowerCase().includes(q));
-      }
-      return true;
-    });
-    list = list.map(c => ({
+    let list = (contacts || []).map(c => ({
       ...c,
       _country: c._country || detectCountry(c.phone),
       _campaign_count: (c.campaign_interactions || []).length,
-      _opp_count: (c.opportunities || []).length,
+      _opp_count: c._opp_count || 0,
+      _agent_count: Array.isArray(c.assigned_to_names) ? c.assigned_to_names.length : (c.assigned_to_name ? 1 : 0),
     }));
-    list = applySmartFilters(list, smartFilters, SMART_FIELDS);
+    // Client-only smart filters — exclude fields already sent to server
+    const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department'];
+    const clientOnlySmartFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
+    list = applySmartFilters(list, clientOnlySmartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
-    // Global filter
-    if (globalFilter?.department && globalFilter.department !== 'all') {
-      list = list.filter(c => c.department === globalFilter.department);
-    }
-    if (globalFilter?.agentName && globalFilter.agentName !== 'all') {
-      list = list.filter(c => c.assigned_to_name === globalFilter.agentName);
-    }
+    // Date range filter (only from global filter, not sent to server)
     if (globalFilter?.dateRange) {
       const { start, end } = globalFilter.dateRange;
       list = list.filter(c => c.created_at && c.created_at >= start && c.created_at <= end);
@@ -164,7 +156,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       return 0;
     });
     return list;
-  }, [contacts, filterType, search, showBlacklisted, sortBy, pinnedIds, smartFilters, SMART_FIELDS, applyAuditFilters, globalFilter?.department, globalFilter?.agentName, globalFilter?.dateRange]);
+  }, [contacts, sortBy, pinnedIds, smartFilters, SMART_FIELDS, applyAuditFilters, globalFilter?.dateRange]);
 
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);

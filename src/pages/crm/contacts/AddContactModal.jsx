@@ -141,8 +141,8 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
       import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
         fetchSalesAgents().then(agents => {
           setAgentsList(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
-        }).catch(() => {});
-      }).catch(() => {});
+        }).catch(err => { if (import.meta.env.DEV) console.warn('fetch sales agents:', err); });
+      }).catch(err => { if (import.meta.env.DEV) console.warn('import opportunitiesService:', err); });
     }
   }, [isAdmin]);
   useEscClose(onClose);
@@ -169,6 +169,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     gender: '', nationality: '', birth_date: '', company: '', job_title: '',
     countryCode: '+20',
     country: 'EG',
+    temperature: 'hot',
   });
   const [dupWarning, setDupWarning] = useState(null);
   const [extraPhones, setExtraPhones] = useState([]);
@@ -226,7 +227,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         } else {
           setDupWarning(dup || null);
         }
-      } catch { setDupWarning(null); }
+      } catch (err) { if (import.meta.env.DEV) console.warn('dup check:', err); setDupWarning(null); }
       setChecking(false);
     }, 400);
   };
@@ -443,7 +444,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                           const v = e.target.value.replace(/[^0-9+]/g, '');
                           const updated = [...extraPhones]; updated[i] = v; setExtraPhones(updated);
                           setExtraDups(d => { const nd = [...d]; nd[i] = null; return nd; });
-                          if (validatePhone(v)) { checkDup(v).then(dup => { setExtraDups(d => { const nd = [...d]; nd[i] = dup || null; return nd; }); }).catch(() => {}); }
+                          if (validatePhone(v)) { checkDup(v).then(dup => { setExtraDups(d => { const nd = [...d]; nd[i] = dup || null; return nd; }); }).catch(err => { if (import.meta.env.DEV) console.warn('extra phone dup check:', err); }); }
                         }} />
                       <button type="button" onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraCountryCodes(prev => prev.filter((_, j) => j !== i)); setExtraDups(d => d.filter((_, j) => j !== i)); }}
                         className="px-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-lg leading-none">×</button>
@@ -572,6 +573,15 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                 </Select>
               </div>
               </>)}
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الحرارة' : 'Temperature'}</label>
+                <Select value={form.temperature} onChange={e => set('temperature', e.target.value)}>
+                  <option value="hot">{isRTL ? 'حار 🔥' : 'Hot 🔥'}</option>
+                  <option value="warm">{isRTL ? 'دافئ' : 'Warm'}</option>
+                  <option value="cool">{isRTL ? 'فاتر' : 'Cool'}</option>
+                  <option value="cold">{isRTL ? 'بارد' : 'Cold'}</option>
+                </Select>
+              </div>
               <div className="col-span-full">
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'ملاحظات' : 'Notes'}</label>
                 <Textarea rows={4} placeholder={isRTL ? "ملاحظات إضافية..." : "Additional notes..."} value={form.notes} onChange={e => set('notes', e.target.value)} />

@@ -11,12 +11,14 @@ import {
   User, CloudOff, Repeat, ToggleLeft, ToggleRight,
   Edit3, SkipForward, Calendar, AlertCircle
 } from 'lucide-react';
-import { fetchTasks, createTask, updateTask, deleteTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
+import { fetchTasks, createTask, updateTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
+import { createActivity } from '../services/contactsService';
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { logAction } from '../services/auditService';
 import { notifyTaskAssigned } from '../services/notificationsService';
+import { useToast } from '../contexts/ToastContext';
 import {
   getRecurringTasks, createRecurringTask, updateRecurringTask, deleteRecurringTask,
   toggleRecurringTask, generateDueInstances, getTodayInstances, completeInstance,
@@ -287,37 +289,46 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
-  const loadData = useCallback(() => {
-    generateDueInstances();
-    setRecTasks(getRecurringTasks());
-    setInstances(getTodayInstances());
+  const [loadingRec, setLoadingRec] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setLoadingRec(true);
+    try {
+      await generateDueInstances();
+      const tasks = await getRecurringTasks();
+      setRecTasks(tasks);
+      setInstances([]); // instances now created as real tasks
+    } catch { setRecTasks([]); }
+    finally { setLoadingRec(false); }
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   const userName = profile?.full_name_ar || profile?.full_name_en || '';
 
-  const handleSave = (formData) => {
-    if (editingTask) {
-      updateRecurringTask(editingTask.id, formData);
-      logAction({ action: 'update', entity: 'recurring_task', entityId: editingTask.id, entityName: formData.title, description: 'Updated recurring task', userName });
-    } else {
-      const t = createRecurringTask(formData);
-      logAction({ action: 'create', entity: 'recurring_task', entityId: t.id, entityName: formData.title, description: 'Created recurring task', userName });
-    }
+  const handleSave = async (formData) => {
+    try {
+      if (editingTask) {
+        await updateRecurringTask(editingTask.id, formData);
+        logAction({ action: 'update', entity: 'recurring_task', entityId: editingTask.id, entityName: formData.title, description: 'Updated recurring task', userName });
+      } else {
+        const t = await createRecurringTask(formData);
+        logAction({ action: 'create', entity: 'recurring_task', entityId: t.id, entityName: formData.title, description: 'Created recurring task', userName });
+      }
+    } catch { /* error reported in service */ }
     setEditingTask(null);
     loadData();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     const task = recTasks.find(t => t.id === id);
-    deleteRecurringTask(id);
+    await deleteRecurringTask(id);
     logAction({ action: 'delete', entity: 'recurring_task', entityId: id, entityName: task?.title || '', description: 'Deleted recurring task', userName });
     loadData();
   };
 
-  const handleToggle = (id) => {
-    toggleRecurringTask(id);
+  const handleToggle = async (id) => {
+    await toggleRecurringTask(id);
     loadData();
   };
 
@@ -576,6 +587,279 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
   );
 }
 
+// ── Calendar View ───────────────────────────────────────────────────
+function CalendarView({ tasks, lang, isRTL, isDark, onTaskClick }) {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const startOfWeek = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay() + weekOffset * 7);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [weekOffset]);
+
+  const days = useMemo(() => {
+    const arr = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek);
+      d.setDate(d.getDate() + i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const dayTasks = (tasks || []).filter(t => t.due_date?.slice(0, 10) === dateStr && t.status !== 'done');
+      arr.push({ date: d, dateStr, tasks: dayTasks });
+    }
+    return arr;
+  }, [startOfWeek, tasks]);
+
+  const isToday = (d) => d.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
+  const dayNames = lang === 'ar'
+    ? ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت']
+    : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return (
+    <div>
+      {/* Week navigation */}
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={() => setWeekOffset(w => w - 1)}
+          className="px-3 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark text-xs cursor-pointer">
+          {isRTL ? '→' : '←'} {lang === 'ar' ? 'الأسبوع السابق' : 'Prev Week'}
+        </button>
+        <span className="text-sm font-bold text-content dark:text-content-dark">
+          {startOfWeek.toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+          {' — '}
+          {new Date(startOfWeek.getTime() + 6 * 86400000).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}
+        </span>
+        <div className="flex gap-2">
+          {weekOffset !== 0 && (
+            <button onClick={() => setWeekOffset(0)}
+              className="px-3 py-1.5 rounded-lg bg-brand-500/10 text-brand-500 text-xs font-semibold cursor-pointer border-none">
+              {lang === 'ar' ? 'اليوم' : 'Today'}
+            </button>
+          )}
+          <button onClick={() => setWeekOffset(w => w + 1)}
+            className="px-3 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark text-xs cursor-pointer">
+            {lang === 'ar' ? 'الأسبوع التالي' : 'Next Week'} {isRTL ? '←' : '→'}
+          </button>
+        </div>
+      </div>
+
+      {/* Days grid */}
+      <div className="grid grid-cols-7 gap-2">
+        {days.map(day => (
+          <div key={day.dateStr} className={`min-h-[120px] rounded-xl border p-2 ${
+            isToday(day.date)
+              ? 'border-brand-500 bg-brand-500/[0.04]'
+              : 'border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark'
+          }`}>
+            {/* Day header */}
+            <div className="text-center mb-2">
+              <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{dayNames[day.date.getDay()]}</div>
+              <div className={`text-sm font-bold ${isToday(day.date) ? 'text-brand-500' : 'text-content dark:text-content-dark'}`}>
+                {day.date.getDate()}
+              </div>
+            </div>
+            {/* Tasks */}
+            <div className="flex flex-col gap-1">
+              {day.tasks.slice(0, 4).map(t => {
+                const pri = TASK_PRIORITIES[t.priority];
+                const overdue = new Date(t.due_date) < new Date();
+                return (
+                  <button key={t.id} onClick={() => onTaskClick(t)}
+                    className={`w-full text-start px-1.5 py-1 rounded-md text-[10px] border-none cursor-pointer truncate font-medium transition-colors ${
+                      overdue ? 'bg-red-500/10 text-red-500' : 'bg-surface-bg dark:bg-surface-bg-dark text-content dark:text-content-dark hover:bg-brand-500/10'
+                    }`}
+                    style={{ borderInlineStart: `2px solid ${pri?.color || '#4A7AAB'}` }}
+                    title={`${t.title}${t.contact_name ? ' · ' + t.contact_name : ''}`}
+                  >
+                    {t.title}
+                  </button>
+                );
+              })}
+              {day.tasks.length > 4 && (
+                <span className="text-[9px] text-content-muted dark:text-content-muted-dark text-center">
+                  +{day.tasks.length - 4} {lang === 'ar' ? 'أخرى' : 'more'}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Complete Task Modal ──────────────────────────────────────────────
+function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) {
+  const [actType, setActType] = useState('call');
+  const [actResult, setActResult] = useState('');
+  const [actNotes, setActNotes] = useState('');
+  const [addFollowUp, setAddFollowUp] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState('');
+  const [followUpNotes, setFollowUpNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const ACT_TYPES = [
+    { key: 'call', ar: 'مكالمة', en: 'Call' },
+    { key: 'whatsapp', ar: 'واتساب', en: 'WhatsApp' },
+    { key: 'email', ar: 'إيميل', en: 'Email' },
+    { key: 'meeting', ar: 'مقابلة', en: 'Meeting' },
+    { key: 'note', ar: 'ملاحظة', en: 'Note' },
+  ];
+
+  const RESULTS = {
+    call: [
+      { value: 'answered', ar: 'رد', en: 'Answered', color: '#10B981' },
+      { value: 'no_answer', ar: 'لم يرد', en: 'No Answer', color: '#F59E0B' },
+      { value: 'busy', ar: 'مشغول', en: 'Busy', color: '#EF4444' },
+      { value: 'switched_off', ar: 'مغلق', en: 'Switched Off', color: '#6b7280' },
+    ],
+    whatsapp: [
+      { value: 'replied', ar: 'رد', en: 'Replied', color: '#10B981' },
+      { value: 'seen', ar: 'شاف', en: 'Seen', color: '#3B82F6' },
+      { value: 'delivered', ar: 'وصلت', en: 'Delivered', color: '#F59E0B' },
+    ],
+    email: [
+      { value: 'replied', ar: 'رد', en: 'Replied', color: '#10B981' },
+      { value: 'sent', ar: 'تم الإرسال', en: 'Sent', color: '#4A7AAB' },
+    ],
+  };
+  const currentResults = RESULTS[actType] || [];
+  const resultRequired = currentResults.length > 0;
+  const canSave = (!resultRequired || actResult) && (actNotes.trim() || actResult);
+
+  const handleSave = async () => {
+    if (!canSave) return;
+    setSaving(true);
+    try {
+      const resultLabel = currentResults.find(r => r.value === actResult);
+      const desc = resultLabel ? `${isRTL ? resultLabel.ar : resultLabel.en}${actNotes ? ' — ' + actNotes : ''}` : actNotes;
+      await onComplete({
+        activity: {
+          type: actType,
+          description: desc,
+          notes: actNotes,
+          result: actResult || null,
+          contact_id: task.contact_id || null,
+          user_id: profile?.id || null,
+          user_name_ar: profile?.full_name_ar || '',
+          user_name_en: profile?.full_name_en || '',
+          dept: 'sales',
+          created_at: new Date().toISOString(),
+        },
+        followUp: addFollowUp && followUpDate ? {
+          title: task.title ? `${isRTL ? 'متابعة' : 'Follow-up'}: ${task.title}` : (isRTL ? 'متابعة' : 'Follow-up'),
+          due_date: followUpDate,
+          notes: followUpNotes,
+          contact_id: task.contact_id || null,
+          contact_name: task.contact_name || null,
+          dept: 'sales',
+          priority: 'medium',
+          status: 'pending',
+          assigned_to: profile?.id || null,
+          assigned_to_name_ar: profile?.full_name_ar || '',
+          assigned_to_name_en: profile?.full_name_en || '',
+        } : null,
+      });
+    } finally { setSaving(false); }
+  };
+
+  useEffect(() => {
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[460px] max-h-[85vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-edge dark:border-edge-dark">
+          <div>
+            <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'إنهاء المهمة' : 'Complete Task'}</h3>
+            <p className="m-0 mt-0.5 text-[11px] text-content-muted dark:text-content-muted-dark truncate max-w-[300px]">{task.title}</p>
+            {task.contact_name && <p className="m-0 mt-0.5 text-[11px] text-brand-500 font-medium">{task.contact_name}</p>}
+          </div>
+          <button onClick={onClose} className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark hover:text-red-500"><X size={16} /></button>
+        </div>
+
+        <div className="px-5 py-4">
+          {/* Activity Type */}
+          <div className="mb-3">
+            <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'نوع النشاط' : 'Activity Type'} <span className="text-red-500">*</span></label>
+            <div className="flex gap-1.5 flex-wrap">
+              {ACT_TYPES.map(t => (
+                <button key={t.key} onClick={() => { setActType(t.key); setActResult(''); }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${
+                    actType === t.key ? 'bg-brand-500 text-white border-brand-500' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
+                  }`}>
+                  {isRTL ? t.ar : t.en}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Result */}
+          {currentResults.length > 0 && (
+            <div className="mb-3">
+              <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'النتيجة' : 'Result'}</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {currentResults.map(r => (
+                  <button key={r.value} onClick={() => setActResult(actResult === r.value ? '' : r.value)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${
+                      actResult === r.value ? 'font-bold text-white border-transparent' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
+                    }`}
+                    style={actResult === r.value ? { background: r.color } : {}}>
+                    {isRTL ? r.ar : r.en}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Notes */}
+          <div className="mb-3">
+            <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 block">{isRTL ? 'ملاحظات' : 'Notes'}</label>
+            <Textarea value={actNotes} onChange={e => setActNotes(e.target.value)} rows={2} size="sm"
+              placeholder={isRTL ? 'ملاحظات عن النشاط...' : 'Activity notes...'} dir={isRTL ? 'rtl' : 'ltr'} />
+          </div>
+
+          {/* Follow-up toggle */}
+          <div className="border-t border-edge dark:border-edge-dark pt-3 mt-3">
+            <button onClick={() => setAddFollowUp(!addFollowUp)}
+              className={`flex items-center gap-2 text-xs font-semibold cursor-pointer bg-transparent border-none p-0 transition-colors ${
+                addFollowUp ? 'text-brand-500' : 'text-content-muted dark:text-content-muted-dark'
+              }`}>
+              <Calendar size={13} />
+              {isRTL ? (addFollowUp ? 'إلغاء المتابعة' : '+ إضافة مهمة متابعة') : (addFollowUp ? 'Cancel follow-up' : '+ Add follow-up task')}
+            </button>
+            {addFollowUp && (
+              <div className="mt-2.5 p-3 bg-brand-500/[0.04] border border-brand-500/10 rounded-xl">
+                <div className="mb-2">
+                  <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'تاريخ المتابعة' : 'Follow-up date'} <span className="text-red-500">*</span></label>
+                  <input type="datetime-local" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
+                    className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'ملاحظة المتابعة' : 'Follow-up note'}</label>
+                  <input type="text" value={followUpNotes} onChange={e => setFollowUpNotes(e.target.value)}
+                    placeholder={isRTL ? 'اختياري...' : 'Optional...'}
+                    className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className={`flex gap-2 px-5 py-4 border-t border-edge dark:border-edge-dark ${isRTL ? 'justify-start' : 'justify-end'}`}>
+          <Button variant="secondary" size="sm" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving || !canSave}>
+            <Check size={13} /> {saving ? '...' : (isRTL ? 'إنهاء المهمة' : 'Complete Task')}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ────────────────────────────────────────────────────────
 export default function TasksPage() {
   const { i18n } = useTranslation();
@@ -586,13 +870,18 @@ export default function TasksPage() {
   const lang   = i18n.language;
   const isRTL   = lang === 'ar';
 
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('tasks');
   const [tasks, setTasks]           = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [completeTask, setCompleteTask] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('pending');
+  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [smartFilters, setSmartFilters] = useState([]);
   const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [showAdd, setShowAdd]       = useState(false);
-  const [form, setForm]             = useState({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'crm', due_date: '', notes: '', contact_name: '' });
+  const [form, setForm]             = useState({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'sales', due_date: '', notes: '', contact_name: '', opportunity_name: '' });
   const [saving, setSaving]         = useState(false);
   const [page, setPage]             = useState(1);
   const [pageSize, setPageSize]     = useState(25);
@@ -611,7 +900,7 @@ export default function TasksPage() {
     { id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select', options: Object.entries(TASK_STATUSES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'priority', label: 'الأولوية', labelEn: 'Priority', type: 'select', options: Object.entries(TASK_PRIORITIES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'dept', label: 'القسم', labelEn: 'Department', type: 'select', options: [
-      { value: 'crm', label: 'CRM', labelEn: 'CRM' },
+      { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
       { value: 'hr', label: 'HR', labelEn: 'HR' },
       { value: 'finance', label: 'المالية', labelEn: 'Finance' },
       { value: 'general', label: 'عام', labelEn: 'General' },
@@ -633,60 +922,115 @@ export default function TasksPage() {
   ], []);
 
   const [sortBy, setSortBy] = useState('due_date_asc');
-
   const [totalCount, setTotalCount] = useState(0);
+  const [stats, setStats] = useState({ total: 0, pending: 0, overdue: 0, done: 0 });
 
-  const load = async (pg = page) => {
+  // Extract server-side filters from smartFilters
+  const serverFilters = useMemo(() => {
+    const statusF = smartFilters.find(f => f.field === 'status' && f.operator === 'is');
+    const priorityF = smartFilters.find(f => f.field === 'priority' && f.operator === 'is');
+    const deptF = smartFilters.find(f => f.field === 'dept' && f.operator === 'is');
+    const agentF = smartFilters.find(f => f.field === 'assigned_to_name_en' && f.operator === 'is');
+    return { status: statusF?.value, priority: priorityF?.value, dept: deptF?.value, agentName: agentF?.value };
+  }, [smartFilters]);
+
+  const loadTasks = useCallback(async (pg) => {
     setLoading(true);
     try {
-      const result = await fetchTasks({ page: pg, pageSize, role: profile?.role, userId: profile?.id, teamId: profile?.team_id });
+      const currentPage = pg || page || 1;
+      const agentValue = serverFilters.agentName || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined);
+      const deptValue = serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined);
+      const result = await fetchTasks({
+        page: currentPage, pageSize, sortBy,
+        role: profile?.role, userId: profile?.id, teamId: profile?.team_id,
+        search: search || undefined,
+        status: serverFilters.status || (statusFilter !== 'all' ? statusFilter : undefined),
+        priority: serverFilters.priority || (priorityFilter !== 'all' ? priorityFilter : undefined),
+        dept: deptValue,
+        agentName: agentValue,
+        ...(dateFilter === 'today' ? { dueDateFrom: new Date().toISOString().slice(0, 10) + 'T00:00:00', dueDateTo: new Date().toISOString().slice(0, 10) + 'T23:59:59' } : {}),
+        ...(dateFilter === 'week' ? { dueDateFrom: new Date().toISOString().slice(0, 10) + 'T00:00:00', dueDateTo: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) + 'T23:59:59' } : {}),
+        ...(dateFilter === 'overdue' ? { overdueOnly: true } : {}),
+      });
       setTasks(result?.data || []);
       setTotalCount(result?.count || 0);
+    } catch (err) {
+      console.error('Tasks load error:', err);
+      setTasks([]);
     } finally { setLoading(false); }
-  };
+  }, [page, pageSize, sortBy, profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.agentName, globalFilter?.department, statusFilter, priorityFilter, dateFilter]);
 
-  useEffect(() => { load(page); }, [page, pageSize]);
+  useEffect(() => { if (profile) loadTasks(); }, [profile, loadTasks]);
 
-  // Realtime: reload when tasks change from another user
-  useRealtimeSubscription('tasks', useCallback(() => { load(page); }, [page, pageSize]));
+  // Realtime
+  useRealtimeSubscription('tasks', useCallback((payload) => {
+    if (payload?.eventType) {
+      setTasks(prev => {
+        if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== payload.old?.id);
+        if (payload.eventType === 'INSERT') return [payload.new, ...prev];
+        if (payload.eventType === 'UPDATE') return prev.map(t => t.id === payload.new?.id ? { ...t, ...payload.new } : t);
+        return prev;
+      });
+    }
+  }, []));
 
+  // Stats — from server
+  const loadStats = useCallback(async () => {
+    try {
+      const baseArgs = { role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: 1, pageSize: 1 };
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const nowISO = new Date().toISOString();
+      const [totalRes, pendingRes, doneRes, overdueRes, todayRes, doneTodayRes] = await Promise.all([
+        fetchTasks({ ...baseArgs }),
+        fetchTasks({ ...baseArgs, status: 'pending' }),
+        fetchTasks({ ...baseArgs, status: 'done' }),
+        // Overdue = pending + due_date < now (need custom query)
+        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO),
+        // Today = due_date starts with today
+        supabase.from('tasks').select('id', { count: 'exact', head: true }).gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59'),
+        // Done today
+        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'done').gte('updated_at', todayStr + 'T00:00:00'),
+      ]);
+      setStats({
+        total: totalRes?.count || 0,
+        pending: pendingRes?.count || 0,
+        done: doneRes?.count || 0,
+        overdue: overdueRes?.count || 0,
+        today: todayRes?.count || 0,
+        doneToday: doneTodayRes?.count || 0,
+      });
+    } catch { /* ignore */ }
+  }, [profile?.role, profile?.id, profile?.team_id]);
+
+  useEffect(() => { if (profile) loadStats(); }, [profile, loadStats]);
+
+  // #4: Notify user about overdue tasks (once per session)
+  const overdueNotified = useRef(false);
+  useEffect(() => {
+    if (overdueNotified.current || !stats.overdue || stats.overdue === 0) return;
+    overdueNotified.current = true;
+    toast.warning(
+      lang === 'ar'
+        ? `عندك ${stats.overdue} مهمة متأخرة — تحتاج متابعة فوراً`
+        : `You have ${stats.overdue} overdue tasks — follow up now`
+    );
+  }, [stats.overdue]);
+
+  // Client-only filters (exclude server-filtered fields)
+  const SERVER_FILTERED_FIELDS = ['status', 'priority', 'dept', 'assigned_to_name_en'];
   const filtered = useMemo(() => {
-    let result = applySmartFilters(tasks, smartFilters, SMART_FIELDS);
+    let result = tasks || [];
+    const clientFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
+    result = applySmartFilters(result, clientFilters, SMART_FIELDS);
     result = applyAuditFilters(result, smartFilters);
-    if (search) {
-      const s = search.toLowerCase();
-      result = result.filter(t => t.title?.toLowerCase().includes(s) || t.contact_name?.toLowerCase().includes(s));
-    }
-    // Global filter
-    if (globalFilter?.agentName && globalFilter.agentName !== 'all') {
-      result = result.filter(t => t.assigned_to_name_en === globalFilter.agentName || t.assigned_to_name_ar === globalFilter.agentName);
-    }
-    const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
-    result = [...result].sort((a, b) => {
-      switch (sortBy) {
-        case 'due_date_asc': return new Date(a.due_date) - new Date(b.due_date);
-        case 'due_date_desc': return new Date(b.due_date) - new Date(a.due_date);
-        case 'created_at_desc': return new Date(b.created_at) - new Date(a.created_at);
-        case 'created_at_asc': return new Date(a.created_at) - new Date(b.created_at);
-        case 'priority_desc': return (PRIORITY_ORDER[a.priority] ?? 9) - (PRIORITY_ORDER[b.priority] ?? 9);
-        default: return 0;
-      }
-    });
     return result;
-  }, [tasks, smartFilters, SMART_FIELDS, search, sortBy, globalFilter?.agentName]);
+  }, [tasks, smartFilters, SMART_FIELDS]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice(0, pageSize);
-  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  const paged = filtered;
+  useEffect(() => { if (page > totalPages && totalPages > 0) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [search, smartFilters, sortBy]);
-
-  const stats = useMemo(() => ({
-    total:   totalCount || (tasks || []).length,
-    pending: (tasks || []).filter(t => t.status === 'pending').length,
-    overdue: (tasks || []).filter(t => t.status !== 'done' && new Date(t.due_date) < new Date()).length,
-    done:    (tasks || []).filter(t => t.status === 'done').length,
-  }), [tasks]);
 
   const handleAdd = async () => {
     if (!form.title.trim() || !form.due_date) return;
@@ -696,23 +1040,21 @@ export default function TasksPage() {
       logAction({ action: 'create', entity: 'task', entityId: t.id, entityName: t.title || '', description: 'Created task', userName: profile?.full_name_ar || profile?.full_name_en || '' });
       notifyTaskAssigned({ taskTitle: t.title, assigneeId: t.assigned_to || profile?.id || 'all', assignedBy: profile?.full_name_ar || profile?.full_name_en || '' });
       setTasks(prev => [t, ...prev]);
-      setForm({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'crm', due_date: '', notes: '', contact_name: '' });
+      setForm({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'sales', due_date: '', notes: '', contact_name: '', opportunity_name: '' });
       setShowAdd(false);
     } finally { setSaving(false); }
   };
 
   const handleStatus = async (task, newStatus) => {
     const oldStatus = task.status;
-    await updateTask(task.id, { status: newStatus });
-    logAction({ action: 'status_change', entity: 'task', entityId: task.id, entityName: task.title || '', description: `Changed task status from ${oldStatus} to ${newStatus}`, oldValue: oldStatus, newValue: newStatus, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: newStatus } : t));
-  };
-
-  const handleDelete = async (id) => {
-    const task = (tasks || []).find(t => t.id === id);
-    await deleteTask(id);
-    logAction({ action: 'delete', entity: 'task', entityId: id, entityName: task?.title || '', description: 'Deleted task', userName: profile?.full_name_ar || profile?.full_name_en || '' });
-    setTasks(prev => prev.filter(t => t.id !== id));
+    try {
+      await updateTask(task.id, { status: newStatus });
+      logAction({ action: 'status_change', entity: 'task', entityId: task.id, entityName: task.title || '', description: `Changed task status from ${oldStatus} to ${newStatus}`, oldValue: oldStatus, newValue: newStatus, userName: profile?.full_name_ar || profile?.full_name_en || '' });
+    } catch (err) {
+      console.error('Task status update failed:', err);
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: oldStatus } : t));
+    }
   };
 
   if (loading) return <PageSkeleton hasKpis={false} tableRows={6} tableCols={5} variant="list" />;
@@ -779,27 +1121,49 @@ export default function TasksPage() {
           <CheckSquare size={14} />
           {lang === 'ar' ? 'المهام' : 'Tasks'}
         </button>
+        <button style={tabStyle(activeTab === 'calendar')} onClick={() => setActiveTab('calendar')}>
+          <Calendar size={14} />
+          {lang === 'ar' ? 'تقويم' : 'Calendar'}
+        </button>
         <button style={tabStyle(activeTab === 'recurring')} onClick={() => setActiveTab('recurring')}>
           <Repeat size={14} />
           {lang === 'ar' ? 'متكررة' : 'Recurring'}
         </button>
       </div>
 
-      {activeTab === 'recurring' ? (
+      {activeTab === 'calendar' ? (
+        <CalendarView tasks={tasks} lang={lang} isRTL={isRTL} isDark={isDark} onTaskClick={(task) => setCompleteTask(task)} />
+      ) : activeTab === 'recurring' ? (
         <RecurringTab lang={lang} isRTL={isRTL} isDark={isDark} profile={profile} />
       ) : (
         <>
+          {/* Overdue Banner */}
+          {stats.overdue > 0 && (
+            <div className="flex items-center gap-2.5 px-4 py-3 mb-4 rounded-xl bg-red-500/[0.08] border border-red-500/20">
+              <AlertCircle size={16} className="text-red-500 shrink-0" />
+              <span className="text-sm font-bold text-red-500">
+                {lang==='ar' ? `${stats.overdue} مهمة متأخرة` : `${stats.overdue} overdue tasks`}
+              </span>
+              <button onClick={() => { setStatusFilter('pending'); setSortBy('due_date_asc'); setPage(1); }}
+                className="text-xs font-semibold text-red-500 bg-red-500/10 px-2.5 py-1 rounded-lg border-none cursor-pointer hover:bg-red-500/20 transition-colors ms-auto">
+                {lang==='ar' ? 'عرض المتأخرة' : 'View Overdue'}
+              </button>
+            </div>
+          )}
+
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-5">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-2 mb-4">
             {[
-              { label: lang==='ar'?'الكل':'Total',    value: stats.total,   color: '#4A7AAB'  },
-              { label: lang==='ar'?'معلقة':'Pending', value: stats.pending, color: '#F97316' },
-              { label: lang==='ar'?'متأخرة':'Overdue',value: stats.overdue, color: '#EF4444' },
-              { label: lang==='ar'?'مكتملة':'Done',   value: stats.done,    color: '#4A7AAB' },
+              { label: lang==='ar'?'الكل':'Total',          value: stats.total,     color: '#4A7AAB' },
+              { label: lang==='ar'?'معلقة':'Pending',       value: stats.pending,   color: '#F97316' },
+              { label: lang==='ar'?'متأخرة':'Overdue',      value: stats.overdue,   color: '#EF4444' },
+              { label: lang==='ar'?'اليوم':'Today',         value: stats.today,     color: '#2B4C6F' },
+              { label: lang==='ar'?'مكتملة اليوم':'Done Today', value: stats.doneToday, color: '#10B981' },
+              { label: lang==='ar'?'مكتملة':'Done',         value: stats.done,      color: '#6B8DB5' },
             ].map((s,i) => (
-              <Card key={i} className="px-4 py-3">
-                <div className="text-xs text-content-muted dark:text-content-muted-dark mb-1">{s.label}</div>
-                <div className="text-2xl font-bold" style={{ color: s.color }}>{s.value}</div>
+              <Card key={i} className="px-3 py-2.5 text-center">
+                <div className="text-[10px] text-content-muted dark:text-content-muted-dark mb-0.5">{s.label}</div>
+                <div className="text-xl font-bold" style={{ color: s.color }}>{s.value}</div>
               </Card>
             ))}
           </div>
@@ -819,13 +1183,15 @@ export default function TasksPage() {
                   {Object.entries(TASK_PRIORITIES).map(([k,v]) => <option key={k} value={k}>{lang==='ar'?v.ar:v.en}</option>)}
                 </Select>
                 <Select value={form.dept} onChange={e => setForm(f=>({...f,dept:e.target.value}))} className={isRTL ? 'direction-rtl' : 'direction-ltr'}>
-                  {[['crm','CRM'],['hr','HR'],['finance',lang==='ar'?'المالية':'Finance'],['general',lang==='ar'?'عام':'General']].map(([k,v])=>(
+                  {[['sales',lang==='ar'?'المبيعات':'Sales'],['hr','HR'],['finance',lang==='ar'?'المالية':'Finance'],['general',lang==='ar'?'عام':'General']].map(([k,v])=>(
                     <option key={k} value={k}>{v}</option>
                   ))}
                 </Select>
                 <Input type="datetime-local" value={form.due_date} onChange={e => setForm(f=>({...f,due_date:e.target.value}))} className={isRTL ? 'direction-rtl' : 'direction-ltr'} />
                 <Input value={form.contact_name} onChange={e => setForm(f=>({...f,contact_name:e.target.value}))}
                   placeholder={lang==='ar'?'اسم العميل (اختياري)':'Contact name (optional)'} className={isRTL ? 'direction-rtl' : 'direction-ltr'} />
+                <Input value={form.opportunity_name} onChange={e => setForm(f=>({...f,opportunity_name:e.target.value}))}
+                  placeholder={lang==='ar'?'اسم الفرصة (اختياري)':'Opportunity (optional)'} className={isRTL ? 'direction-rtl' : 'direction-ltr'} />
                 <Textarea value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))}
                   placeholder={lang==='ar'?'ملاحظات...':'Notes...'} rows={2}
                   className={`col-span-2 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} />
@@ -841,6 +1207,57 @@ export default function TasksPage() {
             </Card>
           )}
 
+          {/* Status + Priority Chips */}
+          <div className="flex gap-2 mb-2 flex-wrap">
+            {[
+              { value: 'pending', label: lang==='ar'?'معلقة':'Pending', color: '#F97316' },
+              { value: 'in_progress', label: lang==='ar'?'جارية':'In Progress', color: '#4A7AAB' },
+              { value: 'done', label: lang==='ar'?'مكتملة':'Done', color: '#10B981' },
+              { value: 'all', label: lang==='ar'?'الكل':'All', color: '#6B8DB5' },
+            ].map(s => {
+              const active = statusFilter === s.value;
+              return (
+                <button key={s.value} onClick={() => { setStatusFilter(s.value); setPage(1); }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                  style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
+                  {s.label}
+                </button>
+              );
+            })}
+            <div className="w-px h-6 bg-edge dark:bg-edge-dark self-center mx-1" />
+            {[
+              { value: 'all', label: lang==='ar'?'كل الأولويات':'All Priorities', color: '#6B8DB5' },
+              { value: 'high', label: lang==='ar'?'عالية':'High', color: '#EF4444' },
+              { value: 'medium', label: lang==='ar'?'متوسطة':'Medium', color: '#F97316' },
+              { value: 'low', label: lang==='ar'?'منخفضة':'Low', color: '#6B8DB5' },
+            ].map(p => {
+              const active = priorityFilter === p.value;
+              return (
+                <button key={p.value} onClick={() => { setPriorityFilter(p.value); setPage(1); }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                  style={active ? { border: `1px solid ${p.color}`, background: `${p.color}15`, color: p.color } : undefined}>
+                  {p.label}
+                </button>
+              );
+            })}
+            <div className="w-px h-6 bg-edge dark:bg-edge-dark self-center mx-1" />
+            {[
+              { value: 'all', label: lang==='ar'?'كل المواعيد':'All Dates', color: '#6B8DB5' },
+              { value: 'today', label: lang==='ar'?'اليوم':'Today', color: '#2B4C6F' },
+              { value: 'week', label: lang==='ar'?'هذا الأسبوع':'This Week', color: '#4A7AAB' },
+              { value: 'overdue', label: lang==='ar'?'متأخرة':'Overdue', color: '#EF4444' },
+            ].map(d => {
+              const active = dateFilter === d.value;
+              return (
+                <button key={d.value} onClick={() => { setDateFilter(d.value); setPage(1); }}
+                  className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                  style={active ? { border: `1px solid ${d.color}`, background: `${d.color}15`, color: d.color } : undefined}>
+                  {d.label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Filters */}
           <SmartFilter
             fields={SMART_FIELDS}
@@ -852,7 +1269,7 @@ export default function TasksPage() {
             sortOptions={SORT_OPTIONS}
             sortBy={sortBy}
             onSortChange={setSortBy}
-            resultsCount={filtered.length}
+            resultsCount={totalCount}
           />
 
           {/* Tasks List */}
@@ -906,21 +1323,13 @@ export default function TasksPage() {
                       <Badge size="sm" style={{ background: (stDef?.color||'#4A7AAB')+'18', color: stDef?.color||'#4A7AAB' }}>
                         {lang==='ar'?stDef?.ar:stDef?.en}
                       </Badge>
-                      {task.contact_name && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); navigate(task.contact_id ? `/contacts?highlight=${task.contact_id}` : `/contacts?q=${encodeURIComponent(task.contact_name)}`); }}
-                          className="text-xs text-brand-500 flex items-center gap-[3px] bg-transparent border-none cursor-pointer hover:underline p-0 font-inherit"
-                        >
-                          <User size={10} /> {task.contact_name}
-                        </button>
-                      )}
                       {task._offline && (
                         <Badge size="sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', gap: '3px', display: 'inline-flex', alignItems: 'center' }}>
                           <CloudOff size={9} /> {lang === 'ar' ? 'غير متزامن' : 'Offline'}
                         </Badge>
                       )}
                     </div>
-                    <div className={`flex items-center gap-2.5 mt-[3px] ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <div className={`flex items-center gap-2.5 mt-[3px] flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                       <span className={`text-xs flex items-center gap-[3px] ${
                         due.overdue && !isDone
                           ? 'text-red-500 font-semibold'
@@ -928,14 +1337,28 @@ export default function TasksPage() {
                       }`}>
                         <Clock size={10} /> {due.label}
                       </span>
-                      {task.assigned_to_name_ar && (
-                        <span className="text-xs text-content-muted dark:text-content-muted-dark">
-                          {lang==='ar'?task.assigned_to_name_ar:task.assigned_to_name_en}
+                      {(task.assigned_to_name_ar || task.assigned_to_name_en) && (
+                        <span className="text-xs text-brand-500 flex items-center gap-[3px] font-medium">
+                          <User size={10} />
+                          {lang==='ar' ? (task.assigned_to_name_ar || task.assigned_to_name_en) : (task.assigned_to_name_en || task.assigned_to_name_ar)}
+                        </span>
+                      )}
+                      {task.contact_name && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(task.contact_id ? `/contacts?highlight=${task.contact_id}` : `/contacts?q=${encodeURIComponent(task.contact_name)}`); }}
+                          className="text-xs text-emerald-500 flex items-center gap-[3px] bg-transparent border-none cursor-pointer hover:underline p-0 font-inherit font-medium"
+                        >
+                          <Phone size={10} /> {task.contact_name}
+                        </button>
+                      )}
+                      {task.opportunity_name && (
+                        <span className="text-xs text-purple-500 flex items-center gap-[3px] font-medium">
+                          <Star size={10} /> {task.opportunity_name}
                         </span>
                       )}
                       {task.dept && (
                         <Badge size="sm" variant="default" className="!text-[10px]">
-                          {task.dept.toUpperCase()}
+                          {({ sales: lang==='ar'?'المبيعات':'Sales', hr: 'HR', finance: lang==='ar'?'المالية':'Finance', marketing: lang==='ar'?'التسويق':'Marketing', operations: lang==='ar'?'العمليات':'Operations', general: lang==='ar'?'عام':'General' })[task.dept] || task.dept}
                         </Badge>
                       )}
                     </div>
@@ -944,9 +1367,21 @@ export default function TasksPage() {
 
                   {/* Actions */}
                   <div className="flex gap-1 shrink-0">
-                    {task.status !== 'in_progress' && task.status !== 'done' && (
-                      <Button variant="secondary" size="sm" onClick={() => handleStatus(task, 'in_progress')} className="!text-xs !px-[9px] !py-1">
-                        {lang==='ar'?'جارية':'Start'}
+                    {task.contact_phone && (
+                      <>
+                        <a href={`tel:${task.contact_phone}`} onClick={e => e.stopPropagation()}
+                          className="w-7 h-7 flex items-center justify-center bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-500 no-underline hover:bg-emerald-500/20 transition-colors">
+                          <Phone size={12} />
+                        </a>
+                        <a href={`https://wa.me/${task.contact_phone.replace(/[^+\d]/g, '').replace('+', '')}`} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}
+                          className="w-7 h-7 flex items-center justify-center bg-[#25D366]/10 border border-[#25D366]/20 rounded-lg text-[#25D366] no-underline hover:bg-[#25D366]/20 transition-colors">
+                          <MessageCircle size={12} />
+                        </a>
+                      </>
+                    )}
+                    {task.status !== 'done' && (
+                      <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); setCompleteTask(task); }} className="!text-xs !px-[9px] !py-1">
+                        <Check size={11} /> {lang==='ar'?'تم':'Done'}
                       </Button>
                     )}
                   </div>
@@ -965,6 +1400,39 @@ export default function TasksPage() {
             safePage={safePage}
           />
         </>
+      )}
+
+      {/* Complete Task Modal */}
+      {completeTask && (
+        <CompleteTaskModal
+          task={completeTask}
+          lang={lang}
+          isRTL={isRTL}
+          profile={profile}
+          onClose={() => setCompleteTask(null)}
+          onComplete={async ({ activity, followUp }) => {
+            try {
+              // 1. Create activity
+              await createActivity(activity);
+              // 2. Mark task as done
+              await updateTask(completeTask.id, { status: 'done' });
+              setTasks(prev => prev.map(t => t.id === completeTask.id ? { ...t, status: 'done' } : t));
+              // 3. Create follow-up task if requested
+              if (followUp) {
+                const newTask = await createTask(followUp);
+                setTasks(prev => [newTask, ...prev]);
+                toast.success(isRTL ? 'تم إنهاء المهمة وإنشاء متابعة جديدة' : 'Task completed & follow-up created');
+              } else {
+                toast.success(isRTL ? 'تم إنهاء المهمة' : 'Task completed');
+              }
+              logAction({ action: 'complete_task', entity: 'task', entityId: completeTask.id, entityName: completeTask.title, description: `Completed task: ${completeTask.title}`, userName: profile?.full_name_ar || '' });
+              setCompleteTask(null);
+            } catch (err) {
+              console.error('Complete task error:', err);
+              toast.error(isRTL ? 'حدث خطأ: ' + (err?.message || '') : 'Error: ' + (err?.message || ''));
+            }
+          }}
+        />
       )}
     </div>
   );

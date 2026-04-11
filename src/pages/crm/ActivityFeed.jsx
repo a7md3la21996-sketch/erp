@@ -23,7 +23,7 @@ function timeAgo(dateStr, lang) {
   return lang === 'ar' ? `${Math.floor(diff/86400)} يوم` : `${Math.floor(diff/86400)}d`;
 }
 
-export default function ActivityFeed({ entityType = 'contact', entityId, dept = 'crm', compact = false }) {
+export default function ActivityFeed({ entityType = 'contact', entityId, dept = 'sales', compact = false }) {
   const { i18n } = useTranslation();
   const { user } = useAuth();
   const lang = i18n.language;
@@ -177,7 +177,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
                     <span className="text-xs text-content-muted dark:text-content-muted-dark">
                       {act.user_name_ar && lang === 'ar' ? act.user_name_ar : act.user_name_en || ''}
                     </span>
-                    <span className="text-xs text-content-muted dark:text-content-muted-dark mr-auto">
+                    <span className="text-xs text-content-muted dark:text-content-muted-dark ms-auto">
                       {timeAgo(act.created_at, lang)}
                     </span>
                   </div>

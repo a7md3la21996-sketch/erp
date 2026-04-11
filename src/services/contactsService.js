@@ -58,21 +58,31 @@ export async function recordAssignment(contactId, { fromAgent, toAgent, assigned
     status: 'completed',
     created_at: entry.at,
   }]).then(() => {}).catch((err) => { reportError('contactsService', 'recordAssignment', err); });
+  // Update assigned_at timestamp
+  supabase.from('contacts').update({ assigned_at: entry.at }).eq('id', contactId).then(() => {}).catch(() => {});
   return entry;
 }
 
-export async function fetchContacts({ role, userId, teamId, filters = {}, page, pageSize }) {
+export async function fetchContacts({ role, userId, teamId, filters = {}, page, pageSize, sortBy }) {
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
   try {
+    // Map sortBy to Supabase column + direction
+    const SORT_MAP = {
+      created:       { column: 'created_at',       ascending: false },
+      assigned:      { column: 'assigned_at',      ascending: false },
+      last_activity: { column: 'last_activity_at', ascending: false },
+      score:         { column: 'lead_score',        ascending: false },
+      name:          { column: 'full_name',         ascending: true },
+      stale:         { column: 'last_activity_at',  ascending: true },
+    };
+    const sort = SORT_MAP[sortBy] || SORT_MAP.created;
     let query = supabase
       .from('contacts')
       .select('*', isServerPaginated ? { count: 'exact' } : {})
-      .order('last_activity_at', { ascending: false });
+      .order(sort.column, { ascending: sort.ascending });
 
     if (role === 'sales_agent' && userId) {
       // Agent sees contacts where their name is in assigned_to_names
-      const names = await getTeamMemberNames('sales_agent', null);
-      // For agent, we need their own name — get from cache or fetch once
       const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
       if (agentUser) {
         const name = agentUser.full_name_en || agentUser.full_name_ar;
@@ -83,6 +93,9 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       if (names.length) {
         const orConditions = names.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
         query = query.or(orConditions);
+      } else {
+        // No team members found — show nothing instead of everything
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
       }
     }
 
@@ -99,6 +112,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
     if (filters.department) query = query.eq('department', filters.department);
     if (filters.unassigned) query = query.or('assigned_to_name.is.null,assigned_to_name.eq.');
+    if (filters.contactIds?.length) query = query.in('id', filters.contactIds);
     if (filters.contact_status) {
       if (filters.agentNameForStatus) {
         query = query.filter('agent_statuses->>' + filters.agentNameForStatus, 'eq', filters.contact_status);
@@ -106,7 +120,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
         query = query.eq('contact_status', filters.contact_status);
       }
     }
-    if (filters.assigned_to_name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
+    if (filters.assigned_to_name) query = query.eq('assigned_to_name', filters.assigned_to_name);
 
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
@@ -135,7 +149,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       // Rebuild query for next page (Supabase mutates query object)
       // NOTE: Role filters (sales_agent assigned_to_names, TL/manager or conditions) are applied only on the initial query above.
       // This non-paginated path is deprecated — ContactsPage always uses server pagination.
-      query = supabase.from('contacts').select('*').order('last_activity_at', { ascending: false });
+      query = supabase.from('contacts').select('*').order(sort.column, { ascending: sort.ascending });
       if (filters.search) { const s = filters.search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, ''); if (s.length > 0) query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`); }
       if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
       if (filters.source) query = query.eq('source', filters.source);
@@ -144,7 +158,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
       if (filters.department) query = query.eq('department', filters.department);
       if (filters.contact_status) query = query.eq('contact_status', filters.contact_status);
-      if (filters.assigned_to_name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
+      if (filters.assigned_to_name) query = query.eq('assigned_to_name', filters.assigned_to_name);
     }
     // Ensure array fields are never null (prevents .map() crashes)
     allData.forEach(c => {
@@ -206,7 +220,11 @@ export async function createContact(contactData) {
 
 export async function updateContact(id, updates, lastKnownUpdatedAt) {
   // Remove computed/internal fields that don't exist in Supabase
-  const { _campaign_count, _country, _opp_count, _aging_level, _offline, opportunities, ...cleanUpdates } = updates;
+  const { _campaign_count, _country, _opp_count, _aging_level, _offline, _lastNote, _feedback, _triggerEdit, opportunities, ...cleanUpdates } = updates;
+  if (import.meta.env.DEV) {
+    const stripped = stripInternalFields({ ...cleanUpdates });
+    console.log('[updateContact] id:', id, 'fields:', Object.keys(stripped));
+  }
   try {
     // Check for conflicts before saving (optimistic locking)
     if (lastKnownUpdatedAt) {
@@ -219,9 +237,14 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       }
     }
     const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
+    // Convert empty strings to null (Supabase rejects '' for date/number columns)
+    const sanitized = {};
+    for (const [k, v] of Object.entries(cleanUpdates)) {
+      sanitized[k] = v === '' ? null : v;
+    }
     const { data, error } = await supabase
       .from('contacts')
-      .update(stripInternalFields({ ...cleanUpdates, updated_at: new Date().toISOString() }))
+      .update(stripInternalFields({ ...sanitized, updated_at: new Date().toISOString() }))
       .eq('id', id)
       .select('*')
       .single();
@@ -301,28 +324,14 @@ export async function checkDuplicate(phone) {
 
 export async function fetchContactActivities(contactId, { role, userId, teamId } = {}) {
   try {
-    let query = supabase
+    // When fetching for a specific contact, show ALL activities on that contact
+    // (the contact itself is already role-filtered, so no need to filter activities by agent)
+    const query = supabase
       .from('activities')
       .select('*')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50);
-    // Role-based filtering by name (not UUID, since imported activities may lack user_id)
-    if (role === 'sales_agent') {
-      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
-      const myName = agentUser?.full_name_en;
-      if (myName) {
-        query = query.or(`user_name_en.eq.${myName},user_id.eq.${userId}`);
-      }
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const names = await getTeamMemberNames(role, teamId);
-      const ids = await getTeamMemberIds(role, teamId);
-      if (names.length) {
-        const nameConds = names.map(n => `user_name_en.eq.${n}`).join(',');
-        const idConds = ids.map(id => `user_id.eq.${id}`).join(',');
-        query = query.or(`${nameConds},${idConds}`);
-      }
-    }
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
@@ -380,12 +389,17 @@ export async function fetchContactOpportunities(contactId, { role, userId, teamI
       .select('*')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false });
-    // Role-based filtering
+    // Role-based filtering — filter by name (not UUID) since imported opps may lack assigned_to UUID
     if (role === 'sales_agent' && userId) {
-      query = query.eq('assigned_to', userId);
+      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+      if (agentUser?.full_name_en) {
+        query = query.eq('assigned_to_name', agentUser.full_name_en);
+      } else {
+        query = query.eq('assigned_to', userId);
+      }
     } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const ids = await getTeamMemberIds(role, teamId);
-      if (ids.length) query = query.in('assigned_to', ids);
+      const names = await getTeamMemberNames(role, teamId);
+      if (names.length) query = query.in('assigned_to_name', names);
     }
     const { data, error } = await query;
     if (error) throw error;

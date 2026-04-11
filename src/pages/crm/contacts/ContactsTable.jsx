@@ -78,6 +78,7 @@ export default function ContactsTable({
   setPage,
   pageSize,
   setPageSize,
+  totalContacts,
   isRTL,
   isSalesAgent,
   isAdmin,
@@ -301,9 +302,9 @@ export default function ContactsTable({
                   {c.phone2 && <PhoneCell phone={c.phone2} small />}
                 </td>}
 
-                {/* Assigned To — admin sees all names, TL/manager sees single name */}
+                {/* Assigned To — admin/manager/TL see all names */}
                 {hasCol('assigned_to') && !isSalesAgent && <td className={`${tdCls} hidden md:table-cell`}>
-                  {isAdmin && Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1 ? (
+                  {Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1 ? (
                     <div className="flex flex-wrap gap-1">
                       {c.assigned_to_names.map((name, i) => (
                         <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${i === 0 ? 'bg-brand-500/10 text-brand-500' : 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark'}`}>{name}</span>
@@ -363,7 +364,7 @@ export default function ContactsTable({
                 {hasCol('last_feedback') && <td className={`${tdCls} hidden lg:table-cell`}>
                   {c._lastNote ? (
                     <div className="max-w-[180px]">
-                      <p className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={c._lastNote.notes}>{c._lastNote.notes}</p>
+                      <p className="m-0 text-[11px] text-content dark:text-content-dark truncate" title={c._lastNote._feedback || c._lastNote.notes || c._lastNote.description}>{c._lastNote._feedback || c._lastNote.notes || c._lastNote.description}</p>
                       <div className="flex items-center gap-1 mt-0.5 text-[10px] text-content-muted dark:text-content-muted-dark">
                         <span>{c._lastNote.user_name_en || c._lastNote.user_name_ar || ''}</span>
                         {c._lastNote.created_at && <span>· {new Date(c._lastNote.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' })}</span>}
@@ -444,7 +445,7 @@ export default function ContactsTable({
         onPageChange={setPage}
         pageSize={pageSize}
         onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-        totalItems={filtered.length}
+        totalItems={totalContacts || filtered.length}
       />
     </div>
   );

@@ -272,39 +272,13 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
 }
 
 /* ─── Widget Wrapper ─────────────────────────────────────────────────── */
-function WidgetCard({ title, children, isDark, isRTL, lang, collapsed, onToggleCollapse }) {
+function WidgetCard({ title, children }) {
   return (
     <Card className="p-5">
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: collapsed ? 0 : 12,
-        flexDirection: isRTL ? 'row-reverse' : 'row',
-      }}>
-        <span style={{
-          fontSize: 13,
-          fontWeight: 700,
-          color: isDark ? '#e2e8f0' : '#1e293b',
-        }}>{safeChild(title)}</span>
-        <button
-          onClick={onToggleCollapse}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            padding: 4,
-            borderRadius: 6,
-            display: 'flex',
-            alignItems: 'center',
-            color: isDark ? '#94a3b8' : '#64748b',
-          }}
-          title={collapsed ? (lang === 'ar' ? 'توسيع' : 'Expand') : (lang === 'ar' ? 'طي' : 'Collapse')}
-        >
-          {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-        </button>
-      </div>
-      {!collapsed && children}
+      {title && <div style={{ marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 700 }} className="text-content dark:text-content-dark">{safeChild(title)}</span>
+      </div>}
+      {children}
     </Card>
   );
 }
@@ -557,35 +531,66 @@ function CustomizePanel({ layout, onUpdate, onReset, onClose, isDark, isRTL, lan
 }
 
 
-function MyDayWidget({ lang, isRTL, isDark, userId, navigate }) {
-  const [reminders, setReminders] = useState([]);
+function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
+  const [stats, setStats] = useState({ followups: 0, overdue: 0, todayTasks: 0, newLeads: 0, needsFollowUp: 0 });
   const [loading, setLoading] = useState(true);
+  const [todayTasksList, setTodayTasksList] = useState([]);
 
   useEffect(() => {
-    fetchTodayReminders(userId).then(data => {
-      setReminders(data || []);
+    const load = async () => {
+      try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const nowISO = new Date().toISOString();
+        const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+
+        // All queries in parallel
+        const [followupsRes, overdueRes, todayTasksRes, newLeadsRes, needsFollowUpRes, taskListRes] = await Promise.allSettled([
+          // Follow-ups due today
+          supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59').eq('status', 'pending'),
+          // Overdue tasks
+          supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .lt('due_date', nowISO).eq('status', 'pending'),
+          // Tasks due today (all)
+          supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59'),
+          // New leads today
+          supabase.from('contacts').select('id', { count: 'exact', head: true })
+            .gte('created_at', todayStr + 'T00:00:00'),
+          // Leads needing follow-up (active, no activity in 7 days)
+          supabase.from('contacts').select('id', { count: 'exact', head: true })
+            .eq('contact_status', 'active').lt('last_activity_at', weekAgo),
+          // Today's task list (for display)
+          supabase.from('tasks').select('id, title, contact_name, due_date, priority')
+            .gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59')
+            .eq('status', 'pending').order('due_date').limit(5),
+        ]);
+
+        setStats({
+          followups: followupsRes.status === 'fulfilled' ? (followupsRes.value.count || 0) : 0,
+          overdue: overdueRes.status === 'fulfilled' ? (overdueRes.value.count || 0) : 0,
+          todayTasks: todayTasksRes.status === 'fulfilled' ? (todayTasksRes.value.count || 0) : 0,
+          newLeads: newLeadsRes.status === 'fulfilled' ? (newLeadsRes.value.count || 0) : 0,
+          needsFollowUp: needsFollowUpRes.status === 'fulfilled' ? (needsFollowUpRes.value.count || 0) : 0,
+        });
+        if (taskListRes.status === 'fulfilled') setTodayTasksList(taskListRes.value.data || []);
+      } catch { /* ignore */ }
       setLoading(false);
-    }).catch(() => setLoading(false));
+    };
+    load();
   }, [userId]);
 
-  const todayTasks = useMemo(() => {
-    try { generateDueInstances(); } catch {}
-    return getTodayInstances().filter(i => i.status === 'pending');
-  }, []);
-
-  const overdueTasks = useMemo(() => [], []);
-  const newLeadsToday = useMemo(() => [], []);
-
   const sections = [
-    { icon: Bell, label: lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups", count: reminders.length, color: '#4A7AAB', link: '/contacts', loading },
-    { icon: AlertTriangle, label: lang === 'ar' ? 'فرص متأخرة' : 'Overdue Opps', count: overdueTasks.length, color: overdueTasks.length > 0 ? '#EF4444' : '#10B981', link: '/crm/opportunities' },
-    { icon: Repeat, label: lang === 'ar' ? 'مهام متكررة' : 'Recurring Tasks', count: todayTasks.length, color: '#F59E0B', link: '/tasks' },
-    { icon: UserCheck, label: lang === 'ar' ? 'ليدز جديدة اليوم' : 'New Leads Today', count: newLeadsToday.length, color: '#8B5CF6', link: '/contacts' },
+    { icon: Bell, label: lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups", count: stats.followups, color: '#4A7AAB', link: '/tasks' },
+    { icon: AlertTriangle, label: lang === 'ar' ? 'مهام متأخرة' : 'Overdue Tasks', count: stats.overdue, color: stats.overdue > 0 ? '#EF4444' : '#10B981', link: '/tasks' },
+    { icon: UserCheck, label: lang === 'ar' ? 'ليدز جديدة اليوم' : 'New Leads Today', count: stats.newLeads, color: '#8B5CF6', link: '/contacts' },
+    { icon: Clock, label: lang === 'ar' ? 'محتاج متابعة' : 'Needs Follow-up', count: stats.needsFollowUp, color: '#F59E0B', link: '/contacts' },
   ];
 
   const quickActions = [
     { icon: Phone, label: lang === 'ar' ? 'سجل مكالمة' : 'Log Call', link: '/contacts', color: '#10B981' },
     { icon: Users, label: lang === 'ar' ? 'ليد جديد' : 'New Lead', link: '/contacts?action=add', color: '#4A7AAB' },
+    { icon: Target, label: lang === 'ar' ? 'المهام' : 'Tasks', link: '/tasks', color: '#F59E0B' },
     { icon: Activity, label: lang === 'ar' ? 'الفرص' : 'Opportunities', link: '/crm/opportunities', color: '#2B4C6F' },
   ];
 
@@ -649,6 +654,33 @@ function MyDayWidget({ lang, isRTL, isDark, userId, navigate }) {
           );
         })}
       </div>
+
+      {/* Today's tasks list */}
+      {todayTasksList.length > 0 && (
+        <div className="mt-4">
+          <p className="m-0 text-xs font-bold text-content dark:text-content-dark mb-2">
+            {lang === 'ar' ? 'مهام اليوم' : "Today's Tasks"}
+          </p>
+          <div className="space-y-1.5">
+            {todayTasksList.map(t => {
+              const priColors = { high: '#EF4444', medium: '#F97316', low: '#6B8DB5' };
+              return (
+                <div key={t.id} onClick={() => navigate('/tasks')}
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-bg dark:bg-white/[0.04] border border-edge dark:border-edge-dark cursor-pointer hover:border-brand-500/30 transition-colors"
+                  style={{ borderInlineStart: `3px solid ${priColors[t.priority] || '#4A7AAB'}` }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{t.title}</p>
+                    {t.contact_name && <p className="m-0 text-[10px] text-brand-500">{t.contact_name}</p>}
+                  </div>
+                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark shrink-0">
+                    {t.due_date ? new Date(t.due_date).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : ''}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1085,7 +1117,7 @@ export default function DashboardPage() {
       }
 
       case 'my_day':
-        return <MyDayWidget lang={lang} isRTL={isRTL} isDark={isDark} userId={profile?.id} navigate={navigate} />;
+        return <MyDayWidget lang={lang} isRTL={isRTL} isDark={isDark} userId={profile?.id} profile={profile} navigate={navigate} />;
 
       case 'today_tasks':
         return <TodayRecurringTasks lang={lang} isRTL={isRTL} isDark={isDark} />;
@@ -1277,6 +1309,123 @@ export default function DashboardPage() {
         );
       }
 
+      case 'team_activity': {
+        if (!sections.showCRM) return null;
+        const [teamData, setTeamData] = useState([]);
+        useEffect(() => {
+          const load = async () => {
+            try {
+              const todayStr = new Date().toISOString().slice(0, 10);
+              const { data } = await supabase.from('activities')
+                .select('user_name_en, type')
+                .gte('created_at', todayStr + 'T00:00:00');
+              if (data) {
+                const map = {};
+                data.forEach(a => {
+                  const name = a.user_name_en || 'Unknown';
+                  if (!map[name]) map[name] = { name, calls: 0, whatsapp: 0, meetings: 0, total: 0 };
+                  if (a.type === 'call') map[name].calls++;
+                  else if (a.type === 'whatsapp') map[name].whatsapp++;
+                  else if (a.type === 'meeting') map[name].meetings++;
+                  map[name].total++;
+                });
+                setTeamData(Object.values(map).sort((a, b) => b.total - a.total).slice(0, 8));
+              }
+            } catch {}
+          };
+          load();
+        }, []);
+        return (
+          <div>
+            <CardTitle icon={Users} title={lang === 'ar' ? 'نشاط الفريق اليوم' : "Team Activity Today"} />
+            {teamData.length === 0 ? (
+              <p className="text-xs text-content-muted dark:text-content-muted-dark text-center py-4">{lang === 'ar' ? 'لا نشاط اليوم بعد' : 'No activity yet today'}</p>
+            ) : (
+              <div className="space-y-2">
+                {teamData.map((t, i) => (
+                  <div key={i} className={`flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-bg dark:bg-white/[0.04] ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-xs font-bold text-brand-500">{t.name.charAt(0)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{t.name}</p>
+                      <div className="flex gap-2 mt-0.5">
+                        {t.calls > 0 && <span className="text-[10px] text-emerald-500">📞 {t.calls}</span>}
+                        {t.whatsapp > 0 && <span className="text-[10px] text-green-500">💬 {t.whatsapp}</span>}
+                        {t.meetings > 0 && <span className="text-[10px] text-blue-500">👥 {t.meetings}</span>}
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold text-brand-500">{t.total}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      case 'smart_alerts': {
+        const [alerts, setAlerts] = useState([]);
+        useEffect(() => {
+          const load = async () => {
+            try {
+              const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+              const nowISO = new Date().toISOString();
+              const [staleRes, overdueRes, hotRes] = await Promise.allSettled([
+                supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('contact_status', 'active').lt('last_activity_at', weekAgo),
+                supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO),
+                supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('temperature', 'hot').not('stage', 'in', '("closed_won","closed_lost")'),
+              ]);
+              const a = [];
+              const stale = staleRes.status === 'fulfilled' ? staleRes.value.count || 0 : 0;
+              if (stale > 0) a.push({ icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#F59E0B', link: '/contacts' });
+              const overdue = overdueRes.status === 'fulfilled' ? overdueRes.value.count || 0 : 0;
+              if (overdue > 0) a.push({ icon: '🔴', text: lang === 'ar' ? `${overdue} مهمة متأخرة` : `${overdue} overdue tasks`, color: '#EF4444', link: '/tasks' });
+              const hot = hotRes.status === 'fulfilled' ? hotRes.value.count || 0 : 0;
+              if (hot > 0) a.push({ icon: '🔥', text: lang === 'ar' ? `${hot} فرصة ساخنة مفتوحة` : `${hot} hot opportunities open`, color: '#10B981', link: '/crm/opportunities' });
+              if (a.length === 0) a.push({ icon: '✅', text: lang === 'ar' ? 'كل شيء تمام!' : 'All good!', color: '#10B981' });
+              setAlerts(a);
+            } catch {}
+          };
+          load();
+        }, []);
+        return (
+          <div>
+            <CardTitle icon={AlertTriangle} title={lang === 'ar' ? 'تنبيهات ذكية' : 'Smart Alerts'} />
+            <div className="space-y-2">
+              {alerts.map((a, i) => (
+                <div key={i} onClick={() => a.link && navigate(a.link)}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark ${a.link ? 'cursor-pointer hover:border-brand-500/30' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <span className="text-base">{a.icon}</span>
+                  <span className="text-xs font-medium text-content dark:text-content-dark flex-1">{a.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      case 'conversion_funnel': {
+        if (!sections.showCRM || !pipeData.length) return null;
+        const maxCount = Math.max(1, ...pipeData.map(s => s.count));
+        return (
+          <div>
+            <CardTitle icon={Target} title={lang === 'ar' ? 'قمع التحويل' : 'Conversion Funnel'} />
+            <div className="space-y-2">
+              {pipeData.filter(s => s.stage_key !== 'closed_lost').map((s, i) => (
+                <div key={i} className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <span className="text-[11px] font-medium text-content-muted dark:text-content-muted-dark w-[80px] shrink-0 truncate" style={{ textAlign: isRTL ? 'right' : 'left' }}>{s.label}</span>
+                  <div className="flex-1 h-6 bg-surface-bg dark:bg-white/[0.04] rounded-md overflow-hidden">
+                    <div className="h-full rounded-md transition-all duration-500 flex items-center justify-end px-2"
+                      style={{ width: Math.max(8, (s.count / maxCount) * 100) + '%', background: BRAND[i % BRAND.length] }}>
+                      <span className="text-[10px] font-bold text-white">{s.count}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
       default:
         return null;
     }
@@ -1352,27 +1501,7 @@ export default function DashboardPage() {
           </div>
         ) : <div />}
 
-        <button
-          onClick={() => setShowCustomize(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '7px 14px',
-            borderRadius: 10,
-            border: '1px solid ' + (isDark ? '#ffffff15' : '#e2e8f0'),
-            background: isDark ? '#1a2332' : '#ffffff',
-            color: '#4A7AAB',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-          }}
-        >
-          <Settings size={14} />
-          {lang === 'ar' ? 'تخصيص' : 'Customize'}
-        </button>
+        {/* Customize button hidden */}
       </div>
 
       {/* Q Goals summary */}

@@ -248,12 +248,25 @@ export function saveConfig(config) {
   }
   // Also persist to Supabase (non-blocking)
   import('../lib/supabase').then(({ default: supabase }) => {
-    Object.entries(config).forEach(([key, value]) => {
-      supabase.from('system_config')
-        .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
-        .then(() => {}).catch(() => {});
+    Object.entries(config).forEach(async ([key, value]) => {
+      try {
+        // Try update first
+        const { data, error: updateErr } = await supabase.from('system_config')
+          .update({ value, updated_at: new Date().toISOString() })
+          .eq('key', key)
+          .select('id');
+        if (updateErr) throw updateErr;
+        // If no row was updated, insert
+        if (!data || data.length === 0) {
+          const { error: insertErr } = await supabase.from('system_config')
+            .insert({ key, value, updated_at: new Date().toISOString() });
+          if (insertErr) throw insertErr;
+        }
+      } catch (err) {
+        console.error(`[saveConfig] Failed to save "${key}":`, err?.message || err);
+      }
     });
-  }).catch(() => {});
+  }).catch((err) => console.error('[saveConfig] Import error:', err));
 }
 
 export function saveSection(key, data) {

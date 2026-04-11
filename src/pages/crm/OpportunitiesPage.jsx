@@ -332,7 +332,7 @@ export default function OpportunitiesPage() {
     let oppsData, agentsData, projectsData;
     try {
       [oppsData, agentsData, projectsData] = await Promise.all([
-        fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: 0, pageSize: 200 }),
+        fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: 0, pageSize: 1000 }),
         fetchSalesAgents(),
         fetchProjects(),
       ]);
@@ -357,7 +357,7 @@ export default function OpportunitiesPage() {
     setOpps(enriched);
     setAgents(agentsData);
     setProjects(projectsData);
-    setHasMore(oppsData.length >= 200);
+    setHasMore(oppsData.length >= 1000);
     setServerPage(0);
     setLoading(false);
     setRefreshing(false);
@@ -368,29 +368,25 @@ export default function OpportunitiesPage() {
       if (contactIds.length) {
         let actQuery = supabase
           .from('activities')
-          .select('contact_id, notes, user_name_ar, user_name_en, created_at')
+          .select('contact_id, notes, description, user_name_ar, user_name_en, created_at')
           .in('contact_id', contactIds.slice(0, 100))
-          .not('notes', 'is', null)
-          .neq('notes', '')
+          .or('notes.neq.,description.neq.')
           .order('created_at', { ascending: false })
           .range(0, 499);
-        // Role-based filter
-        if (profile?.role === 'sales_agent' && profile?.id) {
-          actQuery = actQuery.eq('user_id', profile.id);
-        } else if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
-          const teamIds = [profile.team_id];
-          if (profile.role === 'sales_manager') {
-            const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
-            if (children) teamIds.push(...children.map(c => c.id));
-          }
-          const { data: members } = await supabase.from('users').select('id').in('team_id', teamIds);
-          const memberIds = (members || []).map(m => m.id).filter(Boolean);
-          if (memberIds.length) actQuery = actQuery.in('user_id', memberIds);
+        // Role-based filter — by name (not UUID) for imported activities
+        if (profile?.role === 'sales_agent') {
+          const myName = profile?.full_name_en || profile?.full_name_ar;
+          if (myName) actQuery = actQuery.or(`user_name_en.eq.${myName},user_name_ar.eq.${myName}`);
         }
         const { data: recentActs } = await actQuery;
         if (recentActs?.length) {
           const lastByContact = {};
-          recentActs.forEach(a => { if (a.contact_id && !lastByContact[a.contact_id]) lastByContact[a.contact_id] = a; });
+          recentActs.forEach(a => {
+            if (a.contact_id && !lastByContact[a.contact_id]) {
+              a._feedback = a.notes || a.description || null;
+              if (a._feedback) lastByContact[a.contact_id] = a;
+            }
+          });
           setOpps(prev => (prev || []).map(o => ({ ...o, _lastNote: lastByContact[o.contact_id] || null })));
         }
       }
@@ -402,7 +398,7 @@ export default function OpportunitiesPage() {
     setLoadingMore(true);
     const nextPage = serverPage + 1;
     try {
-      const more = await fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: nextPage, pageSize: 200 });
+      const more = await fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: nextPage, pageSize: 1000 });
       if (more.length > 0) {
         setOpps(prev => {
           const existingIds = new Set(prev.map(o => String(o.id)));
@@ -410,26 +406,34 @@ export default function OpportunitiesPage() {
           return [...prev, ...newOnes];
         });
         setServerPage(nextPage);
-        setHasMore(more.length >= 200);
+        setHasMore(more.length >= 1000);
       } else {
         setHasMore(false);
       }
-    } catch {} finally { setLoadingMore(false); }
+    } catch (err) { console.error('Load more opps:', err); } finally { setLoadingMore(false); }
   }, [serverPage, hasMore, loadingMore, profile?.role, profile?.id, profile?.team_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Auto-load remaining pages after first load
+  useEffect(() => {
+    if (!loading && hasMore && !loadingMore) loadMore();
+  }, [loading, hasMore, loadingMore]);
 
   // Realtime: granular update — apply only the changed record instead of full re-fetch
   useRealtimeSubscription('opportunities', useCallback((payload) => {
     if (payload?.eventType) {
       const newRec = payload.new;
-      // Skip records not assigned to this user/team
-      if (profile?.role === 'sales_agent' && newRec?.assigned_to && newRec.assigned_to !== profile?.id) return;
+      // Skip records not assigned to this user/team (check by name AND UUID)
+      if (profile?.role === 'sales_agent') {
+        const myName = profile?.full_name_en || profile?.full_name_ar;
+        if (newRec?.assigned_to && newRec.assigned_to !== profile?.id && newRec?.assigned_to_name !== myName) return;
+      }
       setOpps(prev => applyRealtimePayload(prev, payload));
     } else {
       loadData(true);
     }
-  }, [loadData, profile?.role, profile?.id]));
+  }, [loadData, profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar]));
 
   const scoreMap = useMemo(() => {
     const m = {};
@@ -547,18 +551,23 @@ export default function OpportunitiesPage() {
         }
       }
     }
-    // Stage gate check: verify required activity exists
+    // Stage gate check: verify required activity exists (fetch from server)
     if (!isAdmin && !extraUpdates._skipGate) {
       const gate = getStageGate(toStage);
       if (gate) {
         const opp_ = (opps || []).find(o => o.id === id);
-        const activities = opp_?.activities || [];
-        const hasRequired = (activities || []).some(a => a.type === gate.required_activity);
-        if (!hasRequired) {
-          setMoveWarningToast(isRTL ? gate.label_ar : gate.label_en);
-          setTimeout(() => setMoveWarningToast(null), 4000);
-          return;
-        }
+        try {
+          const { data: acts } = await supabase.from('activities')
+            .select('id')
+            .eq('contact_id', opp_?.contact_id)
+            .eq('type', gate.required_activity)
+            .limit(1);
+          if (!acts?.length) {
+            setMoveWarningToast(isRTL ? gate.label_ar : gate.label_en);
+            setTimeout(() => setMoveWarningToast(null), 4000);
+            return;
+          }
+        } catch { /* allow move if check fails */ }
       }
     }
 
@@ -814,31 +823,33 @@ export default function OpportunitiesPage() {
       />
 
       {/* Stage Tabs */}
-      <Card className="p-2.5 px-3.5 mb-4 flex gap-1.5 overflow-x-auto scrollbar-hide">
-        {stageConfigWithAll.map(s => {
-          const count = s.id === 'all' ? stageCounts._total : (stageCounts[s.id] || 0);
-          const active = activeStage === s.id;
-          return (
-            <button
-              key={s.id}
-              onClick={() => setActiveStage(s.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg border-none cursor-pointer font-cairo text-xs whitespace-nowrap transition-all duration-150 ${
-                active ? 'font-bold text-white' : 'font-medium text-content-muted dark:text-content-muted-dark bg-transparent'
-              }`}
-              style={active ? { background: s.color } : {}}
-            >
-              {isRTL ? s.label_ar : s.label_en}
-              <span
-                className={`text-[10px] font-bold rounded-full px-1.5 py-px ${
-                  active ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-brand-500/15 text-content-muted dark:text-content-muted-dark'
+      <div className="mb-4 -mx-4 md:mx-0">
+        <div className="flex gap-1.5 px-4 md:px-0 overflow-x-auto scrollbar-hide pb-1" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {stageConfigWithAll.map(s => {
+            const count = s.id === 'all' ? stageCounts._total : (stageCounts[s.id] || 0);
+            const active = activeStage === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setActiveStage(s.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border cursor-pointer font-cairo text-[11px] whitespace-nowrap transition-all duration-150 shrink-0 ${
+                  active ? 'font-bold text-white border-transparent' : 'font-medium text-content-muted dark:text-content-muted-dark bg-surface-card dark:bg-surface-card-dark border-edge dark:border-edge-dark'
                 }`}
+                style={active ? { background: s.color } : {}}
               >
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </Card>
+                {isRTL ? s.label_ar : s.label_en}
+                <span
+                  className={`text-[10px] font-bold rounded-full min-w-[20px] text-center px-1.5 py-px ${
+                    active ? 'bg-white/25 text-white' : 'bg-gray-100 dark:bg-brand-500/15 text-content-muted dark:text-content-muted-dark'
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Filters + Toolbar */}
       <OppToolbar

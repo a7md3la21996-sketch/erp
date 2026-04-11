@@ -59,7 +59,10 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
   const [newStatus, setNewStatus] = useState(contact?.contact_status || '');
   const [dqReason, setDqReason] = useState('');
   const DQ_REASONS = [
+    { value: 'existing_client', label: isRTL ? 'عميل حالي (شاري)' : 'Existing Client' },
+    { value: 'resale', label: isRTL ? 'عايز يبيع وحدته' : 'Wants to sell unit' },
     { value: 'not_interested', label: isRTL ? 'غير مهتم' : 'Not interested' },
+    { value: 'no_answer_all_time', label: isRTL ? 'لا يرد أبداً' : 'No Answer All Time' },
     { value: 'no_budget', label: isRTL ? 'ميزانية غير مناسبة' : 'No budget' },
     { value: 'wrong_audience', label: isRTL ? 'جمهور خاطئ' : 'Wrong audience' },
     { value: 'wrong_number', label: isRTL ? 'رقم خاطئ' : 'Wrong number' },
@@ -103,12 +106,12 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
     if (addTask && taskForm.type && taskForm.due_date) {
       const selectedType = TASK_TYPES.find(t => t.key === taskForm.type);
       const title = selectedType ? (isRTL ? selectedType.ar : selectedType.en) : taskForm.type;
-      await onSaveTask({ ...taskForm, title, contact_id: contact.id, contact_name: contact.full_name, dept: 'crm' });
+      await onSaveTask({ ...taskForm, title, contact_id: contact.id, contact_name: contact.full_name, dept: 'sales' });
     }
 
     // 3. Change contact status if enabled
     if (changeStatus && newStatus) {
-      onStatusChange(newStatus);
+      onStatusChange(newStatus, newStatus === 'disqualified' ? dqReason : undefined);
     }
 
     setSaving(false);

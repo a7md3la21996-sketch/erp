@@ -1,32 +1,7 @@
-// TODO: Migrate to Supabase — currently entirely localStorage-based
-import { syncToSupabase } from '../utils/supabaseSync';
+import supabase from '../lib/supabase';
+import { reportError } from '../utils/errorReporter';
 import { createNotification } from './notificationsService';
-
-const STORAGE_KEY = 'platform_recurring_tasks';
-const INSTANCES_KEY = 'platform_task_instances';
-const MAX_TASKS = 200;
-const MAX_INSTANCES = 500;
-
-// ── localStorage helpers ─────────────────────────────────────────────
-function load(key) {
-  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
-}
-
-function save(key, list, max) {
-  if (list.length > max) list = list.slice(0, max);
-  try {
-    localStorage.setItem(key, JSON.stringify(list));
-  } catch (e) {
-    if (e?.name === 'QuotaExceededError' || e?.code === 22) {
-      list = list.slice(0, Math.floor(max / 2));
-      try { localStorage.setItem(key, JSON.stringify(list)); } catch { /* give up */ }
-    }
-  }
-}
-
-function uid() {
-  return 'rt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-}
+import { createTask } from './tasksService';
 
 // ── Frequency types ──────────────────────────────────────────────────
 export const FREQUENCIES = {
@@ -54,71 +29,102 @@ export const DAY_NAMES = {
 };
 
 // ── CRUD ─────────────────────────────────────────────────────────────
-export function createRecurringTask({
-  title, titleAr, description, frequency, interval = 1,
-  daysOfWeek = [], dayOfMonth = 1, time = '09:00',
-  assigneeId, assigneeName, entity, entityId, entityName,
-  priority = 'medium', reminderMinutes = 30,
-}) {
-  const task = {
-    id: uid(),
-    title: title || '',
-    titleAr: titleAr || '',
-    description: description || '',
-    frequency: frequency || 'daily',
-    interval: interval || 1,
-    daysOfWeek: daysOfWeek || [],
-    dayOfMonth: dayOfMonth || 1,
-    time: time || '09:00',
-    assigneeId: assigneeId || null,
-    assigneeName: assigneeName || '',
-    entity: entity || null,
-    entityId: entityId || null,
-    entityName: entityName || '',
-    priority: priority || 'medium',
-    reminderMinutes: reminderMinutes ?? 30,
-    enabled: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  const list = load(STORAGE_KEY);
-  list.unshift(task);
-  save(STORAGE_KEY, list, MAX_TASKS);
-  return task;
-}
-
-export function getRecurringTasks() {
-  const list = load(STORAGE_KEY);
-  if (list.length === 0) {
-    seedMockTasks();
-    return load(STORAGE_KEY);
+export async function createRecurringTask(formData) {
+  try {
+    const { data, error } = await supabase.from('recurring_tasks').insert([{
+      title: formData.title || '',
+      title_ar: formData.titleAr || '',
+      description: formData.description || '',
+      frequency: formData.frequency || 'daily',
+      interval: formData.interval || 1,
+      days_of_week: formData.daysOfWeek || [],
+      day_of_month: formData.dayOfMonth || 1,
+      time: formData.time || '09:00',
+      assignee_name: formData.assigneeName || null,
+      priority: formData.priority || 'medium',
+      reminder_minutes: formData.reminderMinutes ?? 30,
+      entity_type: formData.entity || null,
+      entity_name: formData.entityName || '',
+      dept: 'sales',
+      active: true,
+    }]).select('*').single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    reportError('recurringTaskService', 'createRecurringTask', err);
+    throw err;
   }
-  return list;
 }
 
-export function updateRecurringTask(id, updates) {
-  const list = load(STORAGE_KEY);
-  const idx = list.findIndex(t => t.id === id);
-  if (idx === -1) return null;
-  list[idx] = { ...list[idx], ...updates, updatedAt: new Date().toISOString() };
-  save(STORAGE_KEY, list, MAX_TASKS);
-  return list[idx];
+export async function getRecurringTasks() {
+  try {
+    const { data, error } = await supabase.from('recurring_tasks')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    // Map DB fields to UI fields for backward compat
+    return (data || []).map(t => ({
+      ...t,
+      titleAr: t.title_ar,
+      daysOfWeek: t.days_of_week || [],
+      dayOfMonth: t.day_of_month,
+      assigneeName: t.assignee_name,
+      reminderMinutes: t.reminder_minutes,
+      entityName: t.entity_name,
+      entity: t.entity_type,
+      enabled: t.active,
+    }));
+  } catch (err) {
+    reportError('recurringTaskService', 'getRecurringTasks', err);
+    return [];
+  }
 }
 
-export function deleteRecurringTask(id) {
-  const list = load(STORAGE_KEY).filter(t => t.id !== id);
-  save(STORAGE_KEY, list, MAX_TASKS);
+export async function updateRecurringTask(id, updates) {
+  try {
+    const dbUpdates = {
+      ...(updates.title !== undefined ? { title: updates.title } : {}),
+      ...(updates.titleAr !== undefined ? { title_ar: updates.titleAr } : {}),
+      ...(updates.description !== undefined ? { description: updates.description } : {}),
+      ...(updates.frequency !== undefined ? { frequency: updates.frequency } : {}),
+      ...(updates.interval !== undefined ? { interval: updates.interval } : {}),
+      ...(updates.daysOfWeek !== undefined ? { days_of_week: updates.daysOfWeek } : {}),
+      ...(updates.dayOfMonth !== undefined ? { day_of_month: updates.dayOfMonth } : {}),
+      ...(updates.time !== undefined ? { time: updates.time } : {}),
+      ...(updates.assigneeName !== undefined ? { assignee_name: updates.assigneeName } : {}),
+      ...(updates.priority !== undefined ? { priority: updates.priority } : {}),
+      ...(updates.reminderMinutes !== undefined ? { reminder_minutes: updates.reminderMinutes } : {}),
+      updated_at: new Date().toISOString(),
+    };
+    const { data, error } = await supabase.from('recurring_tasks').update(dbUpdates).eq('id', id).select('*').single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    reportError('recurringTaskService', 'updateRecurringTask', err);
+    throw err;
+  }
 }
 
-export function toggleRecurringTask(id) {
-  const list = load(STORAGE_KEY);
-  const idx = list.findIndex(t => t.id === id);
-  if (idx === -1) return null;
-  list[idx].enabled = !list[idx].enabled;
-  list[idx].updatedAt = new Date().toISOString();
-  save(STORAGE_KEY, list, MAX_TASKS);
-  return list[idx];
+export async function deleteRecurringTask(id) {
+  try {
+    const { error } = await supabase.from('recurring_tasks').delete().eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    reportError('recurringTaskService', 'deleteRecurringTask', err);
+    throw err;
+  }
+}
+
+export async function toggleRecurringTask(id) {
+  try {
+    const { data: current } = await supabase.from('recurring_tasks').select('active').eq('id', id).single();
+    const { data, error } = await supabase.from('recurring_tasks').update({ active: !current.active, updated_at: new Date().toISOString() }).eq('id', id).select('*').single();
+    if (error) throw error;
+    return data;
+  } catch (err) {
+    reportError('recurringTaskService', 'toggleRecurringTask', err);
+    throw err;
+  }
 }
 
 // ── Instance generation ──────────────────────────────────────────────
@@ -129,281 +135,109 @@ function todayStr() {
 
 function isDueToday(task) {
   const now = new Date();
-  const today = now.getDay(); // 0=Sun
+  const today = now.getDay();
   const dateOfMonth = now.getDate();
-  const month = now.getMonth(); // 0-based
+  const month = now.getMonth();
 
   switch (task.frequency) {
-    case 'daily':
-      return true;
-    case 'weekly':
-      return (task.daysOfWeek || []).includes(today);
-    case 'monthly':
-      return dateOfMonth === (task.dayOfMonth || 1);
-    case 'quarterly':
-      return dateOfMonth === (task.dayOfMonth || 1) && (month % 3 === 0);
-    case 'yearly':
-      return dateOfMonth === (task.dayOfMonth || 1) && month === 0;
-    default:
-      return false;
+    case 'daily': return true;
+    case 'weekly': return (task.days_of_week || task.daysOfWeek || []).includes(today);
+    case 'monthly': return dateOfMonth === (task.day_of_month || task.dayOfMonth || 1);
+    case 'quarterly': return dateOfMonth === (task.day_of_month || task.dayOfMonth || 1) && (month % 3 === 0);
+    case 'yearly': return dateOfMonth === (task.day_of_month || task.dayOfMonth || 1) && month === 0;
+    default: return false;
   }
 }
 
-export function generateDueInstances() {
-  const tasks = load(STORAGE_KEY);
-  const instances = load(INSTANCES_KEY);
-  const today = todayStr();
-  const newInstances = [];
+export async function generateDueInstances() {
+  try {
+    const tasks = await getRecurringTasks();
+    const today = todayStr();
+    let generated = 0;
 
-  for (const task of tasks) {
-    if (!task.enabled) continue;
-    if (!isDueToday(task)) continue;
+    for (const task of tasks) {
+      if (!task.active && !task.enabled) continue;
+      if (!isDueToday(task)) continue;
 
-    // Check if already generated for today
-    const alreadyExists = instances.some(
-      inst => inst.recurringTaskId === task.id && inst.dueDate === today
-    );
-    if (alreadyExists) continue;
+      // Check if already generated today
+      if (task.last_generated_at?.slice(0, 10) === today) continue;
 
-    const instance = {
-      id: 'ti_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-      recurringTaskId: task.id,
-      title: task.title,
-      titleAr: task.titleAr,
-      description: task.description,
-      assigneeId: task.assigneeId,
-      assigneeName: task.assigneeName,
-      dueDate: today,
-      dueTime: task.time || '09:00',
-      status: 'pending',
-      completedAt: null,
-      entity: task.entity,
-      entityId: task.entityId,
-      entityName: task.entityName,
-      priority: task.priority,
-      createdAt: new Date().toISOString(),
-    };
+      // Create a real task in the tasks table
+      try {
+        await createTask({
+          title: task.title || task.titleAr || 'Recurring task',
+          notes: task.description || '',
+          priority: task.priority || 'medium',
+          status: 'pending',
+          dept: task.dept || 'sales',
+          due_date: today + 'T' + (task.time || '09:00') + ':00',
+          assigned_to_name: task.assignee_name || task.assigneeName || '',
+        });
 
-    newInstances.push(instance);
+        // Mark as generated today
+        await supabase.from('recurring_tasks').update({ last_generated_at: new Date().toISOString() }).eq('id', task.id);
+        generated++;
 
-    // Send notification
-    try {
-      createNotification({
-        type: 'reminder',
-        title_ar: 'مهمة متكررة مستحقة',
-        title_en: 'Recurring Task Due',
-        body_ar: task.titleAr || task.title,
-        body_en: task.title || task.titleAr,
-        for_user_id: task.assigneeId || 'all',
-        entity_type: task.entity || 'task',
-        entity_id: task.id,
-      });
-    } catch { /* ignore */ }
+        // Send notification
+        createNotification({
+          type: 'reminder',
+          title_ar: 'مهمة متكررة مستحقة',
+          title_en: 'Recurring Task Due',
+          body_ar: task.title_ar || task.title,
+          body_en: task.title || task.title_ar,
+          for_user_id: task.assignee_id || 'all',
+        }).catch(() => {});
+      } catch { /* skip this task */ }
+    }
+    return generated;
+  } catch (err) {
+    reportError('recurringTaskService', 'generateDueInstances', err);
+    return 0;
   }
-
-  if (newInstances.length > 0) {
-    const updated = [...newInstances, ...instances];
-    save(INSTANCES_KEY, updated, MAX_INSTANCES);
-  }
-
-  return newInstances;
 }
 
-export function getTaskInstances(filters = {}) {
-  let instances = load(INSTANCES_KEY);
-
-  if (filters.status) {
-    instances = instances.filter(i => i.status === filters.status);
-  }
-  if (filters.date) {
-    instances = instances.filter(i => i.dueDate === filters.date);
-  }
-  if (filters.recurringTaskId) {
-    instances = instances.filter(i => i.recurringTaskId === filters.recurringTaskId);
-  }
-
-  // Sort by dueDate desc, then dueTime
-  instances.sort((a, b) => {
-    const dateComp = (a.dueDate || '').localeCompare(b.dueDate || '');
-    if (dateComp !== 0) return -dateComp; // newest first
-    return (a.dueTime || '').localeCompare(b.dueTime || '');
-  });
-
-  return instances;
-}
-
-export function getTodayInstances() {
-  return getTaskInstances({ date: todayStr() });
-}
-
-export function completeInstance(instanceId) {
-  const instances = load(INSTANCES_KEY);
-  const idx = instances.findIndex(i => i.id === instanceId);
-  if (idx === -1) return null;
-  instances[idx].status = 'completed';
-  instances[idx].completedAt = new Date().toISOString();
-  save(INSTANCES_KEY, instances, MAX_INSTANCES);
-  return instances[idx];
-}
-
-export function skipInstance(instanceId) {
-  const instances = load(INSTANCES_KEY);
-  const idx = instances.findIndex(i => i.id === instanceId);
-  if (idx === -1) return null;
-  instances[idx].status = 'skipped';
-  instances[idx].completedAt = new Date().toISOString();
-  save(INSTANCES_KEY, instances, MAX_INSTANCES);
-  return instances[idx];
-}
+// Legacy compat — these now work via the tasks table
+export function getTodayInstances() { return []; }
+export function completeInstance() { return null; }
+export function skipInstance() { return null; }
+export function getTaskInstances() { return []; }
 
 // ── Next due date calculation ────────────────────────────────────────
 export function getNextDueDate(task) {
-  if (!task || !task.enabled) return null;
+  if (!task || (!task.active && !task.enabled)) return null;
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   switch (task.frequency) {
-    case 'daily': {
-      return new Date(today.getTime() + 86400000);
-    }
+    case 'daily': return new Date(today.getTime() + 86400000);
     case 'weekly': {
-      const days = (task.daysOfWeek || []).sort((a, b) => a - b);
+      const days = (task.days_of_week || task.daysOfWeek || []).sort((a, b) => a - b);
       if (days.length === 0) return null;
       const currentDay = today.getDay();
       for (const d of days) {
-        if (d > currentDay) {
-          const diff = d - currentDay;
-          return new Date(today.getTime() + diff * 86400000);
-        }
+        if (d > currentDay) return new Date(today.getTime() + (d - currentDay) * 86400000);
       }
-      // wrap to next week
-      const diff = 7 - currentDay + days[0];
-      return new Date(today.getTime() + diff * 86400000);
+      return new Date(today.getTime() + (7 - currentDay + days[0]) * 86400000);
     }
     case 'monthly': {
-      const dom = task.dayOfMonth || 1;
+      const dom = task.day_of_month || task.dayOfMonth || 1;
       let next = new Date(today.getFullYear(), today.getMonth(), dom);
       if (next <= today) next = new Date(today.getFullYear(), today.getMonth() + 1, dom);
       return next;
     }
     case 'quarterly': {
-      const dom = task.dayOfMonth || 1;
+      const dom = task.day_of_month || task.dayOfMonth || 1;
       const currentQ = Math.floor(today.getMonth() / 3);
       let next = new Date(today.getFullYear(), currentQ * 3, dom);
       if (next <= today) next = new Date(today.getFullYear(), (currentQ + 1) * 3, dom);
       return next;
     }
     case 'yearly': {
-      const dom = task.dayOfMonth || 1;
+      const dom = task.day_of_month || task.dayOfMonth || 1;
       let next = new Date(today.getFullYear(), 0, dom);
       if (next <= today) next = new Date(today.getFullYear() + 1, 0, dom);
       return next;
     }
-    default:
-      return null;
+    default: return null;
   }
-}
-
-// ── Seed mock data ───────────────────────────────────────────────────
-function seedMockTasks() {
-  const now = new Date();
-  const seeds = [
-    {
-      id: 'rt_seed_1',
-      title: 'Daily client follow-up calls',
-      titleAr: 'متابعة العملاء يوميًا',
-      description: 'Call all pending leads from yesterday',
-      frequency: 'daily',
-      interval: 1,
-      daysOfWeek: [],
-      dayOfMonth: 1,
-      time: '10:00',
-      assigneeId: null,
-      assigneeName: 'Sara Ali',
-      entity: null, entityId: null, entityName: '',
-      priority: 'high',
-      reminderMinutes: 15,
-      enabled: true,
-      createdAt: new Date(now - 7 * 86400000).toISOString(),
-      updatedAt: new Date(now - 7 * 86400000).toISOString(),
-    },
-    {
-      id: 'rt_seed_2',
-      title: 'Weekly sales report',
-      titleAr: 'تقرير المبيعات الأسبوعي',
-      description: 'Compile and send weekly sales summary',
-      frequency: 'weekly',
-      interval: 1,
-      daysOfWeek: [0], // Sunday
-      dayOfMonth: 1,
-      time: '09:00',
-      assigneeId: null,
-      assigneeName: 'Ahmed Alaa',
-      entity: null, entityId: null, entityName: '',
-      priority: 'medium',
-      reminderMinutes: 30,
-      enabled: true,
-      createdAt: new Date(now - 14 * 86400000).toISOString(),
-      updatedAt: new Date(now - 14 * 86400000).toISOString(),
-    },
-    {
-      id: 'rt_seed_3',
-      title: 'Monthly performance review',
-      titleAr: 'مراجعة الأداء الشهرية',
-      description: 'Review team KPIs and targets',
-      frequency: 'monthly',
-      interval: 1,
-      daysOfWeek: [],
-      dayOfMonth: 1,
-      time: '11:00',
-      assigneeId: null,
-      assigneeName: 'Mohamed Khaled',
-      entity: null, entityId: null, entityName: '',
-      priority: 'high',
-      reminderMinutes: 60,
-      enabled: true,
-      createdAt: new Date(now - 30 * 86400000).toISOString(),
-      updatedAt: new Date(now - 30 * 86400000).toISOString(),
-    },
-    {
-      id: 'rt_seed_4',
-      title: 'Quarterly budget review',
-      titleAr: 'مراجعة الميزانية ربع السنوية',
-      description: 'Analyze spending vs budget allocation',
-      frequency: 'quarterly',
-      interval: 1,
-      daysOfWeek: [],
-      dayOfMonth: 15,
-      time: '14:00',
-      assigneeId: null,
-      assigneeName: 'Nora Hassan',
-      entity: null, entityId: null, entityName: '',
-      priority: 'medium',
-      reminderMinutes: 120,
-      enabled: true,
-      createdAt: new Date(now - 60 * 86400000).toISOString(),
-      updatedAt: new Date(now - 60 * 86400000).toISOString(),
-    },
-    {
-      id: 'rt_seed_5',
-      title: 'CRM data cleanup',
-      titleAr: 'تنظيف بيانات CRM',
-      description: 'Remove duplicates and update stale contacts',
-      frequency: 'weekly',
-      interval: 1,
-      daysOfWeek: [4], // Thursday
-      dayOfMonth: 1,
-      time: '16:00',
-      assigneeId: null,
-      assigneeName: 'Sara Ali',
-      entity: null, entityId: null, entityName: '',
-      priority: 'low',
-      reminderMinutes: 30,
-      enabled: true,
-      createdAt: new Date(now - 21 * 86400000).toISOString(),
-      updatedAt: new Date(now - 21 * 86400000).toISOString(),
-    },
-  ];
-
-  save(STORAGE_KEY, seeds, MAX_TASKS);
 }

@@ -106,10 +106,10 @@ export const ROLE_PERMISSIONS = {
 
   sales_director: [
     P.DASHBOARD,
-    // Contacts: full access
-    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_DELETE, P.CONTACTS_EXPORT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
-    // Opportunities: full access
-    P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_DELETE, P.OPPS_EXPORT, P.OPPS_BULK,
+    // Contacts: full access (no export)
+    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_DELETE, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
+    // Opportunities: full access (no export)
+    P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_DELETE, P.OPPS_BULK,
     // Deals & Commissions
     P.DEALS_VIEW_OWN, P.DEALS_VIEW_ALL, P.COMM_VIEW_OWN,
     // Pool: full
@@ -120,10 +120,10 @@ export const ROLE_PERMISSIONS = {
 
   sales_manager: [
     P.DASHBOARD,
-    // Contacts: full access
-    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_DELETE, P.CONTACTS_EXPORT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
-    // Opportunities: full access
-    P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_DELETE, P.OPPS_EXPORT, P.OPPS_BULK,
+    // Contacts: full access (no export)
+    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_DELETE, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
+    // Opportunities: full access (no export)
+    P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_DELETE, P.OPPS_BULK,
     // Deals
     P.DEALS_VIEW_OWN, P.DEALS_VIEW_ALL,
     // Pool: full

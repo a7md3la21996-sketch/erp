@@ -8,6 +8,7 @@ import { createOpportunity } from '../../../services/opportunitiesService';
 import { logAction } from '../../../services/auditService';
 import { createNotification } from '../../../services/notificationsService';
 import { getTemplates, renderBody } from '../../../services/smsTemplateService';
+import { reportError } from '../../../utils/errorReporter';
 import { getDeptStages } from './constants';
 import { Button } from '../../../components/ui';
 
@@ -66,7 +67,7 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
           <Button size="sm" onClick={() => {
             const updatedContacts = (contacts || []).map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
             setContacts(updatedContacts);
-            logAction({ action: 'merge', entity: 'contact', entityId: c1.id, entityName: c1.full_name, description: `Merged "${c2.full_name}" (ID:${c2.id}) into "${c1.full_name}" (ID:${c1.id})`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
+            logAction({ action: 'merge', entity: 'contact', entityId: c1.id, entityName: c1.full_name, description: `Merged "${c2.full_name}" (ID:${c2.id}) into "${c1.full_name}" (ID:${c1.id})`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(err => { if (import.meta.env.DEV) console.warn('log merge action:', err); });
             toast.success(isRTL ? 'تم دمج العميلين بنجاح' : 'Leads merged successfully');
             setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
           }}>
@@ -156,16 +157,16 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               const names = (contacts || []).filter(c => ids.includes(c.id)).map(c => c.full_name).join(', ');
               const updated = (contacts || []).map(c => ids.includes(c.id) ? { ...c, ...updates } : c);
               setContacts(updated);
-              await Promise.all(ids.map(id => updateContact(id, updates).catch(() => {})));
-              logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
+              await Promise.all(ids.map(id => updateContact(id, updates).catch(err => { if (import.meta.env.DEV) console.warn('bulk disqualify update:', err); })));
+              logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(err => { if (import.meta.env.DEV) console.warn('log bulk disqualify:', err); });
               toast.success(isRTL ? `تم استبعاد ${ids.length} عميل` : `${ids.length} leads disqualified`);
               setSelectedIds([]);
             } else {
               const c = disqualifyModal;
               const updated = (contacts || []).map(ct => ct.id === c.id ? { ...ct, ...updates } : ct);
               setContacts(updated);
-              await updateContact(c.id, updates).catch(() => {});
-              logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
+              await updateContact(c.id, updates).catch(err => { if (import.meta.env.DEV) console.warn('disqualify update:', err); });
+              logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(err => { if (import.meta.env.DEV) console.warn('log disqualify:', err); });
               toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
             }
             setDisqualifyModal(null);
@@ -294,7 +295,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
           created_by_name: profile?.full_name_ar || profile?.full_name_en || null,
         });
         created++;
-      } catch { /* skip */ }
+      } catch (err) { reportError('BulkModals', 'bulkCreateOpportunity', err); }
     }
     logAction({ action: 'bulk_create_opportunities', entity: 'opportunity', description: `Created ${created} opportunities for ${selContacts.map(c => c.full_name).join(', ')} → ${bulkOppForm.assigned_to_name}`, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
@@ -306,7 +307,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
     setBulkOppModal(false);
     setSelectedIds([]);
     // Refresh contacts
-    try { const { fetchContacts: fc } = await import('../../../services/contactsService'); const fresh = await fc({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }); setContacts(fresh); } catch { /* ignore */ }
+    try { const { fetchContacts: fc } = await import('../../../services/contactsService'); const fresh = await fc({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }); setContacts(fresh); } catch (err) { reportError('BulkModals', 'refreshContactsAfterBulkOpp', err); }
   };
 
   return (

@@ -51,7 +51,7 @@ export default function QuickTaskModal({ contact, onClose }) {
       contact_id: contact.id,
       contact_name: contact.full_name,
       due_date: customDate,
-      dept: 'crm',
+      dept: 'sales',
       notes: '',
       assigned_to: profile?.id || null,
       assigned_to_name_ar: profile?.full_name_ar || '',

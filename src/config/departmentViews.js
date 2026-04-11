@@ -13,7 +13,7 @@ export const DEPT_VIEWS = {
     // Smart filter fields relevant to this department
     smartFilterIds: [
       'prefix', 'contact_type', 'source', 'contact_status', 'full_name', 'phone', 'email',
-      'created_at', 'last_activity_at', 'lead_score', 'campaign_name', '_country',
+      'created_at', 'assigned_at', 'last_activity_at', 'lead_score', 'campaign_name', '_country',
       'assigned_to_name', 'assigned_by_name', '_campaign_count', '_opp_count',
     ],
     // Contact types available in this department

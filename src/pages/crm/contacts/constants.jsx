@@ -154,7 +154,11 @@ export const validatePhone = (p) => {
   if (normalized === p && p.startsWith('0')) return false;
   try {
     const phone = parsePhoneNumberFromString(normalized);
-    return phone ? phone.isValid() : false;
+    if (phone?.isValid()) return true;
+    // Fallback: accept numbers with + prefix and 8-15 digits (international format)
+    const digits = normalized.replace(/\D/g, '');
+    if (normalized.startsWith('+') && digits.length >= 8 && digits.length <= 15) return true;
+    return false;
   } catch { return false; }
 };
 export const getPhoneInfo = (p) => {

@@ -9,7 +9,7 @@ import {
   RefreshCw, CheckSquare, Plus, X, User, Link2,
   Clock, Activity, TrendingUp, CloudOff
 } from 'lucide-react';
-import { fetchActivities, createActivity, updateActivity, deleteActivity, ACTIVITY_TYPES } from '../services/activitiesService';
+import { fetchActivities, createActivity, updateActivity, ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
@@ -37,11 +37,12 @@ const RESULT_LABELS = {
 };
 
 const DEPT_LABELS = {
-  all:     { ar: 'الكل', en: 'All' },
-  crm:     { ar: 'CRM', en: 'CRM' },
-  sales:   { ar: 'المبيعات', en: 'Sales' },
-  hr:      { ar: 'HR', en: 'HR' },
-  finance: { ar: 'المالية', en: 'Finance' },
+  all:        { ar: 'الكل', en: 'All' },
+  sales:      { ar: 'المبيعات', en: 'Sales' },
+  marketing:  { ar: 'التسويق', en: 'Marketing' },
+  hr:         { ar: 'HR', en: 'HR' },
+  finance:    { ar: 'المالية', en: 'Finance' },
+  operations: { ar: 'العمليات', en: 'Operations' },
 };
 
 function timeAgo(dateStr, lang) {
@@ -65,13 +66,11 @@ export default function ActivitiesPage() {
   const [smartFilters, setSmartFilters] = useState([]);
   const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [adding, setAdding]         = useState(false);
-  const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'crm' });
+  const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'sales' });
   const [saving, setSaving]         = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [deleting, setDeleting] = useState(false);
   const { auditFields, applyAuditFilters } = useAuditFilter('activity');
   const globalFilter = useGlobalFilter();
 
@@ -96,7 +95,7 @@ export default function ActivitiesPage() {
     { id: 'user_name_en', label: 'بواسطة', labelEn: 'Done By', type: 'select', options: uniqueUsers },
     { id: 'type', label: 'نوع النشاط', labelEn: 'Activity Type', type: 'select', options: Object.entries(ACTIVITY_TYPES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'dept', label: 'القسم', labelEn: 'Department', type: 'select', options: [
-      { value: 'crm', label: 'CRM', labelEn: 'CRM' },
+      { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
       { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
       { value: 'hr', label: 'HR', labelEn: 'HR' },
       { value: 'finance', label: 'المالية', labelEn: 'Finance' },
@@ -117,80 +116,93 @@ export default function ActivitiesPage() {
   ], []);
 
   const [totalCount, setTotalCount] = useState(0);
+  const [stats, setStats] = useState({ total: 0, today: 0, topType: null });
 
-  const load = async (pg = page) => {
+  // Extract server-side filters from smartFilters
+  const serverFilters = useMemo(() => {
+    const typeFilter = smartFilters.find(f => f.field === 'type' && f.operator === 'is');
+    const deptFilter = smartFilters.find(f => f.field === 'dept' && f.operator === 'is');
+    const agentFilter = smartFilters.find(f => f.field === 'user_name_en' && f.operator === 'is');
+    return { type: typeFilter?.value, dept: deptFilter?.value, agentName: agentFilter?.value };
+  }, [smartFilters]);
+
+  const loadActivities = useCallback(async (pg) => {
     setLoading(true);
     try {
-      const result = await fetchActivities({ page: pg, pageSize, role: profile?.role, userId: profile?.id, teamId: profile?.team_id });
+      const currentPage = pg || page || 1;
+      const deptValue = serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined);
+      const result = await fetchActivities({
+        page: currentPage,
+        pageSize,
+        role: profile?.role,
+        userId: profile?.id,
+        teamId: profile?.team_id,
+        dept: deptValue,
+        search: search || undefined,
+        type: serverFilters.type,
+        agentName: serverFilters.agentName || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
+      });
       setActivities(result?.data || []);
       setTotalCount(result?.count || 0);
     } catch {
       setActivities([]);
     } finally { setLoading(false); }
-  };
+  }, [page, pageSize, profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.department, globalFilter?.agentName]);
 
-  useEffect(() => { load(page); }, [page, pageSize]);
+  useEffect(() => { if (profile) loadActivities(); }, [profile, loadActivities]);
 
-  // Realtime: granular update — apply only the changed record
+  // Realtime
   useRealtimeSubscription('activities', useCallback((payload) => {
     if (payload?.eventType) {
       setActivities(prev => applyRealtimePayload(prev, payload));
-    } else {
-      load();
     }
   }, []));
 
+  // Stats — from server (not current page)
+  const loadStats = useCallback(async () => {
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const baseArgs = { role: profile?.role, userId: profile?.id, teamId: profile?.team_id };
+      const [totalRes, todayRes] = await Promise.all([
+        fetchActivities({ ...baseArgs, page: 1, pageSize: 1 }),
+        fetchActivities({ ...baseArgs, page: 1, pageSize: 1, dateFrom: todayStr }),
+      ]);
+      setStats({
+        total: totalRes?.count || 0,
+        today: todayRes?.count || 0,
+        topType: null,
+      });
+    } catch { /* ignore */ }
+  }, [profile?.role, profile?.id, profile?.team_id]);
+
+  useEffect(() => { if (profile) loadStats(); }, [profile, loadStats]);
+
+  // Client-only filters (exclude server-filtered fields)
+  const SERVER_FILTERED_FIELDS = ['type', 'dept', 'user_name_en'];
   const filtered = useMemo(() => {
     let list = activities || [];
-    if (search) {
-      const s = search.toLowerCase();
-      list = list.filter(a =>
-        a.notes?.toLowerCase().includes(s) ||
-        a.user_name_ar?.toLowerCase().includes(s) ||
-        a.user_name_en?.toLowerCase().includes(s) ||
-        a.entity_name?.toLowerCase().includes(s)
-      );
-    }
-    list = applySmartFilters(list, smartFilters, SMART_FIELDS);
+    const clientFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
+    list = applySmartFilters(list, clientFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);
-    // Global filter
-    if (globalFilter?.department && globalFilter.department !== 'all') {
-      list = list.filter(a => a.dept === globalFilter.department);
-    }
-    if (globalFilter?.agentName && globalFilter.agentName !== 'all') {
-      list = list.filter(a => a.user_name_en === globalFilter.agentName || a.user_name_ar === globalFilter.agentName);
-    }
     return list;
-  }, [activities, search, smartFilters, SMART_FIELDS, globalFilter?.department, globalFilter?.agentName]);
+  }, [activities, smartFilters, SMART_FIELDS]);
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice(0, pageSize);
-  useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
+  const paged = filtered;
+  useEffect(() => { if (page > totalPages && totalPages > 0) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [smartFilters, search, pageSize]);
-
-  // Stats
-  const stats = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const today = (activities || []).filter(a => a.created_at?.startsWith(todayStr));
-    const byType = {};
-    (activities || []).forEach(a => { byType[a.type] = (byType[a.type] || 0) + 1; });
-    const topType = Object.entries(byType).sort((a,b) => b[1]-a[1])[0] || null;
-    return { total: totalCount || (activities || []).length, today: today.length, topType };
-  }, [activities, totalCount]);
 
   const handleAdd = async () => {
     if (!form.notes.trim()) return;
     setSaving(true);
     try {
       await createActivity({ type: form.type, notes: form.notes, entityType: 'internal', dept: form.dept, userId: user?.id || null, userName_ar: profile?.full_name_ar, userName_en: profile?.full_name_en });
-      await load();
-      setForm({ type: 'call', notes: '', dept: 'crm' });
+      await loadActivities();
+      setForm({ type: 'call', notes: '', dept: 'sales' });
       setAdding(false);
-    } catch {
-      // Activity saved locally even if server fails
-      await load();
-      setAdding(false);
+    } catch (err) {
+      console.error('Activity save error:', err?.message || err);
     } finally {
       setSaving(false);
     }
@@ -337,7 +349,7 @@ export default function ActivitiesPage() {
         onSearchChange={setSearchInput}
         searchPlaceholder={isRTL ? 'بحث بالملاحظات أو اسم المستخدم...' : 'Search by notes or user name...'}
         quickFilters={QUICK_FILTERS}
-        resultsCount={filtered.length}
+        resultsCount={totalCount}
       />
 
       {/* Activities List */}
@@ -453,11 +465,6 @@ export default function ActivitiesPage() {
             setActivities(prev => prev.map(a => String(a.id) === String(id) ? { ...a, ...updates } : a));
             setSelectedActivity(prev => ({ ...prev, ...updates }));
             return updated;
-          }}
-          onDelete={async (id) => {
-            try { await deleteActivity(id); } catch {}
-            setActivities(prev => prev.filter(a => a.id !== id));
-            setSelectedActivity(null);
           }}
         />
       )}
