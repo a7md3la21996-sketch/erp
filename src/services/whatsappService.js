@@ -173,9 +173,9 @@ export async function getTemplates(onlyActive = false) {
   }
   if (data && data.length > 0) return data;
 
-  // Supabase is empty — seed default templates
+  // Supabase is empty — seed default templates (upsert to avoid race condition)
   const defaults = getDefaultTemplates();
-  const { error: seedErr } = await supabase.from('whatsapp_templates').insert(defaults.map(t => stripInternalFields(t)));
+  const { error: seedErr } = await supabase.from('whatsapp_templates').upsert(defaults.map(t => stripInternalFields(t)), { onConflict: 'id' });
   if (seedErr) {
     reportError('whatsappService', 'getTemplates:seed', seedErr);
   }
@@ -235,30 +235,23 @@ export async function toggleTemplate(id) {
 
 // ── Stats ──────────────────────────────────────────────────────
 export async function getWhatsAppStats() {
-  const { data, error } = await supabase.from('whatsapp_messages').select('sent_at, contact_id').range(0, 499);
-  if (error) {
-    reportError('whatsappService', 'getWhatsAppStats', error);
-    throw error;
-  }
-  const list = data || [];
   const today = new Date().toISOString().slice(0, 10);
-  const todayMsgs = list.filter(m => m.sent_at?.slice(0, 10) === today);
-  const contactIds = new Set(list.map(m => m.contact_id).filter(Boolean));
-
-  let templatesCount = 0;
-  const { data: tplData, error: tplErr } = await supabase.from('whatsapp_templates').select('is_active').eq('is_active', true).limit(100);
-  if (tplErr) {
-    reportError('whatsappService', 'getWhatsAppStats:templates', tplErr);
-  } else {
-    templatesCount = (tplData || []).length;
+  try {
+    const [totalRes, todayRes, tplRes] = await Promise.allSettled([
+      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }),
+      supabase.from('whatsapp_messages').select('id', { count: 'exact', head: true }).gte('sent_at', today + 'T00:00:00'),
+      supabase.from('whatsapp_templates').select('id', { count: 'exact', head: true }).eq('is_active', true),
+    ]);
+    return {
+      total_messages: totalRes.status === 'fulfilled' ? (totalRes.value.count || 0) : 0,
+      today_count: todayRes.status === 'fulfilled' ? (todayRes.value.count || 0) : 0,
+      templates_count: tplRes.status === 'fulfilled' ? (tplRes.value.count || 0) : 0,
+      contacts_reached: 0,
+    };
+  } catch (err) {
+    reportError('whatsappService', 'getWhatsAppStats', err);
+    return { total_messages: 0, today_count: 0, templates_count: 0, contacts_reached: 0 };
   }
-
-  return {
-    total_messages: list.length,
-    today_count: todayMsgs.length,
-    templates_count: templatesCount,
-    contacts_reached: contactIds.size,
-  };
 }
 
 // ── WhatsApp Link Generator ────────────────────────────────────

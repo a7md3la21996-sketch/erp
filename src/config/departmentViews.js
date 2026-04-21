@@ -19,7 +19,7 @@ export const DEPT_VIEWS = {
     // Contact types available in this department
     contactTypes: ['lead', 'cold', 'customer', 'repeat_buyer', 'vip', 'referrer'],
     // Status options for filtering
-    statusOptions: ['new', 'active', 'has_opportunity', 'inactive', 'disqualified'],
+    statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
     // Sort options
     sortIds: ['created', 'last_activity', 'score', 'name', 'stale'],
     // Actions in the row menu
@@ -39,7 +39,7 @@ export const DEPT_VIEWS = {
       'created_at', '_country', 'assigned_to_name',
     ],
     contactTypes: ['applicant'],
-    statusOptions: ['new', 'active', 'has_opportunity', 'inactive', 'disqualified'],
+    statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
     sortIds: ['created', 'name', 'last_activity'],
     menuActions: ['edit', 'reminder', 'delete'],
     rowActions: ['call', 'whatsapp', 'pin'],
@@ -55,7 +55,7 @@ export const DEPT_VIEWS = {
       'created_at', '_country', 'assigned_to_name',
     ],
     contactTypes: ['supplier', 'partner'],
-    statusOptions: ['new', 'active', 'has_opportunity', 'inactive'],
+    statusOptions: ['new', 'following', 'has_opportunity', 'contacted'],
     sortIds: ['created', 'name', 'last_activity'],
     menuActions: ['edit', 'reminder', 'export', 'delete'],
     rowActions: ['call', 'whatsapp', 'pin'],
@@ -72,7 +72,7 @@ export const DEPT_VIEWS = {
       '_campaign_count',
     ],
     contactTypes: ['lead', 'cold'],
-    statusOptions: ['new', 'active', 'has_opportunity', 'inactive', 'disqualified'],
+    statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
     sortIds: ['created', 'last_activity', 'score', 'name'],
     menuActions: ['edit', 'logCall', 'reminder', 'export'],
     rowActions: ['call', 'whatsapp', 'quickAction', 'pin'],
@@ -88,7 +88,7 @@ export const DEPT_VIEWS = {
       'created_at', '_country', 'assigned_to_name',
     ],
     contactTypes: ['partner', 'supplier'],
-    statusOptions: ['new', 'active', 'has_opportunity', 'inactive', 'disqualified'],
+    statusOptions: ['new', 'following', 'has_opportunity', 'contacted', 'disqualified'],
     sortIds: ['created', 'name', 'last_activity'],
     menuActions: ['edit', 'logCall', 'reminder', 'export', 'delete'],
     rowActions: ['call', 'whatsapp', 'quickAction', 'pin'],

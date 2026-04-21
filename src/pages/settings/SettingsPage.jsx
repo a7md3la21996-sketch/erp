@@ -15,6 +15,8 @@ import { PageSkeleton } from '../../components/ui/PageSkeletons';
 // Lazy load sub-pages
 const SystemConfigPage = lazy(() => import('./SystemConfigPage'));
 const UsersPage = lazy(() => import('./UsersPage'));
+const TeamHierarchyPage = lazy(() => import('./TeamHierarchyPage'));
+const ImportExportLogPage = lazy(() => import('./ImportExportLogPage'));
 const RolesPage = lazy(() => import('./RolesPage'));
 const AuditLogPage = lazy(() => import('./AuditLogPage'));
 const TriggersPage = lazy(() => import('./TriggersPage'));
@@ -28,7 +30,6 @@ const BackupPage = lazy(() => import('./BackupPage'));
 const UserTrackingPage = lazy(() => import('./UserTrackingPage'));
 const SystemHealthPage = lazy(() => import('./SystemHealthPage'));
 const APIDocsPage = lazy(() => import('./APIDocsPage'));
-const ExportImportHistoryPage = lazy(() => import('./ExportImportHistoryPage'));
 const SLAManagementPage = lazy(() => import('./SLAManagementPage'));
 const AdsIntegrationPage = lazy(() => import('./AdsIntegrationPage'));
 
@@ -53,6 +54,8 @@ const SETTINGS_TABS = [
   { key: 'general',      icon: Settings,          ar: 'إعدادات عامة',        en: 'General',              adminOnly: false },
   { key: 'system',       icon: SlidersHorizontal, ar: 'إعدادات النظام',      en: 'System Config',        adminOnly: true },
   { key: 'users',        icon: Users,             ar: 'المستخدمين',          en: 'Users',                adminOnly: false, perm: 'users.manage' },
+  { key: 'hierarchy',    icon: Users,             ar: 'هيكل الفرق',          en: 'Team Hierarchy',       adminOnly: false, perm: 'users.manage' },
+  { key: 'import-export', icon: Upload,           ar: 'سجل الاستيراد',       en: 'Import/Export Log',    adminOnly: false },
   { key: 'roles',        icon: Shield,            ar: 'الأدوار والصلاحيات',   en: 'Roles & Permissions',  adminOnly: true },
   { key: 'audit',        icon: Eye,               ar: 'سجل التدقيق',         en: 'Audit Log',            adminOnly: true },
   { key: 'tracking',     icon: Activity,          ar: 'تتبع المستخدمين',     en: 'User Tracking',        adminOnly: true },
@@ -68,7 +71,6 @@ const SETTINGS_TABS = [
   { key: 'sla',          icon: ThumbsDown,        ar: 'اتفاقيات SLA',        en: 'SLA Management',       adminOnly: true },
   { key: 'ads',          icon: Megaphone,         ar: 'ربط الإعلانات',       en: 'Ads Integration',      adminOnly: false },
   { key: 'api-docs',     icon: FileText,          ar: 'توثيق API',           en: 'API Docs',             adminOnly: true },
-  { key: 'export-import',icon: Database,          ar: 'سجل التصدير',         en: 'Export/Import',        adminOnly: true },
 ];
 
 // ── General Tab (Company Info + Appearance) ──
@@ -253,6 +255,8 @@ export default function SettingsPage() {
           <div style={{ display: activeTab === 'general' ? 'block' : 'none' }}><GeneralTab isRTL={isRTL} isDark={isDark} toggleTheme={toggleTheme} lang={lang} handleLangToggle={handleLangToggle} profile={profile} /></div>
           <div style={{ display: activeTab === 'system' ? 'block' : 'none' }}><SystemConfigPage /></div>
           <div style={{ display: activeTab === 'users' ? 'block' : 'none' }}><UsersPage /></div>
+          {activeTab === 'hierarchy' && <TeamHierarchyPage />}
+          {activeTab === 'import-export' && <ImportExportLogPage />}
           {activeTab === 'roles' && <RolesPage />}
           {activeTab === 'audit' && <AuditLogPage />}
           {activeTab === 'tracking' && <UserTrackingPage />}
@@ -268,7 +272,6 @@ export default function SettingsPage() {
           {activeTab === 'sla' && <SLAManagementPage />}
           {activeTab === 'ads' && <AdsIntegrationPage />}
           {activeTab === 'api-docs' && <APIDocsPage />}
-          {activeTab === 'export-import' && <ExportImportHistoryPage />}
         </Suspense>
       </div>
     </div>

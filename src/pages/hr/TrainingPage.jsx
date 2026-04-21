@@ -1,38 +1,47 @@
-import { syncToSupabase } from '../../utils/supabaseSync';
-import { useState, useEffect, useMemo } from 'react';
+import supabase from '../../lib/supabase';
+import { reportError } from '../../utils/errorReporter';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, Users, CheckCircle2, Clock, Plus, GraduationCap } from 'lucide-react';
 import { KpiCard, Badge, Button, Card, CardHeader, Table, Th, Td, Tr, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 
-const STORAGE_KEY = 'platform_hr_training';
+const TABLE = 'training';
 const DEFAULT_PROGRAMS = [
-  { id:1, title:'مهارات التفاوض', title_en:'Negotiation Skills', category:'sales', duration:16, enrolled:6, completed:4, status:'active', start:'2026-03-10' },
-  { id:2, title:'خدمة العملاء', title_en:'Customer Service', category:'crm', duration:8, enrolled:8, completed:8, status:'completed', start:'2026-02-01' },
-  { id:3, title:'إدارة العقارات', title_en:'Property Management', category:'real_estate', duration:24, enrolled:5, completed:2, status:'active', start:'2026-03-15' },
-  { id:4, title:'التسويق الرقمي', title_en:'Digital Marketing', category:'marketing', duration:12, enrolled:4, completed:0, status:'upcoming', start:'2026-04-01' },
+  { title:'مهارات التفاوض', title_en:'Negotiation Skills', category:'sales', duration:16, enrolled:6, completed:4, status:'active', start:'2026-03-10' },
+  { title:'خدمة العملاء', title_en:'Customer Service', category:'crm', duration:8, enrolled:8, completed:8, status:'completed', start:'2026-02-01' },
+  { title:'إدارة العقارات', title_en:'Property Management', category:'real_estate', duration:24, enrolled:5, completed:2, status:'active', start:'2026-03-15' },
+  { title:'التسويق الرقمي', title_en:'Digital Marketing', category:'marketing', duration:12, enrolled:4, completed:0, status:'upcoming', start:'2026-04-01' },
 ];
-
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_PROGRAMS)); syncToSupabase('platform_hr_training', DEFAULT_PROGRAMS);
-  return [...DEFAULT_PROGRAMS];
-}
-
-function saveData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); syncToSupabase('platform_hr_training', data); } catch {}
-}
 
 export default function TrainingPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [programs, setPrograms] = useState(loadData);
+  const [programs, setPrograms] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Persist to localStorage whenever programs change
-  useEffect(() => { saveData(programs); }, [programs]);
+  // Fetch from Supabase on mount; seed defaults if empty
+  const fetchPrograms = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from(TABLE).select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setPrograms(data);
+      } else {
+        // Seed default data
+        const { data: seeded, error: seedErr } = await supabase.from(TABLE).insert(DEFAULT_PROGRAMS).select();
+        if (seedErr) throw seedErr;
+        setPrograms(seeded || []);
+      }
+    } catch (err) {
+      reportError(`supabase.${TABLE}`, 'fetch', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchPrograms(); }, [fetchPrograms]);
+
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [smartFilters, setSmartFilters] = useState([]);
@@ -51,8 +60,8 @@ export default function TrainingPage() {
   }, [programs, smartFilters, SMART_FIELDS]);
 
   const active    = filtered.filter(p=>p.status==='active').length;
-  const totalEnr  = filtered.reduce((s,p)=>s+p.enrolled,0);
-  const totalComp = filtered.reduce((s,p)=>s+p.completed,0);
+  const totalEnr  = filtered.reduce((s,p)=>s+(p.enrolled||0),0);
+  const totalComp = filtered.reduce((s,p)=>s+(p.completed||0),0);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);

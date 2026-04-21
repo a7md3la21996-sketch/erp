@@ -139,13 +139,20 @@ export const avatarColor = (id) => {
   const num = typeof id === 'number' ? id : [...String(id)].reduce((s, c) => s + c.charCodeAt(0), 0);
   return AVATAR_COLORS[num % AVATAR_COLORS.length];
 };
+// Try to convert a local-format phone to E.164 using libphonenumber-js.
+// Falls back to Egypt mobile pattern (01XXXXXXXXX) for legacy unprefixed data.
+// If already international (+...) or can't be parsed, returns input unchanged.
 export const normalizePhone = (p) => {
   if (!p) return p;
   if (p.startsWith('00')) return '+' + p.slice(2);
-  if (p.startsWith('0')) {
-    if (p.length === 11 && p.startsWith('01')) return '+20' + p.slice(1);
-    return p;
-  }
+  if (p.startsWith('+')) return p;
+  // Egypt mobile fallback — most common legacy pattern in this codebase
+  if (p.startsWith('01') && p.length === 11) return '+20' + p.slice(1);
+  // Best-effort parse with libphonenumber (no default country — only succeeds for unambiguous international formats)
+  try {
+    const parsed = parsePhoneNumberFromString(p);
+    if (parsed?.isValid()) return parsed.format('E.164');
+  } catch { /* noop */ }
   return p;
 };
 export const validatePhone = (p) => {

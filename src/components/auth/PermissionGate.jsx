@@ -8,7 +8,7 @@ export function PermissionGate({ permission, fallback = null, children }) {
 }
 
 export function ProtectedRoute({ permission, children }) {
-  const { isAuthenticated, hasPermission, loading } = useAuth();
+  const { isAuthenticated, hasPermission, hasAnyPermission, loading, permissions } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -22,6 +22,15 @@ export function ProtectedRoute({ permission, children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If permissions haven't loaded yet, show loading instead of Access Denied
+  if (permission && (!permissions || permissions.length === 0)) {
+    return (
+      <div className="flex items-center justify-center h-screen flex-col gap-4 bg-surface-bg dark:bg-surface-bg-dark">
+        <div className="w-10 h-10 border-[3px] border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
+      </div>
+    );
   }
 
   if (permission && !hasPermission(permission)) {

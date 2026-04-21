@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { ROLE_PERMISSIONS } from '../config/roles';
+import { ROLE_PERMISSIONS, mergePermissions } from '../config/roles';
 import { logSession, endSession, updateSessionActivity } from '../services/sessionService';
 import { supabase } from '../lib/supabase';
 
@@ -76,6 +76,24 @@ async function fetchSupabaseProfile(userId, authUser = null) {
   throw new Error('Profile not found');
 }
 
+// Cache for permission overrides (loaded once per session)
+let _permissionOverrides = null;
+async function loadPermissionOverrides() {
+  if (_permissionOverrides !== null) return _permissionOverrides;
+  try {
+    const { data } = await supabase.from('system_config').select('value').eq('key', 'role_permissions_overrides').maybeSingle();
+    _permissionOverrides = data?.value || {};
+  } catch { _permissionOverrides = {}; }
+  return _permissionOverrides;
+}
+// Force reload (called when admin saves new permissions)
+export async function reloadPermissionOverrides() { _permissionOverrides = null; return loadPermissionOverrides(); }
+
+async function getEffectivePermissions(role) {
+  const overrides = await loadPermissionOverrides();
+  return mergePermissions(role, overrides);
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser]               = useState(null);
   const [profile, setProfile]         = useState(null);
@@ -94,7 +112,7 @@ export function AuthProvider({ children }) {
           const u = JSON.parse(saved);
           setUser({ id: u.id || u.email, email: u.email });
           setProfile(u);
-          setPermissions(ROLE_PERMISSIONS[u.role] || []);
+          getEffectivePermissions(u.role).then(p => setPermissions(p));
           return true;
         } catch {}
       }
@@ -113,7 +131,7 @@ export function AuthProvider({ children }) {
               const profileData = await fetchSupabaseProfile(session.user.id, session.user);
               setUser({ id: session.user.id, email: session.user.email });
               setProfile(profileData);
-              setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
+              getEffectivePermissions(profileData.role).then(p => setPermissions(p));
             } catch (profileErr) {
               console.error('[Auth] Profile fetch failed:', profileErr.message);
               await supabase.auth.signOut();
@@ -195,7 +213,7 @@ export function AuthProvider({ children }) {
     };
     setUser({ id: email, email });
     setProfile(profileData);
-    setPermissions(ROLE_PERMISSIONS[mockUser.role] || []);
+    getEffectivePermissions(mockUser.role).then(p => setPermissions(p));
     localStorage.setItem('platform_mock_user', JSON.stringify(profileData));
     logSession(profileData);
     return profileData;
@@ -220,7 +238,7 @@ export function AuthProvider({ children }) {
 
         setUser({ id: data.user.id, email: data.user.email });
         setProfile(profileData);
-        setPermissions(ROLE_PERMISSIONS[profileData.role] || []);
+        getEffectivePermissions(profileData.role).then(p => setPermissions(p));
         logSession(profileData);
         return profileData;
       } catch (err) {
@@ -297,7 +315,7 @@ export function AuthProvider({ children }) {
     };
     setUser({ id: email, email });
     setProfile(impProfile);
-    setPermissions(ROLE_PERMISSIONS[mockUser.role] || []);
+    getEffectivePermissions(mockUser.role).then(p => setPermissions(p));
     setIsImpersonating(true);
     localStorage.setItem('platform_mock_user', JSON.stringify(impProfile));
   };
@@ -307,7 +325,7 @@ export function AuthProvider({ children }) {
     if (!orig) return;
     setUser({ id: orig.email, email: orig.email });
     setProfile(orig);
-    setPermissions(ROLE_PERMISSIONS[orig.role] || []);
+    getEffectivePermissions(orig.role).then(p => setPermissions(p));
     setIsImpersonating(false);
     setOriginalProfile(null);
     localStorage.setItem('platform_mock_user', JSON.stringify(orig));

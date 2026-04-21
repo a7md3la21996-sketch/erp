@@ -1,32 +1,19 @@
-import { syncToSupabase } from '../../utils/supabaseSync';
-import { useState, useEffect, useMemo } from 'react';
+import supabase from '../../lib/supabase';
+import { reportError } from '../../utils/errorReporter';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { fetchEmployees } from '../../services/employeesService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, ShieldAlert } from 'lucide-react';
 import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 
-
-const STORAGE_KEY = 'platform_hr_disciplinary';
+const TABLE = 'disciplinary';
 const DEFAULT_CASES = [
-  { id:1, emp_id:'EMP-001', type:'warning', reason:'تأخير متكرر', date:'2026-02-10', status:'open', severity:'low' },
-  { id:2, emp_id:'EMP-002', type:'suspension', reason:'غياب بدون إذن', date:'2026-01-20', status:'closed', severity:'high' },
-  { id:3, emp_id:'EMP-003', type:'warning', reason:'سلوك غير لائق', date:'2026-03-01', status:'open', severity:'medium' },
-  { id:4, emp_id:'EMP-004', type:'termination', reason:'خرق سياسة الشركة', date:'2026-02-28', status:'closed', severity:'high' },
+  { emp_id:'EMP-001', type:'warning', reason:'تأخير متكرر', date:'2026-02-10', status:'open', severity:'low' },
+  { emp_id:'EMP-002', type:'suspension', reason:'غياب بدون إذن', date:'2026-01-20', status:'closed', severity:'high' },
+  { emp_id:'EMP-003', type:'warning', reason:'سلوك غير لائق', date:'2026-03-01', status:'open', severity:'medium' },
+  { emp_id:'EMP-004', type:'termination', reason:'خرق سياسة الشركة', date:'2026-02-28', status:'closed', severity:'high' },
 ];
-
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_CASES)); syncToSupabase('platform_hr_disciplinary', DEFAULT_CASES);
-  return [...DEFAULT_CASES];
-}
-
-function saveData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); syncToSupabase('platform_hr_disciplinary', data); } catch {}
-}
 
 /* ─── Dynamic Badge ─── */
 function DynBadge({ label, color = '#4A7AAB' }) {
@@ -43,10 +30,7 @@ function DynBadge({ label, color = '#4A7AAB' }) {
 export default function DisciplinaryPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [cases, setCases] = useState(loadData);
-
-  // Persist to localStorage whenever cases change
-  useEffect(() => { saveData(cases); }, [cases]);
+  const [cases, setCases] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -54,7 +38,31 @@ export default function DisciplinaryPage() {
   const [search, setSearch] = useState('');
 
   const [loading, setLoading] = useState(true);
-  useEffect(() => { fetchEmployees().then(data => { setEmployees(data); setLoading(false); }); }, []);
+
+  // Fetch cases from Supabase on mount; seed defaults if empty
+  const fetchCases = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from(TABLE).select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setCases(data);
+      } else {
+        // Seed default data
+        const { data: seeded, error: seedErr } = await supabase.from(TABLE).insert(DEFAULT_CASES).select();
+        if (seedErr) throw seedErr;
+        setCases(seeded || []);
+      }
+    } catch (err) {
+      reportError(`supabase.${TABLE}`, 'fetch', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    Promise.all([
+      fetchCases(),
+      fetchEmployees().then(data => setEmployees(data)),
+    ]).finally(() => setLoading(false));
+  }, [fetchCases]);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('disciplinary');
 

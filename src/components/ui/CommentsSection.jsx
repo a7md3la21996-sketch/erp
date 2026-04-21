@@ -48,7 +48,7 @@ function initials(name) {
   return words.length >= 2 ? (words[0][0] + words[1][0]) : words[0].slice(0, 2);
 }
 
-export default function CommentsSection({ entity, entityId, entityName }) {
+export default function CommentsSection({ entity, entityId, entityName, onCommentAdded }) {
   const { i18n } = useTranslation();
   const { theme } = useTheme();
   const { profile } = useAuth();
@@ -156,6 +156,7 @@ export default function CommentsSection({ entity, entityId, entityName }) {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
+    if (onCommentAdded) onCommentAdded();
     // Comments refresh via event listener
   };
 

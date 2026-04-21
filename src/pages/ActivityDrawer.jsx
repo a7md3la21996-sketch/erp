@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -48,6 +48,7 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
   const [editing, setEditing] = useState(false);
   const [editNotes, setEditNotes] = useState(activity?.notes || '');
   const [saving, setSaving] = useState(false);
+  useEffect(() => { setEditNotes(activity?.notes || ''); setEditing(false); }, [activity?.id]);
 
   if (!activity) return null;
 

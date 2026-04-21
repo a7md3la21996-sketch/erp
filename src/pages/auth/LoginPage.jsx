@@ -13,13 +13,14 @@ export default function LoginPage() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const isRTL = i18n.language === 'ar';
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('rememberedEmail') || '');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem('rememberedEmail') !== null);
   const [forgotMode, setForgotMode] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
 
   const handleLogin = async () => {
@@ -27,6 +28,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
       navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.message || t('auth.invalidCredentials'));
@@ -103,7 +109,7 @@ export default function LoginPage() {
                   className="w-4 h-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500 cursor-pointer" />
                 <span className="text-xs text-gray-500 dark:text-content-muted-dark">{isRTL ? 'تذكرني' : 'Remember me'}</span>
               </label>
-              <button type="button" onClick={() => setForgotMode(true)} className="text-xs text-brand-600 dark:text-brand-400 bg-transparent border-none cursor-pointer p-0 hover:underline">
+              <button type="button" onClick={() => { setForgotMode(true); setForgotEmail(''); setError(''); }} className="text-xs text-brand-600 dark:text-brand-400 bg-transparent border-none cursor-pointer p-0 hover:underline">
                 {t('auth.forgotPassword')}
               </button>
             </div>
@@ -115,7 +121,7 @@ export default function LoginPage() {
 
           {/* Forgot Password Modal */}
           {forgotMode && (
-            <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={() => setForgotMode(false)}>
+            <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={() => { setForgotMode(false); setError(''); setForgotEmail(''); setResetSent(false); }}>
               <div onClick={e => e.stopPropagation()} className="bg-white dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[400px] p-6">
                 {resetSent ? (
                   <div className="text-center py-4">
@@ -126,7 +132,7 @@ export default function LoginPage() {
                     <p className="m-0 text-sm text-gray-500 dark:text-content-muted-dark mb-4">
                       {isRTL ? 'تفقد بريدك الإلكتروني' : 'Check your email inbox'}
                     </p>
-                    <Button onClick={() => { setForgotMode(false); setResetSent(false); }}>
+                    <Button onClick={() => { setForgotMode(false); setResetSent(false); setError(''); setForgotEmail(''); }}>
                       {isRTL ? 'تم' : 'Done'}
                     </Button>
                   </div>
@@ -138,15 +144,15 @@ export default function LoginPage() {
                     <p className="m-0 text-sm text-gray-500 dark:text-content-muted-dark mb-4">
                       {isRTL ? 'أدخل بريدك الإلكتروني وهنبعتلك رابط لإعادة تعيين كلمة المرور' : 'Enter your email and we\'ll send you a reset link'}
                     </p>
-                    <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="email@company.com" dir="ltr" className="mb-4" />
+                    <Input type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="email@company.com" dir="ltr" className="mb-4" />
                     <div className="flex gap-2.5">
-                      <Button variant="secondary" onClick={() => setForgotMode(false)} className="flex-1">
+                      <Button variant="secondary" onClick={() => { setForgotMode(false); setError(''); setForgotEmail(''); setResetSent(false); }} className="flex-1">
                         {isRTL ? 'إلغاء' : 'Cancel'}
                       </Button>
-                      <Button disabled={!email || loading} className="flex-1" onClick={async () => {
+                      <Button disabled={!forgotEmail || loading} className="flex-1" onClick={async () => {
                         setLoading(true);
                         try {
-                          const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+                          const { error: err } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
                             redirectTo: window.location.origin + '/login',
                           });
                           if (err) throw err;

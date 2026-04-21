@@ -28,7 +28,7 @@ const COUNTRY_OPTIONS = COUNTRY_CODES
   .filter(c => ['EG','SA','AE','KW','QA','OM','BH','JO','IQ','LB','LY','MA','TN','SD'].includes(c.country))
   .map(c => ({ value: c.country, label: c.labelAr, labelEn: c.label }));
 
-export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAuditFilters, initialSearch = '', initialFilterType = 'all', initialShowBlacklisted = false, initialSortBy, initialPage = 1 }) {
+export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAuditFilters, initialSearch = '', initialFilterType = 'all', initialShowBlacklisted = false, initialSortBy, initialPage = 1, allAgentNames }) {
   const globalFilter = useGlobalFilter();
   const activeDept = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
   const deptView = activeDept ? getDeptView(activeDept) : ALL_DEPT_VIEW;
@@ -49,8 +49,8 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
   // All status options
   const ALL_STATUS_OPTIONS = [
     { value: 'new', label: 'جديد', labelEn: 'New' },
-    { value: 'active', label: 'نشط', labelEn: 'Active' },
-    { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive' },
+    { value: 'following', label: 'متابعة', labelEn: 'Following' },
+    { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted' },
     { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified' },
   ];
@@ -95,7 +95,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'lead_score', label: 'Lead Score', labelEn: 'Lead Score', type: 'number' },
     { id: 'campaign_name', label: 'الحملة', labelEn: 'Campaign', type: 'text' },
     { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
-    { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: [...new Set((contacts || []).map(c => c.assigned_to_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
+    { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: (allAgentNames || [...new Set((contacts || []).map(c => c.assigned_to_name).filter(Boolean))]).map(n => ({ value: n, label: n, labelEn: n })) },
     { id: 'assigned_by_name', label: 'عيّنه', labelEn: 'Assigned By', type: 'select', options: [...new Set((contacts || []).map(c => c.assigned_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set((contacts || []).map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },

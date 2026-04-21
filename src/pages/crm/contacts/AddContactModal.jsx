@@ -12,6 +12,8 @@ import {
 } from './constants';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import { Plus } from 'lucide-react';
+import { Z } from '../../../constants/zIndex';
+import { useFocusTrap } from '../../../utils/hooks';
 
 function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCampaign }) {
   const [search, setSearch] = useState('');
@@ -21,8 +23,7 @@ function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCamp
   const [saving, setSaving] = useState(false);
   const ref = useRef(null);
 
-  const sourceCampaigns = (campaigns || []).filter(c => c.platform === source || !source);
-  const displayList = (sourceCampaigns.length > 0 ? sourceCampaigns : campaigns)
+  const displayList = (campaigns || [])
     .filter(c => !search || (c.name_ar || '').includes(search) || (c.name_en || '').toLowerCase().includes(search.toLowerCase()));
   const noMatch = search && displayList.length === 0;
 
@@ -40,7 +41,8 @@ function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCamp
       </div>
 
       {open && (
-        <div className="absolute top-full mt-1 inset-x-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg z-50 max-h-[200px] overflow-y-auto">
+        <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg max-h-[250px] overflow-y-auto overscroll-contain"
+          style={{ position: 'fixed', zIndex: Z.DROPDOWN_ABOVE_MODAL, width: ref.current?.offsetWidth || 300, top: ref.current ? Math.min(ref.current.getBoundingClientRect().bottom + 4, window.innerHeight - 260) : 'auto', left: ref.current?.getBoundingClientRect().left || 0, touchAction: 'pan-y' }}>
           {displayList.map(c => (
             <button key={c.id} onClick={() => { onChange(isRTL ? c.name_ar : c.name_en); setSearch(''); setOpen(false); }}
               className="w-full text-start px-3 py-2 text-xs text-content dark:text-content-dark hover:bg-brand-500/[0.08] cursor-pointer border-none bg-transparent">
@@ -104,12 +106,12 @@ function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCamp
                   status: 'active',
                   budget: 0, spent: 0,
                   start_date: new Date().toISOString().slice(0, 10),
-                  end_date: '',
+                  end_date: null,
                   type: 'paid_ads',
                   target_audience: 'new_leads',
-                  target_location: newCamp.target_location,
-                  target_property_type: newCamp.target_property_type,
-                  notes: '',
+                  target_location: newCamp.target_location || null,
+                  target_property_type: newCamp.target_property_type || null,
+                  notes: null,
                 };
                 if (onCreateCampaign) await onCreateCampaign(camp);
                 const name = isRTL ? camp.name_ar : camp.name_en;
@@ -146,6 +148,8 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     }
   }, [isAdmin]);
   useEscClose(onClose);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
   const dupTimer = useRef(null);
   useEffect(() => () => clearTimeout(dupTimer.current), []);
   const [step, setStep] = useState(1);
@@ -177,6 +181,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const [extraDups, setExtraDups] = useState([]);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false); // sync guard against double-submit (state updates are async)
   const [savedContact, setSavedContact] = useState(null);
   const [errors, setErrors] = useState({});
   const [customFieldValues, setCustomFieldValues] = useState({});
@@ -235,11 +240,14 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const getFullPhone = (phone, code) => {
     if (!phone) return '';
     if (phone.startsWith('+')) return phone;
-    if (phone.startsWith('0')) return normalizePhone(phone);
+    if (phone.startsWith('00')) return '+' + phone.slice(2);
+    // Respect the user-selected country code: strip leading 0 (local-format prefix) and prepend code
+    if (phone.startsWith('0')) return code + phone.slice(1);
     return code + phone;
   };
 
   const handleSave = async () => {
+    if (savingRef.current) return; // prevent double-submit (sync check — state updates are async)
     const errs = {};
     if (!form.department) errs.department = isRTL ? 'يرجى اختيار القسم' : 'Please select a department';
     if (!form.contact_type) errs.contact_type = isRTL ? 'يرجى اختيار نوع العميل' : 'Please select lead type';
@@ -250,6 +258,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     setErrors({});
     const invalidExtra = extraPhones.find((p, i) => p && !validatePhone(getFullPhone(p, extraCountryCodes[i] || form.countryCode)));
     if (invalidExtra) { toast.error(isRTL ? `الرقم ${invalidExtra} غير صحيح` : `Invalid number: ${invalidExtra}`); return; }
+    savingRef.current = true;
     setSaving(true);
     try {
       const validExtras = extraPhones.reduce((acc, p, idx) => {
@@ -270,18 +279,21 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
       if (isAdmin && assignTo) {
         saveData.assigned_to_name = assignTo;
         saveData.assigned_to_names = [assignTo];
+        saveData.agent_statuses = { [assignTo]: 'new' };
+        saveData.agent_temperatures = { [assignTo]: form.temperature || 'hot' };
       }
       await onSave(saveData);
       setSavedContact({ full_name: form.full_name, phone: fullPhone });
     } catch (err) {
       toast.error((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
       setSaving(false);
+      savingRef.current = false; // allow retry after failure
     }
   };
 
   return (
     <div onClick={onClose} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'}>
-      <div onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[560px] max-h-[92vh] flex flex-col">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="add-contact-title" onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[560px] max-h-[92vh] flex flex-col">
         {savedContact ? (
           <div className="p-8 text-center">
             <div className="w-16 h-16 rounded-full bg-emerald-500/[0.12] flex items-center justify-center mx-auto mb-4">
@@ -308,7 +320,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <div>
-            <h2 className="m-0 text-content dark:text-content-dark text-[17px] font-bold">
+            <h2 id="add-contact-title" className="m-0 text-content dark:text-content-dark text-[17px] font-bold">
               {isRTL ? 'إضافة عميل' : 'Add Lead'}
             </h2>
             <p className="mt-[3px] mb-0 text-xs text-content-muted dark:text-content-muted-dark">
@@ -359,21 +371,22 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                 {errors.contact_type && <span style={{ color: '#ef4444', fontSize: 12, marginTop: 2, display: 'block' }}>{errors.contact_type}</span>}
               </div>
 
-              <div className="col-span-full">
-                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
-                <div className="flex gap-2">
-                  <Select className="!w-[110px] shrink-0" value={form.prefix} onChange={e => set('prefix', e.target.value)}>
-                    <option value="">{isRTL ? 'اللقب' : 'Prefix'}</option>
-                    <option value="Mr.">{isRTL ? 'السيد' : 'Mr.'}</option>
-                    <option value="Mrs.">{isRTL ? 'السيدة' : 'Mrs.'}</option>
-                    <option value="Dr.">{isRTL ? 'د.' : 'Dr.'}</option>
-                    <option value="Eng.">{isRTL ? 'م.' : 'Eng.'}</option>
-                    <option value="أستاذ">{isRTL ? 'أستاذ' : 'Prof.'}</option>
-                  </Select>
-                  <Input className="flex-1" autoComplete="name" placeholder={isRTL ? 'محمد أحمد...' : 'John Doe...'} value={form.full_name} onChange={e => set('full_name', e.target.value)} />
-                </div>
+              <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'اللقب' : 'Prefix'}</label>
+                <Select value={form.prefix} onChange={e => set('prefix', e.target.value)}>
+                  <option value="">{isRTL ? 'اللقب' : 'Prefix'}</option>
+                  <option value="Mr.">{isRTL ? 'السيد' : 'Mr.'}</option>
+                  <option value="Mrs.">{isRTL ? 'السيدة' : 'Mrs.'}</option>
+                  <option value="Dr.">{isRTL ? 'د.' : 'Dr.'}</option>
+                  <option value="Eng.">{isRTL ? 'م.' : 'Eng.'}</option>
+                  <option value="أستاذ">{isRTL ? 'أستاذ' : 'Prof.'}</option>
+                </Select>
               </div>
               <div>
+                <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
+                <input className="w-full rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-sm px-3 py-2 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30" dir="ltr" style={{ unicodeBidi: 'plaintext', textAlign: 'left' }} autoComplete="name" placeholder={isRTL ? 'محمد أحمد...' : 'John Doe...'} value={form.full_name} onChange={e => set('full_name', e.target.value)} />
+              </div>
+              <div className="col-span-full">
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span> {(() => { const fp = getFullPhone(form.phone, form.countryCode); return (<>{fp && !validatePhone(fp) && <span className="text-xs text-orange-500">⚠️ {isRTL ? 'رقم غير صحيح' : 'Invalid number'}</span>}{fp && validatePhone(fp) && (() => { const info = getPhoneInfo(fp); return info ? <span className="text-xs text-emerald-500">{info.flag} {info.country} — {info.formatted}</span> : null; })()}</>); })()}</label>
                 <div className="flex gap-1.5 items-center">
                   <Select className="!w-[100px] shrink-0" value={form.countryCode} onChange={e => {

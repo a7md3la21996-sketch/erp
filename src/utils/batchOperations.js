@@ -12,6 +12,7 @@ import { reportError } from './errorReporter';
  */
 export async function batchInsert(table, records, chunkSize = 100) {
   if (!records?.length) return [];
+  console.log(`[batchInsert] Starting: ${records.length} records into ${table}, chunkSize=${chunkSize}`);
   const results = [];
   for (let i = 0; i < records.length; i += chunkSize) {
     const chunk = records.slice(i, i + chunkSize);
@@ -20,12 +21,29 @@ export async function batchInsert(table, records, chunkSize = 100) {
         .from(table)
         .insert(chunk)
         .select('*');
-      if (error) throw error;
-      if (data) results.push(...data);
+      if (error) {
+        console.error(`[batchInsert] Chunk ${Math.floor(i / chunkSize)} FAILED:`, error.message, error.details, error.hint);
+        reportError(`batchInsert.${table}`, `chunk ${Math.floor(i / chunkSize)}`, error);
+        // If batch fails, try one by one to salvage what we can
+        let saved = 0, failed = 0;
+        for (const record of chunk) {
+          try {
+            const { data: single, error: sErr } = await supabase.from(table).insert([record]).select('*').single();
+            if (!sErr && single) { results.push(single); saved++; }
+            else { console.error(`[batchInsert] Single insert failed:`, sErr?.message, 'Record:', JSON.stringify(record).slice(0, 150)); failed++; }
+          } catch (e) { console.error(`[batchInsert] Single insert exception:`, e.message); failed++; }
+        }
+        console.log(`[batchInsert] Chunk fallback: ${saved} saved, ${failed} failed`);
+      } else {
+        if (data) results.push(...data);
+        console.log(`[batchInsert] Chunk ${Math.floor(i / chunkSize)}: ${data?.length || 0} inserted`);
+      }
     } catch (err) {
+      console.error(`[batchInsert] Chunk ${Math.floor(i / chunkSize)} EXCEPTION:`, err.message);
       reportError(`batchInsert.${table}`, `chunk ${Math.floor(i / chunkSize)}`, err);
     }
   }
+  console.log(`[batchInsert] Done: ${results.length}/${records.length} inserted`);
   return results;
 }
 

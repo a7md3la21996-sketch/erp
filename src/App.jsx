@@ -94,6 +94,8 @@ const SalesForecastPage = lazyRetry(() => import('./pages/sales/SalesForecastPag
 const ProjectsPage = lazyRetry(() => import('./pages/real-estate/ProjectsPage'));
 const UnitsPage = lazyRetry(() => import('./pages/real-estate/UnitsPage'));
 const UsersPage = lazyRetry(() => import('./pages/settings/UsersPage'));
+const TeamHierarchyPage = lazyRetry(() => import('./pages/settings/TeamHierarchyPage'));
+const ImportExportLogPage = lazyRetry(() => import('./pages/settings/ImportExportLogPage'));
 const TriggersPage = lazyRetry(() => import('./pages/settings/TriggersPage'));
 const CustomFieldsPage = lazyRetry(() => import('./pages/settings/CustomFieldsPage'));
 const BackupPage = lazyRetry(() => import('./pages/settings/BackupPage'));
@@ -113,7 +115,6 @@ const SecurityPage = lazyRetry(() => import('./pages/settings/SecurityPage'));
 const WorkflowBuilderPage = lazyRetry(() => import('./pages/settings/WorkflowBuilderPage'));
 const SystemHealthPage = lazyRetry(() => import('./pages/settings/SystemHealthPage'));
 const APIDocsPage = lazyRetry(() => import('./pages/settings/APIDocsPage'));
-const ExportImportHistoryPage = lazyRetry(() => import('./pages/settings/ExportImportHistoryPage'));
 const ChangelogPage = lazyRetry(() => import('./pages/ChangelogPage'));
 const RolesPage = lazyRetry(() => import('./pages/settings/RolesPage'));
 const SLAManagementPage = lazyRetry(() => import('./pages/settings/SLAManagementPage'));
@@ -288,6 +289,8 @@ export default function App() {
                 <Route path="/settings/system" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><SystemConfigPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/tracking" element={<ProtectedRoute permission={P.AUDIT_VIEW}><Guarded><UserTrackingPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/users" element={<ProtectedRoute permission={P.USERS_MANAGE}><Guarded><UsersPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/hierarchy" element={<ProtectedRoute permission={P.USERS_MANAGE}><Guarded><TeamHierarchyPage /></Guarded></ProtectedRoute>} />
+                <Route path="/settings/import-export" element={<ProtectedRoute permission={P.SETTINGS_VIEW}><Guarded><ImportExportLogPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/triggers" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><TriggersPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/custom-fields" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><CustomFieldsPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/backup" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><BackupPage /></Guarded></ProtectedRoute>} />
@@ -298,7 +301,6 @@ export default function App() {
                 <Route path="/settings/workflows" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><WorkflowBuilderPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/system-health" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><SystemHealthPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/api-docs" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><APIDocsPage /></Guarded></ProtectedRoute>} />
-                <Route path="/settings/export-import-history" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><ExportImportHistoryPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/roles" element={<ProtectedRoute permission={P.ROLES_MANAGE}><Guarded><RolesPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/sla" element={<ProtectedRoute permission={P.SLA_MANAGE}><Guarded><SLAManagementPage /></Guarded></ProtectedRoute>} />
                 <Route path="/settings/ads-integration" element={<ProtectedRoute permission={P.SETTINGS_MANAGE}><Guarded><AdsIntegrationPage /></Guarded></ProtectedRoute>} />

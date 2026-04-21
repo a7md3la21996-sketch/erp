@@ -41,7 +41,7 @@ function saveCampaigns(list) {
 
 export async function fetchCampaigns() {
   try {
-    const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false }).range(0, 199);
+    const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false }).range(0, 999);
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('marketingService', 'query', err);
@@ -54,6 +54,8 @@ export async function createCampaign(data) {
   const campaign = { ...data, created_at: data.created_at || new Date().toISOString().slice(0, 10) };
   // Remove non-UUID id
   if (campaign.id && !campaign.id.match(/^[0-9a-f]{8}-/i)) delete campaign.id;
+  // Convert empty strings to null (Supabase rejects '' for date/number columns)
+  for (const [k, v] of Object.entries(campaign)) { if (v === '') campaign[k] = null; }
   // Save to localStorage first (optimistic)
   try { const list = loadCampaigns(); list.unshift(campaign); saveCampaigns(list); } catch {}
   // Try Supabase

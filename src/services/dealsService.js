@@ -25,7 +25,7 @@ async function getTeamMemberNames(role, teamId) {
 /**
  * Get deals filtered by role
  */
-export async function getWonDeals({ role, userId, teamId, userName } = {}) {
+export async function getWonDeals({ role, userId, teamId, userName, contactId } = {}) {
   try {
     let query = supabase
       .from('deals')
@@ -33,6 +33,10 @@ export async function getWonDeals({ role, userId, teamId, userName } = {}) {
       .not('opportunity_id', 'is', null)
       .order('created_at', { ascending: false })
       .range(0, 499);
+
+    if (contactId) {
+      query = query.eq('contact_id', contactId);
+    }
 
     if (role === 'sales_agent' && userName) {
       query = query.or(`agent_en.eq.${userName},agent_ar.eq.${userName}`);
@@ -55,7 +59,7 @@ export async function getWonDeals({ role, userId, teamId, userName } = {}) {
 
 /**
  * Generate next deal number.
- * Tries DB sequence first (race-condition safe), falls back to JS increment.
+ * Tries DB sequence first (race-condition safe), falls back to timestamp-based ID.
  */
 async function nextDealNumber(existingDeals) {
   // Try database sequence (atomic, no race conditions)
@@ -63,15 +67,8 @@ async function nextDealNumber(existingDeals) {
     const { data, error } = await supabase.rpc('generate_deal_number');
     if (!error && data) return data;
   } catch {}
-  // Fallback: JS-based (for offline/dev)
-  const year = new Date().getFullYear();
-  const prefix = `D-${year}-`;
-  const nums = existingDeals
-    .filter(d => d.deal_number?.startsWith(prefix))
-    .map(d => parseInt(d.deal_number.replace(prefix, ''), 10))
-    .filter(n => !isNaN(n));
-  const next = nums.length > 0 ? Math.max(...nums) + 1 : 100;
-  return `${prefix}${String(next).padStart(3, '0')}`;
+  // Fallback: timestamp-based (race-condition safe, like contacts do)
+  return 'D-' + Date.now().toString(36).toUpperCase();
 }
 
 /**

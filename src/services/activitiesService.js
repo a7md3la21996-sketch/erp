@@ -2,7 +2,12 @@ import { reportError } from '../utils/errorReporter';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 import { logCreate, logDelete } from './auditService';
-import { getTeamMemberIds } from '../utils/teamHelper';
+import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
+import { applyRoleFilter } from '../utils/roleFilter';
+import { incrementAgentScore } from './contactsService';
+
+// ── Score map for lead scoring ──
+const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15, note: 2 };
 
 // ── Activity Types ─────────────────────────────────────────────────────────
 export const ACTIVITY_TYPES = {
@@ -16,8 +21,6 @@ export const ACTIVITY_TYPES = {
   evaluation:    { ar: 'تقييم',         en: 'Evaluation',    icon: 'Star',         color: '#6B8DB5', dept: ['hr'] },
   invoice:       { ar: 'فاتورة',        en: 'Invoice',       icon: 'Receipt',      color: '#4A7AAB', dept: ['finance'] },
   payment:       { ar: 'دفعة',          en: 'Payment',       icon: 'Banknote',     color: '#2B4C6F', dept: ['finance'] },
-  status_change: { ar: 'تغيير حالة',    en: 'Status Change', icon: 'RefreshCw',   color: '#8BA8C8', dept: ['sales','hr','finance'] },
-  task:          { ar: 'مهمة',          en: 'Task',          icon: 'CheckSquare',  color: '#6B8DB5', dept: ['sales','hr','finance'] },
 };
 
 // ── Meeting Subtypes ──────────────────────────────────────────────────────
@@ -39,6 +42,8 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
       .select('*', isServerPaginated ? { count: 'exact' } : {})
       .order('created_at', { ascending: false });
 
+    // Exclude internal types from activities list (status_change, task, reassignment)
+    query = query.not('type', 'in', '("status_change","task","reassignment")');
     if (entityId)   query = query.eq(`${entityType}_id`, entityId);
     if (entityType && !entityId) query = query.eq('entity_type', entityType);
     if (dept)       query = query.eq('dept', dept);
@@ -48,23 +53,26 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
       const s = search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
       if (s.length > 0) query = query.or(`notes.ilike.%${s}%,description.ilike.%${s}%,user_name_en.ilike.%${s}%,user_name_ar.ilike.%${s}%,entity_name.ilike.%${s}%`);
     }
-    if (agentName)  query = query.or(`user_name_en.eq.${agentName},user_name_ar.eq.${agentName}`);
+    if (agentName && role !== 'sales_agent')  query = query.or(`user_name_en.eq.${agentName},user_name_ar.eq.${agentName}`);
 
-    // Role-based filtering — by name (not UUID) since imported activities may lack user_id
-    if (role === 'sales_agent' && userId) {
-      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
-      if (agentUser?.full_name_en) {
-        query = query.or(`user_name_en.eq.${agentUser.full_name_en},user_id.eq.${userId}`);
-      } else {
-        query = query.eq('user_id', userId);
-      }
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const ids = await getTeamMemberIds(role, teamId);
-      const names = await import('../utils/teamHelper').then(m => m.getTeamMemberNames(role, teamId));
-      if (names.length) {
-        const nameConds = names.map(n => `user_name_en.eq.${n}`).join(',');
-        const idConds = ids.map(id => `user_id.eq.${id}`).join(',');
-        query = query.or(`${nameConds},${idConds}`);
+    // Role-based filtering (skip if no role - don't show all data)
+    if (!role || !userId) return isServerPaginated ? { data: [], count: 0 } : [];
+    if (!agentName || role === 'sales_agent') {
+      if (role === 'sales_agent' && userId) {
+        const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+        if (agentUser?.full_name_en) {
+          query = query.or(`user_name_en.eq.${agentUser.full_name_en},user_id.eq.${userId}`);
+        } else {
+          query = query.eq('user_id', userId);
+        }
+      } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+        const ids = await getTeamMemberIds(role, teamId);
+        const names = await getTeamMemberNames(role, teamId);
+        if (names.length) {
+          const nameConds = names.map(n => `user_name_en.eq.${n}`).join(',');
+          const idConds = ids.map(id => `user_id.eq.${id}`).join(',');
+          query = query.or(`${nameConds},${idConds}`);
+        }
       }
     }
 
@@ -133,16 +141,16 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
         .single();
       if (!error && data) {
         if (entityType === 'contact' && entityId) {
-          const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15, note: 2 };
           const scoreIncrement = SCORE_MAP[type] || 2;
+          const agentName = userName_en || userName_ar || null;
           try {
-            const { data: contact } = await supabase.from('contacts').select('lead_score, first_response_at').eq('id', entityId).maybeSingle();
-            const newScore = Math.min((contact?.lead_score || 0) + scoreIncrement, 100);
-            const updates = { last_activity_at: new Date().toISOString(), lead_score: newScore };
+            const { data: contact } = await supabase.from('contacts').select('first_response_at').eq('id', entityId).maybeSingle();
+            const updates = { last_activity_at: new Date().toISOString() };
             if (!contact?.first_response_at && ['call', 'whatsapp', 'email', 'meeting'].includes(type)) {
               updates.first_response_at = new Date().toISOString();
             }
             await supabase.from('contacts').update(updates).eq('id', entityId);
+            if (agentName) await incrementAgentScore(entityId, agentName, scoreIncrement);
           } catch (err) {
             reportError('activitiesService', 'createActivity.updateScore', err);
             await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
@@ -185,18 +193,29 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
 
     logCreate('activity', data.id, data);
     if (entityType === 'contact' && entityId) {
-      // Update last_activity and recalculate lead_score
       const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15, note: 2 };
       const scoreIncrement = SCORE_MAP[type] || 2;
+      const agentName = finalNameEn || finalNameAr || null;
       try {
-        const { data: contact } = await supabase.from('contacts').select('lead_score, first_response_at').eq('id', entityId).maybeSingle();
-        const newScore = Math.min((contact?.lead_score || 0) + scoreIncrement, 100);
-        const updates = { last_activity_at: new Date().toISOString(), lead_score: newScore };
-        // Track first response time (time to first activity after lead creation)
+        const { data: contact } = await supabase.from('contacts').select('first_response_at').eq('id', entityId).maybeSingle();
+        const updates = { last_activity_at: new Date().toISOString() };
         if (!contact?.first_response_at && ['call', 'whatsapp', 'email', 'meeting'].includes(type)) {
           updates.first_response_at = new Date().toISOString();
         }
         await supabase.from('contacts').update(updates).eq('id', entityId);
+        if (agentName) await incrementAgentScore(entityId, agentName, scoreIncrement);
+        // Auto-complete matching pending tasks
+        if (userId && type) {
+          const matchTypes = type === 'call' ? ['call', 'followup'] : [type];
+          supabase.from('tasks')
+            .update({ status: 'done', completed_at: new Date().toISOString() })
+            .eq('contact_id', entityId)
+            .eq('assigned_to', userId)
+            .eq('status', 'pending')
+            .in('type', matchTypes)
+            .lte('due_date', new Date().toISOString())
+            .then(() => {}).catch(() => {});
+        }
       } catch (err) { reportError('activitiesService', 'query', err);
         await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
       }

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { SmartFilter, applySmartFilters, KpiCard, Card, ExportButton, Pagination, Modal, ModalFooter, Button, Input, Select, Textarea } from '../../components/ui';
 import { fmtMoney, fmtFull } from '../../utils/formatting';
 import { thCls, tdCls } from '../../utils/tableStyles';
@@ -19,6 +20,7 @@ import {
   MOCK_COMPANY_COMMISSIONS,
   COMMISSION_STATUS,
 } from '../../data/finance_mock_data';
+import { supabase } from '../../lib/supabase';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import {
   fetchInstallments,
@@ -28,27 +30,11 @@ import {
   getInstallmentStats,
 } from '../../services/commissionInstallmentsService';
 
-// ── Storage keys ──────────────────────────────────────────────────────────
-const STORAGE_KEY_AGENT = 'platform_agent_commissions';
-const STORAGE_KEY_COMPANY = 'platform_company_commissions';
-
 // ── Helpers ───────────────────────────────────────────────────────────────
 const fmtRate = (row) => {
   if (row.calc_method === 'per_million') return `${fmtFull(row.rate)}/M`;
   if (typeof row.rate === 'number' && row.rate < 1) return `${(row.rate * 100).toFixed(1)}%`;
   return `${(row.rate * 100).toFixed(1)}%`;
-};
-
-const loadData = (key, fallback) => {
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored) return JSON.parse(stored);
-  } catch { /* ignore */ }
-  return [...fallback];
-};
-
-const saveData = (key, data) => {
-  try { localStorage.setItem(key, JSON.stringify(data)); } catch { /* ignore */ }
 };
 
 // ── Installment status config ─────────────────────────────────────────────
@@ -84,6 +70,8 @@ export default function CommissionsPage() {
   const isRTL = lang === 'ar';
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const { profile } = useAuth();
+  const toast = useToast();
 
   const { auditFields, applyAuditFilters } = useAuditFilter('commission');
 
@@ -92,9 +80,45 @@ export default function CommissionsPage() {
   const [companyPage, setCompanyPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
 
-  // ── Data state with localStorage persistence ──
-  const [agentData, setAgentData] = useState(() => loadData(STORAGE_KEY_AGENT, MOCK_AGENT_COMMISSIONS));
-  const [companyData, setCompanyData] = useState(() => loadData(STORAGE_KEY_COMPANY, MOCK_COMPANY_COMMISSIONS));
+  // ── Data state with Supabase persistence ──
+  const [agentData, setAgentData] = useState([]);
+  const [companyData, setCompanyData] = useState([]);
+  const [loadingCommissions, setLoadingCommissions] = useState(true);
+
+  // ── Fetch agent & company commissions from Supabase ──
+  const fetchCommissions = useCallback(async () => {
+    setLoadingCommissions(true);
+    try {
+      const [agentRes, companyRes] = await Promise.all([
+        supabase.from('agent_commissions').select('*').order('created_at', { ascending: false }),
+        supabase.from('company_commissions').select('*').order('created_at', { ascending: false }),
+      ]);
+
+      if (agentRes.error) {
+        console.error('Error fetching agent commissions:', agentRes.error);
+        toast.error(isRTL ? 'خطأ في تحميل عمولات السيلز' : 'Error loading agent commissions');
+      }
+      if (companyRes.error) {
+        console.error('Error fetching company commissions:', companyRes.error);
+        toast.error(isRTL ? 'خطأ في تحميل عمولات الشركة' : 'Error loading company commissions');
+      }
+
+      const agentRows = agentRes.data && agentRes.data.length > 0 ? agentRes.data : [...MOCK_AGENT_COMMISSIONS];
+      const companyRows = companyRes.data && companyRes.data.length > 0 ? companyRes.data : [...MOCK_COMPANY_COMMISSIONS];
+
+      setAgentData(agentRows);
+      setCompanyData(companyRows);
+    } catch (err) {
+      console.error('Failed to fetch commissions:', err);
+      // Fallback to mock data on network error
+      setAgentData([...MOCK_AGENT_COMMISSIONS]);
+      setCompanyData([...MOCK_COMPANY_COMMISSIONS]);
+    } finally {
+      setLoadingCommissions(false);
+    }
+  }, [isRTL, toast]);
+
+  useEffect(() => { fetchCommissions(); }, [fetchCommissions]);
 
   // ── Filter state ──
   const [agentSearch, setAgentSearch] = useState('');
@@ -184,9 +208,16 @@ export default function CommissionsPage() {
     refreshInstallments();
   };
 
-  const markInstPaid = async (id) => { await updateInstallment(id, { status: 'paid', paid_date: new Date().toISOString().slice(0, 10) }); refreshInstallments(); };
-  const cancelInst = async (id) => { await updateInstallment(id, { status: 'cancelled' }); refreshInstallments(); };
-  const removeInst = async (id) => { await deleteInstallment(id); refreshInstallments(); };
+  const _checkFinancePermission = () => {
+    if (profile?.role !== 'admin' && profile?.role !== 'operations' && profile?.role !== 'sales_manager') {
+      toast.error(isRTL ? 'ليس لديك صلاحية لتنفيذ هذا الإجراء المالي' : 'You do not have permission to perform this financial operation');
+      return false;
+    }
+    return true;
+  };
+  const markInstPaid = async (id) => { if (!_checkFinancePermission()) return; await updateInstallment(id, { status: 'paid', paid_date: new Date().toISOString().slice(0, 10) }); refreshInstallments(); };
+  const cancelInst = async (id) => { if (!_checkFinancePermission()) return; await updateInstallment(id, { status: 'cancelled' }); refreshInstallments(); };
+  const removeInst = async (id) => { if (!_checkFinancePermission()) return; await deleteInstallment(id); refreshInstallments(); };
 
   // ── Developer summary (computed from company commissions) ──
   const devSummary = useMemo(() => {

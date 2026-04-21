@@ -10,6 +10,7 @@ import {
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
+import { Z } from '../../../constants/zIndex';
 
 function FixedDropdown({ btnRef, isOpen, isRTL, children }) {
   const [pos, setPos] = useState(null);
@@ -31,7 +32,7 @@ function FixedDropdown({ btnRef, isOpen, isRTL, children }) {
   if (!isOpen || !pos) return null;
 
   return createPortal(
-    <div data-menu-dropdown="true" onMouseDown={e => e.stopPropagation()} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 9999 }}
+    <div data-menu-dropdown="true" onMouseDown={e => e.stopPropagation()} style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: Z.FLOATING_DROPDOWN }}
       className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] shadow-[0_8px_30px_rgba(27,51,71,0.15)] overflow-hidden">
       {children}
     </div>,
@@ -82,6 +83,7 @@ export default function ContactsTable({
   isRTL,
   isSalesAgent,
   isAdmin,
+  agentName,
   deptView,
 }) {
   const { t } = useTranslation();
@@ -165,6 +167,7 @@ export default function ContactsTable({
                       </span>
                       <div className="mt-0.5" onClick={e => e.stopPropagation()}><PhoneCell phone={c.phone} small /></div>
                       {c.phone2 && <div onClick={e => e.stopPropagation()}><PhoneCell phone={c.phone2} small /></div>}
+                      {Array.isArray(c.extra_phones) && c.extra_phones.map((p, i) => p ? <div key={`${c.id}-xp-${p}-${i}`} onClick={e => e.stopPropagation()}><PhoneCell phone={p} small /></div> : null)}
                     </div>
                     {/* Call + WhatsApp buttons */}
                     <div className="flex flex-col gap-1 shrink-0" onClick={e => e.stopPropagation()}>
@@ -194,14 +197,17 @@ export default function ContactsTable({
                   </div>
                   {/* Row 2: Status + Temp + Activity */}
                   <div className="flex items-center gap-1.5 mt-2 ms-[52px] flex-wrap">
-                    {c.contact_status && (() => {
-                      const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, active: { label: 'نشط', labelEn: 'Active', color: '#10B981' }, inactive: { label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
-                      const s = statusMap[c.contact_status];
+                    {(() => {
+                      const myStatus = agentName ? ((c.agent_statuses || {})[agentName] || c.contact_status) : c.contact_status;
+                      if (!myStatus) return null;
+                      const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
+                      const s = statusMap[myStatus];
                       return s ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: s.color, background: s.color + '18' }}>{isRTL ? s.label : s.labelEn}</span> : null;
                     })()}
-                    {c.temperature && TEMP[c.temperature] && (() => {
-                      const t = TEMP[c.temperature];
-                      const Icon = t.Icon;
+                    {(() => {
+                      const myTemp = agentName ? ((c.agent_temperatures || {})[agentName] || c.temperature) : c.temperature;
+                      if (!myTemp || !TEMP[myTemp]) return null;
+                      const t = TEMP[myTemp]; const Icon = t.Icon;
                       return <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5" style={{ color: t.color, background: t.bg }}><Icon size={10} />{isRTL ? t.labelAr : t.label}</span>;
                     })()}
                     {!isSalesAgent && c.assigned_to_name && <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/[0.06] text-brand-500 font-medium">{c.assigned_to_name}</span>}
@@ -254,13 +260,13 @@ export default function ContactsTable({
               return (
               <tr key={c.id}
                 onClick={() => mergeMode ? setMergeTargets(prev => prev.includes(c.id) ? prev.filter(x => x !== c.id) : prev.length < MERGE_LIMIT ? [...prev, c.id] : prev) : setSelected(c)}
-                className={`group cursor-pointer transition-colors ${isMergeSelected ? 'bg-brand-800/[0.08]' : selectedIds.includes(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.04]'}`}
+                className={`group cursor-pointer transition-colors ${isMergeSelected ? 'bg-brand-800/[0.08]' : selectedIdSet.has(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.04]'}`}
                 style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
               >
                 {/* Checkbox */}
                 <td className={`${tdCls} !px-2.5 w-9`} onClick={e => e.stopPropagation()}>
-                  <div className={`${selectedIds.includes(c.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-                    <input type="checkbox" checked={selectedIds.includes(c.id)} onChange={() => toggleSelect(c.id)} className="cursor-pointer" />
+                  <div className={`${selectedIdSet.has(c.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                    <input type="checkbox" checked={selectedIdSet.has(c.id)} onChange={() => toggleSelect(c.id)} className="cursor-pointer" />
                   </div>
                 </td>
 
@@ -280,14 +286,17 @@ export default function ContactsTable({
                         {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {c.contact_status && (() => {
-                          const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, active: { label: 'نشط', labelEn: 'Active', color: '#10B981' }, inactive: { label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
-                          const s = statusMap[c.contact_status];
+                        {(() => {
+                          const myStatus = agentName ? ((c.agent_statuses || {})[agentName] || c.contact_status) : c.contact_status;
+                          if (!myStatus) return null;
+                          const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
+                          const s = statusMap[myStatus];
                           return s ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: s.color, background: s.color + '18' }}>{isRTL ? s.label : s.labelEn}</span> : null;
                         })()}
-                        {c.temperature && TEMP[c.temperature] && (() => {
-                          const t = TEMP[c.temperature];
-                          const Icon = t.Icon;
+                        {(() => {
+                          const myTemp = agentName ? ((c.agent_temperatures || {})[agentName] || c.temperature) : c.temperature;
+                          if (!myTemp || !TEMP[myTemp]) return null;
+                          const t = TEMP[myTemp]; const Icon = t.Icon;
                           return <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5" style={{ color: t.color, background: t.bg }}><Icon size={10} />{isRTL ? t.labelAr : t.label}</span>;
                         })()}
                         {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
@@ -300,6 +309,7 @@ export default function ContactsTable({
                 {hasCol('phone') && <td className={tdCls} onClick={e => e.stopPropagation()}>
                   <PhoneCell phone={c.phone} />
                   {c.phone2 && <PhoneCell phone={c.phone2} small />}
+                  {Array.isArray(c.extra_phones) && c.extra_phones.map((p, i) => p ? <PhoneCell key={`${c.id}-xp-${p}-${i}`} phone={p} small /> : null)}
                 </td>}
 
                 {/* Assigned To — admin/manager/TL see all names */}
@@ -317,11 +327,12 @@ export default function ContactsTable({
 
                 {/* Temperature — Sales & Marketing */}
                 {hasCol('temperature') && <td className={`${tdCls} hidden md:table-cell`}>
-                  {c.temperature && TEMP[c.temperature] ? (
-                    <div className="flex items-center gap-1.5">
-                      {(() => { const t = TEMP[c.temperature]; const Icon = t.Icon; return <><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></>; })()}
-                    </div>
-                  ) : <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>}
+                  {(() => {
+                    const myTemp = agentName ? ((c.agent_temperatures || {})[agentName] || c.temperature) : c.temperature;
+                    if (!myTemp || !TEMP[myTemp]) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                    const t = TEMP[myTemp]; const Icon = t.Icon;
+                    return <div className="flex items-center gap-1.5"><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
+                  })()}
                 </td>}
 
                 {/* Job Title — HR */}
@@ -345,7 +356,7 @@ export default function ContactsTable({
 
                 {/* Lead Score — Marketing */}
                 {hasCol('lead_score') && <td className={`${tdCls} hidden lg:table-cell`}>
-                  <ScorePill score={c.lead_score} />
+                  <ScorePill score={agentName ? ((c.agent_scores || {})[agentName] ?? c.lead_score) : c.lead_score} />
                 </td>}
 
                 {/* Source + Date */}

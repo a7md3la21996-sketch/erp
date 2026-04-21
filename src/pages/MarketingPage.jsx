@@ -149,20 +149,26 @@ export default function MarketingPage() {
 
       contacts.forEach(c => {
         let matched = false;
-        const cn = c.campaign_name?.toLowerCase().trim();
-        if (cn && (cn === nameEn || cn === nameAr)) matched = true;
+        // Prefer campaign_id matching (reliable), fall back to name matching
+        if (c.campaign_id && c.campaign_id === camp.id) matched = true;
+        if (!matched) {
+          const cn = c.campaign_name?.toLowerCase().trim();
+          if (cn && (cn === nameEn || cn === nameAr)) matched = true;
+        }
 
         let contactInteractions = 0;
         (c.campaign_interactions || []).forEach(i => {
+          // Prefer campaign_id match, fall back to name match
+          const idMatch = i.campaign_id && i.campaign_id === camp.id;
           const ic = i.campaign?.toLowerCase().trim();
-          if (ic === nameEn || ic === nameAr) {
+          if (idMatch || ic === nameEn || ic === nameAr) {
             matched = true;
             contactInteractions++;
             totalInteractions++;
           }
         });
 
-        if (matched && !c.campaign_interactions?.length && cn) {
+        if (matched && !c.campaign_interactions?.length && !c.campaign_id) {
           totalInteractions++;
         }
 
@@ -176,7 +182,7 @@ export default function MarketingPage() {
       const spent = camp.spent || 0;
       const cpl = leads > 0 ? Math.round(spent / leads) : 0;
       // Count how many became active/has_opportunity (engaged leads)
-      const engagedLeads = contacts.filter(c => contactIds.has(c.id) && ['active', 'has_opportunity'].includes(c.contact_status)).length;
+      const engagedLeads = contacts.filter(c => contactIds.has(c.id) && ['following', 'has_opportunity'].includes(c.contact_status)).length;
       const conversionRate = leads > 0 ? Math.round((engagedLeads / leads) * 100) : 0;
 
       stats[camp.id] = { leads, totalInteractions, repeats, cpl, contactedLeads: engagedLeads, conversionRate, contactIds: [...contactIds] };
@@ -244,7 +250,7 @@ export default function MarketingPage() {
     const allLeadIds = new Set();
     Object.values(campaignStats).forEach(s => (s.contactIds || []).forEach(id => allLeadIds.add(id)));
     const totalLeadsFromCampaigns = allLeadIds.size;
-    const engagedLeads = contacts.filter(c => allLeadIds.has(c.id) && ['active', 'has_opportunity'].includes(c.contact_status));
+    const engagedLeads = contacts.filter(c => allLeadIds.has(c.id) && ['following', 'has_opportunity'].includes(c.contact_status));
     const linkedOpps = opportunities.filter(o => {
       const contactId = o.contact_id || o.contact?.id;
       return contactId && allLeadIds.has(contactId);
@@ -268,7 +274,7 @@ export default function MarketingPage() {
         campaigns.filter(c => c.platform === p.id).forEach(camp => {
           (campaignStats[camp.id]?.contactIds || []).forEach(id => chLeadIds.add(id));
         });
-        const chContacted = contacts.filter(c => chLeadIds.has(c.id) && ['active', 'has_opportunity'].includes(c.contact_status)).length;
+        const chContacted = contacts.filter(c => chLeadIds.has(c.id) && ['following', 'has_opportunity'].includes(c.contact_status)).length;
         const chOpps = opportunities.filter(o => chLeadIds.has(o.contact_id || o.contact?.id)).length;
         const chDeals = deals.filter(d => chLeadIds.has(d.contact_id || d.contact?.id)).length;
         return { platform: p, leads: chLeadIds.size, contacted: chContacted, opps: chOpps, deals: chDeals };
@@ -288,15 +294,19 @@ export default function MarketingPage() {
       const nameAr = camp.name_ar?.toLowerCase().trim();
       const spent = camp.spent || 0;
 
-      // Contacts linked to this campaign
+      // Contacts linked to this campaign (prefer campaign_id, fall back to name)
       const campaignContactIds = new Set();
       contacts.forEach(c => {
         let matched = false;
-        const cn = c.campaign_name?.toLowerCase().trim();
-        if (cn && (cn === nameEn || cn === nameAr)) matched = true;
+        if (c.campaign_id && c.campaign_id === camp.id) matched = true;
+        if (!matched) {
+          const cn = c.campaign_name?.toLowerCase().trim();
+          if (cn && (cn === nameEn || cn === nameAr)) matched = true;
+        }
         (c.campaign_interactions || []).forEach(i => {
+          const idMatch = i.campaign_id && i.campaign_id === camp.id;
           const ic = i.campaign?.toLowerCase().trim();
-          if (ic === nameEn || ic === nameAr) matched = true;
+          if (idMatch || ic === nameEn || ic === nameAr) matched = true;
         });
         if (matched) campaignContactIds.add(c.id);
       });
@@ -385,6 +395,10 @@ export default function MarketingPage() {
   };
 
   const handleDelete = async (id) => {
+    if (profile?.role !== 'admin' && profile?.role !== 'operations') {
+      toast.error(isRTL ? 'ليس لديك صلاحية حذف الحملات' : 'You do not have permission to delete campaigns');
+      return;
+    }
     if (!window.confirm(isRTL ? 'حذف هذه الحملة؟' : 'Delete this campaign?')) return;
     await deleteCampaign(id);
     setCampaigns(prev => prev.filter(c => c.id !== id));
@@ -1214,14 +1228,16 @@ export default function MarketingPage() {
         const interactions = [];
         linkedContacts.forEach(c => {
           (c.campaign_interactions || []).forEach(i => {
+            const idMatch = i.campaign_id && i.campaign_id === camp.id;
             const ic = i.campaign?.toLowerCase().trim();
-            if (ic === camp.name_en?.toLowerCase().trim() || ic === camp.name_ar?.toLowerCase().trim()) {
+            if (idMatch || ic === camp.name_en?.toLowerCase().trim() || ic === camp.name_ar?.toLowerCase().trim()) {
               interactions.push({ ...i, contact_name: c.full_name, contact_phone: c.phone, contact_id: c.id });
             }
           });
           if (!c.campaign_interactions?.length && c.campaign_name) {
+            const idMatch = c.campaign_id && c.campaign_id === camp.id;
             const cn = c.campaign_name.toLowerCase().trim();
-            if (cn === camp.name_en?.toLowerCase().trim() || cn === camp.name_ar?.toLowerCase().trim()) {
+            if (idMatch || cn === camp.name_en?.toLowerCase().trim() || cn === camp.name_ar?.toLowerCase().trim()) {
               interactions.push({ campaign: c.campaign_name, source: c.source, date: c.created_at, contact_name: c.full_name, contact_phone: c.phone, contact_id: c.id });
             }
           }
@@ -1309,6 +1325,7 @@ export default function MarketingPage() {
                     <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
                       {linkedContacts.map(c => {
                         const contactInteractions = (c.campaign_interactions || []).filter(i => {
+                          if (i.campaign_id && i.campaign_id === camp.id) return true;
                           const ic = i.campaign?.toLowerCase().trim();
                           return ic === camp.name_en?.toLowerCase().trim() || ic === camp.name_ar?.toLowerCase().trim();
                         }).length;
@@ -1320,8 +1337,8 @@ export default function MarketingPage() {
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               {contactInteractions > 1 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-bold">{contactInteractions}x</span>}
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${['active', 'has_opportunity'].includes(c.contact_status) ? 'bg-emerald-500/10 text-emerald-500' : c.contact_status === 'inactive' ? 'bg-gray-500/10 text-gray-500' : c.contact_status === 'disqualified' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
-                                {['active', 'has_opportunity'].includes(c.contact_status) ? (isRTL ? 'نشط' : 'Active') : c.contact_status === 'inactive' ? (isRTL ? 'غير نشط' : 'Inactive') : c.contact_status === 'disqualified' ? (isRTL ? 'غير مؤهل' : 'Disqualified') : (isRTL ? 'جديد' : 'New')}
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${['following', 'has_opportunity'].includes(c.contact_status) ? 'bg-emerald-500/10 text-emerald-500' : c.contact_status === 'contacted' ? 'bg-gray-500/10 text-gray-500' : c.contact_status === 'disqualified' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                {['following', 'has_opportunity'].includes(c.contact_status) ? (isRTL ? 'متابعة' : 'Following') : c.contact_status === 'contacted' ? (isRTL ? 'تم التواصل' : 'Contacted') : c.contact_status === 'disqualified' ? (isRTL ? 'غير مؤهل' : 'Disqualified') : (isRTL ? 'جديد' : 'New')}
                               </span>
                             </div>
                           </div>

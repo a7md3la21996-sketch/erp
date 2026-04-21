@@ -67,10 +67,11 @@ export default function CalendarPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      const roleOpts = { role: profile?.role, userId: profile?.id, teamId: profile?.team_id };
       const [t, r, a] = await Promise.all([
-        fetchTasks(),
+        fetchTasks(roleOpts),
         fetchReminders(),
-        fetchActivities({ limit: 200 }),
+        fetchActivities({ limit: 200, ...roleOpts }),
       ]);
       setTasks(t || []);
       setReminders(r || []);
@@ -82,7 +83,7 @@ export default function CalendarPage() {
     }
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => { if (profile) loadData(); }, [loadData, profile]);
 
   // Build events map: dateKey -> { tasks: [], reminders: [], activities: [] }
   const eventsMap = useMemo(() => {

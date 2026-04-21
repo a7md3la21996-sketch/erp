@@ -2,6 +2,7 @@ import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
+import { applyRoleFilter } from '../utils/roleFilter';
 
 
 // ── Team cache ────────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ export async function fetchTasks({ contactId, dept, status, priority, page, page
     if (dueDateTo) query = query.lte('due_date', dueDateTo);
     if (overdueOnly) query = query.lt('due_date', new Date().toISOString()).eq('status', 'pending');
 
-    // Role-based filtering — by name + UUID (skip if fetching by contactId)
+    // Role-based filtering (skip if fetching by contactId)
     if (!contactId) {
       if (role === 'sales_agent' && userId) {
         const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();

@@ -1,6 +1,6 @@
 import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { createActivity, updateContact } from '../../../services/contactsService';
+import { createActivity, updateContact, deriveGlobalStatus } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { logAction } from '../../../services/auditService';
 import {
@@ -129,6 +129,8 @@ export default function BatchCallModal({
             <div className="flex-1">
               <div className="font-bold text-base text-content dark:text-content-dark">{current.full_name}</div>
               <div className="text-xs text-content-muted dark:text-content-muted-dark text-start" dir="ltr">{current.phone}</div>
+              {current.phone2 && <div className="text-[11px] text-content-muted dark:text-content-muted-dark text-start" dir="ltr">{current.phone2}</div>}
+              {Array.isArray(current.extra_phones) && current.extra_phones.filter(Boolean).map((p, i) => <div key={i} className="text-[11px] text-content-muted dark:text-content-muted-dark text-start" dir="ltr">{p}</div>)}
               {current.company && <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">{current.company}</div>}
             </div>
             <div className="flex flex-col items-end gap-1">
@@ -230,14 +232,14 @@ export default function BatchCallModal({
                 if (myStatus === 'disqualified') {
                   newStatus = myStatus;
                 } else if (['no_answer', 'busy', 'switched_off'].includes(batchCallResult)) {
-                  newStatus = 'inactive';
+                  newStatus = 'contacted';
                 } else if (batchCallResult === 'answered') {
-                  newStatus = 'active';
+                  newStatus = 'following';
                 } else if (myStatus === 'new' || !myStatus) {
-                  newStatus = 'active';
+                  newStatus = 'following';
                 }
                 const newStatuses = { ...(current.agent_statuses || {}), [myName]: newStatus };
-                const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus, agent_statuses: newStatuses };
+                const statusUpdate = { last_activity_at: new Date().toISOString(), agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) };
                 try { await updateContact(current.id, statusUpdate); } catch (err) { if (import.meta.env.DEV) console.warn('batch call update status:', err); }
                 setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
                 setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);

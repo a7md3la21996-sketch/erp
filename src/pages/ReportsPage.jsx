@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from 'react
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 import {
   FileText, Users, DollarSign, Briefcase, BarChart3,
   TrendingUp, Calendar, Clock, PieChart, Activity,
@@ -212,15 +213,26 @@ function TargetTrackerTab({ lang, isRTL }) {
     });
   }, []);
 
+  // Fetch targets from kpi_targets table
+  const [targetData, setTargetData] = useState([]);
+  useEffect(() => {
+    import('../lib/supabase').then(({ default: supabase }) => {
+      supabase.from('kpi_targets').select('*').then(({ data }) => setTargetData(data || []));
+    }).catch(() => {});
+  }, []);
+
   const monthData = useMemo(() => {
+    const targets = targetData.length > 0 ? targetData : MOCK_TARGETS;
     return allEmps.map(emp => {
-      const t = MOCK_TARGETS.find(t => t.emp_id === emp.id && t.month === selectedMonth);
+      const t = targets.find(t => (t.emp_id === emp.id || t.user_id === emp.id) && t.month === selectedMonth);
       if (!t) return null;
       if (targetDept !== 'all' && t.dept !== targetDept) return null;
-      const pct = Math.round((t.achieved / t.target) * 100);
-      return { ...emp, ...t, pct };
+      const target = t.target || t.target_value || 0;
+      const achieved = t.achieved || t.actual_value || 0;
+      const pct = target > 0 ? Math.round((achieved / target) * 100) : 0;
+      return { ...emp, ...t, target, achieved, pct };
     }).filter(Boolean).sort((a, b) => sortBy === 'pct' ? b.pct - a.pct : sortBy === 'achieved' ? b.achieved - a.achieved : b.deals - a.deals);
-  }, [allEmps, selectedMonth, sortBy, targetDept]);
+  }, [allEmps, targetData, selectedMonth, sortBy, targetDept]);
 
   const totalTarget = monthData.reduce((s, e) => s + e.target, 0);
   const totalAchieved = monthData.reduce((s, e) => s + e.achieved, 0);
@@ -456,6 +468,12 @@ function KpiPerformanceTab({ lang, isRTL }) {
   const fmtVal = (metric, val) => metric === 'revenue' ? (val >= 1000000 ? (val/1000000).toFixed(1)+'M' : val >= 1000 ? (val/1000).toFixed(0)+'K' : val) : val;
 
   const handleSaveEdit = async (empId, metric) => {
+    if (profile?.role !== 'admin') {
+      toast.error(isRTL ? 'فقط المدير يمكنه تعديل أهداف KPI' : 'Only admin can edit KPI targets');
+      setEditingCell(null);
+      setEditValue('');
+      return;
+    }
     const val = Number(editValue);
     if (!isNaN(val) && val >= 0) {
       await setTargets(empId, selectedMonth, selectedYear, { [metric]: val });
@@ -635,6 +653,7 @@ const TABS = [
 export default function ReportsPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
+  const toast = useToast();
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const [searchParams, setSearchParams] = useSearchParams();

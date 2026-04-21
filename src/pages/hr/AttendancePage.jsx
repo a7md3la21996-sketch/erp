@@ -127,7 +127,7 @@ function AttendanceFormModal({ open, onClose, onSaved, employees, record, lang, 
           <label className="block text-xs font-medium text-content-muted dark:text-content-muted-dark mb-1">
             {lang === 'ar' ? 'الحالة' : 'Status'}
           </label>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {[
               { value: 'present', label: lang === 'ar' ? 'حاضر' : 'Present', color: 'bg-green-500/15 text-green-600 border-green-500/30' },
               { value: 'absent_no_notice', label: lang === 'ar' ? 'غياب بدون إذن' : 'Absent (No Notice)', color: 'bg-red-500/15 text-red-600 border-red-500/30' },

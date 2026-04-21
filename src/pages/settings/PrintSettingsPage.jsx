@@ -41,7 +41,7 @@ const SAMPLE_CONTACT = {
   job_title: 'CEO',
   source: 'Facebook',
   contact_type: 'client',
-  contact_status: 'active',
+  contact_status: 'following',
   budget: '500,000 EGP',
   created_at: '2026-01-15',
 };

@@ -12,6 +12,7 @@ import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity, updateActivity,
   fetchContactOpportunities, getAssignmentHistory,
+  deriveGlobalStatus, deriveGlobalTemp,
 } from '../../../services/contactsService';
 import { createOpportunity } from '../../../services/opportunitiesService';
 import { createNotification } from '../../../services/notificationsService';
@@ -25,6 +26,7 @@ import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
 import { getLocalAuditLogs, ACTION_TYPES, logAction } from '../../../services/auditService';
+import { notifyAgentAdded, notifyNewComment } from '../../../services/notificationService';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/favoritesService';
 import { getComments } from '../../../services/chatService';
 import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
@@ -97,7 +99,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [tab, setTab] = useState('activity');
   const [selectedAgent, setSelectedAgent] = useState('all');
   const [showAddAgent, setShowAddAgent] = useState(false);
+  const [editCampaign, setEditCampaign] = useState(false);
+  const [campaignSearch, setCampaignSearch] = useState('');
+  const [campaignsList, setCampaignsList] = useState([]);
   const [addAgentSearch, setAddAgentSearch] = useState('');
+  const [addAgentPicked, setAddAgentPicked] = useState(null);
+  const [addAgentStatus, setAddAgentStatus] = useState('new');
+  const [addAgentTemp, setAddAgentTemp] = useState('hot');
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -138,6 +146,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         setAgentsList(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
       }).catch(err => { if (import.meta.env.DEV) console.warn('fetch sales agents:', err); });
     }).catch(err => { if (import.meta.env.DEV) console.warn('import opportunitiesService:', err); });
+    // Load campaigns for quick edit
+    import('../../../services/marketingService').then(({ fetchCampaigns }) => {
+      fetchCampaigns().then(c => setCampaignsList(c || [])).catch(() => {});
+    }).catch(() => {});
   }, []);
 
   // Favorites
@@ -186,7 +198,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       fetchContactOpportunities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
       getComments('contact', cid).catch(() => []),
       getDocumentsByEntity('contact', cid).catch(() => []),
-      getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar }).catch(() => []),
+      getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar, contactId: cid }).catch(() => []),
       getLocalAuditLogs({ limit: 50, entity: 'contact', entityId: cid }).catch(() => ({ data: [] })),
     ]).then(([actsRes, tasksRes, oppsRes, commentsRes, docsRes, dealsRes, auditsRes]) => {
       if (cancelled) return;
@@ -195,10 +207,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       if (oppsRes.status === 'fulfilled') setOpportunities(oppsRes.value);
       const comments = commentsRes.status === 'fulfilled' ? (Array.isArray(commentsRes.value) ? commentsRes.value : []) : [];
       const documents = docsRes.status === 'fulfilled' ? (Array.isArray(docsRes.value) ? docsRes.value : []) : [];
-      const allDeals = dealsRes.status === 'fulfilled' ? (Array.isArray(dealsRes.value) ? dealsRes.value : []) : [];
+      const deals = dealsRes.status === 'fulfilled' ? (Array.isArray(dealsRes.value) ? dealsRes.value : []) : [];
       const allAudits = auditsRes.status === 'fulfilled' ? (Array.isArray(auditsRes.value?.data) ? auditsRes.value.data : []) : [];
       const audits = allAudits.filter(a => String(a.entity_id) === cid && a.action !== 'create');
-      const deals = allDeals.filter(d => String(d.contact_id) === cid);
       setExtraSources({ comments, documents, audits, deals });
       setLoadingData(false);
     });
@@ -247,21 +258,21 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
     if (currentStatus !== 'disqualified') {
       const result = form.result || '';
-      if (result === 'not_interested' && currentStatus !== 'has_opportunity' && currentStatus !== 'active') {
+      if (result === 'not_interested' && currentStatus !== 'has_opportunity' && currentStatus !== 'following') {
         // Don't auto-disqualify — let the user choose from disqualify in the menu
         toast.warning(isRTL ? 'اختر "غير مؤهل" من القائمة لتحديد السبب' : 'Use "Disqualify" from menu to select a reason');
       } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
-        newStatus = 'inactive';
+        newStatus = 'contacted';
       } else if (result === 'answered' || result === 'replied') {
-        newStatus = 'active';
+        newStatus = 'following';
       } else if (currentStatus === 'new' || !currentStatus) {
-        newStatus = 'active';
+        newStatus = 'following';
       }
     }
 
     if (newStatus && newStatus !== currentStatus) {
       const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-      if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });
+      if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) });
     }
   };
 
@@ -277,15 +288,40 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   };
 
   // Handle contact status change from TakeActionForm (per-agent)
-  const handleStatusChange = (newStatus, dqReason) => {
+  const handleStatusChange = async (newStatus, dqReason) => {
     if (onUpdate) {
+      // If has_opportunity selected, check if THIS agent has an opportunity on this contact
+      if (newStatus === 'has_opportunity') {
+        const myName = profile?.full_name_en || profile?.full_name_ar;
+        const myOpp = (opportunities || []).some(o => o.assigned_to_name === myName);
+        if (!myOpp) {
+          setShowOppModal(true);
+          return;
+        }
+      }
       const myName = profile?.full_name_en || profile?.full_name_ar;
+      const oldStatus = contact.contact_status;
       const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-      const updates = { ...contact, agent_statuses: newStatuses, contact_status: newStatus };
+      const updates = { ...contact, agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) };
       if (newStatus === 'disqualified' && dqReason) {
         updates.disqualify_reason = dqReason;
       }
       onUpdate(updates);
+      // Log status change in timeline
+      try {
+        const statusLabels = { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
+        const act = await createActivity({
+          type: 'status_change',
+          notes: `${statusLabels[oldStatus] || oldStatus} → ${statusLabels[newStatus] || newStatus}${dqReason ? ' (' + dqReason + ')' : ''}`,
+          contact_id: contact.id,
+          user_id: profile?.id || null,
+          user_name_ar: profile?.full_name_ar || '',
+          user_name_en: profile?.full_name_en || '',
+          dept: 'sales',
+          created_at: new Date().toISOString(),
+        });
+        setActivities(prev => [act, ...prev]);
+      } catch {}
       toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Lead status updated');
     }
   };
@@ -307,12 +343,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         createNotification({ type: 'opportunity_assigned', title_ar: 'فرصة جديدة', title_en: 'New Opportunity Assigned', body_ar: `تم تعيين فرصة "${contact.full_name}" لك بواسطة ${selfName}`, body_en: `Opportunity "${contact.full_name}" assigned to you by ${selfName}`, for_user_name: newOpp.assigned_to_name, entity_type: 'opportunity', from_user: selfName });
       }
       logAction({ action: 'create_opportunity', entity: 'opportunity', entityId: saved.id, description: `Created opportunity for ${contact.full_name} → ${newOpp.assigned_to_name}`, userName: profile?.full_name_ar });
-      // Auto-set status to interested when opportunity is created
-      const currentStatus = contact.contact_status || 'new';
+      // Auto-set status to has_opportunity when opportunity is created (per-agent only)
+      const myName = profile?.full_name_en || profile?.full_name_ar;
+      const currentStatus = (contact.agent_statuses || {})[myName] || contact.contact_status || 'new';
       if (currentStatus !== 'disqualified' && currentStatus !== 'has_opportunity') {
-        const myName = profile?.full_name_en || profile?.full_name_ar;
         const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'has_opportunity' };
-        if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: 'has_opportunity' });
+        if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) });
       }
     } catch (err) {
       console.error('Opportunity save error:', err?.message || err);
@@ -324,7 +360,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   if (!contact) return null;
   const show = (key) => !df || df[key] !== false; // default show if not configured
 
-  const tempInfo = contact.temperature ? TEMP[contact.temperature] : null;
+  const myTempKey = (() => {
+    const mn = profile?.full_name_en || profile?.full_name_ar;
+    if (mn && (contact.agent_temperatures || {})[mn]) return (contact.agent_temperatures || {})[mn];
+    return contact.temperature;
+  })();
+  const tempInfo = myTempKey ? TEMP[myTempKey] : null;
   const tp = contact.contact_type ? TYPE[contact.contact_type] : null;
   const isSupplier = contact.contact_type === 'supplier';
   const dept = contact.department || 'sales';
@@ -451,7 +492,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       color: '#10B981',
       rows: [
         show('phone') && { label: isRTL ? 'الهاتف' : 'Phone', val: contact.phone || '—' },
-        show('phone2') && { label: isRTL ? 'الهاتف الثاني' : 'Phone 2', val: contact.phone2 || '—' },
+        show('phone2') && contact.phone2 && { label: isRTL ? 'الهاتف الثاني' : 'Phone 2', val: contact.phone2 },
+        ...(Array.isArray(contact.extra_phones) ? contact.extra_phones.map((p, i) => p ? { label: `${isRTL ? 'هاتف' : 'Phone'} ${i + 3}`, val: p } : null).filter(Boolean) : []),
         show('email') && { label: isRTL ? 'الإيميل' : 'Email', val: contact.email || '—' },
       ].filter(Boolean),
     },
@@ -498,11 +540,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         show('campaign_name') && (() => {
           const interactions = contact.campaign_interactions || [];
           const uniqueCampaigns = [...new Set(interactions.map(i => i.campaign))];
-          if (uniqueCampaigns.length > 0) return { label: isRTL ? 'الحملات' : 'Campaigns', val: `${uniqueCampaigns.length} ${isRTL ? 'حملات' : 'campaigns'} (${interactions.length} ${isRTL ? 'تفاعل' : 'interactions'})` };
+          if (uniqueCampaigns.length > 0) return { label: isRTL ? 'الحملات' : 'Campaigns', val: uniqueCampaigns.join(' · ') };
           return { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name || '—' };
         })(),
         show('assigned_at') && { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
-        ...(show('dq_reason') && contact.contact_status === 'disqualified' ? [
+        ...(show('dq_reason') && (contact.contact_status === 'disqualified' || Object.values(contact.agent_statuses || {}).includes('disqualified')) ? [
           { label: isRTL ? 'سبب الاستبعاد' : 'DQ Reason', val: contact.disqualify_reason ? ({ resale: isRTL ? 'عايز يبيع وحدته' : 'Wants to sell unit', not_interested: isRTL ? 'غير مهتم' : 'Not interested', no_budget: isRTL ? 'ميزانية غير مناسبة' : 'No budget', wrong_audience: isRTL ? 'جمهور خاطئ' : 'Wrong audience', duplicate: isRTL ? 'مكرر' : 'Duplicate', other: isRTL ? 'آخر' : 'Other' }[contact.disqualify_reason] || contact.disqualify_reason) : '—', color: '#EF4444' },
           ...(contact.disqualify_note ? [{ label: isRTL ? 'ملاحظة الاستبعاد' : 'DQ Note', val: contact.disqualify_note }] : []),
         ] : []),
@@ -516,8 +558,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         show('contact_status') && (() => {
           const myName = profile?.full_name_en || profile?.full_name_ar;
           const statuses = contact.agent_statuses || {};
-          const statusLabels = isRTL ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-          const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : undefined;
+          const statusLabels = isRTL ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
+          const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : undefined;
           const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
           if (isAdminOrOps && Object.keys(statuses).length > 0) {
             // Admin sees all agents' statuses
@@ -530,16 +572,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         ...(() => {
           if (isSalesAgent || profile?.role === 'admin' || profile?.role === 'operations') return [];
           const statuses = contact.agent_statuses || {};
-          const statusLabels = isRTL ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
+          const statusLabels = isRTL ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
           const entries = Object.entries(statuses);
           if (entries.length <= 1) return [];
           return entries.map(([name, s]) => ({
             label: name,
             val: statusLabels[s] || s,
-            color: s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5',
+            color: s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5',
           }));
         })(),
-        show('lead_score') && { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: contact.lead_score != null ? `${contact.lead_score}/100` : '—' },
+        show('lead_score') && (() => {
+          const myName = profile?.full_name_en || profile?.full_name_ar;
+          const myScore = myName ? ((contact.agent_scores || {})[myName] ?? contact.lead_score) : contact.lead_score;
+          return { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: myScore != null ? `${myScore}/100` : '—' };
+        })(),
         contact.contact_type && { label: isRTL ? 'النوع' : 'Type', val: tp ? (isRTL ? tp.label : tp.labelEn) : contact.contact_type },
         contact.department && { label: isRTL ? 'القسم' : 'Department', val: (isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : {})[contact.department] || contact.department },
         contact.contact_number && { label: isRTL ? 'رقم التعريف' : 'Lead #', val: contact.contact_number },
@@ -852,9 +898,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     const statuses = contact.agent_statuses || {};
     const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
     const statusLabels = isRTL
-      ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
-      : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-    const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
+      ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
+      : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
+    const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
     if (isAdminOrOps && Object.keys(statuses).length > 0) {
       const entries = Object.entries(statuses);
       const primary = entries[0];
@@ -880,7 +926,61 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   return (
     <>
-    {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { await onUpdate(updated); }} />}
+    {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { await onUpdate(updated); }} userRole={profile?.role} campaigns={campaignsList} />}
+
+    {/* Quick Campaign Edit Modal */}
+    {editCampaign && (
+      <div className="fixed inset-0 bg-black/50 z-[960] flex items-center justify-center p-5" onClick={() => setEditCampaign(false)}>
+        <div onClick={e => e.stopPropagation()} dir={isRTL ? 'rtl' : 'ltr'} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[380px] overflow-hidden">
+          <div className="px-5 pt-4 pb-3 border-b border-edge dark:border-edge-dark flex justify-between items-center">
+            <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'تغيير الحملة' : 'Change Campaign'}</h3>
+            <button onClick={() => setEditCampaign(false)} className="bg-transparent border-none text-content-muted cursor-pointer"><X size={16} /></button>
+          </div>
+          <div className="p-4">
+            <div className="mb-3 text-xs text-content-muted dark:text-content-muted-dark">
+              {isRTL ? 'الحملة الحالية:' : 'Current:'} <span className="font-bold text-content dark:text-content-dark">{contact.campaign_name || '—'}</span>
+            </div>
+            <input type="text" value={campaignSearch} onChange={e => setCampaignSearch(e.target.value)}
+              placeholder={isRTL ? 'ابحث عن حملة...' : 'Search campaign...'}
+              className="w-full px-3 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none mb-2"
+              autoFocus />
+            <div className="max-h-[250px] overflow-y-auto rounded-lg border border-edge dark:border-edge-dark">
+              {/* Clear campaign option */}
+              <button onClick={async () => {
+                if (onUpdate) onUpdate({ ...contact, campaign_name: null, _skipDbUpdate: true });
+                try {
+                  const { updateContact: uc } = await import('../../../services/contactsService');
+                  await uc(contact.id, { campaign_name: null });
+                } catch {}
+                setEditCampaign(false);
+                toast.success(isRTL ? 'تم مسح الحملة' : 'Campaign cleared');
+              }} className="w-full px-3 py-2.5 text-xs text-red-500 bg-transparent border-none cursor-pointer text-start hover:bg-red-500/[0.08] border-b border-edge dark:border-edge-dark">
+                {isRTL ? '✕ مسح الحملة' : '✕ Clear campaign'}
+              </button>
+              {campaignsList
+                .filter(c => !campaignSearch || (c.name_en || '').toLowerCase().includes(campaignSearch.toLowerCase()) || (c.name_ar || '').includes(campaignSearch))
+                .slice(0, 50)
+                .map(c => (
+                <button key={c.id} onClick={async () => {
+                  const newName = isRTL ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar);
+                  if (onUpdate) onUpdate({ ...contact, campaign_name: newName, campaign_id: c.id, _skipDbUpdate: true });
+                  try {
+                    const { updateContact: uc } = await import('../../../services/contactsService');
+                    await uc(contact.id, { campaign_name: newName, campaign_id: c.id });
+                  } catch {}
+                  setEditCampaign(false);
+                  toast.success(isRTL ? `تم تغيير الحملة لـ "${newName}"` : `Campaign changed to "${newName}"`);
+                }} className={`w-full px-3 py-2.5 text-xs bg-transparent border-none cursor-pointer text-start hover:bg-brand-500/[0.08] ${
+                  (contact.campaign_name === c.name_en || contact.campaign_name === c.name_ar) ? 'text-brand-500 font-bold bg-brand-500/[0.05]' : 'text-content dark:text-content-dark'
+                }`}>
+                  {isRTL ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Backdrop */}
       <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px]" />
@@ -1311,29 +1411,84 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   ))}
                   {/* Add Agent Button — admin only */}
                   {isAdmin && <div className="relative" data-agent-picker>
-                    <button onClick={() => setShowAddAgent(!showAddAgent)}
+                    <button onClick={() => { setShowAddAgent(!showAddAgent); setAddAgentPicked(null); setAddAgentSearch(''); }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer bg-transparent border border-dashed border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500 hover:text-brand-500 transition-colors">
                       + {isRTL ? 'إضافة' : 'Add'}
                     </button>
                     {showAddAgent && (
-                      <div className="absolute top-full mt-1 start-0 z-20 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg w-56 overflow-hidden">
-                        <div className="p-2">
-                          <input type="text" value={addAgentSearch} onChange={e => setAddAgentSearch(e.target.value)}
-                            placeholder={isRTL ? 'ابحث...' : 'Search...'}
-                            className="w-full px-2.5 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none"
-                            autoFocus />
-                        </div>
-                        <div className="max-h-[180px] overflow-y-auto px-1 pb-1">
-                          {agentsList.filter(a => !assignedNames.includes(a) && (!addAgentSearch || a.toLowerCase().includes(addAgentSearch.toLowerCase()))).map(a => (
-                            <button key={a} onClick={() => {
-                              const newNames = [...assignedNames, a];
-                              if (onUpdate) onUpdate({ ...contact, assigned_to_names: newNames });
-                              setShowAddAgent(false); setAddAgentSearch('');
-                            }} className="w-full px-3 py-2 rounded-lg text-xs text-content dark:text-content-dark bg-transparent border-none cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
-                              {a}
-                            </button>
-                          ))}
-                        </div>
+                      <div className="absolute top-full mt-1 start-0 z-20 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden" style={{ width: addAgentPicked ? 260 : 224 }}>
+                        {!addAgentPicked ? (
+                          <>
+                            <div className="p-2">
+                              <input type="text" value={addAgentSearch} onChange={e => setAddAgentSearch(e.target.value)}
+                                placeholder={isRTL ? 'ابحث...' : 'Search...'}
+                                className="w-full px-2.5 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none"
+                                autoFocus />
+                            </div>
+                            <div className="max-h-[180px] overflow-y-auto px-1 pb-1">
+                              {agentsList.filter(a => !assignedNames.includes(a) && (!addAgentSearch || a.toLowerCase().includes(addAgentSearch.toLowerCase()))).map(a => (
+                                <button key={a} onClick={() => { setAddAgentPicked(a); setAddAgentStatus('new'); setAddAgentTemp('hot'); }}
+                                  className="w-full px-3 py-2 rounded-lg text-xs text-content dark:text-content-dark bg-transparent border-none cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
+                                  {a}
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="p-3">
+                            <div className="text-xs font-bold text-brand-500 mb-2.5">{addAgentPicked}</div>
+                            <div className="mb-2">
+                              <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-1">{isRTL ? 'الحالة' : 'Status'}</label>
+                              <select value={addAgentStatus} onChange={e => setAddAgentStatus(e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none">
+                                <option value="new">{isRTL ? 'جديد' : 'New'}</option>
+                                <option value="contacted">{isRTL ? 'تم التواصل' : 'Contacted'}</option>
+                                <option value="following">{isRTL ? 'متابعة' : 'Following'}</option>
+                                <option value="has_opportunity">{isRTL ? 'لديه فرصة' : 'Has Opportunity'}</option>
+                              </select>
+                            </div>
+                            <div className="mb-3">
+                              <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</label>
+                              <select value={addAgentTemp} onChange={e => setAddAgentTemp(e.target.value)}
+                                className="w-full px-2 py-1.5 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none">
+                                <option value="hot">{isRTL ? 'ساخن' : 'Hot'}</option>
+                                <option value="warm">{isRTL ? 'دافئ' : 'Warm'}</option>
+                                <option value="cool">{isRTL ? 'بارد' : 'Cool'}</option>
+                                <option value="cold">{isRTL ? 'بارد جداً' : 'Cold'}</option>
+                              </select>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => setAddAgentPicked(null)}
+                                className="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark cursor-pointer">
+                                {isRTL ? 'رجوع' : 'Back'}
+                              </button>
+                              <button onClick={async () => {
+                                const newNames = [...assignedNames, addAgentPicked];
+                                const newStatuses = { ...(contact.agent_statuses || {}), [addAgentPicked]: addAgentStatus };
+                                const newTemps = { ...(contact.agent_temperatures || {}), [addAgentPicked]: addAgentTemp };
+                                const globalStatus = deriveGlobalStatus(newStatuses);
+                                const globalTemp = deriveGlobalTemp(newTemps);
+                                const dbFields = { assigned_to_names: newNames, agent_statuses: newStatuses, agent_temperatures: newTemps, contact_status: globalStatus, temperature: globalTemp };
+                                // Direct DB update FIRST
+                                try {
+                                  const { updateContact: uc } = await import('../../../services/contactsService');
+                                  await uc(contact.id, dbFields);
+                                  notifyAgentAdded({ contactName: contact.full_name, contactId: contact.id, agentName: addAgentPicked, addedBy: profile?.full_name_en || profile?.full_name_ar });
+                                  // Then update UI (mark _skipDbUpdate so parent doesn't re-save)
+                                  if (onUpdate) onUpdate({ ...contact, ...dbFields, _skipDbUpdate: true });
+                                } catch (err) {
+                                  console.error('Add agent save failed:', err);
+                                  // Still update UI optimistically
+                                  if (onUpdate) onUpdate({ ...contact, ...dbFields });
+                                }
+                                setShowAddAgent(false); setAddAgentPicked(null); setAddAgentSearch('');
+                              }}
+                                className="flex-1 px-2 py-1.5 rounded-lg text-xs font-bold border-none bg-brand-500 text-white cursor-pointer">
+                                {isRTL ? 'تأكيد' : 'Confirm'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>}
@@ -1348,9 +1503,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       {(() => {
                         const agentStatus = (contact.agent_statuses || {})[selectedAgent];
                         const statusLabels = isRTL
-                          ? { new: 'جديد', active: 'نشط', inactive: 'غير نشط', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
-                          : { new: 'New', active: 'Active', inactive: 'Inactive', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-                        const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'active' ? '#10B981' : s === 'inactive' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
+                          ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
+                          : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
+                        const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
                         const color = statusColor(agentStatus);
                         return (
                           <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ color, background: color + '18' }}>
@@ -1382,10 +1537,25 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           return (
                             <button
                               key={opt.v}
-                              onClick={() => {
+                              onClick={async () => {
                                 if (onUpdate) {
+                                  const oldTemp = (contact.agent_temperatures || {})[selectedAgent] || contact.temperature;
                                   const newTemps = { ...(contact.agent_temperatures || {}), [selectedAgent]: opt.v };
-                                  onUpdate({ ...contact, agent_temperatures: newTemps });
+                                  onUpdate({ ...contact, agent_temperatures: newTemps, temperature: deriveGlobalTemp(newTemps) });
+                                  // Log temperature change in timeline
+                                  try {
+                                    const act = await createActivity({
+                                      type: 'status_change',
+                                      notes: `Temperature: ${oldTemp || '—'} → ${opt.v}`,
+                                      contact_id: contact.id,
+                                      user_id: profile?.id || null,
+                                      user_name_ar: profile?.full_name_ar || '',
+                                      user_name_en: profile?.full_name_en || '',
+                                      dept: 'sales',
+                                      created_at: new Date().toISOString(),
+                                    });
+                                    setActivities(prev => [act, ...prev]);
+                                  } catch {}
                                 }
                               }}
                               className={`px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
@@ -1768,6 +1938,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 entity="contact"
                 entityId={contact.id}
                 entityName={contact.full_name}
+                onCommentAdded={() => {
+                  const selfName = profile?.full_name_en || profile?.full_name_ar || '';
+                  (contact.assigned_to_names || []).filter(n => n !== selfName).forEach(agentName => {
+                    notifyNewComment({ contactName: contact.full_name, contactId: contact.id, commentBy: selfName, agentName });
+                  });
+                }}
               />
             )}
 
@@ -1990,7 +2166,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               </Select>
             </div>
             {[
-              { key: 'temperature', label_ar: 'الحرارة', label_en: 'Temperature', options: [{ v: 'hot', ar: 'ساخن', en: 'Hot' }, { v: 'warm', ar: 'دافئ', en: 'Warm' }, { v: 'normal', ar: 'عادي', en: 'Normal' }, { v: 'cold', ar: 'بارد', en: 'Cold' }] },
+              { key: 'temperature', label_ar: 'الحرارة', label_en: 'Temperature', options: [{ v: 'hot', ar: 'ساخن', en: 'Hot' }, { v: 'warm', ar: 'دافئ', en: 'Warm' }, { v: 'cool', ar: 'فاتر', en: 'Cool' }, { v: 'cold', ar: 'بارد', en: 'Cold' }] },
               { key: 'priority', label_ar: 'الأولوية', label_en: 'Priority', options: [{ v: 'urgent', ar: 'عاجل', en: 'Urgent' }, { v: 'high', ar: 'عالي', en: 'High' }, { v: 'medium', ar: 'متوسط', en: 'Medium' }, { v: 'low', ar: 'منخفض', en: 'Low' }] },
             ].map(f => (
               <div key={f.key}>

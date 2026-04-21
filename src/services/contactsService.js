@@ -1,9 +1,10 @@
 import supabase from '../lib/supabase';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
-import { logCreate, logUpdate } from './auditService';
+import { logCreate, logUpdate, logAudit } from './auditService';
 
 import { reportError } from '../utils/errorReporter';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
+import { applyRoleFilter } from '../utils/roleFilter';
 
 // ── Assignment History ─────────────────────────────────────────────────────
 
@@ -23,18 +24,97 @@ export function getAgentStatus(contact, agentName) {
 }
 
 /**
+ * Get the per-agent temperature for a contact.
+ * Falls back to contact.temperature if agent_temperatures is empty.
+ */
+export function getAgentTemperature(contact, agentName) {
+  if (!agentName) return contact?.temperature || null;
+  const temps = contact?.agent_temperatures || {};
+  return temps[agentName] || contact?.temperature || null;
+}
+
+/**
+ * Get the per-agent lead score for a contact.
+ * Falls back to contact.lead_score if agent_scores is empty.
+ */
+export function getAgentScore(contact, agentName) {
+  if (!agentName) return contact?.lead_score || 0;
+  const scores = contact?.agent_scores || {};
+  return scores[agentName] ?? contact?.lead_score ?? 0;
+}
+
+/**
+ * Derive global contact_status from agent_statuses.
+ * Priority: has_opportunity > active > inactive > new > disqualified
+ */
+export function deriveGlobalStatus(agentStatuses) {
+  const vals = Object.values(agentStatuses || {});
+  if (!vals.length) return 'new';
+  const priority = ['has_opportunity', 'following', 'contacted', 'new', 'disqualified'];
+  for (const s of priority) { if (vals.includes(s)) return s; }
+  return vals[0] || 'new';
+}
+
+/**
+ * Derive global temperature from agent_temperatures.
+ * Priority: hot > warm > cool > cold
+ */
+export function deriveGlobalTemp(agentTemps) {
+  const vals = Object.values(agentTemps || {});
+  if (!vals.length) return null;
+  const priority = ['hot', 'warm', 'cool', 'cold'];
+  for (const t of priority) { if (vals.includes(t)) return t; }
+  return vals[0] || null;
+}
+
+/**
  * Update per-agent status on a contact.
- * Sets both agent_statuses[agentName] and contact_status (for backward compat).
+ * Also syncs global contact_status for filters/counts.
  */
 export async function updateAgentStatus(contactId, agentName, newStatus) {
   try {
-    // Fetch current agent_statuses
     const { data: current } = await supabase.from('contacts').select('agent_statuses').eq('id', contactId).maybeSingle();
     const statuses = { ...(current?.agent_statuses || {}), [agentName]: newStatus };
-    await supabase.from('contacts').update({ agent_statuses: statuses, contact_status: newStatus }).eq('id', contactId);
+    const globalStatus = deriveGlobalStatus(statuses);
+    await supabase.from('contacts').update({ agent_statuses: statuses, contact_status: globalStatus }).eq('id', contactId);
     return statuses;
   } catch (err) {
     reportError('contactsService', 'updateAgentStatus', err);
+    throw err;
+  }
+}
+
+/**
+ * Update per-agent temperature on a contact.
+ * Also syncs global temperature for filters/counts.
+ */
+export async function updateAgentTemperature(contactId, agentName, newTemp) {
+  try {
+    const { data: current } = await supabase.from('contacts').select('agent_temperatures').eq('id', contactId).maybeSingle();
+    const temps = { ...(current?.agent_temperatures || {}), [agentName]: newTemp };
+    const globalTemp = deriveGlobalTemp(temps);
+    await supabase.from('contacts').update({ agent_temperatures: temps, temperature: globalTemp }).eq('id', contactId);
+    return temps;
+  } catch (err) {
+    reportError('contactsService', 'updateAgentTemperature', err);
+    throw err;
+  }
+}
+
+/**
+ * Increment per-agent lead score on a contact.
+ */
+export async function incrementAgentScore(contactId, agentName, increment) {
+  try {
+    const { data: current } = await supabase.from('contacts').select('agent_scores, lead_score').eq('id', contactId).maybeSingle();
+    const scores = { ...(current?.agent_scores || {}) };
+    scores[agentName] = Math.min((scores[agentName] || 0) + increment, 100);
+    // Also update global lead_score as max of all agent scores
+    const globalScore = Math.max(...Object.values(scores), current?.lead_score || 0);
+    await supabase.from('contacts').update({ agent_scores: scores, lead_score: globalScore }).eq('id', contactId);
+    return scores;
+  } catch (err) {
+    reportError('contactsService', 'incrementAgentScore', err);
     throw err;
   }
 }
@@ -79,10 +159,11 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     let query = supabase
       .from('contacts')
       .select('*', isServerPaginated ? { count: 'exact' } : {})
+      .or('is_deleted.is.null,is_deleted.eq.false')
       .order(sort.column, { ascending: sort.ascending });
 
+    // Role-based filtering
     if (role === 'sales_agent' && userId) {
-      // Agent sees contacts where their name is in assigned_to_names
       const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
       if (agentUser) {
         const name = agentUser.full_name_en || agentUser.full_name_ar;
@@ -94,7 +175,6 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
         const orConditions = names.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
         query = query.or(orConditions);
       } else {
-        // No team members found — show nothing instead of everything
         query = query.eq('id', '00000000-0000-0000-0000-000000000000');
       }
     }
@@ -102,25 +182,100 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     if (filters.search) {
       const s = filters.search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
       if (s.length > 0) {
-        query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`);
+        // For phone search: also search without leading 0 and with +20
+        const isPhone = /^\d+$/.test(s) || s.startsWith('+');
+        if (isPhone) {
+          const digits = s.replace(/\D/g, '');
+          const last9 = digits.length >= 9 ? digits.slice(-9) : digits;
+          query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${last9}%,phone2.ilike.%${last9}%,email.ilike.%${s}%`);
+        } else {
+          query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`);
+        }
       }
     }
     if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
-    if (filters.source) query = query.eq('source', filters.source);
-    if (filters.temperature) query = query.eq('temperature', filters.temperature);
+    if (filters.source) {
+      if (filters.source_not) query = query.neq('source', filters.source);
+      else query = query.eq('source', filters.source);
+    }
+    if (filters.temperature) {
+      if (filters.agentNameForTemp) {
+        query = query.filter('agent_temperatures->>' + filters.agentNameForTemp, 'eq', filters.temperature);
+      } else if (filters.teamMemberNames?.length) {
+        const conds = filters.teamMemberNames.map(n => `agent_temperatures->>${n}.eq.${filters.temperature}`);
+        conds.push(`temperature.eq.${filters.temperature}`);
+        query = query.or(conds.join(','));
+      } else {
+        query = query.eq('temperature', filters.temperature);
+      }
+    }
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
     if (filters.department) query = query.eq('department', filters.department);
-    if (filters.unassigned) query = query.or('assigned_to_name.is.null,assigned_to_name.eq.');
-    if (filters.contactIds?.length) query = query.in('id', filters.contactIds);
+    if (filters.unassigned) query = query.or('assigned_to_name.is.null,assigned_to_name.eq.,assigned_to_names.eq.[]');
+    if (filters.contactIds?.length) query = query.in('id', filters.contactIds.slice(0, 300));
+    if (filters.excludeContactIds?.length && filters.excludeContactIds[0] !== 'none') {
+      const excludeBatch = filters.excludeContactIds.slice(0, 500);
+      query = query.not('id', 'in', `(${excludeBatch.join(',')})`);
+    }
     if (filters.contact_status) {
+      const statusOp = filters.contact_status_not ? 'neq' : 'eq';
       if (filters.agentNameForStatus) {
-        query = query.filter('agent_statuses->>' + filters.agentNameForStatus, 'eq', filters.contact_status);
+        query = query.filter('agent_statuses->>' + filters.agentNameForStatus, statusOp, filters.contact_status);
+      } else if (filters.teamMemberNames?.length) {
+        // Manager/Admin with team: any team member has this status
+        const conds = filters.teamMemberNames.map(n => `agent_statuses->>${n}.eq.${filters.contact_status}`);
+        conds.push(`contact_status.eq.${filters.contact_status}`);
+        query = query.or(conds.join(','));
       } else {
         query = query.eq('contact_status', filters.contact_status);
       }
     }
-    if (filters.assigned_to_name) query = query.eq('assigned_to_name', filters.assigned_to_name);
+    if (filters.assigned_to_name) {
+      if (filters.assigned_to_name_not) {
+        // is_not: exclude contacts assigned to this agent
+        query = query.not('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
+      } else {
+        query = query.filter('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
+      }
+    }
+    // Activity indicator filter (based on last_activity_at)
+    if (filters.activityFilter) {
+      const now = Date.now();
+      const activeDays = (filters.activityActiveDays || 3) * 86400000;
+      const moderateDays = (filters.activityModerateDays || 7) * 86400000;
+      if (filters.activityFilter === 'active_3d') {
+        query = query.gte('last_activity_at', new Date(now - activeDays).toISOString());
+      } else if (filters.activityFilter === 'moderate_7d') {
+        query = query.gte('last_activity_at', new Date(now - moderateDays).toISOString()).lt('last_activity_at', new Date(now - activeDays).toISOString());
+      } else if (filters.activityFilter === 'stale') {
+        query = query.lt('last_activity_at', new Date(now - moderateDays).toISOString());
+      } else if (filters.activityFilter === 'never') {
+        query = query.is('last_activity_at', null);
+      }
+    }
+    // Date range filter (created_at)
+    if (filters.dateFrom) query = query.gte('created_at', filters.dateFrom + 'T00:00:00');
+    if (filters.dateTo) query = query.lte('created_at', filters.dateTo + 'T23:59:59');
+    // Server-side smart filters
+    if (filters.smartName) query = query.ilike('full_name', `%${filters.smartName}%`);
+    if (filters.smartEmail) query = query.ilike('email', `%${filters.smartEmail}%`);
+    if (filters.smartPhone) {
+      const digits = filters.smartPhone.replace(/\D/g, '');
+      const last9 = digits.length >= 9 ? digits.slice(-9) : digits;
+      query = query.ilike('phone', `%${last9}%`);
+    }
+    if (filters.smartCampaign) query = query.ilike('campaign_name', `%${filters.smartCampaign}%`);
+    if (filters.smartCreatedAt) {
+      const { operator, value } = filters.smartCreatedAt;
+      const now = new Date();
+      if (operator === 'is') query = query.gte('created_at', value + 'T00:00:00').lte('created_at', value + 'T23:59:59');
+      else if (operator === 'before') query = query.lt('created_at', value + 'T00:00:00');
+      else if (operator === 'after') query = query.gt('created_at', value + 'T23:59:59');
+      else if (operator === 'last_7') query = query.gte('created_at', new Date(now - 7 * 86400000).toISOString());
+      else if (operator === 'last_30') query = query.gte('created_at', new Date(now - 30 * 86400000).toISOString());
+      else if (operator === 'this_month') query = query.gte('created_at', new Date(now.getFullYear(), now.getMonth(), 1).toISOString());
+    }
 
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
@@ -135,31 +290,11 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       return { data: data || [], count: count || 0 };
     }
 
-    // Fetch all matching contacts in pages of 1000
-    let allData = [];
-    let offset = 0;
-    const PAGE = 1000;
-    while (true) {
-      const { data: batch, error: batchErr } = await query.range(offset, offset + PAGE - 1);
-      if (batchErr) throw batchErr;
-      if (!batch || batch.length === 0) break;
-      allData = allData.concat(batch);
-      if (batch.length < PAGE) break;
-      offset += PAGE;
-      // Rebuild query for next page (Supabase mutates query object)
-      // NOTE: Role filters (sales_agent assigned_to_names, TL/manager or conditions) are applied only on the initial query above.
-      // This non-paginated path is deprecated — ContactsPage always uses server pagination.
-      query = supabase.from('contacts').select('*').order(sort.column, { ascending: sort.ascending });
-      if (filters.search) { const s = filters.search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, ''); if (s.length > 0) query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`); }
-      if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
-      if (filters.source) query = query.eq('source', filters.source);
-      if (filters.temperature) query = query.eq('temperature', filters.temperature);
-      if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
-      if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
-      if (filters.department) query = query.eq('department', filters.department);
-      if (filters.contact_status) query = query.eq('contact_status', filters.contact_status);
-      if (filters.assigned_to_name) query = query.eq('assigned_to_name', filters.assigned_to_name);
-    }
+    // Non-paginated: fetch first 1000 only (role filters applied on initial query)
+    query = query.range(0, 999);
+    const { data: allBatch, error: batchErr } = await query;
+    if (batchErr) throw batchErr;
+    const allData = allBatch || [];
     // Ensure array fields are never null (prevents .map() crashes)
     allData.forEach(c => {
       if (!Array.isArray(c.campaign_interactions)) c.campaign_interactions = [];
@@ -202,7 +337,7 @@ export async function createContact(contactData) {
   try {
     const { data, error } = await supabase
       .from('contacts')
-      .insert([stripInternalFields({ ...sanitized, last_activity_at: new Date().toISOString() })])
+      .insert([stripInternalFields({ ...sanitized })])
       .select('*')
       .single();
     if (error) {
@@ -247,6 +382,17 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
     for (const [k, v] of Object.entries(cleanUpdates)) {
       sanitized[k] = v === '' ? null : v;
     }
+    // Auto-sync assigned_to_name ↔ assigned_to_names
+    if (sanitized.assigned_to_name && !sanitized.assigned_to_names) {
+      const existing = oldData?.assigned_to_names || [];
+      if (!existing.includes(sanitized.assigned_to_name)) {
+        sanitized.assigned_to_names = [sanitized.assigned_to_name];
+      }
+    }
+    if (sanitized.assigned_to_names && !sanitized.assigned_to_name) {
+      const names = Array.isArray(sanitized.assigned_to_names) ? sanitized.assigned_to_names.filter(Boolean) : [];
+      if (names.length > 0) sanitized.assigned_to_name = names[0];
+    }
     const { data, error } = await supabase
       .from('contacts')
       .update(stripInternalFields({ ...sanitized, updated_at: new Date().toISOString() }))
@@ -263,24 +409,38 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
 
 export async function deleteContact(id) {
   try {
-    // Clean up related opportunities first (prevent orphans)
-    try {
-      await supabase.from('opportunities').delete().eq('contact_id', id);
-    } catch (err) { reportError('contactsService', 'deleteContact.cleanupOpps', err); }
-    // Clean up related activities
-    try {
-      await supabase.from('activities').delete().eq('contact_id', id);
-    } catch (err) { reportError('contactsService', 'deleteContact.cleanupActivities', err); }
-    // Clean up related reminders
-    try {
-      await supabase.from('reminders').delete().eq('entity_id', id);
-    } catch (err) { reportError('contactsService', 'deleteContact.cleanupReminders', err); }
+    // Soft delete: mark as deleted instead of removing from DB
+    // This preserves all data and related records (opportunities, activities, etc.)
+    const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
+    const { error } = await supabase.from('contacts').update({
+      deleted_at: new Date().toISOString(),
+      is_deleted: true,
+    }).eq('id', id);
+    if (error) throw error;
+    // Log with full data for recovery
+    logAudit({ action: 'delete', entity: 'contact', entityId: id, entityName: oldData?.full_name || '', oldData, description: `Soft deleted contact: ${oldData?.full_name || id}` });
+  } catch (err) {
+    throw err;
+  }
+}
 
-    const { error } = await supabase.from('contacts').delete().eq('id', id);
+export async function restoreContact(id) {
+  try {
+    const { error } = await supabase.from('contacts').update({
+      deleted_at: null,
+      is_deleted: false,
+    }).eq('id', id);
     if (error) throw error;
   } catch (err) {
     throw err;
   }
+}
+
+export async function permanentDeleteContact(id) {
+  // Atomic delete via RPC — all related rows + contact succeed or rollback together.
+  // See supabase/migrations/permanent_delete_contact_rpc.sql
+  const { error } = await supabase.rpc('permanent_delete_contact', { p_contact_id: id });
+  if (error) throw error;
 }
 
 export async function blacklistContact(id, reason) {
@@ -329,14 +489,16 @@ export async function checkDuplicate(phone) {
 
 export async function fetchContactActivities(contactId, { role, userId, teamId } = {}) {
   try {
-    // When fetching for a specific contact, show ALL activities on that contact
-    // (the contact itself is already role-filtered, so no need to filter activities by agent)
+    // When viewing a specific contact's activities, show ALL activities on that contact
+    // The contact itself is already role-filtered (agent can only open contacts assigned to them)
+    // So if they can see the contact, they should see all its history (including from previous agents)
     const query = supabase
       .from('activities')
       .select('*')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50);
+
     const { data, error } = await query;
     if (error) throw error;
     return data || [];
@@ -363,6 +525,21 @@ export async function createActivity(activityData) {
     // Update contact last_activity_at
     if (activityData.contact_id) {
       await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', activityData.contact_id);
+      // Auto-complete matching pending tasks for this contact + agent + type
+      const actType = activityData.type;
+      const agentId = activityData.user_id;
+      if (actType && agentId) {
+        const matchTypes = actType === 'call' ? ['call', 'followup'] : [actType];
+        try {
+          await supabase.from('tasks')
+            .update({ status: 'done', completed_at: new Date().toISOString() })
+            .eq('contact_id', activityData.contact_id)
+            .eq('assigned_to', agentId)
+            .eq('status', 'pending')
+            .in('type', matchTypes)
+            .lte('due_date', new Date().toISOString());
+        } catch {}
+      }
     }
     return data;
   } catch (err) {

@@ -5,7 +5,9 @@ import {
   ChevronRight, Award, AlertTriangle, CheckCircle,
   BarChart2, Calendar, Filter, Search
 } from 'lucide-react';
-import { MOCK_EMPLOYEES, DEPARTMENTS, COMPETENCIES } from '../data/hr_mock_data';
+import { DEPARTMENTS } from '../data/hr_mock_data';
+import { fetchEmployees } from '../services/employeesService';
+import supabase from '../lib/supabase';
 import { getAttendanceForMonth } from '../data/attendanceStore';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useAuth } from '../contexts/AuthContext';
@@ -17,20 +19,18 @@ import { Card, CardHeader, CardBody, Input, Select, Badge, KpiCard, ExportButton
 const EMPTY_CRM = { calls: 0, calls_answered: 0, calls_no_answer: 0, calls_busy: 0, meetings_total: 0, meetings_online: 0, meetings_site: 0, meetings_developer: 0, meetings_office: 0, whatsapp_sent: 0, opportunities: 0, deals_closed: 0, leads: 0, campaigns: 0, revenue: 0 };
 
 // ── Competency scores (consistent with CompetenciesPage) ──────
-function genCompScores(empId) {
-  const seed = empId.charCodeAt(empId.length - 1);
-  return COMPETENCIES.reduce((acc, c, i) => {
+function genCompScores(empId, competencies) {
+  const seed = typeof empId === 'string' ? empId.charCodeAt(empId.length - 1) : 0;
+  return (competencies || []).reduce((acc, c, i) => {
     acc[c.key] = Math.min(5, Math.max(1, Math.round(2.5 + ((seed * (i + 3)) % 25) / 10)));
     return acc;
   }, {});
 }
-function calcWeightedScore(scores) {
-  const total = COMPETENCIES.reduce((sum, c) => sum + (scores[c.key] || 3) * c.weight, 0);
-  return Math.round((total / 100) * 10) / 10;
+function calcWeightedScore(scores, competencies) {
+  const total = (competencies || []).reduce((sum, c) => sum + (scores[c.key] || 3) * (c.weight || 10), 0);
+  const maxWeight = (competencies || []).reduce((sum, c) => sum + (c.weight || 10), 0) || 100;
+  return Math.round((total / maxWeight) * 50) / 10;
 }
-const EMP_COMP_SCORES = Object.fromEntries(
-  MOCK_EMPLOYEES.map(emp => [emp.id, calcWeightedScore(genCompScores(emp.id))])
-);
 
 const YEAR = new Date().getFullYear();
 const MONTH = new Date().getMonth() + 1;
@@ -69,7 +69,7 @@ const FREQ_CONFIG = {
 };
 
 // Build employee performance data
-function buildEmpData(emp, attendance, crmData) {
+function buildEmpData(emp, attendance, crmData, competencies) {
   const att = attendance.filter(r => r.employee_id === emp.id);
   const presentDays = att.filter(r => r.check_in && !r.absent).length;
   const lateDays = att.filter(r => r.check_in && !r.absent).filter(r => { const [h, m] = (r.check_in || '').split(':').map(Number); return h > 10 || (h === 10 && m > 30); }).length;
@@ -88,7 +88,7 @@ function buildEmpData(emp, attendance, crmData) {
     ? Math.round(scores.reduce((s, k) => s + k.pct, 0) / scores.length)
     : 0;
 
-  const compScore = EMP_COMP_SCORES[emp.id] || 3;
+  const compScore = calcWeightedScore(genCompScores(emp.id, competencies), competencies);
   return { emp, scores, avgPct, presentDays, lateDays, crm, compScore };
 }
 
@@ -124,6 +124,8 @@ export default function PerformancePage() {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
 
+  const [employees, setEmployees] = useState([]);
+  const [competencies, setCompetencies] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [smartFilters, setSmartFilters] = useState([]);
@@ -132,6 +134,11 @@ export default function PerformancePage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [period, setPeriod] = useState('this_month');
+
+  useEffect(() => {
+    fetchEmployees().then(d => setEmployees(d || [])).catch(() => {});
+    supabase.from('competencies').select('*').then(({ data }) => setCompetencies(data || [])).catch(() => {});
+  }, []);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('performance');
 
@@ -165,7 +172,7 @@ export default function PerformancePage() {
     const filteredActs = filterByPeriod(acts, periodVal);
     const filteredOpps = filterByPeriod(opps, periodVal);
     const map = {};
-    MOCK_EMPLOYEES.forEach(emp => {
+    employees.forEach(emp => {
       const empOpps = filteredOpps.filter(o => o.assigned_to === emp.id);
       const closedWon = empOpps.filter(o => o.stage === 'closed_won');
       const empActs = filteredActs.filter(a => a.user_id === emp.id || a.assigned_to === emp.id);
@@ -213,8 +220,8 @@ export default function PerformancePage() {
 
   const attendance = getAttendanceForMonth(YEAR, MONTH);
   const empData = useMemo(() =>
-    MOCK_EMPLOYEES.map(emp => buildEmpData(emp, attendance, crmData)),
-    [attendance, crmData]
+    employees.map(emp => buildEmpData(emp, attendance, crmData, competencies)),
+    [employees, attendance, crmData, competencies]
   );
 
   const SMART_FIELDS = useMemo(() => [
@@ -366,7 +373,7 @@ export default function PerformancePage() {
           { label: lang === 'ar' ? 'متوسط الأداء' : 'Avg Performance', value: avgPerf + '%', icon: '', color: '#4A7AAB' },
           { label: lang === 'ar' ? 'متميزون' : 'Top Performers',       value: topPerformers,  icon: '', color: '#4A7AAB' },
           { label: lang === 'ar' ? 'يحتاجون متابعة' : 'Need Attention', value: atRisk,         icon: '', color: '#EF4444' },
-          { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: MOCK_EMPLOYEES.length, icon: '', color: '#4A7AAB' },
+          { label: lang === 'ar' ? 'إجمالي الموظفين' : 'Total Employees', value: employees.length, icon: '', color: '#4A7AAB' },
         ].map((s, i) => (
           <Card key={i} className="px-5 py-4">
             <div className="text-xl mb-1.5">{s.icon}</div>

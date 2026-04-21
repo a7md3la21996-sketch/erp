@@ -71,9 +71,10 @@ export default function NotificationsDropdown({ show, onClose }) {
   const [hoveredId, setHoveredId] = useState(null);
 
   const refresh = async () => {
-    const filter = activeTab === 'unread' ? { unreadOnly: true, limit: 30 }
-      : activeTab === 'urgent' ? { priority: 'urgent', limit: 30 }
-      : { limit: 30 };
+    const base = { userId: profile?.id, userName: profile?.full_name_en || profile?.full_name_ar };
+    const filter = activeTab === 'unread' ? { ...base, unreadOnly: true, limit: 30 }
+      : activeTab === 'urgent' ? { ...base, priority: 'urgent', limit: 30 }
+      : { ...base, limit: 30 };
     try {
       const result = await getNotifications(filter);
       const data = result?.data || result;

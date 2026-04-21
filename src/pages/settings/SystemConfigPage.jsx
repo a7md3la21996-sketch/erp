@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { useToast } from '../../contexts/ToastContext';
-import { ROLES, ROLE_LABELS, ROLE_PERMISSIONS, P } from '../../config/roles';
+import { ROLES, ROLE_LABELS, ROLE_PERMISSIONS, P, LOCKED_PERMISSIONS, LOCKED_ROLES } from '../../config/roles';
+import { reloadPermissionOverrides } from '../../contexts/AuthContext';
 import { hexToRgbaBg } from '../../utils/configHelpers';
 import { Card, Button, Input, Select, FilterPill } from '../../components/ui';
 import {
@@ -534,62 +535,253 @@ function CompanyInfoTab({ config, updateSection, isRTL, toast }) {
 }
 
 // ─── Tab: Roles & Permissions (Read-only) ─────────────────────────────
-function RolesPermissionsTab({ isRTL }) {
-  const [expanded, setExpanded] = useState({});
+function RolesPermissionsTab({ isRTL, toast }) {
+  // Permission labels with categories
+  const PERM_CATEGORIES = [
+    { key: 'dashboard', ar: 'لوحة التحكم', en: 'Dashboard', perms: [
+      { key: P.DASHBOARD, ar: 'عرض الداشبورد', en: 'View Dashboard' },
+    ]},
+    { key: 'contacts', ar: 'العملاء المحتملين', en: 'Leads', perms: [
+      { key: P.CONTACTS_VIEW_OWN, ar: 'عرض الخاصة', en: 'View Own' },
+      { key: P.CONTACTS_VIEW_ALL, ar: 'عرض الكل', en: 'View All' },
+      { key: P.CONTACTS_EDIT_OWN, ar: 'تعديل الخاصة', en: 'Edit Own' },
+      { key: P.CONTACTS_EDIT, ar: 'تعديل أي عميل', en: 'Edit Any' },
+      { key: P.CONTACTS_DELETE, ar: 'حذف', en: 'Delete' },
+      { key: P.CONTACTS_EXPORT, ar: 'تصدير', en: 'Export' },
+      { key: P.CONTACTS_IMPORT, ar: 'استيراد', en: 'Import' },
+      { key: P.CONTACTS_BULK, ar: 'عمليات جماعية', en: 'Bulk Actions' },
+    ]},
+    { key: 'opps', ar: 'الفرص', en: 'Opportunities', perms: [
+      { key: P.OPPS_VIEW_OWN, ar: 'عرض الخاصة', en: 'View Own' },
+      { key: P.OPPS_VIEW_ALL, ar: 'عرض الكل', en: 'View All' },
+      { key: P.OPPS_EDIT_OWN, ar: 'تعديل الخاصة', en: 'Edit Own' },
+      { key: P.OPPS_EDIT, ar: 'تعديل أي فرصة', en: 'Edit Any' },
+      { key: P.OPPS_DELETE, ar: 'حذف', en: 'Delete' },
+      { key: P.OPPS_EXPORT, ar: 'تصدير', en: 'Export' },
+      { key: P.OPPS_BULK, ar: 'عمليات جماعية', en: 'Bulk Actions' },
+    ]},
+    { key: 'deals', ar: 'الصفقات', en: 'Deals', perms: [
+      { key: P.DEALS_VIEW_OWN, ar: 'عرض الخاصة', en: 'View Own' },
+      { key: P.DEALS_VIEW_ALL, ar: 'عرض الكل', en: 'View All' },
+    ]},
+    { key: 'pool', ar: 'توزيع الليدز', en: 'Lead Pool', perms: [
+      { key: P.POOL_VIEW, ar: 'عرض', en: 'View' },
+      { key: P.POOL_MANAGE, ar: 'إدارة', en: 'Manage' },
+      { key: P.POOL_ASSIGN, ar: 'توزيع', en: 'Assign' },
+      { key: P.POOL_VIEW_FRESH, ar: 'عرض الجدد', en: 'View Fresh' },
+      { key: P.POOL_SETTINGS, ar: 'إعدادات', en: 'Settings' },
+    ]},
+    { key: 'realestate', ar: 'العقارات', en: 'Real Estate', perms: [
+      { key: P.PROJECTS_VIEW, ar: 'المشاريع', en: 'Projects' },
+      { key: P.UNITS_VIEW, ar: 'الوحدات', en: 'Units' },
+    ]},
+    { key: 'hr', ar: 'الموارد البشرية', en: 'HR', perms: [
+      { key: P.HR_VIEW_OWN, ar: 'عرض الخاصة', en: 'View Own' },
+      { key: P.HR_VIEW_ALL, ar: 'عرض الكل', en: 'View All' },
+      { key: P.HR_EMPLOYEES_MANAGE, ar: 'إدارة الموظفين', en: 'Manage Employees' },
+      { key: P.ATTEND_VIEW_OWN, ar: 'عرض الحضور', en: 'View Attendance' },
+      { key: P.LEAVE_REQUEST, ar: 'طلب إجازة', en: 'Leave Request' },
+      { key: P.PAYROLL_VIEW, ar: 'عرض الرواتب', en: 'View Payroll' },
+    ]},
+    { key: 'finance', ar: 'المالية', en: 'Finance', perms: [
+      { key: P.FINANCE_VIEW, ar: 'عرض', en: 'View' },
+      { key: P.COMM_VIEW_OWN, ar: 'العمولات', en: 'Commissions' },
+    ]},
+    { key: 'workspace', ar: 'مساحة العمل', en: 'Workspace', perms: [
+      { key: P.TASKS_VIEW_OWN, ar: 'المهام', en: 'Tasks' },
+      { key: P.CALENDAR, ar: 'التقويم', en: 'Calendar' },
+      { key: P.CHAT_USE, ar: 'المحادثات', en: 'Chat' },
+    ]},
+    { key: 'settings', ar: 'الإعدادات', en: 'Settings', perms: [
+      { key: P.SETTINGS_VIEW, ar: 'عرض', en: 'View' },
+      { key: P.SETTINGS_MANAGE, ar: 'إدارة', en: 'Manage' },
+      { key: P.USERS_MANAGE, ar: 'إدارة المستخدمين', en: 'Manage Users' },
+      { key: P.AUDIT_VIEW, ar: 'سجل التدقيق', en: 'Audit Log' },
+    ]},
+    { key: 'ops', ar: 'العمليات', en: 'Operations', perms: [
+      { key: P.OPS_VIEW, ar: 'عرض', en: 'View' },
+      { key: P.OPS_MANAGE, ar: 'إدارة', en: 'Manage' },
+      { key: P.OPS_PAYMENTS, ar: 'المدفوعات', en: 'Payments' },
+      { key: P.OPS_HANDOVER, ar: 'التسليمات', en: 'Handover' },
+    ]},
+    { key: 'other', ar: 'أخرى', en: 'Other', perms: [
+      { key: P.RPT_SALES, ar: 'تقارير المبيعات', en: 'Sales Reports' },
+      { key: P.CAMPAIGNS_VIEW, ar: 'الحملات', en: 'Campaigns' },
+    ]},
+  ];
 
-  const toggleExpand = (role) => setExpanded(prev => ({ ...prev, [role]: !prev[role] }));
+  const EDITABLE_ROLES = Object.values(ROLES).filter(r => !LOCKED_ROLES.has(r));
+  const [permsState, setPermsState] = useState(() => {
+    const state = {};
+    Object.values(ROLES).forEach(role => {
+      state[role] = new Set(ROLE_PERMISSIONS[role] || []);
+    });
+    return state;
+  });
+  const [viewMode, setViewMode] = useState('matrix');
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  // Load existing overrides on mount and apply on top of defaults
+  useEffect(() => {
+    (async () => {
+      try {
+        const { default: supabase } = await import('../../lib/supabase');
+        const { data } = await supabase.from('system_config').select('value').eq('key', 'role_permissions_overrides').maybeSingle();
+        const overrides = data?.value || {};
+        setPermsState(prev => {
+          const next = { ...prev };
+          Object.entries(overrides).forEach(([role, { added = [], removed = [] }]) => {
+            if (!next[role]) next[role] = new Set();
+            const s = new Set(next[role]);
+            added.forEach(p => { if (!LOCKED_PERMISSIONS.has(p)) s.add(p); });
+            removed.forEach(p => { if (!LOCKED_PERMISSIONS.has(p)) s.delete(p); });
+            next[role] = s;
+          });
+          return next;
+        });
+      } catch {}
+      setLoaded(true);
+    })();
+  }, []);
+
+  const togglePerm = (role, perm) => {
+    if (LOCKED_ROLES.has(role)) return;
+    if (LOCKED_PERMISSIONS.has(perm)) return;
+    setPermsState(prev => {
+      const next = { ...prev };
+      const s = new Set(next[role]);
+      if (s.has(perm)) s.delete(perm); else s.add(perm);
+      next[role] = s;
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Compute diff: compare current state with defaults
+      const overrides = {};
+      EDITABLE_ROLES.forEach(role => {
+        const current = permsState[role] || new Set();
+        const defaults = new Set(ROLE_PERMISSIONS[role] || []);
+        const added = [...current].filter(p => !defaults.has(p) && !LOCKED_PERMISSIONS.has(p));
+        const removed = [...defaults].filter(p => !current.has(p) && !LOCKED_PERMISSIONS.has(p));
+        if (added.length || removed.length) overrides[role] = { added, removed };
+      });
+      const { default: supabase } = await import('../../lib/supabase');
+      await supabase.from('system_config').upsert({ key: 'role_permissions_overrides', value: overrides, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+      await reloadPermissionOverrides();
+      toast.success(isRTL ? 'تم حفظ الصلاحيات — قد يحتاج المستخدمون تسجيل الخروج والدخول' : 'Permissions saved — users may need to log out and back in');
+    } catch (err) {
+      toast.error(isRTL ? 'فشل الحفظ' : 'Save failed');
+    }
+    setSaving(false);
+  };
 
   return (
     <Card className="p-5">
-      <h3 className="m-0 mb-4 text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
-        <Shield size={16} className="text-brand-500" />
-        {isRTL ? 'الأدوار والصلاحيات' : 'Roles & Permissions'}
-      </h3>
-      <p className="m-0 mb-4 text-xs text-content-muted dark:text-content-muted-dark">
-        {isRTL ? 'للعرض فقط - لا يمكن التعديل من هنا' : 'Read-only view - cannot be edited here'}
-      </p>
-
-      <div className="space-y-2">
-        {Object.values(ROLES).map(role => {
-          const labels = ROLE_LABELS[role];
-          const perms = ROLE_PERMISSIONS[role] || [];
-          const isOpen = expanded[role];
-
-          return (
-            <div key={role} className="border border-edge dark:border-edge-dark rounded-lg overflow-hidden">
-              <button
-                onClick={() => toggleExpand(role)}
-                className="w-full flex items-center justify-between p-3 bg-surface-input dark:bg-surface-input-dark cursor-pointer border-0 text-left font-cairo"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-content dark:text-content-dark">
-                    {isRTL ? labels?.ar : labels?.en}
-                  </span>
-                  <span className="text-xs text-content-muted dark:text-content-muted-dark">
-                    ({isRTL ? labels?.en : labels?.ar})
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold">
-                    {perms.length}
-                  </span>
-                </div>
-                {isOpen
-                  ? <ChevronUp size={16} className="text-content-muted dark:text-content-muted-dark" />
-                  : <ChevronDown size={16} className="text-content-muted dark:text-content-muted-dark" />
-                }
-              </button>
-              {isOpen && (
-                <div className="p-3 flex flex-wrap gap-1.5">
-                  {perms.map(p => (
-                    <span key={p} className="text-[10px] px-2 py-1 rounded-full bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-mono">
-                      {p}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
+          <Shield size={16} className="text-brand-500" />
+          {isRTL ? 'الأدوار والصلاحيات' : 'Roles & Permissions'}
+        </h3>
+        <div className="flex gap-2">
+          <button onClick={() => setViewMode(viewMode === 'matrix' ? 'role' : 'matrix')}
+            className="px-3 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs font-semibold text-content-muted dark:text-content-muted-dark cursor-pointer">
+            {viewMode === 'matrix' ? (isRTL ? 'عرض بالدور' : 'By Role') : (isRTL ? 'عرض مصفوفة' : 'Matrix')}
+          </button>
+          <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+            <Save size={13} /> {saving ? '...' : (isRTL ? 'حفظ' : 'Save')}
+          </Button>
+        </div>
       </div>
+
+      {viewMode === 'matrix' ? (
+        /* Matrix View */
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[11px] min-w-[700px]">
+            <thead>
+              <tr>
+                <th className="text-start p-2 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-semibold sticky left-0 bg-surface-card dark:bg-surface-card-dark z-10 min-w-[140px]">
+                  {isRTL ? 'الصلاحية' : 'Permission'}
+                </th>
+                {EDITABLE_ROLES.map(role => (
+                  <th key={role} className="text-center p-2 border-b border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-semibold min-w-[70px]">
+                    <div className="text-[10px]">{isRTL ? ROLE_LABELS[role]?.ar : ROLE_LABELS[role]?.en}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {PERM_CATEGORIES.map(cat => (
+                <>
+                  <tr key={cat.key + '_header'}>
+                    <td colSpan={EDITABLE_ROLES.length + 1} className="px-2 pt-3 pb-1 text-xs font-bold text-brand-500 border-b border-brand-500/20">
+                      {isRTL ? cat.ar : cat.en}
+                    </td>
+                  </tr>
+                  {cat.perms.map(perm => (
+                    <tr key={perm.key} className="hover:bg-surface-bg dark:hover:bg-white/[0.02]">
+                      <td className="p-2 border-b border-edge/30 dark:border-edge-dark/30 text-content dark:text-content-dark sticky left-0 bg-surface-card dark:bg-surface-card-dark z-10">
+                        {isRTL ? perm.ar : perm.en}
+                      </td>
+                      {EDITABLE_ROLES.map(role => {
+                        const has = permsState[role]?.has(perm.key);
+                        const locked = LOCKED_PERMISSIONS.has(perm.key);
+                        return (
+                          <td key={role} className="p-2 border-b border-edge/30 dark:border-edge-dark/30 text-center">
+                            <button onClick={() => togglePerm(role, perm.key)} disabled={locked} title={locked ? (isRTL ? 'صلاحية محمية' : 'Locked permission') : ''}
+                              className={`w-6 h-6 rounded-md border-none transition-colors ${locked ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} ${
+                                has ? 'bg-brand-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-transparent'
+                              }`}>
+                              {has ? '✓' : '·'}
+                            </button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        /* Role View */
+        <div className="space-y-3">
+          {EDITABLE_ROLES.map(role => (
+            <div key={role} className="border border-edge dark:border-edge-dark rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-sm font-bold text-content dark:text-content-dark">{isRTL ? ROLE_LABELS[role]?.ar : ROLE_LABELS[role]?.en}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500 font-semibold">{permsState[role]?.size || 0}</span>
+              </div>
+              {PERM_CATEGORIES.map(cat => {
+                const catPerms = cat.perms.filter(p => permsState[role]?.has(p.key) || true);
+                return (
+                  <div key={cat.key} className="mb-2">
+                    <div className="text-[10px] font-bold text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? cat.ar : cat.en}</div>
+                    <div className="flex flex-wrap gap-1">
+                      {cat.perms.map(perm => {
+                        const has = permsState[role]?.has(perm.key);
+                        const locked = LOCKED_PERMISSIONS.has(perm.key);
+                        return (
+                          <button key={perm.key} onClick={() => togglePerm(role, perm.key)} disabled={locked} title={locked ? (isRTL ? 'صلاحية محمية' : 'Locked permission') : ''}
+                            className={`text-[10px] px-2 py-1 rounded-md border transition-colors ${locked ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} ${
+                              has ? 'bg-brand-500/10 border-brand-500/30 text-brand-500 font-semibold' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted/40 dark:text-content-muted-dark/40'
+                            }`}>
+                            {isRTL ? perm.ar : perm.en}{locked && ' 🔒'}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }
@@ -854,7 +1046,7 @@ function ActivityTypesTab({ config, updateSection, isRTL, toast }) {
 
 // ─── Tab: Contacts Settings ──────────────────────────────────────────
 function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
-  const [settings, setSettings] = useState(() => ({ mergeLimit: 2, maxPins: 5, inactiveDays: 5, ...(config.contactsSettings || {}) }));
+  const [settings, setSettings] = useState(() => ({ mergeLimit: 2, maxPins: 5, inactiveDays: 5, activityActiveDays: 3, activityModerateDays: 7, ...(config.contactsSettings || {}) }));
 
   // Privacy toggle: stored in system_config root level
   const [hideHistory, setHideHistory] = useState(() => {
@@ -875,7 +1067,9 @@ function ContactsSettingsTab({ config, updateSection, isRTL, toast }) {
   const fields = [
     { key: 'mergeLimit', label_ar: 'الحد الأقصى لدمج جهات الاتصال', label_en: 'Max contacts to merge at once', min: 2, max: 10, desc_ar: 'عدد جهات الاتصال اللي ممكن تدمجهم مع بعض', desc_en: 'How many contacts can be merged together' },
     { key: 'maxPins', label_ar: 'الحد الأقصى للتثبيت', label_en: 'Max pinned contacts', min: 1, max: 20, desc_ar: 'عدد جهات الاتصال اللي ممكن تثبتهم فوق', desc_en: 'How many contacts can be pinned at the top' },
-    { key: 'inactiveDays', label_ar: 'أيام قبل اعتبار العميل غير نشط', label_en: 'Days before marking inactive', min: 1, max: 30, desc_ar: 'لو العميل كان active ومفيش نشاط لعدد الأيام دي بيتحول لـ inactive تلقائي', desc_en: 'Active contacts with no activity for this many days are auto-marked inactive' },
+    { key: 'inactiveDays', label_ar: 'أيام قبل اعتبار العميل غير نشط', label_en: 'Days before marking inactive', min: 1, max: 30, desc_ar: 'لو العميل كان active ومفيش نشاط لعدد الأيام دي بيتحول لـ contacted تلقائي', desc_en: 'Contacts with no activity for this many days are auto-marked contacted' },
+    { key: 'activityActiveDays', label_ar: 'أيام فلتر "نشط"', label_en: 'Activity filter "Active" days', min: 1, max: 14, desc_ar: 'عدد الأيام اللي الليد يعتبر نشط فيها (الأخضر)', desc_en: 'Days threshold for active indicator (green)' },
+    { key: 'activityModerateDays', label_ar: 'أيام فلتر "متوسط"', label_en: 'Activity filter "Moderate" days', min: 2, max: 30, desc_ar: 'عدد الأيام اللي الليد يعتبر متوسط فيها (الأصفر)', desc_en: 'Days threshold for moderate indicator (yellow)' },
   ];
 
   return (
@@ -1357,6 +1551,18 @@ export default function SystemConfigPage() {
 
   const { config, updateSection, resetToDefaults } = useSystemConfig();
 
+  // Admin-only page
+  if (profile?.role !== 'admin' && profile?.role !== 'operations') {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-lg font-bold text-content dark:text-content-dark mb-2">{isRTL ? 'غير مصرح' : 'Unauthorized'}</p>
+          <p className="text-sm text-content-muted dark:text-content-muted-dark">{isRTL ? 'هذه الصفحة للأدمن فقط' : 'This page is admin only'}</p>
+        </div>
+      </div>
+    );
+  }
+
   const [activeTab, setActiveTab] = useState('contactTypes');
 
   // Admin gate
@@ -1414,7 +1620,7 @@ export default function SystemConfigPage() {
       case 'users':
         return <UserManagementTab isRTL={isRTL} toast={toast} />;
       case 'roles':
-        return <RolesPermissionsTab isRTL={isRTL} />;
+        return <RolesPermissionsTab isRTL={isRTL} toast={toast} />;
       default:
         return null;
     }

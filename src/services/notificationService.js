@@ -71,10 +71,15 @@ function dispatch() {
 /**
  * Get notifications with filtering
  */
-export async function getNotifications({ limit = 50, offset = 0, unreadOnly = false, type = null, priority = null, userId = null } = {}) {
+export async function getNotifications({ limit = 50, offset = 0, unreadOnly = false, type = null, priority = null, userId = null, userName = null } = {}) {
   try {
     let query = supabase.from('notifications').select('*', { count: 'exact' });
-    if (userId) query = query.or(`for_user_id.eq.${userId},for_user_id.eq.all`);
+    if (userId || userName) {
+      const conditions = ['for_user_id.eq.all'];
+      if (userId) conditions.push(`for_user_id.eq.${userId}`);
+      if (userName) conditions.push(`for_user_name.eq.${userName}`);
+      query = query.or(conditions.join(','));
+    }
     if (unreadOnly) query = query.eq('read', false);
     if (type) query = query.eq('type', type);
     if (priority) query = query.eq('priority', priority);
@@ -110,7 +115,8 @@ export async function addNotification({ type, title, titleEn, message, messageEn
     priority: priority || 'normal',
     read: false,
     url: actionUrl || null,
-    for_user_id: forUserId || 'all',
+    for_user_id: forUserId || null,
+    for_user_name: forUserId || null,
     from_user: null,
   };
 
@@ -320,7 +326,7 @@ export function notifyLeadAssigned({ contactName, contactId, agentId, agentName,
     entityId: contactId,
     actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
     priority: 'high',
-    forUserId: agentId || null,
+    forUserId: agentName || agentId || null,
   });
 }
 
@@ -362,5 +368,183 @@ export function notifyReminder({ title, userId, entityType, entityId }) {
     entity: entityType,
     entityId,
     priority: 'medium',
+  });
+}
+
+// ── Overdue Tasks (daily reminder) ──
+export function notifyOverdueTasks({ count, agentName }) {
+  return addNotification({
+    type: 'overdue_tasks',
+    title: 'مهام متأخرة',
+    titleEn: 'Overdue Tasks',
+    message: `عندك ${count} مهمة متأخرة محتاجة متابعة`,
+    messageEn: `You have ${count} overdue tasks that need attention`,
+    actionUrl: '/tasks',
+    priority: 'high',
+    forUserId: agentName,
+  });
+}
+
+// ── Stale Leads (no activity > 3 days) ──
+export function notifyStaleLeads({ count, agentName }) {
+  return addNotification({
+    type: 'stale_leads',
+    title: 'ليدز محتاجة متابعة',
+    titleEn: 'Leads Need Follow-up',
+    message: `عندك ${count} ليد بدون نشاط من أكتر من 3 أيام`,
+    messageEn: `You have ${count} leads with no activity for 3+ days`,
+    actionUrl: '/contacts',
+    priority: 'medium',
+    forUserId: agentName,
+  });
+}
+
+// ── Hot Opportunity Needs Follow-up ──
+export function notifyHotOpportunity({ oppTitle, contactName, agentName }) {
+  return addNotification({
+    type: 'hot_opportunity',
+    title: 'فرصة ساخنة',
+    titleEn: 'Hot Opportunity',
+    message: `الفرصة "${contactName}" ساخنة ومحتاجة متابعة سريعة`,
+    messageEn: `Opportunity "${contactName}" is hot and needs quick follow-up`,
+    actionUrl: '/crm/opportunities',
+    priority: 'high',
+    forUserId: agentName,
+  });
+}
+
+// ── Lead DQ'd (for manager review) ──
+export function notifyLeadDQ({ contactName, contactId, agentName, reason, managerName }) {
+  return addNotification({
+    type: 'lead_dq',
+    title: 'ليد تم استبعاده',
+    titleEn: 'Lead Disqualified',
+    message: `${agentName} استبعد "${contactName}" — السبب: ${reason}`,
+    messageEn: `${agentName} disqualified "${contactName}" — Reason: ${reason}`,
+    entity: 'contact',
+    entityId: contactId,
+    actionUrl: `/contacts?highlight=${contactId}`,
+    priority: 'medium',
+    forUserId: managerName,
+  });
+}
+
+// ── Agent Inactive (for TL/Manager) ──
+export function notifyAgentInactive({ agentName, days, managerName }) {
+  return addNotification({
+    type: 'agent_inactive',
+    title: 'سيلز غير نشط',
+    titleEn: 'Inactive Agent',
+    message: `${agentName} مفيش أي نشاط من ${days} يوم`,
+    messageEn: `${agentName} has no activity for ${days} days`,
+    priority: 'high',
+    forUserId: managerName,
+  });
+}
+
+// ── Import Done ──
+export function notifyImportDone({ count, importedBy }) {
+  return addNotification({
+    type: 'import_done',
+    title: 'تم الاستيراد',
+    titleEn: 'Import Complete',
+    message: `تم استيراد ${count} ليد جديد بواسطة ${importedBy}`,
+    messageEn: `${count} new leads imported by ${importedBy}`,
+    actionUrl: '/contacts',
+    priority: 'medium',
+    forUserId: 'all',
+  });
+}
+
+// ── Opportunity Stage Changed ──
+export function notifyOppStageChange({ contactName, stage, agentName }) {
+  const stageLabels = { qualification: 'تأهيل', proposal: 'عرض', negotiation: 'تفاوض', closing: 'إغلاق', reserved: 'حجز', contracted: 'تعاقد', closed_won: 'تم البيع', closed_lost: 'خسارة' };
+  return addNotification({
+    type: 'opp_stage',
+    title: 'تحديث فرصة',
+    titleEn: 'Opportunity Update',
+    message: `فرصة "${contactName}" انتقلت لمرحلة: ${stageLabels[stage] || stage}`,
+    messageEn: `Opportunity "${contactName}" moved to: ${stage}`,
+    actionUrl: '/crm/opportunities',
+    priority: stage === 'closed_won' ? 'high' : 'medium',
+    forUserId: agentName,
+  });
+}
+
+// ── Agent Added to Lead ──
+export function notifyAgentAdded({ contactName, contactId, agentName, addedBy }) {
+  return addNotification({
+    type: 'agent_added',
+    title: 'ليد جديد',
+    titleEn: 'New Lead Added',
+    message: `تم إضافتك على "${contactName}" بواسطة ${addedBy}`,
+    messageEn: `You've been added to "${contactName}" by ${addedBy}`,
+    entity: 'contact',
+    entityId: contactId,
+    actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
+    priority: 'high',
+    forUserId: agentName,
+  });
+}
+
+// ── Lead Reassigned (notify new agent only) ──
+export function notifyLeadReassigned({ contactName, contactId, newAgentName, assignedBy }) {
+  return addNotification({
+    type: 'lead_reassigned',
+    title: 'ليد اتنقل ليك',
+    titleEn: 'Lead Reassigned to You',
+    message: `تم نقل "${contactName}" ليك بواسطة ${assignedBy}`,
+    messageEn: `"${contactName}" has been reassigned to you by ${assignedBy}`,
+    entity: 'contact',
+    entityId: contactId,
+    actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
+    priority: 'high',
+    forUserId: newAgentName,
+  });
+}
+
+// ── Contact Birthday ──
+export function notifyBirthday({ contactName, contactId, agentName }) {
+  return addNotification({
+    type: 'birthday',
+    title: 'عيد ميلاد عميل',
+    titleEn: 'Client Birthday',
+    message: `النهارده عيد ميلاد "${contactName}" — ابعتله تهنئة!`,
+    messageEn: `Today is "${contactName}"'s birthday — send a greeting!`,
+    entity: 'contact',
+    entityId: contactId,
+    actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
+    priority: 'medium',
+    forUserId: agentName,
+  });
+}
+
+// ── New Comment on Your Contact ──
+export function notifyNewComment({ contactName, contactId, commentBy, agentName }) {
+  return addNotification({
+    type: 'new_comment',
+    title: 'تعليق جديد',
+    titleEn: 'New Comment',
+    message: `${commentBy} علق على "${contactName}"`,
+    messageEn: `${commentBy} commented on "${contactName}"`,
+    entity: 'contact',
+    entityId: contactId,
+    actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
+    priority: 'medium',
+    forUserId: agentName,
+  });
+}
+
+// ── Import Leads Per Agent ──
+export function notifyImportLeadsForAgent({ count, agentName, importedBy }) {
+  return addNotification({
+    type: 'import_leads',
+    title: 'ليدز جديدة من Import',
+    titleEn: 'New Imported Leads',
+    message: `تم توزيع ${count} ليد جديد عليك من Import بواسطة ${importedBy}`,
+    messageEn: `${count} new leads assigned to you from import by ${importedBy}`,
+    actionUrl: '/contacts',
+    priority: 'high',
+    forUserId: agentName,
   });
 }

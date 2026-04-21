@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -7,6 +7,7 @@ import { Clock } from 'lucide-react';
 import { Button, Input, Select } from '../../../components/ui/';
 import { createTask } from '../../../services/tasksService';
 import { useEscClose, contactPropType } from './constants';
+import { useFocusTrap } from '../../../utils/hooks';
 
 const QUICK_TASK_PRESETS = [
   { key: 'tomorrow', ar: 'غداً', en: 'Tomorrow', days: 1 },
@@ -21,6 +22,8 @@ export default function QuickTaskModal({ contact, onClose }) {
   const toast = useToast();
   const { profile } = useAuth();
   useEscClose(onClose);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
 
   const [selectedPreset, setSelectedPreset] = useState('');
   const [customDate, setCustomDate] = useState('');
@@ -77,9 +80,9 @@ export default function QuickTaskModal({ contact, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={onClose}>
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[400px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="quick-task-title" dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[400px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="px-5 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
-          <h3 className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Clock size={14} /> {isRTL ? 'مهمة سريعة' : 'Quick Task'} — {contact.full_name}</h3>
+          <h3 id="quick-task-title" className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Clock size={14} /> {isRTL ? 'مهمة سريعة' : 'Quick Task'} — {contact.full_name}</h3>
           <button onClick={onClose} className="bg-transparent border-none text-xl text-content-muted dark:text-content-muted-dark cursor-pointer">×</button>
         </div>
         <div className="px-5 py-[18px]">

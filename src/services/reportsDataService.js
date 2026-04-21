@@ -217,7 +217,7 @@ export function computeCampaignPerformance(contacts, opportunities) {
     contactsByCampaign[camp].contacts++;
     contactsByCampaign[camp].contactIds.add(c.id);
     if (c.contact_status === 'disqualified') contactsByCampaign[camp].dq++;
-    if (['active', 'has_opportunity'].includes(c.contact_status) || c.last_activity_at) contactsByCampaign[camp].engaged++;
+    if (['following', 'has_opportunity'].includes(c.contact_status) || c.last_activity_at) contactsByCampaign[camp].engaged++;
     if (!contactsByCampaign[camp].source || contactsByCampaign[camp].source === 'other') contactsByCampaign[camp].source = c.source || 'other';
   });
 
@@ -257,7 +257,7 @@ export function computeCampaignPerformance(contacts, opportunities) {
  */
 export function computeLeadsConversion(contacts, opportunities, deals) {
   const totalLeads = contacts.length;
-  const contacted = contacts.filter(c => ['active', 'has_opportunity'].includes(c.contact_status) || c.last_activity_at).length;
+  const contacted = contacts.filter(c => ['following', 'has_opportunity'].includes(c.contact_status) || c.last_activity_at).length;
   const qualified = opportunities.length;
   const proposals = opportunities.filter(o => ['proposal', 'negotiation', 'closing', 'closed_won'].includes(o.stage)).length;
   const won = deals.length;
@@ -524,7 +524,8 @@ export function computePnl(invoices, expenses) {
   const salesInvoices = invoices.filter(i => i.type === 'sales');
   const revenue = salesInvoices.reduce((s, i) => s + (i.total || i.subtotal || 0), 0);
   const totalExpenses = expenses.reduce((s, e) => s + (e.amount || 0), 0);
-  const grossProfit = revenue;
+  const cogs = expenses.filter(e => e.category === 'cogs' || e.category === 'cost_of_goods').reduce((s, e) => s + (e.amount || 0), 0);
+  const grossProfit = revenue - cogs;
   const netProfit = revenue - totalExpenses;
 
   // Group expenses by category
@@ -575,7 +576,8 @@ export function computeExpenseBreakdown(expenses) {
     catMap[cat] = (catMap[cat] || 0) + (e.amount || 0);
   });
 
-  const total = expenses.reduce((s, e) => s + (e.amount || 0), 0) || 1;
+  const total = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  if (total === 0) return [];
 
   const CAT_LABELS = {
     salaries: { en: 'Salaries', ar: 'الرواتب' },

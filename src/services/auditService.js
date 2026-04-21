@@ -78,23 +78,31 @@ export async function logAudit({ action, entity, entityId, entityName = '', oldD
 
   // Save to Supabase
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from('audit_logs').insert({
-        user_id: user.id,
-        action,
-        entity,
-        entity_id: entityId,
-        entity_name: entityName,
-        old_data: stripSensitive(oldData),
-        new_data: stripSensitive(newData),
-        changes,
-        description,
-        user_agent: navigator.userAgent,
-      });
-    } else {
-      reportError('auditService', 'logAudit', new Error('No authenticated user'));
+    let userId = null;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id || null;
+    } catch {}
+    // If no auth user, try getting from localStorage profile
+    if (!userId) {
+      try {
+        const profile = JSON.parse(localStorage.getItem('platform_profile') || '{}');
+        userId = profile?.id || null;
+      } catch {}
     }
+    await supabase.from('audit_logs').insert({
+      user_id: userId,
+      user_name: userName || null,
+      action,
+      entity,
+      entity_id: entityId,
+      entity_name: entityName,
+      old_data: stripSensitive(oldData),
+      new_data: stripSensitive(newData),
+      changes,
+      description,
+      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+    });
   } catch (err) { reportError('auditService', 'logAudit', err); }
 }
 

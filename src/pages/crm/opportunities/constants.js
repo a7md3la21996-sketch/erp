@@ -108,9 +108,18 @@ const SAVED_FILTERS_KEY = 'platform_opp_saved_filters';
 export const getSavedFilters = () => { try { return JSON.parse(localStorage.getItem(SAVED_FILTERS_KEY) || '[]'); } catch { return []; } };
 export const saveSavedFilters = (f) => { try { localStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(f)); } catch {} };
 
-// ─── Stage History (localStorage + Supabase) ───
+// ─── Stage History (Supabase + localStorage fallback) ───
 const STAGE_HISTORY_KEY = 'platform_opp_stage_history';
-export const getStageHistory = (oppId) => { try { const all = JSON.parse(localStorage.getItem(STAGE_HISTORY_KEY) || '{}'); return all[oppId] || []; } catch { return []; } };
+export const getStageHistory = async (oppId) => {
+  // Try Supabase first
+  try {
+    const { default: supabase } = await import('../../../lib/supabase');
+    const { data } = await supabase.from('stage_history').select('*').eq('opportunity_id', oppId).order('changed_at', { ascending: false });
+    if (data?.length) return data.map(d => ({ from: d.from_stage, to: d.to_stage, at: d.changed_at }));
+  } catch {}
+  // Fallback to localStorage
+  try { const all = JSON.parse(localStorage.getItem(STAGE_HISTORY_KEY) || '{}'); return all[oppId] || []; } catch { return []; }
+};
 export const addStageHistory = (oppId, fromStage, toStage) => {
   const entry = { from: fromStage, to: toStage, at: new Date().toISOString() };
   // Save to localStorage
@@ -131,18 +140,36 @@ export const addStageHistory = (oppId, fromStage, toStage) => {
   }).catch(() => {});
 };
 
-// ─── Notes (localStorage) ───
+// ─── Notes (Supabase via activities table + localStorage fallback) ───
 const NOTES_KEY = 'platform_opp_notes';
-export const getOppNotes = (oppId) => { try { const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); return all[oppId] || []; } catch { return []; } };
-export const addOppNote = (oppId, text) => {
+export const getOppNotes = async (oppId) => {
+  try {
+    const { default: supabase } = await import('../../../lib/supabase');
+    const { data } = await supabase.from('activities').select('id, notes, created_at, user_name_en, user_name_ar')
+      .eq('contact_id', oppId).eq('type', 'note').order('created_at', { ascending: false }).limit(20);
+    if (data?.length) return data.map(a => ({ id: a.id, text: a.notes, at: a.created_at, by: a.user_name_en || a.user_name_ar }));
+  } catch {}
+  try { const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}'); return all[oppId] || []; } catch { return []; }
+};
+export const addOppNote = async (oppId, text, profile) => {
+  const note = { id: Date.now().toString(), text, at: new Date().toISOString() };
+  // Save to localStorage
   try {
     const all = JSON.parse(localStorage.getItem(NOTES_KEY) || '{}');
     if (!all[oppId]) all[oppId] = [];
-    const note = { id: Date.now().toString(), text, at: new Date().toISOString() };
     all[oppId].unshift(note);
     localStorage.setItem(NOTES_KEY, JSON.stringify(all));
-    return note;
-  } catch { return { id: Date.now().toString(), text, at: new Date().toISOString() }; }
+  } catch {}
+  // Persist to Supabase
+  try {
+    const { default: supabase } = await import('../../../lib/supabase');
+    await supabase.from('activities').insert([{
+      type: 'note', notes: text, contact_id: oppId, entity_type: 'opportunity',
+      user_id: profile?.id || null, user_name_en: profile?.full_name_en || '', user_name_ar: profile?.full_name_ar || '',
+      dept: 'sales', status: 'completed', created_at: note.at,
+    }]);
+  } catch {}
+  return note;
 };
 export const deleteOppNote = (oppId, noteId) => {
   try {

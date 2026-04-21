@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 
 /**
@@ -6,21 +6,27 @@ import { supabase } from '../lib/supabase';
  * Callback receives the payload with { eventType, new: record, old: record }.
  * Use payload.eventType ('INSERT'|'UPDATE'|'DELETE') to do smart upsert
  * instead of full re-fetch.
+ *
+ * The callback is stored in a ref so the subscription is only created/destroyed
+ * when the table changes, not on every re-render. The latest callback is always
+ * invoked for each payload.
  */
 export function useRealtimeSubscription(table, callback) {
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
   useEffect(() => {
     const channel = supabase
       .channel(`realtime_${table}`)
       .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
-        // Pass the full payload so consumers can do granular updates
-        callback(payload);
+        callbackRef.current(payload);
       })
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [table, callback]);
+  }, [table]);
 }
 
 /**

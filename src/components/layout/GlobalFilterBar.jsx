@@ -42,7 +42,10 @@ export default function GlobalFilterBar() {
         const allowedTeams = new Set([profile.team_id, ...((children || []).map(c => c.id))]);
         setAgents(filtered.filter(a => allowedTeams.has(a.team_id)));
       } else if (profile?.role === 'team_leader' && profile?.team_id) {
-        setAgents(filtered.filter(a => a.team_id === profile.team_id));
+        // TL's team_id is the parent team. Their managed team has parent_id = TL's team_id
+        const { data: childTeams } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
+        const managedTeamIds = new Set([profile.team_id, ...((childTeams || []).map(c => c.id))]);
+        setAgents(filtered.filter(a => managedTeamIds.has(a.team_id)));
       } else if (profile?.role === 'sales_agent') {
         setAgents(filtered.filter(a => a.id === profile.id));
       } else {

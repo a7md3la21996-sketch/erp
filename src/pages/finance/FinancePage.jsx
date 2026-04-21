@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   BarChart2, DollarSign, Receipt, FileText, BookOpen, Wallet,
   Plus, Search, X, ChevronDown, ChevronRight,
@@ -281,6 +282,12 @@ export default function FinancePage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const L = (ar, en) => isRTL ? ar : en;
+  const { profile } = useAuth();
+
+  // Admin/Finance only
+  if (profile && !['admin', 'operations', 'finance'].includes(profile.role)) {
+    return <div className="flex items-center justify-center min-h-screen"><p className="text-lg font-bold text-content dark:text-content-dark">{isRTL ? 'غير مصرح' : 'Unauthorized'}</p></div>;
+  }
 
   const location = useLocation();
   const activeTab = useMemo(() => {
@@ -298,8 +305,8 @@ export default function FinancePage() {
   // State — initialised empty, populated from Supabase (or mock fallback) on mount
   const [journalEntries, setJournalEntries] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [companyComm, setCompanyComm] = useState(MOCK_COMPANY_COMMISSIONS);
-  const [agentComm, setAgentComm] = useState(MOCK_AGENT_COMMISSIONS);
+  const [companyComm, setCompanyComm] = useState([]);
+  const [agentComm, setAgentComm] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [chartOfAccounts, setChartOfAccounts] = useState([]);
 
@@ -309,6 +316,11 @@ export default function FinancePage() {
     svcFetchInvoices().then(setInvoices);
     svcFetchExpenses().then(setExpenses);
     svcFetchChartOfAccounts().then(setChartOfAccounts);
+    // Commissions from Supabase
+    import('../../lib/supabase').then(({ default: sb }) => {
+      sb.from('company_commissions').select('*').order('created_at', { ascending: false }).then(({ data }) => { if (data?.length) setCompanyComm(data); });
+      sb.from('agent_commissions').select('*').order('created_at', { ascending: false }).then(({ data }) => { if (data?.length) setAgentComm(data); });
+    });
   }, []);
 
   // Filters

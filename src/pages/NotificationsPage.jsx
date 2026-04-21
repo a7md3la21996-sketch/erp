@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
 import {
   getNotifications, markAsRead, markAllAsRead, deleteNotification, clearAll,
   getNotificationPreferences, setNotificationPreferences,
@@ -85,6 +86,7 @@ export default function NotificationsPage() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const { i18n } = useTranslation();
+  const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
   const navigate = useNavigate();
 
@@ -111,7 +113,7 @@ export default function NotificationsPage() {
       setNotifications(filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE));
     } else {
       // Build filter for getNotifications
-      const opts = { limit: PER_PAGE, offset: page * PER_PAGE };
+      const opts = { limit: PER_PAGE, offset: page * PER_PAGE, userId: profile?.id, userName: profile?.full_name_en || profile?.full_name_ar };
       if (filterRead === 'unread') opts.unreadOnly = true;
       if (filterType) opts.type = filterType;
       if (filterPriority) opts.priority = filterPriority;
@@ -121,11 +123,14 @@ export default function NotificationsPage() {
       // If read filter, we need to additionally filter
       let finalData = data;
       if (filterRead === 'read') {
-        const all = await getNotifications({ ...opts, limit: 999 });
-        const allData = Array.isArray(all?.data) ? all.data : [];
+        const readOpts = { limit: PER_PAGE, offset: page * PER_PAGE, type: filterType || undefined, priority: filterPriority || undefined };
+        // Fetch only read notifications server-side by excluding unreadOnly
+        const readResult = await getNotifications(readOpts);
+        const allData = Array.isArray(readResult?.data) ? readResult.data : [];
         const readOnly = allData.filter(n => n.read);
-        setTotal(readOnly.length);
-        finalData = readOnly.slice(page * PER_PAGE, (page + 1) * PER_PAGE);
+        // Use server count if available, otherwise estimate
+        setTotal(readResult?.total || readOnly.length);
+        finalData = readOnly;
       } else {
         setTotal(t);
         finalData = data;

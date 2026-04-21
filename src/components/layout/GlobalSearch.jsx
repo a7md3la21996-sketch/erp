@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { NAV_ITEMS } from '../../config/navigation';
 import supabase from '../../lib/supabase';
 import { fetchTasks } from '../../services/tasksService';
@@ -86,6 +87,7 @@ export default function GlobalSearch({ onClose }) {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const inputRef = useRef(null);
   const listRef = useRef(null);
   const debounceRef = useRef(null);
@@ -140,12 +142,17 @@ export default function GlobalSearch({ onClose }) {
         const [contactsRes, oppsRes, tasksRes, employeesRes, activitiesRes] = await Promise.allSettled([
           (async () => {
             try {
-              const { data, error } = await supabase
+              let q = supabase
                 .from('contacts')
-                .select('id, full_name, phone, email, company, contact_type, source')
+                .select('id, full_name, phone, email, company, contact_type, source, assigned_to_names')
                 .eq('is_blacklisted', false)
-                .order('last_activity_at', { ascending: false })
-                .range(0, 999);
+                .order('last_activity_at', { ascending: false });
+              // Role filter: sales_agent only sees assigned contacts
+              if (profile?.role === 'sales_agent') {
+                const myName = profile?.full_name_en || profile?.full_name_ar;
+                if (myName) q = q.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+              }
+              const { data, error } = await q.range(0, 999);
               if (error) throw error;
               return data || [];
             } catch {
@@ -200,12 +207,18 @@ export default function GlobalSearch({ onClose }) {
     let cancelled = false;
     const q = debouncedQuery.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
     if (!q) return;
-    supabase
-      .from('contacts')
-      .select('id, full_name, phone, email, company, contact_type, source')
-      .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%,company.ilike.%${q}%`)
-      .limit(20)
-      .then(({ data }) => {
+    (async () => {
+      let lq = supabase
+        .from('contacts')
+        .select('id, full_name, phone, email, company, contact_type, source, assigned_to_names')
+        .or(`full_name.ilike.%${q}%,phone.ilike.%${/^\d/.test(q) ? q.replace(/\D/g, '').slice(-9) : q}%,email.ilike.%${q}%,company.ilike.%${q}%`);
+      // Role filter for live search
+      if (profile?.role === 'sales_agent') {
+        const myName = profile?.full_name_en || profile?.full_name_ar;
+        if (myName) lq = lq.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+      }
+      return lq.limit(20);
+    })().then(({ data }) => {
         if (!cancelled && data) {
           // Merge with cached, dedup by id
           const cachedIds = new Set((contacts || []).map(c => c.id));
@@ -537,6 +550,7 @@ export default function GlobalSearch({ onClose }) {
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isRTL ? 'ابحث عن صفحات، جهات اتصال، فرص، مهام، موظفين...' : 'Search pages, contacts, opportunities, tasks, employees...'}
+            dir="auto"
             className="flex-1 border-none outline-none text-[15px] font-[inherit] bg-transparent text-content dark:text-content-dark placeholder:text-content-muted dark:placeholder:text-brand-400"
           />
           {loading && !dataLoaded && (

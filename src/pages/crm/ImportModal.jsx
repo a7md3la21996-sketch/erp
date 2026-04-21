@@ -9,22 +9,29 @@ const SOURCE_PLATFORM = { facebook: 'meta', instagram: 'meta', google_ads: 'goog
 // System fields that users can map to
 const SYSTEM_FIELDS = [
   { key: 'full_name', en: 'Full Name', ar: 'الاسم الكامل', required: true },
+  { key: 'prefix', en: 'Prefix', ar: 'اللقب' },
   { key: 'phone', en: 'Phone', ar: 'رقم الموبايل', required: true },
   { key: 'phone2', en: 'Phone 2', ar: 'رقم ثاني' },
+  { key: 'extra_phones', en: 'Extra Phones', ar: 'أرقام إضافية' },
   { key: 'email', en: 'Email', ar: 'البريد الإلكتروني' },
   { key: 'company', en: 'Company', ar: 'الشركة' },
   { key: 'job_title', en: 'Job Title', ar: 'المسمى الوظيفي' },
   { key: 'department', en: 'Department', ar: 'القسم' },
   { key: 'source', en: 'Source', ar: 'المصدر' },
   { key: 'contact_type', en: 'Contact Type', ar: 'نوع العميل' },
+  { key: 'contact_status', en: 'Status', ar: 'الحالة' },
   { key: 'notes', en: 'Notes', ar: 'ملاحظات' },
+  { key: 'gender', en: 'Gender', ar: 'الجنس' },
   { key: 'nationality', en: 'Nationality', ar: 'الجنسية' },
+  { key: 'birth_date', en: 'Birth Date', ar: 'تاريخ الميلاد' },
   { key: 'preferred_location', en: 'Preferred Location', ar: 'الموقع المفضل' },
+  { key: 'interested_in_type', en: 'Property Type', ar: 'نوع العقار' },
   { key: 'campaign_name', en: 'Campaign', ar: 'الحملة' },
   { key: 'temperature', en: 'Rating', ar: 'التصنيف' },
   { key: 'assigned_to_name', en: 'Assigned To', ar: 'مسؤول' },
   { key: 'created_at', en: 'Created At', ar: 'تاريخ الإنشاء' },
-  { key: 'budget_min', en: 'Budget', ar: 'الميزانية' },
+  { key: 'budget_min', en: 'Budget Min', ar: 'الميزانية (من)' },
+  { key: 'budget_max', en: 'Budget Max', ar: 'الميزانية (إلى)' },
 ];
 
 // Auto-detect mapping from common column header names (case-insensitive)
@@ -61,9 +68,16 @@ const AUTO_DETECT_MAP = {
   'القسم': 'department',
   'المصدر': 'source',
   'النوع': 'contact_type', 'نوع العميل': 'contact_type',
+  'الحالة': 'contact_status', 'حالة': 'contact_status', 'status': 'contact_status',
   'ملاحظات': 'notes',
+  'الجنس': 'gender', 'gender': 'gender', 'النوع الاجتماعي': 'gender',
   'الجنسية': 'nationality',
+  'تاريخ الميلاد': 'birth_date', 'birth date': 'birth_date', 'birthday': 'birth_date', 'dob': 'birth_date',
   'الموقع': 'preferred_location', 'الموقع المفضل': 'preferred_location',
+  'نوع العقار': 'interested_in_type', 'property type': 'interested_in_type', 'property': 'interested_in_type', 'interested in': 'interested_in_type',
+  'اللقب': 'prefix', 'prefix': 'prefix', 'لقب': 'prefix', 'salutation': 'prefix',
+  'أرقام إضافية': 'extra_phones', 'extra phones': 'extra_phones', 'extra_phones': 'extra_phones', 'other phones': 'extra_phones',
+  'budget max': 'budget_max', 'budget_max': 'budget_max', 'الميزانية القصوى': 'budget_max', 'max budget': 'budget_max',
 };
 
 const TYPE_MAP = {
@@ -557,6 +571,19 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
         };
       }
 
+      // Handle extra_phones (comma/semicolon separated string → array)
+      let extra_phones = null;
+      if (cleanedRow.extra_phones) {
+        const phones = String(cleanedRow.extra_phones).split(/[,;،]+/).map(p => p.trim()).filter(Boolean);
+        if (phones.length) extra_phones = phones;
+      }
+      // Handle gender mapping
+      const GENDER_MAP = { male: 'male', female: 'female', ذكر: 'male', أنثى: 'female', م: 'male', 'M': 'male', 'F': 'female' };
+      // Handle interested_in_type mapping
+      const PROPERTY_MAP = { residential: 'residential', commercial: 'commercial', administrative: 'administrative', سكني: 'residential', تجاري: 'commercial', إداري: 'administrative' };
+      // Handle contact_status mapping
+      const STATUS_MAP = { new: 'new', following: 'following', contacted: 'contacted', has_opportunity: 'has_opportunity', disqualified: 'disqualified', جديد: 'new', متابعة: 'following', 'تم التواصل': 'contacted', active: 'following', inactive: 'contacted', نشط: 'following', 'غير نشط': 'contacted' };
+
       return {
         ...cleanedRow,
         phone,
@@ -564,9 +591,17 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
         email,
         full_name,
         contact_type: TYPE_MAP[cleanedRow.contact_type] || cleanedRow.contact_type || 'lead',
+        contact_status: STATUS_MAP[cleanedRow.contact_status] || cleanedRow.contact_status || 'new',
         temperature: RATING_MAP[cleanedRow.temperature] || cleanedRow.temperature || 'warm',
         department: cleanedRow.department || 'sales',
         platform: SOURCE_PLATFORM[cleanedRow.source] || 'other',
+        gender: GENDER_MAP[cleanedRow.gender] || cleanedRow.gender || null,
+        interested_in_type: PROPERTY_MAP[cleanedRow.interested_in_type] || cleanedRow.interested_in_type || null,
+        prefix: cleanedRow.prefix || null,
+        birth_date: cleanedRow.birth_date || null,
+        budget_min: cleanedRow.budget_min ? Number(cleanedRow.budget_min) || null : null,
+        budget_max: cleanedRow.budget_max ? Number(cleanedRow.budget_max) || null : null,
+        extra_phones,
         _row: idx + 2,
         _status: 'new',
         _origIdx: idx,
@@ -637,13 +672,11 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
     }
 
     const toAdd = [];
-    const baseId = Math.max(0, ...existingContacts.map(c => parseInt(c.id) || 0));
-
     for (let i = 0; i < importable.length; i++) {
       const r = importable[i];
       toAdd.push({
         ...r,
-        id: r._status === 'overwrite' ? r._existingId : String(baseId + i + 1),
+        id: r._status === 'overwrite' ? r._existingId : undefined, // Let Supabase generate UUID
         lead_score: 0,
         is_blacklisted: false,
         created_at: r.created_at || new Date().toISOString(),

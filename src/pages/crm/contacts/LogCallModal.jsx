@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { Phone, Clock } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
-import { createActivity } from '../../../services/contactsService';
+import { createActivity, deriveGlobalStatus } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { useEscClose, contactPropType } from './constants';
+import { useFocusTrap } from '../../../utils/hooks';
 
 const CALL_RESULTS = [
   { key: 'answered', ar: 'رد', en: 'Answered', color: '#10B981' },
@@ -35,6 +36,8 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
   const toast = useToast();
   const { profile } = useAuth();
   useEscClose(onClose);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
 
   const [callResult, setCallResult] = useState('');
   const [callNotes, setCallNotes] = useState('');
@@ -88,7 +91,7 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
       user_name_en: profile?.full_name_en || '',
       created_at: new Date().toISOString(),
     };
-    try { await createActivity(activity); } catch { /* saved optimistically */ }
+    try { await createActivity(activity); } catch (err) { console.error('Activity save error:', err?.message); }
 
     // Auto-update contact_status based on call result (per-agent)
     if (onUpdate) {
@@ -99,17 +102,17 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
       if (myStatus === 'disqualified') {
         newStatus = myStatus;
       } else if (['no_answer', 'busy', 'switched_off'].includes(callResult)) {
-        newStatus = 'inactive';
+        newStatus = 'contacted';
       } else if (callResult === 'answered') {
-        newStatus = 'active';
-      } else if (callResult === 'not_interested' && myStatus !== 'has_opportunity' && myStatus !== 'active') {
+        newStatus = 'following';
+      } else if (callResult === 'not_interested' && myStatus !== 'has_opportunity' && myStatus !== 'following') {
         newStatus = 'disqualified';
       } else if (myStatus === 'new' || !myStatus) {
-        newStatus = 'active';
+        newStatus = 'following';
       }
       if (newStatus !== myStatus) {
         const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-        onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: newStatus });
+        onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) });
       }
     }
 
@@ -148,10 +151,10 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={onClose}>
-      <div dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[420px] max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="log-call-title" dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[420px] max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="px-5 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
-          <h3 className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
+          <h3 id="log-call-title" className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Phone size={14} /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'} — {contact.full_name}</h3>
           <button onClick={onClose} className="bg-transparent border-none text-xl text-content-muted dark:text-content-muted-dark cursor-pointer">×</button>
         </div>
         <div className="px-5 py-[18px]">

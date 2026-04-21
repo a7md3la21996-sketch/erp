@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { X } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import { useEscClose, SOURCE_LABELS, SOURCE_EN, SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES, COUNTRY_CODES, getCountryFromPhone, getPhoneInfo, validatePhone, normalizePhone } from './constants';
+import { useFocusTrap } from '../../../utils/hooks';
 
 const getFullPhone = (phone, code) => {
   if (!phone) return '';
   if (phone.startsWith('+')) return phone;
-  if (phone.startsWith('0')) return normalizePhone(phone);
+  if (phone.startsWith('00')) return '+' + phone.slice(2);
+  // Respect the user-selected country code: strip leading 0 (local-format prefix) and prepend code
+  if (phone.startsWith('0')) return code + phone.slice(1);
   return code + phone;
 };
 
-export default function EditContactModal({ contact, onClose, onSave }) {
+export default function EditContactModal({ contact, onClose, onSave, userRole, campaigns = [] }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -58,6 +61,9 @@ export default function EditContactModal({ contact, onClose, onSave }) {
   const [extraPhones, setExtraPhones] = useState(() => (contact.extra_phones || []).map(p => initPhone(p)));
   const [extraCodes, setExtraCodes] = useState(() => (contact.extra_phones || []).map(p => initCode(p)));
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false); // sync guard against double-submit
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const isSalesType = ['lead','client'].includes(form.contact_type);
   const isSalesDept = form.department === 'sales';
@@ -67,7 +73,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     set(field, val);
     if (val.startsWith('0')) {
       const detected = getCountryFromPhone(normalizePhone(val));
-      set(codeField, detected.code);
+      if (detected) set(codeField, detected.code);
     }
   };
 
@@ -77,6 +83,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
   };
 
   const handleSave = async () => {
+    if (savingRef.current) return; // prevent double-submit
     const fullPhone = getFullPhone(form.phone, form.countryCode);
     if (!validatePhone(fullPhone)) { toast.warning(isRTL ? 'رقم الهاتف غير صحيح' : 'Invalid phone number'); return; }
     if (form.email && !emailValid) { toast.warning(isRTL ? 'البريد الإلكتروني غير صحيح' : 'Invalid email'); return; }
@@ -86,6 +93,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     }
     const invalidExtra = extraPhones.find((p, i) => p && !validatePhone(getFullPhone(p, extraCodes[i])));
     if (invalidExtra) { toast.warning(isRTL ? 'رقم إضافي غير صحيح' : 'Invalid extra phone number'); return; }
+    savingRef.current = true;
     setSaving(true);
     try {
       const { countryCode, countryCode2, ...formData } = form;
@@ -105,16 +113,17 @@ export default function EditContactModal({ contact, onClose, onSave }) {
     } catch (err) {
       toast.error((isRTL ? 'خطأ في الحفظ: ' : 'Save error: ') + err.message);
       setSaving(false);
+      savingRef.current = false;
     }
   };
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[950] flex items-center justify-center p-5">
-      <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[580px] max-h-[92vh] flex flex-col">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="edit-contact-title" className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[580px] max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="px-6 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center shrink-0">
           <div>
-            <h2 className="m-0 text-content dark:text-content-dark text-[17px] font-bold">{isRTL ? 'تعديل بيانات العميل' : 'Edit Lead'}</h2>
+            <h2 id="edit-contact-title" className="m-0 text-content dark:text-content-dark text-[17px] font-bold">{isRTL ? 'تعديل بيانات العميل' : 'Edit Lead'}</h2>
             <p className="mt-[3px] mb-0 text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px]">{contact.full_name}</p>
           </div>
           <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1"><X size={18} /></button>
@@ -135,12 +144,12 @@ export default function EditContactModal({ contact, onClose, onSave }) {
                 <option value="Eng.">Eng.</option>
                 <option value="أستاذ">أستاذ</option>
               </Select>
-              <Input value={form.full_name} onChange={e => set('full_name', e.target.value)} placeholder={isRTL ? 'الاسم الكامل...' : 'Full name...'} />
+              <input className="w-full rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-sm px-3 py-2 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500/30" dir="ltr" style={{ unicodeBidi: 'plaintext', textAlign: 'left' }} value={form.full_name} onChange={e => set('full_name', e.target.value)} placeholder={isRTL ? 'الاسم الكامل...' : 'Full name...'} />
             </div>
           </div>
 
           {/* النوع والقسم */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النوع' : 'Type'}</label>
               <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
@@ -165,7 +174,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
           </div>
 
           {/* الهاتف */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
                 {isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span>
@@ -220,7 +229,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
 
           {/* الشركة والمسمى — مخفية لقسم المبيعات */}
           {!isSalesDept && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الشركة' : 'Company'}</label>
                 <Input value={form.company} onChange={e => set('company', e.target.value)} placeholder={isRTL ? 'اسم الشركة...' : 'Company name...'} />
@@ -234,7 +243,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
 
           {/* المصدر والمنصة — للـ sales types فقط */}
           {isSalesType && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'المصدر' : 'Source'}</label>
                 <Select value={form.source} onChange={e => handleSourceChange(e.target.value)}>
@@ -248,11 +257,23 @@ export default function EditContactModal({ contact, onClose, onSave }) {
             </div>
           )}
 
-          {/* الكامبين — فقط لمصادر الإعلانات */}
-          {isSalesType && AD_SOURCES.includes(form.source) && (
+          {/* الكامبين */}
+          {isSalesType && (
             <div>
-              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'اسم الحملة' : 'Campaign Name'}</label>
-              <Input value={form.campaign_name} onChange={e => set('campaign_name', e.target.value)} placeholder={isRTL ? 'اسم الحملة...' : 'Campaign name...'} />
+              <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الحملة' : 'Campaign'}</label>
+              <div className="relative">
+                <Input
+                  value={form.campaign_name}
+                  onChange={e => set('campaign_name', e.target.value)}
+                  placeholder={isRTL ? 'ابحث أو اكتب اسم الحملة...' : 'Search or type campaign...'}
+                  list="campaign-options"
+                />
+                <datalist id="campaign-options">
+                  {(campaigns || []).map(c => (
+                    <option key={c.id} value={isRTL ? (c.name_ar || c.name_en) : (c.name_en || c.name_ar)} />
+                  ))}
+                </datalist>
+              </div>
             </div>
           )}
 
@@ -269,7 +290,7 @@ export default function EditContactModal({ contact, onClose, onSave }) {
 
           {/* الجنس والجنسية — مخفية لقسم المبيعات */}
           {!isSalesDept && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'الجنس' : 'Gender'}</label>
                 <Select value={form.gender} onChange={e => set('gender', e.target.value)}>
@@ -294,10 +315,21 @@ export default function EditContactModal({ contact, onClose, onSave }) {
             </div>
           )}
 
-          {/* ملاحظات */}
+          {/* ملاحظات — only admin/operations can edit */}
           <div>
-            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'ملاحظات' : 'Notes'}</label>
-            <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} placeholder={isRTL ? 'أي ملاحظات...' : 'Any notes...'} />
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {isRTL ? 'ملاحظات' : 'Notes'}
+              {userRole !== 'admin' && userRole !== 'operations' && (
+                <span className="text-[10px] text-orange-500 ms-1">{isRTL ? '(للقراءة فقط)' : '(read-only)'}</span>
+              )}
+            </label>
+            <Textarea
+              value={form.notes}
+              onChange={e => set('notes', e.target.value)}
+              placeholder={isRTL ? 'أي ملاحظات...' : 'Any notes...'}
+              disabled={userRole !== 'admin' && userRole !== 'operations'}
+              className={userRole !== 'admin' && userRole !== 'operations' ? '!bg-gray-50 dark:!bg-gray-800/50 !cursor-not-allowed' : ''}
+            />
           </div>
         </div>
 

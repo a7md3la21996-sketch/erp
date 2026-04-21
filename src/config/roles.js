@@ -106,10 +106,10 @@ export const ROLE_PERMISSIONS = {
 
   sales_director: [
     P.DASHBOARD,
-    // Contacts: full access (no export)
-    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_DELETE, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
-    // Opportunities: full access (no export)
-    P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_DELETE, P.OPPS_BULK,
+    // Contacts: full access (no export, no delete)
+    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
+    // Opportunities: full access (no export, no delete)
+    P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_BULK,
     // Deals & Commissions
     P.DEALS_VIEW_OWN, P.DEALS_VIEW_ALL, P.COMM_VIEW_OWN,
     // Pool: full
@@ -120,10 +120,10 @@ export const ROLE_PERMISSIONS = {
 
   sales_manager: [
     P.DASHBOARD,
-    // Contacts: full access (no export)
-    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_DELETE, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
-    // Opportunities: full access (no export)
-    P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_DELETE, P.OPPS_BULK,
+    // Contacts: full access (no export, no delete)
+    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
+    // Opportunities: full access (no export, no delete)
+    P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_BULK,
     // Deals
     P.DEALS_VIEW_OWN, P.DEALS_VIEW_ALL,
     // Pool: full
@@ -168,17 +168,55 @@ export const ROLE_PERMISSIONS = {
     // Operations
     P.OPS_VIEW, P.OPS_MANAGE, P.OPS_PAYMENTS, P.OPS_HANDOVER, P.OPS_AFTERSALES,
     // Sales (contacts, opps, deals)
-    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT,
+    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
     P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT,
     P.DEALS_VIEW_OWN,
     // Marketing
     P.CAMPAIGNS_VIEW,
     // Lead Distribution
     P.POOL_VIEW, P.POOL_MANAGE, P.POOL_ASSIGN,
-    // Users + Ads Integration
-    P.USERS_MANAGE, P.SETTINGS_VIEW,
+    // Ads Integration
+    P.SETTINGS_VIEW,
     // Common
     P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE,
     P.PROJECTS_VIEW, P.UNITS_VIEW,
   ],
 };
+
+// Permissions that CANNOT be edited from Settings UI (admin-only)
+// These are always enforced from roles.js regardless of custom overrides
+export const LOCKED_PERMISSIONS = new Set([
+  P.USERS_MANAGE,
+  P.ROLES_MANAGE,
+  P.SETTINGS_MANAGE,
+  P.AUDIT_VIEW,
+]);
+
+// Admin always has all permissions, cannot be restricted
+export const LOCKED_ROLES = new Set(['admin']);
+
+/**
+ * Merge default role permissions with custom overrides from Settings.
+ * Respects LOCKED_PERMISSIONS (can't be added/removed via overrides).
+ * @param {string} role - User role
+ * @param {Object} overrides - { [role]: { added: [], removed: [] } } from system_config
+ * @returns {Array} - Effective permissions for the role
+ */
+export function mergePermissions(role, overrides = {}) {
+  if (LOCKED_ROLES.has(role)) {
+    return ROLE_PERMISSIONS[role] || Object.values(P);
+  }
+  const defaults = ROLE_PERMISSIONS[role] || [];
+  const override = overrides[role];
+  if (!override) return defaults;
+  const result = new Set(defaults);
+  // Add custom-added permissions (except LOCKED ones)
+  (override.added || []).forEach(p => {
+    if (!LOCKED_PERMISSIONS.has(p)) result.add(p);
+  });
+  // Remove custom-removed permissions (except LOCKED ones)
+  (override.removed || []).forEach(p => {
+    if (!LOCKED_PERMISSIONS.has(p)) result.delete(p);
+  });
+  return Array.from(result);
+}

@@ -8,8 +8,8 @@ const sizes = {
   lg: 'px-4 py-2.5 text-sm',
 };
 
-const Input = forwardRef(({ size = 'md', className = '', ...props }, ref) => (
-  <input ref={ref} className={`${base} ${sizes[size]} ${className}`} {...props} />
+const Input = forwardRef(({ size = 'md', className = '', dir = 'auto', ...props }, ref) => (
+  <input ref={ref} dir={dir} className={`${base} ${sizes[size]} ${className}`} {...props} />
 ));
 Input.displayName = 'Input';
 
@@ -20,8 +20,8 @@ export const Select = forwardRef(({ size = 'md', className = '', children, ...pr
 ));
 Select.displayName = 'Select';
 
-export const Textarea = forwardRef(({ size = 'md', className = '', ...props }, ref) => (
-  <textarea ref={ref} className={`${base} ${sizes[size]} resize-y min-h-[70px] ${className}`} {...props} />
+export const Textarea = forwardRef(({ size = 'md', className = '', dir = 'auto', ...props }, ref) => (
+  <textarea ref={ref} dir={dir} className={`${base} ${sizes[size]} resize-y min-h-[70px] ${className}`} {...props} />
 ));
 Textarea.displayName = 'Textarea';
 

@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/AuthContext';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchAttendance } from '../../services/attendanceService';
 import { loadPayrollConfig, savePayrollConfig, calcEmployeeAttendance, calcProRatedSalary, DEFAULT_PAYROLL_CONFIG } from '../../config/payrollConfig';
@@ -20,7 +21,13 @@ export default function PayrollPage() {
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const { auditFields, applyAuditFilters } = useAuditFilter('payroll');
-  const { showToast } = useToast();
+  const toast = useToast();
+  const { profile } = useAuth();
+
+  // Admin/Finance only
+  if (profile && !['admin', 'operations', 'finance', 'hr'].includes(profile.role)) {
+    return <div className="flex items-center justify-center min-h-screen"><p className="text-lg font-bold text-content dark:text-content-dark">{isRTL ? 'غير مصرح' : 'Unauthorized'}</p></div>;
+  }
   const [month, setMonth] = useState(() => new Date().getMonth() + 1);
   const [year] = useState(() => new Date().getFullYear());
   const [employees, setEmployees] = useState([]);
@@ -328,19 +335,19 @@ export default function PayrollPage() {
 
     try {
       await savePayrollRun(runData, items);
-      showToast(
+      toast.success(
         lang === 'ar'
           ? `تم تشغيل مسير رواتب ${MONTHS_AR[month - 1]} بنجاح - ${activeEmployees.length} موظف`
           : `Payroll for ${MONTHS_AR[month - 1]} processed successfully - ${activeEmployees.length} employees`,
         'success'
       );
     } catch {
-      showToast(
+      toast.success(
         lang === 'ar' ? 'فشل حفظ المسير' : 'Failed to save payroll run',
         'error'
       );
     }
-  }, [payrollData, month, year, lang, isRTL, showToast]);
+  }, [payrollData, month, year, lang, isRTL]);
 
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
@@ -464,7 +471,7 @@ export default function PayrollPage() {
       {showSettings && (
         <PayrollSettingsModal
           config={config}
-          onSave={(newConfig) => { setConfig(newConfig); savePayrollConfig(newConfig); setShowSettings(false); showToast(lang === 'ar' ? 'تم حفظ الإعدادات' : 'Settings saved', 'success'); }}
+          onSave={(newConfig) => { setConfig(newConfig); savePayrollConfig(newConfig); setShowSettings(false); toast.success(lang === 'ar' ? 'تم حفظ الإعدادات' : 'Settings saved', 'success'); }}
           onClose={() => setShowSettings(false)}
           lang={lang}
           isRTL={isRTL}

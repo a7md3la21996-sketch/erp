@@ -50,13 +50,13 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
   // Contact status state (optional section)
   const CONTACT_STATUSES = [
     { id: 'new', ar: 'جديد', en: 'New', color: '#4A7AAB' },
-    { id: 'active', ar: 'نشط', en: 'Active', color: '#10B981' },
-    { id: 'inactive', ar: 'غير نشط', en: 'Inactive', color: '#F59E0B' },
+    { id: 'contacted', ar: 'تم التواصل', en: 'Contacted', color: '#F59E0B' },
+    { id: 'following', ar: 'متابعة', en: 'Following', color: '#10B981' },
     { id: 'has_opportunity', ar: 'لديه فرصة', en: 'Has Opportunity', color: '#059669' },
     { id: 'disqualified', ar: 'غير مؤهل', en: 'Disqualified', color: '#EF4444' },
   ];
   const [changeStatus, setChangeStatus] = useState(false);
-  const [newStatus, setNewStatus] = useState(contact?.contact_status || '');
+  const [newStatus, setNewStatus] = useState('');
   const [dqReason, setDqReason] = useState('');
   const DQ_REASONS = [
     { value: 'existing_client', label: isRTL ? 'عميل حالي (شاري)' : 'Existing Client' },

@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useAuth } from '../../contexts/AuthContext';
 import GlobalFilterBar from './GlobalFilterBar';
 import ProductTour from '../ui/ProductTour';
 import BottomNav from './BottomNav';
@@ -20,6 +21,7 @@ function useIsMobile(breakpoint = 768) {
 }
 
 export default function MainLayout() {
+  const { profile } = useAuth();
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     return saved === 'true';
@@ -45,15 +47,28 @@ export default function MainLayout() {
   useEffect(() => {
     let channel;
     // 1. Setup Firebase FCM
+    const userId = profile?.id;
     import('../../lib/firebase').then(({ getFCMToken, onForegroundMessage }) => {
       getFCMToken().then(token => {
-        if (token) {
-          // Save token to Supabase for targeted push later
+        if (token && userId) {
+          // Save token to Supabase — support multiple devices (fcm_tokens array)
           import('../../lib/supabase').then(({ default: supabase }) => {
-            const userId = JSON.parse(localStorage.getItem('platform_system_config') || '{}')?.userId;
-            if (userId) {
-              supabase.from('users').update({ fcm_token: token }).eq('id', userId).then(() => {}).catch(() => {});
-            }
+            supabase.from('users').select('fcm_tokens').eq('id', userId).maybeSingle().then(({ data }) => {
+              const existing = Array.isArray(data?.fcm_tokens) ? data.fcm_tokens : [];
+              if (!existing.includes(token)) {
+                const updated = [...existing, token].slice(-5); // keep last 5 devices
+                supabase.from('users').update({ fcm_token: token, fcm_tokens: updated }).eq('id', userId).then(() => {
+                  console.log('[FCM] Token saved for user', userId, '(' + updated.length + ' devices)');
+                }).catch(() => {});
+              } else {
+                console.log('[FCM] Token already registered');
+              }
+            }).catch(() => {
+              // fcm_tokens column might not exist yet, fallback to single token
+              supabase.from('users').update({ fcm_token: token }).eq('id', userId).then(() => {
+                console.log('[FCM] Token saved (single) for user', userId);
+              }).catch(() => {});
+            });
           }).catch(() => {});
         }
       }).catch(() => {});
@@ -74,9 +89,18 @@ export default function MainLayout() {
       channel = supabase
         .channel('push-notifications')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, async (payload) => {
-          console.log('[Push] Realtime notification received:', payload.new?.title_ar);
           const n = payload.new;
           if (!n) return;
+          // Check if this notification is for the current user
+          const myId = profile?.id;
+          const forUser = n.for_user_id;
+          const forName = n.for_user_name;
+          const myNameEn = profile?.full_name_en;
+          const myNameAr = profile?.full_name_ar;
+          const isForMe = !forUser || forUser === 'all' || forUser === myId
+            || forUser === myNameEn || forUser === myNameAr
+            || forName === myNameEn || forName === myNameAr;
+          if (!isForMe) return;
           // Update bell icon immediately
           window.dispatchEvent(new CustomEvent('platform_notification_changed'));
           window.dispatchEvent(new CustomEvent('platform_notification', { detail: n }));
@@ -95,7 +119,7 @@ export default function MainLayout() {
         });
     }).catch((err) => console.error('[Push] Realtime setup failed:', err));
     return () => { if (channel) import('../../lib/supabase').then(({ default: supabase }) => supabase.removeChannel(channel)).catch(() => {}); };
-  }, []);
+  }, [profile?.id]);
 
   // Global error banner for service failures
   const [serviceError, setServiceError] = useState(null);

@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Merge, Briefcase, CheckCircle2, Send } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
-import { updateContact } from '../../../services/contactsService';
+import { updateContact, deleteContact } from '../../../services/contactsService';
 import { createOpportunity } from '../../../services/opportunitiesService';
 import { logAction } from '../../../services/auditService';
 import { createNotification } from '../../../services/notificationsService';
@@ -28,6 +28,16 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
     if (c1[k] !== null && c1[k] !== undefined && c1[k] !== '') merged[k] = c1[k];
   });
   if (!merged.phone2 && c2.phone !== c1.phone) merged.phone2 = c2.phone;
+  // Merge extra_phones from both contacts
+  const allExtra = [...(c1.extra_phones || []), ...(c2.extra_phones || [])].filter(Boolean);
+  const allPhones = [merged.phone, merged.phone2, ...allExtra].filter(Boolean);
+  merged.extra_phones = [...new Set(allExtra)].filter(p => p && p !== merged.phone && p !== merged.phone2);
+  // Merge agent-level data
+  merged.agent_statuses = { ...(c2.agent_statuses || {}), ...(c1.agent_statuses || {}) };
+  merged.agent_temperatures = { ...(c2.agent_temperatures || {}), ...(c1.agent_temperatures || {}) };
+  merged.agent_scores = { ...(c2.agent_scores || {}), ...(c1.agent_scores || {}) };
+  // Merge assigned_to_names
+  merged.assigned_to_names = [...new Set([...(c1.assigned_to_names || []), ...(c2.assigned_to_names || [])])].filter(Boolean);
   if ((c2.lead_score || 0) > (c1.lead_score || 0)) merged.lead_score = c2.lead_score;
   const fields = ['full_name','phone','phone2','email','contact_type','source','department','temperature','company','preferred_location'];
 
@@ -64,10 +74,15 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
           <button onClick={() => { setMergePreview(null); setMergeTargets([]); setMergeMode(false); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
             {isRTL ? 'إلغاء' : 'Cancel'}
           </button>
-          <Button size="sm" onClick={() => {
+          <Button size="sm" onClick={async () => {
             const updatedContacts = (contacts || []).map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
             setContacts(updatedContacts);
-            logAction({ action: 'merge', entity: 'contact', entityId: c1.id, entityName: c1.full_name, description: `Merged "${c2.full_name}" (ID:${c2.id}) into "${c1.full_name}" (ID:${c1.id})`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(err => { if (import.meta.env.DEV) console.warn('log merge action:', err); });
+            // Persist to Supabase: update merged contact + delete duplicate
+            try {
+              await updateContact(c1.id, merged);
+              await deleteContact(c2.id);
+            } catch (err) { console.error('Merge persist failed:', err); }
+            logAction({ action: 'merge', entity: 'contact', entityId: c1.id, entityName: c1.full_name, description: `Merged "${c2.full_name}" (ID:${c2.id}) into "${c1.full_name}" (ID:${c1.id})`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
             toast.success(isRTL ? 'تم دمج العميلين بنجاح' : 'Leads merged successfully');
             setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
           }}>
@@ -151,21 +166,46 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
           </button>
           <button disabled={!dqReason} onClick={async () => {
             const reasonLabel = DQ_REASONS.find(r => r.value === dqReason)?.label || dqReason;
-            const updates = { contact_status: 'disqualified', disqualify_reason: dqReason, disqualify_note: dqNote || '' };
+            const myName = profile?.full_name_en || profile?.full_name_ar;
+            const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
+
+            // Per-agent DQ: set agent_statuses[myName] = 'disqualified' and remove from assigned_to_names
+            // Admin/Ops: global DQ (sets contact_status for everyone)
+            const buildDqUpdates = (contact) => {
+              if (isAdminOrOps) {
+                return { contact_status: 'disqualified', disqualify_reason: dqReason, disqualify_note: dqNote || '' };
+              }
+              const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'disqualified' };
+              const newNames = (contact.assigned_to_names || []).filter(n => n !== myName);
+              return {
+                agent_statuses: newStatuses,
+                assigned_to_names: newNames,
+                disqualify_reason: dqReason,
+                disqualify_note: dqNote || '',
+              };
+            };
+
             if (disqualifyModal === 'bulk') {
               const ids = [...selectedIds];
               const names = (contacts || []).filter(c => ids.includes(c.id)).map(c => c.full_name).join(', ');
-              const updated = (contacts || []).map(c => ids.includes(c.id) ? { ...c, ...updates } : c);
+              const updated = (contacts || []).map(c => {
+                if (!ids.includes(c.id)) return c;
+                return { ...c, ...buildDqUpdates(c) };
+              });
               setContacts(updated);
-              await Promise.all(ids.map(id => updateContact(id, updates).catch(err => { if (import.meta.env.DEV) console.warn('bulk disqualify update:', err); })));
+              await Promise.all(ids.map(id => {
+                const c = contacts.find(ct => ct.id === id);
+                return updateContact(id, buildDqUpdates(c || {})).catch(err => { if (import.meta.env.DEV) console.warn('bulk disqualify update:', err); });
+              }));
               logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(err => { if (import.meta.env.DEV) console.warn('log bulk disqualify:', err); });
               toast.success(isRTL ? `تم استبعاد ${ids.length} عميل` : `${ids.length} leads disqualified`);
               setSelectedIds([]);
             } else {
               const c = disqualifyModal;
-              const updated = (contacts || []).map(ct => ct.id === c.id ? { ...ct, ...updates } : ct);
+              const dqUpdates = buildDqUpdates(c);
+              const updated = (contacts || []).map(ct => ct.id === c.id ? { ...ct, ...dqUpdates } : ct);
               setContacts(updated);
-              await updateContact(c.id, updates).catch(err => { if (import.meta.env.DEV) console.warn('disqualify update:', err); });
+              await updateContact(c.id, dqUpdates).catch(err => { if (import.meta.env.DEV) console.warn('disqualify update:', err); });
               logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(err => { if (import.meta.env.DEV) console.warn('log disqualify:', err); });
               toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
             }
@@ -184,10 +224,22 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
 export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, contacts, selectedIds, handleBulkReassign, isRTL }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
+  const [allAgents, setAllAgents] = useState([]);
+  const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkTemp, setBulkTemp] = useState('');
+
+  useEffect(() => {
+    if (!bulkReassignModal) return;
+    import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
+      fetchSalesAgents().then(data => {
+        setAllAgents((data || []).map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
+      }).catch(() => {});
+    });
+  }, [bulkReassignModal]);
 
   if (!bulkReassignModal) return null;
 
-  const agents = [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].sort();
+  const agents = allAgents.length > 0 ? allAgents : [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].sort();
   const filtered = search ? agents.filter(a => a.toLowerCase().includes(search.toLowerCase())) : agents;
 
   return (
@@ -245,13 +297,46 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
           ))}
         </div>
 
+        {/* Bulk Status & Temperature */}
+        {selected && (
+          <div className="px-5 py-3 border-t border-edge/40 dark:border-edge-dark/40">
+            <p className="m-0 mb-2 text-[11px] font-bold text-content-muted dark:text-content-muted-dark">
+              {isRTL ? `تطبيق على ${selectedIds.length} عميل:` : `Apply to ${selectedIds.length} leads:`}
+            </p>
+            <div className="flex gap-2 mb-2">
+              <div className="flex-1">
+                <label className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الحالة' : 'Status'}</label>
+                <select value={bulkStatus} onChange={e => setBulkStatus(e.target.value)}
+                  className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs text-content dark:text-content-dark">
+                  <option value="">{isRTL ? 'بدون تغيير' : 'No change'}</option>
+                  <option value="new">{isRTL ? 'جديد' : 'New'}</option>
+                  <option value="active">{isRTL ? 'نشط' : 'Active'}</option>
+                  <option value="inactive">{isRTL ? 'غير نشط' : 'Inactive'}</option>
+                  <option value="has_opportunity">{isRTL ? 'لديه فرصة' : 'Has Opp'}</option>
+                </select>
+              </div>
+              <div className="flex-1">
+                <label className="text-[10px] text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الحرارة' : 'Temperature'}</label>
+                <select value={bulkTemp} onChange={e => setBulkTemp(e.target.value)}
+                  className="w-full px-2 py-1.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-xs text-content dark:text-content-dark">
+                  <option value="">{isRTL ? 'بدون تغيير' : 'No change'}</option>
+                  <option value="hot">🔥 {isRTL ? 'حار' : 'Hot'}</option>
+                  <option value="warm">{isRTL ? 'دافئ' : 'Warm'}</option>
+                  <option value="cool">{isRTL ? 'فاتر' : 'Cool'}</option>
+                  <option value="cold">{isRTL ? 'بارد' : 'Cold'}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="px-5 py-4 border-t border-edge dark:border-edge-dark flex gap-3">
           <button onClick={() => { setBulkReassignModal(false); setSearch(''); setSelected(null); }}
             className="flex-1 px-4 py-2.5 rounded-xl bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark text-xs font-semibold cursor-pointer">
             {isRTL ? 'إلغاء' : 'Cancel'}
           </button>
-          <button onClick={() => { if (selected) { handleBulkReassign(selected); setSearch(''); setSelected(null); } }}
+          <button onClick={() => { if (selected) { handleBulkReassign(selected, bulkStatus, bulkTemp); setSearch(''); setSelected(null); setBulkStatus(''); setBulkTemp(''); } }}
             disabled={!selected}
             className={`flex-1 px-4 py-2.5 rounded-xl border-none text-xs font-bold cursor-pointer transition-colors ${
               selected ? 'bg-brand-500 text-white hover:bg-brand-600' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark cursor-not-allowed'
@@ -269,6 +354,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const toast = useToast();
+  const savingRef = useRef(false); // sync guard against double-submit
 
   if (!bulkOppModal) return null;
 
@@ -277,7 +363,9 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
   const stages = getDeptStages('sales');
 
   const handleCreate = async () => {
+    if (savingRef.current) return; // prevent double-submit
     if (!bulkOppForm.assigned_to_name) { toast.error(isRTL ? 'اختر السيلز المسؤول' : 'Select sales agent'); return; }
+    savingRef.current = true;
     setBulkOppSaving(true);
     let created = 0;
     for (const c of selContacts) {
@@ -304,6 +392,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
     }
     toast.success(isRTL ? `تم إنشاء ${created} فرصة` : `${created} opportunities created`);
     setBulkOppSaving(false);
+    savingRef.current = false;
     setBulkOppModal(false);
     setSelectedIds([]);
     // Refresh contacts

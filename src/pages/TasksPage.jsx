@@ -694,6 +694,8 @@ function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) 
   const [addFollowUp, setAddFollowUp] = useState(false);
   const [followUpDate, setFollowUpDate] = useState('');
   const [followUpNotes, setFollowUpNotes] = useState('');
+  const [changeContactStatus, setChangeContactStatus] = useState(false);
+  const [newContactStatus, setNewContactStatus] = useState('');
   const [saving, setSaving] = useState(false);
 
   const ACT_TYPES = [
@@ -757,6 +759,7 @@ function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) 
           assigned_to_name_ar: profile?.full_name_ar || '',
           assigned_to_name_en: profile?.full_name_en || '',
         } : null,
+        contactStatus: changeContactStatus && newContactStatus ? newContactStatus : null,
       });
     } finally { setSaving(false); }
   };
@@ -846,6 +849,36 @@ function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) 
               </div>
             )}
           </div>
+
+          {/* Contact Status Change */}
+          <div className="border-t border-edge dark:border-edge-dark pt-3 mt-3">
+            <button onClick={() => setChangeContactStatus(!changeContactStatus)}
+              className={`flex items-center gap-2 text-xs font-semibold cursor-pointer bg-transparent border-none p-0 transition-colors ${
+                changeContactStatus ? 'text-purple-500' : 'text-content-muted dark:text-content-muted-dark'
+              }`}>
+              <User size={13} />
+              {isRTL ? (changeContactStatus ? 'إلغاء تغيير الحالة' : '+ تغيير حالة العميل') : (changeContactStatus ? 'Cancel status change' : '+ Change lead status')}
+            </button>
+            {changeContactStatus && (
+              <div className="mt-2.5 flex gap-1.5 flex-wrap">
+                {[
+                  { value: 'new', ar: 'جديد', en: 'New', color: '#4A7AAB' },
+                  { value: 'following', ar: 'متابعة', en: 'Following', color: '#10B981' },
+                  { value: 'contacted', ar: 'تم التواصل', en: 'Contacted', color: '#F59E0B' },
+                  { value: 'has_opportunity', ar: 'لديه فرصة', en: 'Has Opp', color: '#059669' },
+                  { value: 'disqualified', ar: 'غير مؤهل', en: 'Disqualified', color: '#EF4444' },
+                ].map(s => (
+                  <button key={s.value} onClick={() => setNewContactStatus(newContactStatus === s.value ? '' : s.value)}
+                    className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold cursor-pointer border transition-colors ${
+                      newContactStatus === s.value ? 'text-white border-transparent' : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
+                    }`}
+                    style={newContactStatus === s.value ? { background: s.color } : {}}>
+                    {isRTL ? s.ar : s.en}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -875,6 +908,7 @@ export default function TasksPage() {
   const [tasks, setTasks]           = useState([]);
   const [loading, setLoading]       = useState(true);
   const [completeTask, setCompleteTask] = useState(null);
+  const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState('pending');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
@@ -889,12 +923,22 @@ export default function TasksPage() {
   const { auditFields, applyAuditFilters } = useAuditFilter('task');
   const globalFilter = useGlobalFilter();
 
-  const assignedToOptions = useMemo(() =>
+  const [allAgentsList, setAllAgentsList] = useState([]);
+  useEffect(() => {
+    import('../services/opportunitiesService').then(({ fetchSalesAgents }) => {
+      fetchSalesAgents().then(data => {
+        setAllAgentsList((data || []).map(a => ({ value: a.full_name_en || a.full_name_ar, label: a.full_name_ar || a.full_name_en, labelEn: a.full_name_en || a.full_name_ar })).filter(o => o.value));
+      }).catch(() => {});
+    });
+  }, []);
+
+  const assignedToOptions = allAgentsList.length > 0 ? allAgentsList :
     [...new Set(tasks.map(t => t.assigned_to_name_en).filter(Boolean))].map(name => {
       const match = (tasks || []).find(t => t.assigned_to_name_en === name);
       return { value: name, label: match?.assigned_to_name_ar || name, labelEn: name };
-    }),
-  [tasks]);
+    });
+
+  const [agentFilter, setAgentFilter] = useState('all');
 
   const SMART_FIELDS = useMemo(() => [
     { id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select', options: Object.entries(TASK_STATUSES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
@@ -938,7 +982,7 @@ export default function TasksPage() {
     setLoading(true);
     try {
       const currentPage = pg || page || 1;
-      const agentValue = serverFilters.agentName || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined);
+      const agentValue = serverFilters.agentName || (agentFilter !== 'all' ? agentFilter : undefined) || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined);
       const deptValue = serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined);
       const result = await fetchTasks({
         page: currentPage, pageSize, sortBy,
@@ -958,7 +1002,7 @@ export default function TasksPage() {
       console.error('Tasks load error:', err);
       setTasks([]);
     } finally { setLoading(false); }
-  }, [page, pageSize, sortBy, profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.agentName, globalFilter?.department, statusFilter, priorityFilter, dateFilter]);
+  }, [page, pageSize, sortBy, profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.agentName, globalFilter?.department, statusFilter, priorityFilter, dateFilter, agentFilter]);
 
   useEffect(() => { if (profile) loadTasks(); }, [profile, loadTasks]);
 
@@ -1256,6 +1300,13 @@ export default function TasksPage() {
                 </button>
               );
             })}
+            <div className="w-px h-6 bg-edge dark:bg-edge-dark self-center mx-1" />
+            <select value={agentFilter} onChange={e => { setAgentFilter(e.target.value); setPage(1); }}
+              className="px-3 py-1.5 rounded-full text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer"
+              style={agentFilter !== 'all' ? { borderColor: '#4A7AAB', color: '#4A7AAB', background: '#4A7AAB15' } : {}}>
+              <option value="all">{lang==='ar'?'كل الموظفين':'All Agents'}</option>
+              {assignedToOptions.map(a => <option key={a.value} value={a.value}>{lang==='ar' ? a.label : a.labelEn}</option>)}
+            </select>
           </div>
 
           {/* Filters */}
@@ -1300,6 +1351,12 @@ export default function TasksPage() {
                   ${isDone ? 'opacity-65' : 'opacity-100'}
                   transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-brand-500/[0.06]
                 `}>
+                  {/* Checkbox */}
+                  <input type="checkbox" checked={selectedTaskIds.has(task.id)} onChange={(e) => {
+                    e.stopPropagation();
+                    setSelectedTaskIds(prev => { const n = new Set(prev); if (n.has(task.id)) n.delete(task.id); else n.add(task.id); return n; });
+                  }} className="w-4 h-4 cursor-pointer shrink-0 mt-0.5" />
+
                   {/* Status indicator */}
                   <div className={`w-5 h-5 rounded-[5px] border-2 flex items-center justify-center shrink-0 mt-0.5
                     ${isDone ? 'border-brand-500 bg-brand-500' : 'border-edge dark:border-edge-dark bg-transparent'}
@@ -1402,6 +1459,31 @@ export default function TasksPage() {
         </>
       )}
 
+      {/* Bulk Done Bar */}
+      {selectedTaskIds.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-[300] bg-gradient-to-r from-brand-900 to-brand-500 px-5 py-3 flex items-center justify-between shadow-lg">
+          <span className="text-sm font-bold text-white">{selectedTaskIds.size} {isRTL ? 'مهمة محددة' : 'tasks selected'}</span>
+          <div className="flex gap-2">
+            <button onClick={() => setSelectedTaskIds(new Set())}
+              className="px-3 py-1.5 rounded-lg border border-white/30 bg-transparent text-white text-xs font-semibold cursor-pointer">
+              {isRTL ? 'إلغاء' : 'Clear'}
+            </button>
+            <button onClick={async () => {
+              const ids = [...selectedTaskIds];
+              try {
+                await Promise.all(ids.map(id => updateTask(id, { status: 'done' })));
+                setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: 'done' } : t));
+                toast.success(isRTL ? `تم إنهاء ${ids.length} مهمة` : `${ids.length} tasks completed`);
+                setSelectedTaskIds(new Set());
+              } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
+            }}
+              className="px-4 py-1.5 rounded-lg border-none bg-white text-brand-500 text-xs font-bold cursor-pointer flex items-center gap-1.5">
+              <Check size={13} /> {isRTL ? 'إنهاء الكل' : 'Done All'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Complete Task Modal */}
       {completeTask && (
         <CompleteTaskModal
@@ -1410,7 +1492,7 @@ export default function TasksPage() {
           isRTL={isRTL}
           profile={profile}
           onClose={() => setCompleteTask(null)}
-          onComplete={async ({ activity, followUp }) => {
+          onComplete={async ({ activity, followUp, contactStatus }) => {
             try {
               // 1. Create activity
               await createActivity(activity);
@@ -1424,6 +1506,11 @@ export default function TasksPage() {
                 toast.success(isRTL ? 'تم إنهاء المهمة وإنشاء متابعة جديدة' : 'Task completed & follow-up created');
               } else {
                 toast.success(isRTL ? 'تم إنهاء المهمة' : 'Task completed');
+              }
+              // 4. Update contact status if requested
+              if (contactStatus && completeTask.contact_id) {
+                const { updateContact } = await import('../services/contactsService');
+                await updateContact(completeTask.contact_id, { contact_status: contactStatus });
               }
               logAction({ action: 'complete_task', entity: 'task', entityId: completeTask.id, entityName: completeTask.title, description: `Completed task: ${completeTask.title}`, userName: profile?.full_name_ar || '' });
               setCompleteTask(null);

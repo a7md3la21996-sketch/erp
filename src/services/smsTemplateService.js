@@ -199,6 +199,9 @@ export async function getSMSLog(filters = {}) {
 }
 
 export async function bulkSend(templateId, contacts = [], lang = 'en') {
+  // Fetch template ONCE before loop
+  const template = await getTemplateById(templateId);
+  if (!template) return [];
   const results = [];
   for (const contact of contacts) {
     const data = {
@@ -210,10 +213,10 @@ export async function bulkSend(templateId, contacts = [], lang = 'en') {
       date: new Date().toLocaleDateString('en-GB'),
       amount: contact.amount || '',
     };
-    const message = await renderTemplate(templateId, data, lang);
-    const template = await getTemplateById(templateId);
+    const body = lang === 'ar' ? (template.body_ar || template.body) : template.body;
+    const message = renderBody(body, data);
     if (contact.phone && message) {
-      const entry = await sendSMS(contact.phone, message, templateId, template?.name || '');
+      const entry = await sendSMS(contact.phone, message, templateId, template.name || '');
       results.push({ ...entry, contact_name: contact.full_name || contact.name });
     }
   }

@@ -1,30 +1,18 @@
-import { syncToSupabase } from '../../utils/supabaseSync';
-import { useState, useEffect, useMemo } from 'react';
+import supabase from '../../lib/supabase';
+import { reportError } from '../../utils/errorReporter';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { Briefcase, Users, Clock, CheckCircle2, Plus, Eye } from 'lucide-react';
 import { KpiCard, Button, Th, Td, Tr, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 
-const STORAGE_KEY = 'platform_hr_recruitment';
+const TABLE = 'recruitment';
 const DEFAULT_JOBS = [
-  { id:1, title_ar:'مدير مبيعات', title_en:'Sales Manager', dept:'المبيعات', type:'full-time', status:'open', applicants:12, posted:'2026-02-15' },
-  { id:2, title_ar:'محاسب', title_en:'Accountant', dept:'المالية', type:'full-time', status:'open', applicants:8, posted:'2026-02-20' },
-  { id:3, title_ar:'مستشار عقاري', title_en:'Real Estate Consultant', dept:'العقارات', type:'full-time', status:'interviewing', applicants:5, posted:'2026-03-01' },
-  { id:4, title_ar:'مدير تسويق', title_en:'Marketing Manager', dept:'التسويق', type:'full-time', status:'closed', applicants:20, posted:'2026-01-10' },
+  { title_ar:'مدير مبيعات', title_en:'Sales Manager', dept:'المبيعات', type:'full-time', status:'open', applicants:12, posted:'2026-02-15' },
+  { title_ar:'محاسب', title_en:'Accountant', dept:'المالية', type:'full-time', status:'open', applicants:8, posted:'2026-02-20' },
+  { title_ar:'مستشار عقاري', title_en:'Real Estate Consultant', dept:'العقارات', type:'full-time', status:'interviewing', applicants:5, posted:'2026-03-01' },
+  { title_ar:'مدير تسويق', title_en:'Marketing Manager', dept:'التسويق', type:'full-time', status:'closed', applicants:20, posted:'2026-01-10' },
 ];
-
-function loadData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_JOBS)); syncToSupabase('platform_hr_recruitment', DEFAULT_JOBS);
-  return [...DEFAULT_JOBS];
-}
-
-function saveData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); syncToSupabase('platform_hr_recruitment', data); } catch {}
-}
 
 const statusColor = s => s==='open'?'#4A7AAB':s==='interviewing'?'#6B8DB5':'#8BA8C8';
 const statusLabel = (s,lang) => ({ open:lang==='ar'?'مفتوح':'Open', interviewing:lang==='ar'?'مقابلات':'Interviewing', closed:lang==='ar'?'مغلق':'Closed' }[s]||s);
@@ -44,10 +32,31 @@ function ViewBtn() {
 export default function RecruitmentPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
-  const [jobs, setJobs] = useState(loadData);
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // Persist to localStorage whenever jobs change
-  useEffect(() => { saveData(jobs); }, [jobs]);
+  // Fetch from Supabase on mount; seed defaults if empty
+  const fetchJobs = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from(TABLE).select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setJobs(data);
+      } else {
+        // Seed default data
+        const { data: seeded, error: seedErr } = await supabase.from(TABLE).insert(DEFAULT_JOBS).select();
+        if (seedErr) throw seedErr;
+        setJobs(seeded || []);
+      }
+    } catch (err) {
+      reportError(`supabase.${TABLE}`, 'fetch', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchJobs(); }, [fetchJobs]);
+
   const [search, setSearch] = useState('');
   const [smartFilters, setSmartFilters] = useState([]);
   const [page, setPage] = useState(1);
@@ -95,7 +104,7 @@ export default function RecruitmentPage() {
 
   const open = jobs.filter(j=>j.status==='open').length;
   const interviewing = jobs.filter(j=>j.status==='interviewing').length;
-  const totalApplicants = jobs.reduce((s,j)=>s+j.applicants,0);
+  const totalApplicants = jobs.reduce((s,j)=>s+(j.applicants||0),0);
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">

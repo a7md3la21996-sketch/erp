@@ -1,7 +1,10 @@
 import { FEATURES } from '../config/features';
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
-import { getTeamMemberIds } from '../utils/teamHelper';
+import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
+
+const _teamCache = { key: null, names: null, ts: 0 };
+let _userNameCache = { id: null, name: null };
 
 async function applyRoleFilter(query, field, { role, userId, teamId } = {}) {
   if (role === 'sales_agent' && userId) {
@@ -67,20 +70,29 @@ function getLocalActivities() { return []; }
 // ── Contacts KPIs ────────────────────────────────────────────────────────────
 export async function fetchContactStats({ role, userId, teamId } = {}) {
   try {
-    let q1 = supabase.from('contacts').select('*', { count: 'exact', head: true });
-    // Role-based: filter by assigned_to_names
-    if (role === 'sales_agent' && userId) {
-      const { data: u } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
-      if (u?.full_name_en) q1 = q1.filter('assigned_to_names', 'cs', JSON.stringify([u.full_name_en]));
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const names = _teamCache.key === `${role}:${teamId}` && _teamCache.names ? _teamCache.names : [];
-      if (!names.length) await getTeamMemberIds(role, teamId);
-      const teamNames = _teamCache.names || [];
-      if (teamNames.length) {
-        const orConditions = teamNames.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
-        q1 = q1.or(orConditions);
+    // Helper to apply role filter to contacts query
+    const applyContactRoleFilter = async (q) => {
+      if (role === 'sales_agent' && userId) {
+        if (!_userNameCache.id || _userNameCache.id !== userId) {
+          const { data: u } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+          _userNameCache = { id: userId, name: u?.full_name_en || null };
+        }
+        if (_userNameCache.name) return q.filter('assigned_to_names', 'cs', JSON.stringify([_userNameCache.name]));
+      } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+        const ck = `${role}:${teamId}`;
+        if (_teamCache.key !== ck || !_teamCache.names || Date.now() - _teamCache.ts > 60000) {
+          _teamCache.names = await getTeamMemberNames(role, teamId);
+          _teamCache.key = ck; _teamCache.ts = Date.now();
+        }
+        if (_teamCache.names?.length) {
+          return q.or(_teamCache.names.map(n => `assigned_to_names.cs.["${n}"]`).join(','));
+        }
       }
-    }
+      return q;
+    };
+
+    let q1 = supabase.from('contacts').select('*', { count: 'exact', head: true });
+    q1 = await applyContactRoleFilter(q1);
     const { count: totalLeads, error: e1 } = await q1;
     if (e1) throw e1;
 
@@ -88,16 +100,7 @@ export async function fetchContactStats({ role, userId, teamId } = {}) {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
     let q2 = supabase.from('contacts').select('*', { count: 'exact', head: true }).gte('created_at', monthStart.toISOString());
-    if (role === 'sales_agent' && userId) {
-      const { data: u } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
-      if (u?.full_name_en) q2 = q2.filter('assigned_to_names', 'cs', JSON.stringify([u.full_name_en]));
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const teamNames = _teamCache.names || [];
-      if (teamNames.length) {
-        const orConditions = teamNames.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
-        q2 = q2.or(orConditions);
-      }
-    }
+    q2 = await applyContactRoleFilter(q2);
     const { count: newLeadsThisMonth, error: e2 } = await q2;
     if (e2) throw e2;
 

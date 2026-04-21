@@ -100,7 +100,7 @@ export function SystemConfigProvider({ children }) {
       lostReasons: config.lostReasons || [],
       activityTypes: config.activityTypes || [],
       activityResults: config.activityResults || {},
-      contactsSettings: config.contactsSettings || { mergeLimit: 2, maxPins: 5, inactiveDays: 5 },
+      contactsSettings: config.contactsSettings || { mergeLimit: 2, maxPins: 5, inactiveDays: 5, activityActiveDays: 3, activityModerateDays: 7 },
       drawerFields: config.drawerFields || {},
       stageWinRates: config.stageWinRates || {},
       getType,

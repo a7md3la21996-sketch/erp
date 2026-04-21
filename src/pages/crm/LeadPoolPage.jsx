@@ -10,6 +10,7 @@ import { P } from '../../config/roles';
 import { Button, Card, Badge, KpiCard, Modal, ModalFooter, Input, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { logAction } from '../../services/auditService';
+import supabase from '../../lib/supabase';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SOURCES = {
@@ -31,27 +32,50 @@ const LEVELS = {
 
 const SLA_MINUTES = { google: 15, tiktok: 20, meta: 30, organic: 60, cold_call: 1440 };
 
-// ── Sales Team (loaded from localStorage) ──────────────────────
-function loadAgents() {
+// ── Sales Team (fetched from Supabase) ──────────────────────
+async function fetchAgents() {
   try {
-    const contacts = [];
-    const names = new Set();
-    const agents = [];
-    (contacts || []).forEach(c => {
-      const name = c.assigned_to_name?.trim();
-      if (name && !names.has(name)) {
-        names.add(name);
-        agents.push({ id: name, name_ar: name, name_en: name, level: 'senior', today_count: 0 });
-      }
-    });
-    return agents;
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, full_name_en, full_name_ar, role')
+      .in('role', ['sales_agent', 'team_leader', 'sales_manager']);
+    if (error) throw error;
+    return (data || []).map(u => ({
+      id: u.full_name_en || u.full_name_ar || u.id,
+      name_ar: u.full_name_ar || u.full_name_en || '',
+      name_en: u.full_name_en || u.full_name_ar || '',
+      level: 'senior',
+      today_count: 0,
+    }));
   } catch { return []; }
 }
 
-// ── Pool Data (localStorage) ──────────────────────────────────────────────
-function loadLeads() {
+// ── Pool Data (fetched from Supabase — unassigned contacts) ──────────────
+async function fetchPoolLeads() {
   try {
-    return [];
+    const { data, error } = await supabase
+      .from('contacts')
+      .select('*')
+      .or('assigned_to_names.is.null,assigned_to_names.eq.[]')
+      .order('created_at', { ascending: false })
+      .range(0, 499);
+    if (error) throw error;
+    return (data || []).map(c => ({
+      id: c.id,
+      name: c.full_name || c.phone || '—',
+      phone: c.phone || '',
+      source: c.source || 'organic',
+      type: c.contact_type || 'fresh',
+      score: c.lead_score || 0,
+      created_at: c.created_at,
+      team: c.team_id || null,
+      assigned_to: null,
+      assigned_to_name: null,
+      campaign_name: c.campaign_name || '',
+      reserved_by: null,
+      reserved_until: null,
+      _raw: c,
+    }));
   } catch { return []; }
 }
 
@@ -117,10 +141,14 @@ export default function LeadPoolPage() {
   const canManage      = hasPermission(P.POOL_MANAGE);
   const canViewAll     = canManage; // managers/directors see all teams
 
-  const [leads, setLeads]             = useState(() => loadLeads());
-  const agentsList = useMemo(() => loadAgents(), []);
+  const [leads, setLeads]             = useState([]);
+  const [agentsList, setAgentsList]   = useState([]);
 
-  // Supabase is the source of truth — no localStorage persistence needed
+  // Fetch leads and agents from Supabase on mount
+  useEffect(() => {
+    fetchPoolLeads().then(data => setLeads(data));
+    fetchAgents().then(data => setAgentsList(data));
+  }, []);
 
   const assignedToOptions = useMemo(() =>
     [...new Set((leads || []).map(l => l.assigned_to).filter(Boolean))].map(name => ({ value: name, label: name, labelEn: name })),

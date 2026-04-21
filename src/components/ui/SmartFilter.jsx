@@ -216,6 +216,8 @@ export default function SmartFilter({
               onChange={e => onSearchChange(e.target.value)}
               placeholder={searchPlaceholder || (isRTL ? 'بحث...' : 'Search...')}
               className={`${inputCls} w-full pe-8`}
+              dir="auto"
+              data-search-input
             />
           </div>
         )}

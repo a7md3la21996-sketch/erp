@@ -4,6 +4,8 @@ import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { addToSyncQueue } from './syncService';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
+import { applyRoleFilter } from '../utils/roleFilter';
+import { notifyOppStageChange, notifyDealWon } from './notificationService';
 
 // ── Unit blocking helpers ──
 export async function checkUnitAvailability(unitId) {
@@ -80,7 +82,6 @@ export async function fetchOpportunities({ role, userId, teamId, page = 0, pageS
       .order('created_at', { ascending: false });
 
     if (role === 'sales_agent') {
-      // Filter by name since assigned_to UUID may not always be set
       const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
       if (agentUser?.full_name_en) {
         query = query.eq('assigned_to_name', agentUser.full_name_en);
@@ -200,6 +201,12 @@ export async function updateOpportunity(id, updates) {
     if (error) throw error;
     const [enriched] = await enrichOpps([data]);
     logUpdate('opportunity', id, oldData, enriched);
+    if (updates.stage && updates.stage !== oldData?.stage) {
+      notifyOppStageChange({ contactName: enriched.contacts?.full_name || enriched.contact_name, stage: updates.stage, agentName: enriched.assigned_to_name });
+    }
+    if (updates.stage === 'closed_won') {
+      notifyDealWon({ dealNumber: '', dealId: id, clientName: enriched.contacts?.full_name || '', value: enriched.budget || 0, agentId: enriched.assigned_to_name });
+    }
     return enriched;
   } catch (err) {
     reportError('opportunitiesService', 'updateOpportunity', err);
@@ -226,11 +233,33 @@ export async function fetchSalesAgents() {
     const { data, error } = await supabase
       .from('users')
       .select('id, full_name_ar, full_name_en, role, team_id')
-      .in('role', ['sales_agent', 'team_leader', 'sales_manager', 'sales_director'])
+      .in('role', ['sales_agent', 'team_leader', 'sales_manager', 'sales_director', 'operations', 'admin'])
       .order('full_name_ar');
     if (error) throw error;
     return data || [];
   } catch (err) { reportError('opportunitiesService', 'query', err);
+    return [];
+  }
+}
+
+// ─── Fetch agents filtered by role (TL sees only their team, Manager sees their teams) ───
+export async function fetchTeamAgents({ role, userId, teamId } = {}) {
+  try {
+    const all = await fetchSalesAgents();
+    if (role === 'admin' || role === 'operations') return all;
+    if (role === 'sales_agent') return all.filter(a => a.id === userId);
+    if (role === 'team_leader' && teamId) {
+      const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+      const managedTeams = new Set([teamId, ...((children || []).map(c => c.id))]);
+      return all.filter(a => managedTeams.has(a.team_id));
+    }
+    if (role === 'sales_manager' && teamId) {
+      const { data: children } = await supabase.from('departments').select('id').eq('parent_id', teamId);
+      const allowedTeams = new Set([teamId, ...((children || []).map(c => c.id))]);
+      return all.filter(a => allowedTeams.has(a.team_id));
+    }
+    return all;
+  } catch (err) { reportError('opportunitiesService', 'fetchTeamAgents', err);
     return [];
   }
 }
@@ -250,14 +279,21 @@ export async function fetchProjects() {
 }
 
 // ─── Search contacts for linking ───
-export async function searchContacts(query) {
+export async function searchContacts(query, { role, userId } = {}) {
   if (!query || query.length < 2) return [];
   try {
-    const { data, error } = await supabase
+    let q = supabase
       .from('contacts')
-      .select('id, full_name, phone, email, company, contact_type, department')
-      .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`)
-      .limit(10);
+      .select('id, full_name, phone, email, company, contact_type, department, assigned_to_names')
+      .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`);
+    // Sales agent: only see their assigned contacts
+    if (role === 'sales_agent' && userId) {
+      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
+      if (agentUser?.full_name_en) {
+        q = q.filter('assigned_to_names', 'cs', JSON.stringify([agentUser.full_name_en]));
+      }
+    }
+    const { data, error } = await q.limit(10);
     if (error) throw error;
     return data || [];
   } catch (err) {

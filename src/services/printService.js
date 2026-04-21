@@ -124,10 +124,10 @@ function buildFooter(companyInfo, lang) {
   return `
     <div class="footer">
       <div class="footer-left">
-        <div>${name}</div>
-        ${companyInfo.phone ? `<div>${companyInfo.phone}</div>` : ''}
-        ${companyInfo.email ? `<div>${companyInfo.email}</div>` : ''}
-        ${companyInfo.website ? `<div>${companyInfo.website}</div>` : ''}
+        <div>${escapeHtml(name || '')}</div>
+        ${companyInfo.phone ? `<div>${escapeHtml(companyInfo.phone)}</div>` : ''}
+        ${companyInfo.email ? `<div>${escapeHtml(companyInfo.email)}</div>` : ''}
+        ${companyInfo.website ? `<div>${escapeHtml(companyInfo.website)}</div>` : ''}
       </div>
       <div class="qr-placeholder">QR Code</div>
     </div>
@@ -341,7 +341,7 @@ export function generateReportHTML(title, data, columns, companyInfo, lang) {
           ${cols.map(c => {
             const key = typeof c === 'string' ? c : (c.key || '');
             const val = Array.isArray(row) ? row[cols.indexOf(c)] : (row[key] ?? '');
-            return `<td>${val}</td>`;
+            return `<td>${escapeHtml(String(val))}</td>`;
           }).join('')}
         </tr>`).join('')}
       </tbody>

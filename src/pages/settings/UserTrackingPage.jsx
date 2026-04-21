@@ -32,10 +32,14 @@ export default function UserTrackingPage() {
   const [pageSize, setPageSize] = useState(25);
 
   // Load data
-  const sessions = useMemo(() => getAllSessions(), []);
-  const sessionStats = useMemo(() => getSessionStats(), []);
+  const [sessions, setSessions] = useState([]);
+  const [sessionStats, setSessionStats] = useState({ total: 0, today: 0, uniqueUsers: 0 });
   const viewLogs = useMemo(() => getViewLogs({ limit: 500 }), []);
   const viewStats = useMemo(() => getViewStats(), []);
+  useEffect(() => {
+    getAllSessions().then(d => setSessions(d || [])).catch(() => setSessions([]));
+    getSessionStats().then(d => setSessionStats(d || {})).catch(() => {});
+  }, []);
 
   // Filter sessions
   const filteredSessions = useMemo(() => {
@@ -52,9 +56,9 @@ export default function UserTrackingPage() {
 
   // Filter views
   const filteredViews = useMemo(() => {
-    if (!search) return viewLogs;
+    if (!search) return viewLogs || [];
     const q = search.toLowerCase();
-    return viewLogs.filter(v =>
+    return (viewLogs || []).filter(v =>
       (v.user_name || '').toLowerCase().includes(q) ||
       (v.entity_name || '').toLowerCase().includes(q) ||
       (v.entity_type || '').toLowerCase().includes(q)

@@ -10,6 +10,7 @@ import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, Chevron
 import {
   fetchContacts, createContact, updateContact, deleteContact,
   blacklistContact, createActivity, recordAssignment,
+  deriveGlobalStatus, deriveGlobalTemp,
 } from '../services/contactsService';
 import supabase from '../lib/supabase';
 import { logAction } from '../services/auditService';
@@ -18,6 +19,7 @@ import { createNotification } from '../services/notificationsService';
 import { setFieldValues as setCFValues } from '../services/customFieldsService';
 import { fetchCampaigns, createCampaign } from '../services/marketingService';
 import { notifyLeadAssigned } from '../services/notificationsService';
+import { notifyImportDone, notifyLeadReassigned, notifyImportLeadsForAgent } from '../services/notificationService';
 import { evaluateTriggers } from '../services/triggerService';
 import { reportError } from '../utils/errorReporter';
 import ImportModal from './crm/ImportModal';
@@ -52,6 +54,9 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState([]);
   const [filterTemp, setFilterTemp] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterActivity, setFilterActivity] = useState('all'); // all, active_3d, moderate_7d, stale, never
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [showUnassigned, setShowUnassigned] = useState(false);
   const [campaignsList, setCampaignsList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -94,6 +99,15 @@ export default function ContactsPage() {
   const [bulkOppForm, setBulkOppForm] = useState({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' });
   const [bulkOppSaving, setBulkOppSaving] = useState(false);
   const [projectsList, setProjectsList] = useState([]);
+  const [allAgentNames, setAllAgentNames] = useState(null);
+  useEffect(() => {
+    if (!profile) return;
+    import('../services/opportunitiesService').then(({ fetchTeamAgents }) => {
+      fetchTeamAgents({ role: profile.role, userId: profile.id, teamId: profile.team_id }).then(data => {
+        setAllAgentNames((data || []).map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
+      }).catch(() => {});
+    });
+  }, [profile?.role, profile?.id, profile?.team_id]);
   const { auditFields, applyAuditFilters } = useAuditFilter('contact');
   const {
     filtered, paged, safePage, totalPages,
@@ -111,7 +125,8 @@ export default function ContactsPage() {
     initialFilterType: searchParams.get('type') || 'all',
     initialShowBlacklisted: searchParams.get('blacklist') === 'true',
     initialSortBy: searchParams.get('sort') || 'created',
-    initialPage: 1,
+    initialPage: Math.max(1, parseInt(searchParams.get('page'), 10) || 1),
+    allAgentNames,
   });
 
   // Track whether highlight has been handled
@@ -125,6 +140,7 @@ export default function ContactsPage() {
     if (filterType !== 'all') params.set('type', filterType);
     if (showBlacklisted) params.set('blacklist', 'true');
     if (sortBy !== 'created') params.set('sort', sortBy);
+    if (page > 1) params.set('page', String(page)); // preserve pagination in URL for reload/share
     setSearchParams(params, { replace: true });
   }, [search, filterType, showBlacklisted, sortBy, page, setSearchParams]);
 
@@ -132,14 +148,15 @@ export default function ContactsPage() {
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
   const MAX_PINS = contactsSettings?.maxPins || 5;
   const INACTIVE_DAYS = contactsSettings?.inactiveDays || 5;
+  const ACTIVITY_ACTIVE_DAYS = contactsSettings?.activityActiveDays || 3;
+  const ACTIVITY_MODERATE_DAYS = contactsSettings?.activityModerateDays || 7;
   const saveContactsLocal = () => {}; // OFFLINE_MODE disabled — Supabase is single source of truth
 
   const deletedContactsRef = useReactRef(null);
   const restoreContacts = useCallback((deletedItems) => {
     setContacts(prev => {
       const next = [...prev, ...deletedItems];
-      saveContactsLocal(next);
-      return next;
+            return next;
     });
     toast.success(isRTL ? 'تم التراجع عن الحذف' : 'Delete undone');
   }, [isRTL]);
@@ -206,26 +223,27 @@ export default function ContactsPage() {
       let newStatus = null;
 
       if (currentStatus !== 'disqualified') {
-        if (result === 'not_interested' && currentStatus !== 'has_opportunity' && currentStatus !== 'active') {
+        if (result === 'not_interested' && currentStatus !== 'has_opportunity' && currentStatus !== 'following') {
           // Open disqualify modal instead of auto-setting
           setDisqualifyModal(contact);
           setDqReason('not_interested');
           setDqNote('');
         } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
-          newStatus = 'inactive';
+          newStatus = 'contacted';
         } else if (result === 'answered' || result === 'replied') {
-          newStatus = 'active';
+          newStatus = 'following';
         } else if (currentStatus === 'new' || !currentStatus) {
-          newStatus = 'active';
+          newStatus = 'following';
         }
       }
 
       if (newStatus && newStatus !== currentStatus) {
         const myName = profile?.full_name_en || profile?.full_name_ar;
         const newAgentStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-        const updated = { ...contact, contact_status: newStatus, agent_statuses: newAgentStatuses };
+        const globalStatus = deriveGlobalStatus(newAgentStatuses);
+        const updated = { ...contact, agent_statuses: newAgentStatuses, contact_status: globalStatus };
         setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
-        updateContact(updated.id, { contact_status: newStatus, agent_statuses: newAgentStatuses }).catch(err => { if (import.meta.env.DEV) console.warn('optimistic status update:', err); });
+        updateContact(updated.id, { agent_statuses: newAgentStatuses, contact_status: globalStatus }).catch(err => { if (import.meta.env.DEV) console.warn('optimistic status update:', err); });
       }
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch (err) {
@@ -260,6 +278,10 @@ export default function ContactsPage() {
   }, [quickActionTarget, batchCallMode, mergePreview, disqualifyModal, bulkOppModal, bulkReassignModal, confirmAction, bulkSMSModal, bulkDropdownOpen]);
 
   const handleDelete = async (id) => {
+    if (profile?.role !== 'admin') {
+      toast.error(isRTL ? 'الحذف متاح للأدمن فقط' : 'Only admin can delete contacts');
+      return;
+    }
     const contact = contacts.find(c => c.id === id);
     // Check for linked data before confirming
     let linkedOpps = 0, linkedTasks = 0, linkedActs = 0;
@@ -312,8 +334,7 @@ export default function ContactsPage() {
         const names = deletedItems.map(c => c.full_name).join(', ');
         const updated = contacts.filter(c => !selectedIds.includes(c.id));
         setContacts(updated);
-        saveContactsLocal(updated);
-        selectedIds.forEach(sid => deleteContact(sid).catch(err => { if (import.meta.env.DEV) console.warn('bulk delete contact:', err); }));
+                selectedIds.forEach(sid => deleteContact(sid).catch(err => { if (import.meta.env.DEV) console.warn('bulk delete contact:', err); }));
         logAction({ action: 'bulk_delete', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk deleted ${count} contacts: ${names}`, userName: profile?.full_name_ar });
         setSelectedIds([]);
         deletedContactsRef.current = deletedItems;
@@ -323,44 +344,73 @@ export default function ContactsPage() {
     });
   };
 
-  const handleBulkReassign = async (agentName) => {
+  const handleBulkReassign = async (agentName, bulkStatus, bulkTemp) => {
     const assignedByName = profile?.full_name_ar || '—';
     const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
     const idsToUpdate = [...selectedIds];
-    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName } : c);
+    const extraUpdates = {};
+    if (bulkStatus) extraUpdates.contact_status = bulkStatus; // bulk reassign sets global (admin/ops action)
+    if (bulkTemp) extraUpdates.temperature = bulkTemp; // bulk reassign sets global (admin/ops action)
+    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName, ...extraUpdates } : c);
     setContacts(updated);
-    saveContactsLocal(updated);
-    logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
+        logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
     // Record assignment history for each contact
-    contacts.filter(c => selectedIds.includes(c.id)).forEach(c => {
+    const reassignedContacts = contacts.filter(c => selectedIds.includes(c.id));
+    reassignedContacts.forEach(c => {
       recordAssignment(c.id, { fromAgent: c.assigned_to_name, toAgent: agentName, assignedBy: assignedByName });
-      notifyLeadAssigned({ contactName: c.full_name || c.phone || '—', contactId: c.id, agentId: agentName, agentName, assignedBy: assignedByName });
     });
+    // Single notification for bulk assign (not one per lead)
+    if (reassignedContacts.length === 1) {
+      notifyLeadReassigned({ contactName: reassignedContacts[0].full_name || reassignedContacts[0].phone || '—', contactId: reassignedContacts[0].id, newAgentName: agentName, assignedBy: assignedByName });
+    } else if (reassignedContacts.length > 1) {
+      notifyLeadAssigned({ contactName: `${reassignedContacts.length} ليد جديد`, contactId: null, agentId: agentName, agentName, assignedBy: assignedByName });
+    }
     // Opportunities reassignment is handled via Supabase in updateContact
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} عميل` : `${selectedIds.length} leads reassigned`);
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
-    Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName }).catch(err => { if (import.meta.env.DEV) console.warn('bulk reassign:', err); }))).catch(err => { if (import.meta.env.DEV) console.warn('bulk reassign batch:', err); });
+    try {
+      const results = await Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName, ...extraUpdates }).catch(err => { console.error('Reassign failed for', id, err?.message); return null; })));
+      const failed = results.filter(r => r === null).length;
+      if (failed > 0) toast.error(isRTL ? `فشل تحديث ${failed} عميل` : `Failed to update ${failed} contacts`);
+    } catch (err) { toast.error(isRTL ? 'فشل إعادة التعيين' : 'Reassign failed'); console.error('bulk reassign:', err); }
   };
 
-  const handleBulkAddAgent = async (agentName) => {
+  const handleBulkAddAgent = async (agentName, agentStatus = 'new', agentTemp = 'hot') => {
     const idsToUpdate = [...selectedIds];
     const updated = contacts.map(c => {
       if (!selectedIds.includes(c.id)) return c;
       const names = c.assigned_to_names || [];
       if (names.includes(agentName)) return c;
-      return { ...c, assigned_to_names: [...names, agentName] };
+      const newStatuses = { ...(c.agent_statuses || {}), [agentName]: agentStatus };
+      const newTemps = { ...(c.agent_temperatures || {}), [agentName]: agentTemp };
+      return { ...c, assigned_to_names: [...names, agentName], agent_statuses: newStatuses, agent_temperatures: newTemps };
     });
     setContacts(updated);
     toast.success(isRTL ? `تم إضافة ${agentName} لـ ${selectedIds.length} عميل` : `Added ${agentName} to ${selectedIds.length} leads`);
+    // Single notification for bulk add agent
+    const addedCount = idsToUpdate.length;
+    if (addedCount === 1) {
+      const c = contacts.find(ct => ct.id === idsToUpdate[0]);
+      notifyLeadAssigned({ contactName: c?.full_name || '—', contactId: c?.id, agentId: agentName, agentName, assignedBy: profile?.full_name_ar || '—' });
+    } else if (addedCount > 1) {
+      notifyLeadAssigned({ contactName: `${addedCount} ليد جديد`, contactId: null, agentId: agentName, agentName, assignedBy: profile?.full_name_ar || '—' });
+    }
     setSelectedIds([]);
-    Promise.all(idsToUpdate.map(id => {
+    const results = await Promise.allSettled(idsToUpdate.map(id => {
       const c = contacts.find(ct => ct.id === id);
       const names = c?.assigned_to_names || [];
       if (names.includes(agentName)) return Promise.resolve();
-      return updateContact(id, { assigned_to_names: [...names, agentName] }).catch(err => { if (import.meta.env.DEV) console.warn('bulk add agent:', err); });
-    })).catch(err => { if (import.meta.env.DEV) console.warn('bulk add agent batch:', err); });
+      const newStatuses = { ...(c?.agent_statuses || {}), [agentName]: agentStatus };
+      const newTemps = { ...(c?.agent_temperatures || {}), [agentName]: agentTemp };
+      return updateContact(id, { assigned_to_names: [...names, agentName], agent_statuses: newStatuses, agent_temperatures: newTemps });
+    }));
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      failed.forEach(r => reportError('ContactsPage', 'bulkAddAgent', r.reason));
+      toast.error(isRTL ? `فشل تحديث ${failed.length} عميل` : `Failed to update ${failed.length} leads`);
+    }
   };
 
   const handleBulkRemoveAgent = async (agentName) => {
@@ -371,19 +421,26 @@ export default function ContactsPage() {
       if (names.length === 0) return c; // don't remove last agent
       const newStatuses = { ...(c.agent_statuses || {}) }; delete newStatuses[agentName];
       const newTemps = { ...(c.agent_temperatures || {}) }; delete newTemps[agentName];
-      return { ...c, assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps };
+      const newScores = { ...(c.agent_scores || {}) }; delete newScores[agentName];
+      return { ...c, assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps, agent_scores: newScores };
     });
     setContacts(updated);
     toast.success(isRTL ? `تم شيل ${agentName} من ${selectedIds.length} عميل` : `Removed ${agentName} from ${selectedIds.length} leads`);
     setSelectedIds([]);
-    Promise.all(idsToUpdate.map(id => {
+    const results = await Promise.allSettled(idsToUpdate.map(id => {
       const c = contacts.find(ct => ct.id === id);
       const names = (c?.assigned_to_names || []).filter(n => n !== agentName);
       if (names.length === 0) return Promise.resolve();
       const newStatuses = { ...(c?.agent_statuses || {}) }; delete newStatuses[agentName];
       const newTemps = { ...(c?.agent_temperatures || {}) }; delete newTemps[agentName];
-      return updateContact(id, { assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps }).catch(err => { if (import.meta.env.DEV) console.warn('bulk remove agent:', err); });
-    })).catch(err => { if (import.meta.env.DEV) console.warn('bulk remove agent batch:', err); });
+      const newScores = { ...(c?.agent_scores || {}) }; delete newScores[agentName];
+      return updateContact(id, { assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps, agent_scores: newScores });
+    }));
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      failed.forEach(r => reportError('ContactsPage', 'bulkRemoveAgent', r.reason));
+      toast.error(isRTL ? `فشل تحديث ${failed.length} عميل` : `Failed to update ${failed.length} leads`);
+    }
   };
 
   const handleBulkChangeField = async (field, value, actionLabel) => {
@@ -392,14 +449,18 @@ export default function ContactsPage() {
     const idsToUpdate = [...selectedIds];
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, [field]: value } : c);
     setContacts(updated);
-    saveContactsLocal(updated);
-    logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: selectedIds.join(','), description: `Bulk changed ${field} to "${value}" for ${count} contacts: ${names}`, newValue: value, userName: profile?.full_name_ar });
+        logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: selectedIds.join(','), description: `Bulk changed ${field} to "${value}" for ${count} contacts: ${names}`, newValue: value, userName: profile?.full_name_ar });
     createNotification({ type: 'system', title_en: `Bulk ${actionLabel}`, title_ar: `تغيير جماعي — ${actionLabel}`, body_en: `Changed ${field} to "${value}" for ${count} leads`, body_ar: `تم تغيير ${field} إلى "${value}" لـ ${count} عميل`, for_user_id: 'all' });
     toast.success(isRTL ? `تم تحديث ${count} عميل` : `${count} leads updated`);
     setSelectedIds([]);
     setBulkDropdownOpen(null);
     setShowBulkMenu(false);
-    Promise.all(idsToUpdate.map(id => updateContact(id, { [field]: value }).catch(err => { if (import.meta.env.DEV) console.warn('bulk change field:', err); }))).catch(err => { if (import.meta.env.DEV) console.warn('bulk change field batch:', err); });
+    const results = await Promise.allSettled(idsToUpdate.map(id => updateContact(id, { [field]: value })));
+    const failed = results.filter(r => r.status === 'rejected');
+    if (failed.length > 0) {
+      failed.forEach(r => reportError('ContactsPage', `bulkChange_${field}`, r.reason));
+      toast.error(isRTL ? `فشل تحديث ${failed.length} عميل` : `Failed to update ${failed.length} leads`);
+    }
   };
 
   const handleBulkSMS = async () => {
@@ -407,11 +468,12 @@ export default function ContactsPage() {
     if (!templateId) return;
     const smsContacts = contacts.filter(c => selectedIds.includes(c.id) && c.phone);
     setBulkSMSState(s => ({ ...s, sending: true, total: smsContacts.length, progress: 0 }));
-    const results = bulkSend(templateId, smsContacts, lang);
-    setBulkSMSState(s => ({ ...s, sending: false, progress: smsContacts.length, done: true, results }));
-    logAction({ action: 'bulk_sms', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk SMS sent to ${results.length} contacts`, userName: profile?.full_name_ar });
-    createNotification({ type: 'system', title_en: 'Bulk SMS Sent', title_ar: 'تم إرسال رسائل جماعية', body_en: `Sent SMS to ${results.length} leads`, body_ar: `تم إرسال رسائل لـ ${results.length} عميل`, for_user_id: 'all' });
-    toast.success(isRTL ? `تم إرسال ${results.length} رسالة` : `${results.length} messages sent`);
+    const results = await bulkSend(templateId, smsContacts, lang);
+    const resultsList = Array.isArray(results) ? results : [];
+    setBulkSMSState(s => ({ ...s, sending: false, progress: smsContacts.length, done: true, results: resultsList }));
+    logAction({ action: 'bulk_sms', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk SMS sent to ${resultsList.length} contacts`, userName: profile?.full_name_ar });
+    createNotification({ type: 'system', title_en: 'Bulk SMS Sent', title_ar: 'تم إرسال رسائل جماعية', body_en: `Sent SMS to ${resultsList.length} leads`, body_ar: `تم إرسال رسائل لـ ${resultsList.length} عميل`, for_user_id: 'all' });
+    toast.success(isRTL ? `تم إرسال ${resultsList.length} رسالة` : `${resultsList.length} messages sent`);
   };
 
   const exportSelectedCSV = () => {
@@ -432,6 +494,12 @@ export default function ContactsPage() {
     const a = document.createElement('a');
     a.href = url; a.download = `contacts_${new Date().toISOString().slice(0,10)}.csv`; a.click();
     URL.revokeObjectURL(url);
+    // Log export
+    supabase.from('import_export_logs').insert([{
+      type: 'export', user_id: profile?.id, user_name: profile?.full_name_en || profile?.full_name_ar,
+      total_records: list.length, success_count: list.length, entity: 'contacts', status: 'completed',
+      file_name: `contacts_${new Date().toISOString().slice(0,10)}.csv`,
+    }]).then(() => {}).catch(() => {});
   };
 
   // Bulk action dropdown options
@@ -446,8 +514,8 @@ export default function ContactsPage() {
   ];
   const BULK_STATUS_OPTIONS = [
     { value: 'new', label: isRTL ? 'جديد' : 'New' },
-    { value: 'active', label: isRTL ? 'نشط' : 'Active' },
-    { value: 'inactive', label: isRTL ? 'غير نشط' : 'Inactive' },
+    { value: 'following', label: isRTL ? 'متابعة' : 'Following' },
+    { value: 'contacted', label: isRTL ? 'تم التواصل' : 'Contacted' },
     { value: 'has_opportunity', label: isRTL ? 'لديه فرصة' : 'Has Opportunity' },
     { value: 'disqualified', label: isRTL ? 'غير مؤهل' : 'Disqualified' },
   ];
@@ -466,6 +534,12 @@ export default function ContactsPage() {
   const [totalContacts, setTotalContacts] = useState(0);
   const [showOverdueTasks, setShowOverdueTasks] = useState(false);
   const [overdueContactIds, setOverdueContactIds] = useState(null);
+  const [showTodayFollowups, setShowTodayFollowups] = useState(false);
+  const [todayFollowupIds, setTodayFollowupIds] = useState(null);
+  const [showNoOpps, setShowNoOpps] = useState(false);
+  const [noOppsIds, setNoOppsIds] = useState(null);
+  const [showSingleAgent, setShowSingleAgent] = useState(false);
+  const [singleAgentIds, setSingleAgentIds] = useState(null);
 
   const globalFilter = useGlobalFilter();
 
@@ -474,11 +548,14 @@ export default function ContactsPage() {
     if (!showOverdueTasks) { setOverdueContactIds(null); return; }
     const fetchOverdue = async () => {
       try {
-        const { data } = await supabase.from('tasks')
+        let q = supabase.from('tasks')
           .select('contact_id')
           .eq('status', 'pending')
           .lt('due_date', new Date().toISOString())
           .not('contact_id', 'is', null);
+        // Role filter: sales_agent sees only their tasks
+        if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
+        const { data } = await q;
         if (data) {
           const ids = [...new Set(data.map(t => t.contact_id).filter(Boolean))];
           setOverdueContactIds(ids);
@@ -488,6 +565,55 @@ export default function ContactsPage() {
     fetchOverdue();
   }, [showOverdueTasks]);
 
+  // Fetch today's followup contact IDs
+  useEffect(() => {
+    if (!showTodayFollowups) { setTodayFollowupIds(null); return; }
+    const fetchToday = async () => {
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        let q = supabase.from('tasks')
+          .select('contact_id')
+          .eq('status', 'pending')
+          .gte('due_date', today + 'T00:00:00')
+          .lte('due_date', today + 'T23:59:59')
+          .not('contact_id', 'is', null);
+        if (profile?.role === 'sales_agent' && profile?.id) q = q.eq('assigned_to', profile.id);
+        const { data } = await q;
+        if (data) {
+          const ids = [...new Set(data.map(t => t.contact_id).filter(Boolean))];
+          setTodayFollowupIds(ids);
+        }
+      } catch { setTodayFollowupIds([]); }
+    };
+    fetchToday();
+  }, [showTodayFollowups]);
+
+  // Fetch contact IDs that HAVE opportunities (to exclude them)
+  useEffect(() => {
+    if (!showNoOpps) { setNoOppsIds(null); return; }
+    (async () => {
+      try {
+        const { data: withOpps } = await supabase.from('opportunities').select('contact_id').not('contact_id', 'is', null);
+        const ids = [...new Set((withOpps || []).map(o => o.contact_id).filter(Boolean))];
+        // Store as EXCLUDE list (contacts WITH opps) - will be handled in service
+        setNoOppsIds(ids.length ? ids : ['none']);
+      } catch { setNoOppsIds([]); }
+    })();
+  }, [showNoOpps]);
+
+  // Fetch contacts with MULTIPLE agents (to exclude → show single agent only)
+  useEffect(() => {
+    if (!showSingleAgent) { setSingleAgentIds(null); return; }
+    (async () => {
+      try {
+        // Get contacts with 2+ agents → exclude them to show single-agent contacts
+        const { data } = await supabase.from('contacts').select('id, assigned_to_names').not('assigned_to_names', 'is', null).range(0, 20000);
+        const multiAgentIds = (data || []).filter(c => Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1).map(c => c.id);
+        setSingleAgentIds(multiAgentIds.length ? multiAgentIds : ['none']);
+      } catch { setSingleAgentIds([]); }
+    })();
+  }, [showSingleAgent]);
+
   // Load contacts with server-side pagination
   const hasLoadedOnce = useReactRef(false);
   const [searching, setSearching] = useState(false);
@@ -496,11 +622,31 @@ export default function ContactsPage() {
     if (!hasLoadedOnce.current) setLoading(true); else setSearching(true);
     try {
       const currentPage = pg || page || 1;
-      // Extract server-side filters from smartFilters
-      const statusFilter = smartFilters.find(f => f.field === 'contact_status' && f.operator === 'is');
-      const agentSmartFilter = smartFilters.find(f => f.field === 'assigned_to_name' && f.operator === 'is');
-      const sourceSmartFilter = smartFilters.find(f => f.field === 'source' && f.operator === 'is');
+      // Handle special quick filter values
+      const isTodayFollowup = smartFilters.some(f => f.value === '__today_followup');
+      const isOverdueTasks = smartFilters.some(f => f.value === '__overdue_tasks');
+      const isNoOpps = smartFilters.some(f => f.value === '__no_opps');
+      const isSingleAgent = smartFilters.some(f => f.value === '__single_agent');
+      if (isTodayFollowup && !showTodayFollowups) setShowTodayFollowups(true);
+      if (isOverdueTasks && !showOverdueTasks) setShowOverdueTasks(true);
+      if (isNoOpps && !showNoOpps) setShowNoOpps(true);
+      if (isSingleAgent && !showSingleAgent) setShowSingleAgent(true);
+      if (!isTodayFollowup && showTodayFollowups) { setShowTodayFollowups(false); setTodayFollowupIds(null); }
+      if (!isOverdueTasks && showOverdueTasks) { setShowOverdueTasks(false); setOverdueContactIds(null); }
+      if (!isNoOpps && showNoOpps) { setShowNoOpps(false); setNoOppsIds(null); }
+      if (!isSingleAgent && showSingleAgent) { setShowSingleAgent(false); setSingleAgentIds(null); }
+
+      // Extract server-side filters from smartFilters (skip special ones)
+      const statusFilter = smartFilters.find(f => f.field === 'contact_status' && (f.operator === 'is' || f.operator === 'is_not') && !f.value?.startsWith('__'));
+      const agentSmartFilter = smartFilters.find(f => f.field === 'assigned_to_name' && (f.operator === 'is' || f.operator === 'is_not'));
+      const sourceSmartFilter = smartFilters.find(f => f.field === 'source' && (f.operator === 'is' || f.operator === 'is_not'));
       const deptSmartFilter = smartFilters.find(f => f.field === 'department' && f.operator === 'is');
+      // Server-side text/date filters
+      const nameFilter = smartFilters.find(f => f.field === 'full_name' && f.value);
+      const emailFilter = smartFilters.find(f => f.field === 'email' && f.value);
+      const phoneFilter = smartFilters.find(f => f.field === 'phone' && f.value);
+      const createdFilter = smartFilters.find(f => f.field === 'created_at' && f.value);
+      const campaignFilter = smartFilters.find(f => f.field === 'campaign_name' && f.value);
       const result = await fetchContacts({
         role: profile?.role,
         userId: profile?.id,
@@ -509,22 +655,49 @@ export default function ContactsPage() {
           search: search || undefined,
           contact_type: filterType !== 'all' ? filterType : undefined,
           temperature: filterTemp !== 'all' ? filterTemp : undefined,
-          showBlacklisted: showBlacklisted || undefined,
-          unassigned: showUnassigned || undefined,
-          department: deptSmartFilter?.value || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
-          assigned_to_name: agentSmartFilter?.value || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
-          source: sourceSmartFilter?.value || undefined,
-          contactIds: overdueContactIds || undefined,
-          contact_status: statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
-          agentNameForStatus: statusFilter?.value ? (
-            // If admin selected an agent in Global Filter, use that agent's name
+          agentNameForTemp: filterTemp !== 'all' ? (
             (globalFilter?.agentName && globalFilter.agentName !== 'all')
               ? globalFilter.agentName
-              // Otherwise, non-admin users use their own name
               : (profile?.role !== 'admin' && profile?.role !== 'operations')
                 ? (profile?.full_name_en || profile?.full_name_ar)
                 : undefined
           ) : undefined,
+          showBlacklisted: showBlacklisted || undefined,
+          unassigned: showUnassigned || undefined,
+          department: deptSmartFilter?.value || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
+          assigned_to_name: agentSmartFilter?.value || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
+          assigned_to_name_not: agentSmartFilter?.operator === 'is_not' ? true : undefined,
+          source: sourceSmartFilter?.value || undefined,
+          source_not: sourceSmartFilter?.operator === 'is_not' ? true : undefined,
+          // Server-side smart filters
+          smartName: nameFilter?.value || undefined,
+          smartEmail: emailFilter?.value || undefined,
+          smartPhone: phoneFilter?.value || undefined,
+          smartCreatedAt: createdFilter ? { operator: createdFilter.operator, value: createdFilter.value } : undefined,
+          smartCampaign: campaignFilter?.value || undefined,
+          contactIds: overdueContactIds || todayFollowupIds || undefined,
+          excludeContactIds: showNoOpps ? noOppsIds : showSingleAgent ? singleAgentIds : undefined,
+          contact_status: statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
+          contact_status_not: statusFilter?.operator === 'is_not' ? true : undefined,
+          agentNameForStatus: (statusFilter?.value || filterStatus !== 'all') ? (
+            // If Global Filter has a specific agent, use that agent's name
+            (globalFilter?.agentName && globalFilter.agentName !== 'all')
+              ? globalFilter.agentName
+              // Non-admin users always use their own name for per-agent filtering
+              : (profile?.role !== 'admin' && profile?.role !== 'operations')
+                ? (profile?.full_name_en || profile?.full_name_ar)
+                // Admin without Global Filter: use global contact_status
+                : undefined
+          ) : undefined,
+          // Pass team member names for managers/admin to search per-agent statuses
+          teamMemberNames: (filterStatus !== 'all' || filterTemp !== 'all') && !globalFilter?.agentName
+            ? allAgentNames || undefined
+            : undefined,
+          dateFrom: dateFrom || undefined,
+          dateTo: dateTo || undefined,
+          activityFilter: filterActivity !== 'all' ? filterActivity : undefined,
+          activityActiveDays: ACTIVITY_ACTIVE_DAYS,
+          activityModerateDays: ACTIVITY_MODERATE_DAYS,
         },
         page: currentPage,
         pageSize,
@@ -558,27 +731,23 @@ export default function ContactsPage() {
         const now = Date.now();
         const inactiveThreshold = INACTIVE_DAYS * 86400000;
         list.forEach(c => {
-          if (c.contact_status === 'active' && c.last_activity_at && (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold) {
-            // Check if any agent has a non-inactive status — if so, skip auto-inactive
+          if (c.contact_status === 'following' && c.last_activity_at && (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold) {
+            // Check if any agent has a non-contacted status — if so, skip auto-contacted
             const agentStatuses = c.agent_statuses || {};
-            const hasActiveAgent = Object.values(agentStatuses).some(s => s === 'active' || s === 'has_opportunity');
+            const hasActiveAgent = Object.values(agentStatuses).some(s => s === 'following' || s === 'has_opportunity');
             if (hasActiveAgent) return;
-            c.contact_status = 'inactive';
-            updateContact(c.id, { contact_status: 'inactive' }).catch(err => { if (import.meta.env.DEV) console.warn('auto-inactive:', err); });
+            c.contact_status = 'contacted';
+            updateContact(c.id, { contact_status: 'contacted' }).catch(err => { if (import.meta.env.DEV) console.warn('auto-contacted:', err); });
           }
         });
 
         // Fetch last feedback (non-blocking)
         const ids = list.map(c => c.id).filter(Boolean);
+        // Show ALL feedback on assigned contacts (if agent can see the contact, they see all its history)
         let feedbackQuery = supabase.from('activities').select('contact_id, notes, description, user_name_ar, user_name_en, created_at')
           .in('contact_id', ids)
           .or('notes.neq.,description.neq.')
           .order('created_at', { ascending: false }).range(0, 199);
-        // Sales agent: only show their own feedback
-        if (profile?.role === 'sales_agent') {
-          const myName = profile?.full_name_en || profile?.full_name_ar;
-          if (myName) feedbackQuery = feedbackQuery.or(`user_name_en.eq.${myName},user_name_ar.eq.${myName}`);
-        }
         feedbackQuery.then(({ data: acts }) => {
             if (acts?.length) {
               const lastByContact = {};
@@ -612,7 +781,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds]);
 
   useEffect(() => {
     if (profile) loadContactsData();
@@ -656,18 +825,19 @@ export default function ContactsPage() {
         if (data) setSelected(data);
       });
     }
-    // Clean URL after a short delay to avoid re-render race
-    setTimeout(() => {
-      searchParams.delete('highlight');
-      setSearchParams(searchParams, { replace: true });
-    }, 100);
-  }, [highlightId, loading, contacts]);
+    // Clean URL immediately using a functional updater to avoid stale closure races with URL sync effect
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      next.delete('highlight');
+      return next;
+    }, { replace: true });
+  }, [highlightId, loading, contacts, setSearchParams]);
 
   // Stats — fetched from Supabase (real counts across all contacts)
   const STATUS_DEFS = [
     { value: 'new', label: 'جديد', labelEn: 'New', color: '#4A7AAB' },
-    { value: 'active', label: 'نشط', labelEn: 'Active', color: '#10B981' },
-    { value: 'inactive', label: 'غير نشط', labelEn: 'Inactive', color: '#F59E0B' },
+    { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' },
+    { value: 'following', label: 'متابعة', labelEn: 'Following', color: '#10B981' },
     { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity', color: '#059669' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified', color: '#6b7280' },
   ];
@@ -713,7 +883,7 @@ export default function ContactsPage() {
       const allQueries = [
         baseQ(), // total
         baseQ().eq('is_blacklisted', true), // blacklisted
-        baseQ().or('assigned_to_name.is.null,assigned_to_name.eq.'), // unassigned (respects role filter)
+        baseQ().or('assigned_to_name.is.null,assigned_to_name.eq.,assigned_to_names.eq.[]'), // unassigned (respects role filter)
         ...statusKeys.map(s => baseQ().eq('contact_status', s)),
         ...tempKeys.map(t => baseQ().eq('temperature', t)),
         ...typeKeys.map(t => baseQ().eq('contact_type', t)),
@@ -728,8 +898,8 @@ export default function ContactsPage() {
         unassigned: results[i++].count || 0,
       };
       statusKeys.forEach(s => { counts[s] = results[i++].count || 0; });
-      tempKeys.forEach(t => { counts[t] = results[i++].count || 0; });
-      typeKeys.forEach(t => { counts[t] = results[i++].count || 0; });
+      tempKeys.forEach(t => { counts['temp_' + t] = results[i++].count || 0; });
+      typeKeys.forEach(t => { counts['type_' + t] = results[i++].count || 0; });
 
       setStats(counts);
     } catch (err) { reportError('ContactsPage', 'loadStats', err); }
@@ -808,6 +978,7 @@ export default function ContactsPage() {
     const campaign_interactions = form.campaign_name
       ? [{ campaign: form.campaign_name, campaign_id: matchedCampaign?.id || null, source: form.source, platform: form.platform, date: new Date().toISOString() }]
       : [];
+    const myName = profile?.full_name_en || profile?.full_name_ar || '—';
     const newContact = {
       ...form,
       id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -815,14 +986,17 @@ export default function ContactsPage() {
       temperature: 'hot',
       contact_status: 'new',
       is_blacklisted: false,
-      assigned_to_name: profile?.full_name_en || profile?.full_name_ar || '—',
-      assigned_to_names: [profile?.full_name_en || profile?.full_name_ar].filter(Boolean),
+      assigned_to_name: myName,
+      assigned_to_names: [myName].filter(n => n !== '—'),
       assigned_by_name: profile?.full_name_ar || '—',
       created_by: profile?.id || null,
       created_by_name: profile?.full_name_ar || profile?.full_name_en || '—',
+      agent_statuses: { [myName]: 'new' },
+      agent_temperatures: { [myName]: form.temperature || 'hot' },
+      agent_scores: { [myName]: 0 },
       campaign_interactions,
       created_at: new Date().toISOString(),
-      last_activity_at: new Date().toISOString(),
+      last_activity_at: null,
     };
     const cfValues = form._customFieldValues;
     const { _customFieldValues, ...cleanForm } = form;
@@ -840,8 +1014,7 @@ export default function ContactsPage() {
       });
       const updated = [{ ...saved, campaign_interactions }, ...contacts];
       setContacts(updated);
-      saveContactsLocal(updated);
-      if (cfValues) setCFValues('contact', saved.id, cfValues);
+            if (cfValues) setCFValues('contact', saved.id, cfValues);
       logAction({ action: 'create', entity: 'contact', entityId: saved.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
       evaluateTriggers('contact', 'created', saved);
       // Notify assigned agent about new lead
@@ -865,8 +1038,7 @@ export default function ContactsPage() {
   const handleBlacklist = async (contact, reason) => {
     setContacts(prev => {
       const next = prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c);
-      saveContactsLocal(next);
-      return next;
+            return next;
     });
     if (selected?.id === contact.id) setSelected(null);
     blacklistContact(contact.id, reason).catch(err => { if (import.meta.env.DEV) console.warn('blacklist contact:', err); });
@@ -919,16 +1091,32 @@ export default function ContactsPage() {
         const activeType = types.find(k => k === filterType);
         const activeLabel = activeType && TYPE[activeType] ? (isRTL ? TYPE[activeType].label : TYPE[activeType].labelEn) : (isRTL ? 'كل الأنواع' : 'All Types');
         return (
-          <div className="relative inline-block mb-3">
-            <select value={filterType} onChange={e => setFilterType(e.target.value)}
-              className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
-              style={activeType ? { borderColor: TYPE[activeType]?.color, color: TYPE[activeType]?.color } : undefined}>
-              <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
-              {types.filter(k => TYPE[k]).map(k => (
-                <option key={k} value={k}>{isRTL ? TYPE[k].label : TYPE[k].labelEn} ({stats[k] || 0})</option>
-              ))}
-            </select>
-            <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
+          <div className="flex gap-2 flex-wrap mb-3">
+            {/* Type dropdown */}
+            <div className="relative inline-block">
+              <select value={filterType} onChange={e => setFilterType(e.target.value)}
+                className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
+                style={activeType ? { borderColor: TYPE[activeType]?.color, color: TYPE[activeType]?.color } : undefined}>
+                <option value="all">{isRTL ? 'كل الأنواع' : 'All Types'}</option>
+                {types.filter(k => TYPE[k]).map(k => (
+                  <option key={k} value={k}>{isRTL ? TYPE[k].label : TYPE[k].labelEn} ({stats['type_' + k] || 0})</option>
+                ))}
+              </select>
+              <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
+            </div>
+            {/* Activity dropdown */}
+            <div className="relative inline-block">
+              <select value={filterActivity} onChange={e => setFilterActivity(e.target.value)}
+                className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
+                style={filterActivity !== 'all' ? { borderColor: filterActivity === 'active_3d' ? '#10B981' : filterActivity === 'moderate_7d' ? '#F59E0B' : filterActivity === 'stale' ? '#EF4444' : '#6b7280', color: filterActivity === 'active_3d' ? '#10B981' : filterActivity === 'moderate_7d' ? '#F59E0B' : filterActivity === 'stale' ? '#EF4444' : '#6b7280' } : undefined}>
+                <option value="all">{isRTL ? 'كل النشاط' : 'All Activity'}</option>
+                <option value="active_3d">{isRTL ? `🟢 نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `🟢 Active (${ACTIVITY_ACTIVE_DAYS}d)`}</option>
+                <option value="moderate_7d">{isRTL ? `🟡 متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `🟡 Moderate (${ACTIVITY_MODERATE_DAYS}d)`}</option>
+                <option value="stale">{isRTL ? '🔴 مهمل' : '🔴 Stale'}</option>
+                <option value="never">{isRTL ? '⚫ لم يتم التواصل' : '⚫ Never'}</option>
+              </select>
+              <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
+            </div>
           </div>
         );
       })()}
@@ -952,14 +1140,13 @@ export default function ContactsPage() {
           </button>
           );
         })}
+        {profile?.role !== 'sales_agent' && (
         <button onClick={() => setShowUnassigned(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showUnassigned ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
           <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
         </button>
+        )}
         <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
           <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
-        </button>
-        <button onClick={() => { setShowOverdueTasks(v => !v); if (showOverdueTasks) setOverdueContactIds(null); }} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showOverdueTasks ? 'border border-red-600 bg-red-600/[0.08] text-red-600 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-          <Clock size={11} /> {isRTL ? 'مهام متأخرة' : 'Overdue Tasks'}
         </button>
       </div>
 
@@ -969,7 +1156,7 @@ export default function ContactsPage() {
         {[
           { label: isRTL ? 'الكل' : 'All', value: 'all', count: stats.total, color: '#4A7AAB', Icon: null },
           ...Object.entries(TEMP).map(([k, v]) => ({
-            label: isRTL ? v.labelAr : v.label, value: k, count: stats[k] || 0, color: v.color, Icon: v.Icon,
+            label: isRTL ? v.labelAr : v.label, value: k, count: stats['temp_' + k] || 0, color: v.color, Icon: v.Icon,
           })),
         ].map(s => {
           const active = filterTemp === s.value;
@@ -999,13 +1186,10 @@ export default function ContactsPage() {
         onSortChange={setSortBy}
         resultsCount={totalContacts}
         quickFilters={[
-          { label: 'ليدز جدد', labelEn: 'New Leads', filters: [{ field: 'contact_type', operator: 'is', value: 'lead' }, { field: 'created_at', operator: 'last_7' }] },
-          { label: 'متأخر 3 أيام', labelEn: 'Overdue 3d', filters: [{ field: 'contact_status', operator: 'is', value: 'active' }, { field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10) }] },
-          { label: 'متأخر 7 أيام', labelEn: 'Overdue 7d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10) }] },
-          { label: 'متأخر 30 يوم', labelEn: 'Overdue 30d', filters: [{ field: 'last_activity_at', operator: 'before', value: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10) }] },
-          { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: '_opp_count', operator: 'eq', value: '0' }] },
-          { label: 'عملاء حاليين', labelEn: 'Customers', filters: [{ field: 'contact_type', operator: 'is', value: 'customer' }] },
-          { label: 'مسؤول واحد', labelEn: 'Single Agent', filters: [{ field: '_agent_count', operator: 'eq', value: '1' }] },
+          { label: 'متابعة اليوم', labelEn: "Today's Follow-ups", filters: [{ field: 'contact_status', operator: 'is', value: '__today_followup' }] },
+          { label: 'مهام متأخرة', labelEn: 'Overdue Tasks', filters: [{ field: 'contact_status', operator: 'is', value: '__overdue_tasks' }] },
+          { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: 'contact_status', operator: 'is', value: '__no_opps' }] },
+          ...(profile?.role !== 'sales_agent' ? [{ label: 'مسؤول واحد', labelEn: 'Single Agent', filters: [{ field: 'contact_status', operator: 'is', value: '__single_agent' }] }] : []),
         ]}
       />
 
@@ -1135,6 +1319,7 @@ export default function ContactsPage() {
         isRTL={isRTL}
         isSalesAgent={profile?.role === 'sales_agent'}
         isAdmin={profile?.role === 'admin' || profile?.role === 'operations'}
+        agentName={profile?.full_name_en || profile?.full_name_ar}
         deptView={deptView}
       />
       </div>
@@ -1157,45 +1342,83 @@ export default function ContactsPage() {
         const updatedContact = { ...contact, campaign_interactions: [...existing, interaction] };
         setContacts(prev => {
           const next = prev.map(c => c.id === contact.id ? updatedContact : c);
-          saveContactsLocal(next);
-          return next;
+                    return next;
         });
         updateContact(contact.id, { campaign_interactions: updatedContact.campaign_interactions }).catch(err => { if (import.meta.env.DEV) console.warn('update campaign interactions:', err); });
       }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={async (updated) => {
         const old = contacts.find(c => c.id === updated.id);
-        setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
-        setSelected(updated);
-        try {
-          await updateContact(updated.id, updated);
-        } catch (err) {
-          console.error('[onUpdate] updateContact failed:', err?.message || err);
-          toast.error(isRTL ? 'فشل حفظ التعديلات: ' + (err?.message || '') : 'Save failed: ' + (err?.message || ''));
-          // Revert optimistic update
-          if (old) { setContacts(prev => prev.map(c => c.id === old.id ? old : c)); setSelected(old); }
+        const { _skipDbUpdate, ...cleanUpdated } = updated;
+        setContacts(prev => prev.map(c => c.id === cleanUpdated.id ? cleanUpdated : c));
+        setSelected(cleanUpdated);
+        if (!_skipDbUpdate) {
+          try {
+            await updateContact(cleanUpdated.id, cleanUpdated);
+          } catch (err) {
+            console.error('[onUpdate] updateContact failed:', err?.message || err);
+            toast.error(isRTL ? 'فشل حفظ التعديلات: ' + (err?.message || '') : 'Save failed: ' + (err?.message || ''));
+            if (old) { setContacts(prev => prev.map(c => c.id === old.id ? old : c)); setSelected(old); }
+          }
         }
         const changedFields = old ? Object.keys(updated).filter(k => JSON.stringify(old[k]) !== JSON.stringify(updated[k]) && !['updated_at'].includes(k)) : [];
         const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${updated[k] || ''}"`).join(', ') : `Updated contact: ${updated.full_name}`;
         logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: desc, oldValue: old || null, newValue: updated, userName: profile?.full_name_ar || '' }).catch(() => {});
       }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
-      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onUpdate={(updated) => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); saveContactsLocal(next); return next; }); updateContact(updated.id, updated).catch(err => { if (import.meta.env.DEV) console.warn('optimistic contact update:', err); }); }} />}
+      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onUpdate={(updated) => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); return next; }); updateContact(updated.id, updated).catch(err => { if (import.meta.env.DEV) console.warn('optimistic contact update:', err); }); }} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
       {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={async (newContacts) => {
         // Import directly to Supabase using batch insert
         const { batchInsert } = await import('../utils/batchOperations');
         const { stripInternalFields } = await import('../utils/sanitizeForSupabase');
-        const clean = newContacts.map(c => ({
-          ...stripInternalFields(c),
-          last_activity_at: c.last_activity_at || new Date().toISOString(),
-          created_at: c.created_at || new Date().toISOString(),
-        }));
-        // Remove 'id' field so Supabase generates UUIDs
-        clean.forEach(c => { if (c.id && !c.id.match(/^[0-9a-f-]{36}$/)) delete c.id; });
+        // Only allow known contacts table columns
+        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to_name','assigned_to_names','assigned_by_name','created_by','created_by_name','budget_min','budget_max','lead_score','is_blacklisted','last_activity_at','created_at','agent_statuses','agent_temperatures','agent_scores']);
+        const clean = newContacts.map(c => {
+          const stripped = stripInternalFields(c);
+          const safe = {};
+          for (const [k, v] of Object.entries(stripped)) {
+            if (!ALLOWED_COLS.has(k)) continue;
+            safe[k] = v === '' ? null : v;
+          }
+          if (safe.id && !safe.id.match(/^[0-9a-f-]{36}$/)) delete safe.id;
+          // Don't set last_activity_at on import - only set when actual activity happens
+          safe.created_at = safe.created_at || new Date().toISOString();
+          // Sync assigned_to_name → assigned_to_names + agent_statuses + agent_temperatures
+          const agentName = safe.assigned_to_name || profile?.full_name_en || profile?.full_name_ar;
+          if (agentName) {
+            safe.assigned_to_name = agentName;
+            safe.assigned_to_names = [agentName];
+            safe.agent_statuses = { [agentName]: safe.contact_status || 'new' };
+            safe.agent_temperatures = { [agentName]: safe.temperature || 'warm' };
+          }
+          return safe;
+        });
         try {
-          const inserted = await batchInsert('contacts', clean, 50);
-          setContacts(prev => [...inserted, ...prev]);
-          toast.success(isRTL ? `تم استيراد ${inserted.length} عميل` : `${inserted.length} leads imported`);
+          console.log('[Import] Sending', clean.length, 'contacts. Sample:', JSON.stringify(clean[0]).slice(0, 200));
+          const inserted = await batchInsert('contacts', clean, 20);
+          console.log('[Import] Inserted:', inserted.length, 'out of', clean.length);
+          // Log import
+          supabase.from('import_export_logs').insert([{
+            type: 'import', user_id: profile?.id, user_name: profile?.full_name_en || profile?.full_name_ar,
+            total_records: clean.length, success_count: inserted.length, failed_count: clean.length - inserted.length,
+            entity: 'contacts', status: inserted.length === clean.length ? 'completed' : inserted.length > 0 ? 'partial' : 'failed',
+          }]).then(() => {}).catch(() => {});
+          if (inserted.length === 0 && clean.length > 0) {
+            toast.error(isRTL ? 'فشل الاستيراد — تأكد من البيانات' : 'Import failed — check data');
+            console.error('[Import] All inserts failed. First record:', clean[0]);
+          } else {
+            setContacts(prev => [...inserted, ...prev]);
+            toast.success(isRTL ? `تم استيراد ${inserted.length} عميل` : `${inserted.length} leads imported`);
+          }
+          notifyImportDone({ count: inserted.length, importedBy: profile?.full_name_en || profile?.full_name_ar });
+          const byAgent = {};
+          inserted.forEach(c => {
+            const name = c.assigned_to_name;
+            if (name) byAgent[name] = (byAgent[name] || 0) + 1;
+          });
+          Object.entries(byAgent).forEach(([name, count]) => {
+            notifyImportLeadsForAgent({ count, agentName: name, importedBy: profile?.full_name_en || profile?.full_name_ar });
+          });
         } catch (err) {
           toast.error(isRTL ? 'فشل الاستيراد: ' + err.message : 'Import failed: ' + err.message);
         }

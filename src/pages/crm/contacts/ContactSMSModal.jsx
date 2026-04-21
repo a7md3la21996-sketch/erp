@@ -1,8 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Phone, X, Send, MessageSquare } from 'lucide-react';
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button } from '../../../components/ui/';
 import { logAction } from '../../../services/auditService';
+import { useFocusTrap } from '../../../utils/hooks';
 
 // ── Contact SMS Modal ────────────────────────────────────────────────────
 export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
@@ -30,6 +31,9 @@ export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
     return () => document.removeEventListener('keydown', handler, true);
   }, [onClose]);
 
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
+
   const handleSend = () => {
     if (!selectedTemplate || !contact.phone) return;
     sendSMS(contact.phone, preview, selectedTemplate.id, selectedTemplate.name);
@@ -44,12 +48,16 @@ export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="sms-title"
         onClick={e => e.stopPropagation()}
         className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[420px] shadow-[0_12px_40px_rgba(27,51,71,0.2)]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-edge dark:border-edge-dark">
-          <span className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
+          <span id="sms-title" className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-2">
             <Send size={15} className="text-brand-500" />
             {isRTL ? 'إرسال SMS' : 'Send SMS'}
           </span>

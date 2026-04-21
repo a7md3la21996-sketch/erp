@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { COMPETENCIES } from '../../data/hr_mock_data';
+import supabase from '../../lib/supabase';
 import { Award, TrendingUp, Users, Star, ChevronDown } from 'lucide-react';
 import { KpiCard, Badge, Button, Card, FilterPill, Table, Th, Td, Tr, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
@@ -8,6 +8,8 @@ import { useAuditFilter } from '../../hooks/useAuditFilter';
 export default function CompetenciesPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
+  const [competencies, setCompetencies] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [expanded, setExpanded] = useState(null);
   const [page, setPage] = useState(1);
@@ -16,7 +18,32 @@ export default function CompetenciesPage() {
 
   const { auditFields, applyAuditFilters } = useAuditFilter('competency');
 
-  const categories = [...new Set(COMPETENCIES.map(c=>c.category))];
+  const DEFAULTS = [
+    { key: 'communication', name_ar: 'التواصل', name_en: 'Communication', icon: 'MessageCircle', weight: 20, category: 'core', required_level: 3 },
+    { key: 'teamwork', name_ar: 'العمل الجماعي', name_en: 'Teamwork', icon: 'Users', weight: 15, category: 'core', required_level: 3 },
+    { key: 'initiative', name_ar: 'المبادرة', name_en: 'Initiative', icon: 'Zap', weight: 15, category: 'core', required_level: 3 },
+    { key: 'problem_solving', name_ar: 'حل المشكلات', name_en: 'Problem Solving', icon: 'Lightbulb', weight: 20, category: 'technical', required_level: 4 },
+    { key: 'attendance', name_ar: 'الالتزام والحضور', name_en: 'Commitment', icon: 'Clock', weight: 15, category: 'behavioral', required_level: 3 },
+    { key: 'quality', name_ar: 'جودة العمل', name_en: 'Work Quality', icon: 'CheckCircle2', weight: 15, category: 'technical', required_level: 4 },
+  ];
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase.from('competencies').select('*').order('created_at');
+        if (error) throw error;
+        if (data?.length) { setCompetencies(data); }
+        else {
+          // Seed defaults
+          const { data: seeded } = await supabase.from('competencies').upsert(DEFAULTS, { onConflict: 'key' }).select('*');
+          setCompetencies(seeded || DEFAULTS);
+        }
+      } catch { setCompetencies(DEFAULTS); }
+      setLoading(false);
+    })();
+  }, []);
+
+  const categories = [...new Set(competencies.map(c=>c.category).filter(Boolean))];
 
   const SMART_FIELDS = useMemo(() => [
     {
@@ -31,7 +58,7 @@ export default function CompetenciesPage() {
   ], [auditFields, categories.length]);
 
   const filtered = useMemo(() => {
-    let result = filter==='all' ? COMPETENCIES : COMPETENCIES.filter(c=>c.category===filter);
+    let result = filter==='all' ? competencies : competencies.filter(c=>c.category===filter);
     result = applySmartFilters(result, smartFilters, SMART_FIELDS);
     result = applyAuditFilters(result, smartFilters);
     return result;
@@ -43,7 +70,7 @@ export default function CompetenciesPage() {
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [filter, smartFilters]);
 
-  const avgLevel = Math.round(COMPETENCIES.reduce((s,c)=>s+(c.required_level||3),0)/COMPETENCIES.length);
+  const avgLevel = Math.round(competencies.reduce((s,c)=>s+(c.required_level||3),0)/competencies.length);
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
@@ -63,10 +90,10 @@ export default function CompetenciesPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
-        <KpiCard icon={Award} label={lang==='ar'?'إجمالي الكفاءات':'Total Competencies'} value={COMPETENCIES.length} color="#1B3347" />
+        <KpiCard icon={Award} label={lang==='ar'?'إجمالي الكفاءات':'Total Competencies'} value={competencies.length} color="#1B3347" />
         <KpiCard icon={Users} label={lang==='ar'?'عدد الفئات':'Categories'} value={categories.length} color="#4A7AAB" />
         <KpiCard icon={TrendingUp} label={lang==='ar'?'متوسط المستوى':'Avg Level'} value={avgLevel+'/5'} color="#6B8DB5" />
-        <KpiCard icon={Star} label={lang==='ar'?'كفاءات متقدمة':'Advanced'} value={COMPETENCIES.filter(c=>c.required_level>=4).length} color="#2B4C6F" />
+        <KpiCard icon={Star} label={lang==='ar'?'كفاءات متقدمة':'Advanced'} value={competencies.filter(c=>c.required_level>=4).length} color="#2B4C6F" />
       </div>
 
       {/* Filter Buttons */}

@@ -13,6 +13,7 @@ import { fetchActivities, createActivity, updateActivity, ACTIVITY_TYPES } from 
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
+import { useToast } from '../contexts/ToastContext';
 import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
 import ActivityDrawer from './ActivityDrawer';
 
@@ -58,6 +59,7 @@ export default function ActivitiesPage() {
   const { i18n } = useTranslation();
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
   const lang  = i18n.language;
   const isRTL  = lang === 'ar';
 
@@ -96,9 +98,10 @@ export default function ActivitiesPage() {
     { id: 'type', label: 'نوع النشاط', labelEn: 'Activity Type', type: 'select', options: Object.entries(ACTIVITY_TYPES).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'dept', label: 'القسم', labelEn: 'Department', type: 'select', options: [
       { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
-      { value: 'sales', label: 'المبيعات', labelEn: 'Sales' },
+      { value: 'marketing', label: 'التسويق', labelEn: 'Marketing' },
       { value: 'hr', label: 'HR', labelEn: 'HR' },
       { value: 'finance', label: 'المالية', labelEn: 'Finance' },
+      { value: 'operations', label: 'العمليات', labelEn: 'Operations' },
     ]},
     { id: 'entity_name', label: 'الجهة', labelEn: 'Related Entity', type: 'select', options: uniqueEntities },
     { id: 'result', label: 'النتيجة', labelEn: 'Result', type: 'select', options: Object.entries(RESULT_LABELS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
@@ -127,6 +130,7 @@ export default function ActivitiesPage() {
   }, [smartFilters]);
 
   const loadActivities = useCallback(async (pg) => {
+    if (!profile?.id) return; // Don't load without profile
     setLoading(true);
     try {
       const currentPage = pg || page || 1;
@@ -134,9 +138,9 @@ export default function ActivitiesPage() {
       const result = await fetchActivities({
         page: currentPage,
         pageSize,
-        role: profile?.role,
-        userId: profile?.id,
-        teamId: profile?.team_id,
+        role: profile.role,
+        userId: profile.id,
+        teamId: profile.team_id,
         dept: deptValue,
         search: search || undefined,
         type: serverFilters.type,
@@ -187,9 +191,10 @@ export default function ActivitiesPage() {
     return list;
   }, [activities, smartFilters, SMART_FIELDS]);
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const filteredTotal = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered;
+  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
   useEffect(() => { if (page > totalPages && totalPages > 0) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [smartFilters, search, pageSize]);
 
@@ -203,6 +208,7 @@ export default function ActivitiesPage() {
       setAdding(false);
     } catch (err) {
       console.error('Activity save error:', err?.message || err);
+      toast.error(isRTL ? 'فشل حفظ النشاط' : 'Failed to save activity');
     } finally {
       setSaving(false);
     }
@@ -284,7 +290,7 @@ export default function ActivitiesPage() {
       {/* Add Form */}
       {adding && (
         <Card className="p-5 mb-4">
-          <div className="grid grid-cols-2 gap-2.5 mb-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
             {/* Dept */}
             <div>
               <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1">
@@ -349,7 +355,7 @@ export default function ActivitiesPage() {
         onSearchChange={setSearchInput}
         searchPlaceholder={isRTL ? 'بحث بالملاحظات أو اسم المستخدم...' : 'Search by notes or user name...'}
         quickFilters={QUICK_FILTERS}
-        resultsCount={totalCount}
+        resultsCount={filteredTotal}
       />
 
       {/* Activities List */}

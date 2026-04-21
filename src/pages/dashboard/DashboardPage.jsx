@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
+import supabase from '../../lib/supabase';
 import { useTheme } from '../../contexts/ThemeContext';
 import { ROLE_LABELS } from '../../config/roles';
 import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
@@ -196,11 +197,12 @@ function TodayReminders({ lang, isRTL, isDark, userId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!userId) return;
     fetchTodayReminders(userId).then(data => {
       setReminders(data || []);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, []);
+  }, [userId]);
 
   const formatTime = (iso) => {
     if (!iso) return '';
@@ -607,12 +609,18 @@ function SmartAlertsWidget({ lang, isRTL, profile, navigate, CardTitle }) {
       try {
         const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
         const nowISO = new Date().toISOString();
-        // Queries respect RLS (opportunities filtered by role)
-        const [staleRes, overdueRes, hotRes] = await Promise.allSettled([
-          supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('contact_status', 'active').lt('last_activity_at', weekAgo),
-          supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO),
-          supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('temperature', 'hot').not('stage', 'in', '("closed_won","closed_lost")'),
-        ]);
+        // Role-based filtering
+        const myName = profile?.full_name_en || profile?.full_name_ar;
+        const isSalesAgent = profile?.role === 'sales_agent';
+        let contactsQ = supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('contact_status', 'following').lt('last_activity_at', weekAgo);
+        let tasksQ = supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO);
+        let oppsQ = supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('temperature', 'hot').not('stage', 'in', '("closed_won","closed_lost")');
+        if (isSalesAgent && myName) {
+          contactsQ = contactsQ.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+          tasksQ = tasksQ.eq('assigned_to', profile?.id);
+          oppsQ = oppsQ.eq('assigned_to_name', myName);
+        }
+        const [staleRes, overdueRes, hotRes] = await Promise.allSettled([contactsQ, tasksQ, oppsQ]);
         const a = [];
         const stale = staleRes.status === 'fulfilled' ? staleRes.value.count || 0 : 0;
         if (stale > 0) a.push({ icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#F59E0B', link: '/contacts' });
@@ -655,27 +663,39 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
         const nowISO = new Date().toISOString();
         const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString();
 
+        // Role-based task filter helper
+        const taskQ = (q) => {
+          if (profile?.role === 'sales_agent' && userId) return q.eq('assigned_to', userId);
+          return q;
+        };
+        // Role-based contact filter helper
+        const contactQ = (q) => {
+          const myName = profile?.full_name_en || profile?.full_name_ar;
+          if (profile?.role === 'sales_agent' && myName) return q.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+          return q;
+        };
+
         // All queries in parallel
         const [followupsRes, overdueRes, todayTasksRes, newLeadsRes, needsFollowUpRes, taskListRes] = await Promise.allSettled([
           // Follow-ups due today
-          supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59').eq('status', 'pending'),
+          taskQ(supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59').eq('status', 'pending')),
           // Overdue tasks
-          supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .lt('due_date', nowISO).eq('status', 'pending'),
+          taskQ(supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .lt('due_date', nowISO).eq('status', 'pending')),
           // Tasks due today (all)
-          supabase.from('tasks').select('id', { count: 'exact', head: true })
-            .gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59'),
+          taskQ(supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59')),
           // New leads today
-          supabase.from('contacts').select('id', { count: 'exact', head: true })
-            .gte('created_at', todayStr + 'T00:00:00'),
+          contactQ(supabase.from('contacts').select('id', { count: 'exact', head: true })
+            .gte('created_at', todayStr + 'T00:00:00')),
           // Leads needing follow-up (active, no activity in 7 days)
-          supabase.from('contacts').select('id', { count: 'exact', head: true })
-            .eq('contact_status', 'active').lt('last_activity_at', weekAgo),
+          contactQ(supabase.from('contacts').select('id', { count: 'exact', head: true })
+            .eq('contact_status', 'following').lt('last_activity_at', weekAgo)),
           // Today's task list (for display)
-          supabase.from('tasks').select('id, title, contact_name, due_date, priority')
+          taskQ(supabase.from('tasks').select('id, title, contact_name, due_date, priority')
             .gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59')
-            .eq('status', 'pending').order('due_date').limit(5),
+            .eq('status', 'pending').order('due_date').limit(5)),
         ]);
 
         setStats({
