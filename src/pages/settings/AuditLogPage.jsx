@@ -404,14 +404,22 @@ export default function AuditLogPage() {
                       <tr>
                         <td colSpan={7} className="px-4 py-3 bg-surface-bg dark:bg-surface-bg-dark">
                           <div className="text-[11px] space-y-1">
-                            {Object.entries(log.changes).map(([k, v]) => (
-                              <div key={k} className="flex gap-2">
-                                <span className="font-semibold text-content dark:text-content-dark min-w-[100px]">{k}:</span>
-                                <span className="text-red-500 line-through">{String(v.from ?? '—')}</span>
-                                <span className="text-content-muted">→</span>
-                                <span className="text-emerald-500">{String(v.to ?? '—')}</span>
-                              </div>
-                            ))}
+                            {Object.entries(log.changes).map(([k, v]) => {
+                              // Render objects as JSON (not "[object Object]")
+                              const fmt = (x) => {
+                                if (x === null || x === undefined || x === '') return '—';
+                                if (typeof x === 'object') { try { return JSON.stringify(x); } catch { return String(x); } }
+                                return String(x);
+                              };
+                              return (
+                                <div key={k} className="flex gap-2">
+                                  <span className="font-semibold text-content dark:text-content-dark min-w-[100px]">{k}:</span>
+                                  <span className="text-red-500 line-through">{fmt(v.from)}</span>
+                                  <span className="text-content-muted">→</span>
+                                  <span className="text-emerald-500">{fmt(v.to)}</span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </td>
                       </tr>

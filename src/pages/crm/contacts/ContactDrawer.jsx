@@ -440,7 +440,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     opportunities.forEach(o => items.push({ ...o, _type: 'opportunity', _date: o.created_at }));
     extraSources.comments.forEach(c => items.push({ ...c, _type: 'comment', _date: c.created_at }));
     extraSources.documents.forEach(d => items.push({ ...d, _type: 'document', _date: d.uploaded_at || d.created_at }));
-    extraSources.audits.forEach(a => items.push({ ...a, _type: 'audit', _date: a.created_at }));
+    // Timeline should surface meaningful audit events only (status/stage/assignment-level
+    // changes, blacklist, merge, import). Generic 'update' audits are noisy — most of
+    // what changes on a contact is already captured by activities, comments, and
+    // assignment history. The full audit trail is still available at /settings/audit-log.
+    const HIGH_SIGNAL_AUDIT_ACTIONS = new Set([
+      'status_change','type_change','blacklist','unblacklist',
+      'reassign','bulk_reassign','bulk_add_agent','bulk_remove_agent',
+      'stage_change','temperature_change','score_change','assign',
+      'merge','import','delete','bulk_delete','note','batch_call',
+    ]);
+    extraSources.audits
+      .filter(a => HIGH_SIGNAL_AUDIT_ACTIONS.has(a.action))
+      .forEach(a => items.push({ ...a, _type: 'audit', _date: a.created_at }));
     extraSources.deals.forEach(d => items.push({ ...d, _type: 'deal', _date: d.created_at }));
     // Include assignment history in timeline
     assignmentHistory.forEach(h => items.push({

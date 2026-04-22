@@ -43,8 +43,20 @@ export const getLocalAuditLogs = getAuditLogs;
 
 // ── Main audit function ─────────────────────────────────────────────────
 export async function logAudit({ action, entity, entityId, entityName = '', oldData = null, newData = null, description = '', userName = '' }) {
-  // Build changes diff
-  const SKIP_FIELDS = ['id','created_at','updated_at','opportunities','activities','campaign_interactions','extra_phones','_country','users','lead_score_history'];
+  // Build changes diff. SKIP_FIELDS covers:
+  //  - DB internals (id, created_at, updated_at)
+  //  - Related collections fetched as embeds (opportunities, activities, ...)
+  //  - Client-computed helper fields prefixed with '_' — these are derived on
+  //    the frontend and only exist in memory, so auditing them is noise.
+  const SKIP_FIELDS = [
+    'id','created_at','updated_at',
+    'opportunities','activities','campaign_interactions','extra_phones',
+    'users','lead_score_history',
+    // Client-side computed/helper fields
+    '_country','_campaign_count','_opp_count','_agent_count',
+    '_lastNote','_feedback','_aging_level','_offline','_triggerEdit',
+    '_customFieldValues',
+  ];
   let changes = null;
   if (oldData && newData) {
     changes = {};
