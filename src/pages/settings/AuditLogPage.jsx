@@ -87,9 +87,11 @@ export default function AuditLogPage() {
   const fetchLogs = useCallback(async () => {
     setLoading(true);
     try {
+      // No users FK embed — audit_logs.user_name is already stored at write time,
+      // and embedding was failing silently (either missing FK or RLS on users).
       let query = supabase
         .from('audit_logs')
-        .select('*, users:user_id (full_name_ar, full_name_en)', { count: 'exact' })
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (filterAction) query = query.eq('action', filterAction);
@@ -115,11 +117,17 @@ export default function AuditLogPage() {
 
       const { data, count, error } = await query;
       if (error) throw error;
-      setLogs((data || []).map(row => ({
-        ...row,
-        _user_name_ar: row.users?.full_name_ar || row.user_name || '',
-        _user_name_en: row.users?.full_name_en || row.user_name || '',
-      })));
+      // Enrich names from the already-loaded userOptions list — no extra query.
+      const byId = {};
+      (userOptions || []).forEach(u => { byId[u.value] = u; });
+      setLogs((data || []).map(row => {
+        const u = row.user_id ? byId[row.user_id] : null;
+        return {
+          ...row,
+          _user_name_ar: u?.label || row.user_name || '',
+          _user_name_en: u?.labelEn || row.user_name || '',
+        };
+      }));
       setTotalCount(count || 0);
     } catch (err) {
       console.error('Audit fetch error:', err);
@@ -127,7 +135,7 @@ export default function AuditLogPage() {
       setTotalCount(0);
     }
     setLoading(false);
-  }, [page, pageSize, filterAction, filterEntity, filterUser, filterDateRange, dateFrom, dateTo, search]);
+  }, [page, pageSize, filterAction, filterEntity, filterUser, filterDateRange, dateFrom, dateTo, search, userOptions]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
