@@ -61,6 +61,23 @@ export async function logAudit({ action, entity, entityId, entityName = '', oldD
     if (Object.keys(changes).length === 0) changes = null;
   }
 
+  // Auto-build description from changes when caller didn't provide a specific one,
+  // so the audit table row is informative without having to expand. Keep it short
+  // — long values are truncated; many fields collapse to a names-only list.
+  const genericDesc = !description || /^Updated\s+\w+$/i.test(description) || /^Created\s+\w+$/i.test(description) || /^Deleted\s+\w+$/i.test(description);
+  if (genericDesc && changes) {
+    const fields = Object.keys(changes);
+    const short = (v) => {
+      const s = v === null || v === undefined ? '—' : (typeof v === 'string' ? v : JSON.stringify(v));
+      return s.length > 30 ? s.slice(0, 30) + '…' : s;
+    };
+    if (fields.length <= 3) {
+      description = fields.map(f => `${f}: "${short(changes[f].from)}" → "${short(changes[f].to)}"`).join(', ');
+    } else {
+      description = `Updated ${entity}: ${fields.slice(0, 5).join(', ')}${fields.length > 5 ? ` (+${fields.length - 5} more)` : ''}`;
+    }
+  }
+
   // Strip sensitive fields before storing
   const SENSITIVE_FIELDS = ['password', 'token', 'secret', 'access_token', 'refresh_token', 'api_key', 'apikey', 'credit_card', 'ssn', 'national_id'];
   function stripSensitive(obj) {
