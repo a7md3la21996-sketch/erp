@@ -341,6 +341,13 @@ export async function createContact(contactData) {
     delete sanitized.id;
   }
 
+  // Stamp assigned_at on initial creation if the contact is already assigned to someone.
+  // This keeps "Sort: Assignment Date" meaningful for brand-new contacts too.
+  if (!sanitized.assigned_at) {
+    const hasAssignee = sanitized.assigned_to_name || (Array.isArray(sanitized.assigned_to_names) && sanitized.assigned_to_names.length > 0);
+    if (hasAssignee) sanitized.assigned_at = new Date().toISOString();
+  }
+
   try {
     const { data, error } = await supabase
       .from('contacts')
@@ -399,6 +406,20 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
     if (sanitized.assigned_to_names && !sanitized.assigned_to_name) {
       const names = Array.isArray(sanitized.assigned_to_names) ? sanitized.assigned_to_names.filter(Boolean) : [];
       if (names.length > 0) sanitized.assigned_to_name = names[0];
+    }
+
+    // Refresh assigned_at whenever the assignment actually changes (add/remove/reassign).
+    // Skip if the caller already set it (e.g. recordAssignment) and skip if the value
+    // is semantically unchanged to avoid noisy timestamp churn.
+    const assignmentTouched = 'assigned_to_name' in sanitized || 'assigned_to_names' in sanitized;
+    if (assignmentTouched && !('assigned_at' in sanitized)) {
+      const oldName = oldData?.assigned_to_name || null;
+      const newName = sanitized.assigned_to_name ?? oldName;
+      const oldNames = JSON.stringify((oldData?.assigned_to_names || []).slice().sort());
+      const newNames = JSON.stringify(((sanitized.assigned_to_names ?? oldData?.assigned_to_names) || []).slice().sort());
+      if (oldName !== newName || oldNames !== newNames) {
+        sanitized.assigned_at = new Date().toISOString();
+      }
     }
     const { data, error } = await rq(() => supabase
       .from('contacts')

@@ -1385,7 +1385,7 @@ export default function ContactsPage() {
         const { batchInsert } = await import('../utils/batchOperations');
         const { stripInternalFields } = await import('../utils/sanitizeForSupabase');
         // Only allow known contacts table columns
-        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to_name','assigned_to_names','assigned_by_name','created_by','created_by_name','budget_min','budget_max','lead_score','is_blacklisted','last_activity_at','created_at','agent_statuses','agent_temperatures','agent_scores']);
+        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to_name','assigned_to_names','assigned_by_name','assigned_at','created_by','created_by_name','budget_min','budget_max','lead_score','is_blacklisted','last_activity_at','created_at','agent_statuses','agent_temperatures','agent_scores']);
         const clean = newContacts.map(c => {
           const stripped = stripInternalFields(c);
           const safe = {};
@@ -1403,6 +1403,8 @@ export default function ContactsPage() {
             safe.assigned_to_names = [agentName];
             safe.agent_statuses = { [agentName]: safe.contact_status || 'new' };
             safe.agent_temperatures = { [agentName]: safe.temperature || 'warm' };
+            // Stamp assignment time so "Sort: Assignment Date" shows imports correctly
+            if (!safe.assigned_at) safe.assigned_at = new Date().toISOString();
           }
           return safe;
         });
