@@ -5,6 +5,7 @@ import { X, Loader2 } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui';
 import { TEMP_CONFIG, PRIORITY_CONFIG, addStageHistory } from './constants';
 import { getDeptStages } from '../contacts/constants';
+import ContactSearch from './ContactSearch';
 
 export default function EditOpportunityModal({ opp, agents, projects, profile, onClose, onSave, onEditStageLost }) {
   const { i18n } = useTranslation();
@@ -21,7 +22,12 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
     notes: opp.notes || '',
     stage: opp.stage || 'qualification',
     expected_close_date: opp.expected_close_date || '',
+    lost_reason: opp.lost_reason || '',
   });
+  // Contact selector — allow reassigning opportunity to a different contact
+  const [contact, setContact] = useState(opp.contacts?.id
+    ? { id: opp.contacts.id, full_name: opp.contacts.full_name, phone: opp.contacts.phone }
+    : (opp.contact_id ? { id: opp.contact_id, full_name: opp.contact_name || '', phone: '' } : null));
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -42,6 +48,7 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
       addStageHistory(opp.id, opp.stage, form.stage);
     }
     const assignmentChanged = form.assigned_to !== (opp.assigned_to || '');
+    const contactChanged = (contact?.id || null) !== (opp.contacts?.id || opp.contact_id || null);
     const updates = {
       budget: Number(form.budget) || 0,
       temperature: form.temperature,
@@ -51,7 +58,10 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
       project_id: form.project_id || null,
       notes: form.notes,
       expected_close_date: form.expected_close_date || null,
+      ...(contactChanged ? { contact_id: contact?.id || null, contact_name: contact?.full_name || null } : {}),
       ...(stageChanged ? { stage: form.stage, stage_changed_at: new Date().toISOString() } : {}),
+      // Allow editing lost_reason when the opp is already (or staying) in closed_lost
+      ...(form.stage === 'closed_lost' ? { lost_reason: form.lost_reason || null } : {}),
     };
     try {
       await onSave(opp.id, updates);
@@ -86,6 +96,10 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
 
         {/* Body */}
         <div className="flex-1 overflow-auto p-5 flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'العميل' : 'Contact'}</label>
+            <ContactSearch isRTL={isRTL} value={contact} onSelect={setContact} />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'الميزانية' : 'Budget'}</label>
@@ -156,6 +170,13 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
             <label className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'ملاحظات' : 'Notes'}</label>
             <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={3} />
           </div>
+          {/* Lost reason — editable when the opp is (or is being kept) in closed_lost */}
+          {form.stage === 'closed_lost' && (
+            <div>
+              <label className="text-xs font-semibold text-red-500 mb-1 block">{isRTL ? 'سبب الخسارة' : 'Lost Reason'}</label>
+              <Textarea value={form.lost_reason} onChange={e => set('lost_reason', e.target.value)} rows={2} placeholder={isRTL ? 'مثال: السعر عالي، فضل منافس...' : 'e.g. Price too high, chose competitor...'} />
+            </div>
+          )}
         </div>
 
         {/* Footer */}

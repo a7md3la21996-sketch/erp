@@ -392,6 +392,12 @@ export default function ContactsPage() {
 
   const handleBulkAddAgent = async (agentName, agentStatus = 'new', agentTemp = 'hot') => {
     const idsToUpdate = [...selectedIds];
+    // Split selected contacts into { toAdd } (new assignment) and { alreadyHad } (no-op)
+    // so the toast, notifications, and audit log reflect the real effect.
+    const selected = contacts.filter(c => selectedIds.includes(c.id));
+    const toAdd = selected.filter(c => !(c.assigned_to_names || []).includes(agentName));
+    const alreadyHad = selected.filter(c => (c.assigned_to_names || []).includes(agentName));
+
     const updated = contacts.map(c => {
       if (!selectedIds.includes(c.id)) return c;
       const names = c.assigned_to_names || [];
@@ -401,20 +407,46 @@ export default function ContactsPage() {
       return { ...c, assigned_to_names: [...names, agentName], agent_statuses: newStatuses, agent_temperatures: newTemps };
     });
     setContacts(updated);
-    toast.success(isRTL ? `تم إضافة ${agentName} لـ ${selectedIds.length} عميل` : `Added ${agentName} to ${selectedIds.length} leads`);
-    // Single notification for bulk add agent
-    const addedCount = idsToUpdate.length;
-    if (addedCount === 1) {
-      const c = contacts.find(ct => ct.id === idsToUpdate[0]);
-      notifyLeadAssigned({ contactName: c?.full_name || '—', contactId: c?.id, agentId: agentName, agentName, assignedBy: profile?.full_name_ar || '—' });
-    } else if (addedCount > 1) {
-      notifyLeadAssigned({ contactName: `${addedCount} ليد جديد`, contactId: null, agentId: agentName, agentName, assignedBy: profile?.full_name_ar || '—' });
+
+    // Honest toast: show the real number added; mention the ones already assigned.
+    if (toAdd.length === 0) {
+      toast.info(isRTL
+        ? `${agentName} موجود بالفعل عند كل العملاء الـ ${selectedIds.length} المختارين — ما تم تعديل شيء`
+        : `${agentName} is already assigned to all ${selectedIds.length} selected leads — nothing changed`);
+    } else if (alreadyHad.length > 0) {
+      toast.success(isRTL
+        ? `تم إضافة ${agentName} لـ ${toAdd.length} عميل (${alreadyHad.length} كانوا عنده بالفعل)`
+        : `Added ${agentName} to ${toAdd.length} leads (${alreadyHad.length} already had them)`);
+    } else {
+      toast.success(isRTL ? `تم إضافة ${agentName} لـ ${toAdd.length} عميل` : `Added ${agentName} to ${toAdd.length} leads`);
     }
+
+    // Notify only if something actually changed
+    if (toAdd.length === 1) {
+      notifyLeadAssigned({ contactName: toAdd[0].full_name || '—', contactId: toAdd[0].id, agentId: agentName, agentName, assignedBy: profile?.full_name_ar || '—' });
+    } else if (toAdd.length > 1) {
+      notifyLeadAssigned({ contactName: `${toAdd.length} ليد جديد`, contactId: null, agentId: agentName, agentName, assignedBy: profile?.full_name_ar || '—' });
+    }
+
+    // Audit log — so "who added whom to whose list and when" is traceable.
+    if (toAdd.length > 0) {
+      const names = toAdd.map(c => c.full_name).filter(Boolean).join(', ');
+      logAction({
+        action: 'bulk_add_agent',
+        entity: 'contact',
+        entityId: toAdd.map(c => c.id).join(','),
+        description: `Added ${agentName} to ${toAdd.length} contacts: ${names}`,
+        newValue: agentName,
+        userName: profile?.full_name_ar || profile?.full_name_en || '',
+      });
+    }
+
     setSelectedIds([]);
-    const results = await Promise.allSettled(idsToUpdate.map(id => {
+    // Perform the actual updates only on the ones that need them
+    const toAddIds = toAdd.map(c => c.id);
+    const results = await Promise.allSettled(toAddIds.map(id => {
       const c = contacts.find(ct => ct.id === id);
       const names = c?.assigned_to_names || [];
-      if (names.includes(agentName)) return Promise.resolve();
       const newStatuses = { ...(c?.agent_statuses || {}), [agentName]: agentStatus };
       const newTemps = { ...(c?.agent_temperatures || {}), [agentName]: agentTemp };
       return updateContact(id, { assigned_to_names: [...names, agentName], agent_statuses: newStatuses, agent_temperatures: newTemps });
@@ -427,7 +459,20 @@ export default function ContactsPage() {
   };
 
   const handleBulkRemoveAgent = async (agentName) => {
-    const idsToUpdate = [...selectedIds];
+    // Split selected: { toRemove } (actually has the agent and not the last one),
+    // { notAssigned } (doesn't have them — no-op), { onlyAgent } (has them as
+    // the single assignee — we refuse to leave the contact unassigned).
+    const selected = contacts.filter(c => selectedIds.includes(c.id));
+    const toRemove = selected.filter(c => {
+      const names = c.assigned_to_names || [];
+      return names.includes(agentName) && names.filter(n => n !== agentName).length > 0;
+    });
+    const notAssigned = selected.filter(c => !(c.assigned_to_names || []).includes(agentName));
+    const onlyAgent = selected.filter(c => {
+      const names = c.assigned_to_names || [];
+      return names.includes(agentName) && names.filter(n => n !== agentName).length === 0;
+    });
+
     const updated = contacts.map(c => {
       if (!selectedIds.includes(c.id)) return c;
       const names = (c.assigned_to_names || []).filter(n => n !== agentName);
@@ -438,12 +483,44 @@ export default function ContactsPage() {
       return { ...c, assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps, agent_scores: newScores };
     });
     setContacts(updated);
-    toast.success(isRTL ? `تم شيل ${agentName} من ${selectedIds.length} عميل` : `Removed ${agentName} from ${selectedIds.length} leads`);
+
+    // Honest toast
+    if (toRemove.length === 0 && notAssigned.length === selected.length) {
+      toast.info(isRTL
+        ? `${agentName} مش موجود عند أي من العملاء الـ ${selected.length} المختارين`
+        : `${agentName} is not assigned to any of the ${selected.length} selected leads`);
+    } else if (toRemove.length === 0 && onlyAgent.length > 0) {
+      toast.warning(isRTL
+        ? `${agentName} هو المسؤول الوحيد عند ${onlyAgent.length} عميل — لن يتم شيله لتجنب تركهم بدون مسؤول`
+        : `${agentName} is the only assignee for ${onlyAgent.length} leads — skipped to avoid leaving them unassigned`);
+    } else {
+      const extras = [];
+      if (notAssigned.length > 0) extras.push(isRTL ? `${notAssigned.length} غير موجود عندهم` : `${notAssigned.length} didn't have them`);
+      if (onlyAgent.length > 0) extras.push(isRTL ? `${onlyAgent.length} كان المسؤول الوحيد` : `${onlyAgent.length} was sole assignee`);
+      const suffix = extras.length ? ` (${extras.join(' · ')})` : '';
+      toast.success(isRTL
+        ? `تم شيل ${agentName} من ${toRemove.length} عميل${suffix}`
+        : `Removed ${agentName} from ${toRemove.length} leads${suffix}`);
+    }
+
+    // Audit log
+    if (toRemove.length > 0) {
+      const names = toRemove.map(c => c.full_name).filter(Boolean).join(', ');
+      logAction({
+        action: 'bulk_remove_agent',
+        entity: 'contact',
+        entityId: toRemove.map(c => c.id).join(','),
+        description: `Removed ${agentName} from ${toRemove.length} contacts: ${names}`,
+        oldValue: agentName,
+        userName: profile?.full_name_ar || profile?.full_name_en || '',
+      });
+    }
+
     setSelectedIds([]);
-    const results = await Promise.allSettled(idsToUpdate.map(id => {
+    const toRemoveIds = toRemove.map(c => c.id);
+    const results = await Promise.allSettled(toRemoveIds.map(id => {
       const c = contacts.find(ct => ct.id === id);
       const names = (c?.assigned_to_names || []).filter(n => n !== agentName);
-      if (names.length === 0) return Promise.resolve();
       const newStatuses = { ...(c?.agent_statuses || {}) }; delete newStatuses[agentName];
       const newTemps = { ...(c?.agent_temperatures || {}) }; delete newTemps[agentName];
       const newScores = { ...(c?.agent_scores || {}) }; delete newScores[agentName];

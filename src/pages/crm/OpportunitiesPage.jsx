@@ -223,7 +223,14 @@ export default function OpportunitiesPage() {
   const [searchInput, setSearchInput] = useState(searchParams.get('q') || '');
   const [search, setSearch] = useState(searchParams.get('q') || '');
   const [activeStage, setActiveStage] = useState(location.state?.initialStage || searchParams.get('stage') || 'all');
-  const [smartFilters, setSmartFilters] = useState([]);
+  const [smartFilters, setSmartFilters] = useState(() => {
+    try {
+      const raw = searchParams.get('filters');
+      if (!raw) return [];
+      const parsed = JSON.parse(decodeURIComponent(raw));
+      return Array.isArray(parsed) ? parsed : [];
+    } catch { return []; }
+  });
   const [showModal, setShowModal] = useState(false);
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [dealCreatedToast, setDealCreatedToast] = useState(null);
@@ -258,15 +265,16 @@ export default function OpportunitiesPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  // Sync filters to URL params
+  // Sync filters to URL params — including smartFilters so reload preserves them
   useEffect(() => {
     const params = new URLSearchParams();
     if (search) params.set('q', search);
     if (activeStage !== 'all') params.set('stage', activeStage);
     if (sortBy !== 'newest') params.set('sort', sortBy);
     if (viewMode !== 'table') params.set('view', viewMode);
+    if (smartFilters.length > 0) params.set('filters', encodeURIComponent(JSON.stringify(smartFilters)));
     setSearchParams(params, { replace: true });
-  }, [search, activeStage, sortBy, viewMode, setSearchParams]);
+  }, [search, activeStage, sortBy, viewMode, smartFilters, setSearchParams]);
 
   // Close more-actions dropdown on outside click
   useEffect(() => {

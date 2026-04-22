@@ -162,19 +162,26 @@ export default function ActivitiesPage() {
     }
   }, []));
 
-  // Stats — from server (not current page)
+  // Stats — from server (not current page). topType is computed client-side
+  // from a recent sample of activities (most common type in last ~500 records).
   const loadStats = useCallback(async () => {
     try {
       const todayStr = new Date().toISOString().slice(0, 10);
       const baseArgs = { role: profile?.role, userId: profile?.id, teamId: profile?.team_id };
-      const [totalRes, todayRes] = await Promise.all([
+      const [totalRes, todayRes, sampleRes] = await Promise.all([
         fetchActivities({ ...baseArgs, page: 1, pageSize: 1 }),
         fetchActivities({ ...baseArgs, page: 1, pageSize: 1, dateFrom: todayStr }),
+        fetchActivities({ ...baseArgs, page: 1, pageSize: 500 }),
       ]);
+      // Count types across the sample and pick the most frequent
+      const sample = Array.isArray(sampleRes?.data) ? sampleRes.data : (Array.isArray(sampleRes) ? sampleRes : []);
+      const typeCounts = {};
+      sample.forEach(a => { if (a?.type) typeCounts[a.type] = (typeCounts[a.type] || 0) + 1; });
+      const top = Object.entries(typeCounts).sort((x, y) => y[1] - x[1])[0];
       setStats({
         total: totalRes?.count || 0,
         today: todayRes?.count || 0,
-        topType: null,
+        topType: top || null, // [type, count] tuple matching the UI expectation at line ~285
       });
     } catch { /* ignore */ }
   }, [profile?.role, profile?.id, profile?.team_id]);

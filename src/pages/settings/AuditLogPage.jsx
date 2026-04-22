@@ -20,6 +20,8 @@ const ACTION_CONFIG = {
   unblacklist:        { variant: 'success', icon: Ban,            ar: 'إلغاء بلاك ليست',     en: 'Unblacklisted' },
   reassign:           { variant: 'default', icon: UserCheck,      ar: 'إعادة تعيين',         en: 'Reassigned' },
   bulk_reassign:      { variant: 'default', icon: Users2,         ar: 'إعادة تعيين جماعي',   en: 'Bulk Reassign' },
+  bulk_add_agent:     { variant: 'default', icon: UserCheck,      ar: 'إضافة مسؤول جماعي',   en: 'Bulk Add Agent' },
+  bulk_remove_agent:  { variant: 'default', icon: UserCheck,      ar: 'شيل مسؤول جماعي',     en: 'Bulk Remove Agent' },
   bulk_delete:        { variant: 'danger',  icon: Trash2,         ar: 'حذف جماعي',           en: 'Bulk Delete' },
   merge:              { variant: 'default', icon: Merge,          ar: 'دمج',                 en: 'Merge' },
   import:             { variant: 'success', icon: Upload,         ar: 'استيراد',              en: 'Import' },
