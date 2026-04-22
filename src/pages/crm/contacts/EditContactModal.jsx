@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
+import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { X } from 'lucide-react';
-import { Button, Input, Select, Textarea } from '../../../components/ui/';
+import { Button, Input, Select, Textarea, DiscardConfirm } from '../../../components/ui/';
 import { useEscClose, SOURCE_LABELS, SOURCE_EN, SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES, COUNTRY_CODES, getCountryFromPhone, getPhoneInfo, validatePhone, normalizePhone } from './constants';
-import { useFocusTrap } from '../../../utils/hooks';
+import { useFocusTrap, useDirtyTracker } from '../../../utils/hooks';
 
 const getFullPhone = (phone, code) => {
   if (!phone) return '';
@@ -19,7 +20,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
-  useEscClose(onClose);
+  useEscClose(() => requestClose());
 
   // Extract local phone from stored full phone
   const initPhone = (p) => {
@@ -64,7 +65,40 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
   const savingRef = useRef(false); // sync guard against double-submit
   const dialogRef = useRef(null);
   useFocusTrap(dialogRef);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const isDirty = useDirtyTracker({ form, extraPhones, extraCodes });
+  const requestClose = () => {
+    if (isDirty) { setConfirmDiscard(true); return; }
+    onClose();
+  };
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const { contactTypes } = useSystemConfig();
+  // Build allowed types per department from system config (same pattern as AddContactModal)
+  const DEPT_TYPES = (() => {
+    const map = { sales: [], hr: [], marketing: [], finance: [], operations: [] };
+    (contactTypes || []).forEach(t => {
+      (t.departments || []).forEach(d => { if (map[d] && !map[d].includes(t.key)) map[d].push(t.key); });
+    });
+    if (Object.values(map).every(v => v.length === 0)) {
+      // Fallback when system config has no departments mapping
+      map.sales = ['lead', 'client'];
+      map.hr = ['applicant'];
+      map.marketing = ['partner'];
+      map.finance = ['supplier'];
+      map.operations = ['developer'];
+    }
+    return map;
+  })();
+  const availableTypes = DEPT_TYPES[form.department] || [];
+  // Preserve the contact's current type even if not in the filtered list (e.g. custom types)
+  const typeOptions = form.contact_type && !availableTypes.includes(form.contact_type)
+    ? [form.contact_type, ...availableTypes]
+    : availableTypes;
+  const getTypeLabel = (key) => {
+    const ct = (contactTypes || []).find(c => c.key === key);
+    if (ct) return isRTL ? ct.label_ar : ct.label_en;
+    return key;
+  };
   const isSalesType = ['lead','client'].includes(form.contact_type);
   const isSalesDept = form.department === 'sales';
   const emailValid = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
@@ -126,7 +160,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
             <h2 id="edit-contact-title" className="m-0 text-content dark:text-content-dark text-[17px] font-bold">{isRTL ? 'تعديل بيانات العميل' : 'Edit Lead'}</h2>
             <p className="mt-[3px] mb-0 text-xs text-content-muted dark:text-content-muted-dark whitespace-nowrap overflow-hidden text-ellipsis max-w-[300px]">{contact.full_name}</p>
           </div>
-          <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1"><X size={18} /></button>
+          <button onClick={requestClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1"><X size={18} /></button>
         </div>
 
         {/* Body */}
@@ -153,12 +187,7 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
             <div>
               <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{isRTL ? 'النوع' : 'Type'}</label>
               <Select value={form.contact_type} onChange={e => set('contact_type', e.target.value)}>
-                <option value="lead">{isRTL ? 'ليد' : 'Lead'}</option>
-                <option value="client">{isRTL ? 'عميل' : 'Client'}</option>
-                <option value="supplier">{isRTL ? 'مورد' : 'Supplier'}</option>
-                <option value="developer">{isRTL ? 'مطور عقاري' : 'Developer'}</option>
-                <option value="applicant">{isRTL ? 'متقدم لوظيفة' : 'Applicant'}</option>
-                <option value="partner">{isRTL ? 'شريك' : 'Partner'}</option>
+                {typeOptions.map(t => <option key={t} value={t}>{getTypeLabel(t)}</option>)}
               </Select>
             </div>
             <div>
@@ -335,12 +364,19 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
 
         {/* Footer */}
         <div className="px-6 py-3.5 border-t border-edge dark:border-edge-dark flex justify-end gap-2.5 shrink-0">
-          <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <Button variant="secondary" onClick={requestClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? (isRTL ? 'جارى الحفظ...' : 'Saving...') : (isRTL ? 'حفظ التعديلات' : 'Save Changes')}
           </Button>
         </div>
       </div>
+      {confirmDiscard && (
+        <DiscardConfirm
+          isRTL={isRTL}
+          onCancel={() => setConfirmDiscard(false)}
+          onDiscard={() => { setConfirmDiscard(false); onClose(); }}
+        />
+      )}
     </div>
   );
 }

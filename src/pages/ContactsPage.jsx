@@ -325,21 +325,31 @@ export default function ContactsPage() {
   const BULK_WARN_THRESHOLD = 50;
   const handleDeleteSelected = () => {
     const warnMsg = selectedIds.length > BULK_WARN_THRESHOLD ? (isRTL ? `\n⚠️ أنت على وشك حذف ${selectedIds.length} عميل دفعة واحدة!` : `\n⚠️ You are about to delete ${selectedIds.length} leads at once!`) : '';
+    const toDelete = contacts.filter(c => selectedIds.includes(c.id));
     setConfirmAction({
       title: isRTL ? 'تأكيد الحذف' : 'Confirm Delete',
       message: (isRTL ? `حذف ${selectedIds.length} عميل؟` : `Delete ${selectedIds.length} leads?`) + warnMsg,
-      onConfirm: () => {
+      items: toDelete,
+      onConfirm: async () => {
         const count = selectedIds.length;
         const deletedItems = contacts.filter(c => selectedIds.includes(c.id));
         const names = deletedItems.map(c => c.full_name).join(', ');
+        const idsToDelete = [...selectedIds];
         const updated = contacts.filter(c => !selectedIds.includes(c.id));
         setContacts(updated);
-                selectedIds.forEach(sid => deleteContact(sid).catch(err => { if (import.meta.env.DEV) console.warn('bulk delete contact:', err); }));
-        logAction({ action: 'bulk_delete', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk deleted ${count} contacts: ${names}`, userName: profile?.full_name_ar });
+        logAction({ action: 'bulk_delete', entity: 'contact', entityId: idsToDelete.join(','), description: `Bulk deleted ${count} contacts: ${names}`, userName: profile?.full_name_ar });
         setSelectedIds([]);
         deletedContactsRef.current = deletedItems;
-        toast.show({ type: 'success', message: isRTL ? `تم حذف ${count} عميل` : `${count} leads deleted`, duration: 5000, action: { label: isRTL ? 'تراجع' : 'Undo', onClick: () => restoreContacts(deletedItems) } });
         setConfirmAction(null);
+        // deleteContact already retries internally via retryWithBackoff — no outer wrapping needed
+        const results = await Promise.allSettled(idsToDelete.map(sid => deleteContact(sid)));
+        const failed = results.filter(r => r.status === 'rejected');
+        if (failed.length > 0) {
+          failed.forEach(r => reportError('ContactsPage', 'bulkDelete', r.reason));
+          toast.error(isRTL ? `فشل حذف ${failed.length} من ${count}` : `Failed to delete ${failed.length} of ${count}`);
+        } else {
+          toast.show({ type: 'success', message: isRTL ? `تم حذف ${count} عميل` : `${count} leads deleted`, duration: 5000, action: { label: isRTL ? 'تراجع' : 'Undo', onClick: () => restoreContacts(deletedItems) } });
+        }
       }
     });
   };
@@ -371,8 +381,11 @@ export default function ContactsPage() {
     setBulkReassignModal(false);
     setShowBulkMenu(false);
     try {
-      const results = await Promise.all(idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName, ...extraUpdates }).catch(err => { console.error('Reassign failed for', id, err?.message); return null; })));
-      const failed = results.filter(r => r === null).length;
+      // updateContact already retries internally — service-level retry is the single source of truth
+      const results = await Promise.allSettled(
+        idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName, ...extraUpdates }))
+      );
+      const failed = results.filter(r => r.status === 'rejected').length;
       if (failed > 0) toast.error(isRTL ? `فشل تحديث ${failed} عميل` : `Failed to update ${failed} contacts`);
     } catch (err) { toast.error(isRTL ? 'فشل إعادة التعيين' : 'Reassign failed'); console.error('bulk reassign:', err); }
   };

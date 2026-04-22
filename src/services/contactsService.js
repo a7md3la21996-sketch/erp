@@ -5,6 +5,13 @@ import { logCreate, logUpdate, logAudit } from './auditService';
 import { reportError } from '../utils/errorReporter';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
 import { applyRoleFilter } from '../utils/roleFilter';
+import { retryWithBackoff } from '../utils/retryWithBackoff';
+
+// Retry helper: wraps a Supabase builder thunk in exponential-backoff retry
+// (3 attempts). Use for idempotent ops only — UPDATE/DELETE/SELECT — never for
+// INSERT because a successful insert with a dropped response would create
+// duplicates on retry.
+const rq = (fn, label) => retryWithBackoff(fn, { label });
 
 // ── Assignment History ─────────────────────────────────────────────────────
 
@@ -73,10 +80,10 @@ export function deriveGlobalTemp(agentTemps) {
  */
 export async function updateAgentStatus(contactId, agentName, newStatus) {
   try {
-    const { data: current } = await supabase.from('contacts').select('agent_statuses').eq('id', contactId).maybeSingle();
+    const { data: current } = await rq(() => supabase.from('contacts').select('agent_statuses').eq('id', contactId).maybeSingle(), 'updateAgentStatus.read');
     const statuses = { ...(current?.agent_statuses || {}), [agentName]: newStatus };
     const globalStatus = deriveGlobalStatus(statuses);
-    await supabase.from('contacts').update({ agent_statuses: statuses, contact_status: globalStatus }).eq('id', contactId);
+    await rq(() => supabase.from('contacts').update({ agent_statuses: statuses, contact_status: globalStatus }).eq('id', contactId), 'updateAgentStatus.write');
     return statuses;
   } catch (err) {
     reportError('contactsService', 'updateAgentStatus', err);
@@ -90,10 +97,10 @@ export async function updateAgentStatus(contactId, agentName, newStatus) {
  */
 export async function updateAgentTemperature(contactId, agentName, newTemp) {
   try {
-    const { data: current } = await supabase.from('contacts').select('agent_temperatures').eq('id', contactId).maybeSingle();
+    const { data: current } = await rq(() => supabase.from('contacts').select('agent_temperatures').eq('id', contactId).maybeSingle(), 'updateAgentTemperature.read');
     const temps = { ...(current?.agent_temperatures || {}), [agentName]: newTemp };
     const globalTemp = deriveGlobalTemp(temps);
-    await supabase.from('contacts').update({ agent_temperatures: temps, temperature: globalTemp }).eq('id', contactId);
+    await rq(() => supabase.from('contacts').update({ agent_temperatures: temps, temperature: globalTemp }).eq('id', contactId), 'updateAgentTemperature.write');
     return temps;
   } catch (err) {
     reportError('contactsService', 'updateAgentTemperature', err);
@@ -106,12 +113,12 @@ export async function updateAgentTemperature(contactId, agentName, newTemp) {
  */
 export async function incrementAgentScore(contactId, agentName, increment) {
   try {
-    const { data: current } = await supabase.from('contacts').select('agent_scores, lead_score').eq('id', contactId).maybeSingle();
+    const { data: current } = await rq(() => supabase.from('contacts').select('agent_scores, lead_score').eq('id', contactId).maybeSingle(), 'incrementAgentScore.read');
     const scores = { ...(current?.agent_scores || {}) };
     scores[agentName] = Math.min((scores[agentName] || 0) + increment, 100);
     // Also update global lead_score as max of all agent scores
     const globalScore = Math.max(...Object.values(scores), current?.lead_score || 0);
-    await supabase.from('contacts').update({ agent_scores: scores, lead_score: globalScore }).eq('id', contactId);
+    await rq(() => supabase.from('contacts').update({ agent_scores: scores, lead_score: globalScore }).eq('id', contactId), 'incrementAgentScore.write');
     return scores;
   } catch (err) {
     reportError('contactsService', 'incrementAgentScore', err);
@@ -281,7 +288,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       const from = (page - 1) * pageSize;
       const to = from + pageSize - 1;
       query = query.range(from, to);
-      const { data, error, count } = await query;
+      const { data, error, count } = await rq(() => query, 'fetchContacts.paginated');
       if (error) throw error;
       (data || []).forEach(c => {
         if (!Array.isArray(c.campaign_interactions)) c.campaign_interactions = [];
@@ -292,7 +299,7 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
 
     // Non-paginated: fetch first 1000 only (role filters applied on initial query)
     query = query.range(0, 999);
-    const { data: allBatch, error: batchErr } = await query;
+    const { data: allBatch, error: batchErr } = await rq(() => query, 'fetchContacts.full');
     if (batchErr) throw batchErr;
     const allData = allBatch || [];
     // Ensure array fields are never null (prevents .map() crashes)
@@ -376,7 +383,7 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
         throw err;
       }
     }
-    const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
+    const { data: oldData } = await rq(() => supabase.from('contacts').select('*').eq('id', id).single(), 'updateContact.read');
     // Convert empty strings to null (Supabase rejects '' for date/number columns)
     const sanitized = {};
     for (const [k, v] of Object.entries(cleanUpdates)) {
@@ -393,12 +400,12 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       const names = Array.isArray(sanitized.assigned_to_names) ? sanitized.assigned_to_names.filter(Boolean) : [];
       if (names.length > 0) sanitized.assigned_to_name = names[0];
     }
-    const { data, error } = await supabase
+    const { data, error } = await rq(() => supabase
       .from('contacts')
       .update(stripInternalFields({ ...sanitized, updated_at: new Date().toISOString() }))
       .eq('id', id)
       .select('*')
-      .single();
+      .single(), 'updateContact.write');
     if (error) throw error;
     logUpdate('contact', id, oldData, data);
     return data;
@@ -411,11 +418,11 @@ export async function deleteContact(id) {
   try {
     // Soft delete: mark as deleted instead of removing from DB
     // This preserves all data and related records (opportunities, activities, etc.)
-    const { data: oldData } = await supabase.from('contacts').select('*').eq('id', id).single();
-    const { error } = await supabase.from('contacts').update({
+    const { data: oldData } = await rq(() => supabase.from('contacts').select('*').eq('id', id).single(), 'deleteContact.read');
+    const { error } = await rq(() => supabase.from('contacts').update({
       deleted_at: new Date().toISOString(),
       is_deleted: true,
-    }).eq('id', id);
+    }).eq('id', id), 'deleteContact.write');
     if (error) throw error;
     // Log with full data for recovery
     logAudit({ action: 'delete', entity: 'contact', entityId: id, entityName: oldData?.full_name || '', oldData, description: `Soft deleted contact: ${oldData?.full_name || id}` });
@@ -426,10 +433,10 @@ export async function deleteContact(id) {
 
 export async function restoreContact(id) {
   try {
-    const { error } = await supabase.from('contacts').update({
+    const { error } = await rq(() => supabase.from('contacts').update({
       deleted_at: null,
       is_deleted: false,
-    }).eq('id', id);
+    }).eq('id', id), 'restoreContact');
     if (error) throw error;
   } catch (err) {
     throw err;
@@ -439,7 +446,7 @@ export async function restoreContact(id) {
 export async function permanentDeleteContact(id) {
   // Atomic delete via RPC — all related rows + contact succeed or rollback together.
   // See supabase/migrations/permanent_delete_contact_rpc.sql
-  const { error } = await supabase.rpc('permanent_delete_contact', { p_contact_id: id });
+  const { error } = await rq(() => supabase.rpc('permanent_delete_contact', { p_contact_id: id }), 'permanentDeleteContact');
   if (error) throw error;
 }
 
@@ -473,12 +480,12 @@ export async function checkDuplicate(phone) {
   const last9 = digits.length >= 9 ? digits.slice(-9) : digits;
 
   try {
-    const { data } = await supabase
+    const { data } = await rq(() => supabase
       .from('contacts')
       .select('id, full_name, phone, phone2, extra_phones, contact_type')
       .or(`phone.eq.${normalized.replace(/[^+\d]/g, '')},phone.ilike.%${last9.replace(/\D/g, '')},phone2.eq.${normalized.replace(/[^+\d]/g, '')},phone2.ilike.%${last9.replace(/\D/g, '')},extra_phones.ilike.%${last9.replace(/\D/g, '')}`)
       .limit(1)
-      .maybeSingle();
+      .maybeSingle(), 'checkDuplicate');
     if (data) return data;
   } catch (err) {
     reportError('contactsService', 'checkDuplicate', err);
@@ -492,14 +499,12 @@ export async function fetchContactActivities(contactId, { role, userId, teamId }
     // When viewing a specific contact's activities, show ALL activities on that contact
     // The contact itself is already role-filtered (agent can only open contacts assigned to them)
     // So if they can see the contact, they should see all its history (including from previous agents)
-    const query = supabase
+    const { data, error } = await rq(() => supabase
       .from('activities')
       .select('*')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
-      .limit(50);
-
-    const { data, error } = await query;
+      .limit(50), 'fetchContactActivities');
     if (error) throw error;
     return data || [];
   } catch (err) {
@@ -550,12 +555,12 @@ export async function createActivity(activityData) {
 
 export async function updateActivity(id, updates) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await rq(() => supabase
       .from('activities')
       .update(stripInternalFields(updates))
       .eq('id', id)
       .select('*')
-      .single();
+      .single(), 'updateActivity');
     if (error) throw error;
     return data;
   } catch (err) {
@@ -583,7 +588,7 @@ export async function fetchContactOpportunities(contactId, { role, userId, teamI
       const names = await getTeamMemberNames(role, teamId);
       if (names.length) query = query.in('assigned_to_name', names);
     }
-    const { data, error } = await query;
+    const { data, error } = await rq(() => query, 'fetchContactOpportunities');
     if (error) throw error;
     return data || [];
   } catch (err) {

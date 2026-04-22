@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 /**
  * Close on ESC key press (capture phase, stops propagation)
@@ -37,6 +37,22 @@ export function useClickOutside(ref, onClose, active = true) {
  *   useFocusTrap(dialogRef);
  *   return <div ref={dialogRef} role="dialog" aria-modal="true">...</div>;
  */
+/**
+ * Track whether a form's state has diverged from its initial snapshot.
+ * Pass an object with all form fields (including array/object state) —
+ * on first render the snapshot is captured, subsequent renders compare.
+ *
+ * Usage:
+ *   const isDirty = useDirtyTracker({ form, extraPhones, customFields });
+ *   if (isDirty) showConfirm();
+ */
+export function useDirtyTracker(value) {
+  const snapshot = useMemo(() => JSON.stringify(value), [value]);
+  const initialRef = useRef(null);
+  if (initialRef.current === null) initialRef.current = snapshot;
+  return initialRef.current !== snapshot;
+}
+
 export function useFocusTrap(ref) {
   useEffect(() => {
     const node = ref.current;

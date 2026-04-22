@@ -1651,6 +1651,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       { key: 'comment', label: isRTL ? 'تعليقات' : 'Comments', count: extraSources.comments.length },
                       { key: 'document', label: isRTL ? 'مستندات' : 'Docs', count: extraSources.documents.length },
                       { key: 'deal', label: isRTL ? 'صفقات' : 'Deals', count: extraSources.deals.length },
+                      { key: 'assignment', label: isRTL ? 'تغيير المسؤول' : 'Reassignments', count: (assignmentHistory || []).length },
                       { key: 'audit', label: isRTL ? 'سجل' : 'Log', count: extraSources.audits.length },
                     ].filter(f => f.key === 'all' || f.count > 0).map(f => (
                       <button key={f.key} onClick={() => setTimelineFilter(f.key)}

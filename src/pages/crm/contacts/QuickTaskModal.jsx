@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { Clock } from 'lucide-react';
-import { Button, Input, Select } from '../../../components/ui/';
+import { Button, Input, Select, DiscardConfirm } from '../../../components/ui/';
 import { createTask } from '../../../services/tasksService';
 import { useEscClose, contactPropType } from './constants';
-import { useFocusTrap } from '../../../utils/hooks';
+import { useFocusTrap, useDirtyTracker } from '../../../utils/hooks';
 
 const QUICK_TASK_PRESETS = [
   { key: 'tomorrow', ar: 'غداً', en: 'Tomorrow', days: 1 },
@@ -21,7 +21,6 @@ export default function QuickTaskModal({ contact, onClose }) {
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   const { profile } = useAuth();
-  useEscClose(onClose);
   const dialogRef = useRef(null);
   useFocusTrap(dialogRef);
 
@@ -31,6 +30,13 @@ export default function QuickTaskModal({ contact, onClose }) {
   const [taskType, setTaskType] = useState('followup');
   const [priority, setPriority] = useState('medium');
   const [saving, setSaving] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const isDirty = useDirtyTracker({ selectedPreset, customDate, title, taskType, priority });
+  const requestClose = () => {
+    if (isDirty) { setConfirmDiscard(true); return; }
+    onClose();
+  };
+  useEscClose(() => requestClose());
 
   const handlePreset = (preset) => {
     setSelectedPreset(preset.key);
@@ -79,11 +85,11 @@ export default function QuickTaskModal({ contact, onClose }) {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" onClick={requestClose}>
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="quick-task-title" dir={isRTL ? 'rtl' : 'ltr'} className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-2xl w-[400px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="px-5 pt-[18px] pb-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center">
           <h3 id="quick-task-title" className="text-sm font-bold text-content dark:text-content-dark flex items-center gap-1.5"><Clock size={14} /> {isRTL ? 'مهمة سريعة' : 'Quick Task'} — {contact.full_name}</h3>
-          <button onClick={onClose} className="bg-transparent border-none text-xl text-content-muted dark:text-content-muted-dark cursor-pointer">×</button>
+          <button onClick={requestClose} className="bg-transparent border-none text-xl text-content-muted dark:text-content-muted-dark cursor-pointer">×</button>
         </div>
         <div className="px-5 py-[18px]">
           <Input value={title} onChange={e => setTitle(e.target.value)} className="mb-3.5" placeholder={isRTL ? `متابعة ${contact.full_name}` : `Follow up with ${contact.full_name}`} />
@@ -124,10 +130,17 @@ export default function QuickTaskModal({ contact, onClose }) {
           </div>
         </div>
         <div className="px-5 py-3.5 border-t border-edge dark:border-edge-dark flex gap-2 justify-end">
-          <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <Button variant="secondary" onClick={requestClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
           <Button onClick={handleSave} disabled={saving || !selectedPreset || !customDate}>{saving ? '...' : (isRTL ? 'إنشاء مهمة' : 'Create Task')}</Button>
         </div>
       </div>
+      {confirmDiscard && (
+        <DiscardConfirm
+          isRTL={isRTL}
+          onCancel={() => setConfirmDiscard(false)}
+          onDiscard={() => { setConfirmDiscard(false); onClose(); }}
+        />
+      )}
     </div>
   );
 }

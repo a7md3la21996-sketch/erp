@@ -11,9 +11,10 @@ import {
   SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES,
 } from './constants';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
+import { DiscardConfirm } from '../../../components/ui';
 import { Plus } from 'lucide-react';
 import { Z } from '../../../constants/zIndex';
-import { useFocusTrap } from '../../../utils/hooks';
+import { useFocusTrap, useDirtyTracker } from '../../../utils/hooks';
 
 function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCampaign }) {
   const [search, setSearch] = useState('');
@@ -147,7 +148,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
       }).catch(err => { if (import.meta.env.DEV) console.warn('import opportunitiesService:', err); });
     }
   }, [isAdmin]);
-  useEscClose(onClose);
+  useEscClose(() => requestClose());
   const dialogRef = useRef(null);
   useFocusTrap(dialogRef);
   const dupTimer = useRef(null);
@@ -185,6 +186,14 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const [savedContact, setSavedContact] = useState(null);
   const [errors, setErrors] = useState({});
   const [customFieldValues, setCustomFieldValues] = useState({});
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const isDirty = useDirtyTracker({ form, extraPhones, extraCountryCodes, customFieldValues });
+  // Close requests go through this gate — shows confirm if form has unsaved edits.
+  // Skip the guard once the contact is saved (success screen) — nothing to lose.
+  const requestClose = () => {
+    if (isDirty && !savedContact) { setConfirmDiscard(true); return; }
+    onClose();
+  };
   const loggedInteractionRef = useRef(null); // track which dup+campaign combo was logged
   const set = (k, v) => {
     setForm(f => ({ ...f, [k]: v }));
@@ -292,7 +301,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   };
 
   return (
-    <div onClick={onClose} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div onClick={requestClose} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'}>
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="add-contact-title" onClick={e => e.stopPropagation()} className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[560px] max-h-[92vh] flex flex-col">
         {savedContact ? (
           <div className="p-8 text-center">
@@ -328,7 +337,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
               {' '}<span className="text-brand-400/50">({isRTL ? `${step} من 2` : `${step} of 2`})</span>
             </p>
           </div>
-          <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer text-lg"><X size={18} /></button>
+          <button onClick={requestClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer text-lg"><X size={18} /></button>
         </div>
         <div className="h-[3px] bg-brand-500/15 rounded-b-sm">
           <div className="h-full bg-gradient-to-r from-brand-900 to-brand-500 rounded-b-sm transition-[width] duration-300 ease-in-out" style={{ width: step === 1 ? '50%' : '100%' }} />
@@ -608,7 +617,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-edge dark:border-edge-dark flex justify-between items-center">
-          <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
+          <Button variant="secondary" onClick={requestClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
           <div className="flex gap-2.5">
             {step === 2 && <Button variant="secondary" onClick={() => setStep(1)}>{isRTL ? 'السابق →' : '← Back'}</Button>}
             {step === 1
@@ -619,6 +628,13 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         </div>
         </>)}
       </div>
+      {confirmDiscard && (
+        <DiscardConfirm
+          isRTL={isRTL}
+          onCancel={() => setConfirmDiscard(false)}
+          onDiscard={() => { setConfirmDiscard(false); onClose(); }}
+        />
+      )}
     </div>
   );
 }

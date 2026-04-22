@@ -3,6 +3,11 @@ import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { applyRoleFilter } from '../utils/roleFilter';
+import { retryWithBackoff } from '../utils/retryWithBackoff';
+
+// Retry wrapper for idempotent Supabase calls (UPDATE/DELETE/SELECT). Never
+// for INSERT — dropped response after successful write would duplicate.
+const rq = (fn, label) => retryWithBackoff(fn, { label });
 
 
 // ── Team cache ────────────────────────────────────────────────────────────
@@ -110,13 +115,13 @@ export async function fetchTasks({ contactId, dept, status, priority, page, page
     if (isServerPaginated) {
       const from = (page - 1) * pageSize;
       query = query.range(from, from + pageSize - 1);
-      const { data, error, count } = await query;
+      const { data, error, count } = await rq(() => query, 'fetchTasks.paginated');
       if (error) { reportError('tasksService', 'fetchTasks', error); return { data: [], count: 0 }; }
       return { data: await enrich(data), count: count || 0 };
     }
 
     query = query.range(0, 999);
-    const { data, error } = await query;
+    const { data, error } = await rq(() => query, 'fetchTasks.full');
     if (error) { reportError('tasksService', 'fetchTasks', error); return []; }
     return await enrich(data);
   } catch (err) { reportError('tasksService', 'fetchTasks', err); return isServerPaginated ? { data: [], count: 0 } : []; }
@@ -137,8 +142,8 @@ export async function createTask(data) {
 
 export async function updateTask(id, updates) {
   try {
-    const { data: oldData } = await supabase.from('tasks').select('*').eq('id', id).single();
-    const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select('*').single();
+    const { data: oldData } = await rq(() => supabase.from('tasks').select('*').eq('id', id).single(), 'updateTask.read');
+    const { data, error } = await rq(() => supabase.from('tasks').update(updates).eq('id', id).select('*').single(), 'updateTask.write');
     if (error) throw error;
     logUpdate('task', id, oldData, data);
     return data;
@@ -150,8 +155,8 @@ export async function updateTask(id, updates) {
 
 export async function deleteTask(id) {
   try {
-    const { data: oldData } = await supabase.from('tasks').select('*').eq('id', id).single();
-    await supabase.from('tasks').delete().eq('id', id);
+    const { data: oldData } = await rq(() => supabase.from('tasks').select('*').eq('id', id).single(), 'deleteTask.read');
+    await rq(() => supabase.from('tasks').delete().eq('id', id), 'deleteTask.write');
     logDelete('task', id, oldData);
   } catch (err) {
     reportError('tasksService', 'deleteTask', err);

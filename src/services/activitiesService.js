@@ -5,6 +5,12 @@ import { logCreate, logDelete } from './auditService';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
 import { applyRoleFilter } from '../utils/roleFilter';
 import { incrementAgentScore } from './contactsService';
+import { retryWithBackoff } from '../utils/retryWithBackoff';
+
+// Retry wrapper for idempotent Supabase calls (UPDATE/DELETE/SELECT). Do not
+// use for INSERT — retrying a request whose response was dropped after a
+// successful write would create duplicates.
+const rq = (fn, label) => retryWithBackoff(fn, { label });
 
 // ── Score map for lead scoring ──
 const SCORE_MAP = { call: 10, whatsapp: 5, email: 3, site_visit: 20, meeting: 15, note: 2 };
@@ -83,7 +89,7 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
       query = query.limit(limit);
     }
 
-    const { data, error, count } = await query;
+    const { data, error, count } = await rq(() => query, 'fetchActivities');
     if (error) { reportError('activitiesService', 'fetchActivities', error); }
     if (!error && data?.length) {
       // Fetch contact names for activities that have contact_id
@@ -133,12 +139,12 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
   if (scheduledActivityId) {
     // Update existing scheduled activity → completed (no duplicate)
     try {
-      const { data, error } = await supabase
+      const { data, error } = await rq(() => supabase
         .from('activities')
         .update({ status: 'completed', notes, completed_at: new Date().toISOString() })
         .eq('id', scheduledActivityId)
         .select('*')
-        .single();
+        .single(), 'createActivity.completeScheduled');
       if (!error && data) {
         if (entityType === 'contact' && entityId) {
           const scoreIncrement = SCORE_MAP[type] || 2;
@@ -228,12 +234,12 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
 
 export async function updateActivity(id, updates) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await rq(() => supabase
       .from('activities')
       .update(stripInternalFields(updates))
       .eq('id', id)
       .select('*')
-      .single();
+      .single(), 'updateActivity');
     if (error) throw error;
     return data;
   } catch (err) { reportError('activitiesService', 'query', err);
@@ -243,8 +249,8 @@ export async function updateActivity(id, updates) {
 
 export async function deleteActivity(id) {
   try {
-    const { data: oldData } = await supabase.from('activities').select('*').eq('id', id).single();
-    const { error } = await supabase.from('activities').delete().eq('id', id);
+    const { data: oldData } = await rq(() => supabase.from('activities').select('*').eq('id', id).single(), 'deleteActivity.read');
+    const { error } = await rq(() => supabase.from('activities').delete().eq('id', id), 'deleteActivity.write');
     if (error) throw error;
     logDelete('activity', id, oldData);
   } catch (err) { reportError('activitiesService', 'query', err);

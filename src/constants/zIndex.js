@@ -31,6 +31,7 @@ export const Z = {
   MODAL_OVER: 1100,
   MODAL_TOP: 1200,
   DROPDOWN_ABOVE_MODAL: 1300,
+  DISCARD_CONFIRM: 1500,  // "unsaved changes?" dialog, must appear above any form modal
   TOAST: 2000,
 };
 

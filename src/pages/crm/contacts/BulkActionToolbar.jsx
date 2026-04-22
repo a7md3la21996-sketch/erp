@@ -167,8 +167,8 @@ export default function BulkActionToolbar({
                   <select value={addAgentStatus} onChange={e => setAddAgentStatus(e.target.value)}
                     style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(74,122,171,0.3)', background: '#0d1b2a', color: '#e2e8f0', fontSize: 11, outline: 'none' }}>
                     <option value="new">{isRTL ? 'جديد' : 'New'}</option>
-                    <option value="active">{isRTL ? 'نشط' : 'Active'}</option>
-                    <option value="inactive">{isRTL ? 'غير نشط' : 'Inactive'}</option>
+                    <option value="contacted">{isRTL ? 'تم التواصل' : 'Contacted'}</option>
+                    <option value="following">{isRTL ? 'متابعة' : 'Following'}</option>
                     <option value="has_opportunity">{isRTL ? 'لديه فرصة' : 'Has Opportunity'}</option>
                   </select>
                 </div>

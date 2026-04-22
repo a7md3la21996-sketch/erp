@@ -10,7 +10,7 @@ import { createNotification } from '../../../services/notificationsService';
 import { getTemplates, renderBody } from '../../../services/smsTemplateService';
 import { reportError } from '../../../utils/errorReporter';
 import { getDeptStages } from './constants';
-import { Button } from '../../../components/ui';
+import { Button, SelectedContactsList } from '../../../components/ui';
 
 // ── Merge Preview Modal ──────────────────────────────────────────────
 export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTargets, setMergeMode, contacts, setContacts, setSelectedIds, isRTL }) {
@@ -102,13 +102,29 @@ export function ConfirmModal({ confirmAction, setConfirmAction, isRTL }) {
 
   const requiredWord = isRTL ? 'حذف' : 'DELETE';
   const isConfirmed = confirmText.trim() === requiredWord;
+  const items = Array.isArray(confirmAction.items) ? confirmAction.items : [];
+  const hasList = items.length > 0;
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => { setConfirmAction(null); setConfirmText(''); }}>
-      <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-red-500/30 dark:border-red-500/30 rounded-2xl p-7 w-full max-w-[420px] text-center" onClick={e => e.stopPropagation()}>
-        <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4 text-xl">⚠️</div>
-        <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">{confirmAction.title}</h3>
-        <p className="m-0 mb-4 text-content-muted dark:text-content-muted-dark text-xs">{confirmAction.message}</p>
+      <div className={`modal-content bg-surface-card dark:bg-surface-card-dark border border-red-500/30 dark:border-red-500/30 rounded-2xl p-6 w-full ${hasList ? 'max-w-[520px]' : 'max-w-[420px] text-center'}`} onClick={e => e.stopPropagation()}>
+        <div className={`${hasList ? 'flex items-center gap-3 mb-4' : ''}`}>
+          <div className={`w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-xl shrink-0 ${hasList ? '' : 'mx-auto mb-4'}`}>⚠️</div>
+          <div className={`${hasList ? 'flex-1' : ''}`}>
+            <h3 className="m-0 mb-1 text-content dark:text-content-dark text-base font-bold">{confirmAction.title}</h3>
+            <p className="m-0 text-content-muted dark:text-content-muted-dark text-xs">{confirmAction.message}</p>
+          </div>
+        </div>
+        {hasList && (
+          <>
+            <p className="m-0 mb-2 text-xs font-semibold text-content dark:text-content-dark">
+              {isRTL ? 'راجع القائمة قبل التأكيد:' : 'Review the list before confirming:'}
+            </p>
+            <div className="mb-4">
+              <SelectedContactsList contacts={items} isRTL={isRTL} maxHeight={260} />
+            </div>
+          </>
+        )}
         <p className="m-0 mb-2 text-xs text-red-500 font-semibold">
           {isRTL ? `اكتب "${requiredWord}" للتأكيد` : `Type "${requiredWord}" to confirm`}
         </p>
@@ -122,7 +138,7 @@ export function ConfirmModal({ confirmAction, setConfirmAction, isRTL }) {
           dir="auto"
           onKeyDown={e => { if (e.key === 'Enter' && isConfirmed) { confirmAction.onConfirm(); setConfirmText(''); } }}
         />
-        <div className="flex gap-2.5 justify-center">
+        <div className={`flex gap-2.5 ${hasList ? 'justify-end' : 'justify-center'}`}>
           <button onClick={() => { setConfirmAction(null); setConfirmText(''); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
           <Button variant="danger" size="sm" disabled={!isConfirmed} onClick={() => { confirmAction.onConfirm(); setConfirmText(''); }}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</Button>
         </div>
@@ -139,15 +155,26 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
 
   if (!disqualifyModal) return null;
 
+  const isBulk = disqualifyModal === 'bulk';
+  const bulkContacts = isBulk ? (contacts || []).filter(c => selectedIds.includes(c.id)) : [];
+
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setDisqualifyModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: isDark ? '#1a2332' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 400, boxShadow: isDark ? '0 24px 48px rgba(0,0,0,0.4)' : '0 24px 48px rgba(0,0,0,0.12)' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: isDark ? '#1a2332' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: isBulk ? 500 : 400, boxShadow: isDark ? '0 24px 48px rgba(0,0,0,0.4)' : '0 24px 48px rgba(0,0,0,0.12)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#EF4444' }}>
-            {isRTL ? (disqualifyModal === 'bulk' ? `غير مؤهل (${selectedIds.length})` : `غير مؤهل — ${disqualifyModal?.full_name}`) : (disqualifyModal === 'bulk' ? `Disqualify (${selectedIds.length})` : `Disqualify — ${disqualifyModal?.full_name}`)}
+            {isRTL ? (isBulk ? `غير مؤهل (${selectedIds.length})` : `غير مؤهل — ${disqualifyModal?.full_name}`) : (isBulk ? `Disqualify (${selectedIds.length})` : `Disqualify — ${disqualifyModal?.full_name}`)}
           </h3>
           <button onClick={() => setDisqualifyModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#64748b' : '#94a3b8' }}><X size={16} /></button>
         </div>
+        {isBulk && bulkContacts.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b', marginBottom: 6 }}>
+              {isRTL ? 'العملاء اللي هيتم استبعادهم:' : 'Contacts to disqualify:'}
+            </div>
+            <SelectedContactsList contacts={bulkContacts} isRTL={isRTL} maxHeight={220} />
+          </div>
+        )}
         <div style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 12 }}>{isRTL ? 'اختر سبب الاستبعاد:' : 'Select disqualification reason:'}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
           {DQ_REASONS.map(r => (
@@ -241,10 +268,11 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
 
   const agents = allAgents.length > 0 ? allAgents : [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].sort();
   const filtered = search ? agents.filter(a => a.toLowerCase().includes(search.toLowerCase())) : agents;
+  const selectedContacts = (contacts || []).filter(c => selectedIds.includes(c.id));
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1200] flex items-center justify-center p-5">
-      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[400px] overflow-hidden">
+      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[460px] overflow-hidden">
         {/* Header */}
         <div className="flex justify-between items-center px-5 py-4 border-b border-edge dark:border-edge-dark">
           <div>
@@ -260,6 +288,16 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
             <X size={16} />
           </button>
         </div>
+
+        {/* Selected contacts preview */}
+        {selectedContacts.length > 0 && (
+          <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
+            <p className="m-0 mb-1.5 text-[11px] font-bold text-content dark:text-content-dark">
+              {isRTL ? 'العملاء اللي هيتم نقلهم:' : 'Contacts to reassign:'}
+            </p>
+            <SelectedContactsList contacts={selectedContacts} isRTL={isRTL} maxHeight={180} />
+          </div>
+        )}
 
         {/* Search */}
         <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
@@ -417,12 +455,11 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
         </div>
 
         {/* Selected contacts preview */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 16, maxHeight: 60, overflowY: 'auto' }}>
-          {selContacts.slice(0, 8).map(c => (
-            <span key={c.id} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 6, background: isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.08)', color: isDark ? '#7db4d8' : '#4A7AAB', fontWeight: 600 }}>{c.full_name}</span>
-          ))}
-          {selContacts.length > 8 && <span style={{ fontSize: 10, color: isDark ? '#64748b' : '#94a3b8' }}>+{selContacts.length - 8}</span>}
-        </div>
+        {selContacts.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <SelectedContactsList contacts={selContacts} isRTL={isRTL} maxHeight={180} />
+          </div>
+        )}
 
         {/* Form */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

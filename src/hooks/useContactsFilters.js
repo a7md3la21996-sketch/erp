@@ -152,6 +152,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       if (sortBy === 'score') return (b.lead_score || 0) - (a.lead_score || 0);
       if (sortBy === 'name') return (a.full_name || '').localeCompare(b.full_name || '', 'ar');
       if (sortBy === 'created') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+      if (sortBy === 'assigned') return new Date(b.assigned_at || 0) - new Date(a.assigned_at || 0); // latest assigned first; null assigned_at sinks to bottom
       if (sortBy === 'stale') return new Date(a.last_activity_at || 0) - new Date(b.last_activity_at || 0);
       return 0;
     });

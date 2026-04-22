@@ -6,6 +6,11 @@ import { addToSyncQueue } from './syncService';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
 import { applyRoleFilter } from '../utils/roleFilter';
 import { notifyOppStageChange, notifyDealWon } from './notificationService';
+import { retryWithBackoff } from '../utils/retryWithBackoff';
+
+// Retry wrapper for idempotent Supabase calls (UPDATE/DELETE/SELECT). Never
+// for INSERT — dropped response after successful write would duplicate.
+const rq = (fn, label) => retryWithBackoff(fn, { label });
 
 // ── Unit blocking helpers ──
 export async function checkUnitAvailability(unitId) {
@@ -97,7 +102,8 @@ export async function fetchOpportunities({ role, userId, teamId, page = 0, pageS
 
     const from = page * pageSize;
     const to = from + pageSize - 1;
-    const { data, error } = await query.range(from, to);
+    const rangedQuery = query.range(from, to);
+    const { data, error } = await rq(() => rangedQuery, 'fetchOpportunities');
     if (error) throw error;
     if (data?.length) {
       const enriched = await enrichOpps(data);
@@ -191,13 +197,13 @@ export async function updateOpportunity(id, updates) {
   }
 
   try {
-    const { data: oldData } = await supabase.from('opportunities').select('*').eq('id', id).single();
-    const { data, error } = await supabase
+    const { data: oldData } = await rq(() => supabase.from('opportunities').select('*').eq('id', id).single(), 'updateOpportunity.read');
+    const { data, error } = await rq(() => supabase
       .from('opportunities')
       .update({ ...stripInternalFields(updates), updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
-      .single();
+      .single(), 'updateOpportunity.write');
     if (error) throw error;
     const [enriched] = await enrichOpps([data]);
     logUpdate('opportunity', id, oldData, enriched);
@@ -217,8 +223,8 @@ export async function updateOpportunity(id, updates) {
 // ─── Delete opportunity ───
 export async function deleteOpportunity(id) {
   try {
-    const { data: oldData } = await supabase.from('opportunities').select('*').eq('id', id).single();
-    const { error } = await supabase.from('opportunities').delete().eq('id', id);
+    const { data: oldData } = await rq(() => supabase.from('opportunities').select('*').eq('id', id).single(), 'deleteOpportunity.read');
+    const { error } = await rq(() => supabase.from('opportunities').delete().eq('id', id), 'deleteOpportunity.write');
     if (error) throw error;
     logDelete('opportunity', id, oldData);
   } catch (err) {
