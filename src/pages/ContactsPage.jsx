@@ -126,6 +126,7 @@ export default function ContactsPage() {
     initialShowBlacklisted: searchParams.get('blacklist') === 'true',
     initialSortBy: searchParams.get('sort') || 'created',
     initialPage: Math.max(1, parseInt(searchParams.get('page'), 10) || 1),
+    profile,
     allAgentNames,
   });
 

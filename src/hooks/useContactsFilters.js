@@ -3,6 +3,7 @@ import { applySmartFilters } from '../components/ui';
 import { SOURCE_LABELS, SOURCE_EN, COUNTRY_CODES } from '../pages/crm/contacts/constants';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { getDeptView, ALL_DEPT_VIEW } from '../config/departmentViews';
+import { withAgentView, profileName } from '../utils/contactView';
 
 const detectCountry = (phone) => {
   if (!phone) return '';
@@ -28,7 +29,7 @@ const COUNTRY_OPTIONS = COUNTRY_CODES
   .filter(c => ['EG','SA','AE','KW','QA','OM','BH','JO','IQ','LB','LY','MA','TN','SD'].includes(c.country))
   .map(c => ({ value: c.country, label: c.labelAr, labelEn: c.label }));
 
-export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAuditFilters, initialSearch = '', initialFilterType = 'all', initialShowBlacklisted = false, initialSortBy, initialPage = 1, allAgentNames }) {
+export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAuditFilters, initialSearch = '', initialFilterType = 'all', initialShowBlacklisted = false, initialSortBy, initialPage = 1, allAgentNames, profile }) {
   const globalFilter = useGlobalFilter();
   const activeDept = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
   const deptView = activeDept ? getDeptView(activeDept) : ALL_DEPT_VIEW;
@@ -53,6 +54,14 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { value: 'contacted', label: 'تم التواصل', labelEn: 'Contacted' },
     { value: 'has_opportunity', label: 'لديه فرصة', labelEn: 'Has Opportunity' },
     { value: 'disqualified', label: 'غير مؤهل', labelEn: 'Disqualified' },
+  ];
+
+  // Temperature options — used by the per-agent "my_temperature" smart filter
+  const ALL_TEMP_OPTIONS = [
+    { value: 'hot', label: 'حار', labelEn: 'Hot' },
+    { value: 'warm', label: 'دافئ', labelEn: 'Warm' },
+    { value: 'cool', label: 'فاتر', labelEn: 'Cool' },
+    { value: 'cold', label: 'بارد', labelEn: 'Cold' },
   ];
 
   // All contact type options
@@ -84,15 +93,18 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       { value: 'marketing', label: 'التسويق', labelEn: 'Marketing' },
       { value: 'operations', label: 'العمليات', labelEn: 'Operations' },
     ]},
-    { id: 'contact_status', label: 'الحالة', labelEn: 'Status', type: 'select',
+    // Per-agent fields (replaces old global contact_status/lead_score). The filter
+    // matches against the current user's own entry in agent_statuses/agent_scores.
+    { id: 'my_status', label: 'حالتي', labelEn: 'My Status', type: 'select',
       options: deptView.statusOptions ? ALL_STATUS_OPTIONS.filter(o => deptView.statusOptions.includes(o.value)) : ALL_STATUS_OPTIONS },
+    { id: 'my_temperature', label: 'حرارتي', labelEn: 'My Temperature', type: 'select', options: ALL_TEMP_OPTIONS },
     { id: 'full_name', label: 'الاسم', labelEn: 'Name', type: 'text' },
     { id: 'email', label: 'الإيميل', labelEn: 'Email', type: 'text' },
     { id: 'phone', label: 'الهاتف', labelEn: 'Phone', type: 'text' },
     { id: 'created_at', label: 'تاريخ الإنشاء', labelEn: 'Created Date', type: 'date' },
     { id: 'assigned_at', label: 'تاريخ التوزيع', labelEn: 'Assignment Date', type: 'date' },
     { id: 'last_activity_at', label: 'آخر نشاط', labelEn: 'Last Activity', type: 'date' },
-    { id: 'lead_score', label: 'Lead Score', labelEn: 'Lead Score', type: 'number' },
+    { id: 'my_score', label: 'تقييمي', labelEn: 'My Score', type: 'number' },
     { id: 'campaign_name', label: 'الحملة', labelEn: 'Campaign', type: 'text' },
     { id: '_country', label: 'الدولة', labelEn: 'Country', type: 'select', options: COUNTRY_OPTIONS },
     { id: 'assigned_to_name', label: 'المسؤول', labelEn: 'Assigned To', type: 'select', options: (allAgentNames || [...new Set((contacts || []).map(c => c.assigned_to_name).filter(Boolean))]).map(n => ({ value: n, label: n, labelEn: n })) },
@@ -127,13 +139,22 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
   // NOTE: search, filterType, showBlacklisted, department, agentName are already filtered server-side.
   // This hook only applies: computed fields, smart filters (client-only), audit filters, date range, and sorting.
   const filtered = useMemo(() => {
-    let list = (contacts || []).map(c => ({
+    const meName = profileName(profile);
+    // withAgentView attaches my_status / my_temperature / my_score / _agent_count
+    // from the current user's perspective — SmartFilter then addresses them as
+    // regular fields. For legacy rows without agent_statuses, it falls back to
+    // the global contact_status / temperature / lead_score.
+    let list = withAgentView(contacts || [], profile).map(c => ({
       ...c,
       _country: c._country || detectCountry(c.phone),
       _campaign_count: (c.campaign_interactions || []).length,
       _opp_count: c._opp_count || 0,
-      _agent_count: Array.isArray(c.assigned_to_names) ? c.assigned_to_names.length : (c.assigned_to_name ? 1 : 0),
+      // _agent_count already set by withAgentView — keep it aligned with the
+      // old logic (use assigned_to_name when array missing).
+      _agent_count: c._agent_count ?? (Array.isArray(c.assigned_to_names) ? c.assigned_to_names.length : (c.assigned_to_name ? 1 : 0)),
     }));
+    // meName is kept for downstream code that may log it
+    void meName;
     // Client-only smart filters — exclude fields already sent to server
     const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department'];
     const clientOnlySmartFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
@@ -157,7 +178,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       return 0;
     });
     return list;
-  }, [contacts, sortBy, pinnedIds, smartFilters, SMART_FIELDS, applyAuditFilters, globalFilter?.dateRange]);
+  }, [contacts, sortBy, pinnedIds, smartFilters, SMART_FIELDS, applyAuditFilters, globalFilter?.dateRange, profile]);
 
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);
