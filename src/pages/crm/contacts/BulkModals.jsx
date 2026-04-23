@@ -272,9 +272,9 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
 
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1200] flex items-center justify-center p-5">
-      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[460px] overflow-hidden">
-        {/* Header */}
-        <div className="flex justify-between items-center px-5 py-4 border-b border-edge dark:border-edge-dark">
+      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[460px] max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header — stays anchored at top */}
+        <div className="shrink-0 flex justify-between items-center px-5 py-4 border-b border-edge dark:border-edge-dark">
           <div>
             <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">
               {isRTL ? 'إعادة تعيين' : 'Reassign'}
@@ -289,6 +289,8 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
           </button>
         </div>
 
+        {/* Scrollable body — only this area scrolls, header/footer stay visible */}
+        <div className="flex-1 overflow-y-auto min-h-0">
         {/* Selected contacts preview */}
         {selectedContacts.length > 0 && (
           <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
@@ -367,9 +369,10 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
             </div>
           </div>
         )}
+        </div>{/* end scrollable body */}
 
-        {/* Footer */}
-        <div className="px-5 py-4 border-t border-edge dark:border-edge-dark flex gap-3">
+        {/* Footer — stays anchored at bottom */}
+        <div className="shrink-0 px-5 py-4 border-t border-edge dark:border-edge-dark flex gap-3">
           <button onClick={() => { setBulkReassignModal(false); setSearch(''); setSelected(null); }}
             className="flex-1 px-4 py-2.5 rounded-xl bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark text-xs font-semibold cursor-pointer">
             {isRTL ? 'إلغاء' : 'Cancel'}

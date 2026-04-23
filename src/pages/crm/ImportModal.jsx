@@ -1,8 +1,21 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
+import supabase from '../../lib/supabase';
 // ExcelJS is loaded dynamically to reduce bundle size (~917KB)
 import { Button, FilterPill } from '../../components/ui';
+
+// Normalize a name for fuzzy comparison: trim, collapse spaces, lowercase,
+// strip punctuation/diacritics. Used to match sheet names against real users.
+function normalizeName(s) {
+  return String(s || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/[.,_-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
 
 const SOURCE_PLATFORM = { facebook: 'meta', instagram: 'meta', google_ads: 'google', website: 'organic', call: 'direct', walk_in: 'direct', referral: 'direct', developer: 'direct', cold_call: 'direct', other: 'other' };
 
@@ -322,6 +335,19 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   // Tooltip state for cleaned cells
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, text: '' });
 
+  // ── Agent validation / mapping ─────────────────────────────────────────
+  // Users in DB (fetched once). Used to validate the "Assigned To" column
+  // of the sheet so imported contacts actually route to real agents.
+  const [knownUsers, setKnownUsers] = useState([]);
+  // User override map: { rawNameFromSheet: resolvedFullNameInDb | '' }
+  // '' means "import as-is without mapping" (the fallback in parent will apply).
+  const [agentOverrides, setAgentOverrides] = useState({});
+  useEffect(() => {
+    supabase.from('users').select('id, full_name_en, full_name_ar').then(({ data }) => {
+      setKnownUsers((data || []).filter(u => u.full_name_en || u.full_name_ar));
+    }).catch(() => {});
+  }, []);
+
   const processFile = async (file) => {
     const arrayBuffer = await file.arrayBuffer();
     const ExcelJS = await import('exceljs');
@@ -638,6 +664,50 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
 
   const displayRows = tab === 'all' ? rows : tab === 'new' ? newRows : tab === 'dup' ? dupRows : errRows;
 
+  // ── Agent matching ──────────────────────────────────────────────────
+  // Build a normalized lookup of known users once knownUsers is loaded.
+  const userLookup = useMemo(() => {
+    const byNormEn = new Map();
+    const byNormAr = new Map();
+    const allNormNames = [];
+    knownUsers.forEach(u => {
+      if (u.full_name_en) { byNormEn.set(normalizeName(u.full_name_en), u.full_name_en); allNormNames.push({ norm: normalizeName(u.full_name_en), full: u.full_name_en }); }
+      if (u.full_name_ar) { byNormAr.set(normalizeName(u.full_name_ar), u.full_name_en || u.full_name_ar); allNormNames.push({ norm: normalizeName(u.full_name_ar), full: u.full_name_en || u.full_name_ar }); }
+    });
+    return { byNormEn, byNormAr, allNormNames };
+  }, [knownUsers]);
+
+  // For each unique assigned_to_name in the importable rows, figure out its
+  // match status: 'exact' | 'normalized' | 'partial' | 'none'.
+  const agentMatchTable = useMemo(() => {
+    const importable = [...newRows, ...overwriteRows];
+    const names = [...new Set(importable.map(r => r.assigned_to_name).filter(Boolean).map(n => String(n).trim()))];
+    return names.map(raw => {
+      if (!raw) return null;
+      const norm = normalizeName(raw);
+      // 1. Exact match against full_name_en
+      const exactEn = knownUsers.find(u => u.full_name_en === raw);
+      if (exactEn) return { raw, status: 'exact', matchedTo: exactEn.full_name_en, count: importable.filter(r => r.assigned_to_name === raw).length };
+      // 2. Normalized match (case/whitespace variant)
+      if (userLookup.byNormEn.has(norm)) {
+        const matched = userLookup.byNormEn.get(norm);
+        return { raw, status: 'normalized', matchedTo: matched, count: importable.filter(r => r.assigned_to_name === raw).length };
+      }
+      if (userLookup.byNormAr.has(norm)) {
+        const matched = userLookup.byNormAr.get(norm);
+        return { raw, status: 'normalized', matchedTo: matched, count: importable.filter(r => r.assigned_to_name === raw).length };
+      }
+      // 3. Partial match — raw is a prefix/contains a user's name (or vice versa)
+      const partial = userLookup.allNormNames.find(u => u.norm.includes(norm) || norm.includes(u.norm));
+      if (partial) return { raw, status: 'partial', matchedTo: partial.full, count: importable.filter(r => r.assigned_to_name === raw).length };
+      // 4. No match
+      return { raw, status: 'none', matchedTo: null, count: importable.filter(r => r.assigned_to_name === raw).length };
+    }).filter(Boolean);
+  }, [newRows, overwriteRows, knownUsers, userLookup]);
+
+  const unmatchedCount = agentMatchTable.filter(a => a.status === 'none' && !agentOverrides[a.raw]).length;
+  const partialCount   = agentMatchTable.filter(a => a.status === 'partial' && !agentOverrides[a.raw]).length;
+
   const downloadErrors = async () => {
     const data = errRows.map(r => ({
       ROW: r._row,
@@ -671,11 +741,28 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
       setImportProgress({ current: 0, total, active: true });
     }
 
+    // Build a resolver: raw sheet name → canonical DB name (auto-match or user override)
+    const resolveAgent = (raw) => {
+      if (!raw) return raw;
+      const trimmed = String(raw).trim();
+      // User-specified override wins (including '' which means "leave as-is")
+      if (Object.prototype.hasOwnProperty.call(agentOverrides, trimmed)) {
+        const ov = agentOverrides[trimmed];
+        return ov || trimmed; // empty override = import literal (parent may fallback)
+      }
+      const match = agentMatchTable.find(a => a.raw === trimmed);
+      if (match && (match.status === 'exact' || match.status === 'normalized')) {
+        return match.matchedTo; // auto-fix case/whitespace variants
+      }
+      return trimmed; // partial/none without override → keep as-is
+    };
+
     const toAdd = [];
     for (let i = 0; i < importable.length; i++) {
       const r = importable[i];
       toAdd.push({
         ...r,
+        assigned_to_name: resolveAgent(r.assigned_to_name),
         id: r._status === 'overwrite' ? r._existingId : undefined, // Let Supabase generate UUID
         lead_score: 0,
         is_blacklisted: false,
@@ -1395,6 +1482,96 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
             <div>
               {/* Cleaning Summary */}
               <CleaningSummaryCard />
+
+              {/* Agent Matching Review — only shown when any row has an assignee */}
+              {agentMatchTable.length > 0 && (
+                <div style={{ marginBottom: 16, padding: 14, borderRadius: 12, background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.04)', border: `1px solid ${isDark ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.15)'}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+                      {isRTL ? '🔍 مراجعة المسؤولين' : '🔍 Agent Mapping Review'}
+                    </span>
+                    {unmatchedCount > 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>
+                        {isRTL ? `${unmatchedCount} غير مطابق` : `${unmatchedCount} unmatched`}
+                      </span>
+                    )}
+                    {partialCount > 0 && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: 'rgba(245,158,11,0.12)', color: '#D97706' }}>
+                        {isRTL ? `${partialCount} تطابق جزئي` : `${partialCount} partial`}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 10 }}>
+                    {isRTL
+                      ? 'الأسماء اللي في عمود "مسؤول" بتاع الشيت — صحّح أي اسم مش متطابق قبل الاستيراد.'
+                      : 'Names from the sheet\'s "Assigned To" column — fix any unmatched names before import.'}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                    {agentMatchTable.map(a => {
+                      const override = agentOverrides[a.raw];
+                      const effectiveStatus = override ? 'exact' : a.status;
+                      const statusColor = effectiveStatus === 'exact' ? '#10B981'
+                        : effectiveStatus === 'normalized' ? '#10B981'
+                        : effectiveStatus === 'partial' ? '#D97706'
+                        : '#EF4444';
+                      const statusIcon = effectiveStatus === 'exact' ? '✓'
+                        : effectiveStatus === 'normalized' ? '✓'
+                        : effectiveStatus === 'partial' ? '⚠'
+                        : '✗';
+                      return (
+                        <div key={a.raw} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 8, background: isDark ? 'rgba(255,255,255,0.02)' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)'}` }}>
+                          <span style={{ fontSize: 14, fontWeight: 700, color: statusColor, width: 16, textAlign: 'center' }}>{statusIcon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} dir="auto">
+                              "{a.raw}"
+                              <span style={{ fontWeight: 400, marginInlineStart: 6, color: isDark ? '#94a3b8' : '#64748b', fontSize: 10 }}>
+                                ({a.count} {isRTL ? 'ليد' : 'leads'})
+                              </span>
+                            </div>
+                            {a.status === 'exact' && !override && (
+                              <div style={{ fontSize: 10, color: '#10B981', marginTop: 2 }}>
+                                {isRTL ? `مطابق: ${a.matchedTo}` : `Matched: ${a.matchedTo}`}
+                              </div>
+                            )}
+                            {a.status === 'normalized' && !override && (
+                              <div style={{ fontSize: 10, color: '#10B981', marginTop: 2 }}>
+                                {isRTL ? `مطابق تلقائياً: ${a.matchedTo}` : `Auto-matched: ${a.matchedTo}`}
+                              </div>
+                            )}
+                            {a.status === 'partial' && !override && (
+                              <div style={{ fontSize: 10, color: '#D97706', marginTop: 2 }}>
+                                {isRTL ? `اقتراح: ${a.matchedTo} — اختار يدوياً للتأكيد` : `Suggested: ${a.matchedTo} — pick manually to confirm`}
+                              </div>
+                            )}
+                            {a.status === 'none' && !override && (
+                              <div style={{ fontSize: 10, color: '#EF4444', marginTop: 2 }}>
+                                {isRTL ? 'غير موجود في السيستم — لو تركت كده هيتحفظ بنفس الاسم (قد لا يظهر لأي سيلز)' : 'Not found in users — will save as-is (may not appear for any agent)'}
+                              </div>
+                            )}
+                            {override && (
+                              <div style={{ fontSize: 10, color: '#4A7AAB', marginTop: 2 }}>
+                                {isRTL ? `هيتحول لـ: ${override}` : `Will map to: ${override}`}
+                              </div>
+                            )}
+                          </div>
+                          <select
+                            value={agentOverrides[a.raw] || (a.status === 'exact' || a.status === 'normalized' ? a.matchedTo : '')}
+                            onChange={e => setAgentOverrides(prev => ({ ...prev, [a.raw]: e.target.value }))}
+                            style={{ padding: '4px 6px', borderRadius: 6, fontSize: 11, border: `1px solid ${isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', color: isDark ? '#e2e8f0' : '#1e293b', minWidth: 150 }}
+                          >
+                            <option value="">{isRTL ? '— اتركه كما هو —' : '— leave as-is —'}</option>
+                            {knownUsers.map(u => (
+                              <option key={u.id} value={u.full_name_en || u.full_name_ar}>
+                                {u.full_name_en || u.full_name_ar}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <SummaryCards items={[
                 { num: newRows.length, label: isRTL ? 'عميل جديد' : 'New Contacts', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.2)', icon: '\u2705' },
