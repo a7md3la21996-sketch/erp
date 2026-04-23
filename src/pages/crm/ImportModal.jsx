@@ -335,6 +335,10 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   // Tooltip state for cleaned cells
   const [tooltip, setTooltip] = useState({ visible: false, x: 0, y: 0, text: '' });
 
+  // Shows a spinner + message while the duplicate-detection DB query runs
+  // (processMapping is async now — can take a few seconds for large sheets).
+  const [previewLoading, setPreviewLoading] = useState(false);
+
   // ── Agent validation / mapping ─────────────────────────────────────────
   // Users in DB (fetched once). Used to validate the "Assigned To" column
   // of the sheet so imported contacts actually route to real agents.
@@ -400,8 +404,14 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
 
   // ──────────────────────────────────────────────
   // ENHANCED: Process mapped data with cleaning
+  //
+  // Duplicate detection used to rely on the `existingContacts` prop from the
+  // parent, but that prop holds only the current paginated page (~25 rows).
+  // That gave inconsistent "already exists" warnings on re-opens depending
+  // on which page the user was viewing. We now query Supabase directly for
+  // every phone/email in the sheet so detection is always complete.
   // ──────────────────────────────────────────────
-  const processMapping = () => {
+  const processMapping = async () => {
     const mapping = columnMapping;
     const summary = {
       phonesNormalized: 0,
@@ -512,6 +522,49 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
       return { cleanedRow, idx };
     });
 
+    // Step 3.5: Query DB for ALL phones/emails in the sheet (not just the
+    // current in-memory page). This is what makes duplicate detection
+    // accurate and consistent between opens.
+    const allPhones = new Set();
+    const allEmails = new Set();
+    cleaned.forEach(({ cleanedRow }) => {
+      if (cleanedRow.phone) allPhones.add(cleanedRow.phone);
+      if (cleanedRow.phone2) allPhones.add(cleanedRow.phone2);
+      if (cleanedRow.email) allEmails.add(String(cleanedRow.email).toLowerCase());
+    });
+    const phonesArr = [...allPhones].filter(Boolean);
+    const emailsArr = [...allEmails].filter(Boolean);
+    // Batch to keep each request under PostgREST's URL length limit (~1000 items per IN is safe)
+    const batchSize = 500;
+    const dbMatches = [];
+    for (let i = 0; i < phonesArr.length; i += batchSize) {
+      const chunk = phonesArr.slice(i, i + batchSize);
+      try {
+        const { data } = await supabase.from('contacts')
+          .select('id, full_name, phone, phone2, email, extra_phones')
+          .or(`phone.in.(${chunk.map(p => `"${p.replace(/"/g, '\\"')}"`).join(',')}),phone2.in.(${chunk.map(p => `"${p.replace(/"/g, '\\"')}"`).join(',')})`)
+          .or('is_deleted.is.null,is_deleted.eq.false');
+        if (Array.isArray(data)) dbMatches.push(...data);
+      } catch { /* fall through — partial matches still work */ }
+    }
+    for (let i = 0; i < emailsArr.length; i += batchSize) {
+      const chunk = emailsArr.slice(i, i + batchSize);
+      try {
+        const { data } = await supabase.from('contacts')
+          .select('id, full_name, phone, phone2, email, extra_phones')
+          .in('email', chunk)
+          .or('is_deleted.is.null,is_deleted.eq.false');
+        if (Array.isArray(data)) dbMatches.push(...data);
+      } catch { /* noop */ }
+    }
+    // Merge DB matches with the in-memory existingContacts (deduped by id) so
+    // we catch anything loaded in the parent too (e.g. realtime inserts).
+    const seen = new Set();
+    const combined = [];
+    const push = (c) => { if (c && c.id && !seen.has(c.id)) { seen.add(c.id); combined.push(c); } };
+    dbMatches.forEach(push);
+    (existingContacts || []).forEach(push);
+
     // Step 4: Process with validation and duplicate detection
     const processed = cleaned.map(({ cleanedRow, idx }) => {
       const phone = cleanedRow.phone;
@@ -551,11 +604,13 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
       }
 
       // Enhanced duplicate detection: phone, email, fuzzy name
+      // Matching now runs against `combined` (DB query result ∪ in-memory
+      // existingContacts), not just the in-memory page.
       let duplicateMatch = null;
       let duplicateReason = '';
 
       // Check phone match
-      const phoneMatch = existingContacts.find(c => c.phone === phone || c.phone2 === phone || (phone2 && (c.phone === phone2 || c.phone2 === phone2)));
+      const phoneMatch = combined.find(c => c.phone === phone || c.phone2 === phone || (phone2 && (c.phone === phone2 || c.phone2 === phone2)));
       if (phoneMatch) {
         duplicateMatch = phoneMatch;
         duplicateReason = isRTL ? `رقم مطابق: ${phoneMatch.full_name}` : `Phone match: ${phoneMatch.full_name}`;
@@ -563,18 +618,19 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
 
       // Check email match
       if (!duplicateMatch && email && validateEmail(email)) {
-        const emailMatch = existingContacts.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
+        const emailMatch = combined.find(c => c.email && c.email.toLowerCase() === email.toLowerCase());
         if (emailMatch) {
           duplicateMatch = emailMatch;
           duplicateReason = isRTL ? `ايميل مطابق: ${emailMatch.full_name}` : `Email match: ${emailMatch.full_name}`;
         }
       }
 
-      // Fuzzy name match (normalized Arabic)
+      // Fuzzy name match (normalized Arabic) — only against in-memory set since
+      // DB query was phone/email-based and name fuzziness can't be expressed in SQL
       if (!duplicateMatch && full_name) {
         const normalizedNew = normalizeArabicName(full_name);
         if (normalizedNew.length > 2) {
-          const nameMatch = existingContacts.find(c => {
+          const nameMatch = (existingContacts || []).find(c => {
             const normalizedExisting = normalizeArabicName(c.full_name);
             return normalizedExisting === normalizedNew;
           });
@@ -1742,7 +1798,7 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
             {step === 1 || step === 4 ? (isRTL ? 'إلغاء' : step === 4 ? 'Close' : 'Cancel') : (isRTL ? '\u2190 رجوع' : '\u2190 Back')}
           </Button>
           {step === 2 && (
-            <Button size="sm" onClick={processMapping} disabled={!requiredMapped}>
+            <Button size="sm" onClick={async () => { setPreviewLoading(true); try { await processMapping(); } finally { setPreviewLoading(false); } }} disabled={!requiredMapped || previewLoading}>
               {isRTL ? 'معاينة \u2192' : 'Preview \u2192'}
             </Button>
           )}
