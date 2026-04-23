@@ -11,6 +11,7 @@ import {
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
 import { Z } from '../../../constants/zIndex';
+import { getMyStatus, getMyTemp, getMyScore, isMixed, getAgentCount } from '../../../utils/contactView';
 
 function FixedDropdown({ btnRef, isOpen, isRTL, children }) {
   const [pos, setPos] = useState(null);
@@ -198,14 +199,14 @@ export default function ContactsTable({
                   {/* Row 2: Status + Temp + Activity */}
                   <div className="flex items-center gap-1.5 mt-2 ms-[52px] flex-wrap">
                     {(() => {
-                      const myStatus = agentName ? ((c.agent_statuses || {})[agentName] || c.contact_status) : c.contact_status;
+                      const myStatus = getMyStatus(c, agentName);
                       if (!myStatus) return null;
                       const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
                       const s = statusMap[myStatus];
                       return s ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: s.color, background: s.color + '18' }}>{isRTL ? s.label : s.labelEn}</span> : null;
                     })()}
                     {(() => {
-                      const myTemp = agentName ? ((c.agent_temperatures || {})[agentName] || c.temperature) : c.temperature;
+                      const myTemp = getMyTemp(c, agentName);
                       if (!myTemp || !TEMP[myTemp]) return null;
                       const t = TEMP[myTemp]; const Icon = t.Icon;
                       return <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5" style={{ color: t.color, background: t.bg }}><Icon size={10} />{isRTL ? t.labelAr : t.label}</span>;
@@ -287,14 +288,24 @@ export default function ContactsTable({
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {(() => {
-                          const myStatus = agentName ? ((c.agent_statuses || {})[agentName] || c.contact_status) : c.contact_status;
+                          // getMyStatus respects agent_statuses[agentName] first, falls back to contact_status
+                          const myStatus = getMyStatus(c, agentName);
                           if (!myStatus) return null;
                           const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
                           const s = statusMap[myStatus];
-                          return s ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: s.color, background: s.color + '18' }}>{isRTL ? s.label : s.labelEn}</span> : null;
+                          // "mixed" indicator when the viewer is an admin on a multi-agent contact
+                          // with disagreeing per-agent statuses.
+                          const agentCount = getAgentCount(c);
+                          const mixed = agentCount > 1 && isMixed(c, 'agent_statuses');
+                          return s ? (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" style={{ color: s.color, background: s.color + '18' }} title={mixed ? (isRTL ? 'الوكلاء مختلفون' : 'Agents disagree') : undefined}>
+                              {isRTL ? s.label : s.labelEn}
+                              {mixed && <span className="text-[8px] opacity-70">⚠</span>}
+                            </span>
+                          ) : null;
                         })()}
                         {(() => {
-                          const myTemp = agentName ? ((c.agent_temperatures || {})[agentName] || c.temperature) : c.temperature;
+                          const myTemp = getMyTemp(c, agentName);
                           if (!myTemp || !TEMP[myTemp]) return null;
                           const t = TEMP[myTemp]; const Icon = t.Icon;
                           return <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5" style={{ color: t.color, background: t.bg }}><Icon size={10} />{isRTL ? t.labelAr : t.label}</span>;
@@ -328,7 +339,7 @@ export default function ContactsTable({
                 {/* Temperature — Sales & Marketing */}
                 {hasCol('temperature') && <td className={`${tdCls} hidden md:table-cell`}>
                   {(() => {
-                    const myTemp = agentName ? ((c.agent_temperatures || {})[agentName] || c.temperature) : c.temperature;
+                    const myTemp = getMyTemp(c, agentName);
                     if (!myTemp || !TEMP[myTemp]) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
                     const t = TEMP[myTemp]; const Icon = t.Icon;
                     return <div className="flex items-center gap-1.5"><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
@@ -356,7 +367,7 @@ export default function ContactsTable({
 
                 {/* Lead Score — Marketing */}
                 {hasCol('lead_score') && <td className={`${tdCls} hidden lg:table-cell`}>
-                  <ScorePill score={agentName ? ((c.agent_scores || {})[agentName] ?? c.lead_score) : c.lead_score} />
+                  <ScorePill score={getMyScore(c, agentName)} />
                 </td>}
 
                 {/* Source + Date */}
