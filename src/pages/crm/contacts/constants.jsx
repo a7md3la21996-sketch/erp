@@ -257,7 +257,9 @@ export function PhoneCell({ phone, small = false }) {
   const copyTimer = useRef(null);
   useEffect(() => () => clearTimeout(copyTimer.current), []);
   if (!phone) return null;
-  const masked = phone.slice(0, 6) + '****';
+  // Pad masked form so it has the same character count as the full phone —
+  // avoids any width change on hover that would cause a flicker loop.
+  const masked = phone.slice(0, 6) + '*'.repeat(Math.max(0, phone.length - 6));
   const handleCopy = (e) => {
     e.stopPropagation();
     navigator.clipboard.writeText(phone).then(() => {
@@ -268,16 +270,19 @@ export function PhoneCell({ phone, small = false }) {
   return (
     <div className="flex items-center gap-1.5 cursor-pointer py-[3px]" dir="ltr"
       onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}>
-      <span className={`font-mono whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] ${small ? 'text-xs text-gray-400 dark:text-gray-500' : 'text-xs text-content dark:text-content-dark'}`}
-        style={{ letterSpacing: revealed ? 0 : 1 }}>
+      <span className={`font-mono whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] ${small ? 'text-xs text-gray-400 dark:text-gray-500' : 'text-xs text-content dark:text-content-dark'}`}>
         {revealed ? phone : masked}
       </span>
-      {revealed && (
-        <button onClick={handleCopy}
-          className={`px-2 py-0.5 rounded text-xs cursor-pointer font-semibold border ${copied ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500' : 'bg-brand-500/15 border-brand-500/30 text-brand-400'}`}>
-          {copied ? (isRTL ? '✓ تم' : '✓ copied') : (isRTL ? 'نسخ' : 'copy')}
-        </button>
-      )}
+      {/* Always rendered — toggled via opacity so the row never changes width on hover */}
+      <button
+        onClick={handleCopy}
+        aria-hidden={!revealed}
+        tabIndex={revealed ? 0 : -1}
+        style={{ visibility: revealed ? 'visible' : 'hidden' }}
+        className={`px-2 py-0.5 rounded text-xs cursor-pointer font-semibold border transition-opacity ${copied ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-500' : 'bg-brand-500/15 border-brand-500/30 text-brand-400'}`}
+      >
+        {copied ? (isRTL ? '✓ تم' : '✓ copied') : (isRTL ? 'نسخ' : 'copy')}
+      </button>
     </div>
   );
 }
