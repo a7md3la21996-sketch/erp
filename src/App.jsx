@@ -16,7 +16,18 @@ import { PageSkeleton } from './components/ui/PageSkeletons';
 import ErrorBoundary from './components/ErrorBoundary';
 
 import ConnectionStatus from './components/ui/ConnectionStatus';
+import UpdateBanner from './components/ui/UpdateBanner';
+import { useVersionCheck, reloadForUpdate } from './hooks/useVersionCheck';
 import './i18n';
+
+// Watches for a newer deployed bundle and shows a dismissible banner so the
+// user can reload without having to do a hard refresh. Kept as a thin
+// component so the hook has a valid render context.
+function VersionChecker() {
+  const updateAvailable = useVersionCheck();
+  if (!updateAvailable) return null;
+  return <UpdateBanner onUpdate={reloadForUpdate} />;
+}
 
 // ── Chunk-load retry: if a lazy chunk 404s after deploy, reload the page ────
 function lazyRetry(importFn) {
@@ -214,6 +225,7 @@ export default function App() {
             <AppErrorBoundary>
             <KeyboardShortcutsProvider>
             <ConnectionStatus />
+            <VersionChecker />
 
             <Suspense fallback={<PageLoader />}>
             <Routes>
