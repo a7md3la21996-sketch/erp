@@ -11,7 +11,7 @@ import {
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
 import { Z } from '../../../constants/zIndex';
-import { getMyStatus, getMyTemp, getMyScore, isMixed, getAgentCount } from '../../../utils/contactView';
+import { getDisplayStatus, getMyTemp, getMyScore, isMixed, getAgentCount } from '../../../utils/contactView';
 
 function FixedDropdown({ btnRef, isOpen, isRTL, children }) {
   const [pos, setPos] = useState(null);
@@ -199,11 +199,18 @@ export default function ContactsTable({
                   {/* Row 2: Status + Temp + Activity */}
                   <div className="flex items-center gap-1.5 mt-2 ms-[52px] flex-wrap">
                     {(() => {
-                      const myStatus = getMyStatus(c, agentName);
+                      const myStatus = getDisplayStatus(c, agentName);
                       if (!myStatus) return null;
                       const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
                       const s = statusMap[myStatus];
-                      return s ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: s.color, background: s.color + '18' }}>{isRTL ? s.label : s.labelEn}</span> : null;
+                      const agentCount = getAgentCount(c);
+                      const mixed = agentCount > 1 && isMixed(c, 'agent_statuses');
+                      return s ? (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" style={{ color: s.color, background: s.color + '18' }} title={mixed ? (isRTL ? 'الوكلاء مختلفون' : 'Agents disagree') : undefined}>
+                          {isRTL ? s.label : s.labelEn}
+                          {mixed && <span className="text-[8px] opacity-70">⚠</span>}
+                        </span>
+                      ) : null;
                     })()}
                     {(() => {
                       const myTemp = getMyTemp(c, agentName);
@@ -288,13 +295,12 @@ export default function ContactsTable({
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {(() => {
-                          // getMyStatus respects agent_statuses[agentName] first, falls back to contact_status
-                          const myStatus = getMyStatus(c, agentName);
+                          // Per-agent for the current viewer; peak for managers/admins who
+                          // aren't assigned — never the stale global contact_status.
+                          const myStatus = getDisplayStatus(c, agentName);
                           if (!myStatus) return null;
                           const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
                           const s = statusMap[myStatus];
-                          // "mixed" indicator when the viewer is an admin on a multi-agent contact
-                          // with disagreeing per-agent statuses.
                           const agentCount = getAgentCount(c);
                           const mixed = agentCount > 1 && isMixed(c, 'agent_statuses');
                           return s ? (
@@ -356,13 +362,26 @@ export default function ContactsTable({
                   <span className="text-xs text-content dark:text-content-dark">{c.company || '—'}</span>
                 </td>}
 
-                {/* Contact Status — HR, Finance, Operations */}
+                {/* Contact Status — per-agent aware (peak for non-assignees) */}
                 {hasCol('contact_status') && <td className={`${tdCls} hidden md:table-cell`}>
-                  {c.contact_status ? (
-                    <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-brand-500/[0.08] text-brand-600 dark:text-brand-400">
-                      {c.contact_status.replace(/_/g, ' ')}
-                    </span>
-                  ) : <span className="text-content-muted/50 text-[11px]">—</span>}
+                  {(() => {
+                    const s = getDisplayStatus(c, agentName);
+                    if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
+                    const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
+                    const info = statusMap[s];
+                    const agentCount = getAgentCount(c);
+                    const mixed = agentCount > 1 && isMixed(c, 'agent_statuses');
+                    return info ? (
+                      <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1" style={{ color: info.color, background: info.color + '18' }} title={mixed ? (isRTL ? 'الوكلاء مختلفون' : 'Agents disagree') : undefined}>
+                        {isRTL ? info.label : info.labelEn}
+                        {mixed && <span className="text-[8px] opacity-70">⚠</span>}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-brand-500/[0.08] text-brand-600 dark:text-brand-400">
+                        {s.replace(/_/g, ' ')}
+                      </span>
+                    );
+                  })()}
                 </td>}
 
                 {/* Lead Score — Marketing */}

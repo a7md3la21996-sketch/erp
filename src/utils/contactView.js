@@ -93,6 +93,47 @@ export function getPeakTemp(contact) {
   return values[0];
 }
 
+// Mirrors deriveGlobalStatus in contactsService.js — the most "advanced" state
+// wins. Kept in sync by convention: if you change one, change both.
+const STATUS_ORDER = ['has_opportunity', 'following', 'contacted', 'new', 'disqualified'];
+
+/**
+ * Peak status across all assigned agents. Used for admin/TL display when the
+ * viewer isn't one of the assignees — the stale global contact_status would
+ * otherwise lie (e.g. show "new" when an agent has already moved it to
+ * "has_opportunity"). Falls back to the global only if there are no per-agent
+ * entries at all.
+ */
+export function getPeakStatus(contact) {
+  if (!contact) return null;
+  const map = contact.agent_statuses;
+  if (!map || typeof map !== 'object') return contact.contact_status || null;
+  const values = Object.values(map).filter(v => v !== undefined && v !== null && v !== '');
+  if (values.length === 0) return contact.contact_status || null;
+  for (const s of STATUS_ORDER) if (values.includes(s)) return s;
+  return values[0];
+}
+
+/**
+ * Status to display for a given viewer on a given contact:
+ *   - If the viewer is one of the assignees, show THEIR own entry
+ *     (so a sales agent always sees their own state).
+ *   - Otherwise (admin / team leader / operations viewing someone else's
+ *     lead), show the peak status across all agents — never the stale
+ *     global contact_status unless there's no per-agent data at all.
+ *
+ * This is the right call for the Leads table Status column: the number
+ * the viewer sees should reflect what's actually happening on the lead.
+ */
+export function getDisplayStatus(contact, userName) {
+  if (!contact) return null;
+  if (userName && isAssignedToMe(contact, userName)) {
+    const mine = contact.agent_statuses?.[userName];
+    if (mine !== undefined && mine !== null && mine !== '') return mine;
+  }
+  return getPeakStatus(contact);
+}
+
 /**
  * Attach computed virtual fields (my_status, my_temperature, my_score,
  * _agent_count, _is_status_mixed, etc.) to each contact so SmartFilter and
