@@ -135,6 +135,47 @@ export function getDisplayStatus(contact, userName) {
 }
 
 /**
+ * Flat per-agent breakdown for display in tables/drawers when a contact has
+ * multiple assignees. Returns one row per assigned agent with their own
+ * status / temperature / score from the JSON maps. When `viewerName` is given
+ * and the viewer is one of the assignees, they're placed first so their own
+ * state reads at a glance.
+ *
+ * Returns [] for contacts with no real assignees (handles empty array, null).
+ */
+export function getAgentsView(contact, viewerName) {
+  if (!contact) return [];
+  let names = [];
+  if (Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0) {
+    names = contact.assigned_to_names.filter(Boolean);
+  } else if (contact.assigned_to_name) {
+    names = [contact.assigned_to_name];
+  }
+  if (names.length === 0) return [];
+
+  const statuses = contact.agent_statuses || {};
+  const temps = contact.agent_temperatures || {};
+  const scores = contact.agent_scores || {};
+
+  const rows = names.map(name => ({
+    name,
+    status: statuses[name] ?? null,
+    temperature: temps[name] ?? null,
+    score: typeof scores[name] === 'number' ? scores[name] : (scores[name] != null ? Number(scores[name]) : null),
+    isViewer: !!viewerName && name === viewerName,
+  }));
+
+  if (viewerName) {
+    const i = rows.findIndex(r => r.name === viewerName);
+    if (i > 0) {
+      const [viewer] = rows.splice(i, 1);
+      rows.unshift(viewer);
+    }
+  }
+  return rows;
+}
+
+/**
  * Attach computed virtual fields (my_status, my_temperature, my_score,
  * _agent_count, _is_status_mixed, etc.) to each contact so SmartFilter and
  * sorts can address them as ordinary field ids. Does not mutate inputs.

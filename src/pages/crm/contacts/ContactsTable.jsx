@@ -11,7 +11,24 @@ import {
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
 import { Z } from '../../../constants/zIndex';
-import { getDisplayStatus, getMyTemp, getMyScore, isMixed, getAgentCount } from '../../../utils/contactView';
+import { getDisplayStatus, getMyTemp, getMyScore, isMixed, getAgentCount, getAgentsView } from '../../../utils/contactView';
+
+const STATUS_STYLES = {
+  new:             { label: 'جديد',        labelEn: 'New',       color: '#4A7AAB' },
+  following:       { label: 'متابعة',      labelEn: 'Following', color: '#10B981' },
+  contacted:       { label: 'تم التواصل',  labelEn: 'Contacted', color: '#F59E0B' },
+  has_opportunity: { label: 'لديه فرصة',   labelEn: 'Has Opp',   color: '#059669' },
+  disqualified:    { label: 'غير مؤهل',    labelEn: 'DQ',        color: '#6b7280' },
+};
+
+// Short agent initials for the multi-agent chips — first letter of first two
+// words (e.g. "Ahmed Adel" → "AA"), falls back to first two characters.
+function agentInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
 
 function FixedDropdown({ btnRef, isOpen, isRTL, children }) {
   const [pos, setPos] = useState(null);
@@ -201,8 +218,7 @@ export default function ContactsTable({
                     {(() => {
                       const myStatus = getDisplayStatus(c, agentName);
                       if (!myStatus) return null;
-                      const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
-                      const s = statusMap[myStatus];
+                      const s = STATUS_STYLES[myStatus];
                       const agentCount = getAgentCount(c);
                       const mixed = agentCount > 1 && isMixed(c, 'agent_statuses');
                       return s ? (
@@ -342,13 +358,52 @@ export default function ContactsTable({
                   )}
                 </td>}
 
-                {/* Temperature — Sales & Marketing */}
+                {/* Temperature — multi-agent stack like Status column. */}
                 {hasCol('temperature') && <td className={`${tdCls} hidden md:table-cell`}>
                   {(() => {
-                    const myTemp = getMyTemp(c, agentName);
-                    if (!myTemp || !TEMP[myTemp]) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
-                    const t = TEMP[myTemp]; const Icon = t.Icon;
-                    return <div className="flex items-center gap-1.5"><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
+                    const agents = getAgentsView(c, agentName);
+                    if (agents.length === 0) {
+                      const myTemp = getMyTemp(c, agentName);
+                      if (!myTemp || !TEMP[myTemp]) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                      const t = TEMP[myTemp]; const Icon = t.Icon;
+                      return <div className="flex items-center gap-1.5"><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
+                    }
+                    if (agents.length === 1) {
+                      const tempKey = agents[0].temperature || c.temperature;
+                      if (!tempKey || !TEMP[tempKey]) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
+                      const t = TEMP[tempKey]; const Icon = t.Icon;
+                      return <div className="flex items-center gap-1.5"><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
+                    }
+                    const VISIBLE = 3;
+                    const shown = agents.slice(0, VISIBLE);
+                    const overflow = agents.slice(VISIBLE);
+                    const overflowTitle = overflow.map(a => `${a.name}: ${a.temperature ? (TEMP[a.temperature] ? (isRTL ? TEMP[a.temperature].labelAr : TEMP[a.temperature].label) : a.temperature) : '—'}`).join('\n');
+                    return (
+                      <div className="flex flex-col gap-1 items-start">
+                        {shown.map(a => {
+                          const info = a.temperature ? TEMP[a.temperature] : null;
+                          const color = info?.color || '#6b7280';
+                          const bg = info?.bg || 'rgba(107,114,128,0.10)';
+                          const Icon = info?.Icon;
+                          const label = info ? (isRTL ? info.labelAr : info.label) : (a.temperature || '—');
+                          return (
+                            <span key={a.name}
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
+                              style={{ color, background: bg }}
+                              title={`${a.name}: ${label}`}>
+                              <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>
+                              {Icon && <Icon size={10} />}
+                              <span>{label}</span>
+                            </span>
+                          );
+                        })}
+                        {overflow.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark cursor-help" title={overflowTitle}>
+                            +{overflow.length}
+                          </span>
+                        )}
+                      </div>
+                    );
                   })()}
                 </td>}
 
@@ -362,24 +417,64 @@ export default function ContactsTable({
                   <span className="text-xs text-content dark:text-content-dark">{c.company || '—'}</span>
                 </td>}
 
-                {/* Contact Status — per-agent aware (peak for non-assignees) */}
+                {/* Contact Status — multi-agent chip stack; falls back to single chip when there's only one assignee. */}
                 {hasCol('contact_status') && <td className={`${tdCls} hidden md:table-cell`}>
                   {(() => {
-                    const s = getDisplayStatus(c, agentName);
-                    if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
-                    const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
-                    const info = statusMap[s];
-                    const agentCount = getAgentCount(c);
-                    const mixed = agentCount > 1 && isMixed(c, 'agent_statuses');
-                    return info ? (
-                      <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1" style={{ color: info.color, background: info.color + '18' }} title={mixed ? (isRTL ? 'الوكلاء مختلفون' : 'Agents disagree') : undefined}>
-                        {isRTL ? info.label : info.labelEn}
-                        {mixed && <span className="text-[8px] opacity-70">⚠</span>}
-                      </span>
-                    ) : (
-                      <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-brand-500/[0.08] text-brand-600 dark:text-brand-400">
-                        {s.replace(/_/g, ' ')}
-                      </span>
+                    const agents = getAgentsView(c, agentName);
+                    // No assignees at all — fall back to legacy global display.
+                    if (agents.length === 0) {
+                      const s = getDisplayStatus(c, agentName);
+                      if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
+                      const info = STATUS_STYLES[s];
+                      return info ? (
+                        <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1" style={{ color: info.color, background: info.color + '18' }}>
+                          {isRTL ? info.label : info.labelEn}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-brand-500/[0.08] text-brand-600 dark:text-brand-400">{s.replace(/_/g, ' ')}</span>
+                      );
+                    }
+                    // Single-agent contact — keep the clean single chip.
+                    if (agents.length === 1) {
+                      const s = agents[0].status || c.contact_status;
+                      if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
+                      const info = STATUS_STYLES[s];
+                      return info ? (
+                        <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1" style={{ color: info.color, background: info.color + '18' }}>
+                          {isRTL ? info.label : info.labelEn}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-brand-500/[0.08] text-brand-600 dark:text-brand-400">{s.replace(/_/g, ' ')}</span>
+                      );
+                    }
+                    // Multi-agent — stack up to 3 chips, collapse the rest into a "+N" pill
+                    // whose hover shows the overflow in a tooltip.
+                    const VISIBLE = 3;
+                    const shown = agents.slice(0, VISIBLE);
+                    const overflow = agents.slice(VISIBLE);
+                    const overflowTitle = overflow.map(a => `${a.name}: ${a.status ? (STATUS_STYLES[a.status] ? (isRTL ? STATUS_STYLES[a.status].label : STATUS_STYLES[a.status].labelEn) : a.status) : '—'}`).join('\n');
+                    return (
+                      <div className="flex flex-col gap-1 items-start">
+                        {shown.map(a => {
+                          const info = a.status ? STATUS_STYLES[a.status] : null;
+                          const color = info?.color || '#6b7280';
+                          const label = info ? (isRTL ? info.label : info.labelEn) : (a.status ? a.status.replace(/_/g, ' ') : '—');
+                          return (
+                            <span key={a.name}
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
+                              style={{ color, background: color + '18' }}
+                              title={`${a.name}: ${label}`}>
+                              <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>
+                              <span>{label}</span>
+                            </span>
+                          );
+                        })}
+                        {overflow.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark border border-edge dark:border-edge-dark cursor-help" title={overflowTitle}>
+                            +{overflow.length}
+                          </span>
+                        )}
+                      </div>
                     );
                   })()}
                 </td>}
