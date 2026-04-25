@@ -56,38 +56,55 @@ export function getMyScore(contact, userName) {
   return Number(contact.lead_score || 0);
 }
 
+/** Names of agents currently assigned to this contact (filtered/cleaned). */
+function getValidAgentNames(contact) {
+  if (!contact) return [];
+  if (Array.isArray(contact.assigned_to_names)) return contact.assigned_to_names.filter(Boolean);
+  return contact.assigned_to_name ? [contact.assigned_to_name] : [];
+}
+
 /** How many agents are assigned to this contact. */
 export function getAgentCount(contact) {
-  if (!contact) return 0;
-  if (Array.isArray(contact.assigned_to_names)) return contact.assigned_to_names.length;
-  return contact.assigned_to_name ? 1 : 0;
+  return getValidAgentNames(contact).length;
 }
 
 /**
- * Whether the per-agent entries disagree with each other. Useful for showing a
- * "mixed" badge in admin/team-leader views when a multi-agent contact has
- * different readings from different agents.
+ * Read only the per-agent entries for agents who are still in
+ * assigned_to_names. The JSON maps in the DB sometimes carry "ghost" entries
+ * for agents who were unassigned without their slot being cleaned up — those
+ * shouldn't influence display, peak, or mixed indicators.
+ */
+function validValuesFromMap(contact, field) {
+  const map = contact?.[field];
+  if (!map || typeof map !== 'object') return [];
+  const valid = getValidAgentNames(contact);
+  if (valid.length === 0) return [];
+  return valid
+    .map(n => map[n])
+    .filter(v => v !== undefined && v !== null && v !== '');
+}
+
+/**
+ * Whether the per-agent entries (for currently-assigned agents) disagree.
+ * Used for the ⚠ Mixed badge in admin/TL views.
  *
  * field is one of 'agent_statuses' | 'agent_temperatures' | 'agent_scores'.
  */
 export function isMixed(contact, field) {
-  const map = contact?.[field];
-  if (!map || typeof map !== 'object') return false;
-  const values = Object.values(map).filter(v => v !== undefined && v !== null && v !== '');
+  const values = validValuesFromMap(contact, field);
   if (values.length <= 1) return false;
   return new Set(values.map(String)).size > 1;
 }
 
 /**
- * Highest "heat" across all agents — used for Admin/TL summary. Ordered
- * hottest-first. Returns the first agent's value if no temperature known.
+ * Highest "heat" across currently-assigned agents — Admin/TL summary.
+ * Ordered hottest-first. Falls back to contact.temperature if no assignees
+ * have a temperature recorded.
  */
 const TEMP_ORDER = ['hot', 'warm', 'cool', 'cold'];
 export function getPeakTemp(contact) {
   if (!contact) return null;
-  const map = contact.agent_temperatures;
-  if (!map || typeof map !== 'object') return contact.temperature || null;
-  const values = Object.values(map).filter(Boolean);
+  const values = validValuesFromMap(contact, 'agent_temperatures');
   if (values.length === 0) return contact.temperature || null;
   for (const t of TEMP_ORDER) if (values.includes(t)) return t;
   return values[0];
@@ -106,9 +123,7 @@ const STATUS_ORDER = ['has_opportunity', 'following', 'contacted', 'new', 'disqu
  */
 export function getPeakStatus(contact) {
   if (!contact) return null;
-  const map = contact.agent_statuses;
-  if (!map || typeof map !== 'object') return contact.contact_status || null;
-  const values = Object.values(map).filter(v => v !== undefined && v !== null && v !== '');
+  const values = validValuesFromMap(contact, 'agent_statuses');
   if (values.length === 0) return contact.contact_status || null;
   for (const s of STATUS_ORDER) if (values.includes(s)) return s;
   return values[0];
