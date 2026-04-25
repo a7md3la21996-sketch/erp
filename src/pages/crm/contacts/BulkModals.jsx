@@ -196,17 +196,24 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
             const myName = profile?.full_name_en || profile?.full_name_ar;
             const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
 
-            // Per-agent DQ: set agent_statuses[myName] = 'disqualified' and remove from assigned_to_names
-            // Admin/Ops: global DQ (sets contact_status for everyone)
+            // Per-agent DQ: the agent is done with this lead — remove their slot
+            // entirely (assigned_to_names AND the per-agent JSON maps) so we
+            // don't leave a "ghost" entry behind. The audit log already records
+            // who disqualified and why; we don't need to also keep the status.
+            // Admin/Ops: global DQ (sets contact_status for everyone).
             const buildDqUpdates = (contact) => {
               if (isAdminOrOps) {
                 return { contact_status: 'disqualified', disqualify_reason: dqReason, disqualify_note: dqNote || '' };
               }
-              const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'disqualified' };
               const newNames = (contact.assigned_to_names || []).filter(n => n !== myName);
+              const newStatuses = { ...(contact.agent_statuses || {}) };     delete newStatuses[myName];
+              const newTemps    = { ...(contact.agent_temperatures || {}) }; delete newTemps[myName];
+              const newScores   = { ...(contact.agent_scores || {}) };       delete newScores[myName];
               return {
-                agent_statuses: newStatuses,
                 assigned_to_names: newNames,
+                agent_statuses: newStatuses,
+                agent_temperatures: newTemps,
+                agent_scores: newScores,
                 disqualify_reason: dqReason,
                 disqualify_note: dqNote || '',
               };

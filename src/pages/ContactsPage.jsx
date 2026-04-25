@@ -362,7 +362,27 @@ export default function ContactsPage() {
     const extraUpdates = {};
     if (bulkStatus) extraUpdates.contact_status = bulkStatus; // bulk reassign sets global (admin/ops action)
     if (bulkTemp) extraUpdates.temperature = bulkTemp; // bulk reassign sets global (admin/ops action)
-    const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName, ...extraUpdates } : c);
+    // Bulk reassign replaces every assignee with one agent, so the per-agent
+    // maps must be rebuilt around just that agent — leaving the old agents'
+    // entries would be ghosts that pollute peak/mixed displays.
+    const buildPerAgentForReassign = (c) => {
+      const startStatus = bulkStatus || c?.agent_statuses?.[agentName] || 'new';
+      const startTemp   = bulkTemp   || c?.agent_temperatures?.[agentName] || c?.temperature || 'warm';
+      const startScore  = c?.agent_scores?.[agentName] ?? c?.lead_score ?? 0;
+      return {
+        agent_statuses:     { [agentName]: startStatus },
+        agent_temperatures: { [agentName]: startTemp },
+        agent_scores:       { [agentName]: Number(startScore) || 0 },
+      };
+    };
+    const updated = contacts.map(c => selectedIds.includes(c.id) ? {
+      ...c,
+      assigned_to_name: agentName,
+      assigned_to_names: [agentName],
+      assigned_by_name: assignedByName,
+      ...buildPerAgentForReassign(c),
+      ...extraUpdates,
+    } : c);
     setContacts(updated);
         logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
     // Record assignment history for each contact
@@ -384,7 +404,16 @@ export default function ContactsPage() {
     try {
       // updateContact already retries internally — service-level retry is the single source of truth
       const results = await Promise.allSettled(
-        idsToUpdate.map(id => updateContact(id, { assigned_to_name: agentName, assigned_to_names: [agentName], assigned_by_name: assignedByName, ...extraUpdates }))
+        idsToUpdate.map(id => {
+          const c = contacts.find(ct => ct.id === id);
+          return updateContact(id, {
+            assigned_to_name: agentName,
+            assigned_to_names: [agentName],
+            assigned_by_name: assignedByName,
+            ...buildPerAgentForReassign(c),
+            ...extraUpdates,
+          });
+        })
       );
       const failed = results.filter(r => r.status === 'rejected').length;
       if (failed > 0) toast.error(isRTL ? `فشل تحديث ${failed} عميل` : `Failed to update ${failed} contacts`);

@@ -1410,10 +1410,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           e.stopPropagation();
                           const newNames = assignedNames.filter(n => n !== name);
                           const updates = { assigned_to_names: newNames, assigned_to_name: newNames[0] || null };
-                          // Remove from agent_statuses and agent_temperatures
-                          const newStatuses = { ...(contact.agent_statuses || {}) }; delete newStatuses[name];
-                          const newTemps = { ...(contact.agent_temperatures || {}) }; delete newTemps[name];
-                          if (onUpdate) onUpdate({ ...contact, ...updates, agent_statuses: newStatuses, agent_temperatures: newTemps });
+                          // Strip the removed agent's slot from all per-agent
+                          // maps so we don't leave a ghost entry behind.
+                          const newStatuses = { ...(contact.agent_statuses || {}) };     delete newStatuses[name];
+                          const newTemps    = { ...(contact.agent_temperatures || {}) }; delete newTemps[name];
+                          const newScores   = { ...(contact.agent_scores || {}) };       delete newScores[name];
+                          if (onUpdate) onUpdate({ ...contact, ...updates, agent_statuses: newStatuses, agent_temperatures: newTemps, agent_scores: newScores });
                           if (selectedAgent === name) setSelectedAgent('all');
                         }} className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] hover:bg-red-500 hover:text-white transition-colors ${
                           selectedAgent === name ? 'text-white/60' : 'text-content-muted/40 dark:text-content-muted-dark/40'
