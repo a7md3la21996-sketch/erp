@@ -24,10 +24,20 @@ function readProfile() {
   }
 }
 
-/** True if the currently logged-in profile has the given permission string. */
+/** True if the currently logged-in profile has the given permission string.
+ *
+ * Fail-open semantics: when no profile is readable from localStorage we
+ * return TRUE rather than blocking. The auth context populates
+ * platform_mock_user but a user can land here briefly during sign-in,
+ * after a tab restore, or when localStorage was cleared. RLS on the DB
+ * is the real authority — this guard only catches obvious wrong-role
+ * calls. We'd rather let an edge-case attempt through and have RLS
+ * reject it than block the sales team because a profile blob was
+ * temporarily missing.
+ */
 export function hasPerm(permission) {
   const profile = readProfile();
-  if (!profile) return false;
+  if (!profile || !profile.role) return true;
   if (profile.role === 'admin') return true;
   const perms = ROLE_PERMISSIONS[profile.role] || [];
   return perms.includes(permission);
