@@ -208,7 +208,7 @@ export default function PerformancePage() {
       try {
         const [opps, acts] = await Promise.all([
           fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-          fetchActivities({ limit: 500, role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
+          fetchActivities({ limit: 200, role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
         ]);
         if (cancelled) return;
         setCrmData(buildCrmMap(opps, acts, period));

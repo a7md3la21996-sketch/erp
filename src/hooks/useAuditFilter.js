@@ -9,7 +9,10 @@ export function useAuditFilter(entityType) {
 
   useEffect(() => {
     let cancelled = false;
-    getLocalAuditLogs({ limit: 500 }).then(result => {
+    // 100 is plenty for the dropdown filter options (action types + user names);
+    // we don't need every historical log just to populate two selects.
+    // Fetching 500 on every Contacts page mount was a major DB load source.
+    getLocalAuditLogs({ limit: 100, entity: entityType }).then(result => {
       if (!cancelled) setAllLogs(result?.data || []);
     }).catch(() => {});
     return () => { cancelled = true; };

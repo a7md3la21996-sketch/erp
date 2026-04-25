@@ -171,7 +171,7 @@ export default function ActivitiesPage() {
       const [totalRes, todayRes, sampleRes] = await Promise.all([
         fetchActivities({ ...baseArgs, page: 1, pageSize: 1 }),
         fetchActivities({ ...baseArgs, page: 1, pageSize: 1, dateFrom: todayStr }),
-        fetchActivities({ ...baseArgs, page: 1, pageSize: 500 }),
+        fetchActivities({ ...baseArgs, page: 1, pageSize: 100 }),
       ]);
       // Count types across the sample and pick the most frequent
       const sample = Array.isArray(sampleRes?.data) ? sampleRes.data : (Array.isArray(sampleRes) ? sampleRes : []);

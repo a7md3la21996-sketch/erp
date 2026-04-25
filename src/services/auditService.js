@@ -24,9 +24,13 @@ export const ACTION_TYPES = {
   export:           { ar: 'تصدير',           en: 'Export' },
 };
 
-export async function getAuditLogs({ limit = 50, offset = 0, action, entity, search } = {}) {
+export async function getAuditLogs({ limit = 50, offset = 0, action, entity, search, withCount = false } = {}) {
   try {
-    let query = supabase.from('audit_logs').select('*', { count: 'exact' })
+    // count: 'exact' triggers a full scan — only do it when the caller explicitly
+    // asks for the total (e.g. the audit page pagination). Filter callers like
+    // useAuditFilter don't need it and shouldn't pay for it on every mount.
+    const selectOpts = withCount ? { count: 'exact' } : {};
+    let query = supabase.from('audit_logs').select('*', selectOpts)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
     if (action) query = query.eq('action', action);
@@ -34,7 +38,7 @@ export async function getAuditLogs({ limit = 50, offset = 0, action, entity, sea
     if (search) query = query.or(`description.ilike.%${search}%,entity_name.ilike.%${search}%`);
     const { data, error, count } = await query;
     if (error) return { data: [], total: 0 };
-    return { data: data || [], total: count || 0 };
+    return { data: data || [], total: count || (data?.length || 0) };
   } catch { return { data: [], total: 0 }; }
 }
 
