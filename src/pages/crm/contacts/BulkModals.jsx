@@ -222,26 +222,45 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
             if (disqualifyModal === 'bulk') {
               const ids = [...selectedIds];
               const names = (contacts || []).filter(c => ids.includes(c.id)).map(c => c.full_name).join(', ');
+              const beforeMap = new Map((contacts || []).filter(c => ids.includes(c.id)).map(c => [c.id, c]));
               const updated = (contacts || []).map(c => {
                 if (!ids.includes(c.id)) return c;
                 return { ...c, ...buildDqUpdates(c) };
               });
               setContacts(updated);
-              await Promise.all(ids.map(id => {
+              const results = await Promise.allSettled(ids.map(id => {
                 const c = contacts.find(ct => ct.id === id);
-                return updateContact(id, buildDqUpdates(c || {})).catch(err => { if (import.meta.env.DEV) console.warn('bulk disqualify update:', err); });
+                return updateContact(id, buildDqUpdates(c || {}));
               }));
-              logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.join(','), description: `Disqualified ${ids.length} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(err => { if (import.meta.env.DEV) console.warn('log bulk disqualify:', err); });
-              toast.success(isRTL ? `تم استبعاد ${ids.length} عميل` : `${ids.length} leads disqualified`);
+              const failedIds = results.map((r, i) => r.status === 'rejected' ? ids[i] : null).filter(Boolean);
+              if (failedIds.length > 0) {
+                // Roll back the optimistic state for the failed ones so the UI matches reality.
+                setContacts(prev => prev.map(c => failedIds.includes(c.id) ? (beforeMap.get(c.id) || c) : c));
+                toast.error(isRTL
+                  ? `فشل استبعاد ${failedIds.length} من ${ids.length} عميل — حاول تاني`
+                  : `${failedIds.length} of ${ids.length} disqualifications failed — please retry`);
+              }
+              const okCount = ids.length - failedIds.length;
+              if (okCount > 0) {
+                logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.filter(id => !failedIds.includes(id)).join(','), description: `Disqualified ${okCount} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
+                toast.success(isRTL ? `تم استبعاد ${okCount} عميل` : `${okCount} leads disqualified`);
+              }
               setSelectedIds([]);
             } else {
               const c = disqualifyModal;
+              const before = c;
               const dqUpdates = buildDqUpdates(c);
               const updated = (contacts || []).map(ct => ct.id === c.id ? { ...ct, ...dqUpdates } : ct);
               setContacts(updated);
-              await updateContact(c.id, dqUpdates).catch(err => { if (import.meta.env.DEV) console.warn('disqualify update:', err); });
-              logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(err => { if (import.meta.env.DEV) console.warn('log disqualify:', err); });
-              toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
+              try {
+                await updateContact(c.id, dqUpdates);
+                logAction({ action: 'disqualify', entity: 'contact', entityId: c.id, description: `Disqualified ${c.full_name} (${reasonLabel})${dqNote ? ': ' + dqNote : ''}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
+                toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
+              } catch (err) {
+                setContacts(prev => prev.map(ct => ct.id === c.id ? before : ct));
+                toast.error(isRTL ? `فشل استبعاد "${c.full_name}" — حاول تاني` : `Failed to disqualify "${c.full_name}" — please retry`);
+                if (import.meta.env.DEV) console.error('[disqualify] failed:', err?.message || err);
+              }
             }
             setDisqualifyModal(null);
           }}

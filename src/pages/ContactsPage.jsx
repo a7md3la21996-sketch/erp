@@ -864,7 +864,7 @@ export default function ContactsPage() {
             const hasActiveAgent = Object.values(agentStatuses).some(s => s === 'following' || s === 'has_opportunity');
             if (hasActiveAgent) return;
             c.contact_status = 'contacted';
-            updateContact(c.id, { contact_status: 'contacted' }).catch(err => { if (import.meta.env.DEV) console.warn('auto-contacted:', err); });
+            updateContact(c.id, { contact_status: 'contacted' }).catch(err => reportError('ContactsPage', 'auto-contacted', err));
           }
         });
 
@@ -1471,7 +1471,12 @@ export default function ContactsPage() {
           const next = prev.map(c => c.id === contact.id ? updatedContact : c);
                     return next;
         });
-        updateContact(contact.id, { campaign_interactions: updatedContact.campaign_interactions }).catch(err => { if (import.meta.env.DEV) console.warn('update campaign interactions:', err); });
+        updateContact(contact.id, { campaign_interactions: updatedContact.campaign_interactions })
+          .catch(err => {
+            reportError('ContactsPage', 'update campaign interactions', err);
+            toast.error(isRTL ? 'لم يتم حفظ تفاعل الحملة — حاول تاني' : 'Campaign interaction not saved — please retry');
+            setContacts(prev => prev.map(c => c.id === contact.id ? contact : c));
+          });
       }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={async (updated) => {
         const old = contacts.find(c => c.id === updated.id);

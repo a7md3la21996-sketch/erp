@@ -240,9 +240,19 @@ export default function BatchCallModal({
                 }
                 const newStatuses = { ...(current.agent_statuses || {}), [myName]: newStatus };
                 const statusUpdate = { last_activity_at: new Date().toISOString(), agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) };
-                try { await updateContact(current.id, statusUpdate); } catch (err) { if (import.meta.env.DEV) console.warn('batch call update status:', err); }
-                setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
-                setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }]);
+                let writeOk = true;
+                try {
+                  await updateContact(current.id, statusUpdate);
+                } catch (err) {
+                  writeOk = false;
+                  // Surface failures via the batch log so the user sees which calls didn't save.
+                  // Toast surfacing happens at the modal-close summary so we don't spam mid-batch.
+                  if (import.meta.env.DEV) console.error('[batch call] save failed:', current.full_name, err?.message || err);
+                }
+                if (writeOk) {
+                  setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
+                }
+                setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes, failed: !writeOk }]);
               }
               // Create follow-up task if filled
               if (batchTaskOpen && batchTaskForm.title.trim() && batchTaskForm.due) {
