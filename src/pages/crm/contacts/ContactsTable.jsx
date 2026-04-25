@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Phone, MessageCircle, Search, Ban, Pin, PhoneCall, Merge, MoreVertical, Bell, FileDown, Trash2, Zap, X, Pencil } from 'lucide-react';
 import {
@@ -107,7 +107,23 @@ export default function ContactsTable({
   const { t } = useTranslation();
   const menuBtnRefs = useRef({});
   const getMenuBtnRef = useCallback((id) => (el) => { if (el) menuBtnRefs.current[id] = el; else delete menuBtnRefs.current[id]; }, []);
-  const DEPT_LABELS = isRTL ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' } : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' };
+  // Stable across renders — only recompute when language flips. Was being
+  // rebuilt on every render and breaking child memoization downstream.
+  const DEPT_LABELS = useMemo(
+    () => isRTL
+      ? { sales:'مبيعات', hr:'HR', finance:'مالية', marketing:'تسويق', operations:'عمليات' }
+      : { sales:'Sales', hr:'HR', finance:'Finance', marketing:'Marketing', operations:'Ops' },
+    [isRTL]
+  );
+  // Pre-compute the per-agent breakdown for every visible row once. Each row
+  // referenced this 4× during render (status chip, temp chip, status column,
+  // temp column) and getAgentsView walks assigned_to_names + 3 JSON maps —
+  // so without this we redo the same work on every hover/selection change.
+  const agentsByContactId = useMemo(() => {
+    const map = new Map();
+    (paged || []).forEach(c => map.set(c.id, getAgentsView(c, agentName)));
+    return map;
+  }, [paged, agentName]);
   const cols = deptView?.columns || ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'actions'];
   const hasCol = (id) => cols.includes(id);
   const menuActions = deptView?.menuActions || null;
@@ -217,7 +233,7 @@ export default function ContactsTable({
                        agent so you can see exactly where the lead is for each. */}
                   <div className="flex items-center gap-1.5 mt-2 ms-[52px] flex-wrap">
                     {(() => {
-                      const agents = getAgentsView(c, agentName);
+                      const agents = agentsByContactId.get(c.id) || [];
                       if (agents.length === 0) return null;
                       const showInitials = agents.length > 1;
                       return agents.flatMap(a => {
@@ -326,7 +342,7 @@ export default function ContactsTable({
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {(() => {
-                          const agents = getAgentsView(c, agentName);
+                          const agents = agentsByContactId.get(c.id) || [];
                           if (agents.length === 0) return null;
                           const showInitials = agents.length > 1;
                           return agents.flatMap(a => {
@@ -388,7 +404,7 @@ export default function ContactsTable({
                 {/* Temperature — per-agent only; one chip per assigned sales. */}
                 {hasCol('temperature') && <td className={`${tdCls} hidden md:table-cell`}>
                   {(() => {
-                    const agents = getAgentsView(c, agentName);
+                    const agents = agentsByContactId.get(c.id) || [];
                     if (agents.length === 0) {
                       return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
                     }
@@ -444,7 +460,7 @@ export default function ContactsTable({
                 {/* Contact Status — per-agent only; one chip per assigned sales. */}
                 {hasCol('contact_status') && <td className={`${tdCls} hidden md:table-cell`}>
                   {(() => {
-                    const agents = getAgentsView(c, agentName);
+                    const agents = agentsByContactId.get(c.id) || [];
                     if (agents.length === 0) {
                       return <span className="text-content-muted/50 text-[11px]">—</span>;
                     }
