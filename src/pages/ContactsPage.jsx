@@ -728,17 +728,35 @@ export default function ContactsPage() {
     })();
   }, [showNoOpps]);
 
-  // Fetch contacts with MULTIPLE agents (to exclude → show single agent only)
+  // Fetch contacts with MULTIPLE agents (to exclude → show single agent only).
+  // Prefer the server-side RPC (returns just the IDs we need); if it isn't
+  // installed yet, fall back to the old client-side filter with a smaller
+  // window so we don't drag down a 20k-row payload on every toggle.
   useEffect(() => {
     if (!showSingleAgent) { setSingleAgentIds(null); return; }
+    let cancelled = false;
     (async () => {
       try {
-        // Get contacts with 2+ agents → exclude them to show single-agent contacts
-        const { data } = await supabase.from('contacts').select('id, assigned_to_names').not('assigned_to_names', 'is', null).range(0, 20000);
+        const rpc = await supabase.rpc('get_multi_agent_contact_ids');
+        if (!rpc.error && Array.isArray(rpc.data)) {
+          if (cancelled) return;
+          const ids = rpc.data.map(r => r.id).filter(Boolean);
+          setSingleAgentIds(ids.length ? ids : ['none']);
+          return;
+        }
+        // Fallback: client-side filter on a capped window.
+        const { data } = await supabase.from('contacts')
+          .select('id, assigned_to_names')
+          .not('assigned_to_names', 'is', null)
+          .range(0, 5000);
+        if (cancelled) return;
         const multiAgentIds = (data || []).filter(c => Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1).map(c => c.id);
         setSingleAgentIds(multiAgentIds.length ? multiAgentIds : ['none']);
-      } catch { setSingleAgentIds([]); }
+      } catch {
+        if (!cancelled) setSingleAgentIds([]);
+      }
     })();
+    return () => { cancelled = true; };
   }, [showSingleAgent]);
 
   // Load contacts with server-side pagination
