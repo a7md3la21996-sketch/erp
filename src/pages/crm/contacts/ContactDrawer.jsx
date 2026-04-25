@@ -362,8 +362,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   const myTempKey = (() => {
     const mn = profile?.full_name_en || profile?.full_name_ar;
-    if (mn && (contact.agent_temperatures || {})[mn]) return (contact.agent_temperatures || {})[mn];
-    return contact.temperature;
+    return mn ? (contact.agent_temperatures || {})[mn] : null;
   })();
   const tempInfo = myTempKey ? TEMP[myTempKey] : null;
   const tp = contact.contact_type ? TYPE[contact.contact_type] : null;
@@ -567,37 +566,46 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       icon: Star,
       color: '#6B21A8',
       rows: [
-        show('contact_status') && (() => {
+        // Status: one row per assigned agent (everyone sees everyone). The
+        // viewer's own row is labeled "My Status" so they spot it instantly.
+        ...(show('contact_status') ? (() => {
           const myName = profile?.full_name_en || profile?.full_name_ar;
-          const statuses = contact.agent_statuses || {};
           const statusLabels = isRTL ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
           const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : undefined;
-          const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
-          if (isAdminOrOps && Object.keys(statuses).length > 0) {
-            // Admin sees all agents' statuses
-            return { label: isRTL ? 'الحالة' : 'Status', val: Object.entries(statuses).map(([name, s]) => `${name}: ${statusLabels[s] || s}`).join(' · ') };
-          }
-          const myStatus = statuses[myName] || contact.contact_status;
-          return { label: isRTL ? 'حالتي' : 'My Status', val: myStatus ? (statusLabels[myStatus] || myStatus) : '—', color: statusColor(myStatus) };
-        })(),
-        // For TL/Manager: show team members' statuses
-        ...(() => {
-          if (isSalesAgent || profile?.role === 'admin' || profile?.role === 'operations') return [];
-          const statuses = contact.agent_statuses || {};
-          const statusLabels = isRTL ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-          const entries = Object.entries(statuses);
-          if (entries.length <= 1) return [];
-          return entries.map(([name, s]) => ({
-            label: name,
-            val: statusLabels[s] || s,
-            color: s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5',
-          }));
-        })(),
-        show('lead_score') && (() => {
+          const names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
+            ? contact.assigned_to_names
+            : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
+          if (names.length === 0) return [{ label: isRTL ? 'الحالة' : 'Status', val: '—' }];
+          return names.map(name => {
+            const s = (contact.agent_statuses || {})[name];
+            const isMine = name === myName;
+            return {
+              label: isMine ? (isRTL ? 'حالتي' : 'My Status') : name,
+              val: s ? (statusLabels[s] || s) : '—',
+              color: statusColor(s),
+            };
+          });
+        })() : []),
+        // Score: one row per assigned agent — same pattern.
+        ...(show('lead_score') ? (() => {
           const myName = profile?.full_name_en || profile?.full_name_ar;
-          const myScore = myName ? ((contact.agent_scores || {})[myName] ?? contact.lead_score) : contact.lead_score;
-          return { label: isRTL ? 'تقييم العميل' : 'Lead Score', val: myScore != null ? `${myScore}/100` : '—' };
-        })(),
+          const names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
+            ? contact.assigned_to_names
+            : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
+          if (names.length === 0) return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: '—' }];
+          if (names.length === 1) {
+            const v = (contact.agent_scores || {})[names[0]];
+            return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: v != null ? `${v}/100` : '—' }];
+          }
+          return names.map(name => {
+            const v = (contact.agent_scores || {})[name];
+            const isMine = name === myName;
+            return {
+              label: isMine ? (isRTL ? 'تقييمي' : 'My Score') : name,
+              val: v != null ? `${v}/100` : '—',
+            };
+          });
+        })() : []),
         contact.contact_type && { label: isRTL ? 'النوع' : 'Type', val: tp ? (isRTL ? tp.label : tp.labelEn) : contact.contact_type },
         contact.department && { label: isRTL ? 'القسم' : 'Department', val: (isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : {})[contact.department] || contact.department },
         contact.contact_number && { label: isRTL ? 'رقم التعريف' : 'Lead #', val: contact.contact_number },
@@ -904,24 +912,28 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     { key: 'data', label: isRTL ? 'البيانات' : 'Data', icon: Briefcase },
   ];
 
-  // ── Status helpers for hero section ──────────────────────────────────────
-  const getContactStatus = () => {
+  // ── Per-agent status badges for the hero — one chip per assigned agent.
+  // Viewer's chip is ringed so they spot themselves at a glance.
+  const heroStatusChips = (() => {
     const myName = profile?.full_name_en || profile?.full_name_ar;
-    const statuses = contact.agent_statuses || {};
-    const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
+    const names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
+      ? contact.assigned_to_names
+      : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
+    if (names.length === 0) return [];
     const statusLabels = isRTL
       ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
       : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
     const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
-    if (isAdminOrOps && Object.keys(statuses).length > 0) {
-      const entries = Object.entries(statuses);
-      const primary = entries[0];
-      return { label: statusLabels[primary[1]] || primary[1], color: statusColor(primary[1]) };
-    }
-    const myStatus = statuses[myName] || contact.contact_status || 'new';
-    return { label: statusLabels[myStatus] || myStatus, color: statusColor(myStatus) };
-  };
-  const contactStatus = getContactStatus();
+    return names.map(name => {
+      const s = (contact.agent_statuses || {})[name];
+      return {
+        name,
+        isMine: name === myName,
+        label: s ? (statusLabels[s] || s) : '—',
+        color: statusColor(s),
+      };
+    });
+  })();
 
   // ── Info grid items (only non-empty) ───────────────────────────────────
   const infoGridItems = [
@@ -1073,11 +1085,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     {isRTL ? tempInfo.labelAr : tempInfo.label}
                   </span>
                 )}
-                {contact.lead_score != null && contact.lead_score > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500">
-                    {contact.lead_score}/100
-                  </span>
-                )}
+                {(() => {
+                  const mn = profile?.full_name_en || profile?.full_name_ar;
+                  const myScore = mn ? (contact.agent_scores || {})[mn] : null;
+                  if (myScore == null || myScore <= 0) return null;
+                  return (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500">
+                      {myScore}/100
+                    </span>
+                  );
+                })()}
                 {contact.contact_number && (
                   <span className="text-[10px] font-mono font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.06] px-1.5 py-0.5 rounded-full">
                     {contact.contact_number}
@@ -1085,10 +1102,24 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 )}
               </div>
 
-              {/* Status Badge */}
-              <span className="inline-flex items-center text-[11px] font-bold px-3 py-1 rounded-full" style={{ color: contactStatus.color, background: contactStatus.color + '18', border: `1px solid ${contactStatus.color}25` }}>
-                {contactStatus.label}
-              </span>
+              {/* Per-agent status badges — one per assignee. Viewer's badge is ringed. */}
+              {heroStatusChips.length > 0 ? (
+                <div className="flex items-center gap-1 flex-wrap justify-center">
+                  {heroStatusChips.map(b => (
+                    <span key={b.name}
+                      className={`inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full ${b.isMine ? 'ring-1 ring-brand-500/40' : ''}`}
+                      style={{ color: b.color, background: b.color + '18', border: `1px solid ${b.color}25` }}
+                      title={b.name}>
+                      {heroStatusChips.length > 1 && <span className="font-mono text-[9px] opacity-80">{b.name.split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}</span>}
+                      {b.label}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="inline-flex items-center text-[11px] font-medium px-3 py-1 rounded-full text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark">
+                  {isRTL ? 'غير مخصّص' : 'Unassigned'}
+                </span>
+              )}
               {contact.is_blacklisted && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full mt-1.5 bg-red-500/10 text-red-500 border border-red-500/20">
                   <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklisted'}
@@ -1978,7 +2009,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-brand-500/[0.05] rounded-xl p-3.5 border border-brand-500/10">
                     <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-2 font-medium">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
-                    <ScorePill score={contact.lead_score} />
+                    {(() => {
+                      const mn = profile?.full_name_en || profile?.full_name_ar;
+                      const myScore = mn ? (contact.agent_scores || {})[mn] : null;
+                      return <ScorePill score={myScore != null ? Number(myScore) : null} />;
+                    })()}
                   </div>
                   <div className="rounded-xl p-3.5" style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.04)', border: `1px solid ${tempInfo?.color || '#4A7AAB'}15` }}>
                     <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-1.5 font-medium">{isRTL ? 'الحرارة' : 'Temperature'}</div>
