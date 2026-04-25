@@ -11,7 +11,7 @@ import {
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
 import { Z } from '../../../constants/zIndex';
-import { getDisplayStatus, getMyTemp, getMyScore, isMixed, getAgentCount, getAgentsView } from '../../../utils/contactView';
+import { getMyScore, getAgentCount, getAgentsView } from '../../../utils/contactView';
 
 const STATUS_STYLES = {
   new:             { label: 'جديد',        labelEn: 'New',       color: '#4A7AAB' },
@@ -213,28 +213,43 @@ export default function ContactsTable({
                       )}
                     </div>
                   </div>
-                  {/* Row 2: Status + Temp + Activity */}
+                  {/* Row 2: per-agent Status + Temp chips + Activity. One chip per
+                       agent so you can see exactly where the lead is for each. */}
                   <div className="flex items-center gap-1.5 mt-2 ms-[52px] flex-wrap">
                     {(() => {
-                      const myStatus = getDisplayStatus(c, agentName);
-                      if (!myStatus) return null;
-                      const s = STATUS_STYLES[myStatus];
-                      const agentCount = getAgentCount(c);
-                      const mixed = agentCount > 1 && isMixed(c, 'agent_statuses');
-                      return s ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" style={{ color: s.color, background: s.color + '18' }} title={mixed ? (isRTL ? 'الوكلاء مختلفون' : 'Agents disagree') : undefined}>
-                          {isRTL ? s.label : s.labelEn}
-                          {mixed && <span className="text-[8px] opacity-70">⚠</span>}
-                        </span>
-                      ) : null;
+                      const agents = getAgentsView(c, agentName);
+                      if (agents.length === 0) return null;
+                      const showInitials = agents.length > 1;
+                      return agents.flatMap(a => {
+                        const out = [];
+                        if (a.status && STATUS_STYLES[a.status]) {
+                          const s = STATUS_STYLES[a.status];
+                          out.push(
+                            <span key={`s-${a.name}`}
+                              className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
+                              style={{ color: s.color, background: s.color + '18' }}
+                              title={`${a.name}: ${isRTL ? s.label : s.labelEn}`}>
+                              {showInitials && <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>}
+                              <span>{isRTL ? s.label : s.labelEn}</span>
+                            </span>
+                          );
+                        }
+                        if (a.temperature && TEMP[a.temperature]) {
+                          const t = TEMP[a.temperature]; const Icon = t.Icon;
+                          out.push(
+                            <span key={`t-${a.name}`}
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
+                              style={{ color: t.color, background: t.bg }}
+                              title={`${a.name}: ${isRTL ? t.labelAr : t.label}`}>
+                              {showInitials && <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>}
+                              <Icon size={10} />
+                              {isRTL ? t.labelAr : t.label}
+                            </span>
+                          );
+                        }
+                        return out;
+                      });
                     })()}
-                    {(() => {
-                      const myTemp = getMyTemp(c, agentName);
-                      if (!myTemp || !TEMP[myTemp]) return null;
-                      const t = TEMP[myTemp]; const Icon = t.Icon;
-                      return <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5" style={{ color: t.color, background: t.bg }}><Icon size={10} />{isRTL ? t.labelAr : t.label}</span>;
-                    })()}
-                    {!isSalesAgent && c.assigned_to_name && <span className="text-[10px] px-2 py-0.5 rounded-full bg-brand-500/[0.06] text-brand-500 font-medium">{c.assigned_to_name}</span>}
                     {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd')}</span>; })()}
                   </div>
                 </div>
@@ -311,26 +326,38 @@ export default function ContactsTable({
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         {(() => {
-                          // Per-agent for the current viewer; peak for managers/admins who
-                          // aren't assigned — never the stale global contact_status.
-                          const myStatus = getDisplayStatus(c, agentName);
-                          if (!myStatus) return null;
-                          const statusMap = { new: { label: 'جديد', labelEn: 'New', color: '#4A7AAB' }, following: { label: 'متابعة', labelEn: 'Following', color: '#10B981' }, contacted: { label: 'تم التواصل', labelEn: 'Contacted', color: '#F59E0B' }, has_opportunity: { label: 'لديه فرصة', labelEn: 'Has Opp', color: '#059669' }, disqualified: { label: 'غير مؤهل', labelEn: 'DQ', color: '#6b7280' } };
-                          const s = statusMap[myStatus];
-                          const agentCount = getAgentCount(c);
-                          const mixed = agentCount > 1 && isMixed(c, 'agent_statuses');
-                          return s ? (
-                            <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1" style={{ color: s.color, background: s.color + '18' }} title={mixed ? (isRTL ? 'الوكلاء مختلفون' : 'Agents disagree') : undefined}>
-                              {isRTL ? s.label : s.labelEn}
-                              {mixed && <span className="text-[8px] opacity-70">⚠</span>}
-                            </span>
-                          ) : null;
-                        })()}
-                        {(() => {
-                          const myTemp = getMyTemp(c, agentName);
-                          if (!myTemp || !TEMP[myTemp]) return null;
-                          const t = TEMP[myTemp]; const Icon = t.Icon;
-                          return <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5" style={{ color: t.color, background: t.bg }}><Icon size={10} />{isRTL ? t.labelAr : t.label}</span>;
+                          const agents = getAgentsView(c, agentName);
+                          if (agents.length === 0) return null;
+                          const showInitials = agents.length > 1;
+                          return agents.flatMap(a => {
+                            const out = [];
+                            if (a.status && STATUS_STYLES[a.status]) {
+                              const s = STATUS_STYLES[a.status];
+                              out.push(
+                                <span key={`s-${a.name}`}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex items-center gap-1 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
+                                  style={{ color: s.color, background: s.color + '18' }}
+                                  title={`${a.name}: ${isRTL ? s.label : s.labelEn}`}>
+                                  {showInitials && <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>}
+                                  <span>{isRTL ? s.label : s.labelEn}</span>
+                                </span>
+                              );
+                            }
+                            if (a.temperature && TEMP[a.temperature]) {
+                              const t = TEMP[a.temperature]; const Icon = t.Icon;
+                              out.push(
+                                <span key={`t-${a.name}`}
+                                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold flex items-center gap-0.5 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
+                                  style={{ color: t.color, background: t.bg }}
+                                  title={`${a.name}: ${isRTL ? t.labelAr : t.label}`}>
+                                  {showInitials && <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>}
+                                  <Icon size={10} />
+                                  {isRTL ? t.labelAr : t.label}
+                                </span>
+                              );
+                            }
+                            return out;
+                          });
                         })()}
                         {c.last_activity_at && (() => { const d = daysSince(c.last_activity_at); return <span className={`text-[10px] font-semibold ${d === 0 ? 'text-brand-500' : d <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>{d === 0 ? (isRTL ? '✓ اليوم' : '✓ Today') : (isRTL ? d + ' يوم' : d + 'd ago')}</span>; })()}
                       </div>
@@ -358,18 +385,15 @@ export default function ContactsTable({
                   )}
                 </td>}
 
-                {/* Temperature — multi-agent stack like Status column. */}
+                {/* Temperature — per-agent only; one chip per assigned sales. */}
                 {hasCol('temperature') && <td className={`${tdCls} hidden md:table-cell`}>
                   {(() => {
                     const agents = getAgentsView(c, agentName);
                     if (agents.length === 0) {
-                      const myTemp = getMyTemp(c, agentName);
-                      if (!myTemp || !TEMP[myTemp]) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
-                      const t = TEMP[myTemp]; const Icon = t.Icon;
-                      return <div className="flex items-center gap-1.5"><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
+                      return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
                     }
                     if (agents.length === 1) {
-                      const tempKey = agents[0].temperature || c.temperature;
+                      const tempKey = agents[0].temperature;
                       if (!tempKey || !TEMP[tempKey]) return <span className="text-content-muted/50 dark:text-content-muted-dark/50 text-[11px]">—</span>;
                       const t = TEMP[tempKey]; const Icon = t.Icon;
                       return <div className="flex items-center gap-1.5"><span className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: t.bg }}><Icon size={13} style={{ color: t.color }} /></span><span className="text-xs font-semibold" style={{ color: t.color }}>{isRTL ? t.labelAr : t.label}</span></div>;
@@ -417,26 +441,16 @@ export default function ContactsTable({
                   <span className="text-xs text-content dark:text-content-dark">{c.company || '—'}</span>
                 </td>}
 
-                {/* Contact Status — multi-agent chip stack; falls back to single chip when there's only one assignee. */}
+                {/* Contact Status — per-agent only; one chip per assigned sales. */}
                 {hasCol('contact_status') && <td className={`${tdCls} hidden md:table-cell`}>
                   {(() => {
                     const agents = getAgentsView(c, agentName);
-                    // No assignees at all — fall back to legacy global display.
                     if (agents.length === 0) {
-                      const s = getDisplayStatus(c, agentName);
-                      if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
-                      const info = STATUS_STYLES[s];
-                      return info ? (
-                        <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1" style={{ color: info.color, background: info.color + '18' }}>
-                          {isRTL ? info.label : info.labelEn}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-brand-500/[0.08] text-brand-600 dark:text-brand-400">{s.replace(/_/g, ' ')}</span>
-                      );
+                      return <span className="text-content-muted/50 text-[11px]">—</span>;
                     }
-                    // Single-agent contact — keep the clean single chip.
+                    // Single-agent contact — clean single chip with that agent's status.
                     if (agents.length === 1) {
-                      const s = agents[0].status || c.contact_status;
+                      const s = agents[0].status;
                       if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
                       const info = STATUS_STYLES[s];
                       return info ? (

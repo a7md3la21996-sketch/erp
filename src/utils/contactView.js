@@ -1,16 +1,11 @@
 // Per-agent view helpers for contacts.
 //
-// Contacts have two overlapping data models:
-//   - Global fields (contact_status, temperature, lead_score) — represent a
-//     single "aggregate" view.
-//   - Per-agent JSON fields (agent_statuses, agent_temperatures, agent_scores)
-//     — represent each assigned agent's independent state on the same contact.
-//
-// The UI used to read global fields directly, which produced confusing behavior
-// when the same contact was assigned to multiple agents (one agent's change
-// appeared to everyone). These helpers centralize how we read "my view" so
-// filters, chips, and column displays are always consistent for the current
-// user, and fall back to the global fields for legacy data.
+// The legacy global fields (contact_status, temperature, lead_score) are no
+// longer used for display anywhere in the app. Every status/temperature/score
+// the user sees comes from the per-agent JSON maps (agent_statuses,
+// agent_temperatures, agent_scores) tied to assigned_to_names. Multi-agent
+// contacts show one chip per agent so each one's reality is visible — no
+// synthetic "peak" or aggregate.
 
 /** The user's full name as stored on contacts (full_name_en preferred). */
 export function profileName(profile) {
@@ -26,36 +21,6 @@ export function isAssignedToMe(contact, userName) {
   return contact?.assigned_to_name === userName;
 }
 
-/**
- * Per-agent status for the given user on the given contact.
- * - Returns the user's own entry in agent_statuses if set.
- * - Falls back to the legacy global contact_status for backward compat
- *   (legacy data that predates per-agent tracking).
- * - Returns null when nothing is set.
- */
-export function getMyStatus(contact, userName) {
-  if (!contact) return null;
-  const perAgent = userName ? contact.agent_statuses?.[userName] : undefined;
-  if (perAgent !== undefined && perAgent !== null && perAgent !== '') return perAgent;
-  return contact.contact_status || null;
-}
-
-/** Same pattern for temperature. */
-export function getMyTemp(contact, userName) {
-  if (!contact) return null;
-  const perAgent = userName ? contact.agent_temperatures?.[userName] : undefined;
-  if (perAgent !== undefined && perAgent !== null && perAgent !== '') return perAgent;
-  return contact.temperature || null;
-}
-
-/** Same pattern for lead score. */
-export function getMyScore(contact, userName) {
-  if (!contact) return 0;
-  const perAgent = userName ? contact.agent_scores?.[userName] : undefined;
-  if (typeof perAgent === 'number') return perAgent;
-  return Number(contact.lead_score || 0);
-}
-
 /** Names of agents currently assigned to this contact (filtered/cleaned). */
 function getValidAgentNames(contact) {
   if (!contact) return [];
@@ -69,10 +34,37 @@ export function getAgentCount(contact) {
 }
 
 /**
+ * Per-agent status for the given user. Returns null if the user isn't
+ * assigned or doesn't have an entry — callers shouldn't substitute the
+ * legacy global field on the user's behalf.
+ */
+export function getMyStatus(contact, userName) {
+  if (!contact || !userName) return null;
+  const v = contact.agent_statuses?.[userName];
+  return v !== undefined && v !== null && v !== '' ? v : null;
+}
+
+/** Same pattern for temperature. */
+export function getMyTemp(contact, userName) {
+  if (!contact || !userName) return null;
+  const v = contact.agent_temperatures?.[userName];
+  return v !== undefined && v !== null && v !== '' ? v : null;
+}
+
+/** Same pattern for lead score. Returns 0 (not null) for arithmetic-friendliness. */
+export function getMyScore(contact, userName) {
+  if (!contact || !userName) return 0;
+  const v = contact.agent_scores?.[userName];
+  if (typeof v === 'number') return v;
+  if (v != null && v !== '') return Number(v) || 0;
+  return 0;
+}
+
+/**
  * Read only the per-agent entries for agents who are still in
  * assigned_to_names. The JSON maps in the DB sometimes carry "ghost" entries
  * for agents who were unassigned without their slot being cleaned up — those
- * shouldn't influence display, peak, or mixed indicators.
+ * shouldn't influence display or mixed indicators.
  */
 function validValuesFromMap(contact, field) {
   const map = contact?.[field];
@@ -86,7 +78,9 @@ function validValuesFromMap(contact, field) {
 
 /**
  * Whether the per-agent entries (for currently-assigned agents) disagree.
- * Used for the ⚠ Mixed badge in admin/TL views.
+ * Used in a few summary places that still need a single boolean signal
+ * (e.g. dashboards). The Leads table itself shows every agent's chip so it
+ * doesn't need this.
  *
  * field is one of 'agent_statuses' | 'agent_temperatures' | 'agent_scores'.
  */
@@ -97,75 +91,17 @@ export function isMixed(contact, field) {
 }
 
 /**
- * Highest "heat" across currently-assigned agents — Admin/TL summary.
- * Ordered hottest-first. Falls back to contact.temperature if no assignees
- * have a temperature recorded.
- */
-const TEMP_ORDER = ['hot', 'warm', 'cool', 'cold'];
-export function getPeakTemp(contact) {
-  if (!contact) return null;
-  const values = validValuesFromMap(contact, 'agent_temperatures');
-  if (values.length === 0) return contact.temperature || null;
-  for (const t of TEMP_ORDER) if (values.includes(t)) return t;
-  return values[0];
-}
-
-// Mirrors deriveGlobalStatus in contactsService.js — the most "advanced" state
-// wins. Kept in sync by convention: if you change one, change both.
-const STATUS_ORDER = ['has_opportunity', 'following', 'contacted', 'new', 'disqualified'];
-
-/**
- * Peak status across all assigned agents. Used for admin/TL display when the
- * viewer isn't one of the assignees — the stale global contact_status would
- * otherwise lie (e.g. show "new" when an agent has already moved it to
- * "has_opportunity"). Falls back to the global only if there are no per-agent
- * entries at all.
- */
-export function getPeakStatus(contact) {
-  if (!contact) return null;
-  const values = validValuesFromMap(contact, 'agent_statuses');
-  if (values.length === 0) return contact.contact_status || null;
-  for (const s of STATUS_ORDER) if (values.includes(s)) return s;
-  return values[0];
-}
-
-/**
- * Status to display for a given viewer on a given contact:
- *   - If the viewer is one of the assignees, show THEIR own entry
- *     (so a sales agent always sees their own state).
- *   - Otherwise (admin / team leader / operations viewing someone else's
- *     lead), show the peak status across all agents — never the stale
- *     global contact_status unless there's no per-agent data at all.
+ * Flat per-agent breakdown for tables/drawers/chips. Returns one row per
+ * currently-assigned agent with their own status / temperature / score —
+ * the source of truth for every per-agent display in the app. When
+ * `viewerName` is given and they're one of the assignees, they're placed
+ * first so the viewer's own state reads at a glance.
  *
- * This is the right call for the Leads table Status column: the number
- * the viewer sees should reflect what's actually happening on the lead.
- */
-export function getDisplayStatus(contact, userName) {
-  if (!contact) return null;
-  if (userName && isAssignedToMe(contact, userName)) {
-    const mine = contact.agent_statuses?.[userName];
-    if (mine !== undefined && mine !== null && mine !== '') return mine;
-  }
-  return getPeakStatus(contact);
-}
-
-/**
- * Flat per-agent breakdown for display in tables/drawers when a contact has
- * multiple assignees. Returns one row per assigned agent with their own
- * status / temperature / score from the JSON maps. When `viewerName` is given
- * and the viewer is one of the assignees, they're placed first so their own
- * state reads at a glance.
- *
- * Returns [] for contacts with no real assignees (handles empty array, null).
+ * Returns [] for contacts with no assignees.
  */
 export function getAgentsView(contact, viewerName) {
   if (!contact) return [];
-  let names = [];
-  if (Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0) {
-    names = contact.assigned_to_names.filter(Boolean);
-  } else if (contact.assigned_to_name) {
-    names = [contact.assigned_to_name];
-  }
+  const names = getValidAgentNames(contact);
   if (names.length === 0) return [];
 
   const statuses = contact.agent_statuses || {};
@@ -191,9 +127,9 @@ export function getAgentsView(contact, viewerName) {
 }
 
 /**
- * Attach computed virtual fields (my_status, my_temperature, my_score,
- * _agent_count, _is_status_mixed, etc.) to each contact so SmartFilter and
- * sorts can address them as ordinary field ids. Does not mutate inputs.
+ * Attach computed virtual fields so SmartFilter and sorts can address
+ * per-agent state as ordinary field ids. `my_*` is the viewer's own entry
+ * (or null if the viewer isn't assigned). Does not mutate inputs.
  */
 export function withAgentView(contacts, profile) {
   const name = profileName(profile);
