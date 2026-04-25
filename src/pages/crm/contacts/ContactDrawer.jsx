@@ -236,7 +236,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     return () => document.removeEventListener('keydown', handler, true);
   }, [showOppModal]);
 
-  const handleSaveActivity = async (form) => {
+  const handleSaveActivity = async (form, opts = {}) => {
     try {
       const act = await createActivity({
         ...form,
@@ -251,7 +251,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       console.error('Activity save error:', err?.message || err);
       toast.error(isRTL ? `حدث خطأ: ${err?.message || 'غير معروف'}` : `Error: ${err?.message || 'Unknown'}`);
     }
-    // Auto-update status based on activity (skip if disqualified)
+    // If the caller is also about to change status explicitly, skip the
+    // auto-update so we don't race them. Otherwise infer a sensible default.
+    if (opts.skipAutoStatus) return;
+
     const myName = profile?.full_name_en || profile?.full_name_ar;
     const currentStatus = (contact.agent_statuses || {})[myName] || contact.contact_status || 'new';
     let newStatus = null;

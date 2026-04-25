@@ -100,7 +100,12 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
       const resultLabel = found ? found.label : actForm.result;
       actData.description = `${resultLabel}${actData.description ? ' — ' + actData.description : ''}`;
     }
-    await onSaveActivity(actData);
+    // When the user explicitly toggled status change ON, suppress the activity
+    // handler's own auto-status logic — otherwise both run and race each other,
+    // and the auto-update can overwrite the user's explicit choice (this is
+    // exactly what made disqualified statuses bounce back to "following").
+    const userChoseStatus = !!(changeStatus && newStatus);
+    await onSaveActivity(actData, { skipAutoStatus: userChoseStatus });
 
     // 2. Save task if enabled
     if (addTask && taskForm.type && taskForm.due_date) {
@@ -109,8 +114,9 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
       await onSaveTask({ ...taskForm, title, contact_id: contact.id, contact_name: contact.full_name, dept: 'sales' });
     }
 
-    // 3. Change contact status if enabled
-    if (changeStatus && newStatus) {
+    // 3. Change contact status if enabled — wait for the activity write to
+    // complete (above) so we don't race against its DB read.
+    if (userChoseStatus) {
       onStatusChange(newStatus, newStatus === 'disqualified' ? dqReason : undefined);
     }
 
