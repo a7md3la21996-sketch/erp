@@ -210,7 +210,8 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
         }
         await supabase.from('contacts').update(updates).eq('id', entityId);
         if (agentName) await incrementAgentScore(entityId, agentName, scoreIncrement);
-        // Auto-complete matching pending tasks
+        // Auto-complete matching pending tasks. Fire-and-forget but
+        // failures should be visible in monitoring, not silently dropped.
         if (userId && type) {
           const matchTypes = type === 'call' ? ['call', 'followup'] : [type];
           supabase.from('tasks')
@@ -220,7 +221,8 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
             .eq('status', 'pending')
             .in('type', matchTypes)
             .lte('due_date', new Date().toISOString())
-            .then(() => {}).catch(() => {});
+            .then(({ error }) => { if (error) reportError('activitiesService', 'autoCompleteTasks', error); })
+            .catch(err => reportError('activitiesService', 'autoCompleteTasks', err));
         }
       } catch (err) { reportError('activitiesService', 'query', err);
         await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);

@@ -129,14 +129,22 @@ export const addStageHistory = (oppId, fromStage, toStage) => {
     all[oppId].push(entry);
     localStorage.setItem(STAGE_HISTORY_KEY, JSON.stringify(all));
   } catch {}
-  // Also persist to Supabase (best-effort, non-blocking)
+  // Also persist to Supabase (best-effort, non-blocking). Surface failures
+  // through reportError so monitoring catches them — losing stage history
+  // makes deal-velocity reports meaningless.
   import('../../../lib/supabase').then(({ default: supabase }) => {
     supabase.from('stage_history').insert([{
       opportunity_id: oppId,
       from_stage: fromStage,
       to_stage: toStage,
       changed_at: entry.at,
-    }]).catch(() => {});
+    }]).then(({ error }) => {
+      if (error) {
+        import('../../../utils/errorReporter').then(({ reportError }) => reportError('opportunities/constants', 'stage_history insert', error)).catch(() => {});
+      }
+    }).catch(err => {
+      import('../../../utils/errorReporter').then(({ reportError }) => reportError('opportunities/constants', 'stage_history insert', err)).catch(() => {});
+    });
   }).catch(() => {});
 };
 
@@ -160,15 +168,26 @@ export const addOppNote = async (oppId, text, profile) => {
     all[oppId].unshift(note);
     localStorage.setItem(NOTES_KEY, JSON.stringify(all));
   } catch {}
-  // Persist to Supabase
+  // Persist to Supabase. localStorage above is the safety net so notes
+  // aren't lost on failure, but we still want monitoring on Supabase
+  // failures rather than a bare catch.
   try {
     const { default: supabase } = await import('../../../lib/supabase');
-    await supabase.from('activities').insert([{
+    const { error } = await supabase.from('activities').insert([{
       type: 'note', notes: text, contact_id: oppId, entity_type: 'opportunity',
       user_id: profile?.id || null, user_name_en: profile?.full_name_en || '', user_name_ar: profile?.full_name_ar || '',
       dept: 'sales', status: 'completed', created_at: note.at,
     }]);
-  } catch {}
+    if (error) {
+      const { reportError } = await import('../../../utils/errorReporter');
+      reportError('opportunities/constants', 'addOppNote', error);
+    }
+  } catch (err) {
+    try {
+      const { reportError } = await import('../../../utils/errorReporter');
+      reportError('opportunities/constants', 'addOppNote', err);
+    } catch { /* errorReporter import failed — last-ditch */ }
+  }
   return note;
 };
 export const deleteOppNote = (oppId, noteId) => {

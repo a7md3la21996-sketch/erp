@@ -145,8 +145,11 @@ export async function recordAssignment(contactId, { fromAgent, toAgent, assigned
     status: 'completed',
     created_at: entry.at,
   }]).then(() => {}).catch((err) => { reportError('contactsService', 'recordAssignment', err); });
-  // Update assigned_at timestamp
-  supabase.from('contacts').update({ assigned_at: entry.at }).eq('id', contactId).then(() => {}).catch(() => {});
+  // Update assigned_at timestamp. Best-effort, but at least surface failures
+  // for monitoring instead of swallowing them silently.
+  supabase.from('contacts').update({ assigned_at: entry.at }).eq('id', contactId)
+    .then(({ error }) => { if (error) reportError('contactsService', 'recordAssignment.updateAssignedAt', error); })
+    .catch(err => reportError('contactsService', 'recordAssignment.updateAssignedAt', err));
   return entry;
 }
 
