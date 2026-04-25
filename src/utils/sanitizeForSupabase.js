@@ -1,11 +1,19 @@
 /**
  * Strip internal/frontend-only fields before sending to Supabase.
  * Use before every .insert() and .update() call.
+ *
+ * Critical: virtual fields like my_status / my_temperature / my_score are
+ * computed by withAgentView for SmartFilter and chips. They DON'T exist as
+ * DB columns — sending them causes PostgREST to reject the whole UPDATE
+ * with "column not found", which is what silently dropped 200+ writes
+ * during the unhealthy DB period. Strip them aggressively.
  */
 const INTERNAL_FIELDS = new Set([
   '_customFieldValues', '_offline', '_campaign_count', '_country',
   '_opp_count', '_aging_level', '_interactionLogged', '_skipConfirmed',
   '_skipGate', '_touchStart',
+  // Computed per-agent virtual fields (no underscore prefix → escaped startsWith filter)
+  'my_status', 'my_temperature', 'my_score',
   'countryCode', 'country',
   'contacts', 'users', 'projects', 'opportunities', 'departments',
   'activities', 'tasks', 'deals', 'shifts',

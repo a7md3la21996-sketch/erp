@@ -244,7 +244,14 @@ export default function ContactsPage() {
         const globalStatus = deriveGlobalStatus(newAgentStatuses);
         const updated = { ...contact, agent_statuses: newAgentStatuses, contact_status: globalStatus };
         setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
-        updateContact(updated.id, { agent_statuses: newAgentStatuses, contact_status: globalStatus }).catch(err => { if (import.meta.env.DEV) console.warn('optimistic status update:', err); });
+        // Tell the user when this fails — silent failures here are how
+        // dozens of status changes were lost during the unhealthy DB period.
+        updateContact(updated.id, { agent_statuses: newAgentStatuses, contact_status: globalStatus })
+          .catch(err => {
+            reportError('ContactsPage', 'optimistic status update', err);
+            toast.error(isRTL ? 'لم يتم حفظ تغيير الحالة — حاول تاني' : 'Status change not saved — please retry');
+            setContacts(prev => prev.map(c => c.id === updated.id ? contact : c));
+          });
       }
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch (err) {
@@ -1484,7 +1491,15 @@ export default function ContactsPage() {
         const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${updated[k] || ''}"`).join(', ') : `Updated contact: ${updated.full_name}`;
         logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: desc, oldValue: old || null, newValue: updated, userName: profile?.full_name_ar || '' }).catch(() => {});
       }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
-      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onUpdate={(updated) => { setContacts(prev => { const next = prev.map(c => c.id === updated.id ? updated : c); return next; }); updateContact(updated.id, updated).catch(err => { if (import.meta.env.DEV) console.warn('optimistic contact update:', err); }); }} />}
+      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onUpdate={(updated) => {
+        const previous = contacts.find(c => c.id === updated.id);
+        setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
+        updateContact(updated.id, updated).catch(err => {
+          reportError('ContactsPage', 'LogCall optimistic update', err);
+          toast.error(isRTL ? 'لم يتم حفظ التحديث — حاول تاني' : 'Update not saved — please retry');
+          if (previous) setContacts(prev => prev.map(c => c.id === updated.id ? previous : c));
+        });
+      }} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
       {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={async (newContacts) => {
