@@ -1,6 +1,8 @@
 import supabase from '../lib/supabase';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import { logCreate, logUpdate, logAudit } from './auditService';
+import { requireAnyPerm, requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 import { reportError } from '../utils/errorReporter';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
@@ -318,6 +320,9 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
 }
 
 export async function createContact(contactData) {
+  // Reject before we touch the DB if the caller doesn't have any contact-edit
+  // permission. Defense in depth — the UI gate plus this guard plus DB RLS.
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN], 'Not allowed to create contacts');
   // Input validation
   if (!contactData.phone || String(contactData.phone).replace(/\D/g, '').length < 8) {
     throw new Error('Invalid phone number');
@@ -376,6 +381,10 @@ export async function createContact(contactData) {
 }
 
 export async function updateContact(id, updates, lastKnownUpdatedAt) {
+  // Block direct service calls without an edit permission. RLS is the
+  // ultimate authority, but rejecting here gives a clean error message
+  // instead of an opaque PostgREST one and avoids the round-trip.
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN], 'Not allowed to update contacts');
   // Remove computed/internal fields that don't exist in Supabase
   const { _campaign_count, _country, _opp_count, _aging_level, _offline, _lastNote, _feedback, _triggerEdit, opportunities, ...cleanUpdates } = updates;
   if (import.meta.env.DEV) {
@@ -439,6 +448,9 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
 }
 
 export async function deleteContact(id) {
+  // Sales agents have no DELETE permission — even though they have
+  // CONTACTS_EDIT_OWN, deletion is reserved for managers/admins/ops.
+  requirePerm(P.CONTACTS_DELETE, 'Not allowed to delete contacts');
   try {
     // Soft delete: mark as deleted instead of removing from DB
     // This preserves all data and related records (opportunities, activities, etc.)
@@ -456,6 +468,7 @@ export async function deleteContact(id) {
 }
 
 export async function restoreContact(id) {
+  requirePerm(P.CONTACTS_DELETE, 'Not allowed to restore contacts');
   try {
     const { error } = await rq(() => supabase.from('contacts').update({
       deleted_at: null,
@@ -468,6 +481,7 @@ export async function restoreContact(id) {
 }
 
 export async function permanentDeleteContact(id) {
+  requirePerm(P.CONTACTS_DELETE, 'Not allowed to permanently delete contacts');
   // Atomic delete via RPC — all related rows + contact succeed or rollback together.
   // See supabase/migrations/permanent_delete_contact_rpc.sql
   const { error } = await rq(() => supabase.rpc('permanent_delete_contact', { p_contact_id: id }), 'permanentDeleteContact');
