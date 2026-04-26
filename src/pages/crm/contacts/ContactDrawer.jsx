@@ -46,6 +46,13 @@ import {
 
 const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock };
 
+// Module-level cache for the drawer's per-contact data. Arrow-key navigation
+// fires through contacts faster than the network can respond; without a cache
+// each press queues 7 round-trips. 60s TTL is short enough that data stays
+// fresh during normal use, long enough to absorb the common navigation pattern.
+const _drawerDataCache = new Map();
+const DRAWER_CACHE_TTL = 60_000;
+
 const TIMELINE_CONFIG = {
   activity:    { color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  defaultIcon: Clock },
   task:        { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  defaultIcon: CheckSquare },
@@ -187,33 +194,55 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     setSelectedAgent('all');
   }, [contact.id]);
 
-  // Fetch all data on mount — single parallel batch
+  // Fetch all drawer data on contact change — single parallel batch.
+  // Cached for 60s by contact id so arrow-key navigation between contacts
+  // (or reopening the same one) doesn't refire 7 round-trips. Also debounced
+  // by 250ms so rapid arrow presses don't queue up requests we'll throw away.
   useEffect(() => {
     let cancelled = false;
-    setLoadingData(true);
     const cid = String(contact.id);
-    Promise.allSettled([
-      fetchContactActivities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-      fetchTasks({ contactId: contact.id, role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-      fetchContactOpportunities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
-      getComments('contact', cid).catch(() => []),
-      getDocumentsByEntity('contact', cid).catch(() => []),
-      getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar, contactId: cid }).catch(() => []),
-      getLocalAuditLogs({ limit: 50, entity: 'contact', entityId: cid }).catch(() => ({ data: [] })),
-    ]).then(([actsRes, tasksRes, oppsRes, commentsRes, docsRes, dealsRes, auditsRes]) => {
-      if (cancelled) return;
-      if (actsRes.status === 'fulfilled') setActivities(actsRes.value);
-      if (tasksRes.status === 'fulfilled') setTasks(tasksRes.value);
-      if (oppsRes.status === 'fulfilled') setOpportunities(oppsRes.value);
-      const comments = commentsRes.status === 'fulfilled' ? (Array.isArray(commentsRes.value) ? commentsRes.value : []) : [];
-      const documents = docsRes.status === 'fulfilled' ? (Array.isArray(docsRes.value) ? docsRes.value : []) : [];
-      const deals = dealsRes.status === 'fulfilled' ? (Array.isArray(dealsRes.value) ? dealsRes.value : []) : [];
-      const allAudits = auditsRes.status === 'fulfilled' ? (Array.isArray(auditsRes.value?.data) ? auditsRes.value.data : []) : [];
-      const audits = allAudits.filter(a => String(a.entity_id) === cid && a.action !== 'create');
-      setExtraSources({ comments, documents, audits, deals });
+
+    // Cache hit — apply immediately and skip network entirely.
+    const cached = _drawerDataCache.get(cid);
+    if (cached && Date.now() - cached.ts < DRAWER_CACHE_TTL) {
+      setActivities(cached.activities || []);
+      setTasks(cached.tasks || []);
+      setOpportunities(cached.opportunities || []);
+      setExtraSources(cached.extraSources || { comments: [], documents: [], audits: [], deals: [] });
       setLoadingData(false);
-    });
-    return () => { cancelled = true; };
+      return;
+    }
+
+    setLoadingData(true);
+    const timer = setTimeout(() => {
+      Promise.allSettled([
+        fetchContactActivities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
+        fetchTasks({ contactId: contact.id, role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
+        fetchContactOpportunities(contact.id, { role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
+        getComments('contact', cid).catch(() => []),
+        getDocumentsByEntity('contact', cid).catch(() => []),
+        getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar, contactId: cid }).catch(() => []),
+        getLocalAuditLogs({ limit: 50, entity: 'contact', entityId: cid }).catch(() => ({ data: [] })),
+      ]).then(([actsRes, tasksRes, oppsRes, commentsRes, docsRes, dealsRes, auditsRes]) => {
+        if (cancelled) return;
+        const activities = actsRes.status === 'fulfilled' ? actsRes.value : [];
+        const tasks = tasksRes.status === 'fulfilled' ? tasksRes.value : [];
+        const opportunities = oppsRes.status === 'fulfilled' ? oppsRes.value : [];
+        const comments = commentsRes.status === 'fulfilled' ? (Array.isArray(commentsRes.value) ? commentsRes.value : []) : [];
+        const documents = docsRes.status === 'fulfilled' ? (Array.isArray(docsRes.value) ? docsRes.value : []) : [];
+        const deals = dealsRes.status === 'fulfilled' ? (Array.isArray(dealsRes.value) ? dealsRes.value : []) : [];
+        const allAudits = auditsRes.status === 'fulfilled' ? (Array.isArray(auditsRes.value?.data) ? auditsRes.value.data : []) : [];
+        const audits = allAudits.filter(a => String(a.entity_id) === cid && a.action !== 'create');
+        const extraSources = { comments, documents, audits, deals };
+        setActivities(activities);
+        setTasks(tasks);
+        setOpportunities(opportunities);
+        setExtraSources(extraSources);
+        setLoadingData(false);
+        _drawerDataCache.set(cid, { activities, tasks, opportunities, extraSources, ts: Date.now() });
+      });
+    }, 250);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [contact.id]);
 
   // Arrow key navigation between contacts
