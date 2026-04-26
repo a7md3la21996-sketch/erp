@@ -113,6 +113,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [addAgentPicked, setAddAgentPicked] = useState(null);
   const [addAgentStatus, setAddAgentStatus] = useState('new');
   const [addAgentTemp, setAddAgentTemp] = useState('hot');
+  const [addAgentSaving, setAddAgentSaving] = useState(false);
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -1546,7 +1547,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                                 className="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark cursor-pointer">
                                 {isRTL ? 'رجوع' : 'Back'}
                               </button>
-                              <button onClick={async () => {
+                              <button
+                                disabled={addAgentSaving}
+                                onClick={async () => {
+                                if (addAgentSaving) return; // double-click guard
+                                setAddAgentSaving(true);
                                 const newNames = [...assignedNames, addAgentPicked];
                                 const newStatuses = { ...(contact.agent_statuses || {}), [addAgentPicked]: addAgentStatus };
                                 const newTemps = { ...(contact.agent_temperatures || {}), [addAgentPicked]: addAgentTemp };
@@ -1560,15 +1565,18 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                                   notifyAgentAdded({ contactName: contact.full_name, contactId: contact.id, agentName: addAgentPicked, addedBy: profile?.full_name_en || profile?.full_name_ar });
                                   // Then update UI (mark _skipDbUpdate so parent doesn't re-save)
                                   if (onUpdate) onUpdate({ ...contact, ...dbFields, _skipDbUpdate: true });
+                                  toast.success(isRTL ? `تم إضافة ${addAgentPicked}` : `Added ${addAgentPicked}`);
+                                  setShowAddAgent(false); setAddAgentPicked(null); setAddAgentSearch('');
                                 } catch (err) {
                                   console.error('Add agent save failed:', err);
-                                  // Still update UI optimistically
-                                  if (onUpdate) onUpdate({ ...contact, ...dbFields });
+                                  toast.error(isRTL ? `فشل إضافة ${addAgentPicked} — حاول تاني` : `Failed to add ${addAgentPicked} — please retry`);
+                                  // Don't dismiss the picker on failure so the user can retry
+                                } finally {
+                                  setAddAgentSaving(false);
                                 }
-                                setShowAddAgent(false); setAddAgentPicked(null); setAddAgentSearch('');
                               }}
-                                className="flex-1 px-2 py-1.5 rounded-lg text-xs font-bold border-none bg-brand-500 text-white cursor-pointer">
-                                {isRTL ? 'تأكيد' : 'Confirm'}
+                                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer ${addAgentSaving ? 'bg-brand-500/60 text-white cursor-wait' : 'bg-brand-500 text-white'}`}>
+                                {addAgentSaving ? (isRTL ? 'جاري الإضافة...' : 'Adding...') : (isRTL ? 'تأكيد' : 'Confirm')}
                               </button>
                             </div>
                           </div>

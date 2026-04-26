@@ -164,14 +164,22 @@ export default function ContactsPage() {
 
   const togglePin = (id) => {
     setPinnedIds(prev => {
+      let next;
       if (prev.includes(id)) {
-        const next = prev.filter(x => x !== id);
-        localStorage.setItem('platform_pinned_contacts', JSON.stringify(next));
-        return next;
+        next = prev.filter(x => x !== id);
+      } else {
+        if (prev.length >= MAX_PINS) return prev;
+        next = [...prev, id];
       }
-      if (prev.length >= MAX_PINS) return prev;
-      const next = [...prev, id];
-      localStorage.setItem('platform_pinned_contacts', JSON.stringify(next));
+      // localStorage.setItem can throw on quota exceeded (lots of open tabs,
+      // private mode quirks, full disk). Without a guard, the pin disappears
+      // on next reload with no warning to the user.
+      try {
+        localStorage.setItem('platform_pinned_contacts', JSON.stringify(next));
+      } catch (err) {
+        reportError('ContactsPage', 'togglePin localStorage', err);
+        toast.warning(isRTL ? 'لم يتم حفظ التثبيت — مساحة التخزين ممتلئة' : 'Pin not saved — storage full');
+      }
       return next;
     });
   };
