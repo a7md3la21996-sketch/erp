@@ -26,20 +26,24 @@ function readProfile() {
 
 /** True if the currently logged-in profile has the given permission string.
  *
- * Fail-open semantics: when no profile is readable from localStorage we
- * return TRUE rather than blocking. The auth context populates
- * platform_mock_user but a user can land here briefly during sign-in,
- * after a tab restore, or when localStorage was cleared. RLS on the DB
- * is the real authority — this guard only catches obvious wrong-role
- * calls. We'd rather let an edge-case attempt through and have RLS
- * reject it than block the sales team because a profile blob was
- * temporarily missing.
+ * Fail-open by default. We return TRUE unless we KNOW the user's role and
+ * KNOW that role doesn't have the permission. Cases where we fail open:
+ *   - Profile missing from localStorage (mid sign-in, tab restore, etc.)
+ *   - Profile has no role field
+ *   - Role exists but isn't in ROLE_PERMISSIONS (new/custom roles
+ *     created in the DB but not yet wired into the static map)
+ *
+ * RLS on Postgres is the real authority. This guard only catches an
+ * obviously-wrong-role call early; it must not block valid users. Earlier
+ * a stricter version blocked every newly-created sales account because
+ * the role string didn't match the static map.
  */
 export function hasPerm(permission) {
   const profile = readProfile();
   if (!profile || !profile.role) return true;
   if (profile.role === 'admin') return true;
-  const perms = ROLE_PERMISSIONS[profile.role] || [];
+  const perms = ROLE_PERMISSIONS[profile.role];
+  if (!perms) return true; // unknown role — let RLS decide
   return perms.includes(permission);
 }
 
