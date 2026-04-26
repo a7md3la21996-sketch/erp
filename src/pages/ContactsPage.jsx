@@ -362,9 +362,29 @@ export default function ContactsPage() {
     });
   };
 
+  // Bulk handlers operate on selectedIds, which can span multiple pages.
+  // Server-side pagination means `contacts` only holds the current page,
+  // so we must fetch any selected rows that aren't on screen — otherwise
+  // off-page contacts get reset/wiped when the bulk write is computed
+  // from a missing local row.
+  const getAllSelectedContacts = async () => {
+    const onPage = contacts.filter(c => selectedIds.includes(c.id));
+    const onPageIds = new Set(onPage.map(c => c.id));
+    const offPageIds = selectedIds.filter(id => !onPageIds.has(id));
+    if (offPageIds.length === 0) return onPage;
+    try {
+      const { data } = await supabase.from('contacts').select('*').in('id', offPageIds);
+      return [...onPage, ...(Array.isArray(data) ? data : [])];
+    } catch {
+      return onPage; // fall back to visible-only if fetch fails
+    }
+  };
+
   const handleBulkReassign = async (agentName, bulkStatus, bulkTemp) => {
     const assignedByName = profile?.full_name_ar || '—';
-    const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
+    const allSelected = await getAllSelectedContacts();
+    const allSelectedById = new Map(allSelected.map(c => [c.id, c]));
+    const names = allSelected.map(c => c.full_name).filter(Boolean).join(', ');
     const idsToUpdate = [...selectedIds];
     const extraUpdates = {};
     if (bulkStatus) extraUpdates.contact_status = bulkStatus; // bulk reassign sets global (admin/ops action)
@@ -392,8 +412,8 @@ export default function ContactsPage() {
     } : c);
     setContacts(updated);
         logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
-    // Record assignment history for each contact
-    const reassignedContacts = contacts.filter(c => selectedIds.includes(c.id));
+    // Record assignment history for each contact (uses fetched data so off-page rows are included)
+    const reassignedContacts = allSelected;
     reassignedContacts.forEach(c => {
       recordAssignment(c.id, { fromAgent: c.assigned_to_name, toAgent: agentName, assignedBy: assignedByName });
     });
@@ -412,7 +432,7 @@ export default function ContactsPage() {
       // updateContact already retries internally — service-level retry is the single source of truth
       const results = await Promise.allSettled(
         idsToUpdate.map(id => {
-          const c = contacts.find(ct => ct.id === id);
+          const c = allSelectedById.get(id);
           return updateContact(id, {
             assigned_to_name: agentName,
             assigned_to_names: [agentName],
@@ -431,7 +451,9 @@ export default function ContactsPage() {
     const idsToUpdate = [...selectedIds];
     // Split selected contacts into { toAdd } (new assignment) and { alreadyHad } (no-op)
     // so the toast, notifications, and audit log reflect the real effect.
-    const selected = contacts.filter(c => selectedIds.includes(c.id));
+    // Pull off-page selected rows from the DB so the split is correct.
+    const selected = await getAllSelectedContacts();
+    const selectedById = new Map(selected.map(c => [c.id, c]));
     const toAdd = selected.filter(c => !(c.assigned_to_names || []).includes(agentName));
     const alreadyHad = selected.filter(c => (c.assigned_to_names || []).includes(agentName));
 
@@ -482,7 +504,7 @@ export default function ContactsPage() {
     // Perform the actual updates only on the ones that need them
     const toAddIds = toAdd.map(c => c.id);
     const results = await Promise.allSettled(toAddIds.map(id => {
-      const c = contacts.find(ct => ct.id === id);
+      const c = selectedById.get(id);
       const names = c?.assigned_to_names || [];
       const newStatuses = { ...(c?.agent_statuses || {}), [agentName]: agentStatus };
       const newTemps = { ...(c?.agent_temperatures || {}), [agentName]: agentTemp };
@@ -499,7 +521,8 @@ export default function ContactsPage() {
     // Split selected: { toRemove } (actually has the agent and not the last one),
     // { notAssigned } (doesn't have them — no-op), { onlyAgent } (has them as
     // the single assignee — we refuse to leave the contact unassigned).
-    const selected = contacts.filter(c => selectedIds.includes(c.id));
+    const selected = await getAllSelectedContacts();
+    const selectedById = new Map(selected.map(c => [c.id, c]));
     const toRemove = selected.filter(c => {
       const names = c.assigned_to_names || [];
       return names.includes(agentName) && names.filter(n => n !== agentName).length > 0;
@@ -556,7 +579,7 @@ export default function ContactsPage() {
     setSelectedIds([]);
     const toRemoveIds = toRemove.map(c => c.id);
     const results = await Promise.allSettled(toRemoveIds.map(id => {
-      const c = contacts.find(ct => ct.id === id);
+      const c = selectedById.get(id);
       const names = (c?.assigned_to_names || []).filter(n => n !== agentName);
       const newStatuses = { ...(c?.agent_statuses || {}) }; delete newStatuses[agentName];
       const newTemps = { ...(c?.agent_temperatures || {}) }; delete newTemps[agentName];
