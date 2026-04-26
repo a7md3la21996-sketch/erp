@@ -329,9 +329,12 @@ export default function ContactsTable({
                 className={`group cursor-pointer transition-colors ${isMergeSelected ? 'bg-brand-800/[0.08]' : selectedIdSet.has(c.id) ? 'bg-brand-500/[0.08]' : c.is_blacklisted ? 'bg-red-500/[0.03]' : 'hover:bg-surface-bg dark:hover:bg-brand-500/[0.04]'}`}
                 style={{ borderInlineStart: `3px solid ${c.is_blacklisted ? '#EF4444' : typeBorderColor}` }}
               >
-                {/* Checkbox */}
+                {/* Checkbox — visible on touch (hover-only fade is broken on
+                    iPad/tablet where there is no hover state). Stays full
+                    opacity when row is selected, semi-transparent until
+                    hover/touch on desktop. */}
                 <td className={`${tdCls} !px-2.5 w-9`} onClick={e => e.stopPropagation()}>
-                  <div className={`${selectedIdSet.has(c.id) ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+                  <div className={`${selectedIdSet.has(c.id) ? 'opacity-100' : 'opacity-50 md:opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100'} transition-opacity`}>
                     <input type="checkbox" checked={selectedIdSet.has(c.id)} onChange={() => toggleSelect(c.id)} className="cursor-pointer" />
                   </div>
                 </td>
