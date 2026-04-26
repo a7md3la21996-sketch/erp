@@ -604,9 +604,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           const myName = profile?.full_name_en || profile?.full_name_ar;
           const statusLabels = isRTL ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
           const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : undefined;
-          const names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
+          let names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
             ? contact.assigned_to_names
             : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
+          if (isSalesAgent && myName) names = names.filter(n => n === myName);
           if (names.length === 0) return [{ label: isRTL ? 'الحالة' : 'Status', val: '—' }];
           return names.map(name => {
             const s = (contact.agent_statuses || {})[name];
@@ -621,9 +622,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         // Score: one row per assigned agent — same pattern.
         ...(show('lead_score') ? (() => {
           const myName = profile?.full_name_en || profile?.full_name_ar;
-          const names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
+          let names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
             ? contact.assigned_to_names
             : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
+          if (isSalesAgent && myName) names = names.filter(n => n === myName);
           if (names.length === 0) return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: '—' }];
           if (names.length === 1) {
             const v = (contact.agent_scores || {})[names[0]];
@@ -948,10 +950,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // Viewer's chip is ringed so they spot themselves at a glance.
   const heroStatusChips = (() => {
     const myName = profile?.full_name_en || profile?.full_name_ar;
-    const names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
+    let names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
       ? contact.assigned_to_names
       : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
     if (names.length === 0) return [];
+    // Sales agents only see their own chip even on shared contacts —
+    // managers/admins see everyone for team management.
+    if (isSalesAgent && myName) {
+      names = names.filter(n => n === myName);
+    }
     const statusLabels = isRTL
       ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
       : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };

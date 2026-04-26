@@ -119,11 +119,22 @@ export default function ContactsTable({
   // referenced this 4× during render (status chip, temp chip, status column,
   // temp column) and getAgentsView walks assigned_to_names + 3 JSON maps —
   // so without this we redo the same work on every hover/selection change.
+  //
+  // Sales agents only see their own chip even on contacts shared with other
+  // agents — keeps the table focused on their work, not the whole team's.
+  // Admin / managers / team leaders still see everyone (they need the full
+  // picture to run the team).
   const agentsByContactId = useMemo(() => {
     const map = new Map();
-    (paged || []).forEach(c => map.set(c.id, getAgentsView(c, agentName)));
+    (paged || []).forEach(c => {
+      let view = getAgentsView(c, agentName);
+      if (isSalesAgent && agentName) {
+        view = view.filter(a => a.name === agentName);
+      }
+      map.set(c.id, view);
+    });
     return map;
-  }, [paged, agentName]);
+  }, [paged, agentName, isSalesAgent]);
   const cols = deptView?.columns || ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'actions'];
   const hasCol = (id) => cols.includes(id);
   const menuActions = deptView?.menuActions || null;
