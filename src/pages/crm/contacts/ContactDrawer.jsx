@@ -199,13 +199,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // Cached for 60s by contact id so arrow-key navigation between contacts
   // (or reopening the same one) doesn't refire 7 round-trips. Also debounced
   // by 250ms so rapid arrow presses don't queue up requests we'll throw away.
+  //
+  // Cache invalidates if contact.updated_at moved past what we cached — that
+  // catches edits made by another user (or another tab) since we last fetched.
   useEffect(() => {
     let cancelled = false;
     const cid = String(contact.id);
+    const contactStamp = contact.updated_at || null;
 
     // Cache hit — apply immediately and skip network entirely.
     const cached = _drawerDataCache.get(cid);
-    if (cached && Date.now() - cached.ts < DRAWER_CACHE_TTL) {
+    const cacheFresh = cached && Date.now() - cached.ts < DRAWER_CACHE_TTL;
+    const cacheMatchesContact = cached && (cached.contactStamp === contactStamp);
+    if (cacheFresh && cacheMatchesContact) {
       setActivities(cached.activities || []);
       setTasks(cached.tasks || []);
       setOpportunities(cached.opportunities || []);
@@ -240,11 +246,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         setOpportunities(opportunities);
         setExtraSources(extraSources);
         setLoadingData(false);
-        _drawerDataCache.set(cid, { activities, tasks, opportunities, extraSources, ts: Date.now() });
+        _drawerDataCache.set(cid, { activities, tasks, opportunities, extraSources, ts: Date.now(), contactStamp });
       });
     }, 250);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [contact.id]);
+  }, [contact.id, contact.updated_at]);
 
   // Arrow key navigation between contacts
   useEffect(() => {
