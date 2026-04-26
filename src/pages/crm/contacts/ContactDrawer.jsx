@@ -689,10 +689,25 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   };
 
   // Group timeline by date
+  // Pagination — show TIMELINE_PAGE_SIZE items at a time. The user can load
+  // more when they hit the bottom. Avoids rendering 500+ DOM nodes for VIP
+  // contacts with long histories.
+  const TIMELINE_PAGE_SIZE = 50;
+  const [timelineLimit, setTimelineLimit] = useState(TIMELINE_PAGE_SIZE);
+  // Reset limit when contact changes or timeline filter changes — stale
+  // pagination across contacts would silently hide the most recent items.
+  useEffect(() => { setTimelineLimit(TIMELINE_PAGE_SIZE); }, [contact.id, timelineFilter]);
+
+  const visibleTimeline = useMemo(
+    () => filteredTimeline.slice(0, timelineLimit),
+    [filteredTimeline, timelineLimit]
+  );
+  const hasMoreTimeline = filteredTimeline.length > timelineLimit;
+
   const groupedTimeline = useMemo(() => {
     const groups = [];
     let currentGroup = null;
-    filteredTimeline.forEach(item => {
+    visibleTimeline.forEach(item => {
       const label = getDateGroup(item._date);
       if (!currentGroup || currentGroup.label !== label) {
         currentGroup = { label, items: [] };
@@ -701,7 +716,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       currentGroup.items.push(item);
     });
     return groups;
-  }, [filteredTimeline]);
+  }, [visibleTimeline]);
 
   // ── Timeline Item Renderer ─────────────────────────────────────────────
   const renderTimelineItem = (item, isLast) => {
@@ -1818,11 +1833,23 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         </div>
                         {/* Timeline Items */}
                         {group.items.map((item, ii) => {
-                          const isLastInAll = gi === groupedTimeline.length - 1 && ii === group.items.length - 1;
+                          const isLastInAll = !hasMoreTimeline && gi === groupedTimeline.length - 1 && ii === group.items.length - 1;
                           return renderTimelineItem(item, isLastInAll);
                         })}
                       </div>
                     ))}
+                    {hasMoreTimeline && (
+                      <div className="flex justify-center pt-3 pb-1">
+                        <button
+                          onClick={() => setTimelineLimit(n => n + TIMELINE_PAGE_SIZE)}
+                          className="px-4 py-2 rounded-xl text-xs font-semibold bg-brand-500/[0.06] hover:bg-brand-500/[0.12] text-brand-500 border border-brand-500/20 cursor-pointer transition-colors"
+                        >
+                          {isRTL
+                            ? `عرض المزيد (${filteredTimeline.length - timelineLimit} متبقّي)`
+                            : `Load more (${filteredTimeline.length - timelineLimit} more)`}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
