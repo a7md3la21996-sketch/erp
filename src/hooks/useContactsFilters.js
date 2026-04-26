@@ -113,6 +113,13 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
     { id: '_opp_count', label: 'عدد الفرص', labelEn: 'Opportunities Count', type: 'number' },
     { id: '_agent_count', label: 'عدد المسؤولين', labelEn: 'Agent Count', type: 'number' },
+    // "No activity" filter — pick "Anyone" to find contacts with no activity at
+    // all, or a specific agent to find contacts that agent hasn't touched.
+    { id: '_no_activity_by', label: 'بدون نشاط', labelEn: 'No activity by', type: 'select',
+      options: [
+        { value: '__anyone', label: 'أي شخص', labelEn: 'Anyone' },
+        ...((allAgentNames || []).map(n => ({ value: n, label: n, labelEn: n }))),
+      ]},
     ...auditFields,
   ], [contacts, auditFields, deptView]);
 
@@ -156,7 +163,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     // meName is kept for downstream code that may log it
     void meName;
     // Client-only smart filters — exclude fields already sent to server
-    const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department'];
+    const SERVER_FILTERED_FIELDS = ['contact_status', 'assigned_to_name', 'source', 'department', '_no_activity_by'];
     const clientOnlySmartFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
     list = applySmartFilters(list, clientOnlySmartFilters, SMART_FIELDS);
     list = applyAuditFilters(list, smartFilters);

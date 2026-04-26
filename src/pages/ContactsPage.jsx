@@ -751,6 +751,31 @@ export default function ContactsPage() {
     })();
   }, [showNoOpps]);
 
+  // "No activity by [agent or anyone]" filter — fetches contact IDs that
+  // already have an activity (matching the agent if specified) so we can
+  // exclude them from the visible list.
+  const noActivityFilter = smartFilters.find(f => f.field === '_no_activity_by' && (f.operator === 'is' || !f.operator));
+  const [noActivityExcludeIds, setNoActivityExcludeIds] = useState(null);
+  useEffect(() => {
+    if (!noActivityFilter?.value) { setNoActivityExcludeIds(null); return; }
+    let cancelled = false;
+    (async () => {
+      try {
+        let q = supabase.from('activities').select('contact_id').not('contact_id', 'is', null);
+        if (noActivityFilter.value !== '__anyone') {
+          q = q.or(`user_name_en.eq.${noActivityFilter.value},user_name_ar.eq.${noActivityFilter.value}`);
+        }
+        const { data } = await q.range(0, 9999);
+        if (cancelled) return;
+        const ids = [...new Set((data || []).map(r => r.contact_id).filter(Boolean))];
+        setNoActivityExcludeIds(ids.length ? ids : ['none']);
+      } catch {
+        if (!cancelled) setNoActivityExcludeIds([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [noActivityFilter?.value]);
+
   // Fetch contacts with MULTIPLE agents (to exclude → show single agent only).
   // Prefer the server-side RPC (returns just the IDs we need); if it isn't
   // installed yet, fall back to the old client-side filter with a smaller
@@ -851,7 +876,7 @@ export default function ContactsPage() {
           smartCreatedAt: createdFilter ? { operator: createdFilter.operator, value: createdFilter.value } : undefined,
           smartCampaign: campaignFilter?.value || undefined,
           contactIds: overdueContactIds || todayFollowupIds || undefined,
-          excludeContactIds: showNoOpps ? noOppsIds : showSingleAgent ? singleAgentIds : undefined,
+          excludeContactIds: noActivityExcludeIds || (showNoOpps ? noOppsIds : showSingleAgent ? singleAgentIds : undefined),
           contact_status: statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
           contact_status_op: statusFilter?.operator,
           contact_status_not: (statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,
@@ -957,7 +982,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds, noActivityExcludeIds]);
 
   useEffect(() => {
     if (profile) loadContactsData();
