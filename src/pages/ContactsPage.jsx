@@ -781,10 +781,15 @@ export default function ContactsPage() {
       if (!isNoOpps && showNoOpps) { setShowNoOpps(false); setNoOppsIds(null); }
       if (!isSingleAgent && showSingleAgent) { setShowSingleAgent(false); setSingleAgentIds(null); }
 
-      // Extract server-side filters from smartFilters (skip special ones)
-      const statusFilter = smartFilters.find(f => f.field === 'contact_status' && (f.operator === 'is' || f.operator === 'is_not') && !f.value?.startsWith('__'));
-      const agentSmartFilter = smartFilters.find(f => f.field === 'assigned_to_name' && (f.operator === 'is' || f.operator === 'is_not'));
-      const sourceSmartFilter = smartFilters.find(f => f.field === 'source' && (f.operator === 'is' || f.operator === 'is_not'));
+      // Extract server-side filters from smartFilters (skip special ones).
+      // is / is_not / in / not_in all need to be sent to the server, otherwise
+      // the page falls back to client-side filtering on the visible page only
+      // — which silently misses contacts on other pages and produces wrong
+      // counts for "is none of"-style filters.
+      const SELECT_OPS = ['is', 'is_not', 'in', 'not_in'];
+      const statusFilter = smartFilters.find(f => f.field === 'contact_status' && SELECT_OPS.includes(f.operator) && !(typeof f.value === 'string' && f.value?.startsWith('__')));
+      const agentSmartFilter = smartFilters.find(f => f.field === 'assigned_to_name' && SELECT_OPS.includes(f.operator));
+      const sourceSmartFilter = smartFilters.find(f => f.field === 'source' && SELECT_OPS.includes(f.operator));
       const deptSmartFilter = smartFilters.find(f => f.field === 'department' && f.operator === 'is');
       // Server-side text/date filters
       const nameFilter = smartFilters.find(f => f.field === 'full_name' && f.value);
@@ -811,9 +816,11 @@ export default function ContactsPage() {
           unassigned: showUnassigned || undefined,
           department: deptSmartFilter?.value || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
           assigned_to_name: agentSmartFilter?.value || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
-          assigned_to_name_not: agentSmartFilter?.operator === 'is_not' ? true : undefined,
+          assigned_to_name_op: agentSmartFilter?.operator,
+          assigned_to_name_not: (agentSmartFilter?.operator === 'is_not' || agentSmartFilter?.operator === 'not_in') ? true : undefined,
           source: sourceSmartFilter?.value || undefined,
-          source_not: sourceSmartFilter?.operator === 'is_not' ? true : undefined,
+          source_op: sourceSmartFilter?.operator,
+          source_not: (sourceSmartFilter?.operator === 'is_not' || sourceSmartFilter?.operator === 'not_in') ? true : undefined,
           // Server-side smart filters
           smartName: nameFilter?.value || undefined,
           smartEmail: emailFilter?.value || undefined,
@@ -823,7 +830,8 @@ export default function ContactsPage() {
           contactIds: overdueContactIds || todayFollowupIds || undefined,
           excludeContactIds: showNoOpps ? noOppsIds : showSingleAgent ? singleAgentIds : undefined,
           contact_status: statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
-          contact_status_not: statusFilter?.operator === 'is_not' ? true : undefined,
+          contact_status_op: statusFilter?.operator,
+          contact_status_not: (statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,
           agentNameForStatus: (statusFilter?.value || filterStatus !== 'all') ? (
             // If Global Filter has a specific agent, use that agent's name
             (globalFilter?.agentName && globalFilter.agentName !== 'all')

@@ -207,8 +207,18 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     }
     if (filters.contact_type) query = query.eq('contact_type', filters.contact_type);
     if (filters.source) {
-      if (filters.source_not) query = query.neq('source', filters.source);
-      else query = query.eq('source', filters.source);
+      const srcValues = Array.isArray(filters.source) ? filters.source.filter(Boolean) : [filters.source];
+      if (srcValues.length > 0) {
+        if (filters.source_not) {
+          // is_not / not_in
+          if (srcValues.length === 1) query = query.neq('source', srcValues[0]);
+          else query = query.not('source', 'in', `(${srcValues.map(v => `"${v}"`).join(',')})`);
+        } else {
+          // is / in
+          if (srcValues.length === 1) query = query.eq('source', srcValues[0]);
+          else query = query.in('source', srcValues);
+        }
+      }
     }
     if (filters.temperature) {
       if (filters.agentNameForTemp) {
@@ -231,24 +241,64 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       query = query.not('id', 'in', `(${excludeBatch.join(',')})`);
     }
     if (filters.contact_status) {
-      const statusOp = filters.contact_status_not ? 'neq' : 'eq';
-      if (filters.agentNameForStatus) {
-        query = query.filter('agent_statuses->>' + filters.agentNameForStatus, statusOp, filters.contact_status);
-      } else if (filters.teamMemberNames?.length) {
-        // Manager/Admin with team: any team member has this status
-        const conds = filters.teamMemberNames.map(n => `agent_statuses->>${n}.eq.${filters.contact_status}`);
-        conds.push(`contact_status.eq.${filters.contact_status}`);
-        query = query.or(conds.join(','));
-      } else {
-        query = query.eq('contact_status', filters.contact_status);
+      // Supports is / is_not / in / not_in. Single value vs array shape is
+      // handled here; the boolean *_not flag covers the negation regardless
+      // of single/multi.
+      const statusValues = Array.isArray(filters.contact_status)
+        ? filters.contact_status.filter(Boolean)
+        : [filters.contact_status];
+      if (statusValues.length > 0) {
+        const isNot = !!filters.contact_status_not;
+        if (filters.agentNameForStatus) {
+          // Per-agent filter — a specific agent's slot must match (or not)
+          const agentField = 'agent_statuses->>' + filters.agentNameForStatus;
+          if (isNot) {
+            if (statusValues.length === 1) query = query.filter(agentField, 'neq', statusValues[0]);
+            else query = query.not(agentField, 'in', `(${statusValues.map(v => `"${v}"`).join(',')})`);
+          } else {
+            if (statusValues.length === 1) query = query.filter(agentField, 'eq', statusValues[0]);
+            else query = query.in(agentField, statusValues);
+          }
+        } else if (filters.teamMemberNames?.length && !isNot) {
+          // Manager/Admin: any team member has any of these statuses
+          // (exclusion case is hard to express across many keys, so we fall
+          // back to the global column for is_not / not_in).
+          const conds = [];
+          statusValues.forEach(v => {
+            filters.teamMemberNames.forEach(n => conds.push(`agent_statuses->>${n}.eq.${v}`));
+            conds.push(`contact_status.eq.${v}`);
+          });
+          query = query.or(conds.join(','));
+        } else {
+          if (isNot) {
+            if (statusValues.length === 1) query = query.neq('contact_status', statusValues[0]);
+            else query = query.not('contact_status', 'in', `(${statusValues.map(v => `"${v}"`).join(',')})`);
+          } else {
+            if (statusValues.length === 1) query = query.eq('contact_status', statusValues[0]);
+            else query = query.in('contact_status', statusValues);
+          }
+        }
       }
     }
     if (filters.assigned_to_name) {
-      if (filters.assigned_to_name_not) {
-        // is_not: exclude contacts assigned to this agent
-        query = query.not('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
-      } else {
-        query = query.filter('assigned_to_names', 'cs', JSON.stringify([filters.assigned_to_name]));
+      // Handle both single-value (is/is_not) and multi-value (in/not_in) operators.
+      const agentValues = Array.isArray(filters.assigned_to_name)
+        ? filters.assigned_to_name.filter(Boolean)
+        : [filters.assigned_to_name];
+      if (agentValues.length > 0) {
+        if (filters.assigned_to_name_not) {
+          // is_not / not_in: exclude any contact that has any of these agents.
+          // Each .not() chains as an AND, which is exactly the "none of" semantic.
+          agentValues.forEach(v => {
+            query = query.not('assigned_to_names', 'cs', JSON.stringify([v]));
+          });
+        } else if (agentValues.length === 1) {
+          query = query.filter('assigned_to_names', 'cs', JSON.stringify([agentValues[0]]));
+        } else {
+          // in (any of): build an OR of jsonb-contains predicates
+          const conds = agentValues.map(v => `assigned_to_names.cs.${JSON.stringify([v])}`).join(',');
+          query = query.or(conds);
+        }
       }
     }
     // Activity indicator filter (based on last_activity_at)
