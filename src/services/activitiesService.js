@@ -6,6 +6,8 @@ import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
 import { applyRoleFilter } from '../utils/roleFilter';
 import { incrementAgentScore } from './contactsService';
 import { retryWithBackoff } from '../utils/retryWithBackoff';
+import { requireAnyPerm, currentProfile } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // Retry wrapper for idempotent Supabase calls (UPDATE/DELETE/SELECT). Do not
 // use for INSERT — retrying a request whose response was dropped after a
@@ -120,6 +122,19 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
 }
 
 export async function createActivity({ type, notes, entityType, entityId, dept, userId, userName_ar, userName_en, status = 'completed', scheduled_date, scheduledActivityId }) {
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN], 'Not allowed to log activities');
+
+  // Override userId/userName from session profile so a tampered client can't
+  // log activities under another agent's name. RLS still has the final say,
+  // but this rejects obvious spoofs (e.g. devtools call passing userId of a
+  // different user) before they reach Postgres.
+  const profile = currentProfile();
+  if (profile) {
+    if (profile.id) userId = profile.id;
+    if (profile.full_name_ar) userName_ar = profile.full_name_ar;
+    if (profile.full_name_en) userName_en = profile.full_name_en;
+  }
+
   // Activity Cycle: if completing a scheduled activity, update it instead of creating duplicate
   if (status === 'completed' && !scheduledActivityId && entityId) {
     try {
@@ -212,17 +227,32 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
         if (agentName) await incrementAgentScore(entityId, agentName, scoreIncrement);
         // Auto-complete matching pending tasks. Fire-and-forget but
         // failures should be visible in monitoring, not silently dropped.
+        // Bounded to 50 tasks per call: in practice a single activity rarely
+        // fulfils more than a few open tasks, but a misconfigured workflow
+        // could pile up hundreds of stale "follow up" tasks per contact and
+        // an unbounded UPDATE would lock the whole row set.
         if (userId && type) {
           const matchTypes = type === 'call' ? ['call', 'followup'] : [type];
-          supabase.from('tasks')
-            .update({ status: 'done', completed_at: new Date().toISOString() })
-            .eq('contact_id', entityId)
-            .eq('assigned_to', userId)
-            .eq('status', 'pending')
-            .in('type', matchTypes)
-            .lte('due_date', new Date().toISOString())
-            .then(({ error }) => { if (error) reportError('activitiesService', 'autoCompleteTasks', error); })
-            .catch(err => reportError('activitiesService', 'autoCompleteTasks', err));
+          (async () => {
+            try {
+              const { data: candidateIds } = await supabase.from('tasks')
+                .select('id')
+                .eq('contact_id', entityId)
+                .eq('assigned_to', userId)
+                .eq('status', 'pending')
+                .in('type', matchTypes)
+                .lte('due_date', new Date().toISOString())
+                .limit(50);
+              if (!candidateIds?.length) return;
+              const ids = candidateIds.map(r => r.id);
+              const { error } = await supabase.from('tasks')
+                .update({ status: 'done', completed_at: new Date().toISOString() })
+                .in('id', ids);
+              if (error) reportError('activitiesService', 'autoCompleteTasks', error);
+            } catch (err) {
+              reportError('activitiesService', 'autoCompleteTasks', err);
+            }
+          })();
         }
       } catch (err) { reportError('activitiesService', 'query', err);
         await supabase.from('contacts').update({ last_activity_at: new Date().toISOString() }).eq('id', entityId);
@@ -235,10 +265,17 @@ export async function createActivity({ type, notes, entityType, entityId, dept, 
 }
 
 export async function updateActivity(id, updates) {
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN], 'Not allowed to edit activities');
+  // Drop fields that identify the actor — clients must not be able to
+  // change who an activity belongs to.
+  const safeUpdates = { ...updates };
+  delete safeUpdates.user_id;
+  delete safeUpdates.user_name_ar;
+  delete safeUpdates.user_name_en;
   try {
     const { data, error } = await rq(() => supabase
       .from('activities')
-      .update(stripInternalFields(updates))
+      .update(stripInternalFields(safeUpdates))
       .eq('id', id)
       .select('*')
       .single(), 'updateActivity');
@@ -250,6 +287,7 @@ export async function updateActivity(id, updates) {
 }
 
 export async function deleteActivity(id) {
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN], 'Not allowed to delete activities');
   try {
     const { data: oldData } = await rq(() => supabase.from('activities').select('*').eq('id', id).single(), 'deleteActivity.read');
     const { error } = await rq(() => supabase.from('activities').delete().eq('id', id), 'deleteActivity.write');

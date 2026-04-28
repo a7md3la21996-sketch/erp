@@ -32,6 +32,7 @@ import { getComments } from '../../../services/chatService';
 import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
 import { getWonDeals } from '../../../services/dealsService';
 import { reportError } from '../../../utils/errorReporter';
+import supabase from '../../../lib/supabase';
 import { generateContactCardHTML, getCompanyInfo } from '../../../services/printService';
 import PrintPreview from '../../../components/ui/PrintPreview';
 import {
@@ -123,8 +124,51 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [timelineFilter, setTimelineFilter] = useState('all');
   const [activityAgentFilter, setActivityAgentFilter] = useState('all');
   const assignmentHistory = useMemo(() => contact?.id ? getAssignmentHistory(contact.id) : [], [contact?.id]);
-  const { profile } = useAuth();
+  const { profile, hasPermission } = useAuth();
   const isSalesAgent = profile?.role === 'sales_agent';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'operations';
+  // audit_logs SELECT is admin-only after the RLS tightening — skip the
+  // fetch for users who can't read it. Otherwise we waste a query that
+  // returns empty and renders an empty audit timeline section.
+  const canViewAudit = hasPermission ? hasPermission('audit.view') : false;
+
+  // Names of the viewer's team members (manager / leader / director). Used
+  // to clip per-agent displays so a manager doesn't see sibling-team chips,
+  // statuses, or temperatures on shared contacts. RLS already gates which
+  // *contacts* they can see — this gates *which agents on those contacts*
+  // are exposed in the UI.
+  const [myTeamNames, setMyTeamNames] = useState(null);
+  useEffect(() => {
+    if (!profile?.role || !profile?.team_id) { setMyTeamNames(null); return; }
+    if (isAdmin || isSalesAgent) { setMyTeamNames(null); return; }
+    // Lazy-import to avoid circular deps with teamHelper
+    import('../../../utils/teamHelper').then(({ getTeamMemberNames }) => {
+      getTeamMemberNames(profile.role, profile.team_id)
+        .then(names => setMyTeamNames(names || []))
+        .catch(() => setMyTeamNames([]));
+    }).catch(() => setMyTeamNames([]));
+  }, [profile?.role, profile?.team_id, isAdmin, isSalesAgent]);
+  const teamNamesSet = useMemo(() => {
+    if (!Array.isArray(myTeamNames) || myTeamNames.length === 0) return null;
+    return new Set(myTeamNames);
+  }, [myTeamNames]);
+
+  // Names of agents currently assigned that the viewer is allowed to see
+  // listed/displayed. Returns the raw list for admin/operations; the
+  // viewer's own name only for sales_agent; the team-clipped list for
+  // managers/leaders. Falls back to assigned_to_name when assigned_to_names
+  // is empty/missing.
+  const getVisibleAssignees = (c = contact) => {
+    const all = Array.isArray(c?.assigned_to_names) && c.assigned_to_names.length > 0
+      ? c.assigned_to_names
+      : (c?.assigned_to_name ? [c.assigned_to_name] : []);
+    if (all.length === 0) return [];
+    if (isAdmin) return all;
+    const myName = profile?.full_name_en || profile?.full_name_ar;
+    if (isSalesAgent) return myName ? all.filter(n => n === myName) : [];
+    if (teamNamesSet) return all.filter(n => teamNamesSet.has(n));
+    return all;
+  };
 
   // Privacy: hide previous agent's activities if system config says so
   const hidePreviousHistory = useMemo(() => {
@@ -193,15 +237,30 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     setActivityAgentFilter('all');
     setShowActionForm(false);
     setSelectedAgent('all');
+    // Clear WhatsApp draft state. Without this, the template & message
+    // body composed for contact A leak into the popup when the user
+    // navigates to contact B via arrow keys, which previously caused
+    // wrong-recipient sends.
+    setWaMessage('');
+    setWaSelectedTpl('');
   }, [contact.id]);
+
+  // drawerRefresh is bumped by the realtime subscription below whenever a
+  // related row (activities / tasks / opportunities) changes for this
+  // contact. The data-fetch effect treats it as a refetch trigger.
+  const [drawerRefresh, setDrawerRefresh] = useState(0);
 
   // Fetch all drawer data on contact change — single parallel batch.
   // Cached for 60s by contact id so arrow-key navigation between contacts
   // (or reopening the same one) doesn't refire 7 round-trips. Also debounced
   // by 250ms so rapid arrow presses don't queue up requests we'll throw away.
   //
-  // Cache invalidates if contact.updated_at moved past what we cached — that
-  // catches edits made by another user (or another tab) since we last fetched.
+  // Cache invalidates when:
+  //   - contact.updated_at advances (the contact row itself changed), or
+  //   - drawerRefresh changes (realtime fired for activities/tasks/opps).
+  // Without the realtime branch, two users editing the same contact in
+  // parallel would each see stale activity timelines because contact.updated_at
+  // doesn't change when only a child row changes.
   useEffect(() => {
     let cancelled = false;
     const cid = String(contact.id);
@@ -211,7 +270,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     const cached = _drawerDataCache.get(cid);
     const cacheFresh = cached && Date.now() - cached.ts < DRAWER_CACHE_TTL;
     const cacheMatchesContact = cached && (cached.contactStamp === contactStamp);
-    if (cacheFresh && cacheMatchesContact) {
+    const cacheMatchesRefresh = cached && (cached.drawerRefresh === drawerRefresh);
+    if (cacheFresh && cacheMatchesContact && cacheMatchesRefresh) {
       setActivities(cached.activities || []);
       setTasks(cached.tasks || []);
       setOpportunities(cached.opportunities || []);
@@ -229,7 +289,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         getComments('contact', cid).catch(() => []),
         getDocumentsByEntity('contact', cid).catch(() => []),
         getWonDeals({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, userName: profile?.full_name_en || profile?.full_name_ar, contactId: cid }).catch(() => []),
-        getLocalAuditLogs({ limit: 50, entity: 'contact', entityId: cid }).catch(() => ({ data: [] })),
+        canViewAudit ? getLocalAuditLogs({ limit: 50, entity: 'contact', entityId: cid }).catch(() => ({ data: [] })) : Promise.resolve({ data: [] }),
       ]).then(([actsRes, tasksRes, oppsRes, commentsRes, docsRes, dealsRes, auditsRes]) => {
         if (cancelled) return;
         const activities = actsRes.status === 'fulfilled' ? actsRes.value : [];
@@ -246,11 +306,33 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         setOpportunities(opportunities);
         setExtraSources(extraSources);
         setLoadingData(false);
-        _drawerDataCache.set(cid, { activities, tasks, opportunities, extraSources, ts: Date.now(), contactStamp });
+        _drawerDataCache.set(cid, { activities, tasks, opportunities, extraSources, ts: Date.now(), contactStamp, drawerRefresh });
       });
     }, 250);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [contact.id, contact.updated_at]);
+  }, [contact.id, contact.updated_at, drawerRefresh, canViewAudit]);
+
+  // Realtime invalidator: subscribe to activities/tasks/opportunities for the
+  // currently open contact. When any change comes in, drop the cached entry
+  // and bump drawerRefresh so the data-fetch effect refetches. Tied to
+  // contact.id so the channel resubscribes when the user navigates contacts.
+  useEffect(() => {
+    if (!contact?.id) return undefined;
+    const cid = String(contact.id);
+    const channel = supabase
+      .channel(`drawer_${cid}`)
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'activities', filter: `contact_id=eq.${cid}` },
+        () => { _drawerDataCache.delete(cid); setDrawerRefresh(n => n + 1); })
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'tasks', filter: `contact_id=eq.${cid}` },
+        () => { _drawerDataCache.delete(cid); setDrawerRefresh(n => n + 1); })
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'opportunities', filter: `contact_id=eq.${cid}` },
+        () => { _drawerDataCache.delete(cid); setDrawerRefresh(n => n + 1); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [contact?.id]);
 
   // Arrow key navigation between contacts
   useEffect(() => {
@@ -570,11 +652,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       rows: [
         show('assigned_to_name') && !isSalesAgent && {
           label: isRTL ? 'المسؤول' : 'Assigned',
-          val: (profile?.role === 'admin' || profile?.role === 'operations')
-            ? (Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
-              ? contact.assigned_to_names.join(' · ')
-              : (contact.assigned_to_name || '—'))
-            : (contact.assigned_to_name || '—'),
+          val: (() => {
+            const visible = getVisibleAssignees();
+            return visible.length > 0 ? visible.join(' · ') : '—';
+          })(),
           action: onUpdate ? {
             label: isRTL ? 'تعديل' : 'Edit',
             onClick: () => {
@@ -611,10 +692,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           const myName = profile?.full_name_en || profile?.full_name_ar;
           const statusLabels = isRTL ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
           const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : undefined;
-          let names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
-            ? contact.assigned_to_names
-            : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
-          if (isSalesAgent && myName) names = names.filter(n => n === myName);
+          const names = getVisibleAssignees();
           if (names.length === 0) return [{ label: isRTL ? 'الحالة' : 'Status', val: '—' }];
           return names.map(name => {
             const s = (contact.agent_statuses || {})[name];
@@ -629,10 +707,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         // Score: one row per assigned agent — same pattern.
         ...(show('lead_score') ? (() => {
           const myName = profile?.full_name_en || profile?.full_name_ar;
-          let names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
-            ? contact.assigned_to_names
-            : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
-          if (isSalesAgent && myName) names = names.filter(n => n === myName);
+          const names = getVisibleAssignees();
           if (names.length === 0) return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: '—' }];
           if (names.length === 1) {
             const v = (contact.agent_scores || {})[names[0]];
@@ -972,15 +1047,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // Viewer's chip is ringed so they spot themselves at a glance.
   const heroStatusChips = (() => {
     const myName = profile?.full_name_en || profile?.full_name_ar;
-    let names = Array.isArray(contact.assigned_to_names) && contact.assigned_to_names.length > 0
-      ? contact.assigned_to_names
-      : (contact.assigned_to_name ? [contact.assigned_to_name] : []);
+    // Privacy clip: sales sees own only; managers/leaders see only their
+    // team's chips on shared contacts; admin/operations see everyone.
+    const names = getVisibleAssignees();
     if (names.length === 0) return [];
-    // Sales agents only see their own chip even on shared contacts —
-    // managers/admins see everyone for team management.
-    if (isSalesAgent && myName) {
-      names = names.filter(n => n === myName);
-    }
     const statusLabels = isRTL
       ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
       : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
@@ -1076,17 +1146,26 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         {/* ═══ STICKY TOP BAR ═══ */}
         <div className="shrink-0 sticky top-0 z-10 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark">
           <div className="flex items-center justify-between h-11 px-3">
-            {/* Left: nav arrows */}
+            {/* Left: mobile back button OR desktop nav arrows */}
             <div className="flex items-center gap-0.5">
+              {/* Mobile-only "Back" — arrows are useless on touch and the X
+                  on the right is too small to be a clear "go back" affordance.
+                  This button gives field agents a confident way out. */}
+              <button onClick={onClose}
+                className="md:hidden flex items-center gap-1 h-8 px-2 rounded-md bg-transparent border-none text-content dark:text-content-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-surface-bg-dark active:scale-95 transition-all">
+                {isRTL ? <ChevronDown size={16} className="rotate-90" /> : <ChevronDown size={16} className="-rotate-90" />}
+                <span className="text-xs font-semibold">{isRTL ? 'القائمة' : 'Back'}</span>
+              </button>
+              {/* Desktop nav arrows */}
               {onPrev && (
                 <button onClick={onPrev} title={isRTL ? 'السابق' : 'Previous'}
-                  className="w-7 h-7 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
+                  className="hidden md:flex w-7 h-7 rounded-md items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
                   <ChevronUp size={16} />
                 </button>
               )}
               {onNext && (
                 <button onClick={onNext} title={isRTL ? 'التالي' : 'Next'}
-                  className="w-7 h-7 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
+                  className="hidden md:flex w-7 h-7 rounded-md items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
                   <ChevronDown size={16} />
                 </button>
               )}
@@ -1469,10 +1548,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
           {/* ═══ AGENT PROFILE SELECTOR — admin sees all, TL/manager sees team only, agent sees nothing ═══ */}
           {!isSalesAgent && (() => {
-            const allNames = contact.assigned_to_names || [];
-            const isAdmin = profile?.role === 'admin' || profile?.role === 'operations';
-            // TL/Manager: only show team members from agentsList
-            const assignedNames = isAdmin ? allNames : allNames.filter(n => agentsList.includes(n) || n === (profile?.full_name_en || profile?.full_name_ar));
+            // Use the same getVisibleAssignees rule used everywhere else in
+            // the drawer — guarantees consistent privacy clipping for
+            // managers/leaders.
+            const assignedNames = getVisibleAssignees();
             return (
             <>
               <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">

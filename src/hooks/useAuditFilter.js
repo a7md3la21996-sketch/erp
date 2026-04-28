@@ -1,13 +1,24 @@
 import { useMemo, useState, useEffect } from 'react';
 import { getLocalAuditLogs, ACTION_TYPES } from '../services/auditService';
+import { useAuth } from '../contexts/AuthContext';
+import { P } from '../config/roles';
 
 /**
  * useAuditFilter – adds action history filters to any page's SmartFilter.
+ *
+ * Skipped entirely for users without AUDIT_VIEW. Audit RLS restricts SELECT
+ * to admins, so a non-admin would silently get an empty result and the
+ * dropdowns would render with no options. Better to short-circuit and avoid
+ * the wasted query — this hook is mounted on 30+ pages and was responsible
+ * for thousands of empty queries per sales-agent session.
  */
 export function useAuditFilter(entityType) {
+  const { hasPermission } = useAuth();
+  const canViewAudit = hasPermission(P.AUDIT_VIEW);
   const [allLogs, setAllLogs] = useState([]);
 
   useEffect(() => {
+    if (!canViewAudit) return undefined;
     let cancelled = false;
     // 100 is plenty for the dropdown filter options (action types + user names);
     // we don't need every historical log just to populate two selects.
@@ -16,7 +27,7 @@ export function useAuditFilter(entityType) {
       if (!cancelled) setAllLogs(result?.data || []);
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [entityType]);
+  }, [entityType, canViewAudit]);
 
   // Build audit index: Map<entity_id, log_entry[]>
   const { index, actionOptions, userOptions } = useMemo(() => {
@@ -47,15 +58,21 @@ export function useAuditFilter(entityType) {
     return { index: idx, actionOptions: actionOpts, userOptions: userOpts };
   }, [entityType, allLogs]);
 
-  // SmartFilter field definitions
-  const auditFields = useMemo(() => [
-    { id: '_audit_action', label: 'نوع الإجراء', labelEn: 'Action Type', type: 'select', options: actionOptions },
-    { id: '_audit_user', label: 'نفذه', labelEn: 'Action By', type: 'select', options: userOptions },
-    { id: '_audit_date', label: 'تاريخ الإجراء', labelEn: 'Action Date', type: 'date' },
-  ], [actionOptions, userOptions]);
+  // SmartFilter field definitions — return empty for users without
+  // AUDIT_VIEW so the SmartFilter UI doesn't show audit fields they can't
+  // populate. Pages just render their own non-audit filters.
+  const auditFields = useMemo(() => {
+    if (!canViewAudit) return [];
+    return [
+      { id: '_audit_action', label: 'نوع الإجراء', labelEn: 'Action Type', type: 'select', options: actionOptions },
+      { id: '_audit_user', label: 'نفذه', labelEn: 'Action By', type: 'select', options: userOptions },
+      { id: '_audit_date', label: 'تاريخ الإجراء', labelEn: 'Action Date', type: 'date' },
+    ];
+  }, [actionOptions, userOptions, canViewAudit]);
 
   // Apply audit filters on data
   const applyAuditFilters = (data, smartFilters) => {
+    if (!canViewAudit) return data;
     const auditFilters = smartFilters.filter(f => f.field?.startsWith('_audit_'));
     if (auditFilters.length === 0) return data;
 

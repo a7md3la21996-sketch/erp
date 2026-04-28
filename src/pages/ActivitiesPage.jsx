@@ -475,8 +475,23 @@ export default function ActivitiesPage() {
           onClose={() => setSelectedActivity(null)}
           onUpdate={async (id, updates) => {
             const updated = await updateActivity(id, updates);
-            setActivities(prev => prev.map(a => String(a.id) === String(id) ? { ...a, ...updates } : a));
-            setSelectedActivity(prev => ({ ...prev, ...updates }));
+            // Merge the server response (not the raw `updates`) so the row
+            // gets the canonical updated_at, and only if state isn't already
+            // on a newer version — realtime can deliver a concurrent edit
+            // while the server call is in flight, and overwriting it here
+            // would silently undo that change.
+            setActivities(prev => prev.map(a => {
+              if (String(a.id) !== String(id)) return a;
+              const aTime = new Date(a.updated_at || 0).getTime();
+              const uTime = new Date(updated?.updated_at || 0).getTime();
+              return uTime >= aTime ? { ...a, ...updated } : a;
+            }));
+            setSelectedActivity(prev => {
+              if (!prev || String(prev.id) !== String(id)) return prev;
+              const pTime = new Date(prev.updated_at || 0).getTime();
+              const uTime = new Date(updated?.updated_at || 0).getTime();
+              return uTime >= pTime ? { ...prev, ...updated } : prev;
+            });
             return updated;
           }}
         />

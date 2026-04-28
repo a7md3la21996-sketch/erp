@@ -172,34 +172,49 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       .from('contacts')
       .select('*', isServerPaginated ? { count: 'exact' } : {})
       .or('is_deleted.is.null,is_deleted.eq.false')
-      .order(sort.column, { ascending: sort.ascending });
+      // nullsLast keeps NULL rows at the bottom regardless of sort direction
+      // — without it, server pagination flips NULLs between pages and rows
+      // appear / disappear when scrolling. The id tiebreaker after the
+      // primary key gives a deterministic order so two rows with the same
+      // sort value (or both NULL) always sort the same way across pages.
+      .order(sort.column, { ascending: sort.ascending, nullsFirst: false })
+      .order('id', { ascending: true });
 
-    // Role-based filtering
+    // Role-based filtering. RLS already restricts which contacts each role
+    // sees (own + team via get_team_member_names), so the heavy lifting is
+    // server-side. We only add a narrow client-side filter for sales_agent
+    // because it's a single, indexable @> check. For team_leader /
+    // sales_manager / sales_director we DON'T add a client OR clause —
+    // PostgREST 500'd when 6+ assigned_to_names.cs.[...] conditions were
+    // OR'd together, and the RLS policy already returns the right rows.
     if (role === 'sales_agent' && userId) {
       const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
       if (agentUser) {
         const name = agentUser.full_name_en || agentUser.full_name_ar;
         if (name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([name]));
       }
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-      const names = await getTeamMemberNames(role, teamId);
-      if (names.length) {
-        const orConditions = names.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
-        query = query.or(orConditions);
-      } else {
-        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
-      }
     }
+    // For managers/leaders/director/admin/operations: rely on RLS.
 
     if (filters.search) {
       const s = filters.search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
       if (s.length > 0) {
-        // For phone search: also search without leading 0 and with +20
+        // For phone search: normalize so "01012345678", "1012345678", and
+        // "+201012345678" all match the same row. Strip non-digits, drop a
+        // leading 20 (country code), drop a leading 0, then ILIKE on the
+        // resulting tail. Egyptian mobile numbers are 10 digits without
+        // country code or leading 0.
         const isPhone = /^\d+$/.test(s) || s.startsWith('+');
         if (isPhone) {
-          const digits = s.replace(/\D/g, '');
-          const last9 = digits.length >= 9 ? digits.slice(-9) : digits;
-          query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${last9}%,phone2.ilike.%${last9}%,email.ilike.%${s}%`);
+          let digits = s.replace(/\D/g, '');
+          if (digits.startsWith('0020')) digits = digits.slice(4);
+          else if (digits.startsWith('20') && digits.length >= 11) digits = digits.slice(2);
+          if (digits.startsWith('0')) digits = digits.slice(1);
+          // Use last 9 of the normalized number — 9 digits is enough to
+          // disambiguate without false negatives if the trailing portion
+          // is what's stored.
+          const tail = digits.length >= 9 ? digits.slice(-9) : digits;
+          query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${tail}%,phone2.ilike.%${tail}%,email.ilike.%${s}%`);
         } else {
           query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%,campaign_name.ilike.%${s}%,notes.ilike.%${s}%,company.ilike.%${s}%`);
         }
@@ -394,6 +409,15 @@ export async function createContact(contactData) {
     sanitized[k] = val === '' ? null : val;
   }
 
+  // Drop blank entries from extra_phones — the form lets users add a row
+  // and leave it empty, which would persist as "" in the array and break
+  // dedup/match queries.
+  if (Array.isArray(sanitized.extra_phones)) {
+    sanitized.extra_phones = sanitized.extra_phones
+      .map(p => (typeof p === 'string' ? p.trim() : p))
+      .filter(p => p && String(p).trim().length > 0);
+  }
+
   // Remove non-UUID id (local temp IDs)
   if (sanitized.id && !sanitized.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
     delete sanitized.id;
@@ -409,7 +433,7 @@ export async function createContact(contactData) {
   try {
     const { data, error } = await supabase
       .from('contacts')
-      .insert([stripInternalFields({ ...sanitized })])
+      .insert([stripInternalFields({ ...sanitized }, { table: 'contacts' })])
       .select('*')
       .single();
     if (error) {
@@ -458,6 +482,12 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
     for (const [k, v] of Object.entries(cleanUpdates)) {
       sanitized[k] = v === '' ? null : v;
     }
+    // Drop blank entries from extra_phones (mirror createContact).
+    if (Array.isArray(sanitized.extra_phones)) {
+      sanitized.extra_phones = sanitized.extra_phones
+        .map(p => (typeof p === 'string' ? p.trim() : p))
+        .filter(p => p && String(p).trim().length > 0);
+    }
     // Auto-sync assigned_to_name ↔ assigned_to_names
     if (sanitized.assigned_to_name && !sanitized.assigned_to_names) {
       const existing = oldData?.assigned_to_names || [];
@@ -485,7 +515,7 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
     }
     const { data, error } = await rq(() => supabase
       .from('contacts')
-      .update(stripInternalFields({ ...sanitized, updated_at: new Date().toISOString() }))
+      .update(stripInternalFields({ ...sanitized, updated_at: new Date().toISOString() }, { table: 'contacts' }))
       .eq('id', id)
       .select('*')
       .single(), 'updateContact.write');
@@ -520,10 +550,33 @@ export async function deleteContact(id) {
 export async function restoreContact(id) {
   requirePerm(P.CONTACTS_DELETE, 'Not allowed to restore contacts');
   try {
-    const { error } = await rq(() => supabase.from('contacts').update({
-      deleted_at: null,
-      is_deleted: false,
-    }).eq('id', id), 'restoreContact');
+    // Read the row to check ownership before flipping is_deleted. RLS would
+    // hide a contact that ends up with no owner (assigned_to_names empty),
+    // so restoring without an assignee leaves the row reachable only by
+    // admins. Fall back to created_by_name (the original creator) — and if
+    // that's missing too, refuse and let the caller pick an assignee.
+    const { data: row } = await rq(
+      () => supabase.from('contacts').select('id, assigned_to_name, assigned_to_names, created_by_name').eq('id', id).single(),
+      'restoreContact.read'
+    );
+    const names = Array.isArray(row?.assigned_to_names) ? row.assigned_to_names.filter(Boolean) : [];
+    const hasOwner = !!row?.assigned_to_name || names.length > 0;
+    const updates = { deleted_at: null, is_deleted: false };
+    if (!hasOwner) {
+      const fallback = row?.created_by_name;
+      if (!fallback) {
+        const err = new Error('Cannot restore: contact has no assignee and no creator on record. Reassign first, then restore.');
+        err.code = 'RESTORE_ORPHAN';
+        throw err;
+      }
+      updates.assigned_to_name = fallback;
+      updates.assigned_to_names = [fallback];
+      updates.assigned_at = new Date().toISOString();
+    }
+    const { error } = await rq(
+      () => supabase.from('contacts').update(updates).eq('id', id),
+      'restoreContact.write'
+    );
     if (error) throw error;
   } catch (err) {
     throw err;

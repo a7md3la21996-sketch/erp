@@ -102,6 +102,7 @@ export default function ContactsTable({
   isSalesAgent,
   isAdmin,
   agentName,
+  myTeamNames,
   deptView,
 }) {
   const { t } = useTranslation();
@@ -120,21 +121,30 @@ export default function ContactsTable({
   // temp column) and getAgentsView walks assigned_to_names + 3 JSON maps —
   // so without this we redo the same work on every hover/selection change.
   //
-  // Sales agents only see their own chip even on contacts shared with other
-  // agents — keeps the table focused on their work, not the whole team's.
-  // Admin / managers / team leaders still see everyone (they need the full
-  // picture to run the team).
+  // Chip clipping rules (privacy):
+  //   - sales_agent → see only their own chip (focuses their work)
+  //   - team_leader / sales_manager / sales_director → see only chips of
+  //     names in their team (myTeamNames). RLS lets them see contacts that
+  //     overlap with another team via a shared agent, but the other team's
+  //     names should not leak into the chips column.
+  //   - admin / operations → see every chip (they run the full picture).
+  const teamNamesSet = useMemo(() => {
+    if (!Array.isArray(myTeamNames) || myTeamNames.length === 0) return null;
+    return new Set(myTeamNames);
+  }, [myTeamNames]);
   const agentsByContactId = useMemo(() => {
     const map = new Map();
     (paged || []).forEach(c => {
       let view = getAgentsView(c, agentName);
       if (isSalesAgent && agentName) {
         view = view.filter(a => a.name === agentName);
+      } else if (teamNamesSet && !isAdmin) {
+        view = view.filter(a => teamNamesSet.has(a.name));
       }
       map.set(c.id, view);
     });
     return map;
-  }, [paged, agentName, isSalesAgent]);
+  }, [paged, agentName, isSalesAgent, isAdmin, teamNamesSet]);
   const cols = deptView?.columns || ['contact', 'phone', 'assigned_to', 'source_date', 'last_feedback', 'actions'];
   const hasCol = (id) => cols.includes(id);
   const menuActions = deptView?.menuActions || null;
@@ -402,18 +412,31 @@ export default function ContactsTable({
                   {Array.isArray(c.extra_phones) && c.extra_phones.map((p, i) => p ? <PhoneCell key={`${c.id}-xp-${p}-${i}`} phone={p} small /> : null)}
                 </td>}
 
-                {/* Assigned To — admin/manager/TL see all names */}
-                {hasCol('assigned_to') && !isSalesAgent && <td className={`${tdCls} hidden md:table-cell`}>
-                  {Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {c.assigned_to_names.map((name, i) => (
-                        <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${i === 0 ? 'bg-brand-500/10 text-brand-500' : 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark'}`}>{name}</span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-xs font-medium text-content dark:text-content-dark">{c.assigned_to_name || '—'}</span>
-                  )}
-                </td>}
+                {/* Assigned To — admin sees all; manager/TL see only their team */}
+                {hasCol('assigned_to') && !isSalesAgent && (() => {
+                  // Clip to current viewer's team scope. Admin gets the
+                  // raw list; managers/leaders get only names visible
+                  // through teamNamesSet to avoid leaking sibling teams.
+                  const allNames = Array.isArray(c.assigned_to_names) ? c.assigned_to_names : [];
+                  const visibleNames = (teamNamesSet && !isAdmin)
+                    ? allNames.filter(n => teamNamesSet.has(n))
+                    : allNames;
+                  return (
+                    <td className={`${tdCls} hidden md:table-cell`}>
+                      {visibleNames.length > 1 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {visibleNames.map((name, i) => (
+                            <span key={i} className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium ${i === 0 ? 'bg-brand-500/10 text-brand-500' : 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark'}`}>{name}</span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs font-medium text-content dark:text-content-dark">
+                          {visibleNames[0] || c.assigned_to_name || '—'}
+                        </span>
+                      )}
+                    </td>
+                  );
+                })()}
 
                 {/* Temperature — per-agent only; one chip per assigned sales. */}
                 {hasCol('temperature') && <td className={`${tdCls} hidden md:table-cell`}>

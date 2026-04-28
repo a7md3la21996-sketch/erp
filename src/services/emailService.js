@@ -1,6 +1,8 @@
 import { reportError } from '../utils/errorReporter';
 import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import supabase from '../lib/supabase';
+import { requireAnyPerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 const MAX_EMAILS = 1000;
 
@@ -11,6 +13,9 @@ function genId() {
 // ── CRUD ───────────────────────────────────────────────────────
 
 export async function sendEmail(data) {
+  // Anyone with contact-edit permission can email their own contacts.
+  // Marketing/admin can send broader campaigns.
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN, P.CAMPAIGNS_VIEW], 'Not allowed to send email');
   const email = {
     id: genId(),
     from: data.from || 'me@platform.com',
@@ -157,6 +162,7 @@ export async function getDrafts() {
 }
 
 export async function saveDraft(data) {
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN, P.CAMPAIGNS_VIEW], 'Not allowed to save email drafts');
   // If updating existing draft
   if (data.id) {
     const { error } = await supabase.from('emails').update({ ...stripInternalFields(data), folder: 'draft' }).eq('id', data.id);
@@ -262,6 +268,7 @@ export async function getTemplates() {
 }
 
 export async function saveTemplate(data) {
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to manage email templates');
   if (data.id) {
     // Check if template exists
     const { data: existing } = await supabase.from('email_templates').select('id').eq('id', data.id).maybeSingle();
@@ -295,6 +302,7 @@ export async function saveTemplate(data) {
 }
 
 export async function deleteTemplate(id) {
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to delete email templates');
   const { error } = await supabase.from('email_templates').delete().eq('id', id);
   if (error) {
     reportError('emailService', 'deleteTemplate', error);

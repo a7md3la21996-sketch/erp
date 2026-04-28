@@ -1,5 +1,7 @@
 // TODO: Migrate to Supabase — currently entirely localStorage-based
 import { syncToSupabase } from '../utils/supabaseSync';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 const STORAGE_KEY = 'platform_workflows';
 const MAX_WORKFLOWS = 50;
 
@@ -75,6 +77,9 @@ export const ENTITY_FIELDS = {
 
 // ── CRUD ────────────────────────────────────────────────────────────────
 export function createWorkflow(workflow) {
+  // Workflows chain multiple actions on triggers. Same risk profile as
+  // triggers — admin-only.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to create workflows');
   const list = load();
   const newWorkflow = {
     id: 'wf_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -98,6 +103,7 @@ export function getWorkflows() {
 }
 
 export function updateWorkflow(id, updates) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to update workflows');
   const list = load();
   const idx = list.findIndex(w => w.id === id);
   if (idx === -1) return null;
@@ -107,6 +113,7 @@ export function updateWorkflow(id, updates) {
 }
 
 export function deleteWorkflow(id) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to delete workflows');
   const list = load().filter(w => w.id !== id);
   save(list);
 }

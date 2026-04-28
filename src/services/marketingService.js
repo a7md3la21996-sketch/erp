@@ -2,6 +2,8 @@ import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
+import { requireAnyPerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 const STORAGE_KEY = 'platform_campaigns';
 
@@ -51,6 +53,8 @@ export async function fetchCampaigns() {
 }
 
 export async function createCampaign(data) {
+  // Campaigns drive marketing spend & lead routing.
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to create campaigns');
   const campaign = { ...data, created_at: data.created_at || new Date().toISOString().slice(0, 10) };
   // Remove non-UUID id
   if (campaign.id && !campaign.id.match(/^[0-9a-f]{8}-/i)) delete campaign.id;
@@ -71,6 +75,7 @@ export async function createCampaign(data) {
 }
 
 export async function updateCampaign(id, updates) {
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to update campaigns');
   // Update localStorage (optimistic)
   const list = loadCampaigns();
   const idx = list.findIndex(c => c.id === id);
@@ -91,6 +96,7 @@ export async function updateCampaign(id, updates) {
 }
 
 export async function deleteCampaign(id) {
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to delete campaigns');
   // Delete from localStorage (optimistic)
   const list = loadCampaigns();
   const campaign = list.find(c => c.id === id);

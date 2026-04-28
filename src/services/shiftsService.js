@@ -1,4 +1,6 @@
 import supabase from '../lib/supabase';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Shifts ───────────────────────────────────────────────────
 
@@ -12,6 +14,8 @@ export async function fetchShifts() {
 }
 
 export async function createShift(data) {
+  // Shift definitions feed payroll calculations — HR/admin only.
+  requirePerm(P.HR_POLICIES_MANAGE, 'Not allowed to create shifts');
   const now = new Date().toISOString();
   const { data: d, error } = await supabase
     .from('shifts')
@@ -23,6 +27,7 @@ export async function createShift(data) {
 }
 
 export async function updateShift(id, updates) {
+  requirePerm(P.HR_POLICIES_MANAGE, 'Not allowed to update shifts');
   const { data, error } = await supabase
     .from('shifts')
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -34,6 +39,7 @@ export async function updateShift(id, updates) {
 }
 
 export async function deleteShift(id) {
+  requirePerm(P.HR_POLICIES_MANAGE, 'Not allowed to delete shifts');
   const { error } = await supabase
     .from('shifts')
     .delete()
@@ -42,6 +48,7 @@ export async function deleteShift(id) {
 }
 
 export async function setDefaultShift(id) {
+  requirePerm(P.HR_POLICIES_MANAGE, 'Not allowed to change default shift');
   // Clear all defaults first
   const { error: clearErr } = await supabase
     .from('shifts')

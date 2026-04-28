@@ -1,4 +1,6 @@
 import supabase from '../lib/supabase';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // Config keys stored in system_config
 const META_CONFIG_KEY = 'meta_ads_config';
@@ -16,6 +18,8 @@ export async function getAdsConfig(platform) {
 }
 
 export async function saveAdsConfig(platform, config) {
+  // Stores Facebook/Google Ads API credentials — admin-only.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to save ads integration config');
   const key = platform === 'meta' ? META_CONFIG_KEY : GOOGLE_CONFIG_KEY;
   localStorage.setItem(`platform_${key}`, JSON.stringify(config));
   try { await supabase.from('system_config').upsert({ key, value: config }); } catch {}

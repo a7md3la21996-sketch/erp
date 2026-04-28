@@ -7,6 +7,8 @@ import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
 import { applyRoleFilter } from '../utils/roleFilter';
 import { notifyOppStageChange, notifyDealWon } from './notificationService';
 import { retryWithBackoff } from '../utils/retryWithBackoff';
+import { requireAnyPerm, requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // Retry wrapper for idempotent Supabase calls (UPDATE/DELETE/SELECT). Never
 // for INSERT — dropped response after successful write would duplicate.
@@ -118,6 +120,7 @@ export async function fetchOpportunities({ role, userId, teamId, page = 0, pageS
 
 // ─── Create opportunity ───
 export async function createOpportunity(oppData) {
+  requireAnyPerm([P.OPPS_EDIT, P.OPPS_EDIT_OWN], 'Not allowed to create opportunities');
   // Input validation
   if (!oppData.contact_id && !oppData.contact_name) {
     throw new Error('Contact is required for opportunity');
@@ -172,6 +175,7 @@ export async function createOpportunity(oppData) {
 
 // ─── Update opportunity ───
 export async function updateOpportunity(id, updates) {
+  requireAnyPerm([P.OPPS_EDIT, P.OPPS_EDIT_OWN], 'Not allowed to update opportunities');
   // If stage is changing, handle unit blocking
   if (updates.stage) {
     const unitId = updates.unit_id;
@@ -222,6 +226,7 @@ export async function updateOpportunity(id, updates) {
 
 // ─── Delete opportunity ───
 export async function deleteOpportunity(id) {
+  requirePerm(P.OPPS_DELETE, 'Not allowed to delete opportunities');
   try {
     const { data: oldData } = await rq(() => supabase.from('opportunities').select('*').eq('id', id).single(), 'deleteOpportunity.read');
     const { error } = await rq(() => supabase.from('opportunities').delete().eq('id', id), 'deleteOpportunity.write');

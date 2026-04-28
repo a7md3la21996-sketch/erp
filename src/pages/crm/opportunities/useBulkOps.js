@@ -1,12 +1,36 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { updateOpportunity, deleteOpportunity } from '../../../services/opportunitiesService';
 import { logAction } from '../../../services/auditService';
+import { rollbackManyById } from '../../../utils/safeRollback';
 import {
   TEMP_CONFIG, PRIORITY_CONFIG,
   calcLeadScore, getContactName, getAgentName, getProjectName,
   addStageHistory,
 } from './constants';
 import { deptStageLabel } from '../contacts/constants';
+
+// Run a per-id mutation across ids and resolve with the failed-id list and
+// the snapshots needed to roll those rows back. Failed/successful rows are
+// kept distinct so a partial failure doesn't blow away the rows that
+// actually succeeded (or any realtime updates that landed on them).
+async function settleAndCollectFailures(ids, prevOpps, work) {
+  const previousById = new Map();
+  prevOpps.forEach(o => { if (ids.includes(o.id)) previousById.set(o.id, o); });
+  const results = await Promise.allSettled(ids.map(id => work(id)));
+  const failedIds = results
+    .map((r, i) => r.status === 'rejected' ? ids[i] : null)
+    .filter(Boolean);
+  return { failedIds, previousById };
+}
+
+function pluralFailureMessage(failedIds, total, isRTL, getNameById) {
+  const names = failedIds.map(getNameById).filter(Boolean);
+  const preview = names.slice(0, 3).join(', ');
+  const more = names.length > 3 ? (isRTL ? ` و${names.length - 3} آخرين` : ` and ${names.length - 3} more`) : '';
+  return isRTL
+    ? `فشل تحديث ${failedIds.length} من ${total}${preview ? `: ${preview}${more}` : ''}`
+    : `${failedIds.length} of ${total} failed${preview ? `: ${preview}${more}` : ''}`;
+}
 
 export default function useBulkOps({
   opps, setOpps, agents, profile, isRTL, lang, scoreMap,
@@ -23,6 +47,9 @@ export default function useBulkOps({
 
   const showBulkToastMsg = (msg) => { setBulkToast(msg); setTimeout(() => setBulkToast(null), 3000); };
 
+  // Helper to map an id back to a display name for failure toasts.
+  const nameById = (id) => getContactName((opps || []).find(o => o.id === id) || {});
+
   const bulkMoveAll = async (toStage) => {
     if (toStage === 'closed_lost') {
       setLostReasonModal({ id: '__bulk__', toStage, bulkIds: [...bulkSelected] });
@@ -36,11 +63,12 @@ export default function useBulkOps({
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: toStage, stage_changed_at: new Date().toISOString() } : o));
     showBulkToastMsg(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
     setBulkSelected(new Set()); setBulkMode(false);
-    try {
-      await Promise.all(ids.map(id => updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString() })));
-    } catch {
-      setOpps(prevOpps);
-      toast?.error(isRTL ? 'فشل نقل بعض الفرص' : 'Failed to move some opportunities');
+    const { failedIds, previousById } = await settleAndCollectFailures(ids, prevOpps,
+      id => updateOpportunity(id, { stage: toStage, stage_changed_at: new Date().toISOString() })
+    );
+    if (failedIds.length) {
+      setOpps(p => rollbackManyById(p, previousById, failedIds));
+      toast?.error(pluralFailureMessage(failedIds, ids.length, isRTL, nameById));
     }
   };
 
@@ -52,26 +80,35 @@ export default function useBulkOps({
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, assigned_to: agentId, assigned_by: profile?.id || null, users: agent || o.users } : o));
     showBulkToastMsg(isRTL ? `تم تعيين ${ids.length} فرصة` : `${ids.length} opportunities assigned`);
     setBulkSelected(new Set()); setBulkMode(false);
-    try {
-      await Promise.all(ids.map(id => updateOpportunity(id, { assigned_to: agentId, assigned_by: profile?.id || null })));
-    } catch {
-      setOpps(prevOpps);
-      toast?.error(isRTL ? 'فشل تعيين بعض الفرص' : 'Failed to assign some opportunities');
+    const { failedIds, previousById } = await settleAndCollectFailures(ids, prevOpps,
+      id => updateOpportunity(id, { assigned_to: agentId, assigned_by: profile?.id || null })
+    );
+    if (failedIds.length) {
+      setOpps(p => rollbackManyById(p, previousById, failedIds));
+      toast?.error(pluralFailureMessage(failedIds, ids.length, isRTL, nameById));
     }
   };
 
   const bulkDeleteAll = async () => {
     const ids = [...bulkSelected];
     const prevOpps = opps;
+    const previousById = new Map();
+    prevOpps.forEach(o => { if (ids.includes(o.id)) previousById.set(o.id, o); });
     logAction({ action: 'bulk_delete', entity: 'opportunity', entityId: ids.join(','), entityName: `${ids.length} opportunities`, description: isRTL ? 'حذف جماعي' : 'Bulk delete', userName: profile?.full_name_ar || profile?.full_name_en || '' });
     setOpps(p => p.filter(o => !ids.includes(o.id)));
     showBulkToastMsg(isRTL ? `تم حذف ${ids.length} فرصة` : `${ids.length} opportunities deleted`);
     setBulkSelected(new Set()); setBulkMode(false);
-    try {
-      await Promise.all(ids.map(id => deleteOpportunity(id)));
-    } catch {
-      setOpps(prevOpps);
-      toast?.error(isRTL ? 'فشل حذف بعض الفرص' : 'Failed to delete some opportunities');
+    const results = await Promise.allSettled(ids.map(id => deleteOpportunity(id)));
+    const failedIds = results.map((r, i) => r.status === 'rejected' ? ids[i] : null).filter(Boolean);
+    if (failedIds.length) {
+      // Re-add the rows we couldn't actually delete from the server.
+      const rowsToRestore = failedIds.map(id => previousById.get(id)).filter(Boolean);
+      setOpps(p => {
+        const have = new Set(p.map(o => o.id));
+        const newOnes = rowsToRestore.filter(o => !have.has(o.id));
+        return [...newOnes, ...p];
+      });
+      toast?.error(pluralFailureMessage(failedIds, ids.length, isRTL, id => getContactName(previousById.get(id) || {})));
     }
   };
 
@@ -81,11 +118,12 @@ export default function useBulkOps({
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, temperature: temp } : o));
     showBulkToastMsg(isRTL ? `تم تحديث ${ids.length} فرصة` : `${ids.length} opportunities updated`);
     setBulkSelected(new Set()); setBulkMode(false);
-    try {
-      await Promise.all(ids.map(id => updateOpportunity(id, { temperature: temp })));
-    } catch {
-      setOpps(prevOpps);
-      toast?.error(isRTL ? 'فشل تحديث بعض الفرص' : 'Failed to update some opportunities');
+    const { failedIds, previousById } = await settleAndCollectFailures(ids, prevOpps,
+      id => updateOpportunity(id, { temperature: temp })
+    );
+    if (failedIds.length) {
+      setOpps(p => rollbackManyById(p, previousById, failedIds));
+      toast?.error(pluralFailureMessage(failedIds, ids.length, isRTL, nameById));
     }
   };
 
@@ -95,11 +133,12 @@ export default function useBulkOps({
     setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, priority } : o));
     showBulkToastMsg(isRTL ? `تم تحديث ${ids.length} فرصة` : `${ids.length} opportunities updated`);
     setBulkSelected(new Set()); setBulkMode(false);
-    try {
-      await Promise.all(ids.map(id => updateOpportunity(id, { priority })));
-    } catch {
-      setOpps(prevOpps);
-      toast?.error(isRTL ? 'فشل تحديث بعض الفرص' : 'Failed to update some opportunities');
+    const { failedIds, previousById } = await settleAndCollectFailures(ids, prevOpps,
+      id => updateOpportunity(id, { priority })
+    );
+    if (failedIds.length) {
+      setOpps(p => rollbackManyById(p, previousById, failedIds));
+      toast?.error(pluralFailureMessage(failedIds, ids.length, isRTL, nameById));
     }
   };
 

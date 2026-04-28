@@ -1,4 +1,6 @@
 import supabase from '../lib/supabase';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 export async function fetchEmployeeShifts(employeeId) {
   const { data, error } = await supabase
@@ -20,6 +22,7 @@ export async function fetchAllEmployeeShifts() {
 }
 
 export async function assignShift(employeeId, shiftId, startDate, endDate, notes) {
+  requirePerm(P.HR_POLICIES_MANAGE, 'Not allowed to assign shifts');
   const { data, error } = await supabase
     .from('employee_shifts')
     .insert({
@@ -37,6 +40,7 @@ export async function assignShift(employeeId, shiftId, startDate, endDate, notes
 }
 
 export async function assignShiftBulk(employeeIds, shiftId, startDate, endDate, notes) {
+  requirePerm(P.HR_POLICIES_MANAGE, 'Not allowed to bulk-assign shifts');
   const records = employeeIds.map(empId => ({
     employee_id: empId,
     shift_id: shiftId,
@@ -54,6 +58,7 @@ export async function assignShiftBulk(employeeIds, shiftId, startDate, endDate, 
 }
 
 export async function deleteShiftAssignment(id) {
+  requirePerm(P.HR_POLICIES_MANAGE, 'Not allowed to delete shift assignments');
   const { error } = await supabase.from('employee_shifts').delete().eq('id', id);
   if (error) throw error;
 }

@@ -1,4 +1,6 @@
 import supabase from '../lib/supabase';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 let _cachedRules = null;
 
@@ -26,6 +28,8 @@ export function clearRulesCache() {
 }
 
 export async function updateRule(id, value) {
+  // Payroll rule changes shift everyone's salary calculation — admin/HR only.
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to update payroll rules');
   clearRulesCache();
   const { data, error } = await supabase
     .from('payroll_rules')

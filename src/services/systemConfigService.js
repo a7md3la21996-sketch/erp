@@ -1,3 +1,6 @@
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
+
 const STORAGE_KEY = 'platform_system_config';
 
 export const DEFAULT_CONFIG = {
@@ -240,6 +243,9 @@ export async function loadConfigFromServer() {
 }
 
 export function saveConfig(config) {
+  // System config controls behavior across the whole app — admin-only.
+  // Without this, any user could overwrite contactTypes, statuses, etc.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to save system config');
   // Save to localStorage immediately
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));

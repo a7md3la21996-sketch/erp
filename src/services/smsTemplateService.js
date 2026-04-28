@@ -4,6 +4,8 @@ import { stripInternalFields } from "../utils/sanitizeForSupabase";
 // Supabase as single source of truth
 
 import supabase from '../lib/supabase';
+import { requireAnyPerm, requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Categories ──────────────────────────────────────────────────────────
 export const CATEGORIES = [
@@ -75,6 +77,8 @@ export async function getTemplateById(id) {
 }
 
 export async function createTemplate({ name, nameAr, body, bodyAr, category, variables = [] }) {
+  // Templates are reusable bodies — admin/marketing controls them.
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to create SMS templates');
   const now = new Date().toISOString();
   const template = {
     id: uid(), name, nameAr, body, bodyAr, category, variables,
@@ -91,6 +95,7 @@ export async function createTemplate({ name, nameAr, body, bodyAr, category, var
 }
 
 export async function updateTemplate(id, updates) {
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to update SMS templates');
   const updatedAt = new Date().toISOString();
   const { data, error } = await supabase
     .from('sms_templates')
@@ -106,6 +111,7 @@ export async function updateTemplate(id, updates) {
 }
 
 export async function deleteTemplate(id) {
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to delete SMS templates');
   const { error } = await supabase.from('sms_templates').delete().eq('id', id);
   if (error) {
     reportError('smsTemplateService', 'deleteTemplate', error);
@@ -134,6 +140,10 @@ export function renderBody(body, data = {}) {
 }
 
 export async function sendSMS(phone, message, templateId = null, templateName = '') {
+  // Sales agents send SMS to their own contacts — gate with the broader
+  // CONTACTS_EDIT_OWN/EDIT permission so the contact drawer's send works.
+  // Pure templates/campaign management still requires SETTINGS_MANAGE.
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN, P.CAMPAIGNS_VIEW], 'Not allowed to send SMS');
   const entry = {
     id: uid(),
     phone,
@@ -199,6 +209,9 @@ export async function getSMSLog(filters = {}) {
 }
 
 export async function bulkSend(templateId, contacts = [], lang = 'en') {
+  // Bulk SMS is a real-money / spam vector — gate stricter than single send.
+  // Sales need CONTACTS_BULK to do anything in bulk against contacts.
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CONTACTS_BULK, P.CAMPAIGNS_VIEW], 'Not allowed to bulk-send SMS');
   // Fetch template ONCE before loop
   const template = await getTemplateById(templateId);
   if (!template) return [];

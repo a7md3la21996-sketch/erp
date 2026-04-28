@@ -70,7 +70,11 @@ function getLocalActivities() { return []; }
 // ── Contacts KPIs ────────────────────────────────────────────────────────────
 export async function fetchContactStats({ role, userId, teamId } = {}) {
   try {
-    // Helper to apply role filter to contacts query
+    // Apply role filter to contacts query. RLS handles team-level scope
+    // for managers/leaders; we only add a narrow client-side filter for
+    // sales_agent so the count reflects their own contacts. The previous
+    // OR of assigned_to_names.cs.[...] for managers caused 500s on teams
+    // with 6+ members.
     const applyContactRoleFilter = async (q) => {
       if (role === 'sales_agent' && userId) {
         if (!_userNameCache.id || _userNameCache.id !== userId) {
@@ -78,16 +82,8 @@ export async function fetchContactStats({ role, userId, teamId } = {}) {
           _userNameCache = { id: userId, name: u?.full_name_en || null };
         }
         if (_userNameCache.name) return q.filter('assigned_to_names', 'cs', JSON.stringify([_userNameCache.name]));
-      } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-        const ck = `${role}:${teamId}`;
-        if (_teamCache.key !== ck || !_teamCache.names || Date.now() - _teamCache.ts > 60000) {
-          _teamCache.names = await getTeamMemberNames(role, teamId);
-          _teamCache.key = ck; _teamCache.ts = Date.now();
-        }
-        if (_teamCache.names?.length) {
-          return q.or(_teamCache.names.map(n => `assigned_to_names.cs.["${n}"]`).join(','));
-        }
       }
+      // Managers/leaders/director/admin/operations: rely on RLS.
       return q;
     };
 

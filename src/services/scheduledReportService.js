@@ -1,5 +1,7 @@
 import { reportError } from '../utils/errorReporter';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 /**
  * Scheduled Report Service — localStorage-based with Supabase sync
  * Key: platform_scheduled_reports
@@ -151,6 +153,9 @@ function seedIfEmpty() {
 
 // ── CRUD ─────────────────────────────────────────────────────────────
 export async function createSchedule(data) {
+  // Scheduled reports email recipients on a cadence — abuse vector for
+  // spam or data exfiltration. Admin-only.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to create scheduled reports');
   seedIfEmpty();
   const schedule = {
     id: genId(),
@@ -209,6 +214,7 @@ export async function getSchedules() {
 }
 
 export async function updateSchedule(id, updates) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to update scheduled reports');
   // Optimistic localStorage update
   const list = load();
   const idx = list.findIndex(s => s.id === id);
@@ -236,6 +242,7 @@ export async function updateSchedule(id, updates) {
 }
 
 export async function deleteSchedule(id) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to delete scheduled reports');
   // Optimistic localStorage delete
   const list = load().filter(s => s.id !== id);
   save(list);

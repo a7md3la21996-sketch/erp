@@ -2,6 +2,8 @@ import supabase from '../lib/supabase';
 import { reportError } from '../utils/errorReporter';
 import { createNotification } from './notificationsService';
 import { createTask } from './tasksService';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Frequency types ──────────────────────────────────────────────────
 export const FREQUENCIES = {
@@ -30,6 +32,9 @@ export const DAY_NAMES = {
 
 // ── CRUD ─────────────────────────────────────────────────────────────
 export async function createRecurringTask(formData) {
+  // Recurring tasks auto-spawn task instances on a schedule. Same blast
+  // radius as triggers — admin only.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to create recurring tasks');
   try {
     const { data, error } = await supabase.from('recurring_tasks').insert([{
       title: formData.title || '',
@@ -81,6 +86,7 @@ export async function getRecurringTasks() {
 }
 
 export async function updateRecurringTask(id, updates) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to update recurring tasks');
   try {
     const dbUpdates = {
       ...(updates.title !== undefined ? { title: updates.title } : {}),
@@ -106,6 +112,7 @@ export async function updateRecurringTask(id, updates) {
 }
 
 export async function deleteRecurringTask(id) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to delete recurring tasks');
   try {
     const { error } = await supabase.from('recurring_tasks').delete().eq('id', id);
     if (error) throw error;

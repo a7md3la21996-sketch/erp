@@ -1,6 +1,8 @@
 // TODO: Migrate to Supabase — currently entirely localStorage-based
 import { syncToSupabase } from '../utils/supabaseSync';
 import { createNotification } from './notificationsService';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 const STORAGE_KEY = 'platform_triggers';
 const MAX_TRIGGERS = 100;
@@ -69,6 +71,9 @@ export const CONDITION_OPERATORS = {
 
 // ── CRUD ────────────────────────────────────────────────────────────────
 export function createTrigger(trigger) {
+  // Triggers fire automated actions on entity events. A malicious trigger
+  // could mass-delete records or auto-assign leads. Admin-only.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to create triggers');
   const list = load();
   const newTrigger = {
     id: 'trig_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -92,6 +97,7 @@ export function getTriggers() {
 }
 
 export function updateTrigger(id, updates) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to update triggers');
   const list = load();
   const idx = list.findIndex(t => t.id === id);
   if (idx === -1) return null;
@@ -101,6 +107,7 @@ export function updateTrigger(id, updates) {
 }
 
 export function deleteTrigger(id) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to delete triggers');
   const list = load().filter(t => t.id !== id);
   save(list);
 }

@@ -3,6 +3,9 @@
  * localStorage-first with Supabase sync for persistence
  */
 
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
+
 const ROLES_KEY = 'platform_rbac_roles';
 const USER_ROLES_KEY = 'platform_rbac_user_roles';
 
@@ -197,6 +200,10 @@ export function getRole(id) {
 }
 
 export function createRole({ name, nameEn, permissions, description, descriptionEn }) {
+  // Role / permission management is admin-only — these mutations decide
+  // who can access what. Without the gate, any user with localStorage
+  // access could mint a role granting themselves anything.
+  requirePerm(P.ROLES_MANAGE, 'Not allowed to create roles');
   const roles = getRoles();
   const id = 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const newRole = {
@@ -215,6 +222,7 @@ export function createRole({ name, nameEn, permissions, description, description
 }
 
 export function updateRole(id, updates) {
+  requirePerm(P.ROLES_MANAGE, 'Not allowed to update roles');
   const roles = getRoles();
   const idx = roles.findIndex(r => r.id === id);
   if (idx === -1) return null;
@@ -232,6 +240,7 @@ export function updateRole(id, updates) {
 }
 
 export function deleteRole(id) {
+  requirePerm(P.ROLES_MANAGE, 'Not allowed to delete roles');
   const roles = getRoles();
   const role = roles.find(r => r.id === id);
   if (!role || role.builtIn) return false;
@@ -252,6 +261,9 @@ export function getUserRole(userId) {
 }
 
 export function setUserRole(userId, roleId) {
+  // Assigning a role to a user is the same blast radius as creating one —
+  // it grants effective permissions. Same gate.
+  requirePerm(P.USERS_MANAGE, 'Not allowed to assign roles');
   const userRoles = safeGet(USER_ROLES_KEY, {});
   userRoles[userId] = roleId;
   safeSet(USER_ROLES_KEY, userRoles);

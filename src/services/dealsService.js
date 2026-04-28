@@ -4,6 +4,8 @@ import { logCreate } from './auditService';
 import { reportError } from '../utils/errorReporter';
 import { addToSyncQueue } from './syncService';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
+import { requireAnyPerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Team cache ────────────────────────────────────────────────────────────
 const _teamCache = { key: null, names: null, ts: 0 };
@@ -76,6 +78,10 @@ async function nextDealNumber(existingDeals) {
  * Saves to Supabase first, queues for retry on failure
  */
 export async function createDealFromOpportunity(opp, existingDeals = [], extraFields = {}) {
+  // Creating a deal is a side effect of closing an opportunity won, so the
+  // permission gate is the same as editing an opportunity. There's no
+  // dedicated DEALS_CREATE permission today.
+  requireAnyPerm([P.OPPS_EDIT, P.OPPS_EDIT_OWN], 'Not allowed to create deals');
   const contact = opp.contacts || {};
   const agent = opp.users || {};
   const project = opp.projects || {};

@@ -1,6 +1,8 @@
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { getAttendanceForMonth, updateAttendanceRecord, addAttendanceRecord } from '../data/attendanceStore';
+import { requirePerm, currentProfile } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Attendance ────────────────────────────────────────────────
 
@@ -38,6 +40,14 @@ export async function fetchAttendance({ month, year, employeeId } = {}) {
 }
 
 export async function recordCheckIn(employeeId) {
+  // Anyone can check themselves in. Only HR/admin can check someone else
+  // in (e.g. backfill correction). Override employeeId from session for
+  // non-HR roles to prevent buddy-punching.
+  requirePerm(P.ATTEND_VIEW_OWN, 'Not allowed to check in');
+  const profile = currentProfile();
+  if (profile && profile.role !== 'admin' && profile.role !== 'hr') {
+    if (profile.id) employeeId = profile.id;
+  }
   const now = new Date();
   const date = now.toISOString().split('T')[0];
   const time = now.toTimeString().slice(0, 5);
@@ -73,6 +83,11 @@ export async function recordCheckIn(employeeId) {
 }
 
 export async function recordCheckOut(employeeId) {
+  requirePerm(P.ATTEND_VIEW_OWN, 'Not allowed to check out');
+  const profile = currentProfile();
+  if (profile && profile.role !== 'admin' && profile.role !== 'hr') {
+    if (profile.id) employeeId = profile.id;
+  }
   const now = new Date();
   const date = now.toISOString().split('T')[0];
   const time = now.toTimeString().slice(0, 5);

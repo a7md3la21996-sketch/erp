@@ -2,6 +2,9 @@
 // ── Custom Fields Service ────────────────────────────────────────────────
 // localStorage with Supabase sync for custom field definitions and values
 
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
+
 const FIELDS_KEY = 'platform_custom_fields';
 const VALUES_KEY = 'platform_cf_values';
 
@@ -52,6 +55,9 @@ export function getFieldsByEntity(entity) {
 
 /** Add a new field definition */
 export function addField(fieldDef) {
+  // Custom field definitions affect every form using the entity. Schema
+  // mutation is admin-only.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to add custom fields');
   const fields = getStore(FIELDS_KEY);
   const newField = {
     id: uid(),
@@ -72,6 +78,7 @@ export function addField(fieldDef) {
 
 /** Update an existing field definition */
 export function updateField(id, updates) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to update custom fields');
   const fields = getStore(FIELDS_KEY);
   const idx = fields.findIndex(f => f.id === id);
   if (idx === -1) return null;
@@ -83,6 +90,7 @@ export function updateField(id, updates) {
 
 /** Delete a field definition and its values */
 export function deleteField(id) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to delete custom fields');
   let fields = getStore(FIELDS_KEY);
   fields = fields.filter(f => f.id !== id);
   setStore(FIELDS_KEY, fields);

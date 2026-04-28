@@ -107,10 +107,9 @@ export async function applyRoleFilter(query, table, { role, userId, teamId } = {
 
     switch (table) {
       case 'contacts':
-        if (names.length) {
-          const orConds = names.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
-          return query.or(orConds);
-        }
+        // RLS already restricts to team members via get_team_member_names().
+        // Skipping the client-side OR avoids 500s from PostgREST when the
+        // team has 6+ members (large jsonb-cs OR clauses fail).
         return query;
       case 'opportunities':
         if (names.length) return query.in('assigned_to_name', names);

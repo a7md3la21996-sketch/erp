@@ -131,6 +131,9 @@ export function AuthProvider({ children }) {
               const profileData = await fetchSupabaseProfile(session.user.id, session.user);
               setUser({ id: session.user.id, email: session.user.email });
               setProfile(profileData);
+              // Mirror to localStorage so service-layer permissionGuard can
+              // read the role/team_id without going through React context.
+              try { localStorage.setItem('platform_mock_user', JSON.stringify(profileData)); } catch {}
               getEffectivePermissions(profileData.role).then(p => setPermissions(p));
             } catch (profileErr) {
               console.error('[Auth] Profile fetch failed:', profileErr.message);
@@ -238,6 +241,8 @@ export function AuthProvider({ children }) {
 
         setUser({ id: data.user.id, email: data.user.email });
         setProfile(profileData);
+        // Mirror to localStorage so service-layer permissionGuard can read it.
+        try { localStorage.setItem('platform_mock_user', JSON.stringify(profileData)); } catch {}
         getEffectivePermissions(profileData.role).then(p => setPermissions(p));
         logSession(profileData);
         return profileData;

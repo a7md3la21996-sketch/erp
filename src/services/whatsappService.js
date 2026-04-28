@@ -1,6 +1,8 @@
 import { reportError } from '../utils/errorReporter';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
+import { requireAnyPerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
@@ -67,6 +69,9 @@ function getDefaultTemplates() {
 
 // ── Message CRUD ───────────────────────────────────────────────
 export async function logMessage({ contact_id, contact_name, contact_phone, direction = 'outgoing', message, template_id = null, type = 'text' }) {
+  // Logging WhatsApp messages requires the same scope as editing the
+  // contact — otherwise an unrelated user could fake conversation history.
+  requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN, P.CAMPAIGNS_VIEW], 'Not allowed to log WhatsApp messages');
   const msg = {
     id: genId(),
     contact_id: contact_id || null,
@@ -183,6 +188,7 @@ export async function getTemplates(onlyActive = false) {
 }
 
 export async function saveTemplate(tpl) {
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to save WhatsApp templates');
   // Check if updating existing
   const { data: existing } = await supabase.from('whatsapp_templates').select('id').eq('id', tpl.id).maybeSingle();
   if (existing) {
@@ -206,6 +212,7 @@ export async function saveTemplate(tpl) {
 }
 
 export async function deleteTemplate(id) {
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to delete WhatsApp templates');
   const { error } = await supabase.from('whatsapp_templates').delete().eq('id', id);
   if (error) {
     reportError('whatsappService', 'deleteTemplate', error);

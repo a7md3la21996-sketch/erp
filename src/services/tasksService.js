@@ -4,6 +4,8 @@ import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { applyRoleFilter } from '../utils/roleFilter';
 import { retryWithBackoff } from '../utils/retryWithBackoff';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // Retry wrapper for idempotent Supabase calls (UPDATE/DELETE/SELECT). Never
 // for INSERT — dropped response after successful write would duplicate.
@@ -128,9 +130,19 @@ export async function fetchTasks({ contactId, dept, status, priority, page, page
 }
 
 export async function createTask(data) {
-  // Try Supabase FIRST — this is the source of truth
+  // TASKS_VIEW_OWN is granted to every working role today, so the guard
+  // mainly catches a future custom role that forgot the permission. The
+  // bigger value is below: we drop client-supplied actor/identity fields
+  // so a tampered call can't forge created_by.
+  requirePerm(P.TASKS_VIEW_OWN, 'Not allowed to create tasks');
+  // Drop fields the client should never set directly. created_by is
+  // stamped by the DB (or by the auditService) — clients passing it
+  // would let one user create tasks "as" another.
+  const safeData = { ...data };
+  delete safeData.created_by;
+  delete safeData.created_by_name;
   try {
-    const { data: d, error } = await supabase.from('tasks').insert([{ ...stripInternalFields(data), created_at: new Date().toISOString() }]).select('*').single();
+    const { data: d, error } = await supabase.from('tasks').insert([{ ...stripInternalFields(safeData), created_at: new Date().toISOString() }]).select('*').single();
     if (error) throw error;
     logCreate('task', d.id, d);
     return d;
@@ -141,9 +153,15 @@ export async function createTask(data) {
 }
 
 export async function updateTask(id, updates) {
+  requirePerm(P.TASKS_VIEW_OWN, 'Not allowed to edit tasks');
+  // Don't let updates change the original creator. assigned_to changes are
+  // legitimate (reassign), but created_by is the historical owner record.
+  const safeUpdates = { ...updates };
+  delete safeUpdates.created_by;
+  delete safeUpdates.created_by_name;
   try {
     const { data: oldData } = await rq(() => supabase.from('tasks').select('*').eq('id', id).single(), 'updateTask.read');
-    const { data, error } = await rq(() => supabase.from('tasks').update(updates).eq('id', id).select('*').single(), 'updateTask.write');
+    const { data, error } = await rq(() => supabase.from('tasks').update(safeUpdates).eq('id', id).select('*').single(), 'updateTask.write');
     if (error) throw error;
     logUpdate('task', id, oldData, data);
     return data;
@@ -154,6 +172,7 @@ export async function updateTask(id, updates) {
 }
 
 export async function deleteTask(id) {
+  requirePerm(P.TASKS_VIEW_OWN, 'Not allowed to delete tasks');
   try {
     const { data: oldData } = await rq(() => supabase.from('tasks').select('*').eq('id', id).single(), 'deleteTask.read');
     await rq(() => supabase.from('tasks').delete().eq('id', id), 'deleteTask.write');

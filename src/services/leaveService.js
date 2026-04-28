@@ -2,6 +2,8 @@ import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate } from './auditService';
+import { requirePerm, currentProfile } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Mock Data ─────────────────────────────────────────────────
 
@@ -51,23 +53,42 @@ export async function fetchLeaveRequests(filters = {}) {
 }
 
 export async function createLeaveRequest(data) {
+  // Anyone with LEAVE_REQUEST can submit, but they must submit *for
+  // themselves*. Override employee_id from the session profile so a
+  // sales agent can't file leave for a colleague.
+  requirePerm(P.LEAVE_REQUEST, 'Not allowed to submit leave requests');
+  const profile = currentProfile();
+  const safe = { ...data };
+  // Admin/HR keep the override path open — they may legitimately file
+  // on behalf of others.
+  if (profile && profile.role !== 'admin' && profile.role !== 'hr') {
+    if (profile.id) safe.employee_id = profile.id;
+  }
+  // status is set by the server flow; don't trust a client-passed value
+  // (would let users self-approve).
+  delete safe.status;
+  delete safe.approved_by;
+  delete safe.rejection_reason;
   try {
     const { data: d, error } = await supabase
       .from('leave_requests')
-      .insert([{ ...stripInternalFields(data), status: 'pending', created_at: new Date().toISOString() }])
+      .insert([{ ...stripInternalFields(safe), status: 'pending', created_at: new Date().toISOString() }])
       .select('*')
       .single();
     if (error) throw error;
     await logCreate('leave_request', d.id, d);
     return d;
   } catch (err) { reportError('leaveService', 'query', err);
-    const mock = { ...data, id: 'lr-' + Date.now(), status: 'pending', created_at: new Date().toISOString() };
+    const mock = { ...safe, id: 'lr-' + Date.now(), status: 'pending', created_at: new Date().toISOString() };
     MOCK_LEAVE_REQUESTS.unshift(mock);
     return mock;
   }
 }
 
 export async function approveLeaveRequest(id) {
+  // Approving leave deducts paid balance. Restrict to HR/admin —
+  // otherwise an employee with devtools could approve their own request.
+  requirePerm(P.HR_EMPLOYEES_MANAGE, 'Not allowed to approve leave requests');
   try {
     const { data: old } = await supabase.from('leave_requests').select('*').eq('id', id).single();
     const { data: { user } } = await supabase.auth.getUser();
@@ -164,6 +185,7 @@ async function deductLeaveBalance(employeeId, leaveType, days) {
 }
 
 export async function rejectLeaveRequest(id, reason) {
+  requirePerm(P.HR_EMPLOYEES_MANAGE, 'Not allowed to reject leave requests');
   try {
     const { data: old } = await supabase.from('leave_requests').select('*').eq('id', id).single();
     const { data: { user } } = await supabase.auth.getUser();

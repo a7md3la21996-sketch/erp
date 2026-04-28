@@ -1,6 +1,8 @@
 import { stripInternalFields } from "../utils/sanitizeForSupabase";
 import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Categories ─────────────────────────────────────────────────────────
 export const CATEGORIES = {
@@ -21,6 +23,8 @@ export const PRIORITIES = {
 // ── CRUD ───────────────────────────────────────────────────────────────
 
 export async function createAnnouncement({ title, titleAr, body, bodyAr, category, priority, pinned, expiresAt, author }) {
+  // Announcements broadcast to every employee — admin-only.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to create announcements');
   const announcement = {
     id: 'ann_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     title: title || '',
@@ -85,6 +89,7 @@ export async function getAnnouncements(filters = {}) {
 }
 
 export async function updateAnnouncement(id, updates) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to update announcements');
   const { data, error } = await supabase
     .from('announcements')
     .update({ ...stripInternalFields(updates), updated_at: new Date().toISOString() })
@@ -99,6 +104,7 @@ export async function updateAnnouncement(id, updates) {
 }
 
 export async function deleteAnnouncement(id) {
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to delete announcements');
   const { error } = await supabase
     .from('announcements')
     .delete()

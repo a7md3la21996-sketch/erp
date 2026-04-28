@@ -242,49 +242,60 @@ export default function App() {
                 <Route path="/hr/goals" element={<Guarded><GoalsPage /></Guarded>} />
                 <Route path="/performance" element={<Navigate to="/hr/performance" replace />} />
                 <Route path="/goals" element={<Navigate to="/hr/goals" replace />} />
-                <Route path="/sales/deals" element={<Guarded><DealsPage /></Guarded>} />
-                <Route path="/sales/commissions" element={<Guarded><CommissionsPage /></Guarded>} />
-                <Route path="/sales/forecast" element={<Guarded><SalesForecastPage /></Guarded>} />
+                {/* Sales pages — sales agents see own, managers see team via RLS */}
+                <Route path="/sales/deals" element={<ProtectedRoute permission={P.DEALS_VIEW_OWN}><Guarded><DealsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/sales/commissions" element={<ProtectedRoute permission={P.DEALS_VIEW_OWN}><Guarded><CommissionsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/sales/forecast" element={<ProtectedRoute permission={P.RPT_SALES}><Guarded><SalesForecastPage /></Guarded></ProtectedRoute>} />
                 <Route path="/sales/targets" element={<Navigate to="/reports" replace />} />
-                <Route path="/sales/*" element={<Guarded><DealsPage /></Guarded>} />
-                <Route path="/finance" element={<Guarded><FinancePage /></Guarded>} />
-                <Route path="/finance/*" element={<Guarded><FinancePage /></Guarded>} />
-                <Route path="/hr/employees" element={<Guarded><EmployeesPage /></Guarded>} />
-                <Route path="/hr/policies" element={<Guarded><HRPoliciesPage /></Guarded>} />
-                <Route path="/hr/departments" element={<Guarded><DepartmentsPage /></Guarded>} />
-                <Route path="/hr/shifts" element={<Guarded><ShiftsPage /></Guarded>} />
+                <Route path="/sales/*" element={<ProtectedRoute permission={P.DEALS_VIEW_OWN}><Guarded><DealsPage /></Guarded></ProtectedRoute>} />
+                {/* Finance — admin/finance only */}
+                <Route path="/finance" element={<ProtectedRoute permission={P.FINANCE_VIEW}><Guarded><FinancePage /></Guarded></ProtectedRoute>} />
+                <Route path="/finance/*" element={<ProtectedRoute permission={P.FINANCE_VIEW}><Guarded><FinancePage /></Guarded></ProtectedRoute>} />
+                {/* HR — admin/HR only for the management pages */}
+                <Route path="/hr/employees" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><EmployeesPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/policies" element={<ProtectedRoute permission={P.HR_POLICIES_MANAGE}><Guarded><HRPoliciesPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/departments" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><DepartmentsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/shifts" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><ShiftsPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/holidays" element={<Guarded><HolidaysPage /></Guarded>} />
-                <Route path="/hr/attendance/:employeeId" element={<Guarded><EmployeeAttendanceSummary /></Guarded>} />
-                <Route path="/hr/attendance" element={<Guarded><AttendancePage /></Guarded>} />
+                <Route path="/hr/attendance/:employeeId" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><EmployeeAttendanceSummary /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/attendance" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><AttendancePage /></Guarded></ProtectedRoute>} />
+                {/* /hr/leave open — employees submit own leave (data filtered by RLS) */}
                 <Route path="/hr/leave" element={<Guarded><LeavePage /></Guarded>} />
-                <Route path="/hr/payroll" element={<Guarded><PayrollPage /></Guarded>} />
-                <Route path="/hr/payroll-rules" element={<Guarded><PayrollRulesPage /></Guarded>} />
-                <Route path="/hr/loans" element={<Guarded><LoansPage /></Guarded>} />
-                <Route path="/hr/competencies" element={<Guarded><CompetenciesPage /></Guarded>} />
-                <Route path="/hr/recruitment" element={<Guarded><RecruitmentPage /></Guarded>} />
-                <Route path="/hr/disciplinary" element={<Guarded><DisciplinaryPage /></Guarded>} />
-                <Route path="/hr/training" element={<Guarded><TrainingPage /></Guarded>} />
+                <Route path="/hr/payroll" element={<ProtectedRoute permission={P.PAYROLL_VIEW}><Guarded><PayrollPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/payroll-rules" element={<ProtectedRoute permission={P.PAYROLL_MANAGE}><Guarded><PayrollRulesPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/loans" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><LoansPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/competencies" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><CompetenciesPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/recruitment" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><RecruitmentPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/disciplinary" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><DisciplinaryPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/training" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><TrainingPage /></Guarded></ProtectedRoute>} />
+                {/* Self-service open — employees see only their own data via RLS */}
                 <Route path="/hr/self-service" element={<Guarded><SelfServicePage /></Guarded>} />
-                <Route path="/hr/assets" element={<Guarded><AssetsPage /></Guarded>} />
-                <Route path="/hr/onboarding" element={<Guarded><OnboardingPage /></Guarded>} />
+                <Route path="/hr/assets" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><AssetsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/onboarding" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><OnboardingPage /></Guarded></ProtectedRoute>} />
+                {/* Expense claims open — employees submit own */}
                 <Route path="/hr/expense-claims" element={<Guarded><ExpenseClaimsPage /></Guarded>} />
-                <Route path="/hr/contracts" element={<Guarded><ContractsPage /></Guarded>} />
-                <Route path="/hr/leave-carryover" element={<Guarded><LeaveCarryoverPage /></Guarded>} />
+                <Route path="/hr/contracts" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><ContractsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/leave-carryover" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><LeaveCarryoverPage /></Guarded></ProtectedRoute>} />
+                {/* Overtime open — employees submit own */}
                 <Route path="/hr/overtime" element={<Guarded><OvertimePage /></Guarded>} />
-                <Route path="/hr/bonuses" element={<Guarded><BonusesPage /></Guarded>} />
-                <Route path="/hr/reports" element={<Guarded><HRReportsPage /></Guarded>} />
+                <Route path="/hr/bonuses" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><BonusesPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/reports" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><HRReportsPage /></Guarded></ProtectedRoute>} />
+                {/* Org chart open — informational */}
                 <Route path="/hr/org-chart" element={<Guarded><OrgChartPage /></Guarded>} />
-                <Route path="/hr/documents" element={<Guarded><DocumentsPage /></Guarded>} />
-                <Route path="/hr/ats" element={<Guarded><ATSPage /></Guarded>} />
-                <Route path="/hr/reviews" element={<Guarded><PerformanceReviewPage /></Guarded>} />
+                <Route path="/hr/documents" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><DocumentsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/ats" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><ATSPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/reviews" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><PerformanceReviewPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
-                <Route path="/operations" element={<Guarded><OperationsPage /></Guarded>} />
-                <Route path="/operations/*" element={<Guarded><OperationsPage /></Guarded>} />
-                <Route path="/real-estate/projects" element={<Guarded><ProjectsPage /></Guarded>} />
-                <Route path="/real-estate/units" element={<Guarded><UnitsPage /></Guarded>} />
-                <Route path="/real-estate/*" element={<Guarded><ProjectsPage /></Guarded>} />
-                <Route path="/marketing" element={<Guarded><MarketingPage /></Guarded>} />
-                <Route path="/marketing/*" element={<Guarded><MarketingPage /></Guarded>} />
+                {/* Operations — operations role only */}
+                <Route path="/operations" element={<ProtectedRoute permission={P.OPS_VIEW}><Guarded><OperationsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/operations/*" element={<ProtectedRoute permission={P.OPS_VIEW}><Guarded><OperationsPage /></Guarded></ProtectedRoute>} />
+                {/* Real estate catalog — open to all (sales need projects/units list) */}
+                <Route path="/real-estate/projects" element={<ProtectedRoute permission={P.PROJECTS_VIEW}><Guarded><ProjectsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/real-estate/units" element={<ProtectedRoute permission={P.UNITS_VIEW}><Guarded><UnitsPage /></Guarded></ProtectedRoute>} />
+                <Route path="/real-estate/*" element={<ProtectedRoute permission={P.PROJECTS_VIEW}><Guarded><ProjectsPage /></Guarded></ProtectedRoute>} />
+                {/* Marketing — admin/marketing only */}
+                <Route path="/marketing" element={<ProtectedRoute permission={P.CAMPAIGNS_VIEW}><Guarded><MarketingPage /></Guarded></ProtectedRoute>} />
+                <Route path="/marketing/*" element={<ProtectedRoute permission={P.CAMPAIGNS_VIEW}><Guarded><MarketingPage /></Guarded></ProtectedRoute>} />
                 <Route path="/calendar" element={<Guarded><CalendarPage /></Guarded>} />
                 <Route path="/chat" element={<Guarded><ChatInboxPage /></Guarded>} />
                 <Route path="/email" element={<Guarded><EmailPage /></Guarded>} />

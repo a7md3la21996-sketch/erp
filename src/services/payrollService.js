@@ -1,4 +1,6 @@
 import supabase from '../lib/supabase';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Payroll Runs ─────────────────────────────────────────────
 
@@ -34,6 +36,10 @@ export async function fetchPayrollItems(runId) {
 }
 
 export async function savePayrollRun(runData, items) {
+  // Payroll mutations are admin/HR only — financial data with direct
+  // money impact. Service-layer guard catches devtools-only calls before
+  // they reach RLS, with a clear error.
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to save payroll runs');
   // Upsert the run
   const { data: run, error: runErr } = await supabase
     .from('payroll_runs')
@@ -111,6 +117,7 @@ export async function fetchActiveLoans() {
 }
 
 export async function createLoan(data) {
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to create loans');
   const { data: loan, error } = await supabase
     .from('employee_loans')
     .insert({ ...data, created_at: new Date().toISOString() })
@@ -121,6 +128,7 @@ export async function createLoan(data) {
 }
 
 export async function updateLoan(id, updates) {
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to update loans');
   const { data, error } = await supabase
     .from('employee_loans')
     .update(updates)
@@ -132,6 +140,7 @@ export async function updateLoan(id, updates) {
 }
 
 export async function deleteLoan(id) {
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to delete loans');
   const { error } = await supabase.from('employee_loans').delete().eq('id', id);
   if (error) throw error;
 }
@@ -148,6 +157,7 @@ export async function fetchAdjustments(month, year, employeeId) {
 }
 
 export async function createAdjustment(data) {
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to create payroll adjustments');
   const { data: adj, error } = await supabase
     .from('payroll_adjustments')
     .insert({ ...data, created_at: new Date().toISOString() })
@@ -158,6 +168,7 @@ export async function createAdjustment(data) {
 }
 
 export async function deleteAdjustment(id) {
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to delete payroll adjustments');
   const { error } = await supabase.from('payroll_adjustments').delete().eq('id', id);
   if (error) throw error;
 }

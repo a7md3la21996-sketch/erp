@@ -37,6 +37,7 @@ import { useResponsive } from '../../hooks/useMediaQuery';
 import { useToast } from '../../contexts/ToastContext';
 import useCrmPermissions from '../../hooks/useCrmPermissions';
 import { useRealtimeSubscription, applyRealtimePayload } from '../../hooks/useRealtimeSubscription';
+import { rollbackById, rollbackManyById } from '../../utils/safeRollback';
 
 /* Components extracted to ./opportunities/: OppCard, ContactSearch, AddModal, OpportunityDrawer, OppKPIs, ConversionFunnel, OppTable, OppKanban, OppToolbar, BulkActionsBar */
 
@@ -599,9 +600,19 @@ export default function OpportunitiesPage() {
       logAction({ action: 'stage_change', entity: 'opportunity', entityId: id, entityName: getContactName(opp_ || {}), description: isRTL ? 'تغيير مرحلة' : 'Stage changed', oldValue: fromStage, newValue: toStage, userName: profile?.full_name_ar || profile?.full_name_en || '' });
       evaluateTriggers('opportunity', 'stage_changed', { ...(opp_ || {}), stage: toStage, previous_stage: fromStage });
     } catch {
-      // Rollback on failure
-      setOpps(p => p.map(o => o.id === id ? { ...o, stage: fromStage, ...Object.fromEntries(Object.keys(extraUpdates).map(k => [k, opp_?.[k]])) } : o));
-      if (selectedOpp?.id === id) setSelectedOpp(p => ({ ...p, stage: fromStage }));
+      // Rollback on failure — but only if the row in state isn't newer than
+      // our pre-optimistic snapshot. A realtime event from another session
+      // could have arrived between the optimistic update and the failure;
+      // overwriting it would lose that real change.
+      if (opp_) setOpps(p => rollbackById(p, opp_));
+      if (selectedOpp?.id === id) {
+        setSelectedOpp(prev => {
+          if (!prev || prev.id !== id) return prev;
+          const prevTime = new Date(prev.updated_at || 0).getTime();
+          const oppTime = new Date(opp_?.updated_at || 0).getTime();
+          return prevTime > oppTime ? prev : (opp_ || prev);
+        });
+      }
       toast.error(isRTL ? 'فشل تحديث المرحلة' : 'Failed to update stage');
       setActionLoading(false);
       return;
@@ -647,16 +658,26 @@ export default function OpportunitiesPage() {
 
     if (lostReasonModal.bulkIds) {
       const ids = lostReasonModal.bulkIds;
-      const prevOpps = [...opps];
-      ids.forEach(id => { const opp = (opps || []).find(o => String(o.id) === String(id)); if (opp && opp.stage !== 'closed_lost') addStageHistory(id, opp.stage, 'closed_lost'); });
+      // Snapshot per-id so we only roll back the ones that fail and don't
+      // overwrite any realtime updates that arrived in between.
+      const previousById = new Map();
+      ids.forEach(id => {
+        const opp = (opps || []).find(o => String(o.id) === String(id));
+        if (opp) previousById.set(opp.id, opp);
+        if (opp && opp.stage !== 'closed_lost') addStageHistory(id, opp.stage, 'closed_lost');
+      });
       setOpps(p => p.map(o => ids.includes(o.id) ? { ...o, stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() } : o));
       showBulkToast(isRTL ? `تم نقل ${ids.length} فرصة` : `${ids.length} opportunities moved`);
       setBulkSelected(new Set()); setBulkMode(false);
       setLostReasonModal(null);
       const results = await Promise.allSettled(ids.map(id => updateOpportunity(id, { stage: 'closed_lost', lost_reason: reason, stage_changed_at: new Date().toISOString() })));
-      const failed = results.filter(r => r.status === 'rejected').length;
-      if (failed > 0) {
-        toast.warning(isRTL ? `فشل تحديث ${failed} من ${ids.length} فرصة` : `${failed} of ${ids.length} updates failed`);
+      const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
+      if (failedIdx.length > 0) {
+        const failedIds = failedIdx.map(i => ids[i]);
+        // Roll back only the failed rows, preserving any realtime updates
+        // that landed on the successful ones.
+        setOpps(p => rollbackManyById(p, previousById, failedIds));
+        toast.warning(isRTL ? `فشل تحديث ${failedIds.length} من ${ids.length} فرصة` : `${failedIds.length} of ${ids.length} updates failed`);
       }
       return;
     }
@@ -691,7 +712,6 @@ export default function OpportunitiesPage() {
   const confirmDeleteOpp = async () => {
     if (!confirmDelete) return;
     const deletedOpp = (opps || []).find(o => o.id === confirmDelete);
-    const prevOpps = opps;
     setOpps(p => p.filter(o => o.id !== confirmDelete));
     if (selectedOpp?.id === confirmDelete) setSelectedOpp(null);
     setConfirmDelete(null);
@@ -701,7 +721,11 @@ export default function OpportunitiesPage() {
       logAction({ action: 'delete', entity: 'opportunity', entityId: confirmDelete, entityName: getContactName(deletedOpp || {}), description: isRTL ? 'حذف فرصة' : 'Opportunity deleted', userName: profile?.full_name_ar || profile?.full_name_en || '' });
       toast.success(isRTL ? 'تم حذف الفرصة' : 'Opportunity deleted');
     } catch {
-      setOpps(prevOpps);
+      // Re-add the deleted row only if it isn't already back in state from
+      // a realtime event. rollbackById handles the timestamp comparison
+      // for us when applied to a list missing the row — adding via map
+      // keeps that contract simple.
+      if (deletedOpp) setOpps(p => p.some(o => o.id === deletedOpp.id) ? p : [deletedOpp, ...p]);
       toast.error(isRTL ? 'فشل حذف الفرصة' : 'Failed to delete opportunity');
     }
     setActionLoading(false);
@@ -722,8 +746,21 @@ export default function OpportunitiesPage() {
       setActionLoading(false);
       return;
     }
-    setOpps(p => p.map(o => o.id === oppId ? { ...o, ...result } : o));
-    setSelectedOpp(prev => prev?.id === oppId ? { ...prev, ...result } : prev);
+    // Apply the server response only if state isn't already on a newer
+    // updated_at — a concurrent realtime UPDATE could have landed in
+    // between, and merging stale fields on top would silently undo it.
+    setOpps(p => p.map(o => {
+      if (o.id !== oppId) return o;
+      const oTime = new Date(o.updated_at || 0).getTime();
+      const rTime = new Date(result?.updated_at || 0).getTime();
+      return rTime >= oTime ? { ...o, ...result } : o;
+    }));
+    setSelectedOpp(prev => {
+      if (prev?.id !== oppId) return prev;
+      const pTime = new Date(prev.updated_at || 0).getTime();
+      const rTime = new Date(result?.updated_at || 0).getTime();
+      return rTime >= pTime ? { ...prev, ...result } : prev;
+    });
     toast.success(isRTL ? 'تم تحديث الفرصة' : 'Opportunity updated');
     logAction({ action: 'update', entity: 'opportunity', entityId: oppId, entityName: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}), description: isRTL ? 'تحديث فرصة' : 'Opportunity updated', userName: profile?.full_name_ar || profile?.full_name_en || '' });
 

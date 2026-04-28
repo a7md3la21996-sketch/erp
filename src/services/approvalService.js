@@ -3,6 +3,8 @@ import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 import { createNotification } from './notificationsService';
 import { logAction } from './auditService';
+import { requirePerm, currentProfile } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 /** Default auto-approve threshold (amount below this is auto-approved) */
 export async function getAutoApproveThreshold() {
@@ -16,6 +18,10 @@ export async function getAutoApproveThreshold() {
 }
 
 export async function setAutoApproveThreshold(val) {
+  // Auto-approve threshold is a system-wide config: who can approve below
+  // it without a real approval flow. Admin-only — allowing any user to
+  // raise the threshold would let them auto-approve their own requests.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to change approval threshold');
   try {
     const { data: existing } = await supabase.from('system_config').select('value').eq('key', 'approval_config').maybeSingle();
     const cfg = existing?.value || {};
@@ -59,6 +65,15 @@ export const TYPE_LABELS = {
  * Create an approval request
  */
 export async function createApproval({ type, requesterId, requesterName, data, approverId, approverName, entity_id, entity_name, amount, priority, notes, chain }) {
+  // Override requesterId/requesterName from the session — any user can
+  // submit a request, but they can only do so as themselves. Without this,
+  // a sales agent could create a "leave request" attributed to a colleague.
+  const profile = currentProfile();
+  if (profile) {
+    if (profile.id) requesterId = profile.id;
+    requesterName = profile.full_name_ar || profile.full_name_en || requesterName || '';
+  }
+
   const threshold = await getAutoApproveThreshold();
   const numAmount = Number(amount) || 0;
   const shouldAutoApprove = numAmount > 0 && numAmount < threshold && ['deal', 'quote', 'discount'].includes(type);
@@ -122,6 +137,11 @@ export async function createApproval({ type, requesterId, requesterName, data, a
  * Update an approval record with arbitrary fields
  */
 export async function updateApproval(id, updates) {
+  // Generic updateApproval is an admin-only escape hatch. Normal flow
+  // goes through approveRequest / rejectRequest which have their own
+  // session-based identity overrides. Letting any user POST arbitrary
+  // updates would let them flip status without an audit trail.
+  requirePerm(P.SETTINGS_MANAGE, 'Not allowed to update approvals directly');
   // Map code field names to Supabase column names
   const sbUpdates = {};
   if (updates.status) sbUpdates.status = updates.status;
@@ -224,6 +244,12 @@ export async function getPendingByApprover(approverId) {
  * Approve a request
  */
 export async function approveRequest(id, approverName, comments) {
+  // Override approverName from session profile so the audit trail
+  // reflects who actually clicked Approve (not whatever the client sent).
+  // Per-row authority — "is this user the assigned approver?" — is
+  // enforced by RLS on the approvals table.
+  const profile = currentProfile();
+  if (profile) approverName = profile.full_name_ar || profile.full_name_en || approverName;
   const resolvedAt = new Date().toISOString();
   const { data: approval, error } = await supabase
     .from('approvals')
@@ -274,6 +300,9 @@ export async function approveRequest(id, approverName, comments) {
  * Reject a request
  */
 export async function rejectRequest(id, approverName, comments) {
+  // Override approverName from session — same reasoning as approveRequest.
+  const profile = currentProfile();
+  if (profile) approverName = profile.full_name_ar || profile.full_name_en || approverName;
   const resolvedAt = new Date().toISOString();
   const { data: approval, error } = await supabase
     .from('approvals')

@@ -3,6 +3,8 @@ import { reportError } from '../utils/errorReporter';
 import supabase from '../lib/supabase';
 import { logCreate, logUpdate, logDelete } from './auditService';
 import { MOCK_EMPLOYEES, DEPARTMENTS } from '../data/hr_mock_data';
+import { requirePerm } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Employees ─────────────────────────────────────────────────
 
@@ -50,6 +52,11 @@ export async function fetchEmployees(filters = {}) {
 }
 
 export async function createEmployee(data) {
+  // Employees and salary history are HR territory — admin + HR roles only.
+  // The fail-open semantics in permissionGuard mean an unknown role still
+  // gets through (RLS catches it), but a sales agent calling this from
+  // devtools is rejected here with a clear error.
+  requirePerm(P.HR_EMPLOYEES_MANAGE, 'Not allowed to create employees');
   try {
     const { data: d, error } = await supabase
       .from('employees')
@@ -67,6 +74,7 @@ export async function createEmployee(data) {
 }
 
 export async function updateEmployee(id, updates) {
+  requirePerm(P.HR_EMPLOYEES_MANAGE, 'Not allowed to update employees');
   try {
     const { data: old } = await supabase.from('employees').select('*').eq('id', id).single();
     const { data, error } = await supabase
@@ -124,6 +132,7 @@ export async function updateEmployee(id, updates) {
 }
 
 export async function deleteEmployee(id) {
+  requirePerm(P.HR_EMPLOYEES_MANAGE, 'Not allowed to delete employees');
   const now = new Date().toISOString();
   try {
     const { data: old } = await supabase.from('employees').select('*').eq('id', id).single();

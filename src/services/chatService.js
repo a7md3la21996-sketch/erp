@@ -3,6 +3,8 @@ import { createNotification } from './notificationsService';
 import { logAction } from './auditService';
 import supabase from '../lib/supabase';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
+import { requirePerm, currentProfile } from '../utils/permissionGuard';
+import { P } from '../config/roles';
 
 // ── Team Members (mock) ────────────────────────────────────────
 const TEAM_MEMBERS = [
@@ -35,6 +37,14 @@ export function parseMentions(text, teamMembers) {
 
 // ── Add Comment ────────────────────────────────────────────────
 export async function addComment({ entity, entityId, entityName, text, authorId, authorName, mentions }) {
+  requirePerm(P.CHAT_USE, 'Not allowed to comment');
+  // Override authorId/authorName from session — without this, anyone
+  // with devtools could post a comment "as" a colleague.
+  const profile = currentProfile();
+  if (profile) {
+    if (profile.id) authorId = profile.id;
+    authorName = profile.full_name_ar || profile.full_name_en || authorName;
+  }
   const resolvedMentions = mentions || parseMentions(text, TEAM_MEMBERS);
   const comment = {
     id: 'cmt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -133,6 +143,9 @@ export async function getMentions(userId) {
 
 // ── Delete Comment ─────────────────────────────────────────────
 export async function deleteComment(commentId) {
+  requirePerm(P.CHAT_USE, 'Not allowed to delete comments');
+  // Author-only delete is enforced by RLS on chat_messages — service-layer
+  // guard just rejects users who don't have CHAT_USE at all.
   const { error } = await supabase.from('chat_messages').delete().eq('id', commentId);
   if (error) {
     reportError('chatService', 'deleteComment', error);
@@ -143,6 +156,7 @@ export async function deleteComment(commentId) {
 
 // ── Edit Comment ───────────────────────────────────────────────
 export async function editComment(commentId, newText) {
+  requirePerm(P.CHAT_USE, 'Not allowed to edit comments');
   const editedAt = new Date().toISOString();
   const newMentions = parseMentions(newText, TEAM_MEMBERS);
 

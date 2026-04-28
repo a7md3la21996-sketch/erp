@@ -22,6 +22,9 @@ import { notifyLeadAssigned } from '../services/notificationsService';
 import { notifyImportDone, notifyLeadReassigned, notifyImportLeadsForAgent } from '../services/notificationService';
 import { evaluateTriggers } from '../services/triggerService';
 import { reportError } from '../utils/errorReporter';
+import { rollbackContact } from '../utils/safeRollback';
+import { validateAgentNames } from '../utils/agentValidation';
+import { getTeamMemberNames } from '../utils/teamHelper';
 import ImportModal from './crm/ImportModal';
 import { PageSkeleton, Button, SmartFilter } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
@@ -108,6 +111,29 @@ export default function ContactsPage() {
       }).catch(() => {});
     });
   }, [profile?.role, profile?.id, profile?.team_id]);
+
+  // Names of agents in the viewer's team (manager / leader / director). Used
+  // by the table to clip chips on shared contacts so a manager doesn't see
+  // names from sibling teams. RLS already controls *which contacts* are
+  // visible — this just controls which chips render on the contacts they
+  // can see.
+  const [myTeamNames, setMyTeamNames] = useState(null);
+  useEffect(() => {
+    if (!profile?.role || !profile?.team_id) { setMyTeamNames(null); return; }
+    if (profile.role === 'admin' || profile.role === 'operations') {
+      setMyTeamNames(null); // no clipping — see everyone
+      return;
+    }
+    if (profile.role === 'sales_agent') {
+      // sales_agent already filtered to own chip — no team list needed.
+      setMyTeamNames(null);
+      return;
+    }
+    getTeamMemberNames(profile.role, profile.team_id)
+      .then(names => setMyTeamNames(names || []))
+      .catch(() => setMyTeamNames([]));
+  }, [profile?.role, profile?.team_id]);
+
   const { auditFields, applyAuditFilters } = useAuditFilter('contact');
   const {
     filtered, paged, safePage, totalPages,
@@ -258,7 +284,7 @@ export default function ContactsPage() {
           .catch(err => {
             reportError('ContactsPage', 'optimistic status update', err);
             toast.error(isRTL ? 'لم يتم حفظ تغيير الحالة — حاول تاني' : 'Status change not saved — please retry');
-            setContacts(prev => prev.map(c => c.id === updated.id ? contact : c));
+            setContacts(prev => rollbackContact(prev, contact));
           });
       }
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
@@ -389,6 +415,16 @@ export default function ContactsPage() {
   };
 
   const handleBulkReassign = async (agentName, bulkStatus, bulkTemp) => {
+    // Validate the target agent: must be a real user AND within the
+    // caller's team scope. Catches typos and cross-team escalation
+    // attempts before any DB write happens.
+    const v = await validateAgentNames([agentName]);
+    if (!v.ok) {
+      toast.error(isRTL
+        ? (v.outOfScope.length ? `لا يمكنك التعيين لهذا السيلز — خارج فريقك` : `سيلز غير موجود: ${v.unknown.join(', ')}`)
+        : (v.outOfScope.length ? `Cannot reassign to that agent — outside your team scope` : `Unknown agent: ${v.unknown.join(', ')}`));
+      return;
+    }
     const assignedByName = profile?.full_name_ar || '—';
     const allSelected = await getAllSelectedContacts();
     const allSelectedById = new Map(allSelected.map(c => [c.id, c]));
@@ -450,12 +486,27 @@ export default function ContactsPage() {
           });
         })
       );
-      const failed = results.filter(r => r.status === 'rejected').length;
-      if (failed > 0) toast.error(isRTL ? `فشل تحديث ${failed} عميل` : `Failed to update ${failed} contacts`);
+      const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
+      if (failedIdx.length > 0) {
+        // Surface the actual failures so the user can retry the right rows
+        // (and so the failure isn't silently absorbed into a count).
+        const failedNames = failedIdx.map(i => allSelectedById.get(idsToUpdate[i])?.full_name || idsToUpdate[i]).filter(Boolean);
+        const preview = failedNames.slice(0, 3).join(', ');
+        const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
+        toast.error(isRTL ? `فشل تحديث ${failedNames.length} عميل: ${preview}${more}` : `Failed to update ${failedNames.length} contacts: ${preview}${more}`);
+        failedIdx.forEach(i => reportError('ContactsPage', 'bulkReassign', results[i].reason));
+      }
     } catch (err) { toast.error(isRTL ? 'فشل إعادة التعيين' : 'Reassign failed'); console.error('bulk reassign:', err); }
   };
 
   const handleBulkAddAgent = async (agentName, agentStatus = 'new', agentTemp = 'hot') => {
+    const v = await validateAgentNames([agentName]);
+    if (!v.ok) {
+      toast.error(isRTL
+        ? (v.outOfScope.length ? `لا يمكنك إضافة هذا السيلز — خارج فريقك` : `سيلز غير موجود: ${v.unknown.join(', ')}`)
+        : (v.outOfScope.length ? `Cannot add that agent — outside your team scope` : `Unknown agent: ${v.unknown.join(', ')}`));
+      return;
+    }
     const idsToUpdate = [...selectedIds];
     // Split selected contacts into { toAdd } (new assignment) and { alreadyHad } (no-op)
     // so the toast, notifications, and audit log reflect the real effect.
@@ -518,10 +569,13 @@ export default function ContactsPage() {
       const newTemps = { ...(c?.agent_temperatures || {}), [agentName]: agentTemp };
       return updateContact(id, { assigned_to_names: [...names, agentName], agent_statuses: newStatuses, agent_temperatures: newTemps });
     }));
-    const failed = results.filter(r => r.status === 'rejected');
-    if (failed.length > 0) {
-      failed.forEach(r => reportError('ContactsPage', 'bulkAddAgent', r.reason));
-      toast.error(isRTL ? `فشل تحديث ${failed.length} عميل` : `Failed to update ${failed.length} leads`);
+    const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
+    if (failedIdx.length > 0) {
+      failedIdx.forEach(i => reportError('ContactsPage', 'bulkAddAgent', results[i].reason));
+      const failedNames = failedIdx.map(i => selectedById.get(toAddIds[i])?.full_name || toAddIds[i]).filter(Boolean);
+      const preview = failedNames.slice(0, 3).join(', ');
+      const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
+      toast.error(isRTL ? `فشل تحديث ${failedNames.length} عميل: ${preview}${more}` : `Failed to update ${failedNames.length} leads: ${preview}${more}`);
     }
   };
 
@@ -594,10 +648,13 @@ export default function ContactsPage() {
       const newScores = { ...(c?.agent_scores || {}) }; delete newScores[agentName];
       return updateContact(id, { assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps, agent_scores: newScores });
     }));
-    const failed = results.filter(r => r.status === 'rejected');
-    if (failed.length > 0) {
-      failed.forEach(r => reportError('ContactsPage', 'bulkRemoveAgent', r.reason));
-      toast.error(isRTL ? `فشل تحديث ${failed.length} عميل` : `Failed to update ${failed.length} leads`);
+    const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
+    if (failedIdx.length > 0) {
+      failedIdx.forEach(i => reportError('ContactsPage', 'bulkRemoveAgent', results[i].reason));
+      const failedNames = failedIdx.map(i => selectedById.get(toRemoveIds[i])?.full_name || toRemoveIds[i]).filter(Boolean);
+      const preview = failedNames.slice(0, 3).join(', ');
+      const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
+      toast.error(isRTL ? `فشل تحديث ${failedNames.length} عميل: ${preview}${more}` : `Failed to update ${failedNames.length} leads: ${preview}${more}`);
     }
   };
 
@@ -1056,20 +1113,13 @@ export default function ContactsPage() {
       const deptFilter = (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : null;
       const agentFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
 
-      // Base query builder — respects role-based filtering
-      let teamNames = null;
-      if ((profile?.role === 'team_leader' || profile?.role === 'sales_manager') && profile?.team_id) {
-        try {
-          const teamIds = [profile.team_id];
-          if (profile.role === 'sales_manager') {
-            const { data: children } = await supabase.from('departments').select('id').eq('parent_id', profile.team_id);
-            if (children) teamIds.push(...children.map(c => c.id));
-          }
-          const { data: members } = await supabase.from('users').select('full_name_en').in('team_id', teamIds);
-          teamNames = (members || []).map(m => m.full_name_en).filter(Boolean);
-        } catch (err) { if (import.meta.env.DEV) console.warn('stats team names:', err); }
-      }
-
+      // Base query builder. RLS already restricts which contacts each role
+      // can count (own + team via get_team_member_names). The previous
+      // implementation duplicated that with a client-side OR of
+      // assigned_to_names.cs.[...] conditions per team member, which 500'd
+      // PostgREST when the team had 6+ members. Now we rely on RLS for
+      // team scope and only add a single narrow filter for sales_agent
+      // (own assignments) and for the chosen agentFilter chip.
       const baseQ = () => {
         let q = supabase.from('contacts').select('id', { count: 'exact', head: true });
         if (deptFilter) q = q.eq('department', deptFilter);
@@ -1077,10 +1127,9 @@ export default function ContactsPage() {
         if (profile?.role === 'sales_agent') {
           const myName = profile?.full_name_en || profile?.full_name_ar;
           if (myName) q = q.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
-        } else if (teamNames && teamNames.length && !agentFilter) {
-          const orConds = teamNames.map(n => `assigned_to_names.cs.["${n}"]`).join(',');
-          q = q.or(orConds);
         }
+        // For team_leader / sales_manager / sales_director / admin /
+        // operations: rely on RLS — no client-side OR.
         return q;
       };
 
@@ -1529,6 +1578,7 @@ export default function ContactsPage() {
         isSalesAgent={profile?.role === 'sales_agent'}
         isAdmin={profile?.role === 'admin' || profile?.role === 'operations'}
         agentName={profile?.full_name_en || profile?.full_name_ar}
+        myTeamNames={myTeamNames}
         deptView={deptView}
       />
       </div>
@@ -1557,7 +1607,7 @@ export default function ContactsPage() {
           .catch(err => {
             reportError('ContactsPage', 'update campaign interactions', err);
             toast.error(isRTL ? 'لم يتم حفظ تفاعل الحملة — حاول تاني' : 'Campaign interaction not saved — please retry');
-            setContacts(prev => prev.map(c => c.id === contact.id ? contact : c));
+            setContacts(prev => rollbackContact(prev, contact));
           });
       }} />}
       {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={async (updated) => {
@@ -1571,7 +1621,18 @@ export default function ContactsPage() {
           } catch (err) {
             console.error('[onUpdate] updateContact failed:', err?.message || err);
             toast.error(isRTL ? 'فشل حفظ التعديلات: ' + (err?.message || '') : 'Save failed: ' + (err?.message || ''));
-            if (old) { setContacts(prev => prev.map(c => c.id === old.id ? old : c)); setSelected(old); }
+            if (old) {
+              setContacts(prev => rollbackContact(prev, old));
+              // Drawer's "selected" snapshot is independent of the realtime
+              // stream, so prefer the freshest contact from state if it's
+              // newer than `old`.
+              setSelected(prevSel => {
+                if (!prevSel || prevSel.id !== old.id) return prevSel;
+                const prevTime = new Date(prevSel.updated_at || 0).getTime();
+                const oldTime = new Date(old.updated_at || 0).getTime();
+                return prevTime > oldTime ? prevSel : old;
+              });
+            }
           }
         }
         const changedFields = old ? Object.keys(updated).filter(k => JSON.stringify(old[k]) !== JSON.stringify(updated[k]) && !['updated_at'].includes(k)) : [];
@@ -1584,7 +1645,7 @@ export default function ContactsPage() {
         updateContact(updated.id, updated).catch(err => {
           reportError('ContactsPage', 'LogCall optimistic update', err);
           toast.error(isRTL ? 'لم يتم حفظ التحديث — حاول تاني' : 'Update not saved — please retry');
-          if (previous) setContacts(prev => prev.map(c => c.id === updated.id ? previous : c));
+          if (previous) setContacts(prev => rollbackContact(prev, previous));
         });
       }} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
