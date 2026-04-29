@@ -1163,7 +1163,7 @@ export default function ContactsPage() {
       const allQueries = [
         baseQ(), // total
         baseQ().eq('is_blacklisted', true), // blacklisted
-        baseQ().or('assigned_to_name.is.null,assigned_to_name.eq.,assigned_to_names.eq.[]'), // unassigned (respects role filter)
+        baseQ().or('assigned_to.is.null,assigned_to_name.is.null,assigned_to_name.eq.'), // unassigned (UUID is.null is faster than jsonb.eq.[])
         ...statusKeys.map(s => baseQ().eq('contact_status', s)),
         ...tempKeys.map(t => baseQ().eq('temperature', t)),
         ...typeKeys.map(t => baseQ().eq('contact_type', t)),

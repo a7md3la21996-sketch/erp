@@ -247,7 +247,11 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
     if (filters.department) query = query.eq('department', filters.department);
-    if (filters.unassigned) query = query.or('assigned_to_name.is.null,assigned_to_name.eq.,assigned_to_names.eq.[]');
+    // Unassigned: prefer UUID is null (fast, indexed) — also keep text fallback
+    // for legacy rows that haven't been backfilled. Dropped the jsonb array
+    // check because it was the slowest path and triggered 500s combined with
+    // other filters.
+    if (filters.unassigned) query = query.or('assigned_to.is.null,assigned_to_name.is.null,assigned_to_name.eq.');
     if (filters.contactIds?.length) query = query.in('id', filters.contactIds.slice(0, 300));
     if (filters.excludeContactIds?.length && filters.excludeContactIds[0] !== 'none') {
       const excludeBatch = filters.excludeContactIds.slice(0, 500);

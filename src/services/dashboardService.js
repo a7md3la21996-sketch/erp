@@ -75,20 +75,18 @@ export async function fetchContactStats({ role, userId, teamId } = {}) {
     // sales_agent so the count reflects their own contacts. The previous
     // OR of assigned_to_names.cs.[...] for managers caused 500s on teams
     // with 6+ members.
-    const applyContactRoleFilter = async (q) => {
+    const applyContactRoleFilter = (q) => {
       if (role === 'sales_agent' && userId) {
-        if (!_userNameCache.id || _userNameCache.id !== userId) {
-          const { data: u } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
-          _userNameCache = { id: userId, name: u?.full_name_en || null };
-        }
-        if (_userNameCache.name) return q.filter('assigned_to_names', 'cs', JSON.stringify([_userNameCache.name]));
+        // After Phase 1 (single-assignment): filter by UUID — much faster
+        // than jsonb @> and avoids the 500s seen with cs.[name] on heavy users.
+        return q.eq('assigned_to', userId);
       }
       // Managers/leaders/director/admin/operations: rely on RLS.
       return q;
     };
 
     let q1 = supabase.from('contacts').select('*', { count: 'exact', head: true });
-    q1 = await applyContactRoleFilter(q1);
+    q1 = applyContactRoleFilter(q1);
     const { count: totalLeads, error: e1 } = await q1;
     if (e1) throw e1;
 
@@ -96,7 +94,7 @@ export async function fetchContactStats({ role, userId, teamId } = {}) {
     monthStart.setDate(1);
     monthStart.setHours(0, 0, 0, 0);
     let q2 = supabase.from('contacts').select('*', { count: 'exact', head: true }).gte('created_at', monthStart.toISOString());
-    q2 = await applyContactRoleFilter(q2);
+    q2 = applyContactRoleFilter(q2);
     const { count: newLeadsThisMonth, error: e2 } = await q2;
     if (e2) throw e2;
 

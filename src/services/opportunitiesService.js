@@ -297,12 +297,10 @@ export async function searchContacts(query, { role, userId } = {}) {
       .from('contacts')
       .select('id, full_name, phone, email, company, contact_type, department, assigned_to_names')
       .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%,email.ilike.%${query}%`);
-    // Sales agent: only see their assigned contacts
+    // Sales agent: only see their assigned contacts.
+    // After Phase 1: filter by UUID — faster and avoids jsonb @> overhead.
     if (role === 'sales_agent' && userId) {
-      const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
-      if (agentUser?.full_name_en) {
-        q = q.filter('assigned_to_names', 'cs', JSON.stringify([agentUser.full_name_en]));
-      }
+      q = q.eq('assigned_to', userId);
     }
     const { data, error } = await q.limit(10);
     if (error) throw error;
