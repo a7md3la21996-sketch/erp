@@ -316,10 +316,17 @@ export default function ContactsTable({
             </tr>
           </thead>
           <tbody>
-            {loading ? (
-              <tr><td colSpan={7} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
-            ) : filtered.length === 0 ? (
-              <tr><td colSpan={7} className="p-0 border-none">
+            {(() => {
+              // colSpan was hardcoded to 7 — broke alignment when deptView used
+              // more or fewer columns. Compute from actual visible columns + 1
+              // for the leading checkbox column.
+              const visibleColSpan = cols.filter(c =>
+                c !== 'assigned_to' || !isSalesAgent
+              ).length + 1;
+              return loading ? (
+                <tr><td colSpan={visibleColSpan} className="text-center p-10 text-[#6B8DB5] dark:text-[#6B8DB5]">{isRTL ? 'جاري التحميل...' : 'Loading...'}</td></tr>
+              ) : filtered.length === 0 ? (
+                <tr><td colSpan={visibleColSpan} className="p-0 border-none">
                 <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[rgba(27,51,71,0.08)] to-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
                     <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
@@ -557,8 +564,8 @@ export default function ContactsTable({
                   {c.campaign_name && <div className="text-[10px] text-brand-500/70 dark:text-brand-400/70 mt-0.5 truncate max-w-[160px]" title={c.campaign_name}>{c.campaign_name}</div>}
                   {c.created_at && <div className="text-[10px] text-content-muted/60 dark:text-content-muted-dark/60 mt-0.5">{new Date(c.created_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(c.created_at).toLocaleTimeString(isRTL ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}</div>}
                   {c.notes && (
-                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[150px] block mt-0.5">
-                      {c.notes.slice(0, 40)}{c.notes.length > 40 ? '...' : ''}
+                    <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[150px] block mt-0.5" title={c.notes}>
+                      {c.notes}
                     </span>
                   )}
                 </td>}
@@ -636,7 +643,8 @@ export default function ContactsTable({
                   </div>
                 </td>}
               </tr>
-            ); })}
+            ); });
+            })()}
           </tbody>
         </table>
       </div>

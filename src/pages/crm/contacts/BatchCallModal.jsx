@@ -10,6 +10,7 @@ import {
 } from './constants';
 import { reportError } from '../../../utils/errorReporter';
 import { Button } from '../../../components/ui';
+import { useToast } from '../../../contexts/ToastContext';
 
 export default function BatchCallModal({
   batchCallMode,
@@ -35,6 +36,7 @@ export default function BatchCallModal({
 }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
+  const toast = useToast();
 
   if (!batchCallMode) return null;
 
@@ -222,6 +224,26 @@ export default function BatchCallModal({
             </button>
             <Button size="sm" className="flex-[2] justify-center" onClick={async () => {
               if (batchCallResult) {
+                // Idempotency guard: if this contact already has a log entry,
+                // user is re-saving via Previous → Save. Refuse to create a
+                // duplicate activity row — the original audit flagged this.
+                const alreadyLogged = (batchCallLog || []).some(e => e.id === current.id);
+                if (alreadyLogged) {
+                  toast.warning(isRTL
+                    ? `هذه المكالمة مسجلة بالفعل لـ ${current.full_name}. تم تخطيها لتجنب التكرار.`
+                    : `Call already logged for ${current.full_name}. Skipping to avoid duplicate.`);
+                  // Still advance to next contact
+                  setBatchTaskOpen(false);
+                  setBatchTaskForm({ title: '', due: '', priority: 'medium' });
+                  if (batchCallIndex < batchContacts.length - 1) {
+                    setBatchCallIndex(i => i + 1);
+                  } else {
+                    setBatchCallIndex(batchContacts.length);
+                  }
+                  setBatchCallNotes('');
+                  setBatchCallResult('');
+                  return;
+                }
                 const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
                 const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
                 try { await createActivity(activity); } catch (err) { if (import.meta.env.DEV) console.warn('batch call create activity:', err); }

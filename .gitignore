@@ -8,5 +8,7 @@ scripts/8x-data/*.json
 scripts/8x-data/*.csv
 scripts/import-*.mjs
 scripts/clean-*.mjs
+# Migration backups — large JSON dumps with sensitive customer data
+scripts/backups/
 .vercel
 supabase/.temp/

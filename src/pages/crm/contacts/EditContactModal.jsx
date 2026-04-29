@@ -135,9 +135,30 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
         if (p && validatePhone(getFullPhone(p, extraCodes[idx]))) acc.push(getFullPhone(p, extraCodes[idx]));
         return acc;
       }, []);
-      await onSave({ ...contact, ...formData,
+      // Build payload from form fields ONLY — do NOT spread `...contact`.
+      // Spreading the original would expose assigned_to_names / agent_statuses
+      // to client-side mutation (devtools edit before save).
+      // The id is required for the update; everything else comes from form.
+      await onSave({
+        id: contact.id,
+        prefix: formData.prefix,
+        full_name: formData.full_name,
         phone: fullPhone,
         phone2: getFullPhone(form.phone2, countryCode2),
+        email: formData.email,
+        contact_type: formData.contact_type,
+        source: formData.source,
+        campaign_name: formData.campaign_name,
+        preferred_location: formData.preferred_location,
+        interested_in_type: formData.interested_in_type,
+        notes: formData.notes,
+        department: formData.department,
+        gender: formData.gender,
+        nationality: formData.nationality,
+        birth_date: formData.birth_date,
+        company: formData.company,
+        job_title: formData.job_title,
+        platform: formData.platform,
         extra_phones: validExtras.length > 0 ? validExtras : null,
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,

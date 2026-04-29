@@ -60,6 +60,7 @@ const DashboardPage = lazyRetry(() => import('./pages/dashboard/DashboardPage'))
 const ContactsPage = lazyRetry(() => import('./pages/ContactsPage'));
 const OpportunitiesPage = lazyRetry(() => import('./pages/crm/OpportunitiesPage'));
 const LeadPoolPage = lazyRetry(() => import('./pages/crm/LeadPoolPage'));
+const MasterProfilePage = lazyRetry(() => import('./pages/crm/MasterProfilePage'));
 const ActivitiesPage = lazyRetry(() => import('./pages/ActivitiesPage'));
 const TasksPage = lazyRetry(() => import('./pages/TasksPage'));
 const PerformancePage = lazyRetry(() => import('./pages/PerformancePage'));
@@ -238,6 +239,7 @@ export default function App() {
                 <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
                 <Route path="/crm/opportunities" element={<Guarded><OpportunitiesPage /></Guarded>} />
                 <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
+                <Route path="/contacts/master/:phone" element={<ProtectedRoute permission={P.CONTACTS_VIEW_ALL}><Guarded><MasterProfilePage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/performance" element={<Guarded><PerformancePage /></Guarded>} />
                 <Route path="/hr/goals" element={<Guarded><GoalsPage /></Guarded>} />
                 <Route path="/performance" element={<Navigate to="/hr/performance" replace />} />

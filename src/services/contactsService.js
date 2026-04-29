@@ -635,6 +635,191 @@ export async function checkDuplicate(phone) {
   return null;
 }
 
+/**
+ * Distribute an existing lead to additional agents by creating clones.
+ * Each clone inherits personal data (name, phone, source, campaign) but
+ * starts with fresh operational state (status=new, temp=cold, score=0).
+ * Used by the admin "Distribute Lead" tool — Phase 5 of UUID migration.
+ */
+export async function distributeLeadToAgents(originContactId, targetUserIds) {
+  requireAnyPerm([P.CONTACTS_BULK, P.CONTACTS_EDIT], 'Not allowed to distribute leads');
+  if (!originContactId || !Array.isArray(targetUserIds) || targetUserIds.length === 0) {
+    throw new Error('originContactId and targetUserIds are required');
+  }
+
+  // Fetch origin
+  const { data: origin, error: originErr } = await rq(() =>
+    supabase.from('contacts').select('*').eq('id', originContactId).single(), 'distributeLead.fetchOrigin');
+  if (originErr || !origin) throw new Error('Origin contact not found');
+
+  // Fetch target users
+  const { data: users, error: usersErr } = await rq(() =>
+    supabase.from('users').select('id, full_name_en, full_name_ar').in('id', targetUserIds), 'distributeLead.fetchUsers');
+  if (usersErr) throw usersErr;
+  const usersById = Object.fromEntries((users || []).map(u => [u.id, u]));
+
+  const created = [];
+  const errors = [];
+
+  for (let i = 0; i < targetUserIds.length; i++) {
+    const userId = targetUserIds[i];
+    const user = usersById[userId];
+    if (!user) { errors.push({ userId, error: 'User not found' }); continue; }
+    const name = user.full_name_en || user.full_name_ar;
+
+    const clone = {
+      // Personal — inherited from origin
+      full_name: origin.full_name,
+      phone: origin.phone,
+      phone2: origin.phone2,
+      email: origin.email,
+      contact_type: origin.contact_type,
+      source: origin.source,
+      department: origin.department,
+      platform: origin.platform,
+      campaign_name: origin.campaign_name,
+      campaign_id: origin.campaign_id,
+      campaign_interactions: origin.campaign_interactions,
+      preferred_location: origin.preferred_location,
+      interested_in_type: origin.interested_in_type,
+      budget_min: origin.budget_min,
+      budget_max: origin.budget_max,
+      company: origin.company,
+      job_title: origin.job_title,
+      gender: origin.gender,
+      nationality: origin.nationality,
+      birth_date: origin.birth_date,
+      prefix: origin.prefix,
+      extra_phones: origin.extra_phones,
+      referred_by: origin.referred_by,
+      // Fresh operational state
+      contact_status: 'new',
+      temperature: 'cold',
+      lead_score: 0,
+      assigned_to_name: name,
+      assigned_to: userId,
+      assigned_to_names: [name],
+      agent_statuses: { [name]: 'new' },
+      agent_temperatures: { [name]: 'cold' },
+      agent_scores: { [name]: 0 },
+      assigned_at: new Date().toISOString(),
+      contact_number: origin.contact_number ? `${origin.contact_number}-D${i + 1}` : null,
+    };
+
+    try {
+      const { data, error } = await supabase.from('contacts').insert(clone).select('id, contact_number').single();
+      if (error) throw error;
+      created.push({ ...data, user_id: userId, name });
+      // Audit log
+      logAudit('contact', data.id, 'distribute', { from_origin: originContactId, to_user: userId, agent_name: name });
+    } catch (err) {
+      errors.push({ userId, name, error: err.message });
+    }
+  }
+
+  return { created, errors };
+}
+
+/**
+ * Disqualify other records sharing a phone after a deal is won.
+ * Used by the "Pull leads from other agents" cleanup after closing a deal.
+ */
+export async function pullLeadsAfterDealWon(wonContactId, winnerName) {
+  requireAnyPerm([P.CONTACTS_EDIT], 'Not allowed to pull leads');
+  const { data: won, error: wonErr } = await rq(() =>
+    supabase.from('contacts').select('phone').eq('id', wonContactId).single(), 'pullLeads.fetchWon');
+  if (wonErr || !won?.phone) throw new Error('Won contact not found');
+
+  const others = await fetchContactsByPhone(won.phone);
+  const toUpdate = others.filter(c =>
+    c.id !== wonContactId &&
+    !c.is_deleted &&
+    c.contact_status !== 'disqualified'
+  );
+
+  const reason = `Deal won by ${winnerName || 'another agent'}`;
+  const updates = await Promise.allSettled(toUpdate.map(c =>
+    supabase.from('contacts').update({
+      contact_status: 'disqualified',
+      disqualify_reason: 'won_by_other_agent',
+      disqualify_note: reason,
+      agent_statuses: { ...(c.agent_statuses || {}), [c.assigned_to_name]: 'disqualified' },
+    }).eq('id', c.id)
+  ));
+
+  const successes = updates.filter(r => r.status === 'fulfilled').length;
+  const failures = updates.length - successes;
+  return { total: toUpdate.length, successes, failures, contacts: toUpdate };
+}
+
+/**
+ * Master Profile: fetch all contact records sharing the same phone number.
+ * Used by /contacts/master/:phone to aggregate cross-agent view.
+ * Admin/operations only via permission gate at the route level.
+ */
+export async function fetchContactsByPhone(phone) {
+  requireAnyPerm([P.CONTACTS_VIEW_ALL], 'Not allowed to view master profile');
+  if (!phone) return [];
+  const normalized = normalizePhoneLocal(phone);
+  const digits = normalized.replace(/\D/g, '');
+  const last9 = digits.length >= 9 ? digits.slice(-9) : digits;
+  try {
+    const { data, error } = await rq(() => supabase
+      .from('contacts')
+      .select('*')
+      .or(`phone.eq.${normalized},phone.ilike.%${last9},phone2.eq.${normalized},phone2.ilike.%${last9}`)
+      .order('created_at', { ascending: false }), 'fetchContactsByPhone');
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    reportError('contactsService', 'fetchContactsByPhone', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch combined activity timeline for all records sharing a phone.
+ * Returns activities sorted chronologically (newest first).
+ */
+export async function fetchMasterProfileTimeline(contactIds) {
+  requireAnyPerm([P.CONTACTS_VIEW_ALL], 'Not allowed to view master profile');
+  if (!Array.isArray(contactIds) || contactIds.length === 0) return [];
+  try {
+    const { data, error } = await rq(() => supabase
+      .from('activities')
+      .select('*')
+      .in('contact_id', contactIds)
+      .order('created_at', { ascending: false })
+      .limit(500), 'fetchMasterProfileTimeline');
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    reportError('contactsService', 'fetchMasterProfileTimeline', err);
+    return [];
+  }
+}
+
+/**
+ * Fetch deals on records sharing a phone.
+ * Used by Master Profile to show "won by X" indicator.
+ */
+export async function fetchMasterProfileDeals(contactIds) {
+  requireAnyPerm([P.CONTACTS_VIEW_ALL], 'Not allowed to view master profile');
+  if (!Array.isArray(contactIds) || contactIds.length === 0) return [];
+  try {
+    const { data, error } = await rq(() => supabase
+      .from('deals')
+      .select('id, deal_number, contact_id, agent_en, agent_ar, deal_value, status, created_at')
+      .in('contact_id', contactIds)
+      .order('created_at', { ascending: false }), 'fetchMasterProfileDeals');
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    reportError('contactsService', 'fetchMasterProfileDeals', err);
+    return [];
+  }
+}
+
 export async function fetchContactActivities(contactId, { role, userId, teamId } = {}) {
   try {
     // When viewing a specific contact's activities, show ALL activities on that contact

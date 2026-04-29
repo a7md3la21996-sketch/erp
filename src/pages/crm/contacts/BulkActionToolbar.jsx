@@ -82,8 +82,8 @@ export default function BulkActionToolbar({
       {/* Divider */}
       <div style={{ width: 1, height: 24, background: 'rgba(148,163,184,0.2)' }} />
 
-      {/* Change Type */}
-      <div style={{ position: 'relative' }}>
+      {/* Change Type — admin/manager only */}
+      {perms.canBulkContacts && <div style={{ position: 'relative' }}>
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'type' ? null : 'type')}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: bulkDropdownOpen === 'type' ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
           <Tag size={12} /> {isRTL ? 'النوع' : 'Type'} <ChevronDown size={10} />
@@ -101,10 +101,10 @@ export default function BulkActionToolbar({
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
-      {/* Change Source */}
-      <div style={{ position: 'relative' }}>
+      {/* Change Source — admin/manager only */}
+      {perms.canBulkContacts && <div style={{ position: 'relative' }}>
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'source' ? null : 'source')}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: bulkDropdownOpen === 'source' ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
           <RefreshCw size={12} /> {isRTL ? 'المصدر' : 'Source'} <ChevronDown size={10} />
@@ -121,7 +121,7 @@ export default function BulkActionToolbar({
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Reassign — admin/manager only */}
       {perms.canBulkContacts && <button onClick={() => setBulkReassignModal(true)}
@@ -227,14 +227,14 @@ export default function BulkActionToolbar({
         )}
       </div>}
 
-      {/* Create Opportunities */}
-      <button onClick={() => { setBulkOppModal(true); setBulkOppForm({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' }); fetchProjects().then(p => setProjectsList(p)); }}
+      {/* Create Opportunities — bulk-opps perm */}
+      {perms.canBulkOpps && <button onClick={() => { setBulkOppModal(true); setBulkOppForm({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' }); fetchProjects().then(p => setProjectsList(p)); }}
         style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.08)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
         <Briefcase size={12} /> {isRTL ? 'إنشاء فرص' : 'Create Opps'}
-      </button>
+      </button>}
 
-      {/* Change Department */}
-      <div style={{ position: 'relative' }}>
+      {/* Change Department — admin/manager only */}
+      {perms.canBulkContacts && <div style={{ position: 'relative' }}>
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'dept' ? null : 'dept')}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: bulkDropdownOpen === 'dept' ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
           <Building2 size={12} /> {isRTL ? 'القسم' : 'Dept'} <ChevronDown size={10} />
@@ -251,10 +251,10 @@ export default function BulkActionToolbar({
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
-      {/* Change Status */}
-      <div style={{ position: 'relative' }}>
+      {/* Change Status — admin/manager only */}
+      {perms.canBulkContacts && <div style={{ position: 'relative' }}>
         <button onClick={() => setBulkDropdownOpen(bulkDropdownOpen === 'status' ? null : 'status')}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: bulkDropdownOpen === 'status' ? 'rgba(74,122,171,0.2)' : 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
           <CheckCircle2 size={12} /> {isRTL ? 'الحالة' : 'Status'} <ChevronDown size={10} />
@@ -274,28 +274,28 @@ export default function BulkActionToolbar({
             ))}
           </div>
         )}
-      </div>
+      </div>}
 
-      {/* Send SMS */}
-      <button onClick={() => { setBulkSMSModal(true); setBulkSMSState({ templateId: '', lang: isRTL ? 'ar' : 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); }}
+      {/* Send SMS — bulk perm */}
+      {perms.canBulkContacts && <button onClick={() => { setBulkSMSModal(true); setBulkSMSState({ templateId: '', lang: isRTL ? 'ar' : 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); }}
         style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.1)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
         <MessageSquare size={12} /> {isRTL ? 'رسالة SMS' : 'Send SMS'}
-      </button>
+      </button>}
 
-      {/* Export Selected */}
-      <button onClick={exportSelectedCSV}
+      {/* Export Selected — export perm */}
+      {perms.canExportContacts && <button onClick={exportSelectedCSV}
         style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
         <Download size={12} /> {isRTL ? 'تصدير' : 'Export'}
-      </button>
+      </button>}
 
-      {/* Batch Call */}
-      <button onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }}
+      {/* Batch Call — bulk perm */}
+      {perms.canBulkContacts && <button onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }}
         style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.08)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
         <PhoneCall size={12} /> {isRTL ? 'اتصال جماعي' : 'Batch Call'}
-      </button>
+      </button>}
 
-      {/* Merge (when selected count matches merge limit) */}
-      {selectedIds.length >= 2 && selectedIds.length <= MERGE_LIMIT && (
+      {/* Merge — delete perm (because merge deletes one of the records) */}
+      {perms.canDeleteContacts && selectedIds.length >= 2 && selectedIds.length <= MERGE_LIMIT && (
         <button onClick={() => { setMergePreview(selectedIds); }}
           style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(30,64,175,0.4)', background: 'rgba(30,64,175,0.1)', color: '#93c5fd', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
           <Merge size={12} /> {isRTL ? 'دمج' : 'Merge'}
@@ -305,11 +305,11 @@ export default function BulkActionToolbar({
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Delete Selected */}
-      <button onClick={handleDeleteSelected}
+      {/* Delete Selected — delete perm */}
+      {perms.canDeleteContacts && <button onClick={handleDeleteSelected}
         style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.4)', background: 'rgba(239,68,68,0.1)', color: '#EF4444', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
         <Trash2 size={12} /> {isRTL ? 'حذف' : 'Delete'}
-      </button>
+      </button>}
     </div>
   );
 }

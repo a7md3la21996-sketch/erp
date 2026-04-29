@@ -18,7 +18,10 @@ import { createOpportunity } from '../../../services/opportunitiesService';
 import { createNotification } from '../../../services/notificationsService';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_STATUSES } from '../../../services/tasksService';
+import { useFocusTrap } from '../../../utils/hooks';
 import EditContactModal from './EditContactModal';
+import DistributeLeadModal from './DistributeLeadModal';
+import PullOtherLeadsModal from './PullOtherLeadsModal';
 import TakeActionForm from './TakeActionForm';
 import ContactSMSModal from './ContactSMSModal';
 import ResaleUnitsTab from './ResaleUnitsTab';
@@ -75,7 +78,13 @@ const DEPT_TABS = {
 
 // ── Contact Drawer ─────────────────────────────────────────────────────────
 export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, initialAction = false, onPrev, onNext, onPin, isPinned, onLogCall, onReminder, onDelete }) {
+  // Drawer ref for focus trap + restore — was missing accessibility scaffolding.
+  // Tabbing now stays inside the drawer; focus returns to the opener on close.
+  const drawerRef = useRef(null);
+  useFocusTrap(drawerRef);
   const [showEdit, setShowEdit] = useState(false);
+  const [showDistribute, setShowDistribute] = useState(false);
+  const [showPullLeads, setShowPullLeads] = useState(false);
   const [showDrawerMenu, setShowDrawerMenu] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
@@ -91,13 +100,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   }, []);
   const [recentWAMessages, setRecentWAMessages] = useState([]);
   useEffect(() => {
+    // Clear synchronously on contact change so the previous contact's
+    // messages don't flash for the brief window before the new fetch resolves.
+    setRecentWAMessages([]);
+    if (!contact?.id) return;
+    const cid = contact.id;
     const load = async () => {
       try {
-        const msgs = await getMessagesByContact(contact?.id);
+        const msgs = await getMessagesByContact(cid);
+        // Guard against late response after contact already changed
+        if (cid !== contact.id) return;
         setRecentWAMessages(Array.isArray(msgs) ? msgs.slice(0, 5) : []);
-      } catch (err) { if (import.meta.env.DEV) console.warn('fetch WA messages:', err); setRecentWAMessages([]); }
+      } catch (err) { if (import.meta.env.DEV) console.warn('fetch WA messages:', err); }
     };
-    if (contact?.id) load();
+    load();
   }, [contact?.id]);
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -131,6 +147,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // fetch for users who can't read it. Otherwise we waste a query that
   // returns empty and renders an empty audit timeline section.
   const canViewAudit = hasPermission ? hasPermission('audit.view') : false;
+  // Permission gates for destructive/sensitive actions in the More menu.
+  // Service layer also enforces these — gating in UI prevents disabled-button
+  // confusion and matches what the user can actually do.
+  const canEditContact = hasPermission ? (hasPermission('contacts.edit') || hasPermission('contacts.edit_own')) : false;
+  const canDeleteContact = hasPermission ? hasPermission('contacts.delete') : false;
 
   // Names of the viewer's team members (manager / leader / director). Used
   // to clip per-agent displays so a manager doesn't see sibling-team chips,
@@ -507,6 +528,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     return Array.from(map.values());
   }, [activities, isRTL]);
   const agentCount = uniqueAgents.length;
+
+  // Detect ghost workers — users who logged activities on this contact but
+  // are NOT in assigned_to_names. Surfaces the drift admin needs to see
+  // (this is the C-21807 pattern that triggered the whole UUID migration).
+  // Only shown to admin/operations.
+  const ghostWorkers = useMemo(() => {
+    if (!isAdmin) return [];
+    const assigned = new Set((contact?.assigned_to_names || []));
+    return uniqueAgents.filter(a => a.name && !assigned.has(a.name));
+  }, [uniqueAgents, contact?.assigned_to_names, isAdmin]);
 
   const actCount = activities.length;
   const oppCount = opportunities.length;
@@ -1082,6 +1113,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   return (
     <>
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { await onUpdate(updated); }} userRole={profile?.role} campaigns={campaignsList} />}
+    {showDistribute && <DistributeLeadModal contact={contact} onClose={() => setShowDistribute(false)} onSuccess={() => { /* Created clones — list will refresh on next nav */ }} />}
+    {showPullLeads && <PullOtherLeadsModal contact={contact} onClose={() => setShowPullLeads(false)} onSuccess={() => { /* Pulled — agents will see disqualified records on refresh */ }} />}
 
     {/* Quick Campaign Edit Modal */}
     {editCampaign && (
@@ -1136,12 +1169,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         </div>
       </div>
     )}
-    <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
+    <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'} role="dialog" aria-modal="true" aria-labelledby="drawer-contact-name">
       {/* Backdrop */}
-      <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px]" />
+      <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px]" aria-hidden="true" />
 
       {/* Drawer Panel */}
-      <div className={`contact-drawer w-[480px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark`}>
+      <div ref={drawerRef} className={`contact-drawer w-[480px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark`}>
 
         {/* ═══ STICKY TOP BAR ═══ */}
         <div className="shrink-0 sticky top-0 z-10 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark">
@@ -1172,7 +1205,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </div>
 
             {/* Center: contact name */}
-            <span className="text-xs font-semibold text-content dark:text-content-dark truncate max-w-[200px] px-2">
+            <span id="drawer-contact-name" className="text-xs font-semibold text-content dark:text-content-dark truncate max-w-[200px] px-2">
               {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
             </span>
 
@@ -1349,9 +1382,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 {showDrawerMenu && (
                   <div className="absolute top-[58px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[100] shadow-[0_12px_40px_rgba(27,51,71,0.18)] overflow-hidden">
                     <div className="p-1">
-                      <button onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                        <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Lead'}
-                      </button>
+                      {canEditContact && (
+                        <button onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Lead'}
+                        </button>
+                      )}
                       <button onClick={handleToggleFav} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                         <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#F59E0B' : 'none'} /> {isFav ? (isRTL ? 'إزالة المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
                       </button>
@@ -1373,15 +1408,40 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       <button onClick={() => { setShowPrintPreview(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                         <FileDown size={13} className="text-brand-500" /> {isRTL ? 'طباعة' : 'Print'}
                       </button>
-                      {onDelete && (
-                        <button onClick={() => { onDelete(contact.id); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                      {isAdmin && contact.phone && (
+                        <button onClick={() => { window.open(`/contacts/master/${encodeURIComponent(contact.phone)}`, '_blank'); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Users size={13} className="text-purple-500" /> {isRTL ? 'البروفايل الموحد' : 'Master Profile'}
+                        </button>
+                      )}
+                      {isAdmin && (
+                        <button onClick={() => { setShowDistribute(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Send size={13} className="text-purple-500" /> {isRTL ? 'توزيع الليد' : 'Distribute Lead'}
+                        </button>
+                      )}
+                      {isAdmin && contact.phone && (
+                        <button onClick={() => { setShowPullLeads(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Award size={13} className="text-green-600" /> {isRTL ? 'سحب الليد من الباقي' : 'Pull from Others'}
+                        </button>
+                      )}
+                      {onDelete && canDeleteContact && (
+                        <button onClick={() => {
+                          if (window.confirm(isRTL ? `حذف الليد "${contact.full_name}"؟ لا يمكن التراجع عن العملية.` : `Delete lead "${contact.full_name}"? This action cannot be undone.`)) {
+                            onDelete(contact.id);
+                            setShowDrawerMenu(false);
+                          }
+                        }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
                           <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
                         </button>
                       )}
-                      {!contact.is_blacklisted && (
+                      {!contact.is_blacklisted && canEditContact && (
                         <>
                           <div className="h-px bg-edge dark:bg-edge-dark mx-1 my-0.5" />
-                          <button onClick={() => { onBlacklist(contact); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                          <button onClick={() => {
+                            if (window.confirm(isRTL ? `إضافة "${contact.full_name}" للبلاك ليست؟` : `Add "${contact.full_name}" to blacklist?`)) {
+                              onBlacklist(contact);
+                              setShowDrawerMenu(false);
+                            }
+                          }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
                             <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
                           </button>
                         </>
@@ -1519,6 +1579,32 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     ? `بتشوف الأنشطة من ${myAssignmentDate.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })} — الأنشطة السابقة مخفية`
                     : `Showing activities from ${myAssignmentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} — previous history hidden`}
                 </p>
+              </div>
+            )}
+
+            {/* Ghost Worker Drift Banner — admin-only.
+                Shows when activities were logged by users not in
+                assigned_to_names (the C-21807 pattern). After Phase 1
+                migration this should be rare, but the banner stays as
+                drift detection for any future regressions. */}
+            {ghostWorkers.length > 0 && (
+              <div className="mb-3 p-3 rounded-xl bg-rose-500/[0.05] border border-rose-500/20">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <History size={12} className="text-rose-500" />
+                  <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
+                    {isRTL
+                      ? `⚠️ ${ghostWorkers.length} شخص شغال على الليد لكن مش في assigned_to_names`
+                      : `⚠️ ${ghostWorkers.length} user(s) worked on this lead but aren't in assigned_to_names`}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {ghostWorkers.slice(0, 5).map(g => (
+                    <span key={g.id} className="text-[10px] bg-rose-500/[0.1] text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full">
+                      {g.name} <span className="opacity-60">({g.count} {isRTL ? 'نشاط' : 'acts'})</span>
+                    </span>
+                  ))}
+                  {ghostWorkers.length > 5 && <span className="text-[10px] text-rose-500">+{ghostWorkers.length - 5}</span>}
+                </div>
               </div>
             )}
 

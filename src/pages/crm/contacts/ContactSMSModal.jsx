@@ -4,22 +4,30 @@ import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../service
 import { Button } from '../../../components/ui/';
 import { logAction } from '../../../services/auditService';
 import { useFocusTrap } from '../../../utils/hooks';
+import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 
 // ── Contact SMS Modal ────────────────────────────────────────────────────
 export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
+  const { profile } = useAuth();
+  const toast = useToast();
   const templates = useMemo(() => getTemplates(), []);
   const [selectedId, setSelectedId] = useState(templates[0]?.id || '');
   const [lang, setLang] = useState(isRTL ? 'ar' : 'en');
+  const [sending, setSending] = useState(false);
 
   const contactData = useMemo(() => ({
     client_name: contact.full_name || '',
     client_phone: contact.phone || '',
     project_name: contact.project || SAMPLE_DATA.project_name,
-    agent_name: SAMPLE_DATA.agent_name,
+    // Use the logged-in user's actual name for the {agent_name} template var.
+    // SAMPLE_DATA.agent_name is a hardcoded test string — using it in real SMS
+    // would put a placeholder name in production messages.
+    agent_name: profile?.full_name_en || profile?.full_name_ar || SAMPLE_DATA.agent_name,
     company_name: contact.company || SAMPLE_DATA.company_name,
     date: new Date().toLocaleDateString('en-GB'),
     amount: SAMPLE_DATA.amount,
-  }), [contact]);
+  }), [contact, profile]);
 
   const selectedTemplate = (templates || []).find(t => t.id === selectedId);
   const body = selectedTemplate ? (lang === 'ar' ? (selectedTemplate.bodyAr || selectedTemplate.body) : selectedTemplate.body) : '';
@@ -34,11 +42,19 @@ export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
   const dialogRef = useRef(null);
   useFocusTrap(dialogRef);
 
-  const handleSend = () => {
-    if (!selectedTemplate || !contact.phone) return;
-    sendSMS(contact.phone, preview, selectedTemplate.id, selectedTemplate.name);
-    logAction({ action: 'create', entity: 'sms_send', entityId: contact.id, entityName: contact.full_name, description: `SMS sent to ${contact.full_name} (${contact.phone})` });
-    onSent();
+  const handleSend = async () => {
+    if (!selectedTemplate || !contact.phone || sending) return;
+    setSending(true);
+    try {
+      // Previously fired-and-forgot — any error vanished and onSent ran as if successful.
+      await sendSMS(contact.phone, preview, selectedTemplate.id, selectedTemplate.name);
+      logAction({ action: 'create', entity: 'sms_send', entityId: contact.id, entityName: contact.full_name, description: `SMS sent to ${contact.full_name} (${contact.phone})` });
+      toast.success(isRTL ? 'تم إرسال الرسالة' : 'SMS sent');
+      onSent();
+    } catch (err) {
+      toast.error(isRTL ? `فشل الإرسال: ${err.message || ''}` : `Send failed: ${err.message || ''}`);
+      setSending(false);
+    }
   };
 
   return (
@@ -119,9 +135,9 @@ export default function ContactSMSModal({ contact, isRTL, onClose, onSent }) {
         {/* Footer */}
         <div className="flex gap-2 justify-end px-5 py-3.5 border-t border-edge dark:border-edge-dark">
           <Button variant="secondary" size="sm" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-          <Button size="sm" onClick={handleSend} disabled={!selectedTemplate}>
+          <Button size="sm" onClick={handleSend} disabled={!selectedTemplate || sending}>
             <Send size={12} />
-            {isRTL ? 'إرسال' : 'Send'}
+            {sending ? (isRTL ? 'جاري...' : 'Sending...') : (isRTL ? 'إرسال' : 'Send')}
           </Button>
         </div>
       </div>

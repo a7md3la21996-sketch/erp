@@ -26,7 +26,7 @@ import { rollbackContact } from '../utils/safeRollback';
 import { validateAgentNames } from '../utils/agentValidation';
 import { getTeamMemberNames } from '../utils/teamHelper';
 import ImportModal from './crm/ImportModal';
-import { PageSkeleton, Button, SmartFilter } from '../components/ui';
+import { PageSkeleton, Button, SmartFilter, Modal, ModalFooter, Input } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useContactsFilters } from '../hooks/useContactsFilters';
 import useCrmPermissions from '../hooks/useCrmPermissions';
@@ -66,6 +66,8 @@ export default function ContactsPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const [savedFilters, setSavedFilters] = useState(() => JSON.parse(localStorage.getItem('platform_saved_filters_contacts') || '[]'));
+  const [saveFilterModalOpen, setSaveFilterModalOpen] = useState(false);
+  const [saveFilterName, setSaveFilterName] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [blacklistTarget, setBlacklistTarget] = useState(null);
@@ -691,8 +693,16 @@ export default function ContactsPage() {
     toast.success(isRTL ? `تم إرسال ${resultsList.length} رسالة` : `${resultsList.length} messages sent`);
   };
 
-  const exportSelectedCSV = () => {
-    const list = contacts.filter(c => selectedIds.includes(c.id));
+  const exportSelectedCSV = async () => {
+    if (!perms.canExportContacts) {
+      toast.error(isRTL ? 'ليس لديك صلاحية التصدير' : 'No export permission');
+      return;
+    }
+    // getAllSelectedContacts handles the "selectAllPages" case where selectedIds
+    // includes contacts not loaded into local `contacts` state. The previous
+    // `contacts.filter` would silently drop those off-page IDs, exporting only
+    // the current 25 rows even when 5000 were "selected".
+    const list = await getAllSelectedContacts();
     exportCSVList(list);
     logAction({ action: 'export', entity: 'contact', description: `Exported ${list.length} selected contacts`, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     toast.success(isRTL ? `تم تصدير ${list.length} عميل` : `${list.length} leads exported`);
@@ -901,6 +911,13 @@ export default function ContactsPage() {
       // counts for "is none of"-style filters.
       const SELECT_OPS = ['is', 'is_not', 'in', 'not_in'];
       const statusFilter = smartFilters.find(f => f.field === 'contact_status' && SELECT_OPS.includes(f.operator) && !(typeof f.value === 'string' && f.value?.startsWith('__')));
+      // my_status / my_temperature / my_score smart filters were previously
+      // client-only, which silently undercounted on server-paginated views.
+      // Translate them here to the existing per-agent server filters using
+      // the current user's name as the JSON key.
+      const myName = profile?.full_name_en || profile?.full_name_ar;
+      const myStatusFilter = smartFilters.find(f => f.field === 'my_status' && SELECT_OPS.includes(f.operator));
+      const myTempFilter = smartFilters.find(f => f.field === 'my_temperature' && SELECT_OPS.includes(f.operator));
       const agentSmartFilter = smartFilters.find(f => f.field === 'assigned_to_name' && SELECT_OPS.includes(f.operator));
       const sourceSmartFilter = smartFilters.find(f => f.field === 'source' && SELECT_OPS.includes(f.operator));
       const deptSmartFilter = smartFilters.find(f => f.field === 'department' && f.operator === 'is');
@@ -917,14 +934,16 @@ export default function ContactsPage() {
         filters: {
           search: search || undefined,
           contact_type: filterType !== 'all' ? filterType : undefined,
-          temperature: filterTemp !== 'all' ? filterTemp : undefined,
-          agentNameForTemp: filterTemp !== 'all' ? (
-            (globalFilter?.agentName && globalFilter.agentName !== 'all')
-              ? globalFilter.agentName
-              : (profile?.role !== 'admin' && profile?.role !== 'operations')
-                ? (profile?.full_name_en || profile?.full_name_ar)
-                : undefined
-          ) : undefined,
+          temperature: myTempFilter?.value || (filterTemp !== 'all' ? filterTemp : undefined),
+          agentNameForTemp: myTempFilter
+            ? myName  // my_temperature smart filter — always against current user's slot
+            : (filterTemp !== 'all' ? (
+              (globalFilter?.agentName && globalFilter.agentName !== 'all')
+                ? globalFilter.agentName
+                : (profile?.role !== 'admin' && profile?.role !== 'operations')
+                  ? myName
+                  : undefined
+            ) : undefined),
           showBlacklisted: showBlacklisted || undefined,
           unassigned: showUnassigned || undefined,
           department: deptSmartFilter?.value || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
@@ -942,19 +961,21 @@ export default function ContactsPage() {
           smartCampaign: campaignFilter?.value || undefined,
           contactIds: overdueContactIds || todayFollowupIds || undefined,
           excludeContactIds: noActivityExcludeIds || (showNoOpps ? noOppsIds : showSingleAgent ? singleAgentIds : undefined),
-          contact_status: statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
-          contact_status_op: statusFilter?.operator,
-          contact_status_not: (statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,
-          agentNameForStatus: (statusFilter?.value || filterStatus !== 'all') ? (
+          contact_status: myStatusFilter?.value || statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
+          contact_status_op: myStatusFilter?.operator || statusFilter?.operator,
+          contact_status_not: ((myStatusFilter?.operator === 'is_not' || myStatusFilter?.operator === 'not_in') || statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,
+          agentNameForStatus: myStatusFilter
+            ? myName  // my_status smart filter — always against current user's slot
+            : ((statusFilter?.value || filterStatus !== 'all') ? (
             // If Global Filter has a specific agent, use that agent's name
             (globalFilter?.agentName && globalFilter.agentName !== 'all')
               ? globalFilter.agentName
               // Non-admin users always use their own name for per-agent filtering
               : (profile?.role !== 'admin' && profile?.role !== 'operations')
-                ? (profile?.full_name_en || profile?.full_name_ar)
+                ? myName
                 // Admin without Global Filter: use global contact_status
                 : undefined
-          ) : undefined,
+          ) : undefined),
           // Pass team member names for managers/admin to search per-agent statuses
           teamMemberNames: (filterStatus !== 'all' || filterTemp !== 'all') && !globalFilter?.agentName
             ? allAgentNames || undefined
@@ -1208,6 +1229,8 @@ export default function ContactsPage() {
       if (filterStatus !== 'all') query = query.eq('contact_status', filterStatus);
       if (showBlacklisted) query = query.eq('is_blacklisted', true);
       else query = query.eq('is_blacklisted', false);
+      // Always exclude deleted from bulk selection — can't operate on deleted records
+      query = query.eq('is_deleted', false);
       if (showUnassigned) query = query.or('assigned_to_name.is.null,assigned_to_name.eq.');
       const deptFilter = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
       if (deptFilter) query = query.eq('department', deptFilter);
@@ -1456,14 +1479,7 @@ export default function ContactsPage() {
         <div className="flex gap-2 items-center flex-wrap mt-2 px-1">
           {smartFilters.length > 0 && (
             <button
-              onClick={() => {
-                const name = prompt(isRTL ? 'اسم الفلتر المحفوظ:' : 'Saved filter name:');
-                if (!name || !name.trim()) return;
-                const newFilter = { id: Date.now(), name: name.trim(), filters: smartFilters, filterType, showBlacklisted, sortBy };
-                const updated = [...savedFilters, newFilter];
-                setSavedFilters(updated);
-                localStorage.setItem('platform_saved_filters_contacts', JSON.stringify(updated));
-              }}
+              onClick={() => setSaveFilterModalOpen(true)}
               className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border border-brand-500/30 bg-brand-500/[0.06] text-brand-500 cursor-pointer hover:bg-brand-500/[0.12] transition-colors font-medium"
             >
               <Save size={11} />
@@ -1538,7 +1554,7 @@ export default function ContactsPage() {
       <ContactsTable
         loading={loading}
         filtered={filtered}
-        paged={filtered}
+        paged={paged}
         pinnedIds={pinnedIds}
         selectedIds={selectedIds}
         selectedIdSet={selectedIdSet}
@@ -1650,6 +1666,55 @@ export default function ContactsPage() {
       }} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
       {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
+      {/* Save Filter Modal — replaces the native prompt() that was used before. */}
+      {saveFilterModalOpen && (
+        <Modal
+          isOpen={true}
+          onClose={() => { setSaveFilterModalOpen(false); setSaveFilterName(''); }}
+          title={isRTL ? 'حفظ الفلتر' : 'Save Filter'}
+          size="sm"
+        >
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-content dark:text-content-dark block">
+              {isRTL ? 'اسم الفلتر' : 'Filter name'}
+            </label>
+            <Input
+              value={saveFilterName}
+              onChange={e => setSaveFilterName(e.target.value)}
+              placeholder={isRTL ? 'مثال: ليدز ساخنة هذا الأسبوع' : 'e.g. Hot leads this week'}
+              autoFocus
+              onKeyDown={e => {
+                if (e.key === 'Enter' && saveFilterName.trim()) {
+                  const newFilter = { id: Date.now(), name: saveFilterName.trim(), filters: smartFilters, filterType, showBlacklisted, sortBy };
+                  const updated = [...savedFilters, newFilter];
+                  setSavedFilters(updated);
+                  localStorage.setItem('platform_saved_filters_contacts', JSON.stringify(updated));
+                  setSaveFilterModalOpen(false);
+                  setSaveFilterName('');
+                }
+              }}
+            />
+          </div>
+          <ModalFooter>
+            <Button variant="secondary" onClick={() => { setSaveFilterModalOpen(false); setSaveFilterName(''); }}>
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button
+              disabled={!saveFilterName.trim()}
+              onClick={() => {
+                const newFilter = { id: Date.now(), name: saveFilterName.trim(), filters: smartFilters, filterType, showBlacklisted, sortBy };
+                const updated = [...savedFilters, newFilter];
+                setSavedFilters(updated);
+                localStorage.setItem('platform_saved_filters_contacts', JSON.stringify(updated));
+                setSaveFilterModalOpen(false);
+                setSaveFilterName('');
+              }}
+            >
+              {isRTL ? 'حفظ' : 'Save'}
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
       {showImportModal && <ImportModal onClose={() => setShowImportModal(false)} existingContacts={contacts} onImportDone={async (newContacts) => {
         // Import directly to Supabase using batch insert
         const { batchInsert } = await import('../utils/batchOperations');

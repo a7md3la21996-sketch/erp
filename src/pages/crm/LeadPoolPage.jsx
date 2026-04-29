@@ -10,6 +10,7 @@ import { P } from '../../config/roles';
 import { Button, Card, Badge, KpiCard, Modal, ModalFooter, Input, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { logAction } from '../../services/auditService';
+import { updateContact } from '../../services/contactsService';
 import supabase from '../../lib/supabase';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -53,10 +54,15 @@ async function fetchAgents() {
 // ── Pool Data (fetched from Supabase — unassigned contacts) ──────────────
 async function fetchPoolLeads() {
   try {
+    // Narrow SELECT — only fields the pool view actually displays. The previous
+    // `select('*')` pulled all jsonb maps (agent_statuses, agent_temperatures,
+    // agent_scores, campaign_interactions) on rows that have NO assignment,
+    // wasting bandwidth.
     const { data, error } = await supabase
       .from('contacts')
-      .select('*')
+      .select('id, full_name, phone, source, contact_type, lead_score, created_at, campaign_name')
       .or('assigned_to_names.is.null,assigned_to_names.eq.[]')
+      .eq('is_deleted', false)
       .order('created_at', { ascending: false })
       .range(0, 499);
     if (error) throw error;
@@ -68,7 +74,9 @@ async function fetchPoolLeads() {
       type: c.contact_type || 'fresh',
       score: c.lead_score || 0,
       created_at: c.created_at,
-      team: c.team_id || null,
+      // contacts table doesn't have a team_id column; team derivation would
+      // need a join with the assignee user. For unassigned pool leads, no team.
+      team: null,
       assigned_to: null,
       assigned_to_name: null,
       campaign_name: c.campaign_name || '',
@@ -164,7 +172,10 @@ export default function LeadPoolPage() {
   const [search, setSearch]           = useState('');
   const [page, setPage]               = useState(1);
   const [pageSize, setPageSize]       = useState(25);
-  const [poolScope, setPoolScope]     = useState('my_team'); // 'my_team' | 'all'
+  // 'my_team' filter was historically broken — contacts don't have a team_id
+  // column, so c.team_id was always undefined and the filter always matched 0 leads.
+  // Default to 'all' until we wire up team derivation from assignee or marketing source.
+  const [poolScope, setPoolScope]     = useState('all'); // 'my_team' | 'all'
   const [assignModal, setAssignModal] = useState(null); // lead or 'bulk'
   const [addModal, setAddModal]       = useState(false);
   const [newLead, setNewLead]         = useState({ name: '', phone: '', source: 'cold_call' });
@@ -239,7 +250,7 @@ export default function LeadPoolPage() {
     } : l));
   };
 
-  const handleAssign = (leadIds, agentId) => {
+  const handleAssign = async (leadIds, agentId) => {
     // Filter out reserved leads from bulk assignment
     const idsToAssign = (Array.isArray(leadIds) ? leadIds : [leadIds]).filter(id => {
       const lead = (leads || []).find(l => l.id === id);
@@ -247,24 +258,37 @@ export default function LeadPoolPage() {
     });
     if (idsToAssign.length === 0) return;
     const agent = agentsList.find(a => a.id === agentId);
-    const agentName = agent ? (lang === 'ar' ? agent.name_ar : agent.name_en) : agentId;
+    const agentNameEn = agent?.name_en || agent?.name_ar;
+    const agentNameDisplay = agent ? (lang === 'ar' ? agent.name_ar : agent.name_en) : agentId;
     const userName = profile?.full_name_ar || profile?.full_name_en || '';
     const isBulk = idsToAssign.length > 1;
 
+    // Persist to DB — was previously a UI-only mutation (phantom assignment)
+    const results = await Promise.allSettled(idsToAssign.map(id =>
+      updateContact(id, {
+        assigned_to_name: agentNameEn,
+        assigned_to: agentId,
+        assigned_at: new Date().toISOString(),
+        assigned_by_name: userName,
+      })
+    ));
+    const succeeded = results.filter(r => r.status === 'fulfilled').map((r, i) => idsToAssign[i]);
+
     if (isBulk) {
-      logAction({ action: 'bulk_reassign', entity: 'lead', entityId: idsToAssign.join(','), entityName: `${idsToAssign.length} leads`, description: `Bulk assigned ${idsToAssign.length} leads to ${agentName}`, userName });
-    } else {
-      const leadId = idsToAssign[0];
+      logAction({ action: 'bulk_reassign', entity: 'lead', entityId: succeeded.join(','), entityName: `${succeeded.length} leads`, description: `Bulk assigned ${succeeded.length} leads to ${agentNameDisplay}`, userName });
+    } else if (succeeded.length > 0) {
+      const leadId = succeeded[0];
       const lead = (leads || []).find(l => l.id === leadId);
-      logAction({ action: 'assign', entity: 'lead', entityId: leadId, entityName: lead?.name || '', description: `Assigned lead to ${agentName}`, userName });
+      logAction({ action: 'assign', entity: 'lead', entityId: leadId, entityName: lead?.name || '', description: `Assigned lead to ${agentNameDisplay}`, userName });
     }
 
-    setLeads(prev => prev.filter(l => !idsToAssign.includes(l.id)));
+    // Only remove successfully-persisted leads from the local view
+    setLeads(prev => prev.filter(l => !succeeded.includes(l.id)));
     setSelected([]);
     setAssignModal(null);
   };
 
-  const handleAutoDistribute = () => {
+  const handleAutoDistribute = async () => {
     if (!agentsList.length || !visible.length) return;
     const unassigned = visible.filter(l => !l.assigned_to && (!l.reserved_by || new Date(l.reserved_until) <= new Date()));
     if (!unassigned.length) return;
@@ -280,6 +304,7 @@ export default function LeadPoolPage() {
 
     const totalWeight = agentCaps.reduce((s, a) => s + a.weight, 0);
     const idsToRemove = [];
+    const assignmentMap = []; // {leadId, agentId, agentName}
     const userName = profile?.full_name_ar || profile?.full_name_en || '';
 
     // Sort leads by score desc (best leads first)
@@ -308,11 +333,23 @@ export default function LeadPoolPage() {
 
       chosen.assigned++;
       idsToRemove.push(lead.id);
+      assignmentMap.push({ leadId: lead.id, agentId: chosen.id, agentName: chosen.name_en || chosen.name_ar });
     });
 
     if (idsToRemove.length > 0) {
-      logAction({ action: 'auto_distribute', entity: 'lead', entityId: idsToRemove.join(','), entityName: `${idsToRemove.length} leads`, description: `Auto-distributed ${idsToRemove.length} leads to ${agentCaps.filter(a => a.assigned > 0).length} agents`, userName });
-      setLeads(prev => prev.filter(l => !idsToRemove.includes(l.id)));
+      // Persist each assignment to DB — was previously a UI-only mutation
+      const results = await Promise.allSettled(assignmentMap.map(a =>
+        updateContact(a.leadId, {
+          assigned_to_name: a.agentName,
+          assigned_to: a.agentId,
+          assigned_at: new Date().toISOString(),
+          assigned_by_name: userName,
+        })
+      ));
+      const succeeded = results.map((r, i) => r.status === 'fulfilled' ? assignmentMap[i].leadId : null).filter(Boolean);
+
+      logAction({ action: 'auto_distribute', entity: 'lead', entityId: succeeded.join(','), entityName: `${succeeded.length} leads`, description: `Auto-distributed ${succeeded.length} leads to ${agentCaps.filter(a => a.assigned > 0).length} agents`, userName });
+      setLeads(prev => prev.filter(l => !succeeded.includes(l.id)));
       setSelected([]);
     }
   };

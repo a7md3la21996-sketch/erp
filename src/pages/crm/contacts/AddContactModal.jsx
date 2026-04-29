@@ -152,7 +152,13 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
   const dialogRef = useRef(null);
   useFocusTrap(dialogRef);
   const dupTimer = useRef(null);
-  useEffect(() => () => clearTimeout(dupTimer.current), []);
+  // Per-row extra-phone debounce timers — was previously firing on every keystroke
+  // for each extra phone (no debounce) which stuttered UX and hammered the API.
+  const extraDupTimers = useRef([]);
+  useEffect(() => () => {
+    clearTimeout(dupTimer.current);
+    extraDupTimers.current.forEach(t => clearTimeout(t));
+  }, []);
   const [step, setStep] = useState(1);
   // Build DEPT_TYPES from system config — each type has a departments array
   const DEPT_TYPES = (() => {
@@ -284,13 +290,25 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         extra_phones: validExtras.length > 0 ? validExtras : null,
         _customFieldValues: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined,
       };
-      // If admin selected a specific agent, override the default assignment
+      // If admin selected a specific agent, override the default assignment.
+      // Validate that the typed/selected name is in the active agents list —
+      // a malicious admin could mutate the dropdown options in devtools.
       if (isAdmin && assignTo) {
+        if (!agentsList.includes(assignTo)) {
+          toast.error(isRTL ? 'الـ agent المختار غير موجود' : 'Selected agent does not exist');
+          setSaving(false);
+          savingRef.current = false;
+          return;
+        }
         saveData.assigned_to_name = assignTo;
         saveData.assigned_to_names = [assignTo];
         saveData.agent_statuses = { [assignTo]: 'new' };
         saveData.agent_temperatures = { [assignTo]: form.temperature || 'hot' };
       }
+      // Always remove client-supplied created_by — it must come from auth.uid()
+      // via the DB trigger, not from form data.
+      delete saveData.created_by;
+      delete saveData.created_by_name;
       await onSave(saveData);
       setSavedContact({ full_name: form.full_name, phone: fullPhone });
     } catch (err) {
@@ -466,7 +484,15 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                           const v = e.target.value.replace(/[^0-9+]/g, '');
                           const updated = [...extraPhones]; updated[i] = v; setExtraPhones(updated);
                           setExtraDups(d => { const nd = [...d]; nd[i] = null; return nd; });
-                          if (validatePhone(v)) { checkDup(v).then(dup => { setExtraDups(d => { const nd = [...d]; nd[i] = dup || null; return nd; }); }).catch(err => { if (import.meta.env.DEV) console.warn('extra phone dup check:', err); }); }
+                          // Debounced dup-check (350ms) — previously fired on every keystroke
+                          clearTimeout(extraDupTimers.current[i]);
+                          if (validatePhone(v)) {
+                            extraDupTimers.current[i] = setTimeout(() => {
+                              checkDup(v).then(dup => {
+                                setExtraDups(d => { const nd = [...d]; nd[i] = dup || null; return nd; });
+                              }).catch(err => { if (import.meta.env.DEV) console.warn('extra phone dup check:', err); });
+                            }, 350);
+                          }
                         }} />
                       <button type="button" onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraCountryCodes(prev => prev.filter((_, j) => j !== i)); setExtraDups(d => d.filter((_, j) => j !== i)); }}
                         className="px-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-lg leading-none">×</button>

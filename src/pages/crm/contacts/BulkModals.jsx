@@ -30,12 +30,32 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
   if (!merged.phone2 && c2.phone !== c1.phone) merged.phone2 = c2.phone;
   // Merge extra_phones from both contacts
   const allExtra = [...(c1.extra_phones || []), ...(c2.extra_phones || [])].filter(Boolean);
-  const allPhones = [merged.phone, merged.phone2, ...allExtra].filter(Boolean);
   merged.extra_phones = [...new Set(allExtra)].filter(p => p && p !== merged.phone && p !== merged.phone2);
-  // Merge agent-level data
+  // Merge notes — concatenate when both non-empty so we don't lose richer context.
+  // Audit caught this: previously c1 won outright, dropping c2's longer notes.
+  if (c1.notes && c2.notes && c1.notes !== c2.notes) {
+    merged.notes = `${c1.notes}\n---\n${c2.notes}`;
+  }
+  // Merge campaign_interactions — union of both arrays so marketing attribution survives.
+  if (Array.isArray(c1.campaign_interactions) || Array.isArray(c2.campaign_interactions)) {
+    const seen = new Set();
+    merged.campaign_interactions = [...(c1.campaign_interactions || []), ...(c2.campaign_interactions || [])]
+      .filter(i => {
+        const key = JSON.stringify(i);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+  }
+  // Merge agent-level data — for collisions take the stronger value
   merged.agent_statuses = { ...(c2.agent_statuses || {}), ...(c1.agent_statuses || {}) };
   merged.agent_temperatures = { ...(c2.agent_temperatures || {}), ...(c1.agent_temperatures || {}) };
-  merged.agent_scores = { ...(c2.agent_scores || {}), ...(c1.agent_scores || {}) };
+  // For agent_scores, take MAX per key (richer history wins)
+  const allAgentScoreKeys = new Set([...Object.keys(c1.agent_scores || {}), ...Object.keys(c2.agent_scores || {})]);
+  merged.agent_scores = {};
+  for (const k of allAgentScoreKeys) {
+    merged.agent_scores[k] = Math.max(c1.agent_scores?.[k] || 0, c2.agent_scores?.[k] || 0);
+  }
   // Merge assigned_to_names
   merged.assigned_to_names = [...new Set([...(c1.assigned_to_names || []), ...(c2.assigned_to_names || [])])].filter(Boolean);
   if ((c2.lead_score || 0) > (c1.lead_score || 0)) merged.lead_score = c2.lead_score;
@@ -75,13 +95,28 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
             {isRTL ? 'إلغاء' : 'Cancel'}
           </button>
           <Button size="sm" onClick={async () => {
-            const updatedContacts = (contacts || []).map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
-            setContacts(updatedContacts);
-            // Persist to Supabase: update merged contact + delete duplicate
+            // Persist FIRST, mutate UI on success only — was previously
+            // optimistic (update + delete in local state before awaits) which
+            // left c2 deleted in UI even when the DB update of c1 failed.
             try {
               await updateContact(c1.id, merged);
+            } catch (err) {
+              toast.error(isRTL ? `فشل تحديث الليد المدموج: ${err.message || ''}` : `Merge update failed: ${err.message || ''}`);
+              return;
+            }
+            try {
               await deleteContact(c2.id);
-            } catch (err) { console.error('Merge persist failed:', err); }
+            } catch (err) {
+              // c1 already updated. Warn that c2 still exists — admin can retry delete.
+              toast.warning(isRTL
+                ? `تم تحديث "${c1.full_name}" بنجاح، لكن فشل حذف "${c2.full_name}". احذفه يدوياً.`
+                : `"${c1.full_name}" updated, but failed to delete "${c2.full_name}". Delete it manually.`);
+              setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
+              return;
+            }
+            // Both succeeded — apply local state
+            const updatedContacts = (contacts || []).map(c => c.id === c1.id ? { ...c, ...merged, id: c1.id } : c).filter(c => c.id !== c2.id);
+            setContacts(updatedContacts);
             logAction({ action: 'merge', entity: 'contact', entityId: c1.id, entityName: c1.full_name, description: `Merged "${c2.full_name}" (ID:${c2.id}) into "${c1.full_name}" (ID:${c1.id})`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
             toast.success(isRTL ? 'تم دمج العميلين بنجاح' : 'Leads merged successfully');
             setMergePreview(null); setMergeTargets([]); setMergeMode(false); setSelectedIds([]);
@@ -203,7 +238,19 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
             // Admin/Ops: global DQ (sets contact_status for everyone).
             const buildDqUpdates = (contact) => {
               if (isAdminOrOps) {
-                return { contact_status: 'disqualified', disqualify_reason: dqReason, disqualify_note: dqNote || '' };
+                // Admin path: also set every per-agent slot to 'disqualified'
+                // so derived global status stays in sync. Previously the global
+                // contact_status would silently revert when any per-agent
+                // status was higher in deriveGlobalStatus priority.
+                const allNames = (contact.assigned_to_names || []).filter(Boolean);
+                const newStatuses = { ...(contact.agent_statuses || {}) };
+                for (const n of allNames) newStatuses[n] = 'disqualified';
+                return {
+                  contact_status: 'disqualified',
+                  disqualify_reason: dqReason,
+                  disqualify_note: dqNote || '',
+                  agent_statuses: newStatuses,
+                };
               }
               const newNames = (contact.assigned_to_names || []).filter(n => n !== myName);
               const newStatuses = { ...(contact.agent_statuses || {}) };     delete newStatuses[myName];
@@ -434,24 +481,33 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
     if (!bulkOppForm.assigned_to_name) { toast.error(isRTL ? 'اختر السيلز المسؤول' : 'Select sales agent'); return; }
     savingRef.current = true;
     setBulkOppSaving(true);
+    // Concurrency-limited parallel creates — was previously sequential, which made
+    // 100-lead bulk-opp creation take 30+ seconds. Cap at 8 to be polite to RLS.
+    const CONCURRENCY = 8;
     let created = 0;
-    for (const c of selContacts) {
-      try {
-        await createOpportunity({
-          contact_id: c.id,
-          assigned_to_name: bulkOppForm.assigned_to_name,
-          stage: bulkOppForm.stage,
-          priority: bulkOppForm.priority,
-          notes: bulkOppForm.notes,
-          project_id: bulkOppForm.project_id || null,
-          title: c.full_name,
-          source: c.source || 'manual',
-          created_by: profile?.id || null,
-          created_by_name: profile?.full_name_ar || profile?.full_name_en || null,
-        });
-        created++;
-      } catch (err) { reportError('BulkModals', 'bulkCreateOpportunity', err); }
-    }
+    const queue = [...selContacts];
+    const runWorker = async () => {
+      while (queue.length) {
+        const c = queue.shift();
+        if (!c) return;
+        try {
+          await createOpportunity({
+            contact_id: c.id,
+            assigned_to_name: bulkOppForm.assigned_to_name,
+            stage: bulkOppForm.stage,
+            priority: bulkOppForm.priority,
+            notes: bulkOppForm.notes,
+            project_id: bulkOppForm.project_id || null,
+            title: c.full_name,
+            source: c.source || 'manual',
+            created_by: profile?.id || null,
+            created_by_name: profile?.full_name_ar || profile?.full_name_en || null,
+          });
+          created++;
+        } catch (err) { reportError('BulkModals', 'bulkCreateOpportunity', err); }
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, selContacts.length) }, () => runWorker()));
     logAction({ action: 'bulk_create_opportunities', entity: 'opportunity', description: `Created ${created} opportunities for ${selContacts.map(c => c.full_name).join(', ')} → ${bulkOppForm.assigned_to_name}`, userName: profile?.full_name_ar || profile?.full_name_en || '' });
     const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
     if (bulkOppForm.assigned_to_name !== selfName) {

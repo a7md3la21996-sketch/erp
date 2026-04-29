@@ -91,7 +91,18 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
       user_name_en: profile?.full_name_en || '',
       created_at: new Date().toISOString(),
     };
-    try { await createActivity(activity); } catch (err) { console.error('Activity save error:', err?.message); }
+    let activitySaveError = null;
+    try { await createActivity(activity); } catch (err) {
+      activitySaveError = err;
+      console.error('Activity save error:', err?.message);
+    }
+    if (activitySaveError) {
+      toast.error(isRTL
+        ? `فشل حفظ المكالمة: ${activitySaveError.message || 'خطأ غير معروف'}`
+        : `Failed to save call: ${activitySaveError.message || 'Unknown error'}`);
+      setSaving(false);
+      return;
+    }
 
     // Auto-update contact_status based on call result (per-agent)
     if (onUpdate) {
@@ -132,7 +143,15 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
         assigned_to_name_ar: profile?.full_name_ar || '',
         assigned_to_name_en: profile?.full_name_en || '',
       };
-      try { await createTask(task); } catch { /* saved optimistically */ }
+      try {
+        await createTask(task);
+      } catch (err) {
+        // Don't lie about "saved optimistically" — surface the failure so the
+        // user knows the follow-up wasn't actually scheduled.
+        toast.warning(isRTL
+          ? `تم حفظ المكالمة، لكن فشل إنشاء مهمة المتابعة: ${err.message || ''}`
+          : `Call saved, but follow-up task failed: ${err.message || ''}`);
+      }
     }
 
     toast.success(isRTL
