@@ -22,6 +22,7 @@ import { useFocusTrap } from '../../../utils/hooks';
 import EditContactModal from './EditContactModal';
 import DistributeLeadModal from './DistributeLeadModal';
 import PullOtherLeadsModal from './PullOtherLeadsModal';
+import HandOffLeadModal from './HandOffLeadModal';
 import TakeActionForm from './TakeActionForm';
 import ContactSMSModal from './ContactSMSModal';
 import ResaleUnitsTab from './ResaleUnitsTab';
@@ -85,6 +86,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showEdit, setShowEdit] = useState(false);
   const [showDistribute, setShowDistribute] = useState(false);
   const [showPullLeads, setShowPullLeads] = useState(false);
+  const [showHandOff, setShowHandOff] = useState(false);
   const [showDrawerMenu, setShowDrawerMenu] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
@@ -1115,6 +1117,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     {showEdit && <EditContactModal contact={contact} onClose={() => setShowEdit(false)} onSave={async (updated) => { await onUpdate(updated); }} userRole={profile?.role} campaigns={campaignsList} />}
     {showDistribute && <DistributeLeadModal contact={contact} onClose={() => setShowDistribute(false)} onSuccess={() => { /* Created clones — list will refresh on next nav */ }} />}
     {showPullLeads && <PullOtherLeadsModal contact={contact} onClose={() => setShowPullLeads(false)} onSuccess={() => { /* Pulled — agents will see disqualified records on refresh */ }} />}
+    {showHandOff && <HandOffLeadModal contact={contact} onClose={() => setShowHandOff(false)} onSuccess={() => { onClose?.(); /* lead now belongs to someone else; close the drawer */ }} />}
 
     {/* Quick Campaign Edit Modal */}
     {editCampaign && (
@@ -1413,9 +1416,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           <Users size={13} className="text-purple-500" /> {isRTL ? 'البروفايل الموحد' : 'Master Profile'}
                         </button>
                       )}
-                      {isAdmin && (
+                      {/* Hand Off — for managers/operations who received a lead and want to route it
+                          to a sales agent without keeping a copy. Different from Distribute (which clones).
+                          Visible to anyone with edit permission since service double-checks. */}
+                      {(isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader') && (
+                        <button onClick={() => { setShowHandOff(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Send size={13} className="text-blue-500" /> {isRTL ? 'تسليم الليد' : 'Hand Off Lead'}
+                        </button>
+                      )}
+                      {/* Distribute (compete) — clones the lead for multiple agents.
+                          Available to admin/operations + manager + team_leader since
+                          they all participate in lead distribution workflows. */}
+                      {(isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader') && (
                         <button onClick={() => { setShowDistribute(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Send size={13} className="text-purple-500" /> {isRTL ? 'توزيع الليد' : 'Distribute Lead'}
+                          <Send size={13} className="text-purple-500" /> {isRTL ? 'توزيع للمنافسة' : 'Distribute (compete)'}
                         </button>
                       )}
                       {isAdmin && contact.phone && (

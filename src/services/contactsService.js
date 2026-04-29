@@ -636,6 +636,59 @@ export async function checkDuplicate(phone) {
 }
 
 /**
+ * Hand off a single lead to another agent. Unlike distributeLeadToAgents
+ * (which clones), this transfers ownership of the SAME record. The previous
+ * owner loses it from their pipeline. Use this when a manager/operations
+ * user receives a lead they don't intend to work and needs to route to a
+ * sales agent.
+ */
+export async function handOffLead(contactId, toUserId, options = {}) {
+  requireAnyPerm([P.CONTACTS_BULK, P.CONTACTS_EDIT], 'Not allowed to hand off leads');
+  if (!contactId || !toUserId) throw new Error('contactId and toUserId required');
+
+  // Resolve target user
+  const { data: user, error: userErr } = await rq(() =>
+    supabase.from('users').select('id, full_name_en, full_name_ar, status').eq('id', toUserId).single(), 'handOffLead.fetchUser');
+  if (userErr || !user) throw new Error('Target user not found');
+  if (user.status !== 'active') throw new Error('Target user is not active');
+
+  const targetName = user.full_name_en || user.full_name_ar;
+  if (!targetName) throw new Error('Target user has no name');
+
+  // Fetch current contact to capture before-state for audit
+  const { data: before, error: cErr } = await rq(() =>
+    supabase.from('contacts').select('id, assigned_to, assigned_to_name').eq('id', contactId).single(), 'handOffLead.fetchContact');
+  if (cErr || !before) throw new Error('Contact not found');
+
+  // Single-assignment now after Phase 1 — the operational maps should hold
+  // exactly one entry. Reset them for the new owner with fresh state, but
+  // preserve the existing contact_status/temperature/lead_score (the work
+  // history doesn't reset on hand-off — that would lose context).
+  const updates = {
+    assigned_to: toUserId,
+    assigned_to_name: targetName,
+    assigned_to_names: [targetName],
+    assigned_at: new Date().toISOString(),
+    assigned_by_name: options.assignedByName || null,
+  };
+
+  const { data, error } = await rq(() =>
+    supabase.from('contacts').update(updates).eq('id', contactId).select('*').single(), 'handOffLead.update');
+  if (error) throw error;
+
+  // Audit log entry — captures the hand-off explicitly
+  logAudit('contact', contactId, 'hand_off', {
+    from_user_id: before.assigned_to,
+    from_user_name: before.assigned_to_name,
+    to_user_id: toUserId,
+    to_user_name: targetName,
+    by: options.assignedByName,
+  });
+
+  return data;
+}
+
+/**
  * Distribute an existing lead to additional agents by creating clones.
  * Each clone inherits personal data (name, phone, source, campaign) but
  * starts with fresh operational state (status=new, temp=cold, score=0).
