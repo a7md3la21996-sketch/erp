@@ -1132,54 +1132,36 @@ export default function ContactsPage() {
   const loadStats = useCallback(async () => {
     try {
       const deptFilter = (globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : null;
-      const agentFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
+      // Resolve agent filter to UUID (RPC takes uuid, not name)
+      const agentNameFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
+      let agentIdFilter = null;
+      if (agentNameFilter) {
+        const { data: u } = await supabase.from('users').select('id').or(`full_name_en.eq.${agentNameFilter},full_name_ar.eq.${agentNameFilter}`).maybeSingle();
+        agentIdFilter = u?.id || null;
+      }
+      // For sales_agent, lock the filter to themselves regardless of global filter
+      if (profile?.role === 'sales_agent' && profile.id) agentIdFilter = profile.id;
 
-      // Base query builder. RLS already restricts which contacts each role
-      // can count (own + team via get_team_member_names). The previous
-      // implementation duplicated that with a client-side OR of
-      // assigned_to_names.cs.[...] conditions per team member, which 500'd
-      // PostgREST when the team had 6+ members. Now we rely on RLS for
-      // team scope and only add a single narrow filter for sales_agent
-      // (own assignments) and for the chosen agentFilter chip.
-      const baseQ = () => {
-        let q = supabase.from('contacts').select('id', { count: 'exact', head: true });
-        if (deptFilter) q = q.eq('department', deptFilter);
-        // After Phase 1 (single-assignment): use eq on text/uuid columns —
-        // jsonb cs combined with other filters caused 500s on heavy users.
-        if (agentFilter) q = q.eq('assigned_to_name', agentFilter);
-        if (profile?.role === 'sales_agent' && profile.id) {
-          q = q.eq('assigned_to', profile.id);
-        }
-        // For team_leader / sales_manager / sales_director / admin /
-        // operations: rely on RLS — no client-side OR.
-        return q;
-      };
+      // Single-RPC stats — replaces 23 parallel COUNT queries.
+      // RLS still applies (SECURITY INVOKER), so each role only counts what they can see.
+      const { data: result, error } = await supabase.rpc('get_contact_stats', {
+        p_dept: deptFilter,
+        p_agent_id: agentIdFilter,
+      });
+      if (error) throw error;
 
-      // ALL count queries in ONE parallel batch
-      const statusKeys = STATUS_DEFS.map(s => s.value);
-      const tempKeys = ['hot', 'warm', 'cool', 'cold'];
-      const typeKeys = Object.keys(TYPE);
-
-      const allQueries = [
-        baseQ(), // total
-        baseQ().eq('is_blacklisted', true), // blacklisted
-        baseQ().or('assigned_to.is.null,assigned_to_name.is.null,assigned_to_name.eq.'), // unassigned (UUID is.null is faster than jsonb.eq.[])
-        ...statusKeys.map(s => baseQ().eq('contact_status', s)),
-        ...tempKeys.map(t => baseQ().eq('temperature', t)),
-        ...typeKeys.map(t => baseQ().eq('contact_type', t)),
-      ];
-
-      const results = await Promise.all(allQueries);
-
-      let i = 0;
+      // Flatten the nested jsonb into the flat counts shape callers expect
       const counts = {
-        total: results[i++].count || 0,
-        blacklisted: results[i++].count || 0,
-        unassigned: results[i++].count || 0,
+        total: result?.total || 0,
+        blacklisted: result?.blacklisted || 0,
+        unassigned: result?.unassigned || 0,
       };
-      statusKeys.forEach(s => { counts[s] = results[i++].count || 0; });
-      tempKeys.forEach(t => { counts['temp_' + t] = results[i++].count || 0; });
-      typeKeys.forEach(t => { counts['type_' + t] = results[i++].count || 0; });
+      const statusObj = result?.status || {};
+      const tempObj = result?.temperature || {};
+      const typeObj = result?.type || {};
+      STATUS_DEFS.forEach(s => { counts[s.value] = statusObj[s.value] || 0; });
+      ['hot', 'warm', 'cool', 'cold'].forEach(t => { counts['temp_' + t] = tempObj[t] || 0; });
+      Object.keys(TYPE).forEach(t => { counts['type_' + t] = typeObj[t] || 0; });
 
       setStats(counts);
     } catch (err) { reportError('ContactsPage', 'loadStats', err); }
