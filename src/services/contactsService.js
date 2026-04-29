@@ -188,11 +188,9 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     // PostgREST 500'd when 6+ assigned_to_names.cs.[...] conditions were
     // OR'd together, and the RLS policy already returns the right rows.
     if (role === 'sales_agent' && userId) {
-      const { data: agentUser } = await supabase.from('users').select('full_name_en, full_name_ar').eq('id', userId).maybeSingle();
-      if (agentUser) {
-        const name = agentUser.full_name_en || agentUser.full_name_ar;
-        if (name) query = query.filter('assigned_to_names', 'cs', JSON.stringify([name]));
-      }
+      // After Phase 1 (single-assignment), filter by UUID directly — much
+      // faster than jsonb @> and avoids 500s when combined with other filters.
+      query = query.eq('assigned_to', userId);
     }
     // For managers/leaders/director/admin/operations: rely on RLS.
 
@@ -304,15 +302,15 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
         if (filters.assigned_to_name_not) {
           // is_not / not_in: exclude any contact that has any of these agents.
           // Each .not() chains as an AND, which is exactly the "none of" semantic.
+          // After Phase 1: filter by singular assigned_to_name (text) — faster
+          // and avoids jsonb @> overhead. Replaces the old cs.[name] pattern.
           agentValues.forEach(v => {
-            query = query.not('assigned_to_names', 'cs', JSON.stringify([v]));
+            query = query.neq('assigned_to_name', v);
           });
         } else if (agentValues.length === 1) {
-          query = query.filter('assigned_to_names', 'cs', JSON.stringify([agentValues[0]]));
+          query = query.eq('assigned_to_name', agentValues[0]);
         } else {
-          // in (any of): build an OR of jsonb-contains predicates
-          const conds = agentValues.map(v => `assigned_to_names.cs.${JSON.stringify([v])}`).join(',');
-          query = query.or(conds);
+          query = query.in('assigned_to_name', agentValues);
         }
       }
     }

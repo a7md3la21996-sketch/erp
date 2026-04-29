@@ -1144,10 +1144,11 @@ export default function ContactsPage() {
       const baseQ = () => {
         let q = supabase.from('contacts').select('id', { count: 'exact', head: true });
         if (deptFilter) q = q.eq('department', deptFilter);
-        if (agentFilter) q = q.filter('assigned_to_names', 'cs', JSON.stringify([agentFilter]));
-        if (profile?.role === 'sales_agent') {
-          const myName = profile?.full_name_en || profile?.full_name_ar;
-          if (myName) q = q.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+        // After Phase 1 (single-assignment): use eq on text/uuid columns —
+        // jsonb cs combined with other filters caused 500s on heavy users.
+        if (agentFilter) q = q.eq('assigned_to_name', agentFilter);
+        if (profile?.role === 'sales_agent' && profile.id) {
+          q = q.eq('assigned_to', profile.id);
         }
         // For team_leader / sales_manager / sales_director / admin /
         // operations: rely on RLS — no client-side OR.
@@ -1219,9 +1220,8 @@ export default function ContactsPage() {
       // Fetch all matching contact IDs from server (not just current page)
       let query = supabase.from('contacts').select('id');
       // Apply same filters as loadContactsData
-      if (profile?.role === 'sales_agent') {
-        const myName = profile?.full_name_en || profile?.full_name_ar;
-        if (myName) query = query.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+      if (profile?.role === 'sales_agent' && profile.id) {
+        query = query.eq('assigned_to', profile.id);
       }
       if (search) { const s = search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, ''); if (s.length > 0) query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%`); }
       if (filterType !== 'all') query = query.eq('contact_type', filterType);
@@ -1235,7 +1235,7 @@ export default function ContactsPage() {
       const deptFilter = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
       if (deptFilter) query = query.eq('department', deptFilter);
       const agentFilter = globalFilter?.agentName && globalFilter.agentName !== 'all' ? globalFilter.agentName : null;
-      if (agentFilter) query = query.filter('assigned_to_names', 'cs', JSON.stringify([agentFilter]));
+      if (agentFilter) query = query.eq('assigned_to_name', agentFilter);
       const { data } = await query.range(0, 9999);
       if (data?.length) {
         setSelectedIds(data.map(c => c.id));

@@ -32,16 +32,13 @@ export function parseDevice(ua) {
 }
 
 /**
- * Get IP address from free API
+ * Get IP address — disabled in production due to CSP restrictions blocking
+ * external services. Real IP tracking should be done server-side (e.g. via
+ * a Supabase Edge Function reading the X-Forwarded-For header) instead of
+ * calling ipify.org from the browser. Returns 'Unknown' for now.
  */
 async function getIP() {
-  try {
-    const res = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3000) });
-    const data = await res.json();
-    return data.ip || 'Unknown';
-  } catch (err) { reportError('sessionService', 'query', err);
-    return 'Unknown';
-  }
+  return 'Unknown';
 }
 
 // Track active session id in memory
@@ -70,15 +67,19 @@ export async function logSession(user) {
     is_active: true,
   };
 
-  _activeSessionId = session.id;
-
+  // Capture the inserted id from Supabase. Previously _activeSessionId was
+  // set from session.id (which is undefined since we don't pre-generate it),
+  // so subsequent updateSessionActivity / endSession sent .eq('id', undefined)
+  // → 400 errors. Now we use the actual returned UUID.
   try {
-    await supabase.from('sessions').insert(session);
+    const { data, error } = await supabase.from('sessions').insert(session).select('id').single();
+    if (error) throw error;
+    _activeSessionId = data?.id || null;
+    return { ...session, id: data?.id };
   } catch (err) {
     reportError('sessionService', 'startSession', err);
+    return session;
   }
-
-  return session;
 }
 
 /**
