@@ -1676,26 +1676,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                         selectedAgent === name ? 'bg-white/20 text-white' : 'bg-brand-500/10 text-brand-500'
                       }`}>{name.charAt(0)}</span>
                       {name}
-                      {isAdmin && assignedNames.length > 1 && (
-                        <span onClick={e => {
-                          e.stopPropagation();
-                          const newNames = assignedNames.filter(n => n !== name);
-                          const updates = { assigned_to_names: newNames, assigned_to_name: newNames[0] || null };
-                          // Strip the removed agent's slot from all per-agent
-                          // maps so we don't leave a ghost entry behind.
-                          const newStatuses = { ...(contact.agent_statuses || {}) };     delete newStatuses[name];
-                          const newTemps    = { ...(contact.agent_temperatures || {}) }; delete newTemps[name];
-                          const newScores   = { ...(contact.agent_scores || {}) };       delete newScores[name];
-                          if (onUpdate) onUpdate({ ...contact, ...updates, agent_statuses: newStatuses, agent_temperatures: newTemps, agent_scores: newScores });
-                          if (selectedAgent === name) setSelectedAgent('all');
-                        }} className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] hover:bg-red-500 hover:text-white transition-colors ${
-                          selectedAgent === name ? 'text-white/60' : 'text-content-muted/40 dark:text-content-muted-dark/40'
-                        }`}>✕</span>
-                      )}
+                      {/* Note: per-chip remove (X) button was removed in Phase 3 — multi-assignment is gone after Phase 1, so the condition assignedNames.length > 1 was always false. Use Hand Off Lead from More menu to transfer ownership. */}
                     </button>
                   ))}
-                  {/* Add Agent Button — admin only */}
-                  {isAdmin && <div className="relative" data-agent-picker>
+                  {/* Add Agent picker removed in Phase 3 — multi-assignment is no longer the model. Use Distribute Lead (clones) or Hand Off Lead (transfers) from the More menu instead. The picker UI and its state (showAddAgent, addAgentPicked, addAgentSearch, addAgentStatus, addAgentTemp, addAgentSaving) are still declared to avoid touching too much in one commit; will be removed in a follow-up. */}
+                  {false && isAdmin && <div className="relative" data-agent-picker>
                     <button onClick={() => { setShowAddAgent(!showAddAgent); setAddAgentPicked(null); setAddAgentSearch(''); }}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer bg-transparent border border-dashed border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500 hover:text-brand-500 transition-colors">
                       + {isRTL ? 'إضافة' : 'Add'}
