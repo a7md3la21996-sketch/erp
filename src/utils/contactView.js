@@ -61,36 +61,6 @@ export function getMyScore(contact, userName) {
 }
 
 /**
- * Read only the per-agent entries for agents who are still in
- * assigned_to_names. The JSON maps in the DB sometimes carry "ghost" entries
- * for agents who were unassigned without their slot being cleaned up — those
- * shouldn't influence display or mixed indicators.
- */
-function validValuesFromMap(contact, field) {
-  const map = contact?.[field];
-  if (!map || typeof map !== 'object') return [];
-  const valid = getValidAgentNames(contact);
-  if (valid.length === 0) return [];
-  return valid
-    .map(n => map[n])
-    .filter(v => v !== undefined && v !== null && v !== '');
-}
-
-/**
- * Whether the per-agent entries (for currently-assigned agents) disagree.
- * Used in a few summary places that still need a single boolean signal
- * (e.g. dashboards). The Leads table itself shows every agent's chip so it
- * doesn't need this.
- *
- * field is one of 'agent_statuses' | 'agent_temperatures' | 'agent_scores'.
- */
-export function isMixed(contact, field) {
-  const values = validValuesFromMap(contact, field);
-  if (values.length <= 1) return false;
-  return new Set(values.map(String)).size > 1;
-}
-
-/**
  * Flat per-agent breakdown for tables/drawers/chips. Returns one row per
  * currently-assigned agent with their own status / temperature / score —
  * the source of truth for every per-agent display in the app. When
@@ -139,7 +109,7 @@ export function withAgentView(contacts, profile) {
     my_temperature: getMyTemp(c, name),
     my_score: getMyScore(c, name),
     _agent_count: getAgentCount(c),
-    _is_status_mixed: isMixed(c, 'agent_statuses'),
-    _is_temp_mixed: isMixed(c, 'agent_temperatures'),
+    // _is_status_mixed / _is_temp_mixed removed in Phase 3 — always false now
+    // that each contact has a single assignee. The isMixed helper was deleted.
   }));
 }

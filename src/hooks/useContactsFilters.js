@@ -112,7 +112,7 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     { id: 'created_by_name', label: 'أنشأه', labelEn: 'Created By', type: 'select', options: [...new Set((contacts || []).map(c => c.created_by_name).filter(Boolean))].map(n => ({ value: n, label: n, labelEn: n })) },
     { id: '_campaign_count', label: 'عدد الحملات', labelEn: 'Campaign Count', type: 'number' },
     { id: '_opp_count', label: 'عدد الفرص', labelEn: 'Opportunities Count', type: 'number' },
-    { id: '_agent_count', label: 'عدد المسؤولين', labelEn: 'Agent Count', type: 'number' },
+    // _agent_count filter removed in Phase 3 — always 0 or 1 after single-assignment migration.
     // "No activity" filter — pick "Anyone" to find contacts with no activity at
     // all, or a specific agent to find contacts that agent hasn't touched.
     { id: '_no_activity_by', label: 'بدون نشاط', labelEn: 'No activity by', type: 'select',
