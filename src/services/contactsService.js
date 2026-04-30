@@ -638,6 +638,80 @@ export async function checkDuplicate(phone) {
 }
 
 /**
+ * Bulk-distribute leads across multiple agents. Transfers ownership (no clones).
+ *
+ * method:
+ *   'round_robin' — equal distribution, cycles through agents
+ *   'workload'    — agents with fewer active leads get more
+ *
+ * Returns { plan: [{contactId, agentId, agentName}], applied, errors }
+ */
+export async function bulkDistributeLeads(contactIds, agentIds, method = 'round_robin') {
+  requireAnyPerm([P.CONTACTS_BULK, P.CONTACTS_EDIT], 'Not allowed to bulk distribute');
+  if (!Array.isArray(contactIds) || contactIds.length === 0) throw new Error('No contacts');
+  if (!Array.isArray(agentIds) || agentIds.length === 0) throw new Error('No agents');
+
+  // Resolve agents
+  const { data: agents, error: aErr } = await rq(() =>
+    supabase.from('users').select('id, full_name_en, full_name_ar, status').in('id', agentIds), 'bulkDistribute.agents');
+  if (aErr) throw aErr;
+  const activeAgents = (agents || []).filter(a => a.status !== 'inactive');
+  if (activeAgents.length === 0) throw new Error('No active agents in selection');
+
+  // Build the plan
+  let plan = [];
+  if (method === 'workload') {
+    // Get current active lead count per agent
+    const counts = await Promise.all(activeAgents.map(async a => {
+      const { count } = await supabase.from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('assigned_to', a.id)
+        .eq('is_deleted', false)
+        .neq('contact_status', 'disqualified');
+      return { agent: a, currentCount: count || 0 };
+    }));
+    // Greedy: each lead goes to the agent with the lowest projected count
+    const projected = counts.map(c => ({ ...c, projected: c.currentCount }));
+    for (const cid of contactIds) {
+      projected.sort((x, y) => x.projected - y.projected);
+      const picked = projected[0];
+      const name = picked.agent.full_name_en || picked.agent.full_name_ar;
+      plan.push({ contactId: cid, agentId: picked.agent.id, agentName: name });
+      picked.projected++;
+    }
+  } else {
+    // Round-robin
+    plan = contactIds.map((cid, i) => {
+      const a = activeAgents[i % activeAgents.length];
+      const name = a.full_name_en || a.full_name_ar;
+      return { contactId: cid, agentId: a.id, agentName: name };
+    });
+  }
+
+  // Apply in batches of 50 with concurrency 5
+  const errors = [];
+  let applied = 0;
+  const BATCH = 50;
+  for (let i = 0; i < plan.length; i += BATCH) {
+    const slice = plan.slice(i, i + BATCH);
+    const results = await Promise.allSettled(slice.map(p =>
+      supabase.from('contacts').update({
+        assigned_to: p.agentId,
+        assigned_to_name: p.agentName,
+        assigned_to_names: [p.agentName],
+        assigned_at: new Date().toISOString(),
+      }).eq('id', p.contactId)
+    ));
+    for (let j = 0; j < results.length; j++) {
+      if (results[j].status === 'fulfilled' && !results[j].value.error) applied++;
+      else errors.push({ contactId: slice[j].contactId, error: results[j].reason?.message || results[j].value?.error?.message });
+    }
+  }
+
+  return { plan, applied, errors };
+}
+
+/**
  * Hand off a single lead to another agent. Unlike distributeLeadToAgents
  * (which clones), this transfers ownership of the SAME record. The previous
  * owner loses it from their pipeline. Use this when a manager/operations

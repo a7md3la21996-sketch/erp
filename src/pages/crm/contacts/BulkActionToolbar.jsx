@@ -18,6 +18,7 @@ export default function BulkActionToolbar({
   // Handlers
   handleBulkChangeField,
   setBulkReassignModal,
+  setBulkDistributeOpen,
   setBulkOppModal,
   setBulkOppForm,
   setProjectsList,
@@ -107,16 +108,17 @@ export default function BulkActionToolbar({
         )}
       </div>}
 
-      {/* Reassign — admin/manager only */}
+      {/* Reassign — transfer all selected to ONE agent */}
       {perms.canBulkContacts && <button onClick={() => setBulkReassignModal(true)}
         style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.4)', background: 'rgba(74,122,171,0.08)', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-        <Users size={12} /> {isRTL ? 'إعادة تعيين' : 'Reassign'}
+        <Users size={12} /> {isRTL ? 'تعيين لشخص واحد' : 'Reassign to one'}
       </button>}
 
-      {/* Add Agent / Remove Agent removed in Phase 3 — they wrote to the
-          legacy multi-assignment model. Use Reassign (transfer to one) or
-          per-lead Distribute Tool from the More menu (clones for compete model)
-          instead. */}
+      {/* Bulk Distribute — split selected across multiple agents (round-robin / workload) */}
+      {perms.canBulkContacts && setBulkDistributeOpen && <button onClick={() => setBulkDistributeOpen(true)}
+        style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: 'rgba(16,185,129,0.08)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
+        <Users size={12} /> {isRTL ? 'توزيع على فريق' : 'Distribute to team'}
+      </button>}
 
       {/* Create Opportunities — bulk-opps perm */}
       {perms.canBulkOpps && <button onClick={() => { setBulkOppModal(true); setBulkOppForm({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' }); fetchProjects().then(p => setProjectsList(p)); }}

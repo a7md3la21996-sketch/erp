@@ -44,6 +44,7 @@ import QuickActionPopover from './crm/contacts/QuickActionPopover';
 import BatchCallModal from './crm/contacts/BatchCallModal';
 import BulkActionToolbar from './crm/contacts/BulkActionToolbar';
 import { MergePreviewModal, ConfirmModal, DisqualifyModal, BulkReassignModal, BulkOppModal, BulkSMSModal } from './crm/contacts/BulkModals';
+import BulkDistributeModal from './crm/contacts/BulkDistributeModal';
 export default function ContactsPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
@@ -83,6 +84,7 @@ export default function ContactsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [bulkReassignModal, setBulkReassignModal] = useState(false);
+  const [bulkDistributeOpen, setBulkDistributeOpen] = useState(false);
   const [bulkDropdownOpen, setBulkDropdownOpen] = useState(null);
   const [bulkSMSModal, setBulkSMSModal] = useState(false);
   const [bulkSMSState, setBulkSMSState] = useState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] });
@@ -1821,6 +1823,15 @@ export default function ContactsPage() {
         isRTL={isRTL}
       />
 
+      {/* Bulk Distribute Modal — split selected leads across multiple agents */}
+      {bulkDistributeOpen && (
+        <BulkDistributeModal
+          contactIds={selectedIds}
+          onClose={() => setBulkDistributeOpen(false)}
+          onSuccess={() => { setBulkDistributeOpen(false); setSelectedIds([]); loadContactsData(); loadStats(); }}
+        />
+      )}
+
       {/* Bulk Create Opportunities Modal */}
       <BulkOppModal
         bulkOppModal={bulkOppModal}
@@ -1852,6 +1863,7 @@ export default function ContactsPage() {
         BULK_STATUS_OPTIONS={BULK_STATUS_OPTIONS}
         handleBulkChangeField={handleBulkChangeField}
         setBulkReassignModal={setBulkReassignModal}
+        setBulkDistributeOpen={setBulkDistributeOpen}
         setBulkOppModal={setBulkOppModal}
         setBulkOppForm={setBulkOppForm}
         setProjectsList={setProjectsList}
