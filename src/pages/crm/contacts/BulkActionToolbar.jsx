@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Phone, Download, PhoneCall, Merge, X, Users, UserPlus, UserMinus, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown, Briefcase, RefreshCw, Trash2 } from 'lucide-react';
+import { Phone, Download, PhoneCall, Merge, X, Users, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown, Briefcase, RefreshCw, Trash2 } from 'lucide-react';
 import { TYPE } from './constants';
-import { fetchProjects, fetchSalesAgents } from '../../../services/opportunitiesService';
+import { fetchProjects } from '../../../services/opportunitiesService';
 
 export default function BulkActionToolbar({
   selectedIds,
@@ -36,25 +35,10 @@ export default function BulkActionToolbar({
   setDqReason,
   setDqNote,
   MERGE_LIMIT,
-  handleBulkAddAgent,
-  handleBulkRemoveAgent,
+  // handleBulkAddAgent / handleBulkRemoveAgent removed in Phase 3 — multi-assignment is gone.
   perms = {},
 }) {
-  const [addAgentOpen, setAddAgentOpen] = useState(false);
-  const [addAgentSearch, setAddAgentSearch] = useState('');
-  const [addAgentSelected, setAddAgentSelected] = useState(null);
-  const [addAgentStatus, setAddAgentStatus] = useState('new');
-  const [addAgentTemp, setAddAgentTemp] = useState('hot');
-  const [removeAgentOpen, setRemoveAgentOpen] = useState(false);
-  const [removeAgentSearch, setRemoveAgentSearch] = useState('');
-  const [allAgents, setAllAgents] = useState([]);
-
-  // Fetch all sales agents from users table
-  useEffect(() => {
-    fetchSalesAgents().then(agents => {
-      setAllAgents(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
-    }).catch(() => {});
-  }, []);
+  // Add/Remove Agent state removed in Phase 3 — actions migrated to single-assignment model.
 
   if (selectedIds.length === 0) return null;
 
@@ -129,103 +113,10 @@ export default function BulkActionToolbar({
         <Users size={12} /> {isRTL ? 'إعادة تعيين' : 'Reassign'}
       </button>}
 
-      {/* Add to Agent — admin/manager only */}
-      {perms.canBulkContacts && <div style={{ position: 'relative' }}>
-        <button onClick={() => { setAddAgentOpen(!addAgentOpen); setRemoveAgentOpen(false); setAddAgentSearch(''); setAddAgentSelected(null); }}
-          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(16,185,129,0.4)', background: addAgentOpen ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.08)', color: '#10B981', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-          <UserPlus size={12} /> {isRTL ? 'إضافة لسيلز' : 'Add Agent'}
-        </button>
-        {addAgentOpen && (
-          <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: addAgentSelected ? 260 : 200, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-            {!addAgentSelected ? (
-              <>
-                <div style={{ padding: 8 }}>
-                  <input type="text" value={addAgentSearch} onChange={e => setAddAgentSearch(e.target.value)}
-                    placeholder={isRTL ? 'ابحث...' : 'Search...'}
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(74,122,171,0.3)', background: '#0d1b2a', color: '#e2e8f0', fontSize: 11, outline: 'none' }}
-                    autoFocus />
-                </div>
-                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                  {allAgents.filter(a => !addAgentSearch || a.toLowerCase().includes(addAgentSearch.toLowerCase())).map(agent => (
-                    <button key={agent} onClick={() => { setAddAgentSelected(agent); setAddAgentStatus('new'); setAddAgentTemp('hot'); }}
-                      style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left', display: 'flex', alignItems: 'center', gap: 6 }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(16,185,129,0.15)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                      <span style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(16,185,129,0.2)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700 }}>{agent.charAt(0)}</span>
-                      {agent}
-                    </button>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div style={{ padding: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#10B981', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <UserPlus size={14} /> {addAgentSelected}
-                </div>
-                <div style={{ marginBottom: 8 }}>
-                  <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>{isRTL ? 'الحالة' : 'Status'}</label>
-                  <select value={addAgentStatus} onChange={e => setAddAgentStatus(e.target.value)}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(74,122,171,0.3)', background: '#0d1b2a', color: '#e2e8f0', fontSize: 11, outline: 'none' }}>
-                    <option value="new">{isRTL ? 'جديد' : 'New'}</option>
-                    <option value="contacted">{isRTL ? 'تم التواصل' : 'Contacted'}</option>
-                    <option value="following">{isRTL ? 'متابعة' : 'Following'}</option>
-                    <option value="has_opportunity">{isRTL ? 'لديه فرصة' : 'Has Opportunity'}</option>
-                  </select>
-                </div>
-                <div style={{ marginBottom: 10 }}>
-                  <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>{isRTL ? 'الحرارة' : 'Temperature'}</label>
-                  <select value={addAgentTemp} onChange={e => setAddAgentTemp(e.target.value)}
-                    style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: '1px solid rgba(74,122,171,0.3)', background: '#0d1b2a', color: '#e2e8f0', fontSize: 11, outline: 'none' }}>
-                    <option value="hot">{isRTL ? 'ساخن' : 'Hot'}</option>
-                    <option value="warm">{isRTL ? 'دافئ' : 'Warm'}</option>
-                    <option value="cool">{isRTL ? 'بارد' : 'Cool'}</option>
-                    <option value="cold">{isRTL ? 'بارد جداً' : 'Cold'}</option>
-                  </select>
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => setAddAgentSelected(null)}
-                    style={{ flex: 1, padding: '6px', borderRadius: 6, border: '1px solid rgba(148,163,184,0.3)', background: 'none', color: '#94a3b8', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
-                    {isRTL ? 'رجوع' : 'Back'}
-                  </button>
-                  <button onClick={() => { handleBulkAddAgent(addAgentSelected, addAgentStatus, addAgentTemp); setAddAgentOpen(false); setAddAgentSelected(null); }}
-                    style={{ flex: 1, padding: '6px', borderRadius: 6, border: 'none', background: '#10B981', color: '#fff', fontSize: 11, cursor: 'pointer', fontWeight: 700 }}>
-                    {isRTL ? 'تأكيد' : 'Confirm'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>}
-
-      {/* Remove from Agent — admin/manager only */}
-      {perms.canBulkContacts && <div style={{ position: 'relative' }}>
-        <button onClick={() => { setRemoveAgentOpen(!removeAgentOpen); setAddAgentOpen(false); setRemoveAgentSearch(''); }}
-          style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid rgba(239,68,68,0.4)', background: removeAgentOpen ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.08)', color: '#EF4444', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontWeight: 600 }}>
-          <UserMinus size={12} /> {isRTL ? 'شيل من سيلز' : 'Remove Agent'}
-        </button>
-        {removeAgentOpen && (
-          <div style={{ position: 'absolute', bottom: '110%', [isRTL ? 'right' : 'left']: 0, background: '#1a2332', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 10, minWidth: 200, zIndex: 301, boxShadow: '0 8px 24px rgba(0,0,0,0.4)', overflow: 'hidden' }}>
-            <div style={{ padding: 8 }}>
-              <input type="text" value={removeAgentSearch} onChange={e => setRemoveAgentSearch(e.target.value)}
-                placeholder={isRTL ? 'ابحث...' : 'Search...'}
-                style={{ width: '100%', padding: '6px 10px', borderRadius: 6, border: '1px solid rgba(74,122,171,0.3)', background: '#0d1b2a', color: '#e2e8f0', fontSize: 11, outline: 'none' }}
-                autoFocus />
-            </div>
-            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-              {allAgents.filter(a => !removeAgentSearch || a.toLowerCase().includes(removeAgentSearch.toLowerCase())).map(agent => (
-                <button key={agent} onClick={() => { handleBulkRemoveAgent(agent); setRemoveAgentOpen(false); }}
-                  style={{ width: '100%', padding: '8px 14px', background: 'none', border: 'none', color: '#e2e8f0', fontSize: 11, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left', display: 'flex', alignItems: 'center', gap: 6 }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.15)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-                  <span style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(239,68,68,0.2)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700 }}>{agent.charAt(0)}</span>
-                  {agent}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>}
+      {/* Add Agent / Remove Agent removed in Phase 3 — they wrote to the
+          legacy multi-assignment model. Use Reassign (transfer to one) or
+          per-lead Distribute Tool from the More menu (clones for compete model)
+          instead. */}
 
       {/* Create Opportunities — bulk-opps perm */}
       {perms.canBulkOpps && <button onClick={() => { setBulkOppModal(true); setBulkOppForm({ assigned_to_name: '', stage: 'qualification', priority: 'medium', notes: '', project_id: '' }); fetchProjects().then(p => setProjectsList(p)); }}
