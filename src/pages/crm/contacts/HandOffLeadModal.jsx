@@ -74,7 +74,7 @@ export default function HandOffLeadModal({ contact, onClose, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose} title={isRTL ? 'تسليم الليد' : 'Hand Off Lead'} size="md">
+    <Modal open onClose={onClose} title={isRTL ? 'تسليم الليد' : 'Hand Off Lead'}>
       <div className="space-y-4">
         {/* Lead summary */}
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-sm">

@@ -1650,10 +1650,9 @@ export default function ContactsPage() {
       {/* Save Filter Modal — replaces the native prompt() that was used before. */}
       {saveFilterModalOpen && (
         <Modal
-          isOpen={true}
+          open
           onClose={() => { setSaveFilterModalOpen(false); setSaveFilterName(''); }}
           title={isRTL ? 'حفظ الفلتر' : 'Save Filter'}
-          size="sm"
         >
           <div className="space-y-3">
             <label className="text-sm font-medium text-content dark:text-content-dark block">

@@ -71,7 +71,7 @@ export default function DistributeLeadModal({ contact, onClose, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose} title={isRTL ? 'توزيع الليد على agents' : 'Distribute Lead'} size="md">
+    <Modal open onClose={onClose} title={isRTL ? 'توزيع الليد على agents' : 'Distribute Lead'}>
       <div className="space-y-4">
         {/* Lead summary */}
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-sm">

@@ -90,7 +90,7 @@ export default function PullOtherLeadsModal({ contact, onClose, onSuccess }) {
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose} title={isRTL ? 'سحب الليد من باقي الـ agents' : 'Pull Leads from Other Agents'} size="md">
+    <Modal open onClose={onClose} title={isRTL ? 'سحب الليد من باقي الـ agents' : 'Pull Leads from Other Agents'}>
       <div className="space-y-4">
         {/* Won banner */}
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-start gap-3">
