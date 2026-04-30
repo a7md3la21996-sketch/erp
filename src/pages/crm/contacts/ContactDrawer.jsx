@@ -12,7 +12,8 @@ import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity, updateActivity,
   fetchContactOpportunities, getAssignmentHistory,
-  deriveGlobalStatus, deriveGlobalTemp,
+  // deriveGlobalStatus/Temp removed — single-assignment writes use the new
+  // value directly without computing from a jsonb map.
 } from '../../../services/contactsService';
 import { createOpportunity } from '../../../services/opportunitiesService';
 import { createNotification } from '../../../services/notificationsService';
@@ -389,8 +390,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     }
 
     if (newStatus && newStatus !== currentStatus) {
-      const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-      if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) });
+      if (onUpdate) onUpdate({ ...contact, contact_status: newStatus, agent_statuses: { [myName]: newStatus } });
     }
   };
 
@@ -419,8 +419,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       }
       const myName = profile?.full_name_en || profile?.full_name_ar;
       const oldStatus = contact.contact_status;
-      const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-      const updates = { ...contact, agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) };
+      const updates = { ...contact, contact_status: newStatus, agent_statuses: { [myName]: newStatus } };
       if (newStatus === 'disqualified' && dqReason) {
         updates.disqualify_reason = dqReason;
       }
@@ -465,8 +464,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       const myName = profile?.full_name_en || profile?.full_name_ar;
       const currentStatus = (contact.agent_statuses || {})[myName] || contact.contact_status || 'new';
       if (currentStatus !== 'disqualified' && currentStatus !== 'has_opportunity') {
-        const newStatuses = { ...(contact.agent_statuses || {}), [myName]: 'has_opportunity' };
-        if (onUpdate) onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) });
+        if (onUpdate) onUpdate({ ...contact, contact_status: 'has_opportunity', agent_statuses: { [myName]: 'has_opportunity' } });
       }
     } catch (err) {
       console.error('Opportunity save error:', err?.message || err);
@@ -1696,8 +1694,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                               onClick={async () => {
                                 if (onUpdate) {
                                   const oldTemp = (contact.agent_temperatures || {})[selectedAgent] || contact.temperature;
-                                  const newTemps = { ...(contact.agent_temperatures || {}), [selectedAgent]: opt.v };
-                                  onUpdate({ ...contact, agent_temperatures: newTemps, temperature: deriveGlobalTemp(newTemps) });
+                                  onUpdate({ ...contact, temperature: opt.v, agent_temperatures: { [selectedAgent]: opt.v } });
                                   // Log temperature change in timeline
                                   try {
                                     const act = await createActivity({

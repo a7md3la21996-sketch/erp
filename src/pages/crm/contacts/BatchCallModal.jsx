@@ -1,6 +1,6 @@
 import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo } from 'lucide-react';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { createActivity, updateContact, deriveGlobalStatus } from '../../../services/contactsService';
+import { createActivity, updateContact } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { logAction } from '../../../services/auditService';
 import {
@@ -260,8 +260,8 @@ export default function BatchCallModal({
                 } else if (myStatus === 'new' || !myStatus) {
                   newStatus = 'following';
                 }
-                const newStatuses = { ...(current.agent_statuses || {}), [myName]: newStatus };
-                const statusUpdate = { last_activity_at: new Date().toISOString(), agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) };
+                // Simple single-assignment write — drop spread + derive complexity.
+                const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus, agent_statuses: { [myName]: newStatus } };
                 let writeOk = true;
                 try {
                   await updateContact(current.id, statusUpdate);

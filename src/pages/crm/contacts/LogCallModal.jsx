@@ -5,7 +5,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { Phone, Clock } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
-import { createActivity, deriveGlobalStatus } from '../../../services/contactsService';
+import { createActivity } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { useEscClose, contactPropType } from './constants';
 import { useFocusTrap } from '../../../utils/hooks';
@@ -122,8 +122,9 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
         newStatus = 'following';
       }
       if (newStatus !== myStatus) {
-        const newStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-        onUpdate({ ...contact, agent_statuses: newStatuses, contact_status: deriveGlobalStatus(newStatuses) });
+        // Simple write — single-assignment means contact_status IS the status.
+        // Drop orphan jsonb keys by replacing the map with a single fresh entry.
+        onUpdate({ ...contact, contact_status: newStatus, agent_statuses: { [myName]: newStatus } });
       }
     }
 
