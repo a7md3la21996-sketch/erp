@@ -157,40 +157,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   // Names of the viewer's team members (manager / leader / director). Used
   // to clip per-agent displays so a manager doesn't see sibling-team chips,
-  // statuses, or temperatures on shared contacts. RLS already gates which
-  // *contacts* they can see — this gates *which agents on those contacts*
-  // are exposed in the UI.
-  const [myTeamNames, setMyTeamNames] = useState(null);
-  useEffect(() => {
-    if (!profile?.role || !profile?.team_id) { setMyTeamNames(null); return; }
-    if (isAdmin || isSalesAgent) { setMyTeamNames(null); return; }
-    // Lazy-import to avoid circular deps with teamHelper
-    import('../../../utils/teamHelper').then(({ getTeamMemberNames }) => {
-      getTeamMemberNames(profile.role, profile.team_id)
-        .then(names => setMyTeamNames(names || []))
-        .catch(() => setMyTeamNames([]));
-    }).catch(() => setMyTeamNames([]));
-  }, [profile?.role, profile?.team_id, isAdmin, isSalesAgent]);
-  const teamNamesSet = useMemo(() => {
-    if (!Array.isArray(myTeamNames) || myTeamNames.length === 0) return null;
-    return new Set(myTeamNames);
-  }, [myTeamNames]);
+  // myTeamNames + teamNamesSet removed in Phase 3 — chip clipping was for the
+  // multi-assignment model. After single-assignment migration, RLS gates
+  // visibility at the contact level, so per-name clipping inside the drawer
+  // is no longer needed.
 
   // Names of agents currently assigned that the viewer is allowed to see
-  // listed/displayed. Returns the raw list for admin/operations; the
-  // viewer's own name only for sales_agent; the team-clipped list for
-  // managers/leaders. Falls back to assigned_to_name when assigned_to_names
-  // is empty/missing.
+  // After Phase 1 single-assignment migration, every contact has at most
+  // one assignee. RLS already restricts which contacts each role can see
+  // (admin sees all, manager sees team, agent sees own). So returning
+  // [assigned_to_name] is sufficient — no per-name clipping needed.
   const getVisibleAssignees = (c = contact) => {
-    const all = Array.isArray(c?.assigned_to_names) && c.assigned_to_names.length > 0
-      ? c.assigned_to_names
-      : (c?.assigned_to_name ? [c.assigned_to_name] : []);
-    if (all.length === 0) return [];
-    if (isAdmin) return all;
-    const myName = profile?.full_name_en || profile?.full_name_ar;
-    if (isSalesAgent) return myName ? all.filter(n => n === myName) : [];
-    if (teamNamesSet) return all.filter(n => teamNamesSet.has(n));
-    return all;
+    const name = c?.assigned_to_name;
+    return name ? [name] : [];
   };
 
   // Privacy: hide previous agent's activities if system config says so

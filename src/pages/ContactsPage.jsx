@@ -1576,7 +1576,6 @@ export default function ContactsPage() {
         isSalesAgent={profile?.role === 'sales_agent'}
         isAdmin={profile?.role === 'admin' || profile?.role === 'operations'}
         agentName={profile?.full_name_en || profile?.full_name_ar}
-        myTeamNames={myTeamNames}
         deptView={deptView}
       />
       </div>
