@@ -1,11 +1,11 @@
 // Per-agent view helpers for contacts.
 //
-// The legacy global fields (contact_status, temperature, lead_score) are no
-// longer used for display anywhere in the app. Every status/temperature/score
-// the user sees comes from the per-agent JSON maps (agent_statuses,
-// agent_temperatures, agent_scores) tied to assigned_to_names. Multi-agent
-// contacts show one chip per agent so each one's reality is visible — no
-// synthetic "peak" or aggregate.
+// After Phase 1 (single-assignment migration), every contact has at most one
+// assignee. The per-agent JSON maps (agent_statuses, agent_temperatures,
+// agent_scores) carry the same value as the global contact_status/
+// temperature/lead_score for that single assignee. These helpers prefer
+// the jsonb (for backward compat) but fall back to the global field —
+// once Phase 2 drops the jsonb columns, the fallback becomes the source.
 
 /** The user's full name as stored on contacts (full_name_en preferred). */
 export function profileName(profile) {
@@ -34,21 +34,26 @@ export function getAgentCount(contact) {
 }
 
 /**
- * Per-agent status for the given user. Returns null if the user isn't
- * assigned or doesn't have an entry — callers shouldn't substitute the
- * legacy global field on the user's behalf.
+ * Per-agent status for the given user. Prefers jsonb agent_statuses for
+ * backward compat; falls back to global contact_status when userName is the
+ * current sole assignee (forward-compat for when jsonb writes stop).
  */
 export function getMyStatus(contact, userName) {
   if (!contact || !userName) return null;
   const v = contact.agent_statuses?.[userName];
-  return v !== undefined && v !== null && v !== '' ? v : null;
+  if (v !== undefined && v !== null && v !== '') return v;
+  // Fallback: if userName is the current assignee, the global field is theirs
+  if (contact.assigned_to_name === userName && contact.contact_status) return contact.contact_status;
+  return null;
 }
 
 /** Same pattern for temperature. */
 export function getMyTemp(contact, userName) {
   if (!contact || !userName) return null;
   const v = contact.agent_temperatures?.[userName];
-  return v !== undefined && v !== null && v !== '' ? v : null;
+  if (v !== undefined && v !== null && v !== '') return v;
+  if (contact.assigned_to_name === userName && contact.temperature) return contact.temperature;
+  return null;
 }
 
 /** Same pattern for lead score. Returns 0 (not null) for arithmetic-friendliness. */
@@ -57,6 +62,7 @@ export function getMyScore(contact, userName) {
   const v = contact.agent_scores?.[userName];
   if (typeof v === 'number') return v;
   if (v != null && v !== '') return Number(v) || 0;
+  if (contact.assigned_to_name === userName && typeof contact.lead_score === 'number') return contact.lead_score;
   return 0;
 }
 
@@ -77,12 +83,23 @@ export function getAgentsView(contact, viewerName) {
   const statuses = contact.agent_statuses || {};
   const temps = contact.agent_temperatures || {};
   const scores = contact.agent_scores || {};
+  // Forward-compat: when name === current assignee, fall back to global fields
+  const isAssignee = (name) => contact.assigned_to_name === name;
+  const pickStatus = (name) => statuses[name] ?? (isAssignee(name) ? (contact.contact_status ?? null) : null);
+  const pickTemp = (name) => temps[name] ?? (isAssignee(name) ? (contact.temperature ?? null) : null);
+  const pickScore = (name) => {
+    const s = scores[name];
+    if (typeof s === 'number') return s;
+    if (s != null) return Number(s) || 0;
+    if (isAssignee(name) && typeof contact.lead_score === 'number') return contact.lead_score;
+    return null;
+  };
 
   const rows = names.map(name => ({
     name,
-    status: statuses[name] ?? null,
-    temperature: temps[name] ?? null,
-    score: typeof scores[name] === 'number' ? scores[name] : (scores[name] != null ? Number(scores[name]) : null),
+    status: pickStatus(name),
+    temperature: pickTemp(name),
+    score: pickScore(name),
     isViewer: !!viewerName && name === viewerName,
   }));
 
