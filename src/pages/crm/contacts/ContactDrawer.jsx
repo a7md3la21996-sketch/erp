@@ -30,7 +30,7 @@ import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import DocumentsSection from '../../../components/ui/DocumentsSection';
 import CommentsSection from '../../../components/ui/CommentsSection';
 import { getLocalAuditLogs, ACTION_TYPES, logAction } from '../../../services/auditService';
-import { notifyAgentAdded, notifyNewComment } from '../../../services/notificationService';
+import { notifyNewComment } from '../../../services/notificationService';
 import { isFavorite as checkFavorite, toggleFavorite } from '../../../services/favoritesService';
 import { getComments } from '../../../services/chatService';
 import { getDocumentsByEntity, DOCUMENT_TYPES } from '../../../services/documentService';
@@ -124,15 +124,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   useEscClose(onClose);
   const [tab, setTab] = useState('activity');
   const [selectedAgent, setSelectedAgent] = useState('all');
-  const [showAddAgent, setShowAddAgent] = useState(false);
+  // showAddAgent + addAgent* state removed in Phase 3 — picker UI is gone.
   const [editCampaign, setEditCampaign] = useState(false);
   const [campaignSearch, setCampaignSearch] = useState('');
   const [campaignsList, setCampaignsList] = useState([]);
-  const [addAgentSearch, setAddAgentSearch] = useState('');
-  const [addAgentPicked, setAddAgentPicked] = useState(null);
-  const [addAgentStatus, setAddAgentStatus] = useState('new');
-  const [addAgentTemp, setAddAgentTemp] = useState('hot');
-  const [addAgentSaving, setAddAgentSaving] = useState(false);
   const [activities, setActivities] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -664,18 +659,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       rows: [
         show('assigned_to_name') && !isSalesAgent && {
           label: isRTL ? 'المسؤول' : 'Assigned',
-          val: (() => {
-            const visible = getVisibleAssignees();
-            return visible.length > 0 ? visible.join(' · ') : '—';
-          })(),
-          action: onUpdate ? {
-            label: isRTL ? 'تعديل' : 'Edit',
-            onClick: () => {
-              setShowAddAgent(true); setAddAgentSearch('');
-              // Scroll to agent section in hero
-              setTimeout(() => { document.querySelector('[data-agent-picker]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
-            }
-          } : null,
+          val: contact.assigned_to_name || '—',
+          // Edit action removed in Phase 3 — assignment changes go through
+          // the More menu (Hand Off Lead transfers ownership; Distribute
+          // Lead clones for compete model).
         },
         show('assigned_by_name') && { label: isRTL ? 'تم التعيين بواسطة' : 'Assigned By', val: contact.assigned_by_name || '—' },
         show('created_by_name') && { label: isRTL ? 'أنشأها' : 'Created By', val: contact.created_by_name || '—' },
@@ -1658,96 +1645,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       {/* Note: per-chip remove (X) button was removed in Phase 3 — multi-assignment is gone after Phase 1, so the condition assignedNames.length > 1 was always false. Use Hand Off Lead from More menu to transfer ownership. */}
                     </button>
                   ))}
-                  {/* Add Agent picker removed in Phase 3 — multi-assignment is no longer the model. Use Distribute Lead (clones) or Hand Off Lead (transfers) from the More menu instead. The picker UI and its state (showAddAgent, addAgentPicked, addAgentSearch, addAgentStatus, addAgentTemp, addAgentSaving) are still declared to avoid touching too much in one commit; will be removed in a follow-up. */}
-                  {false && isAdmin && <div className="relative" data-agent-picker>
-                    <button onClick={() => { setShowAddAgent(!showAddAgent); setAddAgentPicked(null); setAddAgentSearch(''); }}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer bg-transparent border border-dashed border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500 hover:text-brand-500 transition-colors">
-                      + {isRTL ? 'إضافة' : 'Add'}
-                    </button>
-                    {showAddAgent && (
-                      <div className="absolute top-full mt-1 start-0 z-20 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden" style={{ width: addAgentPicked ? 260 : 224 }}>
-                        {!addAgentPicked ? (
-                          <>
-                            <div className="p-2">
-                              <input type="text" value={addAgentSearch} onChange={e => setAddAgentSearch(e.target.value)}
-                                placeholder={isRTL ? 'ابحث...' : 'Search...'}
-                                className="w-full px-2.5 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none"
-                                autoFocus />
-                            </div>
-                            <div className="max-h-[180px] overflow-y-auto px-1 pb-1">
-                              {agentsList.filter(a => !assignedNames.includes(a) && (!addAgentSearch || a.toLowerCase().includes(addAgentSearch.toLowerCase()))).map(a => (
-                                <button key={a} onClick={() => { setAddAgentPicked(a); setAddAgentStatus('new'); setAddAgentTemp('hot'); }}
-                                  className="w-full px-3 py-2 rounded-lg text-xs text-content dark:text-content-dark bg-transparent border-none cursor-pointer text-start hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
-                                  {a}
-                                </button>
-                              ))}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="p-3">
-                            <div className="text-xs font-bold text-brand-500 mb-2.5">{addAgentPicked}</div>
-                            <div className="mb-2">
-                              <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-1">{isRTL ? 'الحالة' : 'Status'}</label>
-                              <select value={addAgentStatus} onChange={e => setAddAgentStatus(e.target.value)}
-                                className="w-full px-2 py-1.5 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none">
-                                <option value="new">{isRTL ? 'جديد' : 'New'}</option>
-                                <option value="contacted">{isRTL ? 'تم التواصل' : 'Contacted'}</option>
-                                <option value="following">{isRTL ? 'متابعة' : 'Following'}</option>
-                                <option value="has_opportunity">{isRTL ? 'لديه فرصة' : 'Has Opportunity'}</option>
-                              </select>
-                            </div>
-                            <div className="mb-3">
-                              <label className="text-[10px] text-content-muted dark:text-content-muted-dark block mb-1">{isRTL ? 'الحرارة' : 'Temperature'}</label>
-                              <select value={addAgentTemp} onChange={e => setAddAgentTemp(e.target.value)}
-                                className="w-full px-2 py-1.5 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none">
-                                <option value="hot">{isRTL ? 'ساخن' : 'Hot'}</option>
-                                <option value="warm">{isRTL ? 'دافئ' : 'Warm'}</option>
-                                <option value="cool">{isRTL ? 'بارد' : 'Cool'}</option>
-                                <option value="cold">{isRTL ? 'بارد جداً' : 'Cold'}</option>
-                              </select>
-                            </div>
-                            <div className="flex gap-2">
-                              <button onClick={() => setAddAgentPicked(null)}
-                                className="flex-1 px-2 py-1.5 rounded-lg text-xs font-semibold border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark cursor-pointer">
-                                {isRTL ? 'رجوع' : 'Back'}
-                              </button>
-                              <button
-                                disabled={addAgentSaving}
-                                onClick={async () => {
-                                if (addAgentSaving) return; // double-click guard
-                                setAddAgentSaving(true);
-                                const newNames = [...assignedNames, addAgentPicked];
-                                const newStatuses = { ...(contact.agent_statuses || {}), [addAgentPicked]: addAgentStatus };
-                                const newTemps = { ...(contact.agent_temperatures || {}), [addAgentPicked]: addAgentTemp };
-                                const globalStatus = deriveGlobalStatus(newStatuses);
-                                const globalTemp = deriveGlobalTemp(newTemps);
-                                const dbFields = { assigned_to_names: newNames, agent_statuses: newStatuses, agent_temperatures: newTemps, contact_status: globalStatus, temperature: globalTemp };
-                                // Direct DB update FIRST
-                                try {
-                                  const { updateContact: uc } = await import('../../../services/contactsService');
-                                  await uc(contact.id, dbFields);
-                                  notifyAgentAdded({ contactName: contact.full_name, contactId: contact.id, agentName: addAgentPicked, addedBy: profile?.full_name_en || profile?.full_name_ar });
-                                  // Then update UI (mark _skipDbUpdate so parent doesn't re-save)
-                                  if (onUpdate) onUpdate({ ...contact, ...dbFields, _skipDbUpdate: true });
-                                  toast.success(isRTL ? `تم إضافة ${addAgentPicked}` : `Added ${addAgentPicked}`);
-                                  setShowAddAgent(false); setAddAgentPicked(null); setAddAgentSearch('');
-                                } catch (err) {
-                                  console.error('Add agent save failed:', err);
-                                  toast.error(isRTL ? `فشل إضافة ${addAgentPicked} — حاول تاني` : `Failed to add ${addAgentPicked} — please retry`);
-                                  // Don't dismiss the picker on failure so the user can retry
-                                } finally {
-                                  setAddAgentSaving(false);
-                                }
-                              }}
-                                className={`flex-1 px-2 py-1.5 rounded-lg text-xs font-bold border-none cursor-pointer ${addAgentSaving ? 'bg-brand-500/60 text-white cursor-wait' : 'bg-brand-500 text-white'}`}>
-                                {addAgentSaving ? (isRTL ? 'جاري الإضافة...' : 'Adding...') : (isRTL ? 'تأكيد' : 'Confirm')}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>}
+                  {/* Add Agent picker fully removed in Phase 3 — replaced by
+                      the Distribute Lead (clones) and Hand Off Lead (transfers)
+                      tools in the More menu. */}
                 </div>
               </div>
               {selectedAgent !== 'all' && (
