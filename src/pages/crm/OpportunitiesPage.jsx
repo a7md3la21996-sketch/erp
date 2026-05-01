@@ -54,6 +54,7 @@ function DealClosingWizard({ opp, isRTL, lang, isDark, onComplete, onClose }) {
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const dialogRef = useRef(null);
+  const toast = useToast();
   useFocusTrap(dialogRef);
   useEscClose(onClose);
 
@@ -87,9 +88,13 @@ function DealClosingWizard({ opp, isRTL, lang, isDark, onComplete, onClose }) {
       installments_count: form.installments_count ? Number(form.installments_count) : 0,
       units: allUnits,
     };
+    // Surface the error to the user instead of silently re-enabling the
+    // button. Previous version swallowed the error and the user clicked
+    // "Complete Deal" repeatedly with no feedback.
     try {
       await onComplete(opp, extraFields);
-    } catch {
+    } catch (err) {
+      toast.error(err.message || (isRTL ? 'فشل إتمام الصفقة' : 'Failed to complete deal'));
       setSaving(false);
     }
   };
@@ -774,36 +779,42 @@ export default function OpportunitiesPage() {
     toast.success(isRTL ? 'تم تحديث الفرصة' : 'Opportunity updated');
     logAction({ action: 'update', entity: 'opportunity', entityId: oppId, entityName: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}), description: isRTL ? 'تحديث فرصة' : 'Opportunity updated', userName: profile?.full_name_ar || profile?.full_name_en || '' });
 
-    if (updates.stage === 'closed_won') {
-      notifyDealWon({
-        dealNumber: oppId?.slice(0, 8) || '—',
-        clientName: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}),
-        value: updates.budget ? `${Number(updates.budget).toLocaleString()} EGP` : '—',
-        agentId: updates.assigned_to || selectedOpp?.assigned_to || 'all',
-      });
-      const budgetVal2 = Number(updates.budget) || Number(selectedOpp?.budget) || 0;
-      const approvalThreshold2 = await getAutoApproveThreshold();
-      if (budgetVal2 >= approvalThreshold2 && !(await getApprovalByEntity('deal', oppId))) {
-        createApprovalRequest({
-          type: 'deal',
-          entity_id: oppId,
-          entity_name: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}),
-          requesterId: profile?.id || profile?.email || '',
-          requesterName: profile?.full_name_ar || profile?.full_name_en || '',
-          amount: budgetVal2,
-          priority: budgetVal2 >= approvalThreshold2 * 3 ? 'urgent' : 'normal',
-          approverId: 'admin',
-          approverName: 'Admin',
-          notes: `${isRTL ? 'صفقة مغلقة بقيمة' : 'Deal won with value'} ${budgetVal2.toLocaleString()} EGP`,
+    // Wrap the closed_won bookkeeping (notify, approval threshold check,
+    // deal-exists lookup, deal wizard) in try/finally — any of those awaits
+    // could throw and leave actionLoading=true forever, locking the drawer.
+    try {
+      if (updates.stage === 'closed_won') {
+        notifyDealWon({
+          dealNumber: oppId?.slice(0, 8) || '—',
+          clientName: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}),
+          value: updates.budget ? `${Number(updates.budget).toLocaleString()} EGP` : '—',
+          agentId: updates.assigned_to || selectedOpp?.assigned_to || 'all',
         });
+        const budgetVal2 = Number(updates.budget) || Number(selectedOpp?.budget) || 0;
+        const approvalThreshold2 = await getAutoApproveThreshold();
+        if (budgetVal2 >= approvalThreshold2 && !(await getApprovalByEntity('deal', oppId))) {
+          createApprovalRequest({
+            type: 'deal',
+            entity_id: oppId,
+            entity_name: getContactName(opps.find(o => o.id === oppId) || selectedOpp || {}),
+            requesterId: profile?.id || profile?.email || '',
+            requesterName: profile?.full_name_ar || profile?.full_name_en || '',
+            amount: budgetVal2,
+            priority: budgetVal2 >= approvalThreshold2 * 3 ? 'urgent' : 'normal',
+            approverId: 'admin',
+            approverName: 'Admin',
+            notes: `${isRTL ? 'صفقة مغلقة بقيمة' : 'Deal won with value'} ${budgetVal2.toLocaleString()} EGP`,
+          });
+        }
+        const opp = (opps || []).find(o => o.id === oppId);
+        if (opp && (opp.contacts?.department || 'sales') === 'sales') {
+          const dealExists = await dealExistsForOpportunity(opp.id);
+          if (!dealExists) setDealWizardOpp({ ...opp, ...result });
+        }
       }
-      const opp = (opps || []).find(o => o.id === oppId);
-      if (opp && (opp.contacts?.department || 'sales') === 'sales') {
-        const dealExists = await dealExistsForOpportunity(opp.id);
-        if (!dealExists) setDealWizardOpp({ ...opp, ...result });
-      }
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const handleEditStageLost = (oppId, editForm) => {

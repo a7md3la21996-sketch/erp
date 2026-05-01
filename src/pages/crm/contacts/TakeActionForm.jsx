@@ -105,23 +105,28 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
     // and the auto-update can overwrite the user's explicit choice (this is
     // exactly what made disqualified statuses bounce back to "following").
     const userChoseStatus = !!(changeStatus && newStatus);
-    await onSaveActivity(actData, { skipAutoStatus: userChoseStatus });
 
-    // 2. Save task if enabled
-    if (addTask && taskForm.type && taskForm.due_date) {
-      const selectedType = TASK_TYPES.find(t => t.key === taskForm.type);
-      const title = selectedType ? (isRTL ? selectedType.ar : selectedType.en) : taskForm.type;
-      await onSaveTask({ ...taskForm, title, contact_id: contact.id, contact_name: contact.full_name, dept: 'sales' });
+    // try/finally so a thrown save (network, RLS) releases the saving state
+    // and lets the user retry instead of a permanent spinner.
+    try {
+      await onSaveActivity(actData, { skipAutoStatus: userChoseStatus });
+
+      // 2. Save task if enabled
+      if (addTask && taskForm.type && taskForm.due_date) {
+        const selectedType = TASK_TYPES.find(t => t.key === taskForm.type);
+        const title = selectedType ? (isRTL ? selectedType.ar : selectedType.en) : taskForm.type;
+        await onSaveTask({ ...taskForm, title, contact_id: contact.id, contact_name: contact.full_name, dept: 'sales' });
+      }
+
+      // 3. Change contact status if enabled — wait for the activity write to
+      // complete (above) so we don't race against its DB read.
+      if (userChoseStatus) {
+        onStatusChange(newStatus, newStatus === 'disqualified' ? dqReason : undefined);
+      }
+      onCancel();
+    } finally {
+      setSaving(false);
     }
-
-    // 3. Change contact status if enabled — wait for the activity write to
-    // complete (above) so we don't race against its DB read.
-    if (userChoseStatus) {
-      onStatusChange(newStatus, newStatus === 'disqualified' ? dqReason : undefined);
-    }
-
-    setSaving(false);
-    onCancel();
   };
 
   const RESULT_TITLES = {

@@ -52,7 +52,9 @@ export async function recordAssignment(contactId, { fromAgent, toAgent, assigned
     notes,
     at: new Date().toISOString(),
   };
-  // Persist to Supabase (fire-and-forget)
+  // Persist to Supabase (fire-and-forget). Report both Supabase {error}
+  // responses (RLS, schema) and promise rejections (network) — earlier
+  // versions only caught the latter, so RLS denials disappeared silently.
   supabase.from('activities').insert([{
     type: 'reassignment',
     entity_type: 'contact',
@@ -62,7 +64,9 @@ export async function recordAssignment(contactId, { fromAgent, toAgent, assigned
     user_name_en: assignedBy || null,
     status: 'completed',
     created_at: entry.at,
-  }]).then(() => {}).catch((err) => { reportError('contactsService', 'recordAssignment', err); });
+  }])
+    .then(({ error }) => { if (error) reportError('contactsService', 'recordAssignment', error); })
+    .catch((err) => { reportError('contactsService', 'recordAssignment', err); });
   // Update assigned_at timestamp. Best-effort, but at least surface failures
   // for monitoring instead of swallowing them silently.
   supabase.from('contacts').update({ assigned_at: entry.at }).eq('id', contactId)
@@ -331,17 +335,28 @@ export async function createContact(contactData) {
       if (import.meta.env.DEV) console.error('[createContact] Supabase error:', error.message, error.details, error.hint);
       throw error;
     }
-    // Auto-generate contact_number using timestamp to avoid race condition
+    // Auto-generate contact_number using timestamp + random suffix.
+    // Timestamp-only suffix collided under parallel imports (two rows in the
+    // same millisecond got the same number); 4 random base-36 chars give
+    // ~1.7M unique combos per ms.
     if (!data.contact_number) {
-      // Timestamp-only suffix collided under parallel imports (two rows in
-      // the same millisecond got the same number). Append 4 random base-36
-      // chars (~1.7M unique combos per ms) to make collisions essentially
-      // impossible in practice.
       const ts = Date.now().toString(36).toUpperCase();
       const rand = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, '0');
       const num = `C-${ts}-${rand}`;
-      await supabase.from('contacts').update({ contact_number: num }).eq('id', data.id);
-      data.contact_number = num;
+      // Don't blindly mirror the value into the local object — if the update
+      // fails (network blip, RLS), we'd return a contact whose in-memory
+      // contact_number doesn't exist in the DB, hiding the failure from
+      // every downstream caller. Use the rq() helper so we get the same
+      // retry policy the rest of the service uses.
+      const { error: numErr } = await rq(
+        () => supabase.from('contacts').update({ contact_number: num }).eq('id', data.id),
+        'createContact.assignNumber'
+      );
+      if (!numErr) {
+        data.contact_number = num;
+      } else {
+        reportError('contactsService', 'createContact.assignNumber', numErr);
+      }
     }
     logCreate('contact', data.id, data);
     return data;

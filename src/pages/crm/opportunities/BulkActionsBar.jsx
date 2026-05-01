@@ -107,23 +107,24 @@ export default function BulkActionsBar({
 
     {/* Bulk Delete Confirmation Modal */}
     {confirmBulkDelete && (
-      <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={() => setConfirmBulkDelete(false)}>
-        <div
-          style={{ background: isDark ? '#1E293B' : '#fff', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 16, padding: 28, width: '100%', maxWidth: 420, textAlign: 'center' }}
-          onClick={e => e.stopPropagation()}
-        >
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <Trash2 size={20} style={{ color: '#EF4444' }} />
+      <div dir={isRTL ? 'rtl' : 'ltr'}
+        className="fixed inset-0 bg-black/50 z-[1300] flex items-center justify-center p-5"
+        onClick={() => setConfirmBulkDelete(false)}>
+        <div role="alertdialog" aria-modal="true" aria-labelledby="bulk-opp-delete-title"
+          className="bg-surface-card dark:bg-surface-card-dark border border-red-500/30 rounded-2xl p-7 w-full max-w-[420px] text-center"
+          onClick={e => e.stopPropagation()}>
+          <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+            <Trash2 size={20} className="text-red-500" />
           </div>
-          <h3 style={{ margin: '0 0 8px', color: isDark ? '#F1F5F9' : '#1E293B', fontSize: 16, fontWeight: 700 }}>
+          <h3 id="bulk-opp-delete-title" className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">
             {isRTL ? '\u062D\u0630\u0641 \u0641\u0631\u0635' : 'Delete Opportunities'}
           </h3>
-          <p style={{ margin: '0 0 20px', color: isDark ? '#94A3B8' : '#64748B', fontSize: 13 }}>
+          <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-[13px]">
             {isRTL
               ? `\u0647\u0644 \u0623\u0646\u062A \u0645\u062A\u0623\u0643\u062F \u0645\u0646 \u062D\u0630\u0641 ${bulkSelected.size} \u0641\u0631\u0635\u0629\u061F \u0644\u0627 \u064A\u0645\u0643\u0646 \u0627\u0644\u062A\u0631\u0627\u062C\u0639 \u0639\u0646 \u0647\u0630\u0627 \u0627\u0644\u0625\u062C\u0631\u0627\u0621.`
               : `Are you sure you want to delete ${bulkSelected.size} opportunities? This action cannot be undone.`}
           </p>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+          <div className="flex gap-2.5 justify-center">
             <Button variant="secondary" size="sm" onClick={() => setConfirmBulkDelete(false)}>
               {isRTL ? '\u0625\u0644\u063A\u0627\u0621' : 'Cancel'}
             </Button>

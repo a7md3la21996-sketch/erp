@@ -35,21 +35,29 @@ export default function AddModal({ isRTL, lang, onClose, onSave, agents, project
       notes: form.notes,
       expected_close_date: form.expected_close_date || null,
     };
-    const result = await createOpportunity(payload);
-    // Inject joined data so cards render names immediately
-    if (!result.contacts && form.contact) {
-      result.contacts = { id: form.contact.id, full_name: form.contact.full_name, phone: form.contact.phone, email: form.contact.email, company: form.contact.company, contact_type: form.contact.contact_type, department: form.contact.department };
+    // Wrap in try/finally so a thrown createOpportunity doesn't leave the
+    // modal stuck on the saving spinner. The form-level error message is
+    // shown via `errors._save` so the user can fix and retry.
+    try {
+      const result = await createOpportunity(payload);
+      // Inject joined data so cards render names immediately
+      if (!result.contacts && form.contact) {
+        result.contacts = { id: form.contact.id, full_name: form.contact.full_name, phone: form.contact.phone, email: form.contact.email, company: form.contact.company, contact_type: form.contact.contact_type, department: form.contact.department };
+      }
+      if (!result.projects && form.project_id) {
+        const proj = projects.find(p => p.id === form.project_id);
+        if (proj) result.projects = { id: proj.id, name_ar: proj.name_ar, name_en: proj.name_en };
+      }
+      if (!result.users && form.assigned_to) {
+        const agent = agents.find(a => a.id === form.assigned_to);
+        if (agent) result.users = { id: agent.id, full_name_ar: agent.full_name_ar, full_name_en: agent.full_name_en };
+      }
+      onSave(result);
+    } catch (err) {
+      setErrors({ _save: err.message || (isRTL ? 'فشل حفظ الفرصة' : 'Failed to save opportunity') });
+    } finally {
+      setSaving(false);
     }
-    if (!result.projects && form.project_id) {
-      const proj = projects.find(p => p.id === form.project_id);
-      if (proj) result.projects = { id: proj.id, name_ar: proj.name_ar, name_en: proj.name_en };
-    }
-    if (!result.users && form.assigned_to) {
-      const agent = agents.find(a => a.id === form.assigned_to);
-      if (agent) result.users = { id: agent.id, full_name_ar: agent.full_name_ar, full_name_en: agent.full_name_en };
-    }
-    onSave(result);
-    setSaving(false);
   };
 
   return (

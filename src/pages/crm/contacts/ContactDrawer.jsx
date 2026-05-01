@@ -412,9 +412,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       const savedTask = await createTask({ ...taskData, assigned_to: profile?.id || null, assigned_to_name_ar: profile?.full_name_ar || '', assigned_to_name_en: profile?.full_name_en || '' });
       setTasks(prev => [savedTask, ...prev]);
     } catch (err) {
-      const localTask = { id: String(Date.now()), ...taskData, status: 'todo', created_at: new Date().toISOString() };
-      setTasks(prev => [localTask, ...prev]);
-      toast.success(isRTL ? 'تم حفظ المهمة محلياً' : 'Task saved locally');
+      // The "saved locally" toast was a relic — we don't actually persist
+      // tasks anywhere offline, so the message lied to the user. Surface
+      // the real failure so they can retry instead of trusting a phantom save.
+      toast.error(err.message || (isRTL ? 'فشل حفظ المهمة' : 'Failed to save task'));
     }
   };
 

@@ -115,12 +115,19 @@ function CampaignCombo({ campaigns, source, value, isRTL, onChange, onCreateCamp
                   target_property_type: newCamp.target_property_type || null,
                   notes: null,
                 };
-                if (onCreateCampaign) await onCreateCampaign(camp);
-                const name = isRTL ? camp.name_ar : camp.name_en;
-                onChange(name, camp);
-                setSaving(false);
-                setShowCreate(false);
-                setNewCamp({ name_ar: '', name_en: '', target_location: '', target_property_type: '' });
+                try {
+                  if (onCreateCampaign) await onCreateCampaign(camp);
+                  const name = isRTL ? camp.name_ar : camp.name_en;
+                  onChange(name, camp);
+                  setShowCreate(false);
+                  setNewCamp({ name_ar: '', name_en: '', target_location: '', target_property_type: '' });
+                } catch (err) {
+                  // Without try/finally, a thrown campaign create left the
+                  // sub-modal stuck on the "Saving..." button.
+                  toast.error(err.message || (isRTL ? 'فشل إنشاء الحملة' : 'Failed to create campaign'));
+                } finally {
+                  setSaving(false);
+                }
               }}>
                 {saving ? (isRTL ? 'جاري...' : 'Saving...') : (isRTL ? 'إنشاء' : 'Create')}
               </Button>

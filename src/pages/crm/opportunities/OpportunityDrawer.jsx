@@ -81,22 +81,28 @@ function OppTakeActionForm({ selectedOpp, isRTL, configActivityTypes, configActi
       const resultLabel = found ? found.label : actForm.result;
       actData.description = `${resultLabel}${actForm.description ? ' — ' + actForm.description : ''}`;
     }
-    await onSaveActivity(actData);
 
-    // 2. Save task if enabled
-    if (addTask && taskForm.type && taskForm.due_date) {
-      const selectedType = TASK_TYPES.find(t => t.key === taskForm.type);
-      const title = selectedType ? (isRTL ? selectedType.ar : selectedType.en) : taskForm.type;
-      await onSaveTask({ ...taskForm, title, contact_id: selectedOpp.contact_id, contact_name: getContactName(selectedOpp), entity_type: 'opportunity', entity_id: selectedOpp.id, dept: 'sales', created_by: profile?.id, created_by_name: profile?.full_name_ar || profile?.full_name_en });
+    // try/finally so a thrown save in any of the three steps still releases
+    // the spinner and lets the user retry. Without it, an activity-create
+    // failure would leave the form locked in "Saving..." forever.
+    try {
+      await onSaveActivity(actData);
+
+      // 2. Save task if enabled
+      if (addTask && taskForm.type && taskForm.due_date) {
+        const selectedType = TASK_TYPES.find(t => t.key === taskForm.type);
+        const title = selectedType ? (isRTL ? selectedType.ar : selectedType.en) : taskForm.type;
+        await onSaveTask({ ...taskForm, title, contact_id: selectedOpp.contact_id, contact_name: getContactName(selectedOpp), entity_type: 'opportunity', entity_id: selectedOpp.id, dept: 'sales', created_by: profile?.id, created_by_name: profile?.full_name_ar || profile?.full_name_en });
+      }
+
+      // 3. Change stage if enabled
+      if (changeStage && newStage && newStage !== selectedOpp.stage) {
+        onStageChange(newStage);
+      }
+      onCancel();
+    } finally {
+      setSaving(false);
     }
-
-    // 3. Change stage if enabled
-    if (changeStage && newStage && newStage !== selectedOpp.stage) {
-      onStageChange(newStage);
-    }
-
-    setSaving(false);
-    onCancel();
   };
 
   const sectionHeader = (icon, label, enabled, onToggle, required) => (

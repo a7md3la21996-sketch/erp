@@ -66,9 +66,18 @@ export default function QuickTaskModal({ contact, onClose }) {
       assigned_to_name_ar: profile?.full_name_ar || '',
       assigned_to_name_en: profile?.full_name_en || '',
     };
-    try { await createTask(task); toast.success(isRTL ? 'تم إنشاء المهمة' : 'Task created'); } catch { toast.success(isRTL ? 'تم إنشاء المهمة محلياً' : 'Task created locally'); }
-    setSaving(false);
-    onClose();
+    // Show an honest error on save failure — the previous "created locally"
+    // toast was a relic from the offline-first era; we don't actually save
+    // tasks locally anymore, so the message lied to the user.
+    try {
+      await createTask(task);
+      toast.success(isRTL ? 'تم إنشاء المهمة' : 'Task created');
+      onClose();
+    } catch (err) {
+      toast.error(err.message || (isRTL ? 'فشل إنشاء المهمة' : 'Failed to create task'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const taskTypes = [

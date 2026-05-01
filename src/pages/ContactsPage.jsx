@@ -289,8 +289,11 @@ export default function ContactsPage() {
       }
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
     } catch (err) {
+      // Old "saved locally" toast was a relic from offline-first; we don't
+      // actually persist locally after Phase 2, so the success toast lied
+      // when the DB write failed. Surface the real failure.
       reportError('ContactsPage', 'handleQuickAction.saveActivity', err);
-      toast.success(isRTL ? 'تم حفظ النشاط محلياً' : 'Activity saved locally');
+      toast.error(isRTL ? `فشل حفظ النشاط: ${err.message || 'خطأ غير معروف'}` : `Failed to save activity: ${err.message || 'Unknown error'}`);
     }
     setSavingQuickAction(false);
     setQuickActionTarget(null);
@@ -506,12 +509,21 @@ export default function ContactsPage() {
     if (!templateId) return;
     const smsContacts = contacts.filter(c => selectedIds.includes(c.id) && c.phone);
     setBulkSMSState(s => ({ ...s, sending: true, total: smsContacts.length, progress: 0 }));
-    const results = await bulkSend(templateId, smsContacts, lang);
-    const resultsList = Array.isArray(results) ? results : [];
-    setBulkSMSState(s => ({ ...s, sending: false, progress: smsContacts.length, done: true, results: resultsList }));
-    logAction({ action: 'bulk_sms', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk SMS sent to ${resultsList.length} contacts`, userName: profile?.full_name_ar });
-    createNotification({ type: 'system', title_en: 'Bulk SMS Sent', title_ar: 'تم إرسال رسائل جماعية', body_en: `Sent SMS to ${resultsList.length} leads`, body_ar: `تم إرسال رسائل لـ ${resultsList.length} عميل`, for_user_id: 'all' });
-    toast.success(isRTL ? `تم إرسال ${resultsList.length} رسالة` : `${resultsList.length} messages sent`);
+    try {
+      const results = await bulkSend(templateId, smsContacts, lang);
+      const resultsList = Array.isArray(results) ? results : [];
+      setBulkSMSState(s => ({ ...s, sending: false, progress: smsContacts.length, done: true, results: resultsList }));
+      logAction({ action: 'bulk_sms', entity: 'contact', entityId: selectedIds.join(','), description: `Bulk SMS sent to ${resultsList.length} contacts`, userName: profile?.full_name_ar });
+      createNotification({ type: 'system', title_en: 'Bulk SMS Sent', title_ar: 'تم إرسال رسائل جماعية', body_en: `Sent SMS to ${resultsList.length} leads`, body_ar: `تم إرسال رسائل لـ ${resultsList.length} عميل`, for_user_id: 'all' });
+      toast.success(isRTL ? `تم إرسال ${resultsList.length} رسالة` : `${resultsList.length} messages sent`);
+    } catch (err) {
+      // Without this, a thrown bulkSend left the modal stuck on the spinner
+      // because `sending: true` was never reset. Reset state and surface the
+      // error so the user can retry instead of staring at a frozen UI.
+      reportError('ContactsPage', 'handleBulkSMS', err);
+      setBulkSMSState(s => ({ ...s, sending: false, progress: 0 }));
+      toast.error(isRTL ? `فشل إرسال الرسائل: ${err.message || 'خطأ غير معروف'}` : `Bulk SMS failed: ${err.message || 'Unknown error'}`);
+    }
   };
 
   const exportSelectedCSV = async () => {
@@ -540,12 +552,15 @@ export default function ContactsPage() {
     const a = document.createElement('a');
     a.href = url; a.download = `contacts_${new Date().toISOString().slice(0,10)}.csv`; a.click();
     URL.revokeObjectURL(url);
-    // Log export
+    // Log export — best-effort, but don't swallow Supabase {error}
+    // responses (the audit trail is the only place these exports are recorded).
     supabase.from('import_export_logs').insert([{
       type: 'export', user_id: profile?.id, user_name: profile?.full_name_en || profile?.full_name_ar,
       total_records: list.length, success_count: list.length, entity: 'contacts', status: 'completed',
       file_name: `contacts_${new Date().toISOString().slice(0,10)}.csv`,
-    }]).then(() => {}).catch(() => {});
+    }])
+      .then(({ error }) => { if (error) reportError('ContactsPage', 'exportLog', error); })
+      .catch(err => reportError('ContactsPage', 'exportLog', err));
   };
 
   // Bulk action dropdown options
@@ -1120,14 +1135,23 @@ export default function ContactsPage() {
   ]);
 
   const handleBlacklist = async (contact, reason) => {
-    setContacts(prev => {
-      const next = prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c);
-            return next;
-    });
+    // Optimistic update — flip the chip first so the row reacts instantly.
+    const before = contact;
+    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c));
     if (selected?.id === contact.id) setSelected(null);
-    blacklistContact(contact.id, reason).catch(err => { if (import.meta.env.DEV) console.warn('blacklist contact:', err); });
-    logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
-    toast.success(isRTL ? 'تم إضافة للقائمة السوداء' : 'Lead blacklisted');
+    // Wait for the DB write so we can roll back + show an honest error if
+    // it fails. Previous version fired-and-forgot, then announced
+    // "Lead blacklisted" even when RLS denied the write — the user reloaded
+    // and the contact wasn't blacklisted at all.
+    try {
+      await blacklistContact(contact.id, reason);
+      logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
+      toast.success(isRTL ? 'تم إضافة للقائمة السوداء' : 'Lead blacklisted');
+    } catch (err) {
+      reportError('ContactsPage', 'handleBlacklist', err);
+      setContacts(prev => prev.map(c => c.id === contact.id ? before : c));
+      toast.error(isRTL ? 'فشل إضافة للقائمة السوداء' : 'Failed to blacklist lead');
+    }
   };
 
   const tdCls = `px-4 py-3.5 border-b border-edge/50 dark:border-edge-dark/50 align-middle text-xs text-content dark:text-content-dark text-start`;
@@ -1549,12 +1573,15 @@ export default function ContactsPage() {
           console.log('[Import] Sending', clean.length, 'contacts. Sample:', JSON.stringify(clean[0]).slice(0, 200));
           const inserted = await batchInsert('contacts', clean, 20);
           console.log('[Import] Inserted:', inserted.length, 'out of', clean.length);
-          // Log import
+          // Log import — best-effort, but surface errors to monitoring
+          // (silent .then/.catch hid RLS denials on the audit log table).
           supabase.from('import_export_logs').insert([{
             type: 'import', user_id: profile?.id, user_name: profile?.full_name_en || profile?.full_name_ar,
             total_records: clean.length, success_count: inserted.length, failed_count: clean.length - inserted.length,
             entity: 'contacts', status: inserted.length === clean.length ? 'completed' : inserted.length > 0 ? 'partial' : 'failed',
-          }]).then(() => {}).catch(() => {});
+          }])
+            .then(({ error }) => { if (error) reportError('ContactsPage', 'importLog', error); })
+            .catch(err => reportError('ContactsPage', 'importLog', err));
           if (inserted.length === 0 && clean.length > 0) {
             toast.error(isRTL ? 'فشل الاستيراد — تأكد من البيانات' : 'Import failed — check data');
             console.error('[Import] All inserts failed. First record:', clean[0]);
