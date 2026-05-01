@@ -894,7 +894,14 @@ export default function ContactsPage() {
     fetchCampaigns().then(c => setCampaignsList(c)).catch(err => { if (import.meta.env.DEV) console.warn('fetch campaigns:', err); });
   }, [profile, loadContactsData]);
 
-  // Realtime: auto-refresh contacts when any row changes in Supabase
+  // Realtime: auto-refresh contacts when any row changes in Supabase. We
+  // hold the latest loader in a ref so this callback identity is stable —
+  // otherwise every filter / page change re-subscribed to the channel
+  // (~20 churn/sec while the user types in search), which leaked WebSocket
+  // connections and dropped events between unsub and re-sub.
+  const loadContactsDataRef = useReactRef(loadContactsData);
+  loadContactsDataRef.current = loadContactsData;
+
   useRealtimeSubscription('contacts', useCallback((payload) => {
     if (payload?.eventType) {
       const newRec = payload.new;
@@ -904,7 +911,6 @@ export default function ContactsPage() {
         const myName = profile?.full_name_en || profile?.full_name_ar;
         if (myName && !names.includes(myName)) return;
       } else if (profile?.role === 'team_leader' || profile?.role === 'sales_manager') {
-        // For TL/Manager: only accept if contact is already in our list (existing) or skip INSERT from other teams
         if (payload.eventType === 'INSERT') {
           // Don't auto-add new contacts from realtime — let the next page load pick them up
           return;
@@ -912,9 +918,9 @@ export default function ContactsPage() {
       }
       setContacts(prev => applyRealtimePayload(prev, payload));
     } else if (profile) {
-      loadContactsData();
+      loadContactsDataRef.current();
     }
-  }, [profile, loadContactsData]));
+  }, [profile?.role, profile?.full_name_en, profile?.full_name_ar]));
 
   // Handle highlight query param — open contact drawer directly
   useEffect(() => {
@@ -1135,7 +1141,7 @@ export default function ContactsPage() {
         <style>{`@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }`}</style>
       </div>
     )}
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>
@@ -1187,11 +1193,13 @@ export default function ContactsPage() {
               <select value={filterActivity} onChange={e => setFilterActivity(e.target.value)}
                 className="px-3 py-1.5 rounded-xl text-xs bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark cursor-pointer appearance-none pe-7"
                 style={filterActivity !== 'all' ? { borderColor: filterActivity === 'active_3d' ? '#10B981' : filterActivity === 'moderate_7d' ? '#F59E0B' : filterActivity === 'stale' ? '#EF4444' : '#6b7280', color: filterActivity === 'active_3d' ? '#10B981' : filterActivity === 'moderate_7d' ? '#F59E0B' : filterActivity === 'stale' ? '#EF4444' : '#6b7280' } : undefined}>
+                {/* Shape suffix (●▲■✕) doubles as a colorblind-safe cue —
+                    relying on color alone fails for ~8% of male users. */}
                 <option value="all">{isRTL ? 'كل النشاط' : 'All Activity'}</option>
-                <option value="active_3d">{isRTL ? `🟢 نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `🟢 Active (${ACTIVITY_ACTIVE_DAYS}d)`}</option>
-                <option value="moderate_7d">{isRTL ? `🟡 متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `🟡 Moderate (${ACTIVITY_MODERATE_DAYS}d)`}</option>
-                <option value="stale">{isRTL ? '🔴 مهمل' : '🔴 Stale'}</option>
-                <option value="never">{isRTL ? '⚫ لم يتم التواصل' : '⚫ Never'}</option>
+                <option value="active_3d">{isRTL ? `● نشط (${ACTIVITY_ACTIVE_DAYS} أيام)` : `● Active (${ACTIVITY_ACTIVE_DAYS}d)`}</option>
+                <option value="moderate_7d">{isRTL ? `▲ متوسط (${ACTIVITY_MODERATE_DAYS} أيام)` : `▲ Moderate (${ACTIVITY_MODERATE_DAYS}d)`}</option>
+                <option value="stale">{isRTL ? '■ مهمل' : '■ Stale'}</option>
+                <option value="never">{isRTL ? '✕ لم يتم التواصل' : '✕ Never'}</option>
               </select>
               <ChevronDown size={10} className="absolute end-2 top-1/2 -translate-y-1/2 pointer-events-none text-content-muted" />
             </div>
@@ -1213,18 +1221,18 @@ export default function ContactsPage() {
             className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
             style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
             {s.label} <span
-              className={`rounded-xl px-2 py-px text-[10px] mis-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+              className={`rounded-xl px-2 py-px text-[10px] ms-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
               style={active ? { background: s.color, color: '#fff' } : undefined}>{s.count}</span>
           </button>
           );
         })}
         {profile?.role !== 'sales_agent' && (
         <button onClick={() => setShowUnassigned(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showUnassigned ? 'border border-amber-500 bg-amber-500/[0.08] text-amber-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-          <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
+          <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
         </button>
         )}
         <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] mis-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
+          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
         </button>
       </div>
 

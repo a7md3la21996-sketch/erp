@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Merge, Briefcase, CheckCircle2, Send } from 'lucide-react';
-import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { updateContact, deleteContact } from '../../../services/contactsService';
@@ -127,7 +126,9 @@ export function ConfirmModal({ confirmAction, setConfirmAction, isRTL }) {
   if (!confirmAction) return null;
 
   const requiredWord = isRTL ? 'حذف' : 'DELETE';
-  const isConfirmed = confirmText.trim() === requiredWord;
+  const trimmed = confirmText.trim();
+  const isConfirmed = trimmed === requiredWord;
+  const isMismatch = trimmed.length > 0 && !isConfirmed;
   const items = Array.isArray(confirmAction.items) ? confirmAction.items : [];
   const hasList = items.length > 0;
 
@@ -160,10 +161,22 @@ export function ConfirmModal({ confirmAction, setConfirmAction, isRTL }) {
           onChange={e => setConfirmText(e.target.value)}
           placeholder={requiredWord}
           autoFocus
-          className="w-full px-3 py-2.5 mb-4 text-sm text-center rounded-lg border-2 border-red-500/30 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark font-cairo focus:outline-none focus:border-red-500 transition-colors"
+          aria-invalid={isMismatch}
+          className={`w-full px-3 py-2.5 mb-1 text-sm text-center rounded-lg border-2 bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark font-cairo focus:outline-none transition-colors ${
+            isConfirmed ? 'border-emerald-500 focus:border-emerald-500'
+            : isMismatch ? 'border-red-500 focus:border-red-500'
+            : 'border-red-500/30 focus:border-red-500'
+          }`}
           dir="auto"
           onKeyDown={e => { if (e.key === 'Enter' && isConfirmed) { confirmAction.onConfirm(); setConfirmText(''); } }}
         />
+        <p className={`m-0 mb-3 text-[11px] min-h-[14px] ${isMismatch ? 'text-red-500' : isConfirmed ? 'text-emerald-500' : 'text-transparent'}`}>
+          {isMismatch
+            ? (isRTL ? `الكلمة لا تطابق "${requiredWord}"` : `Doesn't match "${requiredWord}"`)
+            : isConfirmed
+            ? (isRTL ? '✓ مطابق — اضغط Enter للتأكيد' : '✓ Matched — press Enter to confirm')
+            : '·'}
+        </p>
         <div className={`flex gap-2.5 ${hasList ? 'justify-end' : 'justify-center'}`}>
           <button onClick={() => { setConfirmAction(null); setConfirmText(''); }} className="px-5 py-2.5 bg-transparent border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">{isRTL ? 'إلغاء' : 'Cancel'}</button>
           <Button variant="danger" size="sm" disabled={!isConfirmed} onClick={() => { confirmAction.onConfirm(); setConfirmText(''); }}>{isRTL ? 'تأكيد الحذف' : 'Confirm Delete'}</Button>
@@ -175,8 +188,6 @@ export function ConfirmModal({ confirmAction, setConfirmAction, isRTL }) {
 
 // ── Disqualify Modal ─────────────────────────────────────────────────
 export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason, setDqReason, dqNote, setDqNote, DQ_REASONS, contacts, setContacts, selectedIds, setSelectedIds, profile, isRTL }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const toast = useToast();
 
   if (!disqualifyModal) return null;
@@ -185,36 +196,48 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
   const bulkContacts = isBulk ? (contacts || []).filter(c => selectedIds.includes(c.id)) : [];
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setDisqualifyModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: isDark ? '#1a2332' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: isBulk ? 500 : 400, boxShadow: isDark ? '0 24px 48px rgba(0,0,0,0.4)' : '0 24px 48px rgba(0,0,0,0.12)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#EF4444' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setDisqualifyModal(null)}
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1200] flex items-center justify-center p-5">
+      <div onClick={e => e.stopPropagation()}
+        className={`bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full ${isBulk ? 'max-w-[500px]' : 'max-w-[400px]'} shadow-2xl`}>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="m-0 text-[15px] font-bold text-red-500">
             {isRTL ? (isBulk ? `غير مؤهل (${selectedIds.length})` : `غير مؤهل — ${disqualifyModal?.full_name}`) : (isBulk ? `Disqualify (${selectedIds.length})` : `Disqualify — ${disqualifyModal?.full_name}`)}
           </h3>
-          <button onClick={() => setDisqualifyModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#64748b' : '#94a3b8' }}><X size={16} /></button>
+          <button onClick={() => setDisqualifyModal(null)} aria-label={isRTL ? 'إغلاق' : 'Close'}
+            className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark p-1 rounded">
+            <X size={16} />
+          </button>
         </div>
         {isBulk && bulkContacts.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b', marginBottom: 6 }}>
+          <div className="mb-3.5">
+            <div className="text-[11px] font-bold text-content dark:text-content-dark mb-1.5">
               {isRTL ? 'العملاء اللي هيتم استبعادهم:' : 'Contacts to disqualify:'}
             </div>
             <SelectedContactsList contacts={bulkContacts} isRTL={isRTL} maxHeight={220} />
           </div>
         )}
-        <div style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#64748b', marginBottom: 12 }}>{isRTL ? 'اختر سبب الاستبعاد:' : 'Select disqualification reason:'}</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+        <div className="text-xs text-content-muted dark:text-content-muted-dark mb-3">
+          {isRTL ? 'اختر سبب الاستبعاد:' : 'Select disqualification reason:'}
+        </div>
+        <div className="flex flex-col gap-1.5 mb-3">
           {DQ_REASONS.map(r => (
             <button key={r.value} onClick={() => setDqReason(r.value)}
-              style={{ padding: '10px 14px', borderRadius: 8, fontSize: 12, cursor: 'pointer', textAlign: isRTL ? 'right' : 'left', border: dqReason === r.value ? '1px solid #EF4444' : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, background: dqReason === r.value ? 'rgba(239,68,68,0.08)' : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'), color: dqReason === r.value ? '#EF4444' : (isDark ? '#e2e8f0' : '#1e293b'), fontWeight: dqReason === r.value ? 700 : 400 }}>
+              className={`px-3.5 py-2.5 rounded-lg text-xs cursor-pointer text-start border transition-colors ${
+                dqReason === r.value
+                  ? 'border-red-500 bg-red-500/[0.08] text-red-500 font-bold'
+                  : 'border-edge dark:border-edge-dark bg-surface-bg/40 dark:bg-brand-500/[0.03] text-content dark:text-content-dark hover:border-red-500/40'
+              }`}>
               {r.label}
             </button>
           ))}
         </div>
-        <textarea value={dqNote} onChange={e => setDqNote(e.target.value)} rows={2} placeholder={isRTL ? 'ملاحظات إضافية (اختياري)...' : 'Additional notes (optional)...'}
-          style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 16 }} />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <textarea value={dqNote} onChange={e => setDqNote(e.target.value)} rows={2}
+          placeholder={isRTL ? 'ملاحظات إضافية (اختياري)...' : 'Additional notes (optional)...'}
+          className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-xs text-content dark:text-content-dark outline-none resize-none font-cairo box-border mb-4 focus:border-red-500" />
+        <div className="flex justify-end gap-2">
           <button onClick={() => setDisqualifyModal(null)}
-            style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'none', color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+            className="px-4 py-2 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark text-xs cursor-pointer font-semibold">
             {isRTL ? 'إلغاء' : 'Cancel'}
           </button>
           <button disabled={!dqReason} onClick={async () => {
@@ -273,7 +296,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
             }
             setDisqualifyModal(null);
           }}
-            style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: !dqReason ? '#64748b' : '#EF4444', color: '#fff', fontSize: 12, cursor: !dqReason ? 'not-allowed' : 'pointer', fontWeight: 700 }}>
+            className={`px-5 py-2 rounded-lg border-none text-white text-xs font-bold ${!dqReason ? 'bg-slate-500 cursor-not-allowed' : 'bg-red-500 cursor-pointer hover:bg-red-600'}`}>
             {isRTL ? 'تأكيد الاستبعاد' : 'Confirm Disqualify'}
           </button>
         </div>
@@ -427,8 +450,6 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
 
 // ── Bulk Create Opportunities Modal ──────────────────────────────────
 export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBulkOppForm, bulkOppSaving, setBulkOppSaving, contacts, selectedIds, setSelectedIds, setContacts, projectsList, profile, isRTL }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const toast = useToast();
   const savingRef = useRef(false); // sync guard against double-submit
 
@@ -484,55 +505,57 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
     try { const { fetchContacts: fc } = await import('../../../services/contactsService'); const fresh = await fc({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }); setContacts(fresh); } catch (err) { reportError('BulkModals', 'refreshContactsAfterBulkOpp', err); }
   };
 
+  const fieldCls = "w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-xs text-content dark:text-content-dark outline-none focus:border-brand-500";
+  const labelCls = "block text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1";
+  const submitDisabled = bulkOppSaving || !bulkOppForm.assigned_to_name;
+
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-      <div style={{ background: isDark ? '#1a2332' : '#fff', border: `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 440, boxShadow: isDark ? '0 24px 48px rgba(0,0,0,0.4)' : '0 24px 48px rgba(0,0,0,0.12)' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[1200] flex items-center justify-center p-5">
+      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-6 w-full max-w-[440px] shadow-2xl">
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(16,185,129,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Briefcase size={18} color="#10B981" />
+        <div className="flex justify-between items-center mb-5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-[10px] bg-emerald-500/10 flex items-center justify-center">
+              <Briefcase size={18} className="text-emerald-500" />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>{isRTL ? 'إنشاء فرص' : 'Create Opportunities'}</h3>
-              <span style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8' }}>{isRTL ? `${selContacts.length} عميل محدد` : `${selContacts.length} leads selected`}</span>
+              <h3 className="m-0 text-[15px] font-bold text-content dark:text-content-dark">{isRTL ? 'إنشاء فرص' : 'Create Opportunities'}</h3>
+              <span className="text-[11px] text-content-muted dark:text-content-muted-dark">{isRTL ? `${selContacts.length} عميل محدد` : `${selContacts.length} leads selected`}</span>
             </div>
           </div>
-          <button onClick={() => setBulkOppModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isDark ? '#64748b' : '#94a3b8', padding: 4 }}><X size={18} /></button>
+          <button onClick={() => setBulkOppModal(false)} aria-label={isRTL ? 'إغلاق' : 'Close'}
+            className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark p-1">
+            <X size={18} />
+          </button>
         </div>
 
         {/* Selected contacts preview */}
         {selContacts.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
+          <div className="mb-4">
             <SelectedContactsList contacts={selContacts} isRTL={isRTL} maxHeight={180} />
           </div>
         )}
 
         {/* Form */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Sales Agent */}
+        <div className="flex flex-col gap-3">
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
-            <select value={bulkOppForm.assigned_to_name} onChange={e => setBulkOppForm(f => ({ ...f, assigned_to_name: e.target.value }))}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }}>
+            <label className={labelCls}>{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
+            <select value={bulkOppForm.assigned_to_name} onChange={e => setBulkOppForm(f => ({ ...f, assigned_to_name: e.target.value }))} className={fieldCls}>
               <option value="">{isRTL ? '— اختر —' : '— Select —'}</option>
               {agents.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </div>
 
-          {/* Stage + Priority row */}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'المرحلة' : 'Stage'}</label>
-              <select value={bulkOppForm.stage} onChange={e => setBulkOppForm(f => ({ ...f, stage: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }}>
+          <div className="flex gap-2.5">
+            <div className="flex-1">
+              <label className={labelCls}>{isRTL ? 'المرحلة' : 'Stage'}</label>
+              <select value={bulkOppForm.stage} onChange={e => setBulkOppForm(f => ({ ...f, stage: e.target.value }))} className={fieldCls}>
                 {stages.map(s => <option key={s.id} value={s.id}>{isRTL ? s.label_ar : s.label_en}</option>)}
               </select>
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'الأولوية' : 'Priority'}</label>
-              <select value={bulkOppForm.priority} onChange={e => setBulkOppForm(f => ({ ...f, priority: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }}>
+            <div className="flex-1">
+              <label className={labelCls}>{isRTL ? 'الأولوية' : 'Priority'}</label>
+              <select value={bulkOppForm.priority} onChange={e => setBulkOppForm(f => ({ ...f, priority: e.target.value }))} className={fieldCls}>
                 <option value="low">{isRTL ? 'منخفضة' : 'Low'}</option>
                 <option value="medium">{isRTL ? 'متوسطة' : 'Medium'}</option>
                 <option value="high">{isRTL ? 'عالية' : 'High'}</option>
@@ -541,35 +564,32 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
             </div>
           </div>
 
-          {/* Project */}
           {projectsList.length > 0 && (
             <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'المشروع' : 'Project'}</label>
-              <select value={bulkOppForm.project_id} onChange={e => setBulkOppForm(f => ({ ...f, project_id: e.target.value }))}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none' }}>
+              <label className={labelCls}>{isRTL ? 'المشروع' : 'Project'}</label>
+              <select value={bulkOppForm.project_id} onChange={e => setBulkOppForm(f => ({ ...f, project_id: e.target.value }))} className={fieldCls}>
                 <option value="">{isRTL ? '— بدون مشروع —' : '— No Project —'}</option>
                 {projectsList.map(p => <option key={p.id} value={p.id}>{isRTL ? p.name_ar : p.name_en}</option>)}
               </select>
             </div>
           )}
 
-          {/* Notes */}
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: isDark ? '#94a3b8' : '#64748b', display: 'block', marginBottom: 4 }}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
+            <label className={labelCls}>{isRTL ? 'ملاحظات' : 'Notes'}</label>
             <textarea value={bulkOppForm.notes} onChange={e => setBulkOppForm(f => ({ ...f, notes: e.target.value }))} rows={2}
               placeholder={isRTL ? 'ملاحظات اختيارية...' : 'Optional notes...'}
-              style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc', fontSize: 12, color: isDark ? '#e2e8f0' : '#1e293b', outline: 'none', resize: 'none', fontFamily: 'inherit' }} />
+              className={`${fieldCls} resize-none font-cairo`} />
           </div>
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+        <div className="flex justify-end gap-2 mt-5">
           <button onClick={() => setBulkOppModal(false)}
-            style={{ padding: '8px 16px', borderRadius: 8, border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'}`, background: 'none', color: isDark ? '#94a3b8' : '#64748b', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+            className="px-4 py-2 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark text-xs cursor-pointer font-semibold">
             {isRTL ? 'إلغاء' : 'Cancel'}
           </button>
-          <button onClick={handleCreate} disabled={bulkOppSaving || !bulkOppForm.assigned_to_name}
-            style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: bulkOppSaving || !bulkOppForm.assigned_to_name ? '#64748b' : '#10B981', color: '#fff', fontSize: 12, cursor: bulkOppSaving ? 'wait' : 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <button onClick={handleCreate} disabled={submitDisabled}
+            className={`px-5 py-2 rounded-lg border-none text-white text-xs font-bold flex items-center gap-1.5 ${submitDisabled ? 'bg-slate-500 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 cursor-pointer'}`}>
             {bulkOppSaving ? (isRTL ? 'جاري الإنشاء...' : 'Creating...') : (isRTL ? `إنشاء ${selContacts.length} فرصة` : `Create ${selContacts.length} Opps`)}
           </button>
         </div>
@@ -591,40 +611,43 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
   const previewBody = selectedTemplate ? (lang === 'ar' ? (selectedTemplate.bodyAr || selectedTemplate.body) : selectedTemplate.body) : '';
   const previewRendered = previewBody ? renderBody(previewBody, { client_name: withPhone[0]?.full_name || 'Ahmed', client_phone: withPhone[0]?.phone || '', project_name: 'Sample Project', agent_name: profile?.full_name_ar || '', company_name: 'Platform', date: new Date().toLocaleDateString('en-GB'), amount: '' }) : '';
 
+  const closeModal = () => { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); };
+  const sendDisabled = !bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending;
+
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div style={{ background: '#0a1929', border: '1px solid rgba(74,122,171,0.3)', borderRadius: 20, width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1200] flex items-center justify-center p-4">
+      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[520px] max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg, #4A7AAB 0%, #2B4C6F 100%)', padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Send size={18} color="#fff" />
-            <span style={{ color: '#fff', fontWeight: 700, fontSize: 14 }}>{isRTL ? 'إرسال SMS جماعي' : 'Bulk SMS'}</span>
+        <div className="bg-gradient-to-br from-brand-500 to-brand-800 px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2.5">
+            <Send size={18} className="text-white" />
+            <span className="text-white font-bold text-sm">{isRTL ? 'إرسال SMS جماعي' : 'Bulk SMS'}</span>
           </div>
-          <button onClick={() => { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); }}
-            style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+          <button onClick={closeModal} aria-label={isRTL ? 'إغلاق' : 'Close'}
+            className="bg-white/15 hover:bg-white/25 border-none rounded-md w-7 h-7 flex items-center justify-center cursor-pointer text-white">
             <X size={14} />
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+        <div className="p-6 overflow-y-auto flex-1">
           {bulkSMSState.done ? (
             /* Results view */
             <div>
-              <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                  <CheckCircle2 size={28} color="#10B981" />
+              <div className="text-center mb-5">
+                <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle2 size={28} className="text-emerald-500" />
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#e2e8f0', marginBottom: 4 }}>
+                <div className="text-base font-bold text-content dark:text-content-dark mb-1">
                   {isRTL ? 'تم الإرسال بنجاح' : 'SMS Sent Successfully'}
                 </div>
-                <div style={{ fontSize: 12, color: '#94a3b8' }}>
+                <div className="text-xs text-content-muted dark:text-content-muted-dark">
                   {isRTL ? `تم إرسال ${bulkSMSState.results.length} رسالة` : `${bulkSMSState.results.length} messages sent`}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <button onClick={() => { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); setSelectedIds([]); }}
-                  style={{ padding: '8px 20px', borderRadius: 8, background: '#4A7AAB', border: 'none', color: '#fff', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+              <div className="flex gap-2.5 justify-center">
+                <button onClick={() => { closeModal(); setSelectedIds([]); }}
+                  className="px-5 py-2 rounded-lg bg-brand-500 hover:bg-brand-600 border-none text-white text-xs font-semibold cursor-pointer">
                   {isRTL ? 'إغلاق' : 'Close'}
                 </button>
               </div>
@@ -632,10 +655,10 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
           ) : (
             <>
               {/* Template selector */}
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 6 }}>{isRTL ? 'اختر قالب الرسالة' : 'Select Template'}</label>
+              <div className="mb-4">
+                <label className="block text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'اختر قالب الرسالة' : 'Select Template'}</label>
                 <select value={bulkSMSState.templateId} onChange={e => setBulkSMSState(s => ({ ...s, templateId: e.target.value }))}
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(74,122,171,0.3)', background: '#132337', color: '#e2e8f0', fontSize: 12, outline: 'none' }}>
+                  className="w-full px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none focus:border-brand-500">
                   <option value="">{isRTL ? '— اختر قالب —' : '-- Select Template --'}</option>
                   {(templates || []).map(t => (
                     <option key={t.id} value={t.id}>{lang === 'ar' ? (t.nameAr || t.name) : t.name}</option>
@@ -644,15 +667,15 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
               </div>
 
               {/* Language toggle */}
-              <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8' }}>{isRTL ? 'لغة الرسالة:' : 'Message Language:'}</label>
-                <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid rgba(74,122,171,0.3)' }}>
+              <div className="mb-4 flex items-center gap-2">
+                <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'لغة الرسالة:' : 'Message Language:'}</label>
+                <div className="flex rounded-md overflow-hidden border border-edge dark:border-edge-dark">
                   <button onClick={() => setBulkSMSState(s => ({ ...s, lang: 'en' }))}
-                    style={{ padding: '4px 14px', border: 'none', fontSize: 11, cursor: 'pointer', fontWeight: 600, background: lang === 'en' ? '#4A7AAB' : '#132337', color: lang === 'en' ? '#fff' : '#94a3b8' }}>
+                    className={`px-3.5 py-1 border-none text-[11px] cursor-pointer font-semibold ${lang === 'en' ? 'bg-brand-500 text-white' : 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark'}`}>
                     EN
                   </button>
                   <button onClick={() => setBulkSMSState(s => ({ ...s, lang: 'ar' }))}
-                    style={{ padding: '4px 14px', border: 'none', fontSize: 11, cursor: 'pointer', fontWeight: 600, background: lang === 'ar' ? '#4A7AAB' : '#132337', color: lang === 'ar' ? '#fff' : '#94a3b8' }}>
+                    className={`px-3.5 py-1 border-none text-[11px] cursor-pointer font-semibold ${lang === 'ar' ? 'bg-brand-500 text-white' : 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark'}`}>
                     AR
                   </button>
                 </div>
@@ -660,31 +683,31 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
 
               {/* Preview */}
               {selectedTemplate && (
-                <div style={{ marginBottom: 16, background: '#132337', border: '1px solid rgba(74,122,171,0.2)', borderRadius: 10, padding: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#94a3b8', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{isRTL ? 'معاينة الرسالة' : 'Message Preview'}</div>
-                  <div dir={lang === 'ar' ? 'rtl' : 'ltr'} style={{ fontSize: 12, color: '#e2e8f0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                <div className="mb-4 bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark rounded-xl p-3.5">
+                  <div className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark mb-1.5 uppercase tracking-wide">{isRTL ? 'معاينة الرسالة' : 'Message Preview'}</div>
+                  <div dir={lang === 'ar' ? 'rtl' : 'ltr'} className="text-xs text-content dark:text-content-dark leading-relaxed whitespace-pre-wrap">
                     {previewRendered || (isRTL ? 'لا يمكن عرض المعاينة' : 'Cannot render preview')}
                   </div>
                 </div>
               )}
 
               {/* Recipients summary */}
-              <div style={{ marginBottom: 16, display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1, background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#10B981' }}>{withPhone.length}</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{isRTL ? 'سيتم الإرسال لهم' : 'Will receive'}</div>
+              <div className="mb-4 flex gap-2.5">
+                <div className="flex-1 bg-emerald-500/[0.08] border border-emerald-500/20 rounded-xl px-3.5 py-2.5 text-center">
+                  <div className="text-xl font-bold text-emerald-500">{withPhone.length}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'سيتم الإرسال لهم' : 'Will receive'}</div>
                 </div>
-                <div style={{ flex: 1, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '10px 14px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: '#EF4444' }}>{withoutPhone.length}</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{isRTL ? 'بدون رقم (سيتم تخطيهم)' : 'No phone (skipped)'}</div>
+                <div className="flex-1 bg-red-500/[0.08] border border-red-500/20 rounded-xl px-3.5 py-2.5 text-center">
+                  <div className="text-xl font-bold text-red-500">{withoutPhone.length}</div>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'بدون رقم (سيتم تخطيهم)' : 'No phone (skipped)'}</div>
                 </div>
               </div>
 
               {/* Skipped contacts list */}
               {withoutPhone.length > 0 && (
-                <div style={{ marginBottom: 16, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 8, padding: '8px 12px' }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: '#EF4444', marginBottom: 4 }}>{isRTL ? 'عملاء بدون رقم:' : 'Leads without phone:'}</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                <div className="mb-4 bg-red-500/[0.05] border border-red-500/15 rounded-lg px-3 py-2">
+                  <div className="text-[10px] font-semibold text-red-500 mb-1">{isRTL ? 'عملاء بدون رقم:' : 'Leads without phone:'}</div>
+                  <div className="text-[11px] text-content-muted dark:text-content-muted-dark">
                     {withoutPhone.map(c => c.full_name || (isRTL ? 'بدون اسم' : 'No Name')).join(', ')}
                   </div>
                 </div>
@@ -692,24 +715,25 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
 
               {/* Sending progress */}
               {bulkSMSState.sending && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ height: 4, borderRadius: 2, background: '#1a2332', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', background: '#4A7AAB', borderRadius: 2, width: bulkSMSState.total > 0 ? `${(bulkSMSState.progress / bulkSMSState.total) * 100}%` : '0%', transition: 'width 0.3s' }} />
+                <div className="mb-4">
+                  <div className="h-1 rounded-sm bg-surface-bg dark:bg-surface-bg-dark overflow-hidden">
+                    <div className="h-full bg-brand-500 rounded-sm transition-[width] duration-300"
+                      style={{ width: bulkSMSState.total > 0 ? `${(bulkSMSState.progress / bulkSMSState.total) * 100}%` : '0%' }} />
                   </div>
-                  <div style={{ fontSize: 10, color: '#94a3b8', textAlign: 'center', marginTop: 4 }}>
+                  <div className="text-[10px] text-content-muted dark:text-content-muted-dark text-center mt-1">
                     {isRTL ? 'جاري الإرسال...' : 'Sending...'}
                   </div>
                 </div>
               )}
 
               {/* Actions */}
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                <button onClick={() => { setBulkSMSModal(false); setBulkSMSState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); }}
-                  style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid rgba(148,163,184,0.3)', background: 'none', color: '#94a3b8', fontSize: 12, cursor: 'pointer' }}>
+              <div className="flex gap-2.5 justify-end">
+                <button onClick={closeModal}
+                  className="px-4 py-2 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
                   {isRTL ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button onClick={handleBulkSMS} disabled={!bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending}
-                  style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: (!bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending) ? '#1a2332' : '#4A7AAB', color: (!bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending) ? '#64748b' : '#fff', fontSize: 12, cursor: (!bulkSMSState.templateId || withPhone.length === 0 || bulkSMSState.sending) ? 'not-allowed' : 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button onClick={handleBulkSMS} disabled={sendDisabled}
+                  className={`px-5 py-2 rounded-lg border-none text-xs font-semibold flex items-center gap-1.5 ${sendDisabled ? 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark cursor-not-allowed' : 'bg-brand-500 hover:bg-brand-600 text-white cursor-pointer'}`}>
                   <Send size={13} />
                   {bulkSMSState.sending ? (isRTL ? 'جاري الإرسال...' : 'Sending...') : (isRTL ? `إرسال (${withPhone.length})` : `Send (${withPhone.length})`)}
                 </button>

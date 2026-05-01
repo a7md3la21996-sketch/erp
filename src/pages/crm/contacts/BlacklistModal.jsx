@@ -2,9 +2,19 @@ import { useState, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { Ban } from 'lucide-react';
-import { Button, Input } from '../../../components/ui/';
+import { Button, Input, Select } from '../../../components/ui/';
 import { useEscClose, contactPropType } from './constants';
 import { useFocusTrap } from '../../../utils/hooks';
+
+const REASON_OPTIONS = [
+  { value: 'fraud',          label_ar: 'احتيال',                label_en: 'Fraud' },
+  { value: 'spam',           label_ar: 'سبام',                  label_en: 'Spam' },
+  { value: 'wrong_number',   label_ar: 'رقم خاطئ متكرر',        label_en: 'Repeated wrong number' },
+  { value: 'abusive',        label_ar: 'سلوك مسيء',             label_en: 'Abusive behavior' },
+  { value: 'unreachable',    label_ar: 'غير قابل للوصول',       label_en: 'Unreachable' },
+  { value: 'duplicate',      label_ar: 'مكرر',                  label_en: 'Duplicate' },
+  { value: 'other',          label_ar: 'سبب آخر',               label_en: 'Other' },
+];
 
 export default function BlacklistModal({ contact, onClose, onConfirm }) {
   const { i18n } = useTranslation();
@@ -12,7 +22,13 @@ export default function BlacklistModal({ contact, onClose, onConfirm }) {
   useEscClose(onClose);
   const dialogRef = useRef(null);
   useFocusTrap(dialogRef);
-  const [reason, setReason] = useState('');
+  const [reasonCode, setReasonCode] = useState('');
+  const [otherReason, setOtherReason] = useState('');
+  const needsDetail = reasonCode === 'other';
+  const isReady = reasonCode && (!needsDetail || otherReason.trim().length > 0);
+  const finalReason = needsDetail
+    ? otherReason.trim()
+    : (REASON_OPTIONS.find(r => r.value === reasonCode)?.[isRTL ? 'label_ar' : 'label_en'] || reasonCode);
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="blacklist-title" className="modal-content bg-surface-card dark:bg-surface-card-dark border border-red-500/35 rounded-2xl p-7 w-full max-w-[420px]">
@@ -27,12 +43,20 @@ export default function BlacklistModal({ contact, onClose, onConfirm }) {
           {contact?.full_name} — {contact?.phone}
         </div>
         <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-2">{isRTL ? 'سبب الإضافة' : 'Reason'} <span className="text-red-500">*</span></label>
-        <Input type="text" value={reason} onChange={e => setReason(e.target.value)}
-          placeholder={isRTL ? 'مثال: سلوك مسيء، احتيال، رقم خاطئ متكرر...' : 'e.g. Abusive behavior, fraud, repeated wrong number...'}
-          className="!border-red-500/30 mb-5" />
-        <div className="flex gap-2.5 justify-end">
+        <Select value={reasonCode} onChange={e => setReasonCode(e.target.value)} className="mb-3">
+          <option value="">{isRTL ? '— اختر السبب —' : '— Select reason —'}</option>
+          {REASON_OPTIONS.map(r => (
+            <option key={r.value} value={r.value}>{isRTL ? r.label_ar : r.label_en}</option>
+          ))}
+        </Select>
+        {needsDetail && (
+          <Input type="text" value={otherReason} onChange={e => setOtherReason(e.target.value)}
+            placeholder={isRTL ? 'اكتب السبب...' : 'Describe the reason...'}
+            className="!border-red-500/30 mb-5" autoFocus />
+        )}
+        <div className={`flex gap-2.5 justify-end ${needsDetail ? '' : 'mt-2'}`}>
           <Button variant="secondary" onClick={onClose}>{isRTL ? 'إلغاء' : 'Cancel'}</Button>
-          <Button variant="danger" onClick={() => { if (reason.trim()) { onConfirm(contact, reason); onClose(); } }} disabled={!reason.trim()}>
+          <Button variant="danger" onClick={() => { if (isReady) { onConfirm(contact, finalReason); onClose(); } }} disabled={!isReady}>
             {isRTL ? 'تأكيد الإضافة' : 'Confirm'}
           </Button>
         </div>

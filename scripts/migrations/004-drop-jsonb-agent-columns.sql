@@ -1,5 +1,4 @@
--- ─────────────────────────────────────────────────────────────────────────────
--- 004 — DROP unused per-agent jsonb columns
+-- 004: DROP unused per-agent jsonb columns
 --
 -- Phase 2 cleanup. After Phase 1 migrated every contact to single-assignment,
 -- the per-agent jsonb maps (agent_statuses, agent_temperatures, agent_scores)
@@ -11,18 +10,13 @@
 --   1. Deploy the Phase 2 frontend so no client is still writing the columns.
 --   2. Confirm no edge functions / triggers / views / policies reference them.
 --
--- AFTER running this script:
---   - PostgREST exposes a smaller row payload — fewer bytes per /contacts read.
---   - jsonb GIN indexes (if any) on these columns are dropped automatically.
---
--- Rollback: the columns can be re-added (defaulting to '{}'::jsonb) but the
+-- Rollback: the columns can be re-added (defaulting to {}::jsonb) but the
 -- per-agent data they previously held is gone. Re-deriving it from
 -- contact_status / temperature / lead_score is the intended reverse path.
--- ─────────────────────────────────────────────────────────────────────────────
 
 BEGIN;
 
--- Sanity check — surface index/policy references before the DROP fails halfway
+-- Refuse the DROP if any RLS policy on contacts still reads these columns.
 DO $$
 DECLARE
   ref_count int;

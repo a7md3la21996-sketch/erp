@@ -1,5 +1,4 @@
 import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo } from 'lucide-react';
-import { useTheme } from '../../../contexts/ThemeContext';
 import { createActivity, updateContact } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { logAction } from '../../../services/auditService';
@@ -34,8 +33,6 @@ export default function BatchCallModal({
   profile,
   isRTL,
 }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
   const toast = useToast();
 
   if (!batchCallMode) return null;
@@ -147,7 +144,7 @@ export default function BatchCallModal({
 
           {/* Last activity note if exists */}
           {current.last_activity_note && (
-            <div style={{ background: isDark ? 'rgba(74,122,171,0.08)' : 'rgba(74,122,171,0.05)', border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)'}`, borderRadius: 8, padding: '6px 10px', marginBottom: 12, fontSize: 11 }}>
+            <div className="bg-brand-500/[0.05] dark:bg-brand-500/[0.08] border border-brand-500/10 dark:border-brand-500/15 rounded-lg px-2.5 py-1.5 mb-3 text-[11px]">
               <span className="text-content-muted dark:text-content-muted-dark">{isRTL ? 'آخر ملاحظة: ' : 'Last note: '}</span>
               <span className="text-content dark:text-content-dark">{current.last_activity_note}</span>
             </div>
@@ -180,14 +177,14 @@ export default function BatchCallModal({
             className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs resize-none box-border font-inherit mb-3" />
 
           {/* Add Task */}
-          <div style={{ marginBottom: 12 }}>
+          <div className="mb-3">
             <button onClick={() => { setBatchTaskOpen(!batchTaskOpen); if (!batchTaskOpen) setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
               className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer bg-transparent border-none text-brand-500 dark:text-brand-400 p-0 mb-1.5">
               <ListTodo size={13} />
               {isRTL ? (batchTaskOpen ? 'إلغاء التاسك' : '+ إضافة تاسك متابعة') : (batchTaskOpen ? 'Cancel task' : '+ Add follow-up task')}
             </button>
             {batchTaskOpen && (
-              <div style={{ background: isDark ? 'rgba(74,122,171,0.06)' : 'rgba(74,122,171,0.04)', border: `1px solid ${isDark ? 'rgba(74,122,171,0.15)' : 'rgba(74,122,171,0.1)'}`, borderRadius: 10, padding: 10 }}>
+              <div className="bg-brand-500/[0.04] dark:bg-brand-500/[0.06] border border-brand-500/10 dark:border-brand-500/15 rounded-[10px] p-2.5">
                 <input value={batchTaskForm.title} onChange={e => setBatchTaskForm(f => ({ ...f, title: e.target.value }))}
                   placeholder={isRTL ? 'عنوان التاسك (مثل: متابعة عرض سعر)' : 'Task title (e.g. Follow up proposal)'}
                   className="w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-xs box-border font-inherit mb-2" style={{ outline: 'none' }} />

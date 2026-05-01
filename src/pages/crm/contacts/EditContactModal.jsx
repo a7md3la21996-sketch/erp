@@ -4,17 +4,8 @@ import { useToast } from '../../../contexts/ToastContext';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { X } from 'lucide-react';
 import { Button, Input, Select, Textarea, DiscardConfirm } from '../../../components/ui/';
-import { useEscClose, SOURCE_LABELS, SOURCE_EN, SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES, COUNTRY_CODES, getCountryFromPhone, getPhoneInfo, validatePhone, normalizePhone } from './constants';
+import { useEscClose, SOURCE_LABELS, SOURCE_EN, SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES, COUNTRY_CODES, getCountryFromPhone, getPhoneInfo, validatePhone, normalizePhone, getFullPhone } from './constants';
 import { useFocusTrap, useDirtyTracker } from '../../../utils/hooks';
-
-const getFullPhone = (phone, code) => {
-  if (!phone) return '';
-  if (phone.startsWith('+')) return phone;
-  if (phone.startsWith('00')) return '+' + phone.slice(2);
-  // Respect the user-selected country code: strip leading 0 (local-format prefix) and prepend code
-  if (phone.startsWith('0')) return code + phone.slice(1);
-  return code + phone;
-};
 
 export default function EditContactModal({ contact, onClose, onSave, userRole, campaigns = [] }) {
   const { i18n } = useTranslation();

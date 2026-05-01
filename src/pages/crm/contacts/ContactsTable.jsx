@@ -7,6 +7,7 @@ import {
   TYPE, TEMP,
   daysSince, initials, avatarColor, normalizePhone,
   Chip, PhoneCell, ScorePill, getDeptStages, deptStageLabel,
+  agentInitials,
 } from './constants';
 import { Button, Pagination } from '../../../components/ui';
 import { thCls } from '../../../utils/tableStyles';
@@ -20,15 +21,6 @@ const STATUS_STYLES = {
   has_opportunity: { label: 'لديه فرصة',   labelEn: 'Has Opp',   color: '#059669' },
   disqualified:    { label: 'غير مؤهل',    labelEn: 'DQ',        color: '#6b7280' },
 };
-
-// Short agent initials for the multi-agent chips — first letter of first two
-// words (e.g. "Ahmed Adel" → "AA"), falls back to first two characters.
-function agentInitials(name) {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
 
 function FixedDropdown({ btnRef, isOpen, isRTL, children }) {
   const [pos, setPos] = useState(null);

@@ -9,6 +9,7 @@ import {
   validatePhone, getPhoneInfo, normalizePhone,
   COUNTRY_CODES, getCountryFromPhone,
   SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES,
+  getFullPhone,
 } from './constants';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import { DiscardConfirm } from '../../../components/ui';
@@ -250,15 +251,6 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
       } catch (err) { if (import.meta.env.DEV) console.warn('dup check:', err); setDupWarning(null); }
       setChecking(false);
     }, 400);
-  };
-
-  const getFullPhone = (phone, code) => {
-    if (!phone) return '';
-    if (phone.startsWith('+')) return phone;
-    if (phone.startsWith('00')) return '+' + phone.slice(2);
-    // Respect the user-selected country code: strip leading 0 (local-format prefix) and prepend code
-    if (phone.startsWith('0')) return code + phone.slice(1);
-    return code + phone;
   };
 
   const handleSave = async () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
@@ -6,7 +6,9 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { logView, getEntityViewers } from '../../../services/viewTrackingService';
 import { addRecentItem } from '../../../services/recentItemsService';
 import { Phone, MessageCircle, Mail, Ban, X, Clock, Star, Users, FileDown, CheckSquare, Pencil, Target, Plus, Briefcase, UserCheck, Megaphone, Settings, DollarSign, Zap, ChevronDown, ChevronUp, MoreVertical, Pin, PhoneCall, Bell, Trash2, FileText, MessageSquare, FileUp, History, Award, Send, Calendar, Check, XCircle, ExternalLink, Download, Building2 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+
+// Lazy-loaded so the recharts vendor chunk doesn't ship with every contact open.
+const CampaignHistoryChart = lazy(() => import('./CampaignHistoryChart'));
 import { getTemplates, renderBody, sendSMS, SAMPLE_DATA } from '../../../services/smsTemplateService';
 import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
@@ -46,6 +48,7 @@ import {
   useEscClose, SOURCE_LABELS, SOURCE_EN,
   TEMP, TYPE, fmtBudget, daysSince, initials, normalizePhone,
   Chip, ScorePill, PhoneCell, getDeptStages, deptStageLabel,
+  agentInitials,
 } from './constants';
 
 const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meeting: Users, note: Clock };
@@ -120,7 +123,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
-  useEscClose(onClose);
   const [tab, setTab] = useState('activity');
   const [selectedAgent, setSelectedAgent] = useState('all');
   // showAddAgent + addAgent* state removed in Phase 3 — picker UI is gone.
@@ -133,6 +135,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [loadingData, setLoadingData] = useState(true);
   const [showActionForm, setShowActionForm] = useState(initialAction);
   const [showOppModal, setShowOppModal] = useState(false);
+
+  // Guarded ESC: closes the drawer only when no inner modal is open. The
+  // useEscClose hook uses capture-phase + stopImmediatePropagation, so without
+  // this guard the drawer would steal ESC from any modal stacked over it
+  // (Edit, Distribute, HandOff, etc.) and close behind them.
+  useEscClose(() => {
+    if (showEdit || showOppModal || showSMSModal || showWAPopup || showPrintPreview
+      || showDistribute || showPullLeads || showHandOff || showDrawerMenu) return;
+    onClose();
+  });
   const [timelineFilter, setTimelineFilter] = useState('all');
   const [activityAgentFilter, setActivityAgentFilter] = useState('all');
   const assignmentHistory = useMemo(() => contact?.id ? getAssignmentHistory(contact.id) : [], [contact?.id]);
@@ -336,12 +348,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       if (showEdit || showOppModal || showSMSModal || showWAPopup || showPrintPreview) return;
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
-      if (e.key === 'ArrowLeft' && onNext) { e.preventDefault(); onNext(); }
-      if (e.key === 'ArrowRight' && onPrev) { e.preventDefault(); onPrev(); }
+      // Reading-direction-aware: in LTR, Left = previous, Right = next.
+      // In RTL the relationship flips because reading flows the other way.
+      const prevKey = isRTL ? 'ArrowRight' : 'ArrowLeft';
+      const nextKey = isRTL ? 'ArrowLeft' : 'ArrowRight';
+      if (e.key === prevKey && onPrev) { e.preventDefault(); onPrev(); }
+      if (e.key === nextKey && onNext) { e.preventDefault(); onNext(); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onPrev, onNext, showEdit, showOppModal, showSMSModal, showWAPopup, showPrintPreview]);
+  }, [onPrev, onNext, showEdit, showOppModal, showSMSModal, showWAPopup, showPrintPreview, isRTL]);
 
   useEffect(() => {
     if (!showOppModal) return;
@@ -1142,13 +1158,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               {/* Desktop nav arrows */}
               {onPrev && (
                 <button onClick={onPrev} title={isRTL ? 'السابق' : 'Previous'}
-                  className="hidden md:flex w-7 h-7 rounded-md items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
+                  className="hidden md:flex w-8 h-8 rounded-md items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
                   <ChevronUp size={16} />
                 </button>
               )}
               {onNext && (
                 <button onClick={onNext} title={isRTL ? 'التالي' : 'Next'}
-                  className="hidden md:flex w-7 h-7 rounded-md items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
+                  className="hidden md:flex w-8 h-8 rounded-md items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors">
                   <ChevronDown size={16} />
                 </button>
               )}
@@ -1159,10 +1175,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
             </span>
 
-            {/* Right: close */}
-            <button onClick={onClose}
-              className="w-7 h-7 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-red-500/10 hover:text-red-500 transition-colors">
-              <X size={16} />
+            {/* Right: close — 44px on mobile to meet iOS HIG, compact on desktop */}
+            <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
+              className="w-11 h-11 md:w-8 md:h-8 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-red-500/10 hover:text-red-500 transition-colors">
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -1233,7 +1249,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       className={`inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full ${b.isMine ? 'ring-1 ring-brand-500/40' : ''}`}
                       style={{ color: b.color, background: b.color + '18', border: `1px solid ${b.color}25` }}
                       title={b.name}>
-                      {heroStatusChips.length > 1 && <span className="font-mono text-[9px] opacity-80">{b.name.split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase()}</span>}
+                      {heroStatusChips.length > 1 && <span className="font-mono text-[9px] opacity-80">{agentInitials(b.name)}</span>}
                       {b.label}
                     </span>
                   ))}
@@ -1251,17 +1267,18 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </div>
 
             {/* ═══ QUICK ACTIONS ROW ═══ */}
-            <div className="grid grid-cols-6 gap-1 mb-4">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 mb-4">
               {/* Call */}
               {contact.phone ? (
-                <a href={`tel:${contact.phone}`} className="flex flex-col items-center gap-1 py-2 rounded-xl no-underline hover:bg-emerald-500/10 transition-colors group cursor-pointer">
+                <a href={`tel:${contact.phone}`} aria-label={isRTL ? 'اتصال' : 'Call contact'} className="flex flex-col items-center gap-1 py-2 rounded-xl no-underline hover:bg-emerald-500/10 transition-colors group cursor-pointer">
                   <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
                     <Phone size={16} className="text-emerald-500" />
                   </div>
                   <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'اتصال' : 'Call'}</span>
                 </a>
               ) : (
-                <div className="flex flex-col items-center gap-1 py-2 opacity-30">
+                <div role="button" aria-disabled="true" aria-label={isRTL ? 'اتصال غير متاح — لا يوجد رقم' : 'Call unavailable — no phone'}
+                  className="flex flex-col items-center gap-1 py-2 opacity-30 cursor-not-allowed">
                   <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Phone size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
                   <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'اتصال' : 'Call'}</span>
                 </div>
@@ -1269,14 +1286,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
               {/* WhatsApp */}
               {contact.phone ? (
-                <button onClick={() => setShowWAPopup(p => !p)} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-[#25D366]/10 transition-colors group">
+                <button onClick={() => setShowWAPopup(p => !p)} aria-label={isRTL ? 'إرسال واتساب' : 'Send WhatsApp'} aria-expanded={showWAPopup} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-[#25D366]/10 transition-colors group">
                   <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center group-hover:bg-[#25D366]/20 transition-colors">
                     <MessageCircle size={16} className="text-[#25D366]" />
                   </div>
                   <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'واتساب' : 'WA'}</span>
                 </button>
               ) : (
-                <div className="flex flex-col items-center gap-1 py-2 opacity-30">
+                <div role="button" aria-disabled="true" aria-label={isRTL ? 'واتساب غير متاح — لا يوجد رقم' : 'WhatsApp unavailable — no phone'}
+                  className="flex flex-col items-center gap-1 py-2 opacity-30 cursor-not-allowed">
                   <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><MessageCircle size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
                   <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'واتساب' : 'WA'}</span>
                 </div>
@@ -1284,21 +1302,22 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
               {/* Email */}
               {contact.email ? (
-                <a href={`mailto:${contact.email}`} className="flex flex-col items-center gap-1 py-2 rounded-xl no-underline hover:bg-brand-500/10 transition-colors group cursor-pointer">
+                <a href={`mailto:${contact.email}`} aria-label={isRTL ? 'إرسال إيميل' : 'Send email'} className="flex flex-col items-center gap-1 py-2 rounded-xl no-underline hover:bg-brand-500/10 transition-colors group cursor-pointer">
                   <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
                     <Mail size={16} className="text-brand-500" />
                   </div>
                   <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'إيميل' : 'Email'}</span>
                 </a>
               ) : (
-                <div className="flex flex-col items-center gap-1 py-2 opacity-30">
+                <div role="button" aria-disabled="true" aria-label={isRTL ? 'إيميل غير متاح — لا يوجد بريد' : 'Email unavailable — no address'}
+                  className="flex flex-col items-center gap-1 py-2 opacity-30 cursor-not-allowed">
                   <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Mail size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
                   <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'إيميل' : 'Email'}</span>
                 </div>
               )}
 
               {/* Action */}
-              <button onClick={() => { setTab('activity'); setShowActionForm(true); }} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-brand-500/10 transition-colors group">
+              <button onClick={() => { setTab('activity'); setShowActionForm(true); }} aria-label={isRTL ? 'إجراء سريع' : 'Quick action'} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-brand-500/10 transition-colors group">
                 <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
                   <Zap size={16} className="text-brand-500" />
                 </div>
@@ -1307,14 +1326,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
               {/* SMS */}
               {contact.phone ? (
-                <button onClick={() => setShowSMSModal(true)} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-brand-500/10 transition-colors group">
+                <button onClick={() => setShowSMSModal(true)} aria-label={isRTL ? 'إرسال رسالة SMS' : 'Send SMS'} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-brand-500/10 transition-colors group">
                   <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
                     <Send size={16} className="text-brand-500" />
                   </div>
                   <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'رسالة' : 'SMS'}</span>
                 </button>
               ) : (
-                <div className="flex flex-col items-center gap-1 py-2 opacity-30">
+                <div role="button" aria-disabled="true" aria-label={isRTL ? 'SMS غير متاح — لا يوجد رقم' : 'SMS unavailable — no phone'}
+                  className="flex flex-col items-center gap-1 py-2 opacity-30 cursor-not-allowed">
                   <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Send size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
                   <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'رسالة' : 'SMS'}</span>
                 </div>
@@ -1322,7 +1342,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
               {/* More menu */}
               <div className="relative flex flex-col items-center gap-1 py-2">
-                <button onClick={() => setShowDrawerMenu(p => !p)} className="flex flex-col items-center gap-1 rounded-xl bg-transparent border-none cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors group w-full">
+                <button onClick={() => setShowDrawerMenu(p => !p)} aria-label={isRTL ? 'المزيد من الإجراءات' : 'More actions'} aria-expanded={showDrawerMenu} aria-haspopup="menu" className="flex flex-col items-center gap-1 rounded-xl bg-transparent border-none cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors group w-full">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${showDrawerMenu ? 'bg-brand-500 text-white' : 'bg-surface-bg dark:bg-brand-500/10 group-hover:bg-brand-500/15'}`}>
                     <MoreVertical size={16} className={showDrawerMenu ? 'text-white' : 'text-content-muted dark:text-content-muted-dark'} />
                   </div>
@@ -1330,7 +1350,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </button>
                 {/* Dropdown Menu */}
                 {showDrawerMenu && (
-                  <div className="absolute top-[58px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] z-[100] shadow-[0_12px_40px_rgba(27,51,71,0.18)] overflow-hidden">
+                  <div role="menu" className="absolute top-[58px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] max-w-[calc(100vw-2rem)] z-[100] shadow-[0_12px_40px_rgba(27,51,71,0.18)] overflow-hidden">
                     <div className="p-1">
                       {canEditContact && (
                         <button onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
@@ -1715,23 +1735,31 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           })()}
 
           {/* ═══ TABS SECTION ═══ */}
-          <div className="sticky top-0 z-[5] bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark">
-            <div className="flex px-3 gap-0 overflow-x-auto scrollbar-none">
+          {/* Fade gradients at edges hint that the tab strip scrolls horizontally
+              on narrow viewports — without them users miss tabs past the edge. */}
+          <div className="sticky top-0 z-[5] bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark relative">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 start-0 w-6 bg-gradient-to-r from-surface-card dark:from-surface-card-dark to-transparent z-[1]" />
+            <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 end-0 w-6 bg-gradient-to-l from-surface-card dark:from-surface-card-dark to-transparent z-[1]" />
+            <div role="tablist" className="flex px-3 gap-0 overflow-x-auto scrollbar-none">
               {tabs.map(t => {
                 const TabIcon = t.icon;
                 const isActive = tab === t.key;
                 const badge = t.key === 'activity' ? actCount : t.key === deptTab.key ? oppCount : t.key === 'comments' ? extraSources.comments.length : null;
+                const ariaLabel = badge > 0
+                  ? (isRTL ? `${t.label}، ${badge} عنصر` : `${t.label}, ${badge} items`)
+                  : t.label;
                 return (
                   <button key={t.key} onClick={() => setTab(t.key)} title={t.label}
+                    role="tab" aria-selected={isActive} aria-label={ariaLabel}
                     className={`relative flex items-center gap-1.5 px-3 py-2.5 bg-transparent border-0 border-b-2 border-solid text-[11px] cursor-pointer whitespace-nowrap transition-all ${
                       isActive
                         ? 'border-b-brand-500 text-brand-500 font-bold'
                         : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-medium hover:text-content dark:hover:text-content-dark'
                     }`}>
-                    <TabIcon size={13} />
+                    <TabIcon size={13} aria-hidden="true" />
                     <span>{t.label}</span>
                     {badge > 0 && (
-                      <span className={`text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 ${
+                      <span aria-hidden="true" className={`text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 ${
                         isActive ? 'bg-brand-500 text-white' : 'bg-surface-bg dark:bg-brand-500/15 text-content-muted dark:text-content-muted-dark'
                       }`}>{badge}</span>
                     )}
@@ -2239,17 +2267,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       </div>
                       <div className="px-3.5 py-3">
                         <div style={{ width: '100%', height: Math.max(120, chartData.length * 36) }} dir="ltr">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 20, left: 0, bottom: 0 }}>
-                              <XAxis type="number" hide allowDecimals={false} />
-                              <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10, fill: '#6B8DB5' }} />
-                              <Tooltip
-                                contentStyle={{ fontSize: 11, borderRadius: 8, border: '1px solid #e5e7eb' }}
-                                formatter={(value, name, props) => [value, props.payload.fullName]}
-                              />
-                              <Bar dataKey={isRTL ? 'تفاعلات' : 'Interactions'} fill="#4A7AAB" radius={[0, 4, 4, 0]} barSize={16} />
-                            </BarChart>
-                          </ResponsiveContainer>
+                          <Suspense fallback={<div className="w-full h-full bg-surface-bg/30 dark:bg-surface-bg-dark/30 rounded-md animate-pulse" />}>
+                            <CampaignHistoryChart chartData={chartData} isRTL={isRTL} />
+                          </Suspense>
                         </div>
                         <div className="mt-2.5 border-t border-edge/50 dark:border-edge-dark/50 pt-2">
                           {campaignList.map(c => (

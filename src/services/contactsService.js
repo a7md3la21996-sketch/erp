@@ -22,6 +22,12 @@ export function getAssignmentHistory() {
   return [];
 }
 
+// Soft-delete columns must be written together — `is_deleted` (bool) and
+// `deleted_at` (timestamp) drift if one is updated without the other. These
+// helpers are the only correct way to set/clear soft-delete state on contacts.
+const softDeleteFields = () => ({ is_deleted: true,  deleted_at: new Date().toISOString() });
+const softUndeleteFields = () => ({ is_deleted: false, deleted_at: null });
+
 /**
  * Increment a contact's lead score, capped at 100. Single-assignment now —
  * the score belongs to the sole assignee, so this is just a numeric update.
@@ -327,7 +333,13 @@ export async function createContact(contactData) {
     }
     // Auto-generate contact_number using timestamp to avoid race condition
     if (!data.contact_number) {
-      const num = 'C-' + Date.now().toString(36).toUpperCase();
+      // Timestamp-only suffix collided under parallel imports (two rows in
+      // the same millisecond got the same number). Append 4 random base-36
+      // chars (~1.7M unique combos per ms) to make collisions essentially
+      // impossible in practice.
+      const ts = Date.now().toString(36).toUpperCase();
+      const rand = Math.random().toString(36).slice(2, 6).toUpperCase().padEnd(4, '0');
+      const num = `C-${ts}-${rand}`;
       await supabase.from('contacts').update({ contact_number: num }).eq('id', data.id);
       data.contact_number = num;
     }
@@ -420,10 +432,7 @@ export async function deleteContact(id) {
     // Soft delete: mark as deleted instead of removing from DB
     // This preserves all data and related records (opportunities, activities, etc.)
     const { data: oldData } = await rq(() => supabase.from('contacts').select('*').eq('id', id).single(), 'deleteContact.read');
-    const { error } = await rq(() => supabase.from('contacts').update({
-      deleted_at: new Date().toISOString(),
-      is_deleted: true,
-    }).eq('id', id), 'deleteContact.write');
+    const { error } = await rq(() => supabase.from('contacts').update(softDeleteFields()).eq('id', id), 'deleteContact.write');
     if (error) throw error;
     // Log with full data for recovery
     logAudit({ action: 'delete', entity: 'contact', entityId: id, entityName: oldData?.full_name || '', oldData, description: `Soft deleted contact: ${oldData?.full_name || id}` });
@@ -446,7 +455,7 @@ export async function restoreContact(id) {
     );
     const names = Array.isArray(row?.assigned_to_names) ? row.assigned_to_names.filter(Boolean) : [];
     const hasOwner = !!row?.assigned_to_name || names.length > 0;
-    const updates = { deleted_at: null, is_deleted: false };
+    const updates = softUndeleteFields();
     if (!hasOwner) {
       const fallback = row?.created_by_name;
       if (!fallback) {

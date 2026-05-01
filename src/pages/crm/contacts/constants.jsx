@@ -132,7 +132,34 @@ export const fmtBudget = (min, max, isRTL = true) => {
   return min ? `${isRTL ? 'من' : 'From'} ${f(min)}` : `${isRTL ? 'حتى' : 'Up to'} ${f(max)}`;
 };
 export const daysSince = d => Math.floor((Date.now() - new Date(d)) / 86400000);
+
+/**
+ * Combine a local phone number with the user's selected country code into
+ * an E.164-style string. Used by Add/Edit contact forms.
+ *
+ *   getFullPhone('01234', '+20')   → '+201234'
+ *   getFullPhone('+20123', '+20')  → '+20123'   (already international)
+ *   getFullPhone('00201', '+20')   → '+201'      (00 → +)
+ */
+export const getFullPhone = (phone, code) => {
+  if (!phone) return '';
+  if (phone.startsWith('+')) return phone;
+  if (phone.startsWith('00')) return '+' + phone.slice(2);
+  if (phone.startsWith('0')) return code + phone.slice(1);
+  return code + phone;
+};
 export const initials = name => name ? name.trim().charAt(0) : '?';
+
+/**
+ * Short two-letter initials for an agent name. "Ahmed Adel" → "AA",
+ * "Mariam" → "MA". Used by chips and avatars across the contacts UI.
+ */
+export const agentInitials = (name) => {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+};
 export const AVATAR_COLORS = ['#2B4C6F','#4A7AAB','#065F46','#92400E','#1E40AF','#6B21A8','#B45309','#0F766E'];
 export const avatarColor = (id) => {
   if (!id) return AVATAR_COLORS[0];
@@ -271,9 +298,13 @@ export function PhoneCell({ phone, small = false }) {
       copyTimer.current = setTimeout(() => setCopied(false), 1500);
     }).catch(() => { setCopied(false); });
   };
+  // Tap to toggle on touch devices, hover on desktop. The click below also
+  // catches touches that land on the row instead of the copy button.
+  const toggleReveal = (e) => { e.stopPropagation(); setRevealed(v => !v); };
   return (
     <div className="flex items-center gap-1.5 cursor-pointer py-[3px]" dir="ltr"
-      onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}>
+      onMouseEnter={() => setRevealed(true)} onMouseLeave={() => setRevealed(false)}
+      onClick={toggleReveal}>
       <span className={`font-mono whitespace-nowrap overflow-hidden text-ellipsis inline-block max-w-[150px] ${small ? 'text-xs text-gray-400 dark:text-gray-500' : 'text-xs text-content dark:text-content-dark'}`}>
         {revealed ? phone : masked}
       </span>
