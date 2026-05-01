@@ -72,7 +72,6 @@ export default function PullOtherLeadsModal({ contact, onClose, onSuccess }) {
           contact_status: 'disqualified',
           disqualify_reason: 'won_by_other_agent',
           disqualify_note: reason,
-          agent_statuses: { ...(c.agent_statuses || {}), [c.assigned_to_name]: 'disqualified' },
         }).eq('id', c.id)
       ));
       const ok = results.filter(r => r.status === 'fulfilled').length;

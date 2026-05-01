@@ -247,8 +247,7 @@ export default function BatchCallModal({
                 const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
                 const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
                 try { await createActivity(activity); } catch (err) { if (import.meta.env.DEV) console.warn('batch call create activity:', err); }
-                const myName = profile?.full_name_en || profile?.full_name_ar;
-                const myStatus = (current.agent_statuses || {})[myName] || current.contact_status;
+                const myStatus = current.contact_status;
                 let newStatus = myStatus;
                 // disqualified → never auto-change
                 if (myStatus === 'disqualified') {
@@ -260,8 +259,7 @@ export default function BatchCallModal({
                 } else if (myStatus === 'new' || !myStatus) {
                   newStatus = 'following';
                 }
-                // Simple single-assignment write — drop spread + derive complexity.
-                const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus, agent_statuses: { [myName]: newStatus } };
+                const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus };
                 let writeOk = true;
                 try {
                   await updateContact(current.id, statusUpdate);

@@ -136,9 +136,9 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
         return acc;
       }, []);
       // Build payload from form fields ONLY — do NOT spread `...contact`.
-      // Spreading the original would expose assigned_to_names / agent_statuses
-      // to client-side mutation (devtools edit before save).
-      // The id is required for the update; everything else comes from form.
+      // Spreading the original would expose assigned_to_names to client-side
+      // mutation (devtools edit before save). The id is required for the
+      // update; everything else comes from form.
       await onSave({
         id: contact.id,
         prefix: formData.prefix,

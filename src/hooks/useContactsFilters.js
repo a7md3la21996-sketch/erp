@@ -93,8 +93,9 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
       { value: 'marketing', label: 'التسويق', labelEn: 'Marketing' },
       { value: 'operations', label: 'العمليات', labelEn: 'Operations' },
     ]},
-    // Per-agent fields (replaces old global contact_status/lead_score). The filter
-    // matches against the current user's own entry in agent_statuses/agent_scores.
+    // "My Status / My Temperature / My Score" — matches against the current
+    // user's own state on the contact (only meaningful when they're the
+    // assignee; null otherwise).
     { id: 'my_status', label: 'حالتي', labelEn: 'My Status', type: 'select',
       options: deptView.statusOptions ? ALL_STATUS_OPTIONS.filter(o => deptView.statusOptions.includes(o.value)) : ALL_STATUS_OPTIONS },
     { id: 'my_temperature', label: 'حرارتي', labelEn: 'My Temperature', type: 'select', options: ALL_TEMP_OPTIONS },
@@ -149,8 +150,8 @@ export function useContactsFilters({ contacts, pinnedIds, auditFields, applyAudi
     const meName = profileName(profile);
     // withAgentView attaches my_status / my_temperature / my_score / _agent_count
     // from the current user's perspective — SmartFilter then addresses them as
-    // regular fields. For legacy rows without agent_statuses, it falls back to
-    // the global contact_status / temperature / lead_score.
+    // regular fields. The values come straight from contact_status / temperature
+    // / lead_score when the viewer is the sole assignee.
     let list = withAgentView(contacts || [], profile).map(c => ({
       ...c,
       _country: c._country || detectCountry(c.phone),

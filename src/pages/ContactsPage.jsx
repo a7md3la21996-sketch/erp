@@ -10,7 +10,6 @@ import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, Chevron
 import {
   fetchContacts, createContact, updateContact, deleteContact,
   blacklistContact, createActivity, recordAssignment,
-  deriveGlobalStatus, deriveGlobalTemp,
 } from '../services/contactsService';
 import supabase from '../lib/supabase';
 import { logAction } from '../services/auditService';
@@ -277,14 +276,11 @@ export default function ContactsPage() {
       }
 
       if (newStatus && newStatus !== currentStatus) {
-        const myName = profile?.full_name_en || profile?.full_name_ar;
-        const newAgentStatuses = { ...(contact.agent_statuses || {}), [myName]: newStatus };
-        const globalStatus = deriveGlobalStatus(newAgentStatuses);
-        const updated = { ...contact, agent_statuses: newAgentStatuses, contact_status: globalStatus };
+        const updated = { ...contact, contact_status: newStatus };
         setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
         // Tell the user when this fails — silent failures here are how
         // dozens of status changes were lost during the unhealthy DB period.
-        updateContact(updated.id, { agent_statuses: newAgentStatuses, contact_status: globalStatus })
+        updateContact(updated.id, { contact_status: newStatus })
           .catch(err => {
             reportError('ContactsPage', 'optimistic status update', err);
             toast.error(isRTL ? 'لم يتم حفظ تغيير الحالة — حاول تاني' : 'Status change not saved — please retry');
@@ -437,25 +433,11 @@ export default function ContactsPage() {
     const extraUpdates = {};
     if (bulkStatus) extraUpdates.contact_status = bulkStatus; // bulk reassign sets global (admin/ops action)
     if (bulkTemp) extraUpdates.temperature = bulkTemp; // bulk reassign sets global (admin/ops action)
-    // Bulk reassign replaces every assignee with one agent, so the per-agent
-    // maps must be rebuilt around just that agent — leaving the old agents'
-    // entries would be ghosts that pollute peak/mixed displays.
-    const buildPerAgentForReassign = (c) => {
-      const startStatus = bulkStatus || c?.agent_statuses?.[agentName] || 'new';
-      const startTemp   = bulkTemp   || c?.agent_temperatures?.[agentName] || c?.temperature || 'warm';
-      const startScore  = c?.agent_scores?.[agentName] ?? c?.lead_score ?? 0;
-      return {
-        agent_statuses:     { [agentName]: startStatus },
-        agent_temperatures: { [agentName]: startTemp },
-        agent_scores:       { [agentName]: Number(startScore) || 0 },
-      };
-    };
     const updated = contacts.map(c => selectedIds.includes(c.id) ? {
       ...c,
       assigned_to_name: agentName,
       assigned_to_names: [agentName],
       assigned_by_name: assignedByName,
-      ...buildPerAgentForReassign(c),
       ...extraUpdates,
     } : c);
     setContacts(updated);
@@ -479,16 +461,12 @@ export default function ContactsPage() {
     try {
       // updateContact already retries internally — service-level retry is the single source of truth
       const results = await Promise.allSettled(
-        idsToUpdate.map(id => {
-          const c = allSelectedById.get(id);
-          return updateContact(id, {
-            assigned_to_name: agentName,
-            assigned_to_names: [agentName],
-            assigned_by_name: assignedByName,
-            ...buildPerAgentForReassign(c),
-            ...extraUpdates,
-          });
-        })
+        idsToUpdate.map(id => updateContact(id, {
+          assigned_to_name: agentName,
+          assigned_to_names: [agentName],
+          assigned_by_name: assignedByName,
+          ...extraUpdates,
+        }))
       );
       const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
       if (failedIdx.length > 0) {
@@ -501,165 +479,6 @@ export default function ContactsPage() {
         failedIdx.forEach(i => reportError('ContactsPage', 'bulkReassign', results[i].reason));
       }
     } catch (err) { toast.error(isRTL ? 'فشل إعادة التعيين' : 'Reassign failed'); console.error('bulk reassign:', err); }
-  };
-
-  const handleBulkAddAgent = async (agentName, agentStatus = 'new', agentTemp = 'hot') => {
-    const v = await validateAgentNames([agentName]);
-    if (!v.ok) {
-      toast.error(isRTL
-        ? (v.outOfScope.length ? `لا يمكنك إضافة هذا السيلز — خارج فريقك` : `سيلز غير موجود: ${v.unknown.join(', ')}`)
-        : (v.outOfScope.length ? `Cannot add that agent — outside your team scope` : `Unknown agent: ${v.unknown.join(', ')}`));
-      return;
-    }
-    const idsToUpdate = [...selectedIds];
-    // Split selected contacts into { toAdd } (new assignment) and { alreadyHad } (no-op)
-    // so the toast, notifications, and audit log reflect the real effect.
-    // Pull off-page selected rows from the DB so the split is correct.
-    const selected = await getAllSelectedContacts();
-    const selectedById = new Map(selected.map(c => [c.id, c]));
-    const toAdd = selected.filter(c => !(c.assigned_to_names || []).includes(agentName));
-    const alreadyHad = selected.filter(c => (c.assigned_to_names || []).includes(agentName));
-
-    const updated = contacts.map(c => {
-      if (!selectedIds.includes(c.id)) return c;
-      const names = c.assigned_to_names || [];
-      if (names.includes(agentName)) return c;
-      const newStatuses = { ...(c.agent_statuses || {}), [agentName]: agentStatus };
-      const newTemps = { ...(c.agent_temperatures || {}), [agentName]: agentTemp };
-      return { ...c, assigned_to_names: [...names, agentName], agent_statuses: newStatuses, agent_temperatures: newTemps };
-    });
-    setContacts(updated);
-
-    // Honest toast: show the real number added; mention the ones already assigned.
-    if (toAdd.length === 0) {
-      toast.info(isRTL
-        ? `${agentName} موجود بالفعل عند كل العملاء الـ ${selectedIds.length} المختارين — ما تم تعديل شيء`
-        : `${agentName} is already assigned to all ${selectedIds.length} selected leads — nothing changed`);
-    } else if (alreadyHad.length > 0) {
-      toast.success(isRTL
-        ? `تم إضافة ${agentName} لـ ${toAdd.length} عميل (${alreadyHad.length} كانوا عنده بالفعل)`
-        : `Added ${agentName} to ${toAdd.length} leads (${alreadyHad.length} already had them)`);
-    } else {
-      toast.success(isRTL ? `تم إضافة ${agentName} لـ ${toAdd.length} عميل` : `Added ${agentName} to ${toAdd.length} leads`);
-    }
-
-    // Notify only if something actually changed
-    if (toAdd.length === 1) {
-      notifyLeadAssigned({ contactName: toAdd[0].full_name || '—', contactId: toAdd[0].id, agentId: agentName, agentName, assignedBy: profile?.full_name_ar || '—' });
-    } else if (toAdd.length > 1) {
-      notifyLeadAssigned({ contactName: `${toAdd.length} ليد جديد`, contactId: null, agentId: agentName, agentName, assignedBy: profile?.full_name_ar || '—' });
-    }
-
-    // Audit log — so "who added whom to whose list and when" is traceable.
-    if (toAdd.length > 0) {
-      const names = toAdd.map(c => c.full_name).filter(Boolean).join(', ');
-      logAction({
-        action: 'bulk_add_agent',
-        entity: 'contact',
-        entityId: toAdd.map(c => c.id).join(','),
-        description: `Added ${agentName} to ${toAdd.length} contacts: ${names}`,
-        newValue: agentName,
-        userName: profile?.full_name_ar || profile?.full_name_en || '',
-      });
-    }
-
-    setSelectedIds([]);
-    // Perform the actual updates only on the ones that need them
-    const toAddIds = toAdd.map(c => c.id);
-    const results = await Promise.allSettled(toAddIds.map(id => {
-      const c = selectedById.get(id);
-      const names = c?.assigned_to_names || [];
-      const newStatuses = { ...(c?.agent_statuses || {}), [agentName]: agentStatus };
-      const newTemps = { ...(c?.agent_temperatures || {}), [agentName]: agentTemp };
-      return updateContact(id, { assigned_to_names: [...names, agentName], agent_statuses: newStatuses, agent_temperatures: newTemps });
-    }));
-    const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
-    if (failedIdx.length > 0) {
-      failedIdx.forEach(i => reportError('ContactsPage', 'bulkAddAgent', results[i].reason));
-      const failedNames = failedIdx.map(i => selectedById.get(toAddIds[i])?.full_name || toAddIds[i]).filter(Boolean);
-      const preview = failedNames.slice(0, 3).join(', ');
-      const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
-      toast.error(isRTL ? `فشل تحديث ${failedNames.length} عميل: ${preview}${more}` : `Failed to update ${failedNames.length} leads: ${preview}${more}`);
-    }
-  };
-
-  const handleBulkRemoveAgent = async (agentName) => {
-    // Split selected: { toRemove } (actually has the agent and not the last one),
-    // { notAssigned } (doesn't have them — no-op), { onlyAgent } (has them as
-    // the single assignee — we refuse to leave the contact unassigned).
-    const selected = await getAllSelectedContacts();
-    const selectedById = new Map(selected.map(c => [c.id, c]));
-    const toRemove = selected.filter(c => {
-      const names = c.assigned_to_names || [];
-      return names.includes(agentName) && names.filter(n => n !== agentName).length > 0;
-    });
-    const notAssigned = selected.filter(c => !(c.assigned_to_names || []).includes(agentName));
-    const onlyAgent = selected.filter(c => {
-      const names = c.assigned_to_names || [];
-      return names.includes(agentName) && names.filter(n => n !== agentName).length === 0;
-    });
-
-    const updated = contacts.map(c => {
-      if (!selectedIds.includes(c.id)) return c;
-      const names = (c.assigned_to_names || []).filter(n => n !== agentName);
-      if (names.length === 0) return c; // don't remove last agent
-      const newStatuses = { ...(c.agent_statuses || {}) }; delete newStatuses[agentName];
-      const newTemps = { ...(c.agent_temperatures || {}) }; delete newTemps[agentName];
-      const newScores = { ...(c.agent_scores || {}) }; delete newScores[agentName];
-      return { ...c, assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps, agent_scores: newScores };
-    });
-    setContacts(updated);
-
-    // Honest toast
-    if (toRemove.length === 0 && notAssigned.length === selected.length) {
-      toast.info(isRTL
-        ? `${agentName} مش موجود عند أي من العملاء الـ ${selected.length} المختارين`
-        : `${agentName} is not assigned to any of the ${selected.length} selected leads`);
-    } else if (toRemove.length === 0 && onlyAgent.length > 0) {
-      toast.warning(isRTL
-        ? `${agentName} هو المسؤول الوحيد عند ${onlyAgent.length} عميل — لن يتم شيله لتجنب تركهم بدون مسؤول`
-        : `${agentName} is the only assignee for ${onlyAgent.length} leads — skipped to avoid leaving them unassigned`);
-    } else {
-      const extras = [];
-      if (notAssigned.length > 0) extras.push(isRTL ? `${notAssigned.length} غير موجود عندهم` : `${notAssigned.length} didn't have them`);
-      if (onlyAgent.length > 0) extras.push(isRTL ? `${onlyAgent.length} كان المسؤول الوحيد` : `${onlyAgent.length} was sole assignee`);
-      const suffix = extras.length ? ` (${extras.join(' · ')})` : '';
-      toast.success(isRTL
-        ? `تم شيل ${agentName} من ${toRemove.length} عميل${suffix}`
-        : `Removed ${agentName} from ${toRemove.length} leads${suffix}`);
-    }
-
-    // Audit log
-    if (toRemove.length > 0) {
-      const names = toRemove.map(c => c.full_name).filter(Boolean).join(', ');
-      logAction({
-        action: 'bulk_remove_agent',
-        entity: 'contact',
-        entityId: toRemove.map(c => c.id).join(','),
-        description: `Removed ${agentName} from ${toRemove.length} contacts: ${names}`,
-        oldValue: agentName,
-        userName: profile?.full_name_ar || profile?.full_name_en || '',
-      });
-    }
-
-    setSelectedIds([]);
-    const toRemoveIds = toRemove.map(c => c.id);
-    const results = await Promise.allSettled(toRemoveIds.map(id => {
-      const c = selectedById.get(id);
-      const names = (c?.assigned_to_names || []).filter(n => n !== agentName);
-      const newStatuses = { ...(c?.agent_statuses || {}) }; delete newStatuses[agentName];
-      const newTemps = { ...(c?.agent_temperatures || {}) }; delete newTemps[agentName];
-      const newScores = { ...(c?.agent_scores || {}) }; delete newScores[agentName];
-      return updateContact(id, { assigned_to_names: names, assigned_to_name: names[0], agent_statuses: newStatuses, agent_temperatures: newTemps, agent_scores: newScores });
-    }));
-    const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
-    if (failedIdx.length > 0) {
-      failedIdx.forEach(i => reportError('ContactsPage', 'bulkRemoveAgent', results[i].reason));
-      const failedNames = failedIdx.map(i => selectedById.get(toRemoveIds[i])?.full_name || toRemoveIds[i]).filter(Boolean);
-      const preview = failedNames.slice(0, 3).join(', ');
-      const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
-      toast.error(isRTL ? `فشل تحديث ${failedNames.length} عميل: ${preview}${more}` : `Failed to update ${failedNames.length} leads: ${preview}${more}`);
-    }
   };
 
   const handleBulkChangeField = async (field, value, actionLabel) => {
@@ -1016,15 +835,12 @@ export default function ContactsPage() {
 
       // Background: auto-mark inactive + fetch feedback (non-blocking)
       if (list.length) {
-        // Auto-inactive (fire and forget) — only update contact_status, preserve agent_statuses
+        // Auto-mark inactive contacts as 'contacted' if their last activity is past
+        // the threshold. Single-assignment now — contact_status alone is the signal.
         const now = Date.now();
         const inactiveThreshold = INACTIVE_DAYS * 86400000;
         list.forEach(c => {
           if (c.contact_status === 'following' && c.last_activity_at && (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold) {
-            // Check if any agent has a non-contacted status — if so, skip auto-contacted
-            const agentStatuses = c.agent_statuses || {};
-            const hasActiveAgent = Object.values(agentStatuses).some(s => s === 'following' || s === 'has_opportunity');
-            if (hasActiveAgent) return;
             c.contact_status = 'contacted';
             updateContact(c.id, { contact_status: 'contacted' }).catch(err => reportError('ContactsPage', 'auto-contacted', err));
           }
@@ -1256,9 +1072,6 @@ export default function ContactsPage() {
       assigned_by_name: profile?.full_name_ar || '—',
       created_by: profile?.id || null,
       created_by_name: profile?.full_name_ar || profile?.full_name_en || '—',
-      agent_statuses: { [myName]: 'new' },
-      agent_temperatures: { [myName]: form.temperature || 'hot' },
-      agent_scores: { [myName]: 0 },
       campaign_interactions,
       created_at: new Date().toISOString(),
       last_activity_at: null,
@@ -1702,7 +1515,7 @@ export default function ContactsPage() {
         const { batchInsert } = await import('../utils/batchOperations');
         const { stripInternalFields } = await import('../utils/sanitizeForSupabase');
         // Only allow known contacts table columns
-        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to_name','assigned_to_names','assigned_by_name','assigned_at','created_by','created_by_name','budget_min','budget_max','lead_score','is_blacklisted','last_activity_at','created_at','agent_statuses','agent_temperatures','agent_scores']);
+        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to_name','assigned_to_names','assigned_by_name','assigned_at','created_by','created_by_name','budget_min','budget_max','lead_score','is_blacklisted','last_activity_at','created_at']);
         const clean = newContacts.map(c => {
           const stripped = stripInternalFields(c);
           const safe = {};
@@ -1713,13 +1526,12 @@ export default function ContactsPage() {
           if (safe.id && !safe.id.match(/^[0-9a-f-]{36}$/)) delete safe.id;
           // Don't set last_activity_at on import - only set when actual activity happens
           safe.created_at = safe.created_at || new Date().toISOString();
-          // Sync assigned_to_name → assigned_to_names + agent_statuses + agent_temperatures
+          // Sync assigned_to_name → assigned_to_names so the legacy multi-name
+          // column stays consistent with the single-assignment scalar.
           const agentName = safe.assigned_to_name || profile?.full_name_en || profile?.full_name_ar;
           if (agentName) {
             safe.assigned_to_name = agentName;
             safe.assigned_to_names = [agentName];
-            safe.agent_statuses = { [agentName]: safe.contact_status || 'new' };
-            safe.agent_temperatures = { [agentName]: safe.temperature || 'warm' };
             // Stamp assignment time so "Sort: Assignment Date" shows imports correctly
             if (!safe.assigned_at) safe.assigned_at = new Date().toISOString();
           }
@@ -1881,8 +1693,6 @@ export default function ContactsPage() {
         setDqReason={setDqReason}
         setDqNote={setDqNote}
         MERGE_LIMIT={MERGE_LIMIT}
-        handleBulkAddAgent={handleBulkAddAgent}
-        handleBulkRemoveAgent={handleBulkRemoveAgent}
         perms={perms}
       />
 

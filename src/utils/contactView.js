@@ -1,11 +1,10 @@
 // Per-agent view helpers for contacts.
 //
-// After Phase 1 (single-assignment migration), every contact has at most one
-// assignee. The per-agent JSON maps (agent_statuses, agent_temperatures,
-// agent_scores) carry the same value as the global contact_status/
-// temperature/lead_score for that single assignee. These helpers prefer
-// the jsonb (for backward compat) but fall back to the global field —
-// once Phase 2 drops the jsonb columns, the fallback becomes the source.
+// After Phase 1 (single-assignment) every contact has at most one assignee.
+// Phase 2 dropped the per-agent jsonb maps entirely — contact_status /
+// temperature / lead_score are now the only source. These helpers stay so
+// callers can keep asking "what's my status on this contact?" without each
+// site having to repeat the assignee check.
 
 /** The user's full name as stored on contacts (full_name_en preferred). */
 export function profileName(profile) {
@@ -33,84 +32,48 @@ export function getAgentCount(contact) {
   return getValidAgentNames(contact).length;
 }
 
-/**
- * Per-agent status for the given user. Prefers jsonb agent_statuses for
- * backward compat; falls back to global contact_status when userName is the
- * current sole assignee (forward-compat for when jsonb writes stop).
- */
+/** The viewer's status on this contact — null when they're not the assignee. */
 export function getMyStatus(contact, userName) {
   if (!contact || !userName) return null;
-  const v = contact.agent_statuses?.[userName];
-  if (v !== undefined && v !== null && v !== '') return v;
-  // Fallback: if userName is the current assignee, the global field is theirs
   if (contact.assigned_to_name === userName && contact.contact_status) return contact.contact_status;
   return null;
 }
 
-/** Same pattern for temperature. */
+/** The viewer's temperature on this contact — null when they're not the assignee. */
 export function getMyTemp(contact, userName) {
   if (!contact || !userName) return null;
-  const v = contact.agent_temperatures?.[userName];
-  if (v !== undefined && v !== null && v !== '') return v;
   if (contact.assigned_to_name === userName && contact.temperature) return contact.temperature;
   return null;
 }
 
-/** Same pattern for lead score. Returns 0 (not null) for arithmetic-friendliness. */
+/** The viewer's lead score on this contact — 0 when they're not the assignee. */
 export function getMyScore(contact, userName) {
   if (!contact || !userName) return 0;
-  const v = contact.agent_scores?.[userName];
-  if (typeof v === 'number') return v;
-  if (v != null && v !== '') return Number(v) || 0;
   if (contact.assigned_to_name === userName && typeof contact.lead_score === 'number') return contact.lead_score;
   return 0;
 }
 
 /**
- * Flat per-agent breakdown for tables/drawers/chips. Returns one row per
- * currently-assigned agent with their own status / temperature / score —
- * the source of truth for every per-agent display in the app. When
- * `viewerName` is given and they're one of the assignees, they're placed
- * first so the viewer's own state reads at a glance.
- *
- * Returns [] for contacts with no assignees.
+ * Flat per-agent breakdown for tables/drawers/chips. Single-assignment now,
+ * so this returns at most one row — the sole assignee's status / temperature
+ * / score. Kept as an array shape so existing call sites that iterate keep
+ * working without churn. Returns [] for contacts with no assignees.
  */
 export function getAgentsView(contact, viewerName) {
   if (!contact) return [];
   const names = getValidAgentNames(contact);
   if (names.length === 0) return [];
 
-  const statuses = contact.agent_statuses || {};
-  const temps = contact.agent_temperatures || {};
-  const scores = contact.agent_scores || {};
-  // Forward-compat: when name === current assignee, fall back to global fields
-  const isAssignee = (name) => contact.assigned_to_name === name;
-  const pickStatus = (name) => statuses[name] ?? (isAssignee(name) ? (contact.contact_status ?? null) : null);
-  const pickTemp = (name) => temps[name] ?? (isAssignee(name) ? (contact.temperature ?? null) : null);
-  const pickScore = (name) => {
-    const s = scores[name];
-    if (typeof s === 'number') return s;
-    if (s != null) return Number(s) || 0;
-    if (isAssignee(name) && typeof contact.lead_score === 'number') return contact.lead_score;
-    return null;
-  };
-
-  const rows = names.map(name => ({
-    name,
-    status: pickStatus(name),
-    temperature: pickTemp(name),
-    score: pickScore(name),
-    isViewer: !!viewerName && name === viewerName,
-  }));
-
-  if (viewerName) {
-    const i = rows.findIndex(r => r.name === viewerName);
-    if (i > 0) {
-      const [viewer] = rows.splice(i, 1);
-      rows.unshift(viewer);
-    }
-  }
-  return rows;
+  return names.map(name => {
+    const isAssignee = contact.assigned_to_name === name;
+    return {
+      name,
+      status: isAssignee ? (contact.contact_status ?? null) : null,
+      temperature: isAssignee ? (contact.temperature ?? null) : null,
+      score: isAssignee && typeof contact.lead_score === 'number' ? contact.lead_score : null,
+      isViewer: !!viewerName && name === viewerName,
+    };
+  });
 }
 
 /**
@@ -126,7 +89,5 @@ export function withAgentView(contacts, profile) {
     my_temperature: getMyTemp(c, name),
     my_score: getMyScore(c, name),
     _agent_count: getAgentCount(c),
-    // _is_status_mixed / _is_temp_mixed removed in Phase 3 — always false now
-    // that each contact has a single assignee. The isMixed helper was deleted.
   }));
 }

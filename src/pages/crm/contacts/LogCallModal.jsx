@@ -104,10 +104,10 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
       return;
     }
 
-    // Auto-update contact_status based on call result (per-agent)
+    // Auto-update contact_status based on call result. Single-assignment now —
+    // contact_status is the status.
     if (onUpdate) {
-      const myName = profile?.full_name_en || profile?.full_name_ar;
-      const myStatus = (contact.agent_statuses || {})[myName] || contact.contact_status;
+      const myStatus = contact.contact_status;
       let newStatus = myStatus;
       // disqualified → never auto-change
       if (myStatus === 'disqualified') {
@@ -122,9 +122,7 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
         newStatus = 'following';
       }
       if (newStatus !== myStatus) {
-        // Simple write — single-assignment means contact_status IS the status.
-        // Drop orphan jsonb keys by replacing the map with a single fresh entry.
-        onUpdate({ ...contact, contact_status: newStatus, agent_statuses: { [myName]: newStatus } });
+        onUpdate({ ...contact, contact_status: newStatus });
       }
     }
 

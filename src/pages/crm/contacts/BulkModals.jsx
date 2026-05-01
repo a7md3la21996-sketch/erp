@@ -47,15 +47,6 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
         return true;
       });
   }
-  // Merge agent-level data — for collisions take the stronger value
-  merged.agent_statuses = { ...(c2.agent_statuses || {}), ...(c1.agent_statuses || {}) };
-  merged.agent_temperatures = { ...(c2.agent_temperatures || {}), ...(c1.agent_temperatures || {}) };
-  // For agent_scores, take MAX per key (richer history wins)
-  const allAgentScoreKeys = new Set([...Object.keys(c1.agent_scores || {}), ...Object.keys(c2.agent_scores || {})]);
-  merged.agent_scores = {};
-  for (const k of allAgentScoreKeys) {
-    merged.agent_scores[k] = Math.max(c1.agent_scores?.[k] || 0, c2.agent_scores?.[k] || 0);
-  }
   // Merge assigned_to_names
   merged.assigned_to_names = [...new Set([...(c1.assigned_to_names || []), ...(c2.assigned_to_names || [])])].filter(Boolean);
   if ((c2.lead_score || 0) > (c1.lead_score || 0)) merged.lead_score = c2.lead_score;
@@ -228,43 +219,15 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
           </button>
           <button disabled={!dqReason} onClick={async () => {
             const reasonLabel = DQ_REASONS.find(r => r.value === dqReason)?.label || dqReason;
-            const myName = profile?.full_name_en || profile?.full_name_ar;
-            const isAdminOrOps = profile?.role === 'admin' || profile?.role === 'operations';
 
-            // Per-agent DQ: the agent is done with this lead — remove their slot
-            // entirely (assigned_to_names AND the per-agent JSON maps) so we
-            // don't leave a "ghost" entry behind. The audit log already records
-            // who disqualified and why; we don't need to also keep the status.
-            // Admin/Ops: global DQ (sets contact_status for everyone).
-            const buildDqUpdates = (contact) => {
-              if (isAdminOrOps) {
-                // Admin path: also set every per-agent slot to 'disqualified'
-                // so derived global status stays in sync. Previously the global
-                // contact_status would silently revert when any per-agent
-                // status was higher in deriveGlobalStatus priority.
-                const allNames = (contact.assigned_to_names || []).filter(Boolean);
-                const newStatuses = { ...(contact.agent_statuses || {}) };
-                for (const n of allNames) newStatuses[n] = 'disqualified';
-                return {
-                  contact_status: 'disqualified',
-                  disqualify_reason: dqReason,
-                  disqualify_note: dqNote || '',
-                  agent_statuses: newStatuses,
-                };
-              }
-              const newNames = (contact.assigned_to_names || []).filter(n => n !== myName);
-              const newStatuses = { ...(contact.agent_statuses || {}) };     delete newStatuses[myName];
-              const newTemps    = { ...(contact.agent_temperatures || {}) }; delete newTemps[myName];
-              const newScores   = { ...(contact.agent_scores || {}) };       delete newScores[myName];
-              return {
-                assigned_to_names: newNames,
-                agent_statuses: newStatuses,
-                agent_temperatures: newTemps,
-                agent_scores: newScores,
-                disqualify_reason: dqReason,
-                disqualify_note: dqNote || '',
-              };
-            };
+            // Single-assignment DQ: contact_status flips to 'disqualified' for
+            // everyone. Admin/Ops and the assigned agent both go through the
+            // same path now — the per-agent slots are gone.
+            const buildDqUpdates = () => ({
+              contact_status: 'disqualified',
+              disqualify_reason: dqReason,
+              disqualify_note: dqNote || '',
+            });
 
             if (disqualifyModal === 'bulk') {
               const ids = [...selectedIds];
@@ -272,13 +235,12 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               const beforeMap = new Map((contacts || []).filter(c => ids.includes(c.id)).map(c => [c.id, c]));
               const updated = (contacts || []).map(c => {
                 if (!ids.includes(c.id)) return c;
-                return { ...c, ...buildDqUpdates(c) };
+                return { ...c, ...buildDqUpdates() };
               });
               setContacts(updated);
-              const results = await Promise.allSettled(ids.map(id => {
-                const c = contacts.find(ct => ct.id === id);
-                return updateContact(id, buildDqUpdates(c || {}));
-              }));
+              const results = await Promise.allSettled(ids.map(id =>
+                updateContact(id, buildDqUpdates())
+              ));
               const failedIds = results.map((r, i) => r.status === 'rejected' ? ids[i] : null).filter(Boolean);
               if (failedIds.length > 0) {
                 // Roll back the optimistic state for the failed ones so the UI matches reality.
@@ -296,7 +258,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
             } else {
               const c = disqualifyModal;
               const before = c;
-              const dqUpdates = buildDqUpdates(c);
+              const dqUpdates = buildDqUpdates();
               const updated = (contacts || []).map(ct => ct.id === c.id ? { ...ct, ...dqUpdates } : ct);
               setContacts(updated);
               try {

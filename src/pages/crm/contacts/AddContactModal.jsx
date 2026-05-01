@@ -302,8 +302,6 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
         }
         saveData.assigned_to_name = assignTo;
         saveData.assigned_to_names = [assignTo];
-        saveData.agent_statuses = { [assignTo]: 'new' };
-        saveData.agent_temperatures = { [assignTo]: form.temperature || 'hot' };
       }
       // Always remove client-supplied created_by — it must come from auth.uid()
       // via the DB trigger, not from form data.

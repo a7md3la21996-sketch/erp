@@ -5,7 +5,7 @@
 // Two failure modes we close here:
 //   (a) Ghost agents — a typo or stale UI option that doesn't match any
 //       row in `users`. Without this check, the typo lives forever in
-//       assigned_to_names / agent_statuses / agent_scores.
+//       assigned_to_name / assigned_to_names.
 //   (b) Cross-team escalation — a team_leader passing the name of an
 //       agent from another team. Without this check, the leader can
 //       reassign contacts to someone they don't manage.

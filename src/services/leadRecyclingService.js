@@ -25,12 +25,9 @@ export async function runTemperatureDecay() {
   const now = new Date();
 
   try {
-    // Fetch contacts with temperature that might need decay.
-    // After single-assignment migration, temperature is denormalized cache and
-    // agent_temperatures (jsonb keyed by name) is the source of truth — update both.
     const { data: contacts, error } = await supabase
       .from('contacts')
-      .select('id, temperature, agent_temperatures, assigned_to_name, last_activity_at, created_at, temperature_auto')
+      .select('id, temperature, last_activity_at, created_at, temperature_auto')
       .in('temperature', ['hot', 'warm'])
       .eq('is_deleted', false)
       .range(0, 499);
@@ -48,17 +45,13 @@ export async function runTemperatureDecay() {
       const daysSince = Math.floor((now - lastActivity) / 86400000);
 
       if (daysSince >= rule.daysToDecay) {
-        // Sync per-agent map: update assigned agent's slot
-        const agentTemps = { ...(c.agent_temperatures || {}) };
-        if (c.assigned_to_name) agentTemps[c.assigned_to_name] = rule.nextTemp;
-        updates.push({ id: c.id, temperature: rule.nextTemp, agent_temperatures: agentTemps });
+        updates.push({ id: c.id, temperature: rule.nextTemp });
       }
     });
 
-    // Batch update — both legacy temperature column AND per-agent jsonb map
     for (const u of updates) {
       await supabase.from('contacts')
-        .update({ temperature: u.temperature, agent_temperatures: u.agent_temperatures })
+        .update({ temperature: u.temperature })
         .eq('id', u.id);
       decayedCount++;
     }

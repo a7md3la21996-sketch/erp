@@ -23,107 +23,17 @@ export function getAssignmentHistory() {
 }
 
 /**
- * Get the per-agent status for a contact.
- * Falls back to contact_status if agent_statuses is empty.
+ * Increment a contact's lead score, capped at 100. Single-assignment now —
+ * the score belongs to the sole assignee, so this is just a numeric update.
  */
-export function getAgentStatus(contact, agentName) {
-  if (!agentName) return contact?.contact_status || null;
-  const statuses = contact?.agent_statuses || {};
-  return statuses[agentName] || contact?.contact_status || null;
-}
-
-/**
- * Get the per-agent temperature for a contact.
- * Falls back to contact.temperature if agent_temperatures is empty.
- */
-export function getAgentTemperature(contact, agentName) {
-  if (!agentName) return contact?.temperature || null;
-  const temps = contact?.agent_temperatures || {};
-  return temps[agentName] || contact?.temperature || null;
-}
-
-/**
- * Get the per-agent lead score for a contact.
- * Falls back to contact.lead_score if agent_scores is empty.
- */
-export function getAgentScore(contact, agentName) {
-  if (!agentName) return contact?.lead_score || 0;
-  const scores = contact?.agent_scores || {};
-  return scores[agentName] ?? contact?.lead_score ?? 0;
-}
-
-/**
- * Derive global contact_status from agent_statuses.
- * Priority: has_opportunity > active > inactive > new > disqualified
- */
-export function deriveGlobalStatus(agentStatuses) {
-  const vals = Object.values(agentStatuses || {});
-  if (!vals.length) return 'new';
-  const priority = ['has_opportunity', 'following', 'contacted', 'new', 'disqualified'];
-  for (const s of priority) { if (vals.includes(s)) return s; }
-  return vals[0] || 'new';
-}
-
-/**
- * Derive global temperature from agent_temperatures.
- * Priority: hot > warm > cool > cold
- */
-export function deriveGlobalTemp(agentTemps) {
-  const vals = Object.values(agentTemps || {});
-  if (!vals.length) return null;
-  const priority = ['hot', 'warm', 'cool', 'cold'];
-  for (const t of priority) { if (vals.includes(t)) return t; }
-  return vals[0] || null;
-}
-
-/**
- * Update per-agent status on a contact.
- * Also syncs global contact_status for filters/counts.
- */
-export async function updateAgentStatus(contactId, agentName, newStatus) {
+export async function incrementLeadScore(contactId, increment) {
   try {
-    const { data: current } = await rq(() => supabase.from('contacts').select('agent_statuses').eq('id', contactId).maybeSingle(), 'updateAgentStatus.read');
-    const statuses = { ...(current?.agent_statuses || {}), [agentName]: newStatus };
-    const globalStatus = deriveGlobalStatus(statuses);
-    await rq(() => supabase.from('contacts').update({ agent_statuses: statuses, contact_status: globalStatus }).eq('id', contactId), 'updateAgentStatus.write');
-    return statuses;
+    const { data: current } = await rq(() => supabase.from('contacts').select('lead_score').eq('id', contactId).maybeSingle(), 'incrementLeadScore.read');
+    const next = Math.min((current?.lead_score || 0) + increment, 100);
+    await rq(() => supabase.from('contacts').update({ lead_score: next }).eq('id', contactId), 'incrementLeadScore.write');
+    return next;
   } catch (err) {
-    reportError('contactsService', 'updateAgentStatus', err);
-    throw err;
-  }
-}
-
-/**
- * Update per-agent temperature on a contact.
- * Also syncs global temperature for filters/counts.
- */
-export async function updateAgentTemperature(contactId, agentName, newTemp) {
-  try {
-    const { data: current } = await rq(() => supabase.from('contacts').select('agent_temperatures').eq('id', contactId).maybeSingle(), 'updateAgentTemperature.read');
-    const temps = { ...(current?.agent_temperatures || {}), [agentName]: newTemp };
-    const globalTemp = deriveGlobalTemp(temps);
-    await rq(() => supabase.from('contacts').update({ agent_temperatures: temps, temperature: globalTemp }).eq('id', contactId), 'updateAgentTemperature.write');
-    return temps;
-  } catch (err) {
-    reportError('contactsService', 'updateAgentTemperature', err);
-    throw err;
-  }
-}
-
-/**
- * Increment per-agent lead score on a contact.
- */
-export async function incrementAgentScore(contactId, agentName, increment) {
-  try {
-    const { data: current } = await rq(() => supabase.from('contacts').select('agent_scores, lead_score').eq('id', contactId).maybeSingle(), 'incrementAgentScore.read');
-    const scores = { ...(current?.agent_scores || {}) };
-    scores[agentName] = Math.min((scores[agentName] || 0) + increment, 100);
-    // Also update global lead_score as max of all agent scores
-    const globalScore = Math.max(...Object.values(scores), current?.lead_score || 0);
-    await rq(() => supabase.from('contacts').update({ agent_scores: scores, lead_score: globalScore }).eq('id', contactId), 'incrementAgentScore.write');
-    return scores;
-  } catch (err) {
-    reportError('contactsService', 'incrementAgentScore', err);
+    reportError('contactsService', 'incrementLeadScore', err);
     throw err;
   }
 }
@@ -234,15 +144,8 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
       }
     }
     if (filters.temperature) {
-      if (filters.agentNameForTemp) {
-        query = query.filter('agent_temperatures->>' + filters.agentNameForTemp, 'eq', filters.temperature);
-      } else if (filters.teamMemberNames?.length) {
-        const conds = filters.teamMemberNames.map(n => `agent_temperatures->>${n}.eq.${filters.temperature}`);
-        conds.push(`temperature.eq.${filters.temperature}`);
-        query = query.or(conds.join(','));
-      } else {
-        query = query.eq('temperature', filters.temperature);
-      }
+      // Single-assignment now — temperature is the single source of truth.
+      query = query.eq('temperature', filters.temperature);
     }
     if (filters.showBlacklisted === false) query = query.eq('is_blacklisted', false);
     if (filters.showBlacklisted === true) query = query.eq('is_blacklisted', true);
@@ -265,35 +168,15 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
         ? filters.contact_status.filter(Boolean)
         : [filters.contact_status];
       if (statusValues.length > 0) {
+        // Single-assignment now — contact_status is authoritative regardless
+        // of which agent the filter is asking about.
         const isNot = !!filters.contact_status_not;
-        if (filters.agentNameForStatus) {
-          // Per-agent filter — a specific agent's slot must match (or not)
-          const agentField = 'agent_statuses->>' + filters.agentNameForStatus;
-          if (isNot) {
-            if (statusValues.length === 1) query = query.filter(agentField, 'neq', statusValues[0]);
-            else query = query.not(agentField, 'in', `(${statusValues.map(v => `"${v}"`).join(',')})`);
-          } else {
-            if (statusValues.length === 1) query = query.filter(agentField, 'eq', statusValues[0]);
-            else query = query.in(agentField, statusValues);
-          }
-        } else if (filters.teamMemberNames?.length && !isNot) {
-          // Manager/Admin: any team member has any of these statuses
-          // (exclusion case is hard to express across many keys, so we fall
-          // back to the global column for is_not / not_in).
-          const conds = [];
-          statusValues.forEach(v => {
-            filters.teamMemberNames.forEach(n => conds.push(`agent_statuses->>${n}.eq.${v}`));
-            conds.push(`contact_status.eq.${v}`);
-          });
-          query = query.or(conds.join(','));
+        if (isNot) {
+          if (statusValues.length === 1) query = query.neq('contact_status', statusValues[0]);
+          else query = query.not('contact_status', 'in', `(${statusValues.map(v => `"${v}"`).join(',')})`);
         } else {
-          if (isNot) {
-            if (statusValues.length === 1) query = query.neq('contact_status', statusValues[0]);
-            else query = query.not('contact_status', 'in', `(${statusValues.map(v => `"${v}"`).join(',')})`);
-          } else {
-            if (statusValues.length === 1) query = query.eq('contact_status', statusValues[0]);
-            else query = query.in('contact_status', statusValues);
-          }
+          if (statusValues.length === 1) query = query.eq('contact_status', statusValues[0]);
+          else query = query.in('contact_status', statusValues);
         }
       }
     }
@@ -828,9 +711,6 @@ export async function distributeLeadToAgents(originContactId, targetUserIds) {
       assigned_to_name: name,
       assigned_to: userId,
       assigned_to_names: [name],
-      agent_statuses: { [name]: 'new' },
-      agent_temperatures: { [name]: 'cold' },
-      agent_scores: { [name]: 0 },
       assigned_at: new Date().toISOString(),
       contact_number: origin.contact_number ? `${origin.contact_number}-D${i + 1}` : null,
     };
@@ -872,7 +752,6 @@ export async function pullLeadsAfterDealWon(wonContactId, winnerName) {
       contact_status: 'disqualified',
       disqualify_reason: 'won_by_other_agent',
       disqualify_note: reason,
-      agent_statuses: { ...(c.agent_statuses || {}), [c.assigned_to_name]: 'disqualified' },
     }).eq('id', c.id)
   ));
 

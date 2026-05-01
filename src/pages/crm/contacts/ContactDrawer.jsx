@@ -12,8 +12,6 @@ import { Button, Input, Select, Textarea } from '../../../components/ui/';
 import {
   fetchContactActivities, createActivity, updateActivity,
   fetchContactOpportunities, getAssignmentHistory,
-  // deriveGlobalStatus/Temp removed — single-assignment writes use the new
-  // value directly without computing from a jsonb map.
 } from '../../../services/contactsService';
 import { createOpportunity } from '../../../services/opportunitiesService';
 import { createNotification } from '../../../services/notificationsService';
@@ -371,8 +369,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     // auto-update so we don't race them. Otherwise infer a sensible default.
     if (opts.skipAutoStatus) return;
 
-    const myName = profile?.full_name_en || profile?.full_name_ar;
-    const currentStatus = (contact.agent_statuses || {})[myName] || contact.contact_status || 'new';
+    const currentStatus = contact.contact_status || 'new';
     let newStatus = null;
 
     if (currentStatus !== 'disqualified') {
@@ -390,7 +387,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     }
 
     if (newStatus && newStatus !== currentStatus) {
-      if (onUpdate) onUpdate({ ...contact, contact_status: newStatus, agent_statuses: { [myName]: newStatus } });
+      if (onUpdate) onUpdate({ ...contact, contact_status: newStatus });
     }
   };
 
@@ -417,9 +414,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           return;
         }
       }
-      const myName = profile?.full_name_en || profile?.full_name_ar;
       const oldStatus = contact.contact_status;
-      const updates = { ...contact, contact_status: newStatus, agent_statuses: { [myName]: newStatus } };
+      const updates = { ...contact, contact_status: newStatus };
       if (newStatus === 'disqualified' && dqReason) {
         updates.disqualify_reason = dqReason;
       }
@@ -460,11 +456,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         createNotification({ type: 'opportunity_assigned', title_ar: 'فرصة جديدة', title_en: 'New Opportunity Assigned', body_ar: `تم تعيين فرصة "${contact.full_name}" لك بواسطة ${selfName}`, body_en: `Opportunity "${contact.full_name}" assigned to you by ${selfName}`, for_user_name: newOpp.assigned_to_name, entity_type: 'opportunity', from_user: selfName });
       }
       logAction({ action: 'create_opportunity', entity: 'opportunity', entityId: saved.id, description: `Created opportunity for ${contact.full_name} → ${newOpp.assigned_to_name}`, userName: profile?.full_name_ar });
-      // Auto-set status to has_opportunity when opportunity is created (per-agent only)
-      const myName = profile?.full_name_en || profile?.full_name_ar;
-      const currentStatus = (contact.agent_statuses || {})[myName] || contact.contact_status || 'new';
+      // Auto-set status to has_opportunity when opportunity is created.
+      const currentStatus = contact.contact_status || 'new';
       if (currentStatus !== 'disqualified' && currentStatus !== 'has_opportunity') {
-        if (onUpdate) onUpdate({ ...contact, contact_status: 'has_opportunity', agent_statuses: { [myName]: 'has_opportunity' } });
+        if (onUpdate) onUpdate({ ...contact, contact_status: 'has_opportunity' });
       }
     } catch (err) {
       console.error('Opportunity save error:', err?.message || err);
@@ -478,7 +473,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
   const myTempKey = (() => {
     const mn = profile?.full_name_en || profile?.full_name_ar;
-    return mn ? (contact.agent_temperatures || {})[mn] : null;
+    return mn && contact.assigned_to_name === mn ? contact.temperature : null;
   })();
   const tempInfo = myTempKey ? TEMP[myTempKey] : null;
   const tp = contact.contact_type ? TYPE[contact.contact_type] : null;
@@ -672,7 +667,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           return { label: isRTL ? 'الحملة' : 'Campaign', val: contact.campaign_name || '—' };
         })(),
         show('assigned_at') && { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
-        ...(show('dq_reason') && (contact.contact_status === 'disqualified' || Object.values(contact.agent_statuses || {}).includes('disqualified')) ? [
+        ...(show('dq_reason') && contact.contact_status === 'disqualified' ? [
           { label: isRTL ? 'سبب الاستبعاد' : 'DQ Reason', val: contact.disqualify_reason ? ({ resale: isRTL ? 'عايز يبيع وحدته' : 'Wants to sell unit', not_interested: isRTL ? 'غير مهتم' : 'Not interested', no_budget: isRTL ? 'ميزانية غير مناسبة' : 'No budget', wrong_audience: isRTL ? 'جمهور خاطئ' : 'Wrong audience', duplicate: isRTL ? 'مكرر' : 'Duplicate', other: isRTL ? 'آخر' : 'Other' }[contact.disqualify_reason] || contact.disqualify_reason) : '—', color: '#EF4444' },
           ...(contact.disqualify_note ? [{ label: isRTL ? 'ملاحظة الاستبعاد' : 'DQ Note', val: contact.disqualify_note }] : []),
         ] : []),
@@ -683,41 +678,29 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       icon: Star,
       color: '#6B21A8',
       rows: [
-        // Status: one row per assigned agent (everyone sees everyone). The
-        // viewer's own row is labeled "My Status" so they spot it instantly.
+        // Status: single-assignment now — one row labeled with the assignee's
+        // name (or "My Status" when the viewer is the assignee).
         ...(show('contact_status') ? (() => {
           const myName = profile?.full_name_en || profile?.full_name_ar;
           const statusLabels = isRTL ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' } : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
           const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : undefined;
           const names = getVisibleAssignees();
           if (names.length === 0) return [{ label: isRTL ? 'الحالة' : 'Status', val: '—' }];
-          return names.map(name => {
-            const s = (contact.agent_statuses || {})[name];
-            const isMine = name === myName;
-            return {
-              label: isMine ? (isRTL ? 'حالتي' : 'My Status') : name,
-              val: s ? (statusLabels[s] || s) : '—',
-              color: statusColor(s),
-            };
-          });
+          const name = names[0];
+          const s = contact.contact_status;
+          const isMine = name === myName;
+          return [{
+            label: isMine ? (isRTL ? 'حالتي' : 'My Status') : name,
+            val: s ? (statusLabels[s] || s) : '—',
+            color: statusColor(s),
+          }];
         })() : []),
-        // Score: one row per assigned agent — same pattern.
+        // Score: single value tied to the sole assignee.
         ...(show('lead_score') ? (() => {
-          const myName = profile?.full_name_en || profile?.full_name_ar;
           const names = getVisibleAssignees();
           if (names.length === 0) return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: '—' }];
-          if (names.length === 1) {
-            const v = (contact.agent_scores || {})[names[0]];
-            return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: v != null ? `${v}/100` : '—' }];
-          }
-          return names.map(name => {
-            const v = (contact.agent_scores || {})[name];
-            const isMine = name === myName;
-            return {
-              label: isMine ? (isRTL ? 'تقييمي' : 'My Score') : name,
-              val: v != null ? `${v}/100` : '—',
-            };
-          });
+          const v = contact.lead_score;
+          return [{ label: isRTL ? 'تقييم العميل' : 'Lead Score', val: v != null ? `${v}/100` : '—' }];
         })() : []),
         contact.contact_type && { label: isRTL ? 'النوع' : 'Type', val: tp ? (isRTL ? tp.label : tp.labelEn) : contact.contact_type },
         contact.department && { label: isRTL ? 'القسم' : 'Department', val: (isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : {})[contact.department] || contact.department },
@@ -1053,7 +1036,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
     const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
     return names.map(name => {
-      const s = (contact.agent_statuses || {})[name];
+      const s = contact.contact_status;
       return {
         name,
         isMine: name === myName,
@@ -1227,7 +1210,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 )}
                 {(() => {
                   const mn = profile?.full_name_en || profile?.full_name_ar;
-                  const myScore = mn ? (contact.agent_scores || {})[mn] : null;
+                  const myScore = mn && contact.assigned_to_name === mn ? contact.lead_score : null;
                   if (myScore == null || myScore <= 0) return null;
                   return (
                     <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500">
@@ -1655,7 +1638,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <div className="flex-1 rounded-xl p-3 bg-brand-500/[0.05] border border-brand-500/10">
                       <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-1 font-medium">{isRTL ? 'حالة السيلز' : 'Agent Status'}</div>
                       {(() => {
-                        const agentStatus = (contact.agent_statuses || {})[selectedAgent];
+                        const agentStatus = contact.assigned_to_name === selectedAgent ? contact.contact_status : null;
                         const statusLabels = isRTL
                           ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
                           : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
@@ -1672,7 +1655,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <div className="flex-1 rounded-xl p-3 bg-amber-500/[0.05] border border-amber-500/10">
                       <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-1 font-medium">{isRTL ? 'حرارة السيلز' : 'Agent Temp'}</div>
                       {(() => {
-                        const agentTemp = (contact.agent_temperatures || {})[selectedAgent];
+                        const agentTemp = contact.assigned_to_name === selectedAgent ? contact.temperature : null;
                         const tempData = agentTemp ? TEMP[agentTemp] : null;
                         return tempData ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ color: tempData.color, background: tempData.bg }}>
@@ -1686,15 +1669,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       {/* Temperature selector */}
                       <div className="flex gap-1 mt-2 flex-wrap">
                         {['hot', 'warm', 'cool', 'cold'].map(v => ({ v, ar: TEMP[v]?.labelAr || v, en: TEMP[v]?.label || v })).map(opt => {
-                          const isActive = (contact.agent_temperatures || {})[selectedAgent] === opt.v;
+                          const isActive = contact.assigned_to_name === selectedAgent && contact.temperature === opt.v;
                           const optTemp = TEMP[opt.v];
                           return (
                             <button
                               key={opt.v}
                               onClick={async () => {
                                 if (onUpdate) {
-                                  const oldTemp = (contact.agent_temperatures || {})[selectedAgent] || contact.temperature;
-                                  onUpdate({ ...contact, temperature: opt.v, agent_temperatures: { [selectedAgent]: opt.v } });
+                                  const oldTemp = contact.temperature;
+                                  onUpdate({ ...contact, temperature: opt.v });
                                   // Log temperature change in timeline
                                   try {
                                     const act = await createActivity({
@@ -2131,7 +2114,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-2 font-medium">{isRTL ? 'نقاط التقييم' : 'Lead Score'}</div>
                     {(() => {
                       const mn = profile?.full_name_en || profile?.full_name_ar;
-                      const myScore = mn ? (contact.agent_scores || {})[mn] : null;
+                      const myScore = mn && contact.assigned_to_name === mn ? contact.lead_score : null;
                       return <ScorePill score={myScore != null ? Number(myScore) : null} />;
                     })()}
                   </div>

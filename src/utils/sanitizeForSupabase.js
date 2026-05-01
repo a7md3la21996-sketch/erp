@@ -46,9 +46,9 @@ const KNOWN_COLUMNS = {
     // sales
     'temperature', 'lead_score', 'budget_min', 'budget_max',
     'preferred_location', 'interested_in_type',
-    // assignment (per-agent)
+    // assignment (single-assignment after Phase 1)
     'assigned_to_name', 'assigned_to_names', 'assigned_by_name',
-    'assigned_at', 'agent_statuses', 'agent_temperatures', 'agent_scores',
+    'assigned_at',
     'created_by', 'created_by_name',
     // lifecycle
     'is_blacklisted', 'is_deleted', 'deleted_at', 'last_activity_at',

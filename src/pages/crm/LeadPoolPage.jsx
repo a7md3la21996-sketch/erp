@@ -55,9 +55,8 @@ async function fetchAgents() {
 async function fetchPoolLeads() {
   try {
     // Narrow SELECT — only fields the pool view actually displays. The previous
-    // `select('*')` pulled all jsonb maps (agent_statuses, agent_temperatures,
-    // agent_scores, campaign_interactions) on rows that have NO assignment,
-    // wasting bandwidth.
+    // `select('*')` pulled large jsonb (campaign_interactions) on rows that have
+    // NO assignment, wasting bandwidth.
     const { data, error } = await supabase
       .from('contacts')
       .select('id, full_name, phone, source, contact_type, lead_score, created_at, campaign_name')
