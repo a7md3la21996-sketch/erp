@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../../contexts/ToastContext';
 import { X, Loader2 } from 'lucide-react';
 import { Button, Input, Select, Textarea } from '../../../components/ui';
 import { TEMP_CONFIG, PRIORITY_CONFIG, addStageHistory } from './constants';
 import { getDeptStages } from '../contacts/constants';
+import { useEscClose, useFocusTrap } from '../../../utils/hooks';
 import ContactSearch from './ContactSearch';
 
 export default function EditOpportunityModal({ opp, agents, projects, profile, onClose, onSave, onEditStageLost }) {
@@ -12,6 +13,9 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const toast = useToast();
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
+  useEscClose(onClose);
 
   const [form, setForm] = useState({
     budget: opp.budget || '',
@@ -30,11 +34,6 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
     : (opp.contact_id ? { id: opp.contact_id, full_name: opp.contact_name || '', phone: '' } : null));
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  // ESC close
-  const handleKeyDown = (e) => {
-    if (e.key === 'Escape') { e.stopPropagation(); onClose(); }
-  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -81,15 +80,16 @@ export default function EditOpportunityModal({ opp, agents, projects, profile, o
       dir={isRTL ? 'rtl' : 'ltr'}
       className="fixed inset-0 bg-black/50 z-[950] flex items-center justify-center p-5"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-      onKeyDown={handleKeyDown}
     >
-      <div className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[480px] max-h-[92vh] flex flex-col">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="edit-opp-title"
+        className="modal-content bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[480px] max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-edge dark:border-edge-dark shrink-0">
-          <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">
+          <h3 id="edit-opp-title" className="m-0 text-sm font-bold text-content dark:text-content-dark">
             {isRTL ? 'تعديل الفرصة' : 'Edit Opportunity'}
           </h3>
-          <button onClick={onClose} className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark p-1 rounded-lg hover:bg-brand-500/10">
+          <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
+            className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-lg hover:bg-brand-500/10">
             <X size={18} />
           </button>
         </div>

@@ -3,6 +3,7 @@ import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import useDebouncedSearch from '../hooks/useDebouncedSearch';
+import { useFocusTrap } from '../utils/hooks';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import {
@@ -46,6 +47,8 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
   };
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const dialogRef = useRef(null);
+  useFocusTrap(open ? dialogRef : { current: null });
 
   useEffect(() => {
     if (editTask) {
@@ -134,15 +137,16 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
 
   return (
     <div style={overlayStyle} dir={isRTL ? 'rtl' : 'ltr'}>
-      <div style={backdropStyle} onClick={onClose} />
-      <div style={modalStyle}>
+      <div style={backdropStyle} onClick={onClose} aria-hidden="true" />
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="recurring-task-title" style={modalStyle}>
         <div style={headerStyle}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+          <span id="recurring-task-title" style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
             {editTask
               ? (lang === 'ar' ? 'تعديل مهمة متكررة' : 'Edit Recurring Task')
               : (lang === 'ar' ? 'إضافة مهمة متكررة' : 'Add Recurring Task')}
           </span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: isDark ? '#94a3b8' : '#64748b' }}>
+          <button onClick={onClose} aria-label={lang === 'ar' ? 'إغلاق' : 'Close'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', color: isDark ? '#94a3b8' : '#64748b' }}>
             <X size={18} />
           </button>
         </div>
@@ -697,6 +701,8 @@ function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) 
   const [changeContactStatus, setChangeContactStatus] = useState(false);
   const [newContactStatus, setNewContactStatus] = useState('');
   const [saving, setSaving] = useState(false);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
 
   const ACT_TYPES = [
     { key: 'call', ar: 'مكالمة', en: 'Call' },
@@ -772,15 +778,20 @@ function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) 
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4" dir={isRTL ? 'rtl' : 'ltr'} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[460px] max-h-[85vh] overflow-y-auto">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="complete-task-title"
+        onClick={e => e.stopPropagation()}
+        className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[460px] max-h-[85vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-edge dark:border-edge-dark">
           <div>
-            <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'إنهاء المهمة' : 'Complete Task'}</h3>
+            <h3 id="complete-task-title" className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'إنهاء المهمة' : 'Complete Task'}</h3>
             <p className="m-0 mt-0.5 text-[11px] text-content-muted dark:text-content-muted-dark truncate max-w-[300px]">{task.title}</p>
             {task.contact_name && <p className="m-0 mt-0.5 text-[11px] text-brand-500 font-medium">{task.contact_name}</p>}
           </div>
-          <button onClick={onClose} className="bg-transparent border-none cursor-pointer p-1 text-content-muted dark:text-content-muted-dark hover:text-red-500"><X size={16} /></button>
+          <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
+            className="bg-transparent border-none cursor-pointer w-11 h-11 md:w-9 md:h-9 flex items-center justify-center text-content-muted dark:text-content-muted-dark hover:text-red-500">
+            <X size={16} />
+          </button>
         </div>
 
         <div className="px-5 py-4">

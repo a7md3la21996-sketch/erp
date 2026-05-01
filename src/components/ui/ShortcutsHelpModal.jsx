@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { X, Keyboard } from 'lucide-react';
+import { useFocusTrap } from '../../utils/hooks';
 
 const SHORTCUT_GROUPS = [
   {
@@ -38,6 +39,8 @@ export default function ShortcutsHelpModal({ onClose }) {
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
   const overlayRef = useRef(null);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
 
   // Close on Escape
   useEffect(() => {
@@ -73,6 +76,10 @@ export default function ShortcutsHelpModal({ onClose }) {
       }}
     >
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={isRTL ? 'اختصارات لوحة المفاتيح' : 'Keyboard shortcuts'}
         style={{
           width: '100%',
           maxWidth: 520,
@@ -113,11 +120,13 @@ export default function ShortcutsHelpModal({ onClose }) {
           </div>
           <button
             onClick={onClose}
+            aria-label={isRTL ? 'إغلاق' : 'Close'}
             style={{
               border: 'none',
               background: 'none',
               cursor: 'pointer',
-              padding: 6,
+              width: 44,
+              height: 44,
               borderRadius: 8,
               display: 'flex',
               alignItems: 'center',

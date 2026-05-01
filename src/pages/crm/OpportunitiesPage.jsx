@@ -14,6 +14,7 @@ import { logView } from '../../services/viewTrackingService';
 import { addRecentItem } from '../../services/recentItemsService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import { useEscClose, useFocusTrap } from '../../utils/hooks';
 import { exportToPrintableHTML, generateOpportunitiesReport } from '../../services/reportExportService';
 import { notifyDealWon } from '../../services/notificationsService';
 import { evaluateTriggers } from '../../services/triggerService';
@@ -52,6 +53,9 @@ function DealClosingWizard({ opp, isRTL, lang, isDark, onComplete, onClose }) {
   const [extraUnits, setExtraUnits] = useState([]); // multi-unit support
   const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
+  useEscClose(onClose);
 
   const UNIT_TYPES = [
     { value: 'apartment', ar: 'شقة', en: 'Apartment' },
@@ -92,9 +96,11 @@ function DealClosingWizard({ opp, isRTL, lang, isDark, onComplete, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="deal-wizard-title"
+        onClick={e => e.stopPropagation()}
+        className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[520px] max-h-[90vh] flex flex-col">
         <div className="px-6 pt-5 pb-4 border-b border-edge dark:border-edge-dark">
-          <h2 className="m-0 text-[17px] font-bold text-content dark:text-content-dark">
+          <h2 id="deal-wizard-title" className="m-0 text-[17px] font-bold text-content dark:text-content-dark">
             {isRTL ? 'إتمام الصفقة' : 'Complete Deal'}
           </h2>
           <p className="m-0 mt-1 text-xs text-content-muted dark:text-content-muted-dark">
@@ -429,7 +435,11 @@ export default function OpportunitiesPage() {
     if (!loading && hasMore && !loadingMore) loadMore();
   }, [loading, hasMore, loadingMore]);
 
-  // Realtime: granular update — apply only the changed record instead of full re-fetch
+  // Realtime: granular update — apply only the changed record instead of full re-fetch.
+  // Held in a ref so the callback identity stays stable across loadData re-renders;
+  // otherwise every filter/page change re-subscribes the channel (~ContactsPage bug).
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
   useRealtimeSubscription('opportunities', useCallback((payload) => {
     if (payload?.eventType) {
       const newRec = payload.new;
@@ -440,9 +450,9 @@ export default function OpportunitiesPage() {
       }
       setOpps(prev => applyRealtimePayload(prev, payload));
     } else {
-      loadData(true);
+      loadDataRef.current(true);
     }
-  }, [loadData, profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar]));
+  }, [profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar]));
 
   const scoreMap = useMemo(() => {
     const m = {};
@@ -990,11 +1000,12 @@ export default function OpportunitiesPage() {
       {/* Delete Confirmation */}
       {confirmDelete && (
         <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => setConfirmDelete(null)}>
-          <div className="bg-surface-card dark:bg-surface-card-dark border border-red-500/30 rounded-2xl p-7 w-full max-w-[400px] text-center" onClick={e => e.stopPropagation()}>
+          <div role="alertdialog" aria-modal="true" aria-labelledby="opp-delete-title"
+            className="bg-surface-card dark:bg-surface-card-dark border border-red-500/30 rounded-2xl p-7 w-full max-w-[400px] text-center" onClick={e => e.stopPropagation()}>
             <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
               <AlertTriangle size={20} className="text-red-500" />
             </div>
-            <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">
+            <h3 id="opp-delete-title" className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold">
               {isRTL ? 'حذف فرصة' : 'Delete Opportunity'} {(() => { const o = (opps || []).find(x => x.id === confirmDelete); return o ? `"${getContactName(o)}"` : ''; })()}?
             </h3>
             <p className="m-0 mb-5 text-content-muted dark:text-content-muted-dark text-xs">{isRTL ? 'هل أنت متأكد؟ لا يمكن التراجع عن هذا الإجراء.' : 'Are you sure? This action cannot be undone.'}</p>
@@ -1093,8 +1104,9 @@ export default function OpportunitiesPage() {
     {/* Lost Reason Modal */}
     {skipConfirm && (
       <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => setSkipConfirm(null)}>
-        <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-7 w-full max-w-[420px]" onClick={e => e.stopPropagation()}>
-          <h3 className="m-0 text-base font-bold text-content dark:text-content-dark mb-2">
+        <div role="alertdialog" aria-modal="true" aria-labelledby="opp-skip-title"
+          className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-7 w-full max-w-[420px]" onClick={e => e.stopPropagation()}>
+          <h3 id="opp-skip-title" className="m-0 text-base font-bold text-content dark:text-content-dark mb-2">
             {isRTL ? 'تخطي مراحل؟' : 'Skip stages?'}
           </h3>
           <p className="m-0 text-sm text-content-muted dark:text-content-muted-dark mb-4">
@@ -1122,11 +1134,12 @@ export default function OpportunitiesPage() {
     )}
     {lostReasonModal && (
       <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1100] flex items-center justify-center p-5" onClick={() => setLostReasonModal(null)}>
-        <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-7 w-full max-w-[420px]" onClick={e => e.stopPropagation()}>
+        <div role="alertdialog" aria-modal="true" aria-labelledby="opp-lost-title"
+          className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl p-7 w-full max-w-[420px]" onClick={e => e.stopPropagation()}>
           <div className="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
             <AlertTriangle size={20} className="text-red-500" />
           </div>
-          <h3 className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold text-center">
+          <h3 id="opp-lost-title" className="m-0 mb-2 text-content dark:text-content-dark text-base font-bold text-center">
             {isRTL ? 'سبب الخسارة' : 'Lost Reason'}
           </h3>
           <p className="m-0 mb-4 text-content-muted dark:text-content-muted-dark text-xs text-center">

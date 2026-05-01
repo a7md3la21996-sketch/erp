@@ -13,6 +13,7 @@ import CommentsSection from '../../../components/ui/CommentsSection';
 import { getEmailsByOpportunity, sendEmail } from '../../../services/emailService';
 import { logMessage as logWhatsAppMessage, generateWhatsAppLink } from '../../../services/whatsappService';
 import { getDeptStages, deptStageLabel, useEscClose } from '../contacts/constants';
+import { useFocusTrap } from '../../../utils/hooks';
 import EditOpportunityModal from './EditOpportunityModal';
 import {
   TEMP_CONFIG, PRIORITY_CONFIG, ACTIVITY_ICONS,
@@ -270,6 +271,11 @@ export default function OpportunityDrawer({
   const { profile: authProfile } = useAuth();
   const viewerProfile = profile || authProfile;
 
+  // Focus trap + restore on close — keeps Tab inside the drawer and returns
+  // focus to whatever opened it.
+  const drawerRef = useRef(null);
+  useFocusTrap(drawerRef);
+
   // ─── State ───
   const [tab, setTab] = useState('activity');
   const [showEdit, setShowEdit] = useState(false);
@@ -304,8 +310,13 @@ export default function OpportunityDrawer({
     setIsFav(result.added);
   };
 
-  // ESC close
-  useEscClose(onClose);
+  // ESC close — guarded so a stacked Edit/Activity/Menu modal gets ESC first.
+  // Without the guard, the drawer's capture-phase handler would steal ESC
+  // and close behind any open child modal.
+  useEscClose(() => {
+    if (showEdit || showAddActivity || showDrawerMenu) return;
+    onClose();
+  });
 
   // Log view when opportunity opens
   const lastViewedId = useRef(null);
@@ -319,18 +330,21 @@ export default function OpportunityDrawer({
     }
   }, [selectedOpp?.id, viewerProfile]);
 
-  // Arrow key navigation (prev/next)
+  // Arrow key navigation (prev/next) — reading-direction-aware: in LTR, Left
+  // is "previous" and Right is "next"; in RTL the relationship flips.
   useEffect(() => {
     const handler = (e) => {
       if (showEdit || showAddActivity || showDrawerMenu) return;
       const tag = e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
-      if (e.key === 'ArrowLeft' && onNext) { e.preventDefault(); onNext(); }
-      if (e.key === 'ArrowRight' && onPrev) { e.preventDefault(); onPrev(); }
+      const prevKey = isRTL ? 'ArrowRight' : 'ArrowLeft';
+      const nextKey = isRTL ? 'ArrowLeft' : 'ArrowRight';
+      if (e.key === prevKey && onPrev) { e.preventDefault(); onPrev(); }
+      if (e.key === nextKey && onNext) { e.preventDefault(); onNext(); }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [onPrev, onNext, showEdit, showAddActivity, showDrawerMenu]);
+  }, [onPrev, onNext, showEdit, showAddActivity, showDrawerMenu, isRTL]);
 
   // Reset tab on opp change
   useEffect(() => {
@@ -441,17 +455,27 @@ export default function OpportunityDrawer({
       />
     )}
     <div className="fixed inset-0 z-[900] flex" dir={isRTL ? 'rtl' : 'ltr'}>
-      <div onClick={onClose} className="flex-1 bg-black/45" />
-      <div className={`w-[440px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
+      <div onClick={onClose} className="flex-1 bg-black/45" aria-hidden="true" />
+      <div ref={drawerRef} role="dialog" aria-modal="true" aria-label={isRTL ? 'تفاصيل الفرصة' : 'Opportunity details'}
+        className={`w-[440px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden ${isRTL ? 'border-l' : 'border-r'} border-edge dark:border-edge-dark`}>
 
         {/* ═══ COMPACT HEADER ═══ */}
         <div className="shrink-0 bg-gradient-to-b from-surface-bg to-surface-card dark:from-[#1B3347] dark:to-surface-card-dark">
           {/* Top bar */}
           <div className="flex justify-between items-center px-5 pt-3.5 pb-0">
             <div className="flex items-center gap-1">
-              <button onClick={onClose} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><X size={18} /></button>
-              {handlePrev && <button onClick={handlePrev} title={isRTL ? 'السابق' : 'Previous'} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><ChevronUp size={18} /></button>}
-              {handleNext && <button onClick={handleNext} title={isRTL ? 'التالي' : 'Next'} className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer p-1 hover:bg-brand-500/10 rounded-lg transition-colors"><ChevronDown size={18} /></button>}
+              <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
+                className="bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer w-11 h-11 md:w-8 md:h-8 flex items-center justify-center hover:bg-brand-500/10 rounded-lg transition-colors">
+                <X size={18} />
+              </button>
+              {handlePrev && <button onClick={handlePrev} title={isRTL ? 'السابق' : 'Previous'} aria-label={isRTL ? 'السابق' : 'Previous opportunity'}
+                className="hidden md:flex bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer w-8 h-8 items-center justify-center hover:bg-brand-500/10 rounded-lg transition-colors">
+                <ChevronUp size={18} />
+              </button>}
+              {handleNext && <button onClick={handleNext} title={isRTL ? 'التالي' : 'Next'} aria-label={isRTL ? 'التالي' : 'Next opportunity'}
+                className="hidden md:flex bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer w-8 h-8 items-center justify-center hover:bg-brand-500/10 rounded-lg transition-colors">
+                <ChevronDown size={18} />
+              </button>}
             </div>
             <div className="flex items-center gap-1.5">
               <button

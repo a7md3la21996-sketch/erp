@@ -74,7 +74,10 @@ export default function PullOtherLeadsModal({ contact, onClose, onSuccess }) {
           disqualify_note: reason,
         }).eq('id', c.id)
       ));
-      const ok = results.filter(r => r.status === 'fulfilled').length;
+      // Supabase calls don't throw on errors — they resolve with { error: {...} }.
+      // Count both rejected promises AND fulfilled-with-error as failures, otherwise
+      // the user sees "Pulled N" while half the rows actually never updated.
+      const ok = results.filter(r => r.status === 'fulfilled' && !r.value?.error).length;
       const fail = results.length - ok;
       toast.success(isRTL
         ? `تم سحب ${ok} ليد${fail ? ` (${fail} فشل)` : ''}`

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { ACTIVITY_TYPES } from '../services/activitiesService';
 import { Button, Textarea, Badge } from '../components/ui';
-import { useEscClose } from '../utils/hooks';
+import { useEscClose, useFocusTrap } from '../utils/hooks';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -43,6 +43,8 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
   const navigate = useNavigate();
   const lang = i18n.language;
   const isRTL = lang === 'ar';
+  const drawerRef = useRef(null);
+  useFocusTrap(drawerRef);
   useEscClose(onClose);
 
   const [editing, setEditing] = useState(false);
@@ -79,10 +81,14 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 bg-black/40 z-[998]" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/40 z-[998]" onClick={onClose} aria-hidden="true" />
 
       {/* Drawer */}
       <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={isRTL ? 'تفاصيل النشاط' : 'Activity details'}
         className={`fixed top-0 ${isRTL ? 'left-0' : 'right-0'} h-full w-full max-w-[480px] bg-surface-card dark:bg-surface-card-dark shadow-2xl z-[999] flex flex-col overflow-hidden`}
         dir={isRTL ? 'rtl' : 'ltr'}
         style={{ animation: 'slideUp 0.25s ease-out' }}
@@ -107,7 +113,8 @@ export default function ActivityDrawer({ activity, onClose, onUpdate }) {
           </div>
           <button
             onClick={onClose}
-            className="bg-transparent border-none cursor-pointer p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-brand-500/10 text-content-muted dark:text-content-muted-dark"
+            aria-label={isRTL ? 'إغلاق' : 'Close'}
+            className="bg-transparent border-none cursor-pointer w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-brand-500/10 text-content-muted dark:text-content-muted-dark"
           >
             <X size={18} />
           </button>

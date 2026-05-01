@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { Phone, MessageCircle, MapPin, Users, Mail, Bell, Plus, X, Check, Trash2, Clock, ChevronDown } from 'lucide-react';
 import { fetchReminders, createReminder, markReminderDone, deleteReminder, REMINDER_TYPES } from '../../services/remindersService';
+import { useEscClose, useFocusTrap } from '../../utils/hooks';
 import Button from './Button';
 
 const ICONS = { Phone, MessageCircle, MapPin, Users, Mail };
@@ -30,6 +31,9 @@ function ReminderModal({ onClose, onSave, entityType, entityId, entityName, lang
   const [saving, setSaving] = useState(false);
   const [quickDays, setQuickDays] = useState(null);
   const isRTL = lang === 'ar';
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef);
+  useEscClose(onClose);
 
   const setQuick = (days) => {
     const d = new Date();
@@ -50,19 +54,24 @@ function ReminderModal({ onClose, onSave, entityType, entityId, entityName, lang
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4">
-      <div className="bg-surface-card dark:bg-surface-card-dark rounded-2xl w-full max-w-[420px] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
+    <div className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4" onClick={onClose}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="reminder-title"
+        onClick={e => e.stopPropagation()}
+        className="bg-surface-card dark:bg-surface-card-dark rounded-2xl w-full max-w-[420px] shadow-[0_20px_60px_rgba(0,0,0,0.3)]">
         <div className={`px-5 py-[18px] border-b border-edge dark:border-edge-dark flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
             <div className="w-9 h-9 rounded-[10px] bg-gradient-to-br from-brand-900 to-brand-500 flex items-center justify-center">
               <Bell size={16} color="#fff" />
             </div>
             <div className="text-start">
-              <div className="text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'جدول متابعة' : 'Schedule Follow-up'}</div>
+              <div id="reminder-title" className="text-sm font-bold text-content dark:text-content-dark">{lang === 'ar' ? 'جدول متابعة' : 'Schedule Follow-up'}</div>
               <div className="text-[11px] text-content-muted dark:text-content-muted-dark">{entityName}</div>
             </div>
           </div>
-          <button onClick={onClose} className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark"><X size={18} /></button>
+          <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
+            className="bg-transparent border-none cursor-pointer w-11 h-11 md:w-9 md:h-9 flex items-center justify-center text-content-muted dark:text-content-muted-dark">
+            <X size={18} />
+          </button>
         </div>
         <div className={`p-5 flex flex-col gap-4 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
           <div>

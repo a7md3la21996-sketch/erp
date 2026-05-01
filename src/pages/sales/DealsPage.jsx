@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import useDebouncedSearch from '../../hooks/useDebouncedSearch';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -17,6 +17,7 @@ import { logView } from '../../services/viewTrackingService';
 import { addRecentItem } from '../../services/recentItemsService';
 import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
+import { useEscClose, useFocusTrap } from '../../utils/hooks';
 import { fmtMoney } from '../../utils/formatting';
 import CustomFieldsRenderer from '../../components/ui/CustomFieldsRenderer';
 import CommentsSection from '../../components/ui/CommentsSection';
@@ -176,6 +177,28 @@ export default function DealsPage() {
   // Drawer nav
   const handlePrev = () => { if (selectedIdx > 0) { setSelectedDeal(filtered[selectedIdx - 1]); setSelectedIdx(selectedIdx - 1); } };
   const handleNext = () => { if (selectedIdx < filtered.length - 1) { setSelectedDeal(filtered[selectedIdx + 1]); setSelectedIdx(selectedIdx + 1); } };
+
+  // Drawer accessibility — focus trap + ESC handled at the page level since
+  // the drawer is inline JSX. Hooks always run; the trap only activates while
+  // a deal is selected (the ref's current resolves to the panel then).
+  const drawerRef = useRef(null);
+  useFocusTrap(drawerRef);
+  useEscClose(useCallback(() => { if (selectedDeal) setSelectedDeal(null); }, [selectedDeal]));
+
+  // Reading-direction-aware arrow nav inside the drawer.
+  useEffect(() => {
+    if (!selectedDeal) return;
+    const handler = (e) => {
+      const tag = e.target.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable) return;
+      const prevKey = isRTL ? 'ArrowRight' : 'ArrowLeft';
+      const nextKey = isRTL ? 'ArrowLeft' : 'ArrowRight';
+      if (e.key === prevKey) { e.preventDefault(); handlePrev(); }
+      else if (e.key === nextKey) { e.preventDefault(); handleNext(); }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [selectedDeal, selectedIdx, isRTL, filtered.length]);
 
   const openDrawer = useCallback((deal) => {
     const idx = filtered.findIndex(d => d.id === deal.id);
@@ -370,17 +393,25 @@ export default function DealsPage() {
 
         return (
           <div className="fixed inset-0 z-[200] flex" onClick={() => setSelectedDeal(null)}>
-            <div className="flex-1 bg-black/40" />
-            <div onClick={e => e.stopPropagation()} className={`w-full max-w-[480px] bg-surface-card dark:bg-surface-card-dark border-s border-edge dark:border-edge-dark shadow-2xl flex flex-col h-full overflow-hidden ${isRTL ? 'order-first border-e border-s-0' : ''}`}>
+            <div className="flex-1 bg-black/40" aria-hidden="true" />
+            <div ref={drawerRef} role="dialog" aria-modal="true" aria-labelledby="deal-drawer-title"
+              onClick={e => e.stopPropagation()}
+              className={`w-full max-w-[480px] bg-surface-card dark:bg-surface-card-dark border-s border-edge dark:border-edge-dark shadow-2xl flex flex-col h-full overflow-hidden ${isRTL ? 'order-first border-e border-s-0' : ''}`}>
 
               {/* Drawer Header */}
               <div className="px-5 py-4 border-b border-edge dark:border-edge-dark flex items-center gap-3">
                 <div className="flex gap-1">
-                  <button onClick={handlePrev} disabled={selectedIdx <= 0} className="w-7 h-7 flex items-center justify-center rounded-lg bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"><ChevronUp size={14} /></button>
-                  <button onClick={handleNext} disabled={selectedIdx >= filtered.length - 1} className="w-7 h-7 flex items-center justify-center rounded-lg bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"><ChevronDown size={14} /></button>
+                  <button onClick={handlePrev} disabled={selectedIdx <= 0} aria-label={isRTL ? 'الصفقة السابقة' : 'Previous deal'}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
+                    <ChevronUp size={14} />
+                  </button>
+                  <button onClick={handleNext} disabled={selectedIdx >= filtered.length - 1} aria-label={isRTL ? 'الصفقة التالية' : 'Next deal'}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-brand-500/[0.08] border border-brand-500/20 text-brand-500 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed">
+                    <ChevronDown size={14} />
+                  </button>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark truncate">{deal.deal_number}</h3>
+                  <h3 id="deal-drawer-title" className="m-0 text-sm font-bold text-content dark:text-content-dark truncate">{deal.deal_number}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ color: status.color, backgroundColor: status.color + '18' }}>
                       {isRTL ? status.ar : status.en}
@@ -434,7 +465,10 @@ export default function DealsPage() {
                 >
                   <FileText size={14} />
                 </button>
-                <button onClick={() => setSelectedDeal(null)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark cursor-pointer"><X size={14} /></button>
+                <button onClick={() => setSelectedDeal(null)} aria-label={isRTL ? 'إغلاق' : 'Close'}
+                  className="w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-lg bg-transparent border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark cursor-pointer">
+                  <X size={14} />
+                </button>
               </div>
 
               {/* Drawer Body */}

@@ -764,7 +764,9 @@ export async function pullLeadsAfterDealWon(wonContactId, winnerName) {
     }).eq('id', c.id)
   ));
 
-  const successes = updates.filter(r => r.status === 'fulfilled').length;
+  // Supabase resolves with { error: ... } instead of throwing — checking only
+  // `status === 'fulfilled'` would count permission/RLS failures as successes.
+  const successes = updates.filter(r => r.status === 'fulfilled' && !r.value?.error).length;
   const failures = updates.length - successes;
   return { total: toUpdate.length, successes, failures, contacts: toUpdate };
 }

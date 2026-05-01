@@ -1,7 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useId } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
+import { useFocusTrap } from '../../utils/hooks';
 
-export default function Modal({ open, onClose, title, width = 'max-w-lg', children }) {
+export default function Modal({ open, onClose, title, width = 'max-w-lg', children, ariaLabel }) {
+  const { i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
+  const dialogRef = useRef(null);
+  // Always call hooks; the trap is a no-op when ref.current is null (modal closed).
+  useFocusTrap(open ? dialogRef : { current: null });
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
     const handler = (e) => { if (e.key === 'Escape') onClose(); };
@@ -14,10 +23,14 @@ export default function Modal({ open, onClose, title, width = 'max-w-lg', childr
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
 
       {/* Content */}
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        {...(title ? { 'aria-labelledby': titleId } : { 'aria-label': ariaLabel || (isRTL ? 'مربع حوار' : 'Dialog') })}
         dir="auto"
         className={`
           relative ${width}
@@ -33,10 +46,11 @@ export default function Modal({ open, onClose, title, width = 'max-w-lg', childr
         {/* Header */}
         {title && (
           <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-edge dark:border-edge-dark">
-            <h3 className="m-0 text-base font-bold text-content dark:text-content-dark">{title}</h3>
+            <h3 id={titleId} className="m-0 text-base font-bold text-content dark:text-content-dark">{title}</h3>
             <button
               onClick={onClose}
-              className="p-1 rounded-md text-content-muted dark:text-content-muted-dark hover:bg-gray-100 dark:hover:bg-brand-500/10 transition-colors cursor-pointer"
+              aria-label={isRTL ? 'إغلاق' : 'Close'}
+              className="w-11 h-11 md:w-9 md:h-9 flex items-center justify-center rounded-md text-content-muted dark:text-content-muted-dark hover:bg-gray-100 dark:hover:bg-brand-500/10 transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
