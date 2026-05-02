@@ -93,6 +93,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // Quick status change popover anchored on the hero status chip — lets the
   // viewer flip their own status without opening the full TakeActionForm.
   const [showQuickStatus, setShowQuickStatus] = useState(false);
+  // Quick temperature popover anchored on the temperature card.
+  const [showQuickTemp, setShowQuickTemp] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showWAPopup, setShowWAPopup] = useState(false);
@@ -247,7 +249,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     setTimelineFilter('all');
     setActivityAgentFilter('all');
     setShowActionForm(false);
-    setSelectedAgent('all');
+    // Auto-select the lead's assignee so the per-agent Status/Temperature
+    // panel shows immediately. Post-Phase 3 there's exactly one assignee per
+    // contact, so requiring the manager to first click the agent's name to
+    // expose status/temp controls was friction with no upside.
+    setSelectedAgent(contact.assigned_to_name || 'all');
     // Clear WhatsApp draft state. Without this, the template & message
     // body composed for contact A leak into the popup when the user
     // navigates to contact B via arrow keys, which previously caused
@@ -548,6 +554,33 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       } catch {}
       toast.success(isRTL ? 'تم تحديث حالة التواصل' : 'Lead status updated');
     }
+  };
+
+  // Temperature change — same pattern as handleStatusChange (await parent,
+  // log activity, surface real errors).
+  const handleTemperatureChange = async (newTemp) => {
+    if (!onUpdate || newTemp === contact.temperature) return;
+    const oldTemp = contact.temperature;
+    try {
+      await onUpdate({ ...contact, temperature: newTemp });
+    } catch {
+      return;
+    }
+    try {
+      const tempLabels = { hot: 'Hot', warm: 'Warm', cool: 'Cool', cold: 'Cold' };
+      const act = await createActivity({
+        type: 'temperature_change',
+        notes: `Temperature: ${tempLabels[oldTemp] || oldTemp || '—'} → ${tempLabels[newTemp] || newTemp}`,
+        contact_id: contact.id,
+        user_id: profile?.id || null,
+        user_name_ar: profile?.full_name_ar || '',
+        user_name_en: profile?.full_name_en || '',
+        dept: 'sales',
+        created_at: new Date().toISOString(),
+      });
+      setActivities(prev => [act, ...prev]);
+    } catch {}
+    toast.success(isRTL ? 'تم تحديث الحرارة' : 'Temperature updated');
   };
 
   const handleSaveOpp = async () => {
@@ -1871,26 +1904,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           return (
                             <button
                               key={opt.v}
-                              onClick={async () => {
-                                if (onUpdate) {
-                                  const oldTemp = contact.temperature;
-                                  onUpdate({ ...contact, temperature: opt.v });
-                                  // Log temperature change in timeline
-                                  try {
-                                    const act = await createActivity({
-                                      type: 'status_change',
-                                      notes: `Temperature: ${oldTemp || '—'} → ${opt.v}`,
-                                      contact_id: contact.id,
-                                      user_id: profile?.id || null,
-                                      user_name_ar: profile?.full_name_ar || '',
-                                      user_name_en: profile?.full_name_en || '',
-                                      dept: 'sales',
-                                      created_at: new Date().toISOString(),
-                                    });
-                                    setActivities(prev => [act, ...prev]);
-                                  } catch {}
-                                }
-                              }}
+                              onClick={() => handleTemperatureChange(opt.v)}
                               className={`px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
                                 isActive
                                   ? 'border-transparent text-white'
@@ -2323,17 +2337,63 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       return <ScorePill score={myScore != null ? Number(myScore) : null} />;
                     })()}
                   </div>
-                  <div className="rounded-xl p-3.5" style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.04)', border: `1px solid ${tempInfo?.color || '#4A7AAB'}15` }}>
-                    <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-1.5 font-medium">{isRTL ? 'الحرارة' : 'Temperature'}</div>
-                    {tempInfo?.Icon ? (
-                      <div className="flex items-center gap-1.5">
-                        <tempInfo.Icon size={15} color={tempInfo.color} />
-                        <span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span>
+                  {(() => {
+                    const myName = profile?.full_name_en || profile?.full_name_ar;
+                    const isMine = myName && contact.assigned_to_name === myName;
+                    const canEditTemp = isMine && canEditContact;
+                    const cardCls = `rounded-xl p-3.5 transition-all relative ${canEditTemp ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98]' : ''}`;
+                    return (
+                      <div
+                        className={cardCls}
+                        style={{ background: tempInfo?.bg || 'rgba(74,122,171,0.04)', border: `1px solid ${tempInfo?.color || '#4A7AAB'}15` }}
+                        onClick={canEditTemp ? () => setShowQuickTemp(v => !v) : undefined}
+                        role={canEditTemp ? 'button' : undefined}
+                        tabIndex={canEditTemp ? 0 : undefined}
+                        aria-haspopup={canEditTemp ? 'menu' : undefined}
+                        aria-expanded={canEditTemp ? showQuickTemp : undefined}
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide font-medium">{isRTL ? 'الحرارة' : 'Temperature'}</span>
+                          {canEditTemp && <ChevronDown size={11} className="text-content-muted/60 dark:text-content-muted-dark/60" />}
+                        </div>
+                        {tempInfo?.Icon ? (
+                          <div className="flex items-center gap-1.5">
+                            <tempInfo.Icon size={15} color={tempInfo.color} />
+                            <span className="font-bold text-sm" style={{ color: tempInfo?.color }}>{isRTL ? tempInfo?.labelAr : tempInfo?.label}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-content-muted dark:text-content-muted-dark">{canEditTemp ? (isRTL ? 'اضغط للتحديد' : 'Tap to set') : '--'}</span>
+                        )}
+                        {canEditTemp && showQuickTemp && (
+                          <>
+                            <div className="fixed inset-0 z-[60]" onClick={(e) => { e.stopPropagation(); setShowQuickTemp(false); }} />
+                            <div
+                              className="absolute top-full mt-1 start-0 end-0 z-[61] rounded-xl border border-edge dark:border-edge-dark bg-surface dark:bg-surface-dark shadow-xl p-1.5 animate-in fade-in zoom-in-95 duration-150"
+                              onClick={(e) => e.stopPropagation()}
+                              role="menu"
+                            >
+                              {['hot', 'warm', 'cool', 'cold'].map(v => {
+                                const optTemp = TEMP[v];
+                                const isCurrent = contact.temperature === v;
+                                return (
+                                  <button
+                                    key={v}
+                                    onClick={() => { setShowQuickTemp(false); if (!isCurrent) handleTemperatureChange(v); }}
+                                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer border-none transition-colors ${isCurrent ? 'bg-edge/40 dark:bg-edge-dark/40' : 'bg-transparent hover:bg-edge/30 dark:hover:bg-edge-dark/30'}`}
+                                    role="menuitem"
+                                  >
+                                    {optTemp?.Icon && <optTemp.Icon size={13} color={optTemp.color} />}
+                                    <span style={{ color: optTemp?.color }}>{isRTL ? optTemp?.labelAr : optTemp?.label}</span>
+                                    {isCurrent && <Check size={12} className="ms-auto text-content-muted dark:text-content-muted-dark" />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
                       </div>
-                    ) : (
-                      <span className="text-xs text-content-muted dark:text-content-muted-dark">--</span>
-                    )}
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Grouped Data Sections */}
