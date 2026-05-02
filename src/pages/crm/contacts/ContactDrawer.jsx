@@ -367,6 +367,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   }, [showOppModal]);
 
   const handleSaveActivity = async (form, opts = {}) => {
+    let activitySaved = false;
     try {
       const act = await createActivity({
         ...form,
@@ -377,10 +378,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       });
       setActivities(prev => [act, ...prev]);
       toast.success(isRTL ? 'تم حفظ النشاط' : 'Activity saved');
+      activitySaved = true;
     } catch (err) {
       console.error('Activity save error:', err?.message || err);
       toast.error(isRTL ? `حدث خطأ: ${err?.message || 'غير معروف'}` : `Error: ${err?.message || 'Unknown'}`);
     }
+    // Don't auto-promote contact_status off the back of an activity that
+    // never landed in the DB — otherwise a failed "answered" call still
+    // pushes the contact to "following" and the user sees a status that
+    // doesn't match the (missing) activity.
+    if (!activitySaved) return;
     // If the caller is also about to change status explicitly, skip the
     // auto-update so we don't race them. Otherwise infer a sensible default.
     if (opts.skipAutoStatus) return;
@@ -436,8 +443,17 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       if (newStatus === 'disqualified' && dqReason) {
         updates.disqualify_reason = dqReason;
       }
-      onUpdate(updates);
-      // Log status change in timeline
+      // Await the parent's update so we only log + toast success on actual
+      // DB success. Without await, the drawer used to show "Lead status
+      // updated" while the parent simultaneously showed "Save failed" if
+      // RLS denied the write — confusing the user with contradictory toasts.
+      try {
+        await onUpdate(updates);
+      } catch {
+        // Parent already surfaced its own toast.error + rolled back; just bail.
+        return;
+      }
+      // Log status change in timeline (best-effort — the status itself saved).
       try {
         const statusLabels = { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
         const act = await createActivity({
