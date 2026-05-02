@@ -1456,6 +1456,8 @@ export default function ContactsPage() {
         handleDelete={handleDelete}
         perms={perms}
         isRTL={isRTL}
+        agentName={profile?.full_name_en || profile?.full_name_ar}
+        isSalesAgent={profile?.role === 'sales_agent'}
         safePage={page}
         totalPages={Math.max(1, Math.ceil(totalContacts / pageSize))}
         setPage={setPage}

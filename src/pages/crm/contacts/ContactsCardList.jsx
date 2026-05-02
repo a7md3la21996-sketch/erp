@@ -53,6 +53,11 @@ export default function ContactsCardList({
   handleDelete,
   perms = {},
   isRTL,
+  // Identity of the current viewer — used to suppress the "Agent: X" row
+  // on cards the viewer themself owns (it's redundant for them to see
+  // their own name on every lead).
+  agentName,
+  isSalesAgent,
   // Pagination
   safePage,
   totalPages,
@@ -197,20 +202,33 @@ export default function ContactsCardList({
                   )}
                 </div>
 
-                {/* Meta: agent + last activity */}
-                <div className="flex items-center justify-between mt-2 text-[11px]">
-                  <div className="flex items-center gap-1.5 text-content-muted dark:text-content-muted-dark">
-                    <Users size={11} />
-                    <span className="truncate max-w-[140px]">
-                      {c.assigned_to_name || (isRTL ? 'غير معين' : 'Unassigned')}
-                    </span>
-                  </div>
-                  {last && (
-                    <span className="text-content-muted dark:text-content-muted-dark whitespace-nowrap">
-                      {isRTL ? 'آخر نشاط: ' : 'Last: '}{last}
-                    </span>
-                  )}
-                </div>
+                {/* Meta: agent (only when relevant) + last activity */}
+                {(() => {
+                  const ownerIsViewer = agentName && c.assigned_to_name === agentName;
+                  // Sales agent looking at their own assigned lead → skip the
+                  // agent line entirely (redundant). Admin / manager always
+                  // see it because they're looking at multiple agents'
+                  // contacts. Unassigned leads always show the placeholder.
+                  const showAgentRow = !c.assigned_to_name || !(isSalesAgent && ownerIsViewer);
+                  if (!showAgentRow && !last) return null;
+                  return (
+                    <div className="flex items-center justify-between mt-2 text-[11px] gap-2">
+                      {showAgentRow ? (
+                        <div className="flex items-center gap-1.5 text-content-muted dark:text-content-muted-dark min-w-0">
+                          <Users size={11} className="shrink-0" />
+                          <span className="truncate">
+                            {c.assigned_to_name || (isRTL ? 'غير معين' : 'Unassigned')}
+                          </span>
+                        </div>
+                      ) : <span />}
+                      {last && (
+                        <span className="text-content-muted dark:text-content-muted-dark whitespace-nowrap">
+                          {isRTL ? 'آخر نشاط: ' : 'Last: '}{last}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Action buttons row — 44px touch targets */}
                 <div className="flex gap-1.5 mt-3" onClick={e => e.stopPropagation()}>
