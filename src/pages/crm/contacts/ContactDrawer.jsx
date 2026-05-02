@@ -823,7 +823,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         })(),
         show('assigned_at') && { label: isRTL ? 'تاريخ التوزيع' : 'Assigned Date', val: contact.assigned_at ? new Date(contact.assigned_at).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' },
         ...(show('dq_reason') && contact.contact_status === 'disqualified' ? [
-          { label: isRTL ? 'سبب الاستبعاد' : 'DQ Reason', val: contact.disqualify_reason ? ({ resale: isRTL ? 'عايز يبيع وحدته' : 'Wants to sell unit', not_interested: isRTL ? 'غير مهتم' : 'Not interested', no_budget: isRTL ? 'ميزانية غير مناسبة' : 'No budget', wrong_audience: isRTL ? 'جمهور خاطئ' : 'Wrong audience', duplicate: isRTL ? 'مكرر' : 'Duplicate', other: isRTL ? 'آخر' : 'Other' }[contact.disqualify_reason] || contact.disqualify_reason) : '—', color: '#EF4444' },
+          { label: isRTL ? 'سبب الاستبعاد' : 'DQ Reason', val: contact.disqualify_reason ? ({ resale: isRTL ? 'يرغب في بيع وحدته' : 'Wants to sell unit', not_interested: isRTL ? 'غير مهتم' : 'Not interested', no_budget: isRTL ? 'ميزانية غير مناسبة' : 'No budget', wrong_audience: isRTL ? 'جمهور خاطئ' : 'Wrong audience', duplicate: isRTL ? 'مكرر' : 'Duplicate', other: isRTL ? 'آخر' : 'Other' }[contact.disqualify_reason] || contact.disqualify_reason) : '—', color: '#EF4444' },
           ...(contact.disqualify_note ? [{ label: isRTL ? 'ملاحظة الاستبعاد' : 'DQ Note', val: contact.disqualify_note }] : []),
         ] : []),
       ].filter(Boolean),
@@ -1799,8 +1799,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   <History size={12} className="text-rose-500" />
                   <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
                     {isRTL
-                      ? `⚠️ ${ghostWorkers.length} شخص شغال على الليد لكن مش في assigned_to_names`
-                      : `⚠️ ${ghostWorkers.length} user(s) worked on this lead but aren't in assigned_to_names`}
+                      ? `⚠️ ${ghostWorkers.length} مستخدم سجّل أنشطة على هذا العميل دون أن يكون معينًا عليه`
+                      : `⚠️ ${ghostWorkers.length} user(s) logged activity on this lead without being assigned`}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
