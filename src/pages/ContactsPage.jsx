@@ -10,6 +10,7 @@ import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, Chevron
 import {
   fetchContacts, createContact, updateContact, deleteContact,
   blacklistContact, createActivity, recordAssignment,
+  checkDuplicate,
 } from '../services/contactsService';
 import supabase from '../lib/supabase';
 import { logAction } from '../services/auditService';
@@ -1293,6 +1294,7 @@ export default function ContactsPage() {
         search={searchInput}
         onSearchChange={setSearchInput}
         searchPlaceholder={isRTL ? 'بحث بالاسم، الهاتف، الإيميل، ID...' : 'Search by name, phone, email, ID...'}
+        recentSearchesKey="platform_recent_searches_contacts"
         sortOptions={SORT_OPTIONS}
         sortBy={sortBy}
         onSortChange={setSortBy}
@@ -1458,6 +1460,7 @@ export default function ContactsPage() {
         isRTL={isRTL}
         agentName={profile?.full_name_en || profile?.full_name_ar}
         isSalesAgent={profile?.role === 'sales_agent'}
+        onRefresh={loadContactsData}
         safePage={page}
         totalPages={Math.max(1, Math.ceil(totalContacts / pageSize))}
         setPage={setPage}
@@ -1481,7 +1484,19 @@ export default function ContactsPage() {
       />
 
       {/* Modals */}
-      {showAddModal && <AddContactModal profile={profile} campaigns={campaignsList} onCreateCampaign={async (data) => { const created = await createCampaign(data); setCampaignsList(prev => [created, ...prev]); }} onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={(phone) => { const np = normalizePhone(phone); const found = contacts.find(c => normalizePhone(c.phone) === np || normalizePhone(c.phone2) === np || (c.extra_phones || []).some(p => normalizePhone(p) === np)); return Promise.resolve(found || null); }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} onAddInteraction={(contact, interaction) => {
+      {showAddModal && <AddContactModal profile={profile} campaigns={campaignsList} onCreateCampaign={async (data) => { const created = await createCampaign(data); setCampaignsList(prev => [created, ...prev]); }} onClose={() => setShowAddModal(false)} onSave={handleSave} checkDup={async (phone) => {
+        // Check the local list first — instant for already-visible duplicates.
+        // If we miss, fall back to the DB so we catch dupes that are off-page
+        // (the local `contacts` is capped at 1000 by fetchContacts).
+        const np = normalizePhone(phone);
+        const localHit = contacts.find(c =>
+          normalizePhone(c.phone) === np ||
+          normalizePhone(c.phone2) === np ||
+          (c.extra_phones || []).some(p => normalizePhone(p) === np)
+        );
+        if (localHit) return localHit;
+        try { return await checkDuplicate(phone); } catch { return null; }
+      }} onOpenOpportunity={(contact) => { setShowAddModal(false); setSelected(contact); }} onAddInteraction={(contact, interaction) => {
         const existing = contact.campaign_interactions || [];
         const updatedContact = { ...contact, campaign_interactions: [...existing, interaction] };
         setContacts(prev => {

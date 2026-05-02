@@ -1,6 +1,7 @@
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Phone, MessageCircle, Pin, MoreVertical, PhoneCall, Mail, FileText, Ban, Users, Megaphone } from 'lucide-react';
-import { TYPE, TEMP, normalizePhone, agentInitials, PhoneCell } from './constants';
+import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw } from 'lucide-react';
+import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell } from './constants';
 import { Pagination } from '../../../components/ui';
 
 // Mobile-first card view of the contacts list. Same data and handlers as
@@ -32,6 +33,36 @@ function timeAgo(dateStr, isRTL) {
   return new Date(dateStr).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short', day: 'numeric' });
 }
 
+// Days bucket → color. Drives the color of the "last activity" pill so
+// urgency reads at a glance: green (recent) → amber → red (stale).
+function lastActivityTone(dateStr) {
+  if (!dateStr) return null;
+  const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000);
+  if (days <= 3) return { bg: 'bg-emerald-500/12', fg: 'text-emerald-600 dark:text-emerald-400' };
+  if (days <= 7) return { bg: 'bg-amber-500/15', fg: 'text-amber-600 dark:text-amber-400' };
+  return { bg: 'bg-red-500/12', fg: 'text-red-500' };
+}
+
+// Map source key → brand icon + color. Falls back to a generic globe so
+// unknown sources still get a visual pill instead of plain text.
+const SOURCE_ICON = {
+  facebook:   { Icon: Facebook,  color: '#1877F2' },
+  instagram:  { Icon: Instagram, color: '#E4405F' },
+  google_ads: { Icon: Globe,     color: '#4285F4' },
+  website:    { Icon: Globe,     color: '#6B8DB5' },
+  call:       { Icon: Phone,     color: '#10B981' },
+  walk_in:    { Icon: MapPin,    color: '#92400E' },
+  referral:   { Icon: UserPlus,  color: '#6B21A8' },
+  developer:  { Icon: Sparkles,  color: '#0F766E' },
+  cold_call:  { Icon: Phone,     color: '#94a3b8' },
+  other:      { Icon: Globe,     color: '#94a3b8' },
+};
+
+// "Untouched" rule: status is `new` and no activity has ever landed.
+// These are the leads that get forgotten — we surface them visually so
+// they can't hide in the list.
+const isUntouched = (c) => c.contact_status === 'new' && !c.last_activity_at;
+
 export default function ContactsCardList({
   loading,
   paged,
@@ -58,6 +89,10 @@ export default function ContactsCardList({
   // their own name on every lead).
   agentName,
   isSalesAgent,
+  // Pull-to-refresh — async function the parent supplies; if absent the
+  // gesture is disabled. Returning the promise lets us show the spinner
+  // until the reload settles.
+  onRefresh,
   // Pagination
   safePage,
   totalPages,
@@ -69,6 +104,50 @@ export default function ContactsCardList({
 }) {
   const { t } = useTranslation();
   const statusLabels = isRTL ? STATUS_LABELS_AR : STATUS_LABELS_EN;
+
+  // ── Pull-to-refresh ─────────────────────────────────────────────────
+  // Reads window scroll because the cards live inside the page's normal
+  // document scroll (not a sub-scroller). Pull only registers if scrollY=0
+  // at touchstart so we don't hijack mid-list scrolling.
+  const PULL_THRESHOLD = 70;
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const startYRef = useRef(null);
+  useEffect(() => {
+    if (!onRefresh) return;
+    const onTouchStart = (e) => {
+      if (window.scrollY > 0) { startYRef.current = null; return; }
+      startYRef.current = e.touches[0].clientY;
+    };
+    const onTouchMove = (e) => {
+      if (startYRef.current == null || refreshing) return;
+      const delta = e.touches[0].clientY - startYRef.current;
+      if (delta > 0 && window.scrollY === 0) {
+        // Damped pull: 1px finger = 0.5px indicator. Caps at 1.5x threshold
+        // so the user can't keep dragging forever.
+        setPullDistance(Math.min(delta * 0.5, PULL_THRESHOLD * 1.5));
+      }
+    };
+    const onTouchEnd = async () => {
+      const start = startYRef.current;
+      startYRef.current = null;
+      if (start == null) return;
+      const fired = pullDistance >= PULL_THRESHOLD;
+      setPullDistance(0);
+      if (!fired || refreshing) return;
+      setRefreshing(true);
+      try { await onRefresh(); } finally { setRefreshing(false); }
+    };
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd);
+    return () => {
+      window.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+    };
+  }, [onRefresh, pullDistance, refreshing]);
+  const pullRatio = Math.min(pullDistance / PULL_THRESHOLD, 1);
 
   if (loading) {
     return (
@@ -92,6 +171,31 @@ export default function ContactsCardList({
 
   return (
     <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
+      {/* Pull-to-refresh indicator. Translates and rotates with pull, then
+          spins continuously while the refresh promise is in flight. */}
+      {(pullDistance > 0 || refreshing) && (
+        <div
+          aria-live="polite"
+          className="flex items-center justify-center text-content-muted dark:text-content-muted-dark transition-all"
+          style={{
+            height: refreshing ? PULL_THRESHOLD : pullDistance,
+            opacity: refreshing ? 1 : pullRatio,
+          }}
+        >
+          <RefreshCw
+            size={20}
+            className={refreshing ? 'animate-spin' : ''}
+            style={refreshing ? undefined : { transform: `rotate(${pullRatio * 270}deg)` }}
+          />
+          <span className="ms-2 text-[11px] font-semibold">
+            {refreshing
+              ? (isRTL ? 'جاري التحديث...' : 'Refreshing...')
+              : pullRatio >= 1
+              ? (isRTL ? 'اتركها للتحديث' : 'Release to refresh')
+              : (isRTL ? 'اسحب للتحديث' : 'Pull to refresh')}
+          </span>
+        </div>
+      )}
       <ul className="space-y-2 p-2">
         {paged.map(c => {
           const isSelected = selectedIdSet?.has?.(c.id);
@@ -102,6 +206,11 @@ export default function ContactsCardList({
           const statusColor = STATUS_COLORS[status] || STATUS_COLORS.new;
           const typeData = c.contact_type ? TYPE[c.contact_type] : null;
           const last = timeAgo(c.last_activity_at, isRTL);
+          const lastTone = lastActivityTone(c.last_activity_at);
+          const sourceIcon = c.source ? SOURCE_ICON[c.source] : null;
+          const untouched = isUntouched(c);
+          const initials = agentInitials(c.full_name || '?');
+          const avatarBg = avatarColor(c.id);
 
           return (
             <li key={c.id}>
@@ -131,7 +240,7 @@ export default function ContactsCardList({
                     : 'border-edge dark:border-edge-dark'
                 }`}
               >
-                {/* Top row: select + name + temp + pin badge */}
+                {/* Top row: select + avatar + name + meta + pin */}
                 <div className="flex items-start gap-2.5">
                   <input
                     type="checkbox"
@@ -141,6 +250,16 @@ export default function ContactsCardList({
                     className="mt-1 w-5 h-5 cursor-pointer accent-brand-500"
                     aria-label={isRTL ? `تحديد ${c.full_name || ''}` : `Select ${c.full_name || ''}`}
                   />
+                  {/* Avatar — colored circle with initials. Color is derived
+                      from the contact id so the same lead is the same color
+                      every time, making the list scannable. */}
+                  <div
+                    aria-hidden="true"
+                    className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                    style={{ background: avatarBg }}
+                  >
+                    {initials}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap min-w-0">
                       <span className="font-bold text-sm text-content dark:text-content-dark truncate">
@@ -156,13 +275,20 @@ export default function ContactsCardList({
                           <tempData.Icon size={14} />
                         </span>
                       )}
+                      {/* Untouched badge — surfaces leads that haven't been
+                          worked yet. Most likely to slip through the cracks. */}
+                      {untouched && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/15 px-1.5 py-0.5 rounded animate-pulse">
+                          🆕 {isRTL ? 'لم يُتصل به' : 'Untouched'}
+                        </span>
+                      )}
                       {c.is_blacklisted && (
                         <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">
                           <Ban size={10} /> BL
                         </span>
                       )}
                     </div>
-                    {/* Masked phone (tap to reveal) + source + type */}
+                    {/* Masked phone (tap to reveal) + source icon + type */}
                     <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 flex items-center gap-1.5 flex-wrap min-w-0">
                       {c.phone ? (
                         <span onClick={e => e.stopPropagation()} className="inline-flex">
@@ -171,7 +297,16 @@ export default function ContactsCardList({
                       ) : (
                         <span>{isRTL ? 'بدون رقم' : 'no phone'}</span>
                       )}
-                      {c.source && <span className="opacity-60">· {c.source}</span>}
+                      {sourceIcon && (
+                        <span
+                          title={c.source}
+                          aria-label={`Source: ${c.source}`}
+                          className="inline-flex items-center"
+                          style={{ color: sourceIcon.color }}
+                        >
+                          · <sourceIcon.Icon size={11} className="ms-1" />
+                        </span>
+                      )}
                       {typeData && <span className="opacity-60">· {isRTL ? typeData.label : typeData.labelEn}</span>}
                     </div>
                     {/* Campaign — shown when present so the agent knows where the lead came from */}
@@ -221,9 +356,12 @@ export default function ContactsCardList({
                           </span>
                         </div>
                       ) : <span />}
-                      {last && (
-                        <span className="text-content-muted dark:text-content-muted-dark whitespace-nowrap">
-                          {isRTL ? 'آخر نشاط: ' : 'Last: '}{last}
+                      {last && lastTone && (
+                        <span
+                          className={`whitespace-nowrap font-semibold px-2 py-0.5 rounded-full ${lastTone.bg} ${lastTone.fg}`}
+                          title={isRTL ? `آخر نشاط: ${last}` : `Last activity: ${last}`}
+                        >
+                          {last}
                         </span>
                       )}
                     </div>

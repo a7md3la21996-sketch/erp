@@ -66,6 +66,10 @@ export default function SmartFilter({
   quickFilters = [],
   extraActions,
   resultsCount,
+  // Persists the last 5 non-trivial search queries to localStorage under
+  // this key. Empty key disables the feature so other consumers (e.g.
+  // tables that don't want recall) opt-in explicitly.
+  recentSearchesKey,
 }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
@@ -75,6 +79,38 @@ export default function SmartFilter({
   const [sortOpen, setSortOpen] = useState(false);
   const popRef = useRef(null);
   const sortRef = useRef(null);
+  // Recent searches: load on mount, save when search settles for >800ms
+  // (debounced so each keystroke isn't a write). MRU semantics: the
+  // freshest hit jumps to the top, dedup against the existing list.
+  const [recentSearches, setRecentSearches] = useState(() => {
+    if (!recentSearchesKey || typeof window === 'undefined') return [];
+    try {
+      const raw = window.localStorage.getItem(recentSearchesKey);
+      return raw ? JSON.parse(raw).slice(0, 5) : [];
+    } catch { return []; }
+  });
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchSaveTimer = useRef(null);
+  useEffect(() => {
+    if (!recentSearchesKey) return;
+    clearTimeout(searchSaveTimer.current);
+    const term = (search || '').trim();
+    if (term.length < 2) return;
+    searchSaveTimer.current = setTimeout(() => {
+      setRecentSearches(prev => {
+        const next = [term, ...prev.filter(t => t !== term)].slice(0, 5);
+        try { window.localStorage.setItem(recentSearchesKey, JSON.stringify(next)); } catch {}
+        return next;
+      });
+    }, 800);
+    return () => clearTimeout(searchSaveTimer.current);
+  }, [search, recentSearchesKey]);
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    if (recentSearchesKey) {
+      try { window.localStorage.removeItem(recentSearchesKey); } catch {}
+    }
+  };
 
   useEffect(() => {
     if (!showAddRow) return;
@@ -214,11 +250,41 @@ export default function SmartFilter({
             <input
               value={search}
               onChange={e => onSearchChange(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
               placeholder={searchPlaceholder || (isRTL ? 'بحث...' : 'Search...')}
               className={`${inputCls} w-full pe-8`}
               dir="auto"
               data-search-input
             />
+            {/* Recent searches dropdown — only when input is empty + focused.
+                Click on a chip refills the input; X clears the whole list. */}
+            {searchFocused && !search && recentSearches.length > 0 && (
+              <div className="absolute top-full mt-1 start-0 z-50 w-full min-w-[200px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-1.5 border-b border-edge/50 dark:border-edge-dark/50">
+                  <span className="text-[10px] font-bold text-content-muted dark:text-content-muted-dark uppercase tracking-wide">
+                    {isRTL ? 'بحوث سابقة' : 'Recent'}
+                  </span>
+                  <button
+                    onMouseDown={e => { e.preventDefault(); clearRecentSearches(); }}
+                    className="text-[10px] text-content-muted dark:text-content-muted-dark hover:text-red-500 bg-transparent border-none cursor-pointer p-0"
+                    title={isRTL ? 'مسح الكل' : 'Clear all'}
+                  >
+                    {isRTL ? 'مسح' : 'Clear'}
+                  </button>
+                </div>
+                {recentSearches.map((term, i) => (
+                  <button
+                    key={i}
+                    onMouseDown={e => { e.preventDefault(); onSearchChange(term); setSearchFocused(false); }}
+                    className="w-full text-start px-3 py-2 text-xs text-content dark:text-content-dark hover:bg-brand-500/10 cursor-pointer flex items-center gap-2 border-none bg-transparent"
+                  >
+                    <Search size={11} className="text-content-muted dark:text-content-muted-dark shrink-0" />
+                    <span className="truncate">{term}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
