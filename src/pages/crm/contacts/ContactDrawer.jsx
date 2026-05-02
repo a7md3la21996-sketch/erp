@@ -95,6 +95,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showQuickStatus, setShowQuickStatus] = useState(false);
   // Quick temperature popover anchored on the temperature card.
   const [showQuickTemp, setShowQuickTemp] = useState(false);
+  // When the hero action buttons (Meeting / Note) open the TakeActionForm
+  // they preset the activity type so the user lands on the right tab.
+  const [actionPresetType, setActionPresetType] = useState(null);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showWAPopup, setShowWAPopup] = useState(false);
@@ -1334,11 +1337,106 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
             </span>
 
-            {/* Right: close — 44px on mobile to meet iOS HIG, compact on desktop */}
-            <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
-              className="w-11 h-11 md:w-8 md:h-8 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-red-500/10 hover:text-red-500 transition-colors">
-              <X size={18} />
-            </button>
+            {/* Right: More menu + close */}
+            <div className="flex items-center gap-0.5 relative">
+              <button onClick={() => setShowDrawerMenu(p => !p)} aria-label={isRTL ? 'المزيد من الإجراءات' : 'More actions'} aria-expanded={showDrawerMenu} aria-haspopup="menu"
+                className={`w-8 h-8 rounded-md flex items-center justify-center bg-transparent border-none cursor-pointer transition-colors ${showDrawerMenu ? 'text-brand-500 bg-brand-500/10' : 'text-content-muted dark:text-content-muted-dark hover:bg-surface-bg dark:hover:bg-brand-500/10'}`}>
+                <MoreVertical size={16} />
+              </button>
+              <button onClick={onClose} aria-label={isRTL ? 'إغلاق' : 'Close'}
+                className="w-11 h-11 md:w-8 md:h-8 rounded-md flex items-center justify-center bg-transparent border-none text-content-muted dark:text-content-muted-dark cursor-pointer hover:bg-red-500/10 hover:text-red-500 transition-colors">
+                <X size={18} />
+              </button>
+              {/* Dropdown — anchored to the More button in this top bar */}
+              {showDrawerMenu && (
+                <>
+                  <div className="fixed inset-0 z-[99]" onClick={() => setShowDrawerMenu(false)} />
+                  <div role="menu" className="absolute top-full end-0 mt-1 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[210px] max-w-[calc(100vw-2rem)] z-[100] shadow-[0_12px_40px_rgba(27,51,71,0.18)] overflow-hidden">
+                    <div className="p-1">
+                      {canEditContact && (
+                        <button onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Lead'}
+                        </button>
+                      )}
+                      {contact.email && (
+                        <a href={`mailto:${contact.email}`} onClick={() => setShowDrawerMenu(false)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg no-underline cursor-pointer text-xs text-content dark:text-content-dark hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Mail size={13} className="text-brand-500" /> {isRTL ? 'إرسال إيميل' : 'Send Email'}
+                        </a>
+                      )}
+                      {contact.phone && (
+                        <button onClick={() => { setShowSMSModal(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Send size={13} className="text-brand-500" /> {isRTL ? 'إرسال SMS' : 'Send SMS'}
+                        </button>
+                      )}
+                      <button onClick={handleToggleFav} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                        <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#F59E0B' : 'none'} /> {isFav ? (isRTL ? 'إزالة المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
+                      </button>
+                      {onPin && (
+                        <button onClick={() => { onPin(contact.id); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Pin size={13} className={isPinned ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} /> {isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : (isRTL ? 'تثبيت' : 'Pin')}
+                        </button>
+                      )}
+                      {onLogCall && (
+                        <button onClick={() => { onLogCall(contact); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
+                        </button>
+                      )}
+                      {onReminder && (
+                        <button onClick={() => { onReminder(contact); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
+                        </button>
+                      )}
+                      <button onClick={() => { setShowPrintPreview(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                        <FileDown size={13} className="text-brand-500" /> {isRTL ? 'طباعة' : 'Print'}
+                      </button>
+                      {isAdmin && contact.phone && (
+                        <button onClick={() => { window.open(`/contacts/master/${encodeURIComponent(contact.phone)}`, '_blank'); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Users size={13} className="text-purple-500" /> {isRTL ? 'البروفايل الموحد' : 'Master Profile'}
+                        </button>
+                      )}
+                      {(isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader') && (
+                        <button onClick={() => { setShowHandOff(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Send size={13} className="text-blue-500" /> {isRTL ? 'تسليم الليد' : 'Hand Off Lead'}
+                        </button>
+                      )}
+                      {(isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader') && (
+                        <button onClick={() => { setShowDistribute(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Send size={13} className="text-purple-500" /> {isRTL ? 'توزيع للمنافسة' : 'Distribute (compete)'}
+                        </button>
+                      )}
+                      {isAdmin && contact.phone && (
+                        <button onClick={() => { setShowPullLeads(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Award size={13} className="text-green-600" /> {isRTL ? 'سحب الليد من الباقي' : 'Pull from Others'}
+                        </button>
+                      )}
+                      {onDelete && canDeleteContact && (
+                        <button onClick={() => {
+                          if (window.confirm(isRTL ? `حذف الليد "${contact.full_name}"؟ لا يمكن التراجع عن العملية.` : `Delete lead "${contact.full_name}"? This action cannot be undone.`)) {
+                            onDelete(contact.id);
+                            setShowDrawerMenu(false);
+                          }
+                        }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
+                          <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
+                        </button>
+                      )}
+                      {!contact.is_blacklisted && canEditContact && (
+                        <>
+                          <div className="h-px bg-edge dark:bg-edge-dark mx-1 my-0.5" />
+                          <button onClick={() => {
+                            if (window.confirm(isRTL ? `إضافة "${contact.full_name}" للبلاك ليست؟` : `Add "${contact.full_name}" to blacklist?`)) {
+                              onBlacklist(contact);
+                              setShowDrawerMenu(false);
+                            }
+                          }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
+                            <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1346,11 +1444,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
 
           {/* ═══ HERO SECTION ═══ */}
-          <div className="px-5 pt-5 pb-4">
-            {/* Avatar + Name + Badges */}
-            <div className="flex flex-col items-center text-center mb-4">
-              {/* Large Avatar */}
-              <div className={`w-14 h-14 rounded-2xl shrink-0 flex items-center justify-center text-lg font-bold mb-3 shadow-sm ${
+          <div className="px-5 pt-4 pb-3">
+            {/* Identity row: avatar + name + subtitle */}
+            <div className="flex items-start gap-3 mb-3">
+              {/* Avatar */}
+              <div className={`w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center text-base font-bold shadow-sm ${
                 contact.is_blacklisted
                   ? 'bg-red-500/15 text-red-500 border border-red-500/25'
                   : tp?.color
@@ -1359,46 +1457,66 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               }`}
                 style={!contact.is_blacklisted && tp?.color ? { background: `linear-gradient(135deg, ${tp.color}30, ${tp.color}15)`, color: tp.color, border: `1px solid ${tp.color}20` } : undefined}
               >
-                {contact.is_blacklisted ? <Ban size={22} /> : initials(contact.full_name)}
+                {contact.is_blacklisted ? <Ban size={20} /> : initials(contact.full_name)}
               </div>
 
-              {/* Full Name */}
-              <h2 className={`m-0 text-base font-bold leading-tight mb-1.5 ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
-                {contact.prefix && <span className="text-[#6B8DB5] font-medium me-1 text-sm">{contact.prefix}</span>}
-                {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
-              </h2>
-
-              {/* Horizontal Chips Row */}
-              <div className="flex items-center gap-1.5 flex-wrap justify-center mb-2">
-                {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
-                {contact.department && (
-                  <Chip
-                    label={(isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : { sales: 'Sales', hr: 'HR', finance: 'Finance', marketing: 'Marketing', operations: 'Operations' })[contact.department] || contact.department}
-                    color="#8BA8C8" bg="rgba(139,168,200,0.1)"
-                  />
-                )}
-                {tempInfo && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ color: tempInfo.color, background: tempInfo.bg }}>
-                    {tempInfo.Icon && <tempInfo.Icon size={11} />}
-                    {isRTL ? tempInfo.labelAr : tempInfo.label}
-                  </span>
-                )}
-                {(() => {
-                  const mn = profile?.full_name_en || profile?.full_name_ar;
-                  const myScore = mn && contact.assigned_to_name === mn ? contact.lead_score : null;
-                  if (myScore == null || myScore <= 0) return null;
-                  return (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-500">
-                      {myScore}/100
+              {/* Name + meta */}
+              <div className="flex-1 min-w-0">
+                <h2 className={`m-0 text-base font-bold leading-tight ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                  {contact.prefix && <span className="text-[#6B8DB5] font-medium me-1 text-sm">{contact.prefix}</span>}
+                  {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                </h2>
+                {/* Identity badges row: type, dept, contact_number, blacklisted */}
+                <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                  {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
+                  {contact.department && (
+                    <Chip
+                      label={(isRTL ? { sales: 'مبيعات', hr: 'HR', finance: 'مالية', marketing: 'تسويق', operations: 'عمليات' } : { sales: 'Sales', hr: 'HR', finance: 'Finance', marketing: 'Marketing', operations: 'Operations' })[contact.department] || contact.department}
+                      color="#8BA8C8" bg="rgba(139,168,200,0.1)"
+                    />
+                  )}
+                  {contact.contact_number && (
+                    <span className="text-[10px] font-mono font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.06] px-1.5 py-0.5 rounded-full">
+                      {contact.contact_number}
                     </span>
+                  )}
+                  {contact.is_blacklisted && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 border border-red-500/20">
+                      <Ban size={10} /> {isRTL ? 'بلاك ليست' : 'Blacklisted'}
+                    </span>
+                  )}
+                </div>
+                {/* Phone / email / location subtitle */}
+                {(() => {
+                  const parts = [contact.phone, contact.email, contact.preferred_location].filter(Boolean);
+                  if (parts.length === 0) return null;
+                  return (
+                    <div className="text-[11.5px] text-content-muted dark:text-content-muted-dark mt-1.5 truncate">
+                      {parts.join(' · ')}
+                    </div>
                   );
                 })()}
-                {contact.contact_number && (
-                  <span className="text-[10px] font-mono font-medium text-content-muted dark:text-content-muted-dark bg-brand-500/[0.06] px-1.5 py-0.5 rounded-full">
-                    {contact.contact_number}
-                  </span>
-                )}
               </div>
+            </div>
+
+            {/* Status / Temp / Score chips row + last contact pill */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {tempInfo && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ color: tempInfo.color, background: tempInfo.bg }}>
+                  {tempInfo.Icon && <tempInfo.Icon size={11} />}
+                  {isRTL ? tempInfo.labelAr : tempInfo.label}
+                </span>
+              )}
+              {(() => {
+                const mn = profile?.full_name_en || profile?.full_name_ar;
+                const myScore = mn && contact.assigned_to_name === mn ? contact.lead_score : null;
+                if (myScore == null || myScore <= 0) return null;
+                return (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-500">
+                    {myScore}/100
+                  </span>
+                );
+              })()}
 
               {/* Per-agent status badges. Viewer's own chip is interactive
                   — tap it to open the quick-status popover and flip status
@@ -1407,7 +1525,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   includes the status, so changing it remounts the element
                   and re-runs the fade-in animation as visual feedback. */}
               {heroStatusChips.length > 0 ? (
-                <div className="flex items-center gap-1 flex-wrap justify-center">
+                <>
                   {heroStatusChips.map(b => {
                     const interactive = b.isMine && canEditContact;
                     const chipCls = `inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full transition-all animate-in fade-in zoom-in-95 duration-300 ${b.isMine ? 'ring-1 ring-brand-500/40' : ''} ${interactive ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'}`;
@@ -1471,185 +1589,74 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                       </div>
                     );
                   })}
-                </div>
+                </>
               ) : (
-                <span className="inline-flex items-center text-[11px] font-medium px-3 py-1 rounded-full text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark">
+                <span className="inline-flex items-center text-[11px] font-medium px-2.5 py-1 rounded-full text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark">
                   {isRTL ? 'غير مخصّص' : 'Unassigned'}
                 </span>
               )}
-              {contact.is_blacklisted && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full mt-1.5 bg-red-500/10 text-red-500 border border-red-500/20">
-                  <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklisted'}
-                </span>
-              )}
+              {/* Last contact pill — pushed to the end of the row */}
+              {contact.last_activity_at && (() => {
+                const d = daysSince(contact.last_activity_at);
+                const tone = d <= 3 ? 'text-emerald-600 dark:text-emerald-400' : d <= 7 ? 'text-amber-600 dark:text-amber-400' : 'text-red-500';
+                const label = d === 0 ? (isRTL ? 'اليوم' : 'today') : (isRTL ? `منذ ${d} يوم` : `${d}d ago`);
+                return (
+                  <span className={`ms-auto text-[10.5px] font-semibold ${tone}`}>
+                    {isRTL ? 'آخر تواصل · ' : 'Last contact · '}{label}
+                  </span>
+                );
+              })()}
             </div>
+          {/* end hero outer wrapper continues to wrap the rest of the content; closes much later */}
 
-            {/* ═══ QUICK ACTIONS ROW ═══ */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 mb-4">
-              {/* Call */}
-              {contact.phone ? (
-                <a href={`tel:${contact.phone}`} aria-label={isRTL ? 'اتصال' : 'Call contact'} className="flex flex-col items-center gap-1 py-2 rounded-xl no-underline hover:bg-emerald-500/10 transition-colors group cursor-pointer">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500/20 transition-colors">
-                    <Phone size={16} className="text-emerald-500" />
-                  </div>
-                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'اتصال' : 'Call'}</span>
-                </a>
-              ) : (
-                <div role="button" aria-disabled="true" aria-label={isRTL ? 'اتصال غير متاح — لا يوجد رقم' : 'Call unavailable — no phone'}
-                  className="flex flex-col items-center gap-1 py-2 opacity-30 cursor-not-allowed">
-                  <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Phone size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
-                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'اتصال' : 'Call'}</span>
-                </div>
-              )}
-
-              {/* WhatsApp */}
-              {contact.phone ? (
-                <button onClick={() => setShowWAPopup(p => !p)} aria-label={isRTL ? 'إرسال واتساب' : 'Send WhatsApp'} aria-expanded={showWAPopup} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-[#25D366]/10 transition-colors group">
-                  <div className="w-9 h-9 rounded-xl bg-[#25D366]/10 flex items-center justify-center group-hover:bg-[#25D366]/20 transition-colors">
-                    <MessageCircle size={16} className="text-[#25D366]" />
-                  </div>
-                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'واتساب' : 'WA'}</span>
-                </button>
-              ) : (
-                <div role="button" aria-disabled="true" aria-label={isRTL ? 'واتساب غير متاح — لا يوجد رقم' : 'WhatsApp unavailable — no phone'}
-                  className="flex flex-col items-center gap-1 py-2 opacity-30 cursor-not-allowed">
-                  <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><MessageCircle size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
-                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'واتساب' : 'WA'}</span>
-                </div>
-              )}
-
-              {/* Email */}
-              {contact.email ? (
-                <a href={`mailto:${contact.email}`} aria-label={isRTL ? 'إرسال إيميل' : 'Send email'} className="flex flex-col items-center gap-1 py-2 rounded-xl no-underline hover:bg-brand-500/10 transition-colors group cursor-pointer">
-                  <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
-                    <Mail size={16} className="text-brand-500" />
-                  </div>
-                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'إيميل' : 'Email'}</span>
-                </a>
-              ) : (
-                <div role="button" aria-disabled="true" aria-label={isRTL ? 'إيميل غير متاح — لا يوجد بريد' : 'Email unavailable — no address'}
-                  className="flex flex-col items-center gap-1 py-2 opacity-30 cursor-not-allowed">
-                  <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Mail size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
-                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'إيميل' : 'Email'}</span>
-                </div>
-              )}
-
-              {/* Action */}
-              <button onClick={() => { setTab('activity'); setShowActionForm(true); }} aria-label={isRTL ? 'إجراء سريع' : 'Quick action'} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-brand-500/10 transition-colors group">
-                <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
-                  <Zap size={16} className="text-brand-500" />
-                </div>
-                <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'إجراء' : 'Action'}</span>
-              </button>
-
-              {/* SMS */}
-              {contact.phone ? (
-                <button onClick={() => setShowSMSModal(true)} aria-label={isRTL ? 'إرسال رسالة SMS' : 'Send SMS'} className="flex flex-col items-center gap-1 py-2 rounded-xl bg-transparent border-none cursor-pointer hover:bg-brand-500/10 transition-colors group">
-                  <div className="w-9 h-9 rounded-xl bg-brand-500/10 flex items-center justify-center group-hover:bg-brand-500/20 transition-colors">
-                    <Send size={16} className="text-brand-500" />
-                  </div>
-                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'رسالة' : 'SMS'}</span>
-                </button>
-              ) : (
-                <div role="button" aria-disabled="true" aria-label={isRTL ? 'SMS غير متاح — لا يوجد رقم' : 'SMS unavailable — no phone'}
-                  className="flex flex-col items-center gap-1 py-2 opacity-30 cursor-not-allowed">
-                  <div className="w-9 h-9 rounded-xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center"><Send size={16} className="text-content-muted dark:text-content-muted-dark" /></div>
-                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark">{isRTL ? 'رسالة' : 'SMS'}</span>
-                </div>
-              )}
-
-              {/* More menu */}
-              <div className="relative flex flex-col items-center gap-1 py-2">
-                <button onClick={() => setShowDrawerMenu(p => !p)} aria-label={isRTL ? 'المزيد من الإجراءات' : 'More actions'} aria-expanded={showDrawerMenu} aria-haspopup="menu" className="flex flex-col items-center gap-1 rounded-xl bg-transparent border-none cursor-pointer hover:bg-surface-bg dark:hover:bg-brand-500/10 transition-colors group w-full">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${showDrawerMenu ? 'bg-brand-500 text-white' : 'bg-surface-bg dark:bg-brand-500/10 group-hover:bg-brand-500/15'}`}>
-                    <MoreVertical size={16} className={showDrawerMenu ? 'text-white' : 'text-content-muted dark:text-content-muted-dark'} />
-                  </div>
-                  <span className="text-[10px] font-semibold text-content-muted dark:text-content-muted-dark">{isRTL ? 'المزيد' : 'More'}</span>
-                </button>
-                {/* Dropdown Menu */}
-                {showDrawerMenu && (
-                  <div role="menu" className="absolute top-[58px] end-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[190px] max-w-[calc(100vw-2rem)] z-[100] shadow-[0_12px_40px_rgba(27,51,71,0.18)] overflow-hidden">
-                    <div className="p-1">
-                      {canEditContact && (
-                        <button onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Lead'}
-                        </button>
-                      )}
-                      <button onClick={handleToggleFav} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                        <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#F59E0B' : 'none'} /> {isFav ? (isRTL ? 'إزالة المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
-                      </button>
-                      {onPin && (
-                        <button onClick={() => { onPin(contact.id); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Pin size={13} className={isPinned ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} /> {isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : (isRTL ? 'تثبيت' : 'Pin')}
-                        </button>
-                      )}
-                      {onLogCall && (
-                        <button onClick={() => { onLogCall(contact); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
-                        </button>
-                      )}
-                      {onReminder && (
-                        <button onClick={() => { onReminder(contact); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
-                        </button>
-                      )}
-                      <button onClick={() => { setShowPrintPreview(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                        <FileDown size={13} className="text-brand-500" /> {isRTL ? 'طباعة' : 'Print'}
-                      </button>
-                      {isAdmin && contact.phone && (
-                        <button onClick={() => { window.open(`/contacts/master/${encodeURIComponent(contact.phone)}`, '_blank'); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Users size={13} className="text-purple-500" /> {isRTL ? 'البروفايل الموحد' : 'Master Profile'}
-                        </button>
-                      )}
-                      {/* Hand Off — for managers/operations who received a lead and want to route it
-                          to a sales agent without keeping a copy. Different from Distribute (which clones).
-                          Visible to anyone with edit permission since service double-checks. */}
-                      {(isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader') && (
-                        <button onClick={() => { setShowHandOff(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Send size={13} className="text-blue-500" /> {isRTL ? 'تسليم الليد' : 'Hand Off Lead'}
-                        </button>
-                      )}
-                      {/* Distribute (compete) — clones the lead for multiple agents.
-                          Available to admin/operations + manager + team_leader since
-                          they all participate in lead distribution workflows. */}
-                      {(isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader') && (
-                        <button onClick={() => { setShowDistribute(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Send size={13} className="text-purple-500" /> {isRTL ? 'توزيع للمنافسة' : 'Distribute (compete)'}
-                        </button>
-                      )}
-                      {isAdmin && contact.phone && (
-                        <button onClick={() => { setShowPullLeads(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Award size={13} className="text-green-600" /> {isRTL ? 'سحب الليد من الباقي' : 'Pull from Others'}
-                        </button>
-                      )}
-                      {onDelete && canDeleteContact && (
-                        <button onClick={() => {
-                          if (window.confirm(isRTL ? `حذف الليد "${contact.full_name}"؟ لا يمكن التراجع عن العملية.` : `Delete lead "${contact.full_name}"? This action cannot be undone.`)) {
-                            onDelete(contact.id);
-                            setShowDrawerMenu(false);
-                          }
-                        }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
-                        </button>
-                      )}
-                      {!contact.is_blacklisted && canEditContact && (
-                        <>
-                          <div className="h-px bg-edge dark:bg-edge-dark mx-1 my-0.5" />
-                          <button onClick={() => {
-                            if (window.confirm(isRTL ? `إضافة "${contact.full_name}" للبلاك ليست؟` : `Add "${contact.full_name}" to blacklist?`)) {
-                              onBlacklist(contact);
-                              setShowDrawerMenu(false);
-                            }
-                          }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
-                            <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
+          {/* ═══ ACTION BAR — 4 large buttons (Call · WhatsApp · Meeting · Note) ═══ */}
+          <div className="pb-4 grid grid-cols-4 gap-1.5">
+            {/* Call — primary, solid blue */}
+            {contact.phone ? (
+              <a href={`tel:${contact.phone}`} aria-label={isRTL ? 'اتصال' : 'Call contact'}
+                className="flex flex-col items-center gap-1 py-2.5 rounded-xl no-underline bg-blue-500 hover:bg-blue-600 text-white shadow-sm shadow-blue-500/20 transition-all active:scale-95 cursor-pointer">
+                <Phone size={17} />
+                <span className="text-[11px] font-bold">{isRTL ? 'اتصال' : 'Call'}</span>
+              </a>
+            ) : (
+              <div role="button" aria-disabled="true" aria-label={isRTL ? 'اتصال غير متاح — لا يوجد رقم' : 'Call unavailable — no phone'}
+                className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark opacity-50 cursor-not-allowed">
+                <Phone size={17} />
+                <span className="text-[11px] font-semibold">{isRTL ? 'اتصال' : 'Call'}</span>
               </div>
-            </div>
+            )}
+
+            {/* WhatsApp — emerald soft */}
+            {contact.phone ? (
+              <button onClick={() => setShowWAPopup(p => !p)} aria-label={isRTL ? 'إرسال واتساب' : 'Send WhatsApp'} aria-expanded={showWAPopup}
+                className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 border-none cursor-pointer transition-all active:scale-95">
+                <MessageCircle size={17} />
+                <span className="text-[11px] font-bold">{isRTL ? 'واتساب' : 'WhatsApp'}</span>
+              </button>
+            ) : (
+              <div role="button" aria-disabled="true" aria-label={isRTL ? 'واتساب غير متاح — لا يوجد رقم' : 'WhatsApp unavailable — no phone'}
+                className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark opacity-50 cursor-not-allowed">
+                <MessageCircle size={17} />
+                <span className="text-[11px] font-semibold">{isRTL ? 'واتساب' : 'WhatsApp'}</span>
+              </div>
+            )}
+
+            {/* Meeting — purple soft (opens TakeActionForm preset to meeting) */}
+            <button onClick={() => { setTab('activity'); setActionPresetType('meeting'); setShowActionForm(true); }}
+              aria-label={isRTL ? 'تسجيل/جدولة موعد' : 'Log/schedule meeting'}
+              className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-purple-500/10 text-purple-700 dark:text-purple-400 hover:bg-purple-500/20 border-none cursor-pointer transition-all active:scale-95">
+              <Calendar size={17} />
+              <span className="text-[11px] font-bold">{isRTL ? 'موعد' : 'Meeting'}</span>
+            </button>
+
+            {/* Note — amber soft (opens TakeActionForm preset to note) */}
+            <button onClick={() => { setTab('activity'); setActionPresetType('note'); setShowActionForm(true); }}
+              aria-label={isRTL ? 'إضافة ملاحظة' : 'Add note'}
+              className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 border-none cursor-pointer transition-all active:scale-95">
+              <Pencil size={17} />
+              <span className="text-[11px] font-bold">{isRTL ? 'ملاحظة' : 'Note'}</span>
+            </button>
+          </div>
 
             {/* ═══ WHATSAPP QUICK SEND POPUP ═══ */}
             {showWAPopup && contact.phone && (
@@ -1994,11 +2001,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 {showActionForm && (
                   <div className="mb-4">
                     <TakeActionForm
+                      key={actionPresetType || 'default'}
                       contact={contact}
                       onSaveActivity={handleSaveActivity}
                       onSaveTask={handleSaveTask}
                       onStatusChange={handleStatusChange}
-                      onCancel={() => setShowActionForm(false)}
+                      onCancel={() => { setShowActionForm(false); setActionPresetType(null); }}
+                      initialType={actionPresetType}
                     />
                   </div>
                 )}

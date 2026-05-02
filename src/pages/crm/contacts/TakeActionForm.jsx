@@ -7,7 +7,7 @@ import { TASK_PRIORITIES } from '../../../services/tasksService';
 import { MEETING_SUBTYPES } from '../../../services/activitiesService';
 
 // ── Unified Take Action Form ──────────────────────────────────────────────
-export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, onStatusChange, onCancel }) {
+export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, onStatusChange, onCancel, initialType }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
 
@@ -32,7 +32,7 @@ export default function TakeActionForm({ contact, onSaveActivity, onSaveTask, on
   const [actMode, setActMode] = useState('log');
 
   // Activity state
-  const [actForm, setActForm] = useState({ type: 'call', description: '', result: '', scheduled_date: '', meeting_subtype: '' });
+  const [actForm, setActForm] = useState({ type: initialType || 'call', description: '', result: '', scheduled_date: '', meeting_subtype: '' });
   const setAct = (k, v) => setActForm(f => ({ ...f, [k]: v, ...(k === 'type' ? { result: '', meeting_subtype: '' } : {}) }));
   const currentResults = ACTIVITY_RESULTS[actForm.type] || [];
   const resultRequired = actMode === 'log' && currentResults.length > 0;
