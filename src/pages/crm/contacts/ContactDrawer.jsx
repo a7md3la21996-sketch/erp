@@ -643,14 +643,22 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const agentCount = uniqueAgents.length;
 
   // Detect ghost workers — users who logged activities on this contact but
-  // are NOT in assigned_to_names. Surfaces the drift admin needs to see
-  // (this is the C-21807 pattern that triggered the whole UUID migration).
-  // Only shown to admin/operations.
+  // are NOT in assigned_to_names AND were never previously assigned to it.
+  // After Phase 3 (single-assignment), every reassigned lead would otherwise
+  // surface its prior owner as a "ghost" — pure noise. We now exclude anyone
+  // who appears in assignment_history (as either from or to), so the banner
+  // only fires on the real C-21807 pattern: someone working on a lead they
+  // were never assigned to. Only shown to admin/operations.
   const ghostWorkers = useMemo(() => {
     if (!isAdmin) return [];
-    const assigned = new Set((contact?.assigned_to_names || []));
-    return uniqueAgents.filter(a => a.name && !assigned.has(a.name));
-  }, [uniqueAgents, contact?.assigned_to_names, isAdmin]);
+    const assigned = new Set(contact?.assigned_to_names || []);
+    const everAssigned = new Set();
+    (assignmentHistory || []).forEach(h => {
+      if (h.from) everAssigned.add(h.from);
+      if (h.to) everAssigned.add(h.to);
+    });
+    return uniqueAgents.filter(a => a.name && !assigned.has(a.name) && !everAssigned.has(a.name));
+  }, [uniqueAgents, contact?.assigned_to_names, assignmentHistory, isAdmin]);
 
   const actCount = activities.length;
   const oppCount = opportunities.length;
