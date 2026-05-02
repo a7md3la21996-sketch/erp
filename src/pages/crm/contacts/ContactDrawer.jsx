@@ -1940,33 +1940,50 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           );
           })()}
 
-          {/* ═══ TABS SECTION ═══ */}
-          {/* Fade gradients at edges hint that the tab strip scrolls horizontally
-              on narrow viewports — without them users miss tabs past the edge. */}
-          <div className="sticky top-0 z-[5] bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark relative">
+          {/* ═══ TOC PILLS — sticky horizontal pills jump between sections ═══ */}
+          {/* Fade gradients at edges hint that the strip scrolls horizontally
+              on narrow viewports — without them users miss pills past the edge. */}
+          <div className="sticky top-0 z-[5] bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark relative">
             <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 start-0 w-6 bg-gradient-to-r from-surface-card dark:from-surface-card-dark to-transparent z-[1]" />
             <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 end-0 w-6 bg-gradient-to-l from-surface-card dark:from-surface-card-dark to-transparent z-[1]" />
-            <div role="tablist" className="flex px-3 gap-0 overflow-x-auto scrollbar-none">
+            <div role="tablist" className="flex px-3 py-2 gap-1.5 overflow-x-auto scrollbar-none">
               {tabs.map(t => {
                 const TabIcon = t.icon;
                 const isActive = tab === t.key;
-                const badge = t.key === 'activity' ? actCount : t.key === deptTab.key ? oppCount : t.key === 'comments' ? extraSources.comments.length : null;
+                const badge =
+                  t.key === 'activity' ? actCount :
+                  t.key === deptTab.key ? oppCount :
+                  t.key === 'comments' ? extraSources.comments.length :
+                  t.key === 'documents' ? extraSources.documents.length :
+                  null;
                 const ariaLabel = badge > 0
                   ? (isRTL ? `${t.label}، ${badge} عنصر` : `${t.label}, ${badge} items`)
                   : t.label;
                 return (
-                  <button key={t.key} onClick={() => setTab(t.key)} title={t.label}
+                  <button
+                    key={t.key}
+                    onClick={() => {
+                      setTab(t.key);
+                      // After switching, scroll the tab content into view so
+                      // the user lands at the start of the new section
+                      // (avoids being stuck at the bottom of the previous tab).
+                      requestAnimationFrame(() => {
+                        const node = document.getElementById('drawer-tab-content');
+                        node?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      });
+                    }}
+                    title={t.label}
                     role="tab" aria-selected={isActive} aria-label={ariaLabel}
-                    className={`relative flex items-center gap-1.5 px-3 py-2.5 bg-transparent border-0 border-b-2 border-solid text-[11px] cursor-pointer whitespace-nowrap transition-all ${
+                    className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] cursor-pointer whitespace-nowrap transition-all border ${
                       isActive
-                        ? 'border-b-brand-500 text-brand-500 font-bold'
-                        : 'border-b-transparent text-content-muted dark:text-content-muted-dark font-medium hover:text-content dark:hover:text-content-dark'
+                        ? 'bg-brand-500 text-white border-brand-500 font-bold shadow-sm shadow-brand-500/20'
+                        : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-semibold hover:bg-surface-bg dark:hover:bg-brand-500/10 hover:text-content dark:hover:text-content-dark'
                     }`}>
-                    <TabIcon size={13} aria-hidden="true" />
+                    <TabIcon size={12} aria-hidden="true" />
                     <span>{t.label}</span>
                     {badge > 0 && (
                       <span aria-hidden="true" className={`text-[9px] font-bold min-w-[16px] h-4 rounded-full flex items-center justify-center px-1 ${
-                        isActive ? 'bg-brand-500 text-white' : 'bg-surface-bg dark:bg-brand-500/15 text-content-muted dark:text-content-muted-dark'
+                        isActive ? 'bg-white/25 text-white' : 'bg-brand-500/10 text-brand-500'
                       }`}>{badge}</span>
                     )}
                   </button>
@@ -1976,7 +1993,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           </div>
 
           {/* ═══ TAB CONTENT ═══ */}
-          <div className="p-5">
+          <div id="drawer-tab-content" className="p-5 scroll-mt-12">
 
             {/* ══════ ACTIVITY / TIMELINE TAB ══════ */}
             {tab === 'activity' && (
