@@ -98,6 +98,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // When the hero action buttons (Meeting / Note) open the TakeActionForm
   // they preset the activity type so the user lands on the right tab.
   const [actionPresetType, setActionPresetType] = useState(null);
+  // Inline quick-note composer in the hero — log a note in one keystroke
+  // without opening the full TakeActionForm.
+  const [quickNote, setQuickNote] = useState('');
+  const [quickNoteSaving, setQuickNoteSaving] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showWAPopup, setShowWAPopup] = useState(false);
@@ -510,6 +514,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       // tasks anywhere offline, so the message lied to the user. Surface
       // the real failure so they can retry instead of trusting a phantom save.
       toast.error(err.message || (isRTL ? 'فشل حفظ المهمة' : 'Failed to save task'));
+    }
+  };
+
+  // Inline quick-note submit — same path as TakeActionForm but skips
+  // the auto-status promotion (notes shouldn't change contact_status).
+  const submitQuickNote = async () => {
+    const text = quickNote.trim();
+    if (!text || quickNoteSaving) return;
+    setQuickNoteSaving(true);
+    try {
+      await handleSaveActivity({ type: 'note', description: text }, { skipAutoStatus: true });
+      setQuickNote('');
+    } finally {
+      setQuickNoteSaving(false);
     }
   };
 
@@ -1496,10 +1514,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
               {/* Name + meta */}
               <div className="flex-1 min-w-0">
-                <h2 className={`m-0 text-base font-bold leading-tight ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
-                  {contact.prefix && <span className="text-[#6B8DB5] font-medium me-1 text-sm">{contact.prefix}</span>}
-                  {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
-                </h2>
+                <div className="flex items-center gap-1.5">
+                  <h2 className={`m-0 text-base font-bold leading-tight ${contact.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                    {contact.prefix && <span className="text-[#6B8DB5] font-medium me-1 text-sm">{contact.prefix}</span>}
+                    {contact.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
+                  </h2>
+                  {isPinned && (
+                    <Pin
+                      size={13}
+                      className="text-amber-500 shrink-0"
+                      fill="#F59E0B"
+                      aria-label={isRTL ? 'مثبّت' : 'Pinned'}
+                    />
+                  )}
+                </div>
                 {/* Identity badges row: type, dept, contact_number, blacklisted */}
                 <div className="flex items-center gap-1.5 flex-wrap mt-1">
                   {tp && <Chip label={isRTL ? tp.label : tp.labelEn} color={tp.color} bg={tp.bg} />}
@@ -1691,6 +1719,37 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
               <span className="text-[11px] font-bold">{isRTL ? 'ملاحظة' : 'Note'}</span>
             </button>
           </div>
+
+          {/* ═══ QUICK-NOTE COMPOSER — one-keystroke note logging ═══ */}
+          {canEditContact && (
+            <div className="pb-4">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark focus-within:border-brand-500/50 focus-within:bg-surface-card dark:focus-within:bg-surface-card-dark transition-colors">
+                <Pencil size={13} className="text-content-muted dark:text-content-muted-dark shrink-0" />
+                <input
+                  type="text"
+                  value={quickNote}
+                  onChange={e => setQuickNote(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); submitQuickNote(); } }}
+                  placeholder={isRTL ? 'اكتب ملاحظة سريعة... (اضغط Enter للحفظ)' : 'Quick note... (Enter to save)'}
+                  disabled={quickNoteSaving}
+                  className="flex-1 bg-transparent border-none outline-none text-[12.5px] text-content dark:text-content-dark placeholder:text-content-muted/60 dark:placeholder:text-content-muted-dark/60 font-cairo disabled:opacity-50"
+                />
+                {quickNote.trim() && (
+                  <button
+                    onClick={submitQuickNote}
+                    disabled={quickNoteSaving}
+                    aria-label={isRTL ? 'حفظ الملاحظة' : 'Save note'}
+                    className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center bg-brand-500 text-white border-none cursor-pointer hover:bg-brand-600 active:scale-95 transition-all disabled:opacity-50">
+                    {quickNoteSaving ? (
+                      <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Send size={12} />
+                    )}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
             {/* ═══ WHATSAPP QUICK SEND POPUP ═══ */}
             {showWAPopup && contact.phone && (
