@@ -39,6 +39,7 @@ import QuickTaskModal from './crm/contacts/QuickTaskModal';
 import BlacklistModal from './crm/contacts/BlacklistModal';
 import ContactDrawer from './crm/contacts/ContactDrawer';
 import ContactsTable from './crm/contacts/ContactsTable';
+import ContactsCardList from './crm/contacts/ContactsCardList';
 import QuickActionPopover from './crm/contacts/QuickActionPopover';
 import BatchCallModal from './crm/contacts/BatchCallModal';
 import BulkActionToolbar from './crm/contacts/BulkActionToolbar';
@@ -1165,7 +1166,7 @@ export default function ContactsPage() {
         <style>{`@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }`}</style>
       </div>
     )}
-    <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>
+    <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen overflow-x-hidden ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>
       {/* Page Header */}
       <div className="mb-5 flex justify-between items-start flex-wrap gap-3">
         <div>
@@ -1182,8 +1183,9 @@ export default function ContactsPage() {
             </button>
           )}
           {perms.canImportContacts && (
-            <button onClick={() => setShowImportModal(true)} className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
-              <Upload size={14} /> {isRTL ? 'استيراد' : 'Import'}
+            <button onClick={() => setShowImportModal(true)} aria-label={isRTL ? 'استيراد' : 'Import'}
+              className="px-3.5 py-2.5 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg text-content-muted dark:text-content-muted-dark text-xs cursor-pointer flex items-center gap-1.5">
+              <Upload size={14} /> <span className="hidden sm:inline">{isRTL ? 'استيراد' : 'Import'}</span>
             </button>
           )}
           <Button size="sm" onClick={() => setShowAddModal(true)}>
@@ -1378,8 +1380,12 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* Table */}
+      {/* List view — table on md+ desktop, cards on mobile.
+          Same data + handlers; the card list trades column density for
+          thumb-friendly tap targets. */}
       <div style={{ opacity: searching ? 0.5 : 1, transition: 'opacity 0.15s', pointerEvents: searching ? 'none' : 'auto' }}>
+      {/* Desktop: table */}
+      <div className="hidden md:block">
       <ContactsTable
         loading={loading}
         filtered={filtered}
@@ -1425,6 +1431,39 @@ export default function ContactsPage() {
         agentName={profile?.full_name_en || profile?.full_name_ar}
         deptView={deptView}
       />
+      </div>
+      {/* Mobile: cards */}
+      <div className="md:hidden">
+      <ContactsCardList
+        loading={loading}
+        filtered={filtered}
+        paged={paged}
+        pinnedIds={pinnedIds}
+        selectedIdSet={selectedIdSet}
+        mergeMode={mergeMode}
+        mergeTargets={mergeTargets}
+        setMergeTargets={setMergeTargets}
+        MERGE_LIMIT={MERGE_LIMIT}
+        setSelected={setSelected}
+        toggleSelect={toggleSelect}
+        togglePin={togglePin}
+        MAX_PINS={MAX_PINS}
+        setLogCallTarget={setLogCallTarget}
+        setBlacklistTarget={setBlacklistTarget}
+        setDisqualifyModal={setDisqualifyModal}
+        setDqReason={setDqReason}
+        setDqNote={setDqNote}
+        handleDelete={handleDelete}
+        perms={perms}
+        isRTL={isRTL}
+        safePage={page}
+        totalPages={Math.max(1, Math.ceil(totalContacts / pageSize))}
+        setPage={setPage}
+        pageSize={pageSize}
+        setPageSize={(s) => { setPageSize(s); setPage(1); }}
+        totalContacts={totalContacts}
+      />
+      </div>
       </div>
 
       {/* Quick Action Popover */}

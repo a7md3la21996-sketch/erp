@@ -241,10 +241,12 @@ export default function SmartFilter({
             )}
           </button>
 
-          {/* Popover */}
+          {/* Popover — on mobile, drop the 300px floor so it can shrink to fit
+              the viewport. Without this it would push past the screen edge on
+              narrow phones (320–360px). */}
           {showAddRow && (
             <div
-              className="absolute top-[40px] start-0 z-[200] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-4 min-w-[300px] sm:min-w-[400px] max-w-[calc(100vw-2rem)] sm:max-w-[480px]"
+              className="absolute top-[40px] start-0 z-[200] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-4 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[400px] sm:max-w-[480px]"
               dir={isRTL ? 'rtl' : 'ltr'}
             >
               <div className="flex items-center justify-between mb-2.5">
@@ -380,9 +382,11 @@ export default function SmartFilter({
           )}
         </div>
 
-        {/* Quick Filters */}
+        {/* Quick Filters — flex-1 + min-w-0 lets the inner overflow-x-auto
+            actually kick in inside a flex-wrap parent (otherwise it sized
+            to its content and pushed the row off-screen on mobile). */}
         {quickFilters.length > 0 && (
-          <div className="flex gap-1.5 items-center overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <div className="flex-1 min-w-0 flex gap-1.5 items-center overflow-x-auto scrollbar-hide" style={{ WebkitOverflowScrolling: 'touch' }}>
             <Zap size={12} className="text-[#6B8DB5] shrink-0" />
             {quickFilters.map((qf, i) => {
               const active = isQuickFilterActive(qf);
@@ -415,7 +419,8 @@ export default function SmartFilter({
             </button>
             {sortOpen && (
               <div
-                className="absolute top-full mt-1 end-0 z-50 min-w-[160px] max-w-[calc(100vw-2rem)] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg py-1 overflow-hidden"
+                role="menu"
+                className="absolute top-full mt-1 end-0 z-50 min-w-[180px] w-max max-w-[calc(100vw-1rem)] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg py-1 overflow-hidden"
               >
                 {sortOptions.map(opt => {
                   const isActive = opt.value === sortBy;
