@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
-import { Phone, MessageCircle, Pin, MoreVertical, PhoneCall, Mail, FileText, Ban, Users } from 'lucide-react';
-import { TYPE, TEMP, normalizePhone, agentInitials } from './constants';
+import { Phone, MessageCircle, Pin, MoreVertical, PhoneCall, Mail, FileText, Ban, Users, Megaphone } from 'lucide-react';
+import { TYPE, TEMP, normalizePhone, agentInitials, PhoneCell } from './constants';
 import { Pagination } from '../../../components/ui';
 
 // Mobile-first card view of the contacts list. Same data and handlers as
@@ -157,11 +157,25 @@ export default function ContactsCardList({
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 truncate" dir="ltr">
-                      {c.phone || (isRTL ? 'بدون رقم' : 'no phone')}
-                      {c.source && <> · {c.source}</>}
-                      {typeData && <> · {isRTL ? typeData.label : typeData.labelEn}</>}
+                    {/* Masked phone (tap to reveal) + source + type */}
+                    <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 flex items-center gap-1.5 flex-wrap min-w-0">
+                      {c.phone ? (
+                        <span onClick={e => e.stopPropagation()} className="inline-flex">
+                          <PhoneCell phone={c.phone} small />
+                        </span>
+                      ) : (
+                        <span>{isRTL ? 'بدون رقم' : 'no phone'}</span>
+                      )}
+                      {c.source && <span className="opacity-60">· {c.source}</span>}
+                      {typeData && <span className="opacity-60">· {isRTL ? typeData.label : typeData.labelEn}</span>}
                     </div>
+                    {/* Campaign — shown when present so the agent knows where the lead came from */}
+                    {c.campaign_name && (
+                      <div className="text-[11px] text-brand-500 dark:text-brand-400 mt-1 flex items-center gap-1 truncate">
+                        <Megaphone size={11} className="shrink-0" />
+                        <span className="truncate">{c.campaign_name}</span>
+                      </div>
+                    )}
                   </div>
                   {isPinned && (
                     <Pin size={14} className="text-amber-500 shrink-0 mt-0.5" fill="currentColor" aria-label={isRTL ? 'مثبت' : 'Pinned'} />
@@ -203,7 +217,7 @@ export default function ContactsCardList({
                   {c.phone ? (
                     <a
                       href={`tel:${normalizePhone(c.phone)}`}
-                      className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs font-semibold no-underline active:scale-95 transition-transform"
+                      className="flex-1 h-11 flex items-center justify-center gap-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-xs font-semibold no-underline active:scale-95 transition-transform"
                       aria-label={isRTL ? 'اتصال' : 'Call'}
                     >
                       <Phone size={14} /> {isRTL ? 'اتصال' : 'Call'}
