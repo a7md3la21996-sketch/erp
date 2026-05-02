@@ -1352,87 +1352,121 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 <>
                   <div className="fixed inset-0 z-[99]" onClick={() => setShowDrawerMenu(false)} />
                   <div role="menu" className="absolute top-full end-0 mt-1 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl min-w-[210px] max-w-[calc(100vw-2rem)] z-[100] shadow-[0_12px_40px_rgba(27,51,71,0.18)] overflow-hidden">
-                    <div className="p-1">
-                      {canEditContact && (
-                        <button onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Lead'}
-                        </button>
-                      )}
-                      {contact.email && (
-                        <a href={`mailto:${contact.email}`} onClick={() => setShowDrawerMenu(false)} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg no-underline cursor-pointer text-xs text-content dark:text-content-dark hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Mail size={13} className="text-brand-500" /> {isRTL ? 'إرسال إيميل' : 'Send Email'}
-                        </a>
-                      )}
-                      {contact.phone && (
-                        <button onClick={() => { setShowSMSModal(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Send size={13} className="text-brand-500" /> {isRTL ? 'إرسال SMS' : 'Send SMS'}
-                        </button>
-                      )}
-                      <button onClick={handleToggleFav} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                        <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#F59E0B' : 'none'} /> {isFav ? (isRTL ? 'إزالة المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
-                      </button>
-                      {onPin && (
-                        <button onClick={() => { onPin(contact.id); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Pin size={13} className={isPinned ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} /> {isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : (isRTL ? 'تثبيت' : 'Pin')}
-                        </button>
-                      )}
-                      {onLogCall && (
-                        <button onClick={() => { onLogCall(contact); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
-                        </button>
-                      )}
-                      {onReminder && (
-                        <button onClick={() => { onReminder(contact); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
-                        </button>
-                      )}
-                      <button onClick={() => { setShowPrintPreview(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                        <FileDown size={13} className="text-brand-500" /> {isRTL ? 'طباعة' : 'Print'}
-                      </button>
-                      {isAdmin && contact.phone && (
-                        <button onClick={() => { window.open(`/contacts/master/${encodeURIComponent(contact.phone)}`, '_blank'); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Users size={13} className="text-purple-500" /> {isRTL ? 'البروفايل الموحد' : 'Master Profile'}
-                        </button>
-                      )}
-                      {(isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader') && (
-                        <button onClick={() => { setShowHandOff(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Send size={13} className="text-blue-500" /> {isRTL ? 'تسليم الليد' : 'Hand Off Lead'}
-                        </button>
-                      )}
-                      {(isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader') && (
-                        <button onClick={() => { setShowDistribute(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Send size={13} className="text-purple-500" /> {isRTL ? 'توزيع للمنافسة' : 'Distribute (compete)'}
-                        </button>
-                      )}
-                      {isAdmin && contact.phone && (
-                        <button onClick={() => { setShowPullLeads(true); setShowDrawerMenu(false); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Award size={13} className="text-green-600" /> {isRTL ? 'سحب الليد من الباقي' : 'Pull from Others'}
-                        </button>
-                      )}
-                      {onDelete && canDeleteContact && (
-                        <button onClick={() => {
-                          if (window.confirm(isRTL ? `حذف الليد "${contact.full_name}"؟ لا يمكن التراجع عن العملية.` : `Delete lead "${contact.full_name}"? This action cannot be undone.`)) {
-                            onDelete(contact.id);
-                            setShowDrawerMenu(false);
-                          }
-                        }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10">
-                          <Trash2 size={13} className="text-content-muted dark:text-content-muted-dark" /> {isRTL ? 'حذف' : 'Delete'}
-                        </button>
-                      )}
-                      {!contact.is_blacklisted && canEditContact && (
-                        <>
-                          <div className="h-px bg-edge dark:bg-edge-dark mx-1 my-0.5" />
-                          <button onClick={() => {
-                            if (window.confirm(isRTL ? `إضافة "${contact.full_name}" للبلاك ليست؟` : `Add "${contact.full_name}" to blacklist?`)) {
-                              onBlacklist(contact);
-                              setShowDrawerMenu(false);
-                            }
-                          }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
-                            <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
+                    {(() => {
+                      const isLeader = isAdmin || profile?.role === 'sales_manager' || profile?.role === 'team_leader';
+                      const itemCls = "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-content dark:text-content-dark font-inherit hover:bg-surface-bg dark:hover:bg-brand-500/10";
+                      const sectionLabelCls = "text-[9px] font-bold uppercase tracking-wider text-content-muted dark:text-content-muted-dark px-3 pt-2 pb-1";
+                      const Divider = () => <div className="h-px bg-edge dark:bg-edge-dark mx-1 my-1" />;
+                      const groups = [
+                        // Edit (single primary action)
+                        canEditContact && (
+                          <button key="edit" onClick={() => { setShowEdit(true); setShowDrawerMenu(false); }} className={itemCls}>
+                            <Pencil size={13} className="text-brand-500" /> {isRTL ? 'تعديل البيانات' : 'Edit Lead'}
                           </button>
-                        </>
-                      )}
-                    </div>
+                        ),
+                        // Communicate group
+                        (contact.email || contact.phone || onLogCall) && (
+                          <div key="communicate">
+                            {canEditContact && <Divider />}
+                            <div className={sectionLabelCls}>{isRTL ? 'تواصل' : 'Communicate'}</div>
+                            {contact.email && (
+                              <a href={`mailto:${contact.email}`} onClick={() => setShowDrawerMenu(false)} className={`${itemCls} no-underline`}>
+                                <Mail size={13} className="text-brand-500" /> {isRTL ? 'إرسال إيميل' : 'Send Email'}
+                              </a>
+                            )}
+                            {contact.phone && (
+                              <button onClick={() => { setShowSMSModal(true); setShowDrawerMenu(false); }} className={itemCls}>
+                                <Send size={13} className="text-brand-500" /> {isRTL ? 'إرسال SMS' : 'Send SMS'}
+                              </button>
+                            )}
+                            {onLogCall && (
+                              <button onClick={() => { onLogCall(contact); setShowDrawerMenu(false); }} className={itemCls}>
+                                <PhoneCall size={13} className="text-brand-500" /> {isRTL ? 'تسجيل مكالمة' : 'Log Call'}
+                              </button>
+                            )}
+                          </div>
+                        ),
+                        // Personal group
+                        <div key="personal">
+                          <Divider />
+                          <div className={sectionLabelCls}>{isRTL ? 'شخصي' : 'Personal'}</div>
+                          <button onClick={handleToggleFav} className={itemCls}>
+                            <Star size={13} className={isFav ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} fill={isFav ? '#F59E0B' : 'none'} />
+                            {isFav ? (isRTL ? 'إزالة المفضلة' : 'Unfavorite') : (isRTL ? 'إضافة للمفضلة' : 'Favorite')}
+                          </button>
+                          {onPin && (
+                            <button onClick={() => { onPin(contact.id); setShowDrawerMenu(false); }} className={itemCls}>
+                              <Pin size={13} className={isPinned ? 'text-amber-500' : 'text-content-muted dark:text-content-muted-dark'} />
+                              {isPinned ? (isRTL ? 'إلغاء التثبيت' : 'Unpin') : (isRTL ? 'تثبيت' : 'Pin')}
+                            </button>
+                          )}
+                          {onReminder && (
+                            <button onClick={() => { onReminder(contact); setShowDrawerMenu(false); }} className={itemCls}>
+                              <Bell size={13} className="text-amber-500" /> {isRTL ? 'تذكير' : 'Reminder'}
+                            </button>
+                          )}
+                        </div>,
+                        // Tools group
+                        <div key="tools">
+                          <Divider />
+                          <div className={sectionLabelCls}>{isRTL ? 'أدوات' : 'Tools'}</div>
+                          <button onClick={() => { setShowPrintPreview(true); setShowDrawerMenu(false); }} className={itemCls}>
+                            <FileDown size={13} className="text-brand-500" /> {isRTL ? 'طباعة' : 'Print'}
+                          </button>
+                          {isAdmin && contact.phone && (
+                            <button onClick={() => { window.open(`/contacts/master/${encodeURIComponent(contact.phone)}`, '_blank'); setShowDrawerMenu(false); }} className={itemCls}>
+                              <Users size={13} className="text-purple-500" /> {isRTL ? 'البروفايل الموحد' : 'Master Profile'}
+                            </button>
+                          )}
+                        </div>,
+                        // Lead Management group (managers/leaders only)
+                        isLeader && (
+                          <div key="leadmgmt">
+                            <Divider />
+                            <div className={sectionLabelCls}>{isRTL ? 'إدارة الليد' : 'Lead Management'}</div>
+                            <button onClick={() => { setShowHandOff(true); setShowDrawerMenu(false); }} className={itemCls}>
+                              <Send size={13} className="text-blue-500" /> {isRTL ? 'تسليم الليد' : 'Hand Off Lead'}
+                            </button>
+                            <button onClick={() => { setShowDistribute(true); setShowDrawerMenu(false); }} className={itemCls}>
+                              <Send size={13} className="text-purple-500" /> {isRTL ? 'توزيع للمنافسة' : 'Distribute (compete)'}
+                            </button>
+                            {isAdmin && contact.phone && (
+                              <button onClick={() => { setShowPullLeads(true); setShowDrawerMenu(false); }} className={itemCls}>
+                                <Award size={13} className="text-green-600" /> {isRTL ? 'سحب الليد من الباقي' : 'Pull from Others'}
+                              </button>
+                            )}
+                          </div>
+                        ),
+                        // Danger group
+                        ((onDelete && canDeleteContact) || (!contact.is_blacklisted && canEditContact)) && (
+                          <div key="danger">
+                            <Divider />
+                            <div className={`${sectionLabelCls} text-red-500/70 dark:text-red-400/70`}>{isRTL ? 'منطقة الخطر' : 'Danger Zone'}</div>
+                            {onDelete && canDeleteContact && (
+                              <button onClick={() => {
+                                if (window.confirm(isRTL ? `حذف الليد "${contact.full_name}"؟ لا يمكن التراجع عن العملية.` : `Delete lead "${contact.full_name}"? This action cannot be undone.`)) {
+                                  onDelete(contact.id);
+                                  setShowDrawerMenu(false);
+                                }
+                              }} className={`${itemCls} text-red-500 hover:bg-red-500/[0.05]`}>
+                                <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
+                              </button>
+                            )}
+                            {!contact.is_blacklisted && canEditContact && (
+                              <button onClick={() => {
+                                if (window.confirm(isRTL ? `إضافة "${contact.full_name}" للبلاك ليست؟` : `Add "${contact.full_name}" to blacklist?`)) {
+                                  onBlacklist(contact);
+                                  setShowDrawerMenu(false);
+                                }
+                              }} className={`${itemCls} text-red-500 hover:bg-red-500/[0.05]`}>
+                                <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
+                              </button>
+                            )}
+                          </div>
+                        ),
+                      ];
+                      return <div className="p-1">{groups.filter(Boolean)}</div>;
+                    })()}
                   </div>
                 </>
               )}
@@ -1998,19 +2032,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             {/* ══════ ACTIVITY / TIMELINE TAB ══════ */}
             {tab === 'activity' && (
               <div>
-                {/* Take Action + New Opp Buttons */}
-                <div className="flex gap-2 mb-4">
-                  <button onClick={() => setShowActionForm(p => !p)}
-                    className={`flex-1 py-2.5 rounded-xl text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border transition-all ${
+                {/* Take Action (full form) + New Opp — secondary, since hero has the
+                    primary 4 buttons. Smaller pill style keeps focus on the timeline. */}
+                <div className="flex gap-2 mb-3 flex-wrap">
+                  <button onClick={() => { setActionPresetType(null); setShowActionForm(p => !p); }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-semibold cursor-pointer border transition-all ${
                       showActionForm
-                        ? 'bg-brand-500 text-white border-brand-500 shadow-sm shadow-brand-500/20'
-                        : 'bg-brand-500/[0.06] border-brand-500/20 text-brand-500 hover:bg-brand-500/[0.12]'
+                        ? 'bg-brand-500 text-white border-brand-500'
+                        : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-brand-500/40 hover:text-brand-500'
                     }`}>
-                    <Zap size={14} /> {isRTL ? 'اتخذ إجراء' : 'Take Action'}
+                    <Zap size={12} /> {isRTL ? 'إجراء كامل' : 'Full Action'}
                   </button>
                   <button onClick={() => setShowOppModal(true)}
-                    className="flex-1 py-2.5 rounded-xl text-xs font-semibold cursor-pointer flex items-center justify-center gap-1.5 border bg-emerald-500/[0.06] border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/[0.12] transition-all">
-                    <Plus size={14} /> {isRTL ? 'فرصة جديدة' : 'New Opp'}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-semibold cursor-pointer border bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-emerald-500/40 hover:text-emerald-500 transition-all">
+                    <Plus size={12} /> {isRTL ? 'فرصة جديدة' : 'New Opp'}
                   </button>
                 </div>
 
@@ -2091,12 +2126,14 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     <span className="text-xs">{isRTL ? 'جاري التحميل...' : 'Loading...'}</span>
                   </div>
                 ) : filteredTimeline.length === 0 ? (
-                  <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
-                    <div className="w-12 h-12 rounded-2xl bg-surface-bg dark:bg-surface-bg-dark flex items-center justify-center mb-3">
-                      <Clock size={24} className="opacity-30" />
+                  <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark text-center px-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-brand-500/[0.08] to-brand-500/[0.02] flex items-center justify-center mb-3 border border-brand-500/10">
+                      <Clock size={26} className="text-brand-500/60" />
                     </div>
-                    <p className="m-0 text-xs font-medium">{isRTL ? 'لا توجد سجلات بعد' : 'No records yet'}</p>
-                    <p className="m-0 mt-1 text-[11px] opacity-60">{isRTL ? 'ابدأ بإضافة نشاط أو إجراء' : 'Start by adding an activity or action'}</p>
+                    <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{isRTL ? 'لا توجد سجلات بعد' : 'No records yet'}</p>
+                    <p className="m-0 mt-1.5 text-[11.5px] leading-relaxed max-w-[260px]">
+                      {isRTL ? 'استخدم الأزرار في الأعلى للاتصال أو إرسال واتساب أو تسجيل ملاحظة' : 'Use the buttons above to call, message, or log a note'}
+                    </p>
                   </div>
                 ) : (
                   <div>
