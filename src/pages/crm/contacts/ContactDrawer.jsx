@@ -90,6 +90,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showPullLeads, setShowPullLeads] = useState(false);
   const [showHandOff, setShowHandOff] = useState(false);
   const [showDrawerMenu, setShowDrawerMenu] = useState(false);
+  // Quick status change popover anchored on the hero status chip — lets the
+  // viewer flip their own status without opening the full TakeActionForm.
+  const [showQuickStatus, setShowQuickStatus] = useState(false);
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showWAPopup, setShowWAPopup] = useState(false);
@@ -358,6 +361,81 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onPrev, onNext, showEdit, showOppModal, showSMSModal, showWAPopup, showPrintPreview, isRTL]);
+
+  // Touch gestures (mobile): swipe horizontally to navigate prev/next,
+  // pull down from the top to close. Both share a touch listener so we
+  // can distinguish horizontal vs vertical intent on the same gesture
+  // and avoid hijacking normal scrolling inside the drawer.
+  const SWIPE_NAV_THRESHOLD = 90;
+  const PULL_CLOSE_THRESHOLD = 130;
+  const [pullCloseDistance, setPullCloseDistance] = useState(0);
+  useEffect(() => {
+    const node = drawerRef.current;
+    if (!node) return;
+    let startX = 0, startY = 0, scrollAtStart = 0, locked = null;
+    const findScroller = () => node.querySelector('.flex-1.overflow-y-auto') || node;
+    const onStart = (e) => {
+      if (showEdit || showOppModal || showSMSModal || showWAPopup || showPrintPreview || showDistribute || showPullLeads || showHandOff || showDrawerMenu) return;
+      const t = e.touches[0];
+      startX = t.clientX; startY = t.clientY;
+      scrollAtStart = findScroller().scrollTop;
+      locked = null;
+    };
+    const onMove = (e) => {
+      if (!startX) return;
+      const t = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      // First decisive movement decides which gesture this is. After that,
+      // ignore the other axis for the rest of the touch — keeps normal
+      // vertical scrolling smooth even if the finger drifts sideways.
+      if (locked == null && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+        locked = Math.abs(dx) > Math.abs(dy) * 1.4 ? 'h' : 'v';
+      }
+      // Pull-down: only if the inner scroller was already at the top when
+      // the gesture began. Otherwise it's just normal scrolling.
+      if (locked === 'v' && dy > 0 && scrollAtStart === 0) {
+        setPullCloseDistance(Math.min(dy * 0.6, PULL_CLOSE_THRESHOLD * 1.4));
+      }
+    };
+    const onEnd = (e) => {
+      if (!startX) return;
+      const t = (e.changedTouches && e.changedTouches[0]) || { clientX: startX, clientY: startY };
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      const reset = () => { startX = 0; startY = 0; setPullCloseDistance(0); locked = null; };
+      // Pull-down close
+      if (locked === 'v' && dy > PULL_CLOSE_THRESHOLD && scrollAtStart === 0) {
+        reset();
+        onClose?.();
+        return;
+      }
+      // Horizontal swipe nav (RTL-aware)
+      if (locked === 'h' && Math.abs(dx) > SWIPE_NAV_THRESHOLD) {
+        // In LTR a leftward swipe (dx < 0) means "go to next" because the
+        // user is pushing the current card away to reveal the next one;
+        // RTL flips this.
+        const goNext = isRTL ? dx > 0 : dx < 0;
+        const goPrev = !goNext;
+        reset();
+        if (goNext && onNext) onNext();
+        else if (goPrev && onPrev) onPrev();
+        return;
+      }
+      reset();
+    };
+    node.addEventListener('touchstart', onStart, { passive: true });
+    node.addEventListener('touchmove', onMove, { passive: true });
+    node.addEventListener('touchend', onEnd);
+    node.addEventListener('touchcancel', onEnd);
+    return () => {
+      node.removeEventListener('touchstart', onStart);
+      node.removeEventListener('touchmove', onMove);
+      node.removeEventListener('touchend', onEnd);
+      node.removeEventListener('touchcancel', onEnd);
+    };
+  }, [onPrev, onNext, onClose, isRTL, showEdit, showOppModal, showSMSModal, showWAPopup, showPrintPreview, showDistribute, showPullLeads, showHandOff, showDrawerMenu]);
+  const pullCloseRatio = Math.min(pullCloseDistance / PULL_CLOSE_THRESHOLD, 1);
 
   useEffect(() => {
     if (!showOppModal) return;
@@ -1156,8 +1234,31 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       {/* Backdrop */}
       <div onClick={onClose} className="flex-1 bg-black/50 backdrop-blur-[2px]" aria-hidden="true" />
 
-      {/* Drawer Panel */}
-      <div ref={drawerRef} className={`contact-drawer w-[480px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark`}>
+      {/* Drawer Panel — translates downward as the user pulls to close. */}
+      <div
+        ref={drawerRef}
+        style={pullCloseDistance > 0 ? { transform: `translateY(${pullCloseDistance * 0.4}px)`, transition: 'none' } : { transition: 'transform 0.2s ease-out' }}
+        className={`contact-drawer w-[480px] max-w-[100vw] bg-surface-card dark:bg-surface-card-dark flex flex-col overflow-x-hidden shadow-2xl ${isRTL ? 'border-s' : 'border-e'} border-edge dark:border-edge-dark`}
+      >
+        {/* Pull-down hint — only visible while pulling. The chevron flips
+            once the user passes the close threshold so they know they can
+            release. */}
+        {pullCloseDistance > 0 && (
+          <div
+            aria-hidden="true"
+            className="absolute top-0 inset-x-0 z-20 flex items-center justify-center text-content-muted dark:text-content-muted-dark pointer-events-none"
+            style={{ height: pullCloseDistance, opacity: pullCloseRatio }}
+          >
+            <ChevronDown
+              size={20}
+              className="transition-transform"
+              style={{ transform: `rotate(${pullCloseRatio >= 1 ? 180 : 0}deg)` }}
+            />
+            <span className="ms-1.5 text-[11px] font-semibold">
+              {pullCloseRatio >= 1 ? (isRTL ? 'اتركها للإغلاق' : 'Release to close') : (isRTL ? 'اسحب للإغلاق' : 'Pull to close')}
+            </span>
+          </div>
+        )}
 
         {/* ═══ STICKY TOP BAR ═══ */}
         <div className="shrink-0 sticky top-0 z-10 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur-sm border-b border-edge dark:border-edge-dark">
@@ -1258,18 +1359,77 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 )}
               </div>
 
-              {/* Per-agent status badges — one per assignee. Viewer's badge is ringed. */}
+              {/* Per-agent status badges. Viewer's own chip is interactive
+                  — tap it to open the quick-status popover and flip status
+                  without going through the full TakeActionForm. Other
+                  people's chips stay read-only. The chip's React key
+                  includes the status, so changing it remounts the element
+                  and re-runs the fade-in animation as visual feedback. */}
               {heroStatusChips.length > 0 ? (
                 <div className="flex items-center gap-1 flex-wrap justify-center">
-                  {heroStatusChips.map(b => (
-                    <span key={b.name}
-                      className={`inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full ${b.isMine ? 'ring-1 ring-brand-500/40' : ''}`}
-                      style={{ color: b.color, background: b.color + '18', border: `1px solid ${b.color}25` }}
-                      title={b.name}>
-                      {heroStatusChips.length > 1 && <span className="font-mono text-[9px] opacity-80">{agentInitials(b.name)}</span>}
-                      {b.label}
-                    </span>
-                  ))}
+                  {heroStatusChips.map(b => {
+                    const interactive = b.isMine && canEditContact;
+                    const chipCls = `inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full transition-all animate-in fade-in zoom-in-95 duration-300 ${b.isMine ? 'ring-1 ring-brand-500/40' : ''} ${interactive ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'}`;
+                    const chipStyle = { color: b.color, background: b.color + '18', border: `1px solid ${b.color}25` };
+                    // Key includes the status label so any status change
+                    // remounts the chip and re-runs the animate-in transition.
+                    const chipKey = `${b.name}:${b.label}`;
+                    if (!interactive) {
+                      return (
+                        <span key={chipKey} className={chipCls} style={chipStyle} title={b.name}>
+                          {heroStatusChips.length > 1 && <span className="font-mono text-[9px] opacity-80">{agentInitials(b.name)}</span>}
+                          {b.label}
+                        </span>
+                      );
+                    }
+                    return (
+                      <div key={chipKey} className="relative">
+                        <button
+                          onClick={() => setShowQuickStatus(s => !s)}
+                          className={chipCls}
+                          style={chipStyle}
+                          title={isRTL ? 'تغيير الحالة' : 'Change status'}
+                          aria-haspopup="menu"
+                          aria-expanded={showQuickStatus}
+                        >
+                          {heroStatusChips.length > 1 && <span className="font-mono text-[9px] opacity-80">{agentInitials(b.name)}</span>}
+                          {b.label}
+                          <ChevronDown size={10} className="opacity-70" />
+                        </button>
+                        {showQuickStatus && (
+                          <>
+                            <div className="fixed inset-0 z-[60]" onClick={() => setShowQuickStatus(false)} />
+                            <div role="menu"
+                              className="absolute top-full mt-1.5 start-1/2 -translate-x-1/2 z-[61] min-w-[180px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden">
+                              <div className="text-[10px] font-bold text-content-muted dark:text-content-muted-dark uppercase tracking-wide px-3 py-1.5 border-b border-edge/50 dark:border-edge-dark/50">
+                                {isRTL ? 'تغيير الحالة' : 'Change status'}
+                              </div>
+                              {[
+                                { v: 'new', label: isRTL ? 'جديد' : 'New', color: '#4A7AAB' },
+                                { v: 'contacted', label: isRTL ? 'تم التواصل' : 'Contacted', color: '#F59E0B' },
+                                { v: 'following', label: isRTL ? 'متابعة' : 'Following', color: '#10B981' },
+                                { v: 'has_opportunity', label: isRTL ? 'لديه فرصة' : 'Has Opportunity', color: '#059669' },
+                                { v: 'disqualified', label: isRTL ? 'غير مؤهل' : 'Disqualified', color: '#EF4444' },
+                              ].map(opt => {
+                                const isCurrent = opt.v === contact.contact_status;
+                                return (
+                                  <button key={opt.v}
+                                    role="menuitem"
+                                    onClick={() => { setShowQuickStatus(false); if (!isCurrent) handleStatusChange(opt.v); }}
+                                    className={`w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer border-none bg-transparent text-start hover:bg-brand-500/10 ${isCurrent ? 'font-bold' : ''}`}
+                                    style={isCurrent ? { color: opt.color, background: opt.color + '12' } : undefined}>
+                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: opt.color }} />
+                                    <span className="flex-1">{opt.label}</span>
+                                    {isCurrent && <Check size={12} style={{ color: opt.color }} />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <span className="inline-flex items-center text-[11px] font-medium px-3 py-1 rounded-full text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark">
@@ -2177,16 +2337,24 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                 </div>
 
                 {/* Grouped Data Sections */}
-                <div className="flex flex-col gap-3 mb-4">
+                <div className="flex flex-col gap-4 mb-4">
                   {dataGroups.map(group => {
                     const GroupIcon = group.icon;
                     return (
-                      <div key={group.title} className="rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden">
-                        <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-bg/60 dark:bg-surface-bg-dark/40 border-b border-edge/50 dark:border-edge-dark/50">
-                          <div className="w-5 h-5 rounded-md flex items-center justify-center" style={{ background: group.color + '15' }}>
-                            <GroupIcon size={12} style={{ color: group.color }} />
+                      <div
+                        key={group.title}
+                        className="rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden shadow-sm"
+                        style={{ borderInlineStartWidth: '3px', borderInlineStartColor: group.color }}
+                      >
+                        <div
+                          className="flex items-center gap-2.5 px-3.5 py-3 border-b border-edge/50 dark:border-edge-dark/50"
+                          style={{ background: `linear-gradient(90deg, ${group.color}14 0%, ${group.color}04 100%)` }}
+                        >
+                          <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: group.color + '22' }}>
+                            <GroupIcon size={13} style={{ color: group.color }} />
                           </div>
-                          <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wider">{group.title}</span>
+                          <span className="text-[12px] font-bold text-content dark:text-content-dark uppercase tracking-wider" style={{ color: group.color }}>{group.title}</span>
+                          <span className="ms-auto text-[10px] text-content-muted dark:text-content-muted-dark font-semibold tabular-nums">{group.rows.length}</span>
                         </div>
                         <div className="px-3.5">
                           {group.rows.map(r => (
@@ -2217,13 +2385,19 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   const viewers = getEntityViewers('contact', contact.id);
                   if (viewers.length === 0) return null;
                   return (
-                    <div className="rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden mb-4">
-                      <div className="flex items-center gap-2 px-3.5 py-2.5 bg-surface-bg/60 dark:bg-surface-bg-dark/40 border-b border-edge/50 dark:border-edge-dark/50">
-                        <div className="w-5 h-5 rounded-md flex items-center justify-center bg-purple-500/15">
-                          <Star size={12} style={{ color: '#6B21A8' }} />
+                    <div
+                      className="rounded-xl border border-edge/70 dark:border-edge-dark/70 overflow-hidden mb-4 shadow-sm"
+                      style={{ borderInlineStartWidth: '3px', borderInlineStartColor: '#6B21A8' }}
+                    >
+                      <div
+                        className="flex items-center gap-2.5 px-3.5 py-3 border-b border-edge/50 dark:border-edge-dark/50"
+                        style={{ background: 'linear-gradient(90deg, #6B21A814 0%, #6B21A804 100%)' }}
+                      >
+                        <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 bg-purple-500/22">
+                          <Star size={13} style={{ color: '#6B21A8' }} />
                         </div>
-                        <span className="text-[11px] font-bold text-content dark:text-content-dark uppercase tracking-wider">{isRTL ? 'شوهد بواسطة' : 'Viewed By'}</span>
-                        <span className="text-[9px] text-content-muted dark:text-content-muted-dark ms-auto">{viewers.length} {isRTL ? 'مستخدم' : 'users'}</span>
+                        <span className="text-[12px] font-bold uppercase tracking-wider" style={{ color: '#6B21A8' }}>{isRTL ? 'شوهد بواسطة' : 'Viewed By'}</span>
+                        <span className="text-[10px] text-content-muted dark:text-content-muted-dark ms-auto font-semibold tabular-nums">{viewers.length}</span>
                       </div>
                       <div className="px-3.5 py-1 max-h-[180px] overflow-y-auto">
                         {viewers.map(v => (
