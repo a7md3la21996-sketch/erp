@@ -615,10 +615,14 @@ function SmartAlertsWidget({ lang, isRTL, profile, navigate, CardTitle }) {
         let contactsQ = supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('contact_status', 'following').lt('last_activity_at', weekAgo);
         let tasksQ = supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO);
         let oppsQ = supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('temperature', 'hot').not('stage', 'in', '("closed_won","closed_lost")');
-        if (isSalesAgent && myName) {
-          contactsQ = contactsQ.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
-          tasksQ = tasksQ.eq('assigned_to', profile?.id);
-          oppsQ = oppsQ.eq('assigned_to_name', myName);
+        if (isSalesAgent && profile?.id) {
+          // Single-assignment after Phase 1: filter by assigned_to UUID
+          // (which RLS uses anyway) instead of the legacy
+          // jsonb-contains-by-name filter that drifted whenever a name
+          // was renamed or had stray whitespace.
+          contactsQ = contactsQ.eq('assigned_to', profile.id);
+          tasksQ = tasksQ.eq('assigned_to', profile.id);
+          oppsQ = oppsQ.eq('assigned_to', profile.id);
         }
         const [staleRes, overdueRes, hotRes] = await Promise.allSettled([contactsQ, tasksQ, oppsQ]);
         const a = [];
@@ -668,10 +672,12 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
           if (profile?.role === 'sales_agent' && userId) return q.eq('assigned_to', userId);
           return q;
         };
-        // Role-based contact filter helper
+        // Role-based contact filter helper. Single-assignment now —
+        // filter by assigned_to UUID instead of the legacy
+        // jsonb-contains-by-name filter (which broke on any whitespace
+        // / rename drift in assigned_to_names).
         const contactQ = (q) => {
-          const myName = profile?.full_name_en || profile?.full_name_ar;
-          if (profile?.role === 'sales_agent' && myName) return q.filter('assigned_to_names', 'cs', JSON.stringify([myName]));
+          if (profile?.role === 'sales_agent' && userId) return q.eq('assigned_to', userId);
           return q;
         };
 
@@ -891,9 +897,26 @@ export default function DashboardPage() {
   const [dashLoading, setDashLoading] = useState(true);
 
   useEffect(() => {
-    // Run lead temperature decay + birthday checks on dashboard load (non-blocking)
-    runTemperatureDecay().catch(() => {});
-    checkContactBirthdays(userId).catch(() => {});
+    // Run lead temperature decay + birthday checks ONCE per day per
+    // browser session — not on every dashboard mount. Each one writes
+    // to the DB; without this gate, opening the dashboard 10 times in
+    // a day fires 10 decay runs + 10 birthday checks. Should ideally
+    // be a server-side cron, but session-day gating is the cheap fix.
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const decayKey = 'platform_temp_decay_run';
+      const birthdayKey = `platform_birthday_check_${userId || 'anon'}`;
+      if (localStorage.getItem(decayKey) !== todayStr) {
+        runTemperatureDecay().then(() => {
+          try { localStorage.setItem(decayKey, todayStr); } catch {}
+        }).catch(() => {});
+      }
+      if (localStorage.getItem(birthdayKey) !== todayStr) {
+        checkContactBirthdays(userId).then(() => {
+          try { localStorage.setItem(birthdayKey, todayStr); } catch {}
+        }).catch(() => {});
+      }
+    } catch { /* localStorage unavailable */ }
 
     fetchAllDashboardData({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(data => {
       setDashData(data);
