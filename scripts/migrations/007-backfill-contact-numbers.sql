@@ -1,39 +1,45 @@
 -- ─────────────────────────────────────────────────────────────────────────
--- Migration 007: Backfill contact_number for legacy contacts
+-- Migration 007: Backfill + dedupe contact_number
 --
--- Some contacts (mostly older imports / API inserts that bypassed the
--- auto-numbering path) still have NULL or empty contact_number, so the
--- list views show a missing code next to their name. This migration
--- generates a code in the same shape the app uses elsewhere
--- (`C-XXXXXXXX-XXXX`, base36 uppercase) and writes it for every row
--- that needs one. Existing codes are never touched.
+-- Three problems found in the live data on 2026-05-03:
+--   1. Some contacts had NULL/empty contact_number (older imports).
+--   2. Some clones from Phase 1 ended up with literal "null-2", "null-3",
+--      "null-4" because the clone script did `${c.contact_number}-${i}`
+--      without a null-check (see scripts/phase1-sample-test.mjs:129).
+--   3. One real duplicate ('C-01821-2' shared by 2 rows).
 --
--- Safety:
---   1. Wrapped in a transaction.
---   2. Uses a per-row generator with retry-on-collision so no two rows
---      ever land on the same code.
---   3. Verifies at the end that:
---        - zero rows still have NULL/empty contact_number
---        - zero duplicate contact_numbers exist anywhere in the table
+-- This migration regenerates a fresh `C-XXXXXXXX-XXXX` (random base36)
+-- for every row in those three buckets:
+--   - NULL or empty contact_number
+--   - "null-N" / "undefined-N" / literal 'null' / 'undefined'
+--   - Duplicates: keep the OLDEST row (by created_at, then id), regen
+--     the rest
 --
--- Run this once on Supabase (SQL editor).
+-- Per-row generator with retry-on-collision so no two rows ever land on
+-- the same code. Wrapped in a transaction with three final assertions:
+-- zero NULL, zero garbage, zero duplicates. If any check fails the whole
+-- transaction rolls back.
+--
+-- Run once on Supabase (SQL editor). Idempotent — running again is a no-op.
 -- ─────────────────────────────────────────────────────────────────────────
 
 BEGIN;
 
--- 1. Pre-flight: how many rows need a code?
-DO $$
-DECLARE
-  missing_count int;
-BEGIN
-  SELECT COUNT(*) INTO missing_count
+CREATE TEMP TABLE _needs_regen AS
+SELECT id FROM public.contacts WHERE contact_number IS NULL OR contact_number = ''
+UNION
+SELECT id FROM public.contacts
+  WHERE contact_number ~ '^(null|undefined)-' OR contact_number IN ('null', 'undefined')
+UNION
+SELECT id FROM (
+  SELECT id, row_number() OVER (PARTITION BY contact_number ORDER BY created_at ASC, id ASC) AS rn
   FROM public.contacts
-  WHERE contact_number IS NULL OR contact_number = '';
-  RAISE NOTICE 'Backfilling % contacts with missing contact_number', missing_count;
-END $$;
+  WHERE contact_number IS NOT NULL AND contact_number <> ''
+    AND contact_number !~ '^(null|undefined)-'
+    AND contact_number NOT IN ('null', 'undefined')
+) ranked
+WHERE rn > 1;
 
--- 2. Per-row loop with retry-on-collision.
---    Generates `C-XXXXXXXX-XXXX` from random base36 chars.
 DO $$
 DECLARE
   cid uuid;
@@ -41,11 +47,12 @@ DECLARE
   attempts int;
   alphabet text := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   alpha_len int := length(alphabet);
+  total int;
 BEGIN
-  FOR cid IN
-    SELECT id FROM public.contacts
-    WHERE contact_number IS NULL OR contact_number = ''
-  LOOP
+  SELECT COUNT(*) INTO total FROM _needs_regen;
+  RAISE NOTICE 'Regenerating % rows', total;
+
+  FOR cid IN SELECT id FROM _needs_regen LOOP
     attempts := 0;
     LOOP
       new_code := 'C-' ||
@@ -54,54 +61,29 @@ BEGIN
         '-' ||
         (SELECT string_agg(substring(alphabet FROM (floor(random() * alpha_len)::int + 1) FOR 1), '')
          FROM generate_series(1, 4));
-
-      -- Re-roll if this code is already in use somewhere.
-      EXIT WHEN NOT EXISTS (
-        SELECT 1 FROM public.contacts WHERE contact_number = new_code
-      );
-
+      EXIT WHEN NOT EXISTS (SELECT 1 FROM public.contacts WHERE contact_number = new_code);
       attempts := attempts + 1;
       IF attempts > 10 THEN
-        RAISE EXCEPTION 'Could not generate a unique contact_number for % after 10 tries', cid;
+        RAISE EXCEPTION 'Could not generate unique code for %', cid;
       END IF;
     END LOOP;
-
-    UPDATE public.contacts
-    SET contact_number = new_code
-    WHERE id = cid;
+    UPDATE public.contacts SET contact_number = new_code WHERE id = cid;
   END LOOP;
 END $$;
 
--- 3. Verify every row now has a contact_number.
 DO $$
-DECLARE
-  remaining int;
+DECLARE remaining int; garbage int; dups int;
 BEGIN
-  SELECT COUNT(*) INTO remaining
-  FROM public.contacts
-  WHERE contact_number IS NULL OR contact_number = '';
-  IF remaining > 0 THEN
-    RAISE EXCEPTION 'Still % rows without contact_number after backfill — abort', remaining;
-  END IF;
-  RAISE NOTICE 'All contacts now have a contact_number ✓';
-END $$;
-
--- 4. Verify uniqueness across the whole table.
-DO $$
-DECLARE
-  dup_count int;
-BEGIN
-  SELECT COUNT(*) INTO dup_count FROM (
-    SELECT contact_number
-    FROM public.contacts
-    WHERE contact_number IS NOT NULL
-    GROUP BY contact_number
-    HAVING COUNT(*) > 1
+  SELECT COUNT(*) INTO remaining FROM public.contacts WHERE contact_number IS NULL OR contact_number = '';
+  IF remaining > 0 THEN RAISE EXCEPTION 'Still % rows without contact_number', remaining; END IF;
+  SELECT COUNT(*) INTO garbage FROM public.contacts WHERE contact_number ~ '^(null|undefined)-' OR contact_number IN ('null', 'undefined');
+  IF garbage > 0 THEN RAISE EXCEPTION 'Still % garbage codes', garbage; END IF;
+  SELECT COUNT(*) INTO dups FROM (
+    SELECT contact_number FROM public.contacts GROUP BY contact_number HAVING COUNT(*) > 1
   ) d;
-  IF dup_count > 0 THEN
-    RAISE EXCEPTION 'Found % duplicate contact_numbers — abort', dup_count;
-  END IF;
-  RAISE NOTICE 'All contact_numbers are unique ✓';
+  IF dups > 0 THEN RAISE EXCEPTION 'Still % duplicate codes', dups; END IF;
+  RAISE NOTICE 'Done. All clean.';
 END $$;
 
+DROP TABLE _needs_regen;
 COMMIT;
