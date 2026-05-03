@@ -443,6 +443,11 @@ export function notifyAgentInactive({ agentName, days, managerName }) {
 }
 
 // ── Import Done ──
+// Confirmation for the importer only. Sales agents who actually
+// received imported leads get the per-agent notification via
+// notifyImportLeadsForAgent — broadcasting this one to 'all' meant
+// every sales agent saw "100 leads imported" even when none were
+// theirs, which felt like spam.
 export function notifyImportDone({ count, importedBy }) {
   return addNotification({
     type: 'import_done',
@@ -452,7 +457,7 @@ export function notifyImportDone({ count, importedBy }) {
     messageEn: `${count} new leads imported by ${importedBy}`,
     actionUrl: '/contacts',
     priority: 'medium',
-    forUserId: 'all',
+    forUserId: importedBy,
   });
 }
 
