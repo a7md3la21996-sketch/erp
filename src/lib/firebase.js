@@ -22,14 +22,16 @@ try {
 }
 
 /**
- * Request permission and get FCM token
- * Returns the token string or null
+ * Get FCM token if notification permission is already granted.
+ * Does NOT prompt — Chrome/Safari block requestPermission() outside
+ * a user gesture, so the explicit "Enable notifications" button in
+ * the Header is the only place that can legally ask. This function
+ * is safe to call from useEffect on app load.
  */
 export async function getFCMToken() {
   if (!messaging) return null;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return null;
   try {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return null;
     const token = await getToken(messaging, { vapidKey: VAPID_KEY });
     return token;
   } catch {
