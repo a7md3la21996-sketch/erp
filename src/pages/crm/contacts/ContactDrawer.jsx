@@ -60,6 +60,19 @@ const ACT_ICON_MAP = { call: Phone, whatsapp: MessageCircle, email: Mail, meetin
 const _drawerDataCache = new Map();
 const DRAWER_CACHE_TTL = 60_000;
 
+// Skeleton-style placeholder shown while a heavy section is unmounted.
+// Once the section scrolls into view (IntersectionObserver in the
+// drawer), the real component swaps in. Keeps the section's layout
+// space stable so the scroll position doesn't jump.
+function SectionPlaceholder({ label }) {
+  return (
+    <div className="rounded-xl border border-edge/60 dark:border-edge-dark/60 bg-surface-bg/40 dark:bg-surface-bg-dark/40 px-4 py-6 text-center text-[11px] text-content-muted dark:text-content-muted-dark">
+      <div className="w-6 h-6 mx-auto mb-2 rounded-full border-2 border-content-muted/20 dark:border-content-muted-dark/20 border-t-content-muted/40 dark:border-t-content-muted-dark/40 animate-spin" />
+      {label}
+    </div>
+  );
+}
+
 const TIMELINE_CONFIG = {
   activity:    { color: '#4A7AAB', bg: 'rgba(74,122,171,0.10)',  defaultIcon: Clock },
   task:        { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)',  defaultIcon: CheckSquare },
@@ -2034,8 +2047,8 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           {/* ═══ TAB CONTENT ═══ */}
           <div id="drawer-tab-content" className="p-5 scroll-mt-12">
 
-            {/* ══════ ACTIVITY / TIMELINE TAB ══════ */}
-            {tab === 'activity' && (
+            {/* ══════ ACTIVITY ══════ */}
+            <section id="sec-activity" data-section-key="activity" ref={registerSection('activity')} className="scroll-mt-14 mb-8">
               <div>
                 {/* Take Action (full form) + New Opp — secondary, since hero has the
                     primary 4 buttons. Smaller pill style keeps focus on the timeline. */}
@@ -2171,10 +2184,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   </div>
                 )}
               </div>
-            )}
+            </section>
 
-            {/* ══════ DEPARTMENT-SPECIFIC TAB ══════ */}
-            {tab === deptTab.key && (
+            {/* ══════ DEPARTMENT-SPECIFIC ══════ */}
+            <section id={`sec-${deptTab.key}`} data-section-key={deptTab.key} ref={registerSection(deptTab.key)} className="scroll-mt-14 mb-8">
               <div>
                 {isSupplier ? (
                   <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
@@ -2369,39 +2382,45 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   </>
                 )}
               </div>
-            )}
+            </section>
 
-            {/* ══════ RESALE UNITS TAB ══════ */}
-            {tab === 'units' && (
-              <ResaleUnitsTab contact={contact} isRTL={isRTL} />
-            )}
+            {/* ══════ RESALE UNITS (lazy) ══════ */}
+            <section id="sec-units" data-section-key="units" ref={registerSection('units')} className="scroll-mt-14 mb-8">
+              {mountedSections.has('units')
+                ? <ResaleUnitsTab contact={contact} isRTL={isRTL} />
+                : <SectionPlaceholder label={isRTL ? 'الوحدات للبيع' : 'Resale units'} />}
+            </section>
 
-            {/* ══════ COMMENTS TAB ══════ */}
-            {tab === 'comments' && (
-              <CommentsSection
-                entity="contact"
-                entityId={contact.id}
-                entityName={contact.full_name}
-                onCommentAdded={() => {
-                  const selfName = profile?.full_name_en || profile?.full_name_ar || '';
-                  (contact.assigned_to_names || []).filter(n => n !== selfName).forEach(agentName => {
-                    notifyNewComment({ contactName: contact.full_name, contactId: contact.id, commentBy: selfName, agentName });
-                  });
-                }}
-              />
-            )}
+            {/* ══════ COMMENTS (lazy) ══════ */}
+            <section id="sec-comments" data-section-key="comments" ref={registerSection('comments')} className="scroll-mt-14 mb-8">
+              {mountedSections.has('comments')
+                ? <CommentsSection
+                    entity="contact"
+                    entityId={contact.id}
+                    entityName={contact.full_name}
+                    onCommentAdded={() => {
+                      const selfName = profile?.full_name_en || profile?.full_name_ar || '';
+                      (contact.assigned_to_names || []).filter(n => n !== selfName).forEach(agentName => {
+                        notifyNewComment({ contactName: contact.full_name, contactId: contact.id, commentBy: selfName, agentName });
+                      });
+                    }}
+                  />
+                : <SectionPlaceholder label={isRTL ? 'التعليقات' : 'Comments'} />}
+            </section>
 
-            {/* ══════ DOCUMENTS TAB ══════ */}
-            {tab === 'documents' && (
-              <DocumentsSection
-                entity="contact"
-                entityId={contact.id}
-                entityName={contact.full_name}
-              />
-            )}
+            {/* ══════ DOCUMENTS (lazy) ══════ */}
+            <section id="sec-documents" data-section-key="documents" ref={registerSection('documents')} className="scroll-mt-14 mb-8">
+              {mountedSections.has('documents')
+                ? <DocumentsSection
+                    entity="contact"
+                    entityId={contact.id}
+                    entityName={contact.full_name}
+                  />
+                : <SectionPlaceholder label={isRTL ? 'المستندات' : 'Documents'} />}
+            </section>
 
-            {/* ══════ DATA / DETAILS TAB ══════ */}
-            {tab === 'data' && (
+            {/* ══════ DATA / DETAILS ══════ */}
+            <section id="sec-data" data-section-key="data" ref={registerSection('data')} className="scroll-mt-14 mb-8">
               <div>
                 {/* Score & Temperature Cards */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
@@ -2614,7 +2633,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                   );
                 })()}
               </div>
-            )}
+            </section>
           </div>
         </div>
       </div>
