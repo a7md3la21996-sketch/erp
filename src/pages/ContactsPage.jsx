@@ -1039,9 +1039,15 @@ export default function ContactsPage() {
 
       // Single-RPC stats — replaces 23 parallel COUNT queries.
       // RLS still applies (SECURITY INVOKER), so each role only counts what they can see.
+      // p_status / p_temperature: chip groups exclude their own dimension
+      // when counting (so the user can see how many would be in each
+      // option), but honor the others — selecting status='following'
+      // narrows the temperature chips to within following.
       const { data: result, error } = await supabase.rpc('get_contact_stats', {
         p_dept: deptFilter,
         p_agent_id: agentIdFilter,
+        p_status: filterStatus !== 'all' ? filterStatus : null,
+        p_temperature: filterTemp !== 'all' ? filterTemp : null,
       });
       if (error) throw error;
 
@@ -1060,7 +1066,7 @@ export default function ContactsPage() {
 
       setStats(counts);
     } catch (err) { reportError('ContactsPage', 'loadStats', err); }
-  }, [profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar, globalFilter?.department, globalFilter?.agentName]);
+  }, [profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar, globalFilter?.department, globalFilter?.agentName, filterStatus, filterTemp]);
 
   useEffect(() => { if (profile) loadStats(); }, [profile, loadStats]);
 
