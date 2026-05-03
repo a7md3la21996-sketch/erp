@@ -355,16 +355,24 @@ export default function UsersPage() {
     setSaving(true);
     const isEdit = !!editingUser;
 
+    // Trim names so a stray trailing space doesn't break exact-match
+    // lookups later (validateAgentNames / .eq queries). Once a user
+    // record has 'Dina ' in full_name_en, every reassign attempt to
+    // 'Dina' will report 'unknown agent'.
+    const cleanFullNameAr = (form.full_name_ar || '').trim();
+    const cleanFullNameEn = (form.full_name_en || '').trim();
+    const cleanEmail = (form.email || '').trim();
+    const cleanPhone = (form.phone || '').trim();
     try {
       if (isEdit) {
         // ── Edit user ──
         const updates = {
-          full_name_ar: form.full_name_ar,
-          full_name_en: form.full_name_en,
+          full_name_ar: cleanFullNameAr,
+          full_name_en: cleanFullNameEn,
           role: form.role,
           department: form.department,
           team_id: form.team_id || null,
-          phone: form.phone || null,
+          phone: cleanPhone || null,
         };
 
         if (USE_SUPABASE) {
@@ -385,13 +393,13 @@ export default function UsersPage() {
         // ── Create user ──
         if (USE_SUPABASE) {
           try {
-            await register(form.email, form.password, {
-              full_name_ar: form.full_name_ar,
-              full_name_en: form.full_name_en,
+            await register(cleanEmail, form.password, {
+              full_name_ar: cleanFullNameAr,
+              full_name_en: cleanFullNameEn,
               role: form.role,
               department: form.department,
               team_id: form.team_id || null,
-              phone: form.phone || null,
+              phone: cleanPhone || null,
             });
             toast.success(lang === 'ar' ? 'تم إنشاء المستخدم بنجاح' : 'User created successfully');
           } catch (err) {
