@@ -336,12 +336,12 @@ export default function ContactsTable({
                       style={{ background: c.is_blacklisted ? 'rgba(239,68,68,0.15)' : avatarColor(c.id), color: c.is_blacklisted ? '#EF4444' : '#fff' }}>
                       {c.is_blacklisted ? <Ban size={14} /> : initials(c.full_name)}
                     </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 min-w-0">
+                        <span className={`font-semibold text-[13px] whitespace-nowrap overflow-hidden text-ellipsis flex-1 min-w-0 ${c.is_blacklisted ? 'text-red-500' : 'text-content dark:text-content-dark'}`}>
                           {c.prefix ? `${c.prefix} ` : ''}{c.full_name || (isRTL ? 'بدون اسم' : 'No Name')}
                         </span>
-                        {c.contact_number && <span className="text-[9px] font-mono text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark px-1.5 py-px rounded">{c.contact_number}</span>}
+                        {c.contact_number && <span className="shrink-0 text-[9px] font-mono text-content-muted dark:text-content-muted-dark bg-surface-bg dark:bg-surface-bg-dark px-1.5 py-px rounded">{c.contact_number}</span>}
                         {isPinned && <Pin size={10} color="#F59E0B" className="shrink-0" />}
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
