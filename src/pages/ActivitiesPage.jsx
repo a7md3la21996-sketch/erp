@@ -16,6 +16,7 @@ import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { useToast } from '../contexts/ToastContext';
 import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
 import ActivityDrawer from './ActivityDrawer';
+import ContactSearch from './crm/opportunities/ContactSearch';
 
 const ICONS = {
   Phone, MessageCircle, Mail, Users, MapPin, FileText,
@@ -68,7 +69,7 @@ export default function ActivitiesPage() {
   const [smartFilters, setSmartFilters] = useState([]);
   const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [adding, setAdding]         = useState(false);
-  const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'sales' });
+  const [form, setForm]             = useState({ type: 'call', notes: '', dept: 'sales', contact: null });
   const [saving, setSaving]         = useState(false);
   const [selectedActivity, setSelectedActivity] = useState(null);
   const [page, setPage] = useState(1);
@@ -121,37 +122,71 @@ export default function ActivitiesPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [stats, setStats] = useState({ total: 0, today: 0, topType: null });
 
-  // Extract server-side filters from smartFilters
+  // Extract server-side filters from smartFilters. Anything that maps to
+  // a single column.eq(value) belongs here so server-side count + pagination
+  // stay accurate. Complex filters (notes ilike, entity_name) still run
+  // client-side after the server returns the page.
   const serverFilters = useMemo(() => {
-    const typeFilter = smartFilters.find(f => f.field === 'type' && f.operator === 'is');
-    const deptFilter = smartFilters.find(f => f.field === 'dept' && f.operator === 'is');
-    const agentFilter = smartFilters.find(f => f.field === 'user_name_en' && f.operator === 'is');
-    return { type: typeFilter?.value, dept: deptFilter?.value, agentName: agentFilter?.value };
+    const findIs = (field) => smartFilters.find(f => f.field === field && (f.operator === 'is' || !f.operator));
+    const typeFilter   = findIs('type');
+    const deptFilter   = findIs('dept');
+    const agentFilter  = findIs('user_name_en');
+    const resultFilter = findIs('result');
+    const dateFilter   = smartFilters.find(f => f.field === 'created_at' && f.value);
+    let dateFrom, dateTo;
+    if (dateFilter) {
+      const v = dateFilter.value;
+      if (dateFilter.operator === 'this_week') {
+        const now = new Date();
+        const start = new Date(now);
+        start.setDate(now.getDate() - now.getDay());
+        dateFrom = start.toISOString().slice(0, 10);
+      } else if (dateFilter.operator === 'this_month') {
+        dateFrom = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+      } else if (dateFilter.operator === 'is' && v) {
+        dateFrom = v;
+        dateTo   = v + 'T23:59:59';
+      } else if (dateFilter.operator === 'between' && Array.isArray(v)) {
+        dateFrom = v[0]; dateTo = v[1] ? v[1] + 'T23:59:59' : undefined;
+      }
+    }
+    return {
+      type: typeFilter?.value,
+      dept: deptFilter?.value,
+      agentName: agentFilter?.value,
+      result: resultFilter?.value,
+      dateFrom, dateTo,
+    };
   }, [smartFilters]);
+
+  // Build the args once so loadActivities + loadStats stay in lockstep
+  // (otherwise the headline KPIs disagree with the visible list — the
+  // exact bug the May 3 review flagged).
+  const baseQueryArgs = useMemo(() => ({
+    role: profile?.role,
+    userId: profile?.id,
+    teamId: profile?.team_id,
+    dept: serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
+    type: serverFilters.type,
+    result: serverFilters.result,
+    dateFrom: serverFilters.dateFrom,
+    dateTo: serverFilters.dateTo,
+    agentName: serverFilters.agentName || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
+    search: search || undefined,
+  }), [profile?.role, profile?.id, profile?.team_id, serverFilters, globalFilter?.department, globalFilter?.agentName, search]);
 
   const loadActivities = useCallback(async (pg) => {
     if (!profile?.id) return; // Don't load without profile
     setLoading(true);
     try {
       const currentPage = pg || page || 1;
-      const deptValue = serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined);
-      const result = await fetchActivities({
-        page: currentPage,
-        pageSize,
-        role: profile.role,
-        userId: profile.id,
-        teamId: profile.team_id,
-        dept: deptValue,
-        search: search || undefined,
-        type: serverFilters.type,
-        agentName: serverFilters.agentName || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
-      });
+      const result = await fetchActivities({ ...baseQueryArgs, page: currentPage, pageSize });
       setActivities(result?.data || []);
       setTotalCount(result?.count || 0);
     } catch {
       setActivities([]);
     } finally { setLoading(false); }
-  }, [page, pageSize, profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.department, globalFilter?.agentName]);
+  }, [page, pageSize, profile?.id, baseQueryArgs]);
 
   useEffect(() => { if (profile) loadActivities(); }, [profile, loadActivities]);
 
@@ -162,18 +197,17 @@ export default function ActivitiesPage() {
     }
   }, []));
 
-  // Stats — from server (not current page). topType is computed client-side
-  // from a recent sample of activities (most common type in last ~500 records).
+  // Stats — from server, narrowed by the SAME filters as the list so the
+  // KPIs and the visible rows always agree. topType is computed client-side
+  // from a sample of the filtered set.
   const loadStats = useCallback(async () => {
     try {
       const todayStr = new Date().toISOString().slice(0, 10);
-      const baseArgs = { role: profile?.role, userId: profile?.id, teamId: profile?.team_id };
       const [totalRes, todayRes, sampleRes] = await Promise.all([
-        fetchActivities({ ...baseArgs, page: 1, pageSize: 1 }),
-        fetchActivities({ ...baseArgs, page: 1, pageSize: 1, dateFrom: todayStr }),
-        fetchActivities({ ...baseArgs, page: 1, pageSize: 100 }),
+        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1 }),
+        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1, dateFrom: todayStr }),
+        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 100 }),
       ]);
-      // Count types across the sample and pick the most frequent
       const sample = Array.isArray(sampleRes?.data) ? sampleRes.data : (Array.isArray(sampleRes) ? sampleRes : []);
       const typeCounts = {};
       sample.forEach(a => { if (a?.type) typeCounts[a.type] = (typeCounts[a.type] || 0) + 1; });
@@ -181,15 +215,17 @@ export default function ActivitiesPage() {
       setStats({
         total: totalRes?.count || 0,
         today: todayRes?.count || 0,
-        topType: top || null, // [type, count] tuple matching the UI expectation at line ~285
+        topType: top || null,
       });
     } catch { /* ignore */ }
-  }, [profile?.role, profile?.id, profile?.team_id]);
+  }, [baseQueryArgs]);
 
   useEffect(() => { if (profile) loadStats(); }, [profile, loadStats]);
 
-  // Client-only filters (exclude server-filtered fields)
-  const SERVER_FILTERED_FIELDS = ['type', 'dept', 'user_name_en'];
+  // Client-only filters: anything that ISN'T already pushed to the server
+  // (notes ilike, entity_name select, etc.). Server filters are: type,
+  // dept, user_name_en, result, created_at — those don't run again here.
+  const SERVER_FILTERED_FIELDS = ['type', 'dept', 'user_name_en', 'result', 'created_at'];
   const filtered = useMemo(() => {
     let list = activities || [];
     const clientFilters = smartFilters.filter(f => !SERVER_FILTERED_FIELDS.includes(f.field));
@@ -198,10 +234,13 @@ export default function ActivitiesPage() {
     return list;
   }, [activities, smartFilters, SMART_FIELDS]);
 
-  const filteredTotal = filtered.length;
-  const totalPages = Math.max(1, Math.ceil(filteredTotal / pageSize));
+  // Pagination uses the server's count of total matches (totalCount), not
+  // the size of the current page. Without this fix, applying a filter
+  // narrowed totalPages to 1 even when the server had hundreds of matches
+  // — the user could only ever see the first page.
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const paged = filtered; // server already returned the right page
   useEffect(() => { if (page > totalPages && totalPages > 0) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [smartFilters, search, pageSize]);
 
@@ -209,9 +248,22 @@ export default function ActivitiesPage() {
     if (!form.notes.trim()) return;
     setSaving(true);
     try {
-      await createActivity({ type: form.type, notes: form.notes, entityType: 'internal', dept: form.dept, userId: user?.id || null, userName_ar: profile?.full_name_ar, userName_en: profile?.full_name_en });
+      // Link to a contact if one is selected. Otherwise it's an internal
+      // activity (still useful for free-form ops notes, just unlinked).
+      const linkArgs = form.contact?.id
+        ? { entityType: 'contact', entityId: form.contact.id }
+        : { entityType: 'internal' };
+      await createActivity({
+        ...linkArgs,
+        type: form.type,
+        notes: form.notes,
+        dept: form.dept,
+        userId: user?.id || null,
+        userName_ar: profile?.full_name_ar,
+        userName_en: profile?.full_name_en,
+      });
       await loadActivities();
-      setForm({ type: 'call', notes: '', dept: 'sales' });
+      setForm({ type: 'call', notes: '', dept: 'sales', contact: null });
       setAdding(false);
     } catch (err) {
       console.error('Activity save error:', err?.message || err);
@@ -328,6 +380,28 @@ export default function ActivitiesPage() {
                 ))}
               </Select>
             </div>
+          </div>
+          {/* Optional contact link — without this every activity created
+              from this page is orphaned (entity_type='internal') and
+              never appears on a lead's timeline */}
+          <div className="mb-2.5">
+            <label className="text-xs text-content-muted dark:text-content-muted-dark block mb-1">
+              {lang === 'ar' ? 'الربط بعميل (اختياري)' : 'Link to contact (optional)'}
+            </label>
+            {form.contact ? (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-500/[0.08] border border-brand-500/20">
+                <Link2 size={13} className="text-brand-500" />
+                <span className="flex-1 text-xs font-semibold text-content dark:text-content-dark">
+                  {form.contact.full_name}
+                  {form.contact.phone && <span className="text-content-muted dark:text-content-muted-dark font-normal ms-2">{form.contact.phone}</span>}
+                </span>
+                <button onClick={() => setForm(f => ({ ...f, contact: null }))} className="w-6 h-6 rounded flex items-center justify-center bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark hover:text-red-500">
+                  <X size={13} />
+                </button>
+              </div>
+            ) : (
+              <ContactSearch isRTL={isRTL} value={null} onSelect={c => setForm(f => ({ ...f, contact: c }))} />
+            )}
           </div>
           <Textarea
             value={form.notes}

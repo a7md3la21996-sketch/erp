@@ -40,7 +40,7 @@ export const MEETING_SUBTYPES = {
 };
 
 // ── Service Functions ───────────────────────────────────────────────────────
-export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentName, dateFrom } = {}) {
+export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentName, dateFrom, dateTo, result } = {}) {
   let supaData = [];
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
 
@@ -56,7 +56,9 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
     if (entityType && !entityId) query = query.eq('entity_type', entityType);
     if (dept)       query = query.eq('dept', dept);
     if (type)       query = query.eq('type', type);
+    if (result)     query = query.eq('result', result);
     if (dateFrom)   query = query.gte('created_at', dateFrom);
+    if (dateTo)     query = query.lte('created_at', dateTo);
     if (search) {
       const s = search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
       if (s.length > 0) query = query.or(`notes.ilike.%${s}%,description.ilike.%${s}%,user_name_en.ilike.%${s}%,user_name_ar.ilike.%${s}%,entity_name.ilike.%${s}%`);
