@@ -14,6 +14,7 @@ import {
   UserPlus, CheckSquare, TrendingUp, Info, Check, X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useToast } from '../contexts/ToastContext';
 
 const ICON_MAP = {
   Clock, AlertTriangle, Trophy, XCircle, ArrowRightCircle, MessageSquare,
@@ -89,6 +90,7 @@ export default function NotificationsPage() {
   const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [activeView, setActiveView] = useState('notifications'); // 'notifications' | 'settings'
   const [notifications, setNotifications] = useState([]);
@@ -100,8 +102,14 @@ export default function NotificationsPage() {
   const [filterRead, setFilterRead] = useState('all'); // 'all' | 'unread' | 'read'
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [prefs, setPrefs] = useState(DEFAULT_PREFERENCES);
+  // 1-min tick so 'منذ ٥ دقائق' refreshes while the page is open.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(t => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ keepSelection = false } = {}) => {
     if (searchQuery.trim()) {
       const results = await searchNotifications(searchQuery);
       let filtered = Array.isArray(results) ? results : [];
@@ -112,38 +120,35 @@ export default function NotificationsPage() {
       setTotal(filtered.length);
       setNotifications(filtered.slice(page * PER_PAGE, (page + 1) * PER_PAGE));
     } else {
-      // Build filter for getNotifications
-      const opts = { limit: PER_PAGE, offset: page * PER_PAGE, userId: profile?.id, userName: profile?.full_name_en || profile?.full_name_ar };
-      if (filterRead === 'unread') opts.unreadOnly = true;
-      if (filterType) opts.type = filterType;
-      if (filterPriority) opts.priority = filterPriority;
+      // Build filter for getNotifications. Both unread + read filters now
+      // run server-side via the readOnly/unreadOnly params — earlier the
+      // 'read' branch fetched a mixed page then filtered locally, which
+      // broke pagination (page 2 of 'read' could come back empty even
+      // when many read items existed).
+      const opts = {
+        limit: PER_PAGE,
+        offset: page * PER_PAGE,
+        userId: profile?.id,
+        userName: profile?.full_name_en || profile?.full_name_ar,
+        unreadOnly: filterRead === 'unread' || undefined,
+        readOnly:   filterRead === 'read'   || undefined,
+        type:     filterType || undefined,
+        priority: filterPriority || undefined,
+      };
       const result = await getNotifications(opts);
-      const data = Array.isArray(result?.data) ? result.data : [];
-      const t = result?.total || 0;
-      // If read filter, we need to additionally filter
-      let finalData = data;
-      if (filterRead === 'read') {
-        const readOpts = { limit: PER_PAGE, offset: page * PER_PAGE, type: filterType || undefined, priority: filterPriority || undefined };
-        // Fetch only read notifications server-side by excluding unreadOnly
-        const readResult = await getNotifications(readOpts);
-        const allData = Array.isArray(readResult?.data) ? readResult.data : [];
-        const readOnly = allData.filter(n => n.read);
-        // Use server count if available, otherwise estimate
-        setTotal(readResult?.total || readOnly.length);
-        finalData = readOnly;
-      } else {
-        setTotal(t);
-        finalData = data;
-      }
-      setNotifications(finalData);
+      setNotifications(Array.isArray(result?.data) ? result.data : []);
+      setTotal(result?.total || 0);
     }
-    setSelectedIds(new Set());
-  }, [searchQuery, filterType, filterPriority, filterRead, page]);
+    // Don't wipe the user's selection on event-driven refreshes (a new
+    // notification arriving shouldn't deselect the 5 they've ticked).
+    // Filter/page changes still reset via the parent useEffect chain.
+    if (!keepSelection) setSelectedIds(new Set());
+  }, [searchQuery, filterType, filterPriority, filterRead, page, profile?.id, profile?.full_name_en, profile?.full_name_ar]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   useEffect(() => {
-    const handler = () => refresh();
+    const handler = () => refresh({ keepSelection: true });
     window.addEventListener('platform_notification_changed', handler);
     window.addEventListener('platform_notification', handler);
     return () => {
@@ -176,18 +181,51 @@ export default function NotificationsPage() {
   };
 
   const handleBulkRead = async () => {
-    await Promise.all([...selectedIds].map(id => markAsRead(id)));
-    refresh();
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    // Optimistic: flip the local read state instantly so the UI feels
+    // snappy. Roll back any rows whose server call failed.
+    const before = notifications;
+    setNotifications(prev => prev.map(n => ids.includes(n.id) ? { ...n, read: true } : n));
+    const results = await Promise.allSettled(ids.map(id => markAsRead(id)));
+    const failed = results.map((r, i) => r.status === 'rejected' ? ids[i] : null).filter(Boolean);
+    if (failed.length) {
+      setNotifications(before);
+      toast.error(isRTL ? `فشل تحديث ${failed.length} إشعار` : `Failed to update ${failed.length} notifications`);
+    } else {
+      toast.success(isRTL ? `تم تحديد ${ids.length} كمقروء` : `${ids.length} marked as read`);
+    }
+    refresh({ keepSelection: false });
   };
 
   const handleBulkDelete = async () => {
-    await Promise.all([...selectedIds].map(id => deleteNotification(id)));
-    refresh();
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    if (!window.confirm(isRTL ? `حذف ${ids.length} إشعار؟` : `Delete ${ids.length} notifications?`)) return;
+    const before = notifications;
+    setNotifications(prev => prev.filter(n => !ids.includes(n.id)));
+    const results = await Promise.allSettled(ids.map(id => deleteNotification(id)));
+    const failed = results.map((r, i) => r.status === 'rejected' ? ids[i] : null).filter(Boolean);
+    if (failed.length) {
+      setNotifications(before);
+      toast.error(isRTL ? `فشل حذف ${failed.length} إشعار` : `Failed to delete ${failed.length} notifications`);
+    } else {
+      toast.success(isRTL ? `تم حذف ${ids.length} إشعار` : `${ids.length} notifications deleted`);
+    }
+    refresh({ keepSelection: false });
   };
 
   const handleClearAll = async () => {
-    await clearAll();
-    refresh();
+    if (!window.confirm(isRTL
+      ? 'حذف كل الإشعارات؟ لا يمكن التراجع عن هذه العملية.'
+      : 'Delete ALL notifications? This cannot be undone.')) return;
+    try {
+      await clearAll();
+      toast.success(isRTL ? 'تم حذف كل الإشعارات' : 'All notifications cleared');
+      refresh();
+    } catch (err) {
+      toast.error(isRTL ? `فشل المسح: ${err?.message || ''}` : `Clear failed: ${err?.message || ''}`);
+    }
   };
 
   const handlePrefToggle = (type) => {
@@ -514,11 +552,21 @@ export default function NotificationsPage() {
                   </div>
 
                   {/* Content */}
-                  <div style={{ flex: 1, minWidth: 0 }}
+                  <div style={{ flex: 1, minWidth: 0, cursor: n.action_url ? 'pointer' : 'default' }}
                     onClick={async () => {
-                      if (!n.read) await markAsRead(n.id);
-                      if (n.action_url) navigate(n.action_url);
-                      refresh();
+                      // Optimistic mark-as-read so the dot disappears
+                      // even before the navigate triggers the unmount.
+                      if (!n.read) {
+                        setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x));
+                        try { await markAsRead(n.id); } catch { /* the next refresh will reconcile */ }
+                      }
+                      // Only navigate to in-app paths — external URLs in
+                      // action_url are a security smell (open redirect /
+                      // phishing) and broken paths should fail gracefully.
+                      if (n.action_url && typeof n.action_url === 'string' && n.action_url.startsWith('/')) {
+                        navigate(n.action_url);
+                        // Skip refresh after navigate — page unmounts
+                      }
                     }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap',

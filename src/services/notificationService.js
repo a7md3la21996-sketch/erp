@@ -71,7 +71,7 @@ function dispatch() {
 /**
  * Get notifications with filtering
  */
-export async function getNotifications({ limit = 50, offset = 0, unreadOnly = false, type = null, priority = null, userId = null, userName = null } = {}) {
+export async function getNotifications({ limit = 50, offset = 0, unreadOnly = false, readOnly = false, type = null, priority = null, userId = null, userName = null } = {}) {
   try {
     let query = supabase.from('notifications').select('*', { count: 'exact' });
     if (userId || userName) {
@@ -81,6 +81,7 @@ export async function getNotifications({ limit = 50, offset = 0, unreadOnly = fa
       query = query.or(conditions.join(','));
     }
     if (unreadOnly) query = query.eq('read', false);
+    if (readOnly) query = query.eq('read', true);
     if (type) query = query.eq('type', type);
     if (priority) query = query.eq('priority', priority);
     query = query.order('created_at', { ascending: false }).range(offset, offset + limit - 1);
@@ -94,6 +95,7 @@ export async function getNotifications({ limit = 50, offset = 0, unreadOnly = fa
   // Existing localStorage logic
   let list = load();
   if (unreadOnly) list = list.filter(n => !n.read);
+  if (readOnly)   list = list.filter(n => n.read);
   if (type) list = list.filter(n => n.type === type);
   if (priority) list = list.filter(n => n.priority === priority);
   const total = list.length;
