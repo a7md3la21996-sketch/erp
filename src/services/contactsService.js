@@ -422,6 +422,36 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       const names = Array.isArray(sanitized.assigned_to_names) ? sanitized.assigned_to_names.filter(Boolean) : [];
       if (names.length > 0) sanitized.assigned_to_name = names[0];
     }
+    // Auto-resolve assigned_to (UUID) from assigned_to_name when the
+    // caller passed only the name. RLS on contacts gates SELECT by
+    // assigned_to = auth.uid(), so failing to update the UUID alongside
+    // the name silently hides the lead from the new owner — they see
+    // the toast but the lead never appears in their list. This was
+    // the root cause of the 'distributed leads not showing up' bug
+    // reported May 3, 2026.
+    if ('assigned_to_name' in sanitized && !('assigned_to' in sanitized)) {
+      const newName = sanitized.assigned_to_name;
+      const oldName = oldData?.assigned_to_name;
+      if (newName && newName !== oldName) {
+        try {
+          const { data: u } = await supabase
+            .from('users')
+            .select('id')
+            .or(`full_name_en.eq.${newName},full_name_ar.eq.${newName}`)
+            .limit(1)
+            .maybeSingle();
+          if (u?.id) sanitized.assigned_to = u.id;
+        } catch (lookupErr) {
+          // Don't block the update if the name->UUID lookup fails — the
+          // name is still authoritative for display, just RLS visibility
+          // for the new owner will be broken until they're re-saved.
+          if (import.meta.env.DEV) console.warn('[updateContact] could not resolve assigned_to_name to uuid:', newName, lookupErr);
+        }
+      } else if (newName === null || newName === '') {
+        // Explicit unassign — clear the UUID too
+        sanitized.assigned_to = null;
+      }
+    }
 
     // Refresh assigned_at whenever the assignment actually changes (add/remove/reassign).
     // Skip if the caller already set it (e.g. recordAssignment) and skip if the value
