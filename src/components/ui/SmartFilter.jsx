@@ -307,14 +307,18 @@ export default function SmartFilter({
             )}
           </button>
 
-          {/* Popover — on mobile, drop the 300px floor so it can shrink to fit
-              the viewport. Without this it would push past the screen edge on
-              narrow phones (320–360px). */}
+          {/* Popover — on mobile, dock as a fixed bottom sheet so it
+              never overflows the viewport regardless of where the
+              Filter button sits in the toolbar. On sm+ it falls back
+              to absolute positioning relative to the button. */}
           {showAddRow && (
-            <div
-              className="absolute top-[40px] start-0 z-[200] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-4 w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[400px] sm:max-w-[480px]"
-              dir={isRTL ? 'rtl' : 'ltr'}
-            >
+            <>
+              {/* Mobile backdrop — tap-outside-to-close. Only renders below sm. */}
+              <div className="sm:hidden fixed inset-0 z-[199] bg-black/40" onClick={() => setShowAddRow(false)} />
+              <div
+                className="fixed sm:absolute inset-x-2 sm:inset-auto top-auto sm:top-[40px] bottom-2 sm:bottom-auto start-auto sm:start-0 z-[200] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-[0_8px_30px_rgba(27,51,71,0.15)] p-4 w-auto sm:w-auto sm:min-w-[400px] sm:max-w-[480px] max-h-[80vh] sm:max-h-none overflow-y-auto"
+                dir={isRTL ? 'rtl' : 'ltr'}
+              >
               <div className="flex items-center justify-between mb-2.5">
                 <div className="text-xs font-semibold text-content dark:text-content-dark">
                   {isRTL ? 'إضافة فلتر' : 'Add Filter'}
@@ -445,6 +449,7 @@ export default function SmartFilter({
                 </div>
               )}
             </div>
+            </>
           )}
         </div>
 
@@ -484,10 +489,13 @@ export default function SmartFilter({
               <ArrowUpDown size={14} />
             </button>
             {sortOpen && (
-              <div
-                role="menu"
-                className="absolute top-full mt-1 end-0 z-50 min-w-[180px] w-max max-w-[calc(100vw-1rem)] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg py-1 overflow-hidden"
-              >
+              <>
+                {/* Mobile backdrop */}
+                <div className="sm:hidden fixed inset-0 z-[49] bg-black/40" onClick={() => setSortOpen(false)} />
+                <div
+                  role="menu"
+                  className="fixed sm:absolute inset-x-2 sm:inset-auto top-auto sm:top-full bottom-2 sm:bottom-auto end-auto sm:end-0 sm:mt-1 z-50 min-w-0 sm:min-w-[180px] w-auto sm:w-max max-w-none sm:max-w-[calc(100vw-1rem)] max-h-[80vh] sm:max-h-none overflow-y-auto bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg py-1"
+                >
                 {sortOptions.map(opt => {
                   const isActive = opt.value === sortBy;
                   return (
@@ -504,7 +512,8 @@ export default function SmartFilter({
                     </button>
                   );
                 })}
-              </div>
+                </div>
+              </>
             )}
           </div>
         )}
