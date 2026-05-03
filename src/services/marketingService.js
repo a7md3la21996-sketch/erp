@@ -53,8 +53,10 @@ export async function fetchCampaigns() {
 }
 
 export async function createCampaign(data) {
-  // Campaigns drive marketing spend & lead routing.
-  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to create campaigns');
+  // Anyone who can edit a contact (own or all) can also create campaigns
+  // inline from the lead form — otherwise sales agents end up "creating"
+  // campaigns that never persist and have to recreate them per lead.
+  requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW, P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN], 'Not allowed to create campaigns');
   const campaign = { ...data, created_at: data.created_at || new Date().toISOString().slice(0, 10) };
   // Remove non-UUID id
   if (campaign.id && !campaign.id.match(/^[0-9a-f]{8}-/i)) delete campaign.id;
@@ -62,16 +64,16 @@ export async function createCampaign(data) {
   for (const [k, v] of Object.entries(campaign)) { if (v === '') campaign[k] = null; }
   // Save to localStorage first (optimistic)
   try { const list = loadCampaigns(); list.unshift(campaign); saveCampaigns(list); } catch {}
-  // Try Supabase
-  try {
-    const { data: sbData, error } = await supabase.from('campaigns').insert([stripInternalFields(campaign)]).select('*').single();
-    if (error) throw error;
-    logCreate('campaign', sbData.id, sbData);
-    return sbData;
-  } catch (err) { reportError('marketingService', 'query', err);
-    logCreate('campaign', campaign.id, campaign);
-    return campaign;
+  // Try Supabase — surface the error this time. Silently swallowing it
+  // (returning a local-only object) made the campaign vanish on next
+  // reload and forced users to re-create it per lead.
+  const { data: sbData, error } = await supabase.from('campaigns').insert([stripInternalFields(campaign)]).select('*').single();
+  if (error) {
+    reportError('marketingService', 'createCampaign', error);
+    throw new Error(error.message || 'Failed to create campaign');
   }
+  logCreate('campaign', sbData.id, sbData);
+  return sbData;
 }
 
 export async function updateCampaign(id, updates) {
