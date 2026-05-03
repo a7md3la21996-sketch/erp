@@ -14,7 +14,6 @@ export default function BulkDistributeModal({ contactIds, onClose, onSuccess }) 
   const [agents, setAgents] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [search, setSearch] = useState('');
-  const [method, setMethod] = useState('round_robin');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,25 +41,17 @@ export default function BulkDistributeModal({ contactIds, onClose, onSuccess }) 
     });
   };
 
-  // Preview: how many leads each selected agent gets
+  // Preview: every selected agent gets a fresh clone of every selected
+  // lead. So count per agent == contactIds.length, and total clones
+  // created == contactIds.length × selectedAgents.length.
   const preview = useMemo(() => {
     if (selected.size === 0 || !contactIds.length) return [];
     const selectedAgents = agents.filter(a => selected.has(a.id));
-    if (method === 'round_robin') {
-      const total = contactIds.length;
-      const each = Math.floor(total / selectedAgents.length);
-      const remainder = total % selectedAgents.length;
-      return selectedAgents.map((a, i) => ({
-        name: isRTL ? (a.full_name_ar || a.full_name_en) : (a.full_name_en || a.full_name_ar),
-        count: each + (i < remainder ? 1 : 0),
-      }));
-    }
-    // Workload preview is approximate (full calc happens server-side)
     return selectedAgents.map(a => ({
       name: isRTL ? (a.full_name_ar || a.full_name_en) : (a.full_name_en || a.full_name_ar),
-      count: '~' + Math.floor(contactIds.length / selectedAgents.length),
+      count: contactIds.length,
     }));
-  }, [selected, agents, method, contactIds, isRTL]);
+  }, [selected, agents, contactIds, isRTL]);
 
   const handleSubmit = async () => {
     if (selected.size === 0) {
@@ -69,10 +60,10 @@ export default function BulkDistributeModal({ contactIds, onClose, onSuccess }) 
     }
     setSubmitting(true);
     try {
-      const result = await bulkDistributeLeads(contactIds, [...selected], method);
+      const result = await bulkDistributeLeads(contactIds, [...selected]);
       const msg = isRTL
-        ? `تم توزيع ${result.applied} من ${contactIds.length} ليد${result.errors.length ? ` (${result.errors.length} فشل)` : ''}`
-        : `Distributed ${result.applied} of ${contactIds.length} leads${result.errors.length ? `, ${result.errors.length} failed` : ''}`;
+        ? `تم إنشاء ${result.applied} clone من ${result.totalPairs}${result.errors.length ? ` (${result.errors.length} فشل)` : ''}`
+        : `Created ${result.applied} of ${result.totalPairs} clones${result.errors.length ? `, ${result.errors.length} failed` : ''}`;
       toast.success(msg);
       onSuccess?.(result);
       onClose();
@@ -96,47 +87,10 @@ export default function BulkDistributeModal({ contactIds, onClose, onSuccess }) 
           </div>
           <p className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
             {isRTL
-              ? 'كل ليد هينقل لـ agent واحد من اللي اخترتهم. مفيش clones — الـ ownership بتتغير.'
-              : 'Each lead transfers to one of the selected agents. No clones — ownership changes.'
+              ? 'لكل ليد هيتعمل نسخة منفصلة عند كل سيلز اخترته (compete model). الليد الأصلي يفضل عند صاحبه. لو عايز نقل ownership بدل ما تتعمل نسخ، استخدم Reassign.'
+              : 'A fresh clone is created for every selected agent on every selected lead (compete model). The original stays with the current owner. For ownership transfer instead of cloning, use Reassign.'
             }
           </p>
-        </div>
-
-        {/* Method picker */}
-        <div>
-          <div className="text-xs font-semibold text-content-muted dark:text-content-muted-dark mb-2">
-            {isRTL ? 'طريقة التوزيع' : 'Distribution method'}
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setMethod('round_robin')}
-              className={`flex-1 px-3 py-2 rounded-lg border text-xs font-medium ${
-                method === 'round_robin'
-                  ? 'bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                  : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
-              }`}
-            >
-              {isRTL ? 'متساوي (Round-Robin)' : 'Round-Robin'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMethod('workload')}
-              className={`flex-1 px-3 py-2 rounded-lg border text-xs font-medium ${
-                method === 'workload'
-                  ? 'bg-blue-50 border-blue-500 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-                  : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'
-              }`}
-            >
-              {isRTL ? 'حسب الـ workload' : 'Workload-based'}
-            </button>
-          </div>
-          <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-1">
-            {method === 'round_robin'
-              ? (isRTL ? 'كل agent ياخد عدد متساوي' : 'Each agent gets equal count')
-              : (isRTL ? 'الـ agent عنده أقل ليدز active ياخد أكتر' : 'Agents with fewer active leads get more')
-            }
-          </div>
         </div>
 
         {/* Search */}

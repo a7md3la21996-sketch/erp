@@ -556,77 +556,48 @@ export async function checkDuplicate(phone) {
 }
 
 /**
- * Bulk-distribute leads across multiple agents. Transfers ownership (no clones).
+ * Bulk-distribute leads — compete model. For EVERY (contact × agent)
+ * pair this creates a fresh clone of the contact assigned to that
+ * agent. The original contact stays where it was — no ownership is
+ * transferred. Use this when you want N agents to all try the same
+ * batch of leads in parallel and the fastest closer wins.
  *
- * method:
- *   'round_robin' — equal distribution, cycles through agents
- *   'workload'    — agents with fewer active leads get more
+ * For "fair allocation that transfers ownership" (one lead → one
+ * agent, split evenly), use the bulk Reassign flow instead. The old
+ * round_robin/workload methods on this function were removed because
+ * they performed Reassign semantics under a name that suggested
+ * cloning — the duplication caused confusion in the field.
  *
- * Returns { plan: [{contactId, agentId, agentName}], applied, errors }
+ * Returns { applied, errors, totalPairs }
  */
-export async function bulkDistributeLeads(contactIds, agentIds, method = 'round_robin') {
+export async function bulkDistributeLeads(contactIds, agentIds) {
   requireAnyPerm([P.CONTACTS_BULK, P.CONTACTS_EDIT], 'Not allowed to bulk distribute');
   if (!Array.isArray(contactIds) || contactIds.length === 0) throw new Error('No contacts');
   if (!Array.isArray(agentIds) || agentIds.length === 0) throw new Error('No agents');
 
-  // Resolve agents
+  // Validate agents are active before we burn API calls cloning to them
   const { data: agents, error: aErr } = await rq(() =>
-    supabase.from('users').select('id, full_name_en, full_name_ar, status').in('id', agentIds), 'bulkDistribute.agents');
+    supabase.from('users').select('id, status').in('id', agentIds), 'bulkDistribute.agents');
   if (aErr) throw aErr;
-  const activeAgents = (agents || []).filter(a => a.status !== 'inactive');
-  if (activeAgents.length === 0) throw new Error('No active agents in selection');
+  const activeIds = (agents || []).filter(a => a.status !== 'inactive').map(a => a.id);
+  if (activeIds.length === 0) throw new Error('No active agents in selection');
 
-  // Build the plan
-  let plan = [];
-  if (method === 'workload') {
-    // Get current active lead count per agent
-    const counts = await Promise.all(activeAgents.map(async a => {
-      const { count } = await supabase.from('contacts')
-        .select('id', { count: 'exact', head: true })
-        .eq('assigned_to', a.id)
-        .eq('is_deleted', false)
-        .neq('contact_status', 'disqualified');
-      return { agent: a, currentCount: count || 0 };
-    }));
-    // Greedy: each lead goes to the agent with the lowest projected count
-    const projected = counts.map(c => ({ ...c, projected: c.currentCount }));
-    for (const cid of contactIds) {
-      projected.sort((x, y) => x.projected - y.projected);
-      const picked = projected[0];
-      const name = picked.agent.full_name_en || picked.agent.full_name_ar;
-      plan.push({ contactId: cid, agentId: picked.agent.id, agentName: name });
-      picked.projected++;
-    }
-  } else {
-    // Round-robin
-    plan = contactIds.map((cid, i) => {
-      const a = activeAgents[i % activeAgents.length];
-      const name = a.full_name_en || a.full_name_ar;
-      return { contactId: cid, agentId: a.id, agentName: name };
-    });
-  }
-
-  // Apply in batches of 50 with concurrency 5
-  const errors = [];
+  // For each contact, clone to every selected (active) agent. Reuses the
+  // single-contact distributeLeadToAgents path so clone shape, audit log,
+  // and contact_number suffixing all stay consistent with the per-drawer
+  // 'Distribute (compete)' tool.
   let applied = 0;
-  const BATCH = 50;
-  for (let i = 0; i < plan.length; i += BATCH) {
-    const slice = plan.slice(i, i + BATCH);
-    const results = await Promise.allSettled(slice.map(p =>
-      supabase.from('contacts').update({
-        assigned_to: p.agentId,
-        assigned_to_name: p.agentName,
-        assigned_to_names: [p.agentName],
-        assigned_at: new Date().toISOString(),
-      }).eq('id', p.contactId)
-    ));
-    for (let j = 0; j < results.length; j++) {
-      if (results[j].status === 'fulfilled' && !results[j].value.error) applied++;
-      else errors.push({ contactId: slice[j].contactId, error: results[j].reason?.message || results[j].value?.error?.message });
+  const errors = [];
+  for (const cid of contactIds) {
+    try {
+      const { created, errors: cloneErrors } = await distributeLeadToAgents(cid, activeIds);
+      applied += created.length;
+      cloneErrors.forEach(e => errors.push({ contactId: cid, ...e }));
+    } catch (err) {
+      errors.push({ contactId: cid, error: err.message });
     }
   }
-
-  return { plan, applied, errors };
+  return { applied, errors, totalPairs: contactIds.length * activeIds.length };
 }
 
 /**
