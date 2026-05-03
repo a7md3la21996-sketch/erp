@@ -102,6 +102,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // without opening the full TakeActionForm.
   const [quickNote, setQuickNote] = useState('');
   const [quickNoteSaving, setQuickNoteSaving] = useState(false);
+  // Single-scroll mode: each tab now renders as a `<section>` in the
+  // scroll. Heavy components (ResaleUnitsTab, CommentsSection,
+  // DocumentsSection — they each self-fetch on mount) are deferred until
+  // the section actually scrolls into view, so opening a drawer doesn't
+  // burn 3 extra DB queries the user may never look at.
+  const [mountedSections, setMountedSections] = useState(() => new Set(['activity']));
+  const sectionRefs = useRef({});
+  const registerSection = (key) => (el) => {
+    if (el) sectionRefs.current[key] = el;
+  };
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showWAPopup, setShowWAPopup] = useState(false);
@@ -256,17 +266,39 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     setTimelineFilter('all');
     setActivityAgentFilter('all');
     setShowActionForm(false);
-    // Auto-select the lead's assignee so the per-agent Status/Temperature
-    // panel shows immediately. Post-Phase 3 there's exactly one assignee per
-    // contact, so requiring the manager to first click the agent's name to
-    // expose status/temp controls was friction with no upside.
-    setSelectedAgent(contact.assigned_to_name || 'all');
+    // Reset lazy-mount tracking — for the new contact only Activity is
+    // pre-mounted; everything else lazy-mounts on first scroll-into-view.
+    setMountedSections(new Set(['activity']));
+    sectionRefs.current = {};
+    // selectedAgent kept at 'all' — the per-agent profile selector UI was
+    // removed (status/temp edit inline now), so this filter shouldn't hide
+    // anything from the timeline / opportunities list anymore.
+    setSelectedAgent('all');
     // Clear WhatsApp draft state. Without this, the template & message
     // body composed for contact A leak into the popup when the user
     // navigates to contact B via arrow keys, which previously caused
     // wrong-recipient sends.
     setWaMessage('');
     setWaSelectedTpl('');
+  }, [contact.id]);
+
+  // Lazy-mount sections when they scroll into view. Heavy sections
+  // (Comments, Documents, Units) self-fetch on mount, so deferring them
+  // saves 3 DB queries per drawer open if the user only looks at the
+  // activity timeline.
+  useEffect(() => {
+    const root = drawerRef.current?.querySelector('.flex-1.overflow-y-auto');
+    if (!root) return;
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        const key = e.target.dataset.sectionKey;
+        if (!key) return;
+        setMountedSections(prev => prev.has(key) ? prev : new Set([...prev, key]));
+      });
+    }, { root, rootMargin: '300px 0px' });
+    Object.values(sectionRefs.current).forEach(el => el && obs.observe(el));
+    return () => obs.disconnect();
   }, [contact.id]);
 
   // drawerRefresh is bumped by the realtime subscription below whenever a
@@ -1545,12 +1577,64 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
 
             {/* Status / Temp / Score chips row + last contact pill */}
             <div className="flex items-center gap-1.5 flex-wrap">
-              {tempInfo && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ color: tempInfo.color, background: tempInfo.bg }}>
-                  {tempInfo.Icon && <tempInfo.Icon size={11} />}
-                  {isRTL ? tempInfo.labelAr : tempInfo.label}
-                </span>
-              )}
+              {(() => {
+                const myName = profile?.full_name_en || profile?.full_name_ar;
+                const isMine = myName && contact.assigned_to_name === myName;
+                const canEditTemp = isMine && canEditContact;
+                // Show the chip even when no temperature is set IF the
+                // viewer can edit it — otherwise they'd have no entry point.
+                if (!tempInfo && !canEditTemp) return null;
+                const chipCls = `relative inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full transition-all ${canEditTemp ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'}`;
+                const chipStyle = tempInfo
+                  ? { color: tempInfo.color, background: tempInfo.bg }
+                  : { color: '#737373', background: 'rgba(115,115,115,0.1)' };
+                const chip = (
+                  <>
+                    {tempInfo?.Icon && <tempInfo.Icon size={11} />}
+                    {tempInfo ? (isRTL ? tempInfo.labelAr : tempInfo.label) : (isRTL ? 'حدّد الحرارة' : 'Set temp')}
+                    {canEditTemp && <ChevronDown size={10} className="opacity-70" />}
+                  </>
+                );
+                if (!canEditTemp) {
+                  return <span className={chipCls} style={chipStyle}>{chip}</span>;
+                }
+                return (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowQuickTemp(s => !s)}
+                      className={chipCls}
+                      style={chipStyle}
+                      title={isRTL ? 'تغيير الحرارة' : 'Change temperature'}
+                      aria-haspopup="menu"
+                      aria-expanded={showQuickTemp}
+                    >
+                      {chip}
+                    </button>
+                    {showQuickTemp && (
+                      <>
+                        <div className="fixed inset-0 z-[60]" onClick={() => setShowQuickTemp(false)} />
+                        <div role="menu" className="absolute top-full mt-1.5 start-0 z-[61] min-w-[160px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden p-1">
+                          {['hot', 'warm', 'cool', 'cold'].map(v => {
+                            const opt = TEMP[v];
+                            const isCurrent = contact.temperature === v;
+                            return (
+                              <button key={v}
+                                role="menuitem"
+                                onClick={() => { setShowQuickTemp(false); if (!isCurrent) handleTemperatureChange(v); }}
+                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer border-none bg-transparent text-start hover:bg-edge/40 dark:hover:bg-edge-dark/40 ${isCurrent ? 'font-bold' : ''}`}
+                                style={isCurrent && opt ? { color: opt.color, background: opt.color + '14' } : undefined}>
+                                {opt?.Icon && <opt.Icon size={13} color={opt.color} />}
+                                <span style={{ color: opt?.color }} className="flex-1">{isRTL ? opt?.labelAr : opt?.label}</span>
+                                {isCurrent && <Check size={12} style={{ color: opt?.color }} />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })()}
               {(() => {
                 const mn = profile?.full_name_en || profile?.full_name_ar;
                 const myScore = mn && contact.assigned_to_name === mn ? contact.lead_score : null;
@@ -1887,107 +1971,11 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             )}
           </div>
 
-          {/* ═══ AGENT PROFILE SELECTOR — admin sees all, TL/manager sees team only, agent sees nothing ═══ */}
-          {!isSalesAgent && (() => {
-            // Use the same getVisibleAssignees rule used everywhere else in
-            // the drawer — guarantees consistent privacy clipping for
-            // managers/leaders.
-            const assignedNames = getVisibleAssignees();
-            return (
-            <>
-              <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide font-medium">
-                    {isRTL ? 'السيلز المعينين' : 'Assigned Agents'}
-                  </span>
-                  <button onClick={() => setSelectedAgent(selectedAgent === 'all' ? (assignedNames[0] || 'all') : 'all')}
-                    className="text-[10px] text-brand-500 bg-transparent border-none cursor-pointer font-semibold">
-                    {selectedAgent === 'all' ? (isRTL ? 'عرض بروفايل' : 'View Profile') : (isRTL ? 'عرض الكل' : 'View All')}
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {assignedNames.map(name => (
-                    <button key={name} onClick={() => setSelectedAgent(selectedAgent === name ? 'all' : name)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold cursor-pointer transition-all ${
-                        selectedAgent === name
-                          ? 'bg-brand-500 text-white border border-brand-500'
-                          : 'bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark hover:border-brand-500/30'
-                      }`}>
-                      <span className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold ${
-                        selectedAgent === name ? 'bg-white/20 text-white' : 'bg-brand-500/10 text-brand-500'
-                      }`}>{name.charAt(0)}</span>
-                      {name}
-                      {/* Note: per-chip remove (X) button was removed in Phase 3 — multi-assignment is gone after Phase 1, so the condition assignedNames.length > 1 was always false. Use Hand Off Lead from More menu to transfer ownership. */}
-                    </button>
-                  ))}
-                  {/* Add Agent picker fully removed in Phase 3 — replaced by
-                      the Distribute Lead (clones) and Hand Off Lead (transfers)
-                      tools in the More menu. */}
-                </div>
-              </div>
-              {selectedAgent !== 'all' && (
-                <div className="px-5 py-3 border-b border-edge/40 dark:border-edge-dark/40">
-                  <div className="flex gap-3">
-                    {/* Per-agent Status */}
-                    <div className="flex-1 rounded-xl p-3 bg-brand-500/[0.05] border border-brand-500/10">
-                      <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-1 font-medium">{isRTL ? 'حالة السيلز' : 'Agent Status'}</div>
-                      {(() => {
-                        const agentStatus = contact.assigned_to_name === selectedAgent ? contact.contact_status : null;
-                        const statusLabels = isRTL
-                          ? { new: 'جديد', following: 'متابعة', contacted: 'تم التواصل', has_opportunity: 'لديه فرصة', disqualified: 'غير مؤهل' }
-                          : { new: 'New', following: 'Following', contacted: 'Contacted', has_opportunity: 'Has Opportunity', disqualified: 'Disqualified' };
-                        const statusColor = (s) => s === 'disqualified' ? '#EF4444' : s === 'has_opportunity' ? '#059669' : s === 'following' ? '#10B981' : s === 'contacted' ? '#F59E0B' : s === 'new' ? '#4A7AAB' : '#6B8DB5';
-                        const color = statusColor(agentStatus);
-                        return (
-                          <span className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ color, background: color + '18' }}>
-                            {agentStatus ? (statusLabels[agentStatus] || agentStatus) : (isRTL ? 'غير محدد' : 'Not set')}
-                          </span>
-                        );
-                      })()}
-                    </div>
-                    {/* Per-agent Temperature */}
-                    <div className="flex-1 rounded-xl p-3 bg-amber-500/[0.05] border border-amber-500/10">
-                      <div className="text-[10px] text-content-muted dark:text-content-muted-dark uppercase tracking-wide mb-1 font-medium">{isRTL ? 'حرارة السيلز' : 'Agent Temp'}</div>
-                      {(() => {
-                        const agentTemp = contact.assigned_to_name === selectedAgent ? contact.temperature : null;
-                        const tempData = agentTemp ? TEMP[agentTemp] : null;
-                        return tempData ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ color: tempData.color, background: tempData.bg }}>
-                            {tempData.Icon && <tempData.Icon size={11} />}
-                            {isRTL ? tempData.labelAr : tempData.label}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-content-muted dark:text-content-muted-dark">--</span>
-                        );
-                      })()}
-                      {/* Temperature selector */}
-                      <div className="flex gap-1 mt-2 flex-wrap">
-                        {['hot', 'warm', 'cool', 'cold'].map(v => ({ v, ar: TEMP[v]?.labelAr || v, en: TEMP[v]?.label || v })).map(opt => {
-                          const isActive = contact.assigned_to_name === selectedAgent && contact.temperature === opt.v;
-                          const optTemp = TEMP[opt.v];
-                          return (
-                            <button
-                              key={opt.v}
-                              onClick={() => handleTemperatureChange(opt.v)}
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold cursor-pointer border transition-all ${
-                                isActive
-                                  ? 'border-transparent text-white'
-                                  : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:opacity-80'
-                              }`}
-                              style={isActive && optTemp ? { background: optTemp.color } : undefined}
-                            >
-                              {isRTL ? opt.ar : opt.en}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
-          );
-          })()}
+          {/* AGENT PROFILE SELECTOR + per-agent Status/Temp panel removed:
+              after Phase 3 single-assignment there's exactly one agent per
+              contact, and status/temp are now both edited inline (status
+              chip in the hero opens a popover; temp card on the Data tab
+              opens a popover). The block was redundant noise. */}
 
           {/* ═══ TOC PILLS — sticky horizontal pills jump between sections ═══ */}
           {/* Fade gradients at edges hint that the strip scrolls horizontally
@@ -2013,11 +2001,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     key={t.key}
                     onClick={() => {
                       setTab(t.key);
-                      // After switching, scroll the tab content into view so
-                      // the user lands at the start of the new section
-                      // (avoids being stuck at the bottom of the previous tab).
+                      // Pre-mount the section so it's in the DOM before we
+                      // try to scroll to it (lazy-mount might not have fired
+                      // yet for sections far down the page).
+                      setMountedSections(prev => prev.has(t.key) ? prev : new Set([...prev, t.key]));
+                      // Scroll the section into view in the next frame.
                       requestAnimationFrame(() => {
-                        const node = document.getElementById('drawer-tab-content');
+                        const node = document.getElementById(`sec-${t.key}`);
                         node?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                       });
                     }}
