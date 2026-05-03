@@ -33,6 +33,21 @@ async function updateUnitStatus(unitId, newStatus) {
   } catch (err) { reportError('opportunitiesService', 'updateUnitStatus', err); }
 }
 
+// ── Helper: chunked .in() — PostgREST returns 400 once the URL exceeds
+// ~8KB, which happens around 200 UUIDs in a single .in(). Splits the
+// id list into chunks of 200 and concatenates the results.
+async function chunkedIn(table, selectCols, ids, chunkSize = 200) {
+  if (!ids?.length) return [];
+  const out = [];
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const { data, error } = await supabase.from(table).select(selectCols).in('id', chunk);
+    if (error) { reportError('opportunitiesService', `chunkedIn.${table}`, error); continue; }
+    if (data?.length) out.push(...data);
+  }
+  return out;
+}
+
 // ── Helper: enrich opps with contacts/users/projects data ──
 async function enrichOpps(opps) {
   if (!opps.length) return opps;
@@ -44,23 +59,11 @@ async function enrichOpps(opps) {
 
   let contacts = [], users = [], projects = [];
   try {
-    const [contactsRes, usersRes, projectsRes] = await Promise.all([
-      contactIds.length
-        ? supabase.from('contacts').select('id, prefix, full_name, phone, phone2, email, company, job_title, contact_type, department, source, gender, nationality, birth_date, budget_min, budget_max, preferred_location, interested_in_type, last_activity_at').in('id', contactIds)
-        : { data: [] },
-      userIds.length
-        ? supabase.from('users').select('id, full_name_ar, full_name_en').in('id', userIds)
-        : { data: [] },
-      projectIds.length
-        ? supabase.from('projects').select('id, name_ar, name_en').in('id', projectIds)
-        : { data: [] },
+    [contacts, users, projects] = await Promise.all([
+      chunkedIn('contacts', 'id, prefix, full_name, phone, phone2, email, company, job_title, contact_type, department, source, gender, nationality, birth_date, budget_min, budget_max, preferred_location, interested_in_type, last_activity_at', contactIds),
+      chunkedIn('users', 'id, full_name_ar, full_name_en', userIds),
+      chunkedIn('projects', 'id, name_ar, name_en', projectIds),
     ]);
-    if (contactsRes.error) reportError('opportunitiesService', 'enrichOpps.contacts', contactsRes.error);
-    if (usersRes.error) reportError('opportunitiesService', 'enrichOpps.users', usersRes.error);
-    if (projectsRes.error) reportError('opportunitiesService', 'enrichOpps.projects', projectsRes.error);
-    contacts = contactsRes.data || [];
-    users = usersRes.data || [];
-    projects = projectsRes.data || [];
   } catch (err) { reportError('opportunitiesService', 'enrichOpps', err); }
 
   // Build lookup maps
