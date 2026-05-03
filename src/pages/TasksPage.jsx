@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
 import supabase from '../lib/supabase';
+import ContactSearch from './crm/opportunities/ContactSearch';
 import { createActivity } from '../services/contactsService';
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
@@ -82,11 +83,21 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
 
   if (!open) return null;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title.trim()) return;
     setSaving(true);
-    try { onSave(form); }
-    finally { setSaving(false); onClose(); }
+    try {
+      await onSave(form);
+      onClose();
+    } catch (err) {
+      // Without this, a thrown onSave was eaten and the modal closed
+      // anyway — looking like the save succeeded.
+      console.error('Recurring task save error:', err);
+      // Parent (RecurringTab) toasts the message; just keep the modal
+      // open so the user can fix the input or retry.
+    } finally {
+      setSaving(false);
+    }
   };
 
   const toggleDay = (day) => {
@@ -289,6 +300,7 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
 
 // ── Recurring Tab Content ────────────────────────────────────────────
 function RecurringTab({ lang, isRTL, isDark, profile }) {
+  const toast = useToast();
   const [recTasks, setRecTasks] = useState([]);
   const [instances, setInstances] = useState([]);
   const [showModal, setShowModal] = useState(false);
@@ -320,9 +332,13 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
         const t = await createRecurringTask(formData);
         logAction({ action: 'create', entity: 'recurring_task', entityId: t.id, entityName: formData.title, description: 'Created recurring task', userName });
       }
-    } catch { /* error reported in service */ }
-    setEditingTask(null);
-    loadData();
+      toast.success(lang === 'ar' ? 'تم الحفظ' : 'Saved');
+      setEditingTask(null);
+      loadData();
+    } catch (err) {
+      toast.error(lang === 'ar' ? `فشل الحفظ: ${err?.message || ''}` : `Save failed: ${err?.message || ''}`);
+      throw err; // bubble up so the modal stays open
+    }
   };
 
   const handleDelete = async (id) => {
@@ -919,6 +935,7 @@ export default function TasksPage() {
   const [activeTab, setActiveTab] = useState('tasks');
   const [tasks, setTasks]           = useState([]);
   const [loading, setLoading]       = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [completeTask, setCompleteTask] = useState(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
   const [statusFilter, setStatusFilter] = useState('pending');
@@ -927,10 +944,19 @@ export default function TasksPage() {
   const [smartFilters, setSmartFilters] = useState([]);
   const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [showAdd, setShowAdd]       = useState(false);
-  const [form, setForm]             = useState({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'sales', due_date: '', notes: '', contact_name: '', opportunity_name: '' });
+  const [form, setForm]             = useState({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'sales', due_date: '', notes: '', contact_name: '', contact_id: null, opportunity_name: '' });
   const [saving, setSaving]         = useState(false);
   const [page, setPage]             = useState(1);
-  const [pageSize, setPageSize]     = useState(25);
+  const [pageSize, setPageSize]     = useState(() => {
+    try { const v = parseInt(localStorage.getItem('platform_tasks_page_size'), 10); return Number.isFinite(v) && v > 0 ? v : 25; } catch { return 25; }
+  });
+  // 1-min tick so formatDue ('in 5m', 'in 2h') refreshes while the
+  // page is open instead of staying frozen on the value at first render.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(t => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('task');
   const globalFilter = useGlobalFilter();
@@ -1017,7 +1043,10 @@ export default function TasksPage() {
     } catch (err) {
       console.error('Tasks load error:', err);
       setTasks([]);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+      setHasLoadedOnce(true);
+    }
   }, [page, pageSize, sortBy, baseQueryArgs]);
 
   useEffect(() => { if (profile) loadTasks(); }, [profile, loadTasks]);
@@ -1118,7 +1147,7 @@ export default function TasksPage() {
         notifyTaskAssigned({ taskTitle: t.title, assigneeId, assignedBy: profile?.full_name_ar || profile?.full_name_en || '' });
       }
       setTasks(prev => [t, ...prev]);
-      setForm({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'sales', due_date: '', notes: '', contact_name: '', opportunity_name: '' });
+      setForm({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'sales', due_date: '', notes: '', contact_name: '', contact_id: null, opportunity_name: '' });
       setShowAdd(false);
       toast.success(isRTL ? 'تم حفظ المهمة' : 'Task saved');
     } catch (err) {
@@ -1141,7 +1170,10 @@ export default function TasksPage() {
     }
   };
 
-  if (loading) return <PageSkeleton hasKpis={false} tableRows={6} tableCols={5} variant="list" />;
+  // Full-page skeleton only on the very first mount. Subsequent
+  // refetches keep the existing rows mounted and dim them via the
+  // loading state, so switching filter/page doesn't blank the page.
+  if (loading && !hasLoadedOnce) return <PageSkeleton hasKpis={false} tableRows={6} tableCols={5} variant="list" />;
 
   const tabStyle = (active) => ({
     padding: '8px 20px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -1228,7 +1260,7 @@ export default function TasksPage() {
               <span className="text-sm font-bold text-red-500">
                 {lang==='ar' ? `${stats.overdue} مهمة متأخرة` : `${stats.overdue} overdue tasks`}
               </span>
-              <button onClick={() => { setStatusFilter('pending'); setSortBy('due_date_asc'); setPage(1); }}
+              <button onClick={() => { setStatusFilter('pending'); setDateFilter('overdue'); setSortBy('due_date_asc'); setPage(1); }}
                 className="text-xs font-semibold text-red-500 bg-red-500/10 px-2.5 py-1 rounded-lg border-none cursor-pointer hover:bg-red-500/20 transition-colors ms-auto">
                 {lang==='ar' ? 'عرض المتأخرة' : 'View Overdue'}
               </button>
@@ -1272,8 +1304,14 @@ export default function TasksPage() {
                   ))}
                 </Select>
                 <Input type="datetime-local" value={form.due_date} onChange={e => setForm(f=>({...f,due_date:e.target.value}))} className={isRTL ? 'direction-rtl' : 'direction-ltr'} />
-                <Input value={form.contact_name} onChange={e => setForm(f=>({...f,contact_name:e.target.value}))}
-                  placeholder={lang==='ar'?'اسم العميل (اختياري)':'Contact name (optional)'} className={isRTL ? 'direction-rtl' : 'direction-ltr'} />
+                {form.contact_id ? (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-500/[0.08] border border-brand-500/20">
+                    <span className="flex-1 text-xs font-semibold text-content dark:text-content-dark">{form.contact_name}</span>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, contact_id: null, contact_name: '' }))} className="w-6 h-6 rounded flex items-center justify-center bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark hover:text-red-500"><X size={13} /></button>
+                  </div>
+                ) : (
+                  <ContactSearch isRTL={isRTL} value={null} onSelect={c => setForm(f => ({ ...f, contact_id: c?.id || null, contact_name: c?.full_name || '' }))} />
+                )}
                 <Input value={form.opportunity_name} onChange={e => setForm(f=>({...f,opportunity_name:e.target.value}))}
                   placeholder={lang==='ar'?'اسم الفرصة (اختياري)':'Opportunity (optional)'} className={isRTL ? 'direction-rtl' : 'direction-ltr'} />
                 <Textarea value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))}
@@ -1492,7 +1530,7 @@ export default function TasksPage() {
             totalPages={totalPages}
             onPageChange={setPage}
             pageSize={pageSize}
-            onPageSizeChange={v => { setPageSize(v); setPage(1); }}
+            onPageSizeChange={v => { setPageSize(v); setPage(1); try { localStorage.setItem('platform_tasks_page_size', String(v)); } catch {} }}
             totalItems={totalCount}
             safePage={safePage}
           />
