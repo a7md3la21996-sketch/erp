@@ -119,12 +119,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   // scroll. Heavy components (ResaleUnitsTab, CommentsSection,
   // DocumentsSection — they each self-fetch on mount) are deferred until
   // the section actually scrolls into view, so opening a drawer doesn't
-  // burn 3 extra DB queries the user may never look at.
+  // burn 3 extra DB queries the user may never look at. Sections are
+  // discovered via [data-section-key] in the DOM.
   const [mountedSections, setMountedSections] = useState(() => new Set(['activity']));
-  const sectionRefs = useRef({});
-  const registerSection = (key) => (el) => {
-    if (el) sectionRefs.current[key] = el;
-  };
   const [showSMSModal, setShowSMSModal] = useState(false);
   const [showPrintPreview, setShowPrintPreview] = useState(false);
   const [showWAPopup, setShowWAPopup] = useState(false);
@@ -281,8 +278,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     setShowActionForm(false);
     // Reset lazy-mount tracking — for the new contact only Activity is
     // pre-mounted; everything else lazy-mounts on first scroll-into-view.
+    // sectionRefs is NOT wiped — the DOM nodes for the sections persist
+    // across contact navigation (same JSX tree), so the cached refs stay
+    // valid and the IntersectionObserver effect can re-observe them.
     setMountedSections(new Set(['activity']));
-    sectionRefs.current = {};
     // selectedAgent kept at 'all' — the per-agent profile selector UI was
     // removed (status/temp edit inline now), so this filter shouldn't hide
     // anything from the timeline / opportunities list anymore.
@@ -310,7 +309,10 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         setMountedSections(prev => prev.has(key) ? prev : new Set([...prev, key]));
       });
     }, { root, rootMargin: '300px 0px' });
-    Object.values(sectionRefs.current).forEach(el => el && obs.observe(el));
+    // Query the DOM directly instead of relying on the ref cache — the
+    // sections are always rendered (single-scroll), so this is safe and
+    // avoids race conditions with ref population timing.
+    root.querySelectorAll('[data-section-key]').forEach(el => obs.observe(el));
     return () => obs.disconnect();
   }, [contact.id]);
 
@@ -2048,7 +2050,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
           <div id="drawer-tab-content" className="p-5 scroll-mt-12">
 
             {/* ══════ ACTIVITY ══════ */}
-            <section id="sec-activity" data-section-key="activity" ref={registerSection('activity')} className="scroll-mt-14 mb-8">
+            <section id="sec-activity" data-section-key="activity" className="scroll-mt-14 mb-8">
               <div>
                 {/* Take Action (full form) + New Opp — secondary, since hero has the
                     primary 4 buttons. Smaller pill style keeps focus on the timeline. */}
@@ -2187,7 +2189,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </section>
 
             {/* ══════ DEPARTMENT-SPECIFIC ══════ */}
-            <section id={`sec-${deptTab.key}`} data-section-key={deptTab.key} ref={registerSection(deptTab.key)} className="scroll-mt-14 mb-8">
+            <section id={`sec-${deptTab.key}`} data-section-key={deptTab.key} className="scroll-mt-14 mb-8">
               <div>
                 {isSupplier ? (
                   <div className="flex flex-col items-center py-12 text-content-muted dark:text-content-muted-dark">
@@ -2385,14 +2387,14 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </section>
 
             {/* ══════ RESALE UNITS (lazy) ══════ */}
-            <section id="sec-units" data-section-key="units" ref={registerSection('units')} className="scroll-mt-14 mb-8">
+            <section id="sec-units" data-section-key="units" className="scroll-mt-14 mb-8">
               {mountedSections.has('units')
                 ? <ResaleUnitsTab contact={contact} isRTL={isRTL} />
                 : <SectionPlaceholder label={isRTL ? 'الوحدات للبيع' : 'Resale units'} />}
             </section>
 
             {/* ══════ COMMENTS (lazy) ══════ */}
-            <section id="sec-comments" data-section-key="comments" ref={registerSection('comments')} className="scroll-mt-14 mb-8">
+            <section id="sec-comments" data-section-key="comments" className="scroll-mt-14 mb-8">
               {mountedSections.has('comments')
                 ? <CommentsSection
                     entity="contact"
@@ -2409,7 +2411,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </section>
 
             {/* ══════ DOCUMENTS (lazy) ══════ */}
-            <section id="sec-documents" data-section-key="documents" ref={registerSection('documents')} className="scroll-mt-14 mb-8">
+            <section id="sec-documents" data-section-key="documents" className="scroll-mt-14 mb-8">
               {mountedSections.has('documents')
                 ? <DocumentsSection
                     entity="contact"
@@ -2420,7 +2422,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
             </section>
 
             {/* ══════ DATA / DETAILS ══════ */}
-            <section id="sec-data" data-section-key="data" ref={registerSection('data')} className="scroll-mt-14 mb-8">
+            <section id="sec-data" data-section-key="data" className="scroll-mt-14 mb-8">
               <div>
                 {/* Score & Temperature Cards */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
