@@ -66,6 +66,22 @@ export default function ActivitiesPage() {
 
   const [activities, setActivities] = useState([]);
   const [loading, setLoading]       = useState(true);
+  // Track first load separately so subsequent filter/page refetches
+  // don't blank the list with a skeleton — they keep showing the
+  // existing rows dimmed while the new page arrives.
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  // List of every agent in the users table (not just agents that
+  // happen to be on the current page). Without this, the SmartFilter
+  // 'Done By' dropdown only offers agents whose activity falls in the
+  // first 25 visible rows.
+  const [allAgents, setAllAgents] = useState([]);
+  // 1-minute tick to refresh the relative timestamps on the list so
+  // 'منذ دقيقة' doesn't stay frozen for the whole session.
+  const [, setNowTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(t => t + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
   const [smartFilters, setSmartFilters] = useState([]);
   const [searchInput, setSearchInput, search] = useDebouncedSearch(300);
   const [adding, setAdding]         = useState(false);
@@ -77,14 +93,35 @@ export default function ActivitiesPage() {
   const { auditFields, applyAuditFilters } = useAuditFilter('activity');
   const globalFilter = useGlobalFilter();
 
+  // Fetch the full agent list once (all users, not just those on the
+  // current page) so the SmartFilter 'Done By' dropdown is complete.
+  useEffect(() => {
+    let cancelled = false;
+    import('../services/opportunitiesService').then(({ fetchSalesAgents }) => {
+      fetchSalesAgents().then(list => {
+        if (cancelled) return;
+        setAllAgents((list || []).filter(u => u.full_name_en || u.full_name_ar));
+      }).catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, []);
+
   const uniqueUsers = useMemo(() => {
+    if (allAgents.length > 0) {
+      return allAgents.map(u => ({
+        value: u.full_name_en || u.full_name_ar,
+        label: u.full_name_ar || u.full_name_en,
+        labelEn: u.full_name_en || u.full_name_ar,
+      })).sort((a, b) => a.labelEn.localeCompare(b.labelEn));
+    }
+    // Fallback to current-page agents if the users fetch is still pending
     const map = new Map();
     (activities || []).forEach(a => {
       const key = a.user_name_en || a.user_id || '';
       if (key && !map.has(key)) map.set(key, { value: key, label: a.user_name_ar || key, labelEn: a.user_name_en || key });
     });
     return [...map.values()];
-  }, [activities]);
+  }, [allAgents, activities]);
 
   const uniqueEntities = useMemo(() => {
     const map = new Map();
@@ -185,7 +222,10 @@ export default function ActivitiesPage() {
       setTotalCount(result?.count || 0);
     } catch {
       setActivities([]);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+      setHasLoadedOnce(true);
+    }
   }, [page, pageSize, profile?.id, baseQueryArgs]);
 
   useEffect(() => { if (profile) loadActivities(); }, [profile, loadActivities]);
@@ -277,7 +317,11 @@ export default function ActivitiesPage() {
     form.dept === 'all' || v.dept.includes(form.dept)
   );
 
-  if (loading) return <PageSkeleton hasKpis={false} tableRows={6} tableCols={5} variant="list" />;
+  // Only show the full-page skeleton on the very first load. Subsequent
+  // refetches (filter change, page change) keep the existing list mounted
+  // and dim it via the loading state, so the user doesn't see the page
+  // 'flash empty' on every interaction.
+  if (loading && !hasLoadedOnce) return <PageSkeleton hasKpis={false} tableRows={6} tableCols={5} variant="list" />;
 
   return (
     <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
@@ -440,20 +484,8 @@ export default function ActivitiesPage() {
       />
 
       {/* Activities List */}
-      <Card className="overflow-hidden mt-4">
-        {loading ? (
-          <div className="p-6">
-            {[1,2,3,4,5].map(i => (
-              <div key={i} className="flex gap-3 px-4 py-3.5 border-b border-edge dark:border-edge-dark items-start">
-                <div className="w-[38px] h-[38px] rounded-xl bg-edge dark:bg-edge-dark flex-shrink-0 animate-pulse opacity-60" />
-                <div className="flex-1 flex flex-col gap-2">
-                  <div className="w-[40%] h-3 rounded-md bg-edge dark:bg-edge-dark animate-pulse" />
-                  <div className="w-[70%] h-2.5 rounded-md bg-edge dark:bg-edge-dark animate-pulse opacity-70" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
+      <Card className={`overflow-hidden mt-4 transition-opacity ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
+        {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-[60px] px-6 text-center">
             <div className="w-16 h-16 rounded-2xl bg-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
               <Activity size={28} className="text-brand-500" strokeWidth={1.5} />
