@@ -18,6 +18,7 @@ import { bulkSend } from '../services/smsTemplateService';
 import { createNotification } from '../services/notificationsService';
 import { setFieldValues as setCFValues } from '../services/customFieldsService';
 import { fetchCampaigns, createCampaign } from '../services/marketingService';
+import { getDeptStages } from './crm/contacts/constants';
 import { notifyLeadAssigned } from '../services/notificationsService';
 import { notifyImportDone, notifyLeadReassigned, notifyImportLeadsForAgent } from '../services/notificationService';
 import { evaluateTriggers } from '../services/triggerService';
@@ -59,6 +60,13 @@ export default function ContactsPage() {
   const [contacts, setContacts] = useState([]);
   const [filterTemp, setFilterTemp] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
+  // Stage sub-filter — only meaningful when filterStatus === 'has_opportunity'.
+  // Resets to 'all' whenever the parent status filter changes.
+  const [filterStage, setFilterStage] = useState('all');
+  // contact_ids that have at least one opp in the selected stage (lazy-fetched)
+  const [stageContactIds, setStageContactIds] = useState(null);
+  // counts per stage for the chips below has_opportunity (lazy-fetched)
+  const [stageCounts, setStageCounts] = useState({});
   const [filterActivity, setFilterActivity] = useState('all'); // all, active_3d, moderate_7d, stale, never
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -651,6 +659,49 @@ export default function ContactsPage() {
     fetchToday();
   }, [showTodayFollowups]);
 
+  // Stage sub-filter: when the user filters by has_opportunity, fetch
+  // (1) per-stage counts to render numbers on the stage chips, and
+  // (2) the contact_ids that have an opp in the selected stage so the
+  //     query can narrow the visible list.
+  useEffect(() => {
+    if (filterStatus !== 'has_opportunity') {
+      // Outside has_opportunity, clear stage filter + counts.
+      if (filterStage !== 'all') setFilterStage('all');
+      setStageContactIds(null);
+      setStageCounts({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        // Counts per stage (one query, group on the client)
+        const { data: rows } = await supabase
+          .from('opportunities')
+          .select('contact_id, stage')
+          .not('contact_id', 'is', null);
+        if (cancelled) return;
+        const counts = {};
+        const idsByStage = {};
+        (rows || []).forEach(r => {
+          if (!r.stage) return;
+          counts[r.stage] = (counts[r.stage] || 0) + 1;
+          (idsByStage[r.stage] = idsByStage[r.stage] || new Set()).add(r.contact_id);
+        });
+        setStageCounts(counts);
+        if (filterStage === 'all') {
+          setStageContactIds(null);
+        } else {
+          const ids = idsByStage[filterStage] ? [...idsByStage[filterStage]] : [];
+          setStageContactIds(ids.length ? ids : ['none']); // 'none' sentinel: no rows
+        }
+      } catch {
+        setStageContactIds(null);
+        setStageCounts({});
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [filterStatus, filterStage]);
+
   // Fetch contact IDs that HAVE opportunities (to exclude them)
   useEffect(() => {
     if (!showNoOpps) { setNoOppsIds(null); return; }
@@ -797,7 +848,7 @@ export default function ContactsPage() {
           smartPhone: phoneFilter?.value || undefined,
           smartCreatedAt: createdFilter ? { operator: createdFilter.operator, value: createdFilter.value } : undefined,
           smartCampaign: campaignFilter?.value || undefined,
-          contactIds: overdueContactIds || todayFollowupIds || undefined,
+          contactIds: stageContactIds || overdueContactIds || todayFollowupIds || undefined,
           excludeContactIds: noActivityExcludeIds || (showNoOpps ? noOppsIds : showSingleAgent ? singleAgentIds : undefined),
           contact_status: myStatusFilter?.value || statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
           contact_status_op: myStatusFilter?.operator || statusFilter?.operator,
@@ -903,7 +954,7 @@ export default function ContactsPage() {
       setSearching(false);
       hasLoadedOnce.current = true;
     }
-  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds, noActivityExcludeIds]);
+  }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds, noActivityExcludeIds, stageContactIds]);
 
   useEffect(() => {
     if (profile) loadContactsData();
@@ -1262,6 +1313,36 @@ export default function ContactsPage() {
           <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
         </button>
       </div>
+
+      {/* Stage sub-filter — only when 'Has Opportunity' is the active status filter */}
+      {filterStatus === 'has_opportunity' && (() => {
+        const stages = getDeptStages(globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : 'sales');
+        const totalInStages = stages.reduce((s, st) => s + (stageCounts[st.id] || 0), 0);
+        return (
+          <div className="flex gap-1.5 mb-3 flex-wrap items-center ps-3 border-s-2 border-emerald-500/30 dark:border-emerald-500/40">
+            <span className="text-[10px] text-content-muted dark:text-content-muted-dark font-semibold me-1 uppercase tracking-wider">{isRTL ? 'المرحلة:' : 'Stage:'}</span>
+            <button onClick={() => setFilterStage('all')}
+              className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-all ${filterStage === 'all'
+                ? 'bg-emerald-500 text-white border-emerald-500 font-bold'
+                : 'bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark hover:border-emerald-500/40'}`}>
+              {isRTL ? 'الكل' : 'All'} <span className={`rounded-xl px-1.5 py-px text-[9px] ms-1 ${filterStage === 'all' ? 'bg-white/25 text-white' : 'bg-edge dark:bg-edge-dark'}`}>{totalInStages}</span>
+            </button>
+            {stages.map(s => {
+              const count = stageCounts[s.id] || 0;
+              const active = filterStage === s.id;
+              return (
+                <button key={s.id} onClick={() => setFilterStage(active ? 'all' : s.id)}
+                  className={`px-2.5 py-1 rounded-full text-[11px] cursor-pointer border transition-all ${active ? 'font-bold' : 'font-normal bg-transparent border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                  style={active ? { borderColor: s.color, background: s.color + '15', color: s.color } : undefined}>
+                  {isRTL ? s.label_ar : s.label_en}
+                  <span className={`rounded-xl px-1.5 py-px text-[9px] ms-1 ${active ? '' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                    style={active ? { background: s.color, color: '#fff' } : undefined}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* Temperature Chips — only when department is selected */}
       <div className="flex gap-2 mb-3.5 flex-wrap items-center">
