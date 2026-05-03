@@ -45,7 +45,7 @@ import ContactsCardList from './crm/contacts/ContactsCardList';
 import QuickActionPopover from './crm/contacts/QuickActionPopover';
 import BatchCallModal from './crm/contacts/BatchCallModal';
 import BulkActionToolbar from './crm/contacts/BulkActionToolbar';
-import { MergePreviewModal, ConfirmModal, DisqualifyModal, BulkReassignModal, BulkOppModal, BulkSMSModal } from './crm/contacts/BulkModals';
+import { MergePreviewModal, ConfirmModal, DisqualifyModal, BulkReassignModal, BulkOppModal, BulkSMSModal, BulkCampaignModal } from './crm/contacts/BulkModals';
 import BulkDistributeModal from './crm/contacts/BulkDistributeModal';
 export default function ContactsPage() {
   const { i18n } = useTranslation();
@@ -93,6 +93,7 @@ export default function ContactsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [bulkReassignModal, setBulkReassignModal] = useState(false);
+  const [bulkCampaignModal, setBulkCampaignModal] = useState(false);
   const [bulkDistributeOpen, setBulkDistributeOpen] = useState(false);
   const [bulkDropdownOpen, setBulkDropdownOpen] = useState(null);
   const [bulkSMSModal, setBulkSMSModal] = useState(false);
@@ -1816,6 +1817,17 @@ export default function ContactsPage() {
         isRTL={isRTL}
       />
 
+      {/* Bulk Campaign Modal */}
+      <BulkCampaignModal
+        bulkCampaignModal={bulkCampaignModal}
+        setBulkCampaignModal={setBulkCampaignModal}
+        contacts={contacts}
+        selectedIds={selectedIds}
+        campaignsList={campaignsList}
+        handleBulkChangeField={handleBulkChangeField}
+        isRTL={isRTL}
+      />
+
       {/* Bulk Distribute Modal — split selected leads across multiple agents */}
       {bulkDistributeOpen && (
         <BulkDistributeModal
@@ -1856,6 +1868,7 @@ export default function ContactsPage() {
         BULK_STATUS_OPTIONS={BULK_STATUS_OPTIONS}
         handleBulkChangeField={handleBulkChangeField}
         setBulkReassignModal={setBulkReassignModal}
+        setBulkCampaignModal={setBulkCampaignModal}
         setBulkDistributeOpen={setBulkDistributeOpen}
         setBulkOppModal={setBulkOppModal}
         setBulkOppForm={setBulkOppForm}

@@ -745,3 +745,103 @@ export function BulkSMSModal({ bulkSMSModal, setBulkSMSModal, bulkSMSState, setB
     </div>
   );
 }
+
+// ─── Bulk Campaign Picker ───
+// Dropdown-style modal for setting a campaign on N selected leads at once.
+// Picks from the existing campaigns (campaignsList prop) — no inline create
+// here, since adding 50 new campaigns from a bulk action would be chaotic.
+// Use the lead form for new campaigns; this only applies an existing one.
+export function BulkCampaignModal({ bulkCampaignModal, setBulkCampaignModal, contacts, selectedIds, campaignsList, handleBulkChangeField, isRTL }) {
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState(null);
+
+  if (!bulkCampaignModal) return null;
+
+  const list = (campaignsList || [])
+    .map(c => ({ id: c.id, name_ar: c.name_ar || c.name_en, name_en: c.name_en || c.name_ar }))
+    .filter(c => c.name_en || c.name_ar);
+  const lower = search.toLowerCase();
+  const filtered = search
+    ? list.filter(c => (c.name_en || '').toLowerCase().includes(lower) || (c.name_ar || '').includes(search))
+    : list;
+  const selectedContacts = (contacts || []).filter(c => selectedIds.includes(c.id));
+
+  const closeModal = () => { setBulkCampaignModal(false); setSearch(''); setSelected(null); };
+
+  return (
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/50 z-[1200] flex items-center justify-center p-5">
+      <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-2xl w-full max-w-[460px] max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="shrink-0 flex justify-between items-center px-5 py-4 border-b border-edge dark:border-edge-dark">
+          <div>
+            <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">
+              {isRTL ? 'تغيير الحملة' : 'Change Campaign'}
+            </h3>
+            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark mt-0.5">
+              {isRTL ? `${selectedIds.length} عميل محدد` : `${selectedIds.length} leads selected`}
+            </p>
+          </div>
+          <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-lg bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark hover:bg-surface-bg dark:hover:bg-surface-bg-dark">
+            <X size={16} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0 px-5 py-3">
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder={isRTL ? 'بحث عن حملة...' : 'Search campaign...'}
+            className="w-full px-3 py-2 rounded-lg bg-surface-bg dark:bg-surface-bg-dark border border-edge dark:border-edge-dark text-xs text-content dark:text-content-dark outline-none mb-3 font-cairo"
+            autoFocus
+          />
+          {/* Clear (set to null) option */}
+          <button onClick={() => setSelected('__clear__')}
+            className={`w-full text-start px-3 py-2.5 rounded-lg text-xs cursor-pointer border mb-2 transition ${selected === '__clear__' ? 'border-red-500 bg-red-500/[0.08] text-red-500 font-semibold' : 'border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark hover:border-red-500/40'}`}>
+            {isRTL ? '✕ مسح الحملة (بدون حملة)' : '✕ Clear campaign (set to none)'}
+          </button>
+          <div className="border border-edge dark:border-edge-dark rounded-lg max-h-[260px] overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="p-6 text-center text-xs text-content-muted dark:text-content-muted-dark">
+                {isRTL ? 'لا توجد نتائج' : 'No campaigns found'}
+              </div>
+            ) : (
+              filtered.map(c => {
+                const label = isRTL ? c.name_ar : c.name_en;
+                const isSel = selected === label;
+                return (
+                  <button key={c.id} onClick={() => setSelected(label)}
+                    className={`w-full text-start px-3 py-2 text-xs cursor-pointer border-none border-b border-edge/40 dark:border-edge-dark/40 last:border-b-0 ${isSel ? 'bg-brand-500/[0.12] text-brand-500 font-bold' : 'bg-transparent text-content dark:text-content-dark hover:bg-surface-bg dark:hover:bg-brand-500/[0.04]'}`}>
+                    {label}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          {selectedContacts.length > 0 && (
+            <div className="mt-4">
+              <p className="m-0 mb-1.5 text-[11px] font-bold text-content dark:text-content-dark">
+                {isRTL ? 'العملاء اللي هتتعدل حملاتهم:' : 'Contacts to update:'}
+              </p>
+              <SelectedContactsList contacts={selectedContacts} isRTL={isRTL} maxHeight={140} />
+            </div>
+          )}
+        </div>
+        <div className="shrink-0 flex justify-end gap-2 px-5 py-3 border-t border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark">
+          <button onClick={closeModal}
+            className="px-4 py-2 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content-muted dark:text-content-muted-dark text-xs cursor-pointer">
+            {isRTL ? 'إلغاء' : 'Cancel'}
+          </button>
+          <button
+            onClick={() => {
+              const newValue = selected === '__clear__' ? null : selected;
+              handleBulkChangeField('campaign_name', newValue, 'Campaign Change');
+              closeModal();
+            }}
+            disabled={!selected}
+            className={`px-5 py-2 rounded-lg border-none text-xs font-semibold ${selected ? 'bg-brand-500 hover:bg-brand-600 text-white cursor-pointer' : 'bg-surface-bg dark:bg-surface-bg-dark text-content-muted dark:text-content-muted-dark cursor-not-allowed'}`}>
+            {isRTL ? `تطبيق على ${selectedIds.length} عميل` : `Apply to ${selectedIds.length}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

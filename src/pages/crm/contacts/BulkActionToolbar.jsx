@@ -1,4 +1,4 @@
-import { Download, PhoneCall, Merge, X, Users, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown, Briefcase, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, PhoneCall, Merge, X, Users, Tag, Building2, CheckCircle2, MessageSquare, ChevronDown, Briefcase, RefreshCw, Trash2, Megaphone } from 'lucide-react';
 import { TYPE } from './constants';
 import { fetchProjects } from '../../../services/opportunitiesService';
 
@@ -32,6 +32,7 @@ export default function BulkActionToolbar({
   // Handlers
   handleBulkChangeField,
   setBulkReassignModal,
+  setBulkCampaignModal,
   setBulkDistributeOpen,
   setBulkOppModal,
   setBulkOppForm,
@@ -173,6 +174,13 @@ export default function BulkActionToolbar({
           </div>
         )}
       </div>}
+
+      {/* Change Campaign */}
+      {perms.canBulkContacts && setBulkCampaignModal && <button
+        onClick={() => setBulkCampaignModal(true)}
+        className={`${btnBase} ${btnVariants.brand} text-slate-200`}>
+        <Megaphone size={12} /> {isRTL ? 'الحملة' : 'Campaign'}
+      </button>}
 
       {/* Send SMS */}
       {perms.canBulkContacts && <button
