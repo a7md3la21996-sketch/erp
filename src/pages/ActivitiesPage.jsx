@@ -480,7 +480,7 @@ export default function ActivitiesPage() {
         onSearchChange={setSearchInput}
         searchPlaceholder={isRTL ? 'بحث بالملاحظات أو اسم المستخدم...' : 'Search by notes or user name...'}
         quickFilters={QUICK_FILTERS}
-        resultsCount={filteredTotal}
+        resultsCount={totalCount}
       />
 
       {/* Activities List */}
