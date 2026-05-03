@@ -165,7 +165,18 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
     // check because it was the slowest path and triggered 500s combined with
     // other filters.
     if (filters.unassigned) query = query.or('assigned_to.is.null,assigned_to_name.is.null,assigned_to_name.eq.');
-    if (filters.contactIds?.length) query = query.in('id', filters.contactIds.slice(0, 300));
+    if (filters.contactIds?.length) {
+      // Defensive: strip non-UUID values (e.g. legacy 'none' sentinel) so
+      // PostgREST doesn't reject the request with 400 on contacts.id (uuid).
+      const validIds = filters.contactIds.filter(v => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v));
+      if (validIds.length) {
+        query = query.in('id', validIds.slice(0, 300));
+      } else {
+        // Caller asked for an empty/invalid set — short-circuit to no rows
+        // by filtering on a never-matching uuid.
+        query = query.eq('id', '00000000-0000-0000-0000-000000000000');
+      }
+    }
     if (filters.excludeContactIds?.length && filters.excludeContactIds[0] !== 'none') {
       const excludeBatch = filters.excludeContactIds.slice(0, 500);
       query = query.not('id', 'in', `(${excludeBatch.join(',')})`);

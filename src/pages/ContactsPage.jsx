@@ -692,7 +692,10 @@ export default function ContactsPage() {
           setStageContactIds(null);
         } else {
           const ids = idsByStage[filterStage] ? [...idsByStage[filterStage]] : [];
-          setStageContactIds(ids.length ? ids : ['none']); // 'none' sentinel: no rows
+          // Use a never-matching UUID as the empty sentinel — passing
+          // a non-UUID like 'none' to .in('id', ...) makes PostgREST
+          // return 400 (contacts.id is uuid-typed).
+          setStageContactIds(ids.length ? ids : ['00000000-0000-0000-0000-000000000000']);
         }
       } catch {
         setStageContactIds(null);

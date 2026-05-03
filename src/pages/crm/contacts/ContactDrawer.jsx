@@ -15,7 +15,7 @@ import {
   fetchContactActivities, createActivity, updateActivity,
   fetchContactOpportunities, getAssignmentHistory,
 } from '../../../services/contactsService';
-import { createOpportunity } from '../../../services/opportunitiesService';
+import { createOpportunity, updateOpportunity } from '../../../services/opportunitiesService';
 import { createNotification } from '../../../services/notificationsService';
 import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { fetchTasks, createTask, TASK_PRIORITIES, TASK_STATUSES } from '../../../services/tasksService';
@@ -108,6 +108,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const [showQuickStatus, setShowQuickStatus] = useState(false);
   // Quick temperature popover anchored on the temperature card.
   const [showQuickTemp, setShowQuickTemp] = useState(false);
+  // Quick stage popover anchored on each opportunity card's stage chip.
+  // Tracks which opp.id is currently open (only one at a time).
+  const [openStagePopoverFor, setOpenStagePopoverFor] = useState(null);
   // When the hero action buttons (Meeting / Note) open the TakeActionForm
   // they preset the activity type so the user lands on the right tab.
   const [actionPresetType, setActionPresetType] = useState(null);
@@ -562,6 +565,40 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       // the real failure so they can retry instead of trusting a phantom save.
       toast.error(err.message || (isRTL ? 'فشل حفظ المهمة' : 'Failed to save task'));
     }
+  };
+
+  // Quick stage change for an opportunity — updates opportunities.stage
+  // and patches local state so the chip flips immediately. Logs an
+  // activity in the timeline for audit. Errors surface as a toast.
+  const handleStageChange = async (opp, newStage) => {
+    if (!opp?.id || !newStage || newStage === opp.stage) return;
+    const oldStage = opp.stage;
+    // Optimistic update
+    setOpportunities(prev => prev.map(o => o.id === opp.id ? { ...o, stage: newStage, stage_changed_at: new Date().toISOString() } : o));
+    try {
+      await updateOpportunity(opp.id, { stage: newStage, stage_changed_at: new Date().toISOString() });
+    } catch (err) {
+      // Roll back
+      setOpportunities(prev => prev.map(o => o.id === opp.id ? { ...o, stage: oldStage } : o));
+      toast.error(isRTL ? `فشل التحديث: ${err?.message || 'غير معروف'}` : `Update failed: ${err?.message || 'Unknown'}`);
+      return;
+    }
+    try {
+      const fromLabel = deptStageLabel(oldStage, dept, false);
+      const toLabel = deptStageLabel(newStage, dept, false);
+      const act = await createActivity({
+        type: 'stage_change',
+        notes: `Stage: ${fromLabel} → ${toLabel}`,
+        contact_id: contact.id,
+        user_id: profile?.id || null,
+        user_name_ar: profile?.full_name_ar || '',
+        user_name_en: profile?.full_name_en || '',
+        dept: 'sales',
+        created_at: new Date().toISOString(),
+      });
+      setActivities(prev => [act, ...prev]);
+    } catch {}
+    toast.success(isRTL ? 'تم تحديث المرحلة' : 'Stage updated');
   };
 
   // Inline quick-note submit — same path as TakeActionForm but skips
@@ -2228,15 +2265,60 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                           </div>
                         ) : (
                           <div className="flex flex-col gap-2.5">
-                            {filteredOpps.map(opp => (
-                              <button
+                            {filteredOpps.map(opp => {
+                              const stages = getDeptStages(dept);
+                              const currentStage = stages.find(s => s.id === opp.stage);
+                              const stageColor = currentStage?.color || '#10B981';
+                              const isStageOpen = openStagePopoverFor === opp.id;
+                              return (
+                              <div
                                 key={opp.id}
-                                onClick={() => navigate(`/crm/opportunities?highlight=${opp.id}`)}
-                                className="w-full text-start bg-surface-bg/50 dark:bg-surface-bg-dark/50 border border-edge/60 dark:border-edge-dark/60 rounded-xl p-3.5 cursor-pointer hover:bg-emerald-500/[0.05] hover:border-emerald-500/20 transition-all group"
+                                className="bg-surface-bg/50 dark:bg-surface-bg-dark/50 border border-edge/60 dark:border-edge-dark/60 rounded-xl p-3.5 hover:bg-emerald-500/[0.05] hover:border-emerald-500/20 transition-all"
                               >
-                                <div className="flex items-center justify-between mb-2">
-                                  <span className="text-xs font-bold text-content dark:text-content-dark">{isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}</span>
-                                  <Chip label={deptStageLabel(opp.stage, dept, isRTL)} color="#10B981" bg="rgba(16,185,129,0.1)" />
+                                <div className="flex items-center justify-between mb-2 gap-2">
+                                  <button
+                                    onClick={() => navigate(`/crm/opportunities?highlight=${opp.id}`)}
+                                    className="text-xs font-bold text-content dark:text-content-dark bg-transparent border-none cursor-pointer hover:text-brand-500 transition-colors p-0">
+                                    {isRTL ? 'فرصة' : 'Opp'} #{String(opp.id).slice(-4)}
+                                  </button>
+                                  {/* Clickable stage chip with quick-pick popover */}
+                                  <div className="relative">
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); setOpenStagePopoverFor(isStageOpen ? null : opp.id); }}
+                                      className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full cursor-pointer border-none transition-all hover:scale-105 active:scale-95"
+                                      style={{ color: stageColor, background: stageColor + '18' }}
+                                      title={isRTL ? 'تغيير المرحلة' : 'Change stage'}
+                                      aria-haspopup="menu"
+                                      aria-expanded={isStageOpen}
+                                    >
+                                      {deptStageLabel(opp.stage, dept, isRTL)}
+                                      <ChevronDown size={10} className="opacity-70" />
+                                    </button>
+                                    {isStageOpen && (
+                                      <>
+                                        <div className="fixed inset-0 z-[60]" onClick={() => setOpenStagePopoverFor(null)} />
+                                        <div role="menu" className="absolute top-full mt-1.5 end-0 z-[61] min-w-[180px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl shadow-lg overflow-hidden p-1">
+                                          <div className="text-[10px] font-bold text-content-muted dark:text-content-muted-dark uppercase tracking-wide px-2 py-1.5 border-b border-edge/50 dark:border-edge-dark/50">
+                                            {isRTL ? 'تغيير المرحلة' : 'Change stage'}
+                                          </div>
+                                          {stages.map(s => {
+                                            const isCurrent = s.id === opp.stage;
+                                            return (
+                                              <button key={s.id}
+                                                role="menuitem"
+                                                onClick={() => { setOpenStagePopoverFor(null); if (!isCurrent) handleStageChange(opp, s.id); }}
+                                                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer border-none bg-transparent text-start hover:bg-edge/40 dark:hover:bg-edge-dark/40 ${isCurrent ? 'font-bold' : ''}`}
+                                                style={isCurrent ? { color: s.color, background: s.color + '14' } : undefined}>
+                                                <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
+                                                <span className="flex-1" style={{ color: isCurrent ? s.color : undefined }}>{isRTL ? s.label_ar : s.label_en}</span>
+                                                {isCurrent && <Check size={12} style={{ color: s.color }} />}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                                 {opp.projects?.name_ar && (
                                   <div className="text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? opp.projects.name_ar : (opp.projects.name_en || opp.projects.name_ar)}</div>
@@ -2253,8 +2335,9 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                                   )}
                                   <span className="opacity-60">{opp.created_at?.slice(0, 10)}</span>
                                 </div>
-                              </button>
-                            ))}
+                              </div>
+                              );
+                            })}
                           </div>
                         );
                         })()}
