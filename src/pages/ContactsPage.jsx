@@ -918,26 +918,39 @@ export default function ContactsPage() {
           }
         });
 
-        // Fetch last feedback (non-blocking)
+        // Fetch last feedback (non-blocking).
+        // Two bugs fixed here that were 500-ing on the leads page:
+        //   (a) .or('notes.neq.,description.neq.') was malformed
+        //       PostgREST syntax (no value after the operator) — the
+        //       server rejected every request.
+        //   (b) .in('contact_id', ids) with 100+ ids built a URL that
+        //       sometimes exceeded PostgREST's URL length limit.
+        // Fix: chunk the IN by 200 and drop the broken OR filter
+        // (notes/description filtering happens client-side below
+        // anyway — `if (a._feedback)` does the same thing).
         const ids = list.map(c => c.id).filter(Boolean);
-        // Show ALL feedback on assigned contacts (if agent can see the contact, they see all its history)
-        let feedbackQuery = supabase.from('activities').select('contact_id, notes, description, user_name_ar, user_name_en, created_at')
-          .in('contact_id', ids)
-          .or('notes.neq.,description.neq.')
-          .order('created_at', { ascending: false }).range(0, 199);
-        feedbackQuery.then(({ data: acts }) => {
-            if (acts?.length) {
-              const lastByContact = {};
-              acts.forEach(a => {
-                if (a.contact_id && !lastByContact[a.contact_id]) {
-                  // Use notes or description, whichever is populated
-                  a._feedback = a.notes || a.description || null;
-                  if (a._feedback) lastByContact[a.contact_id] = a;
-                }
-              });
-              setContacts(prev => prev.map(c => ({ ...c, _lastNote: lastByContact[c.id] || null })));
-            }
-          }).catch(err => { if (import.meta.env.DEV) console.warn('fetch last feedback:', err); });
+        const fetchFeedbackChunked = async () => {
+          const lastByContact = {};
+          const CHUNK = 200;
+          for (let i = 0; i < ids.length; i += CHUNK) {
+            const chunk = ids.slice(i, i + CHUNK);
+            const { data: acts } = await supabase
+              .from('activities')
+              .select('contact_id, notes, description, user_name_ar, user_name_en, created_at')
+              .in('contact_id', chunk)
+              .order('created_at', { ascending: false })
+              .range(0, 199);
+            (acts || []).forEach(a => {
+              if (!a.contact_id || lastByContact[a.contact_id]) return;
+              a._feedback = a.notes || a.description || null;
+              if (a._feedback) lastByContact[a.contact_id] = a;
+            });
+          }
+          if (Object.keys(lastByContact).length) {
+            setContacts(prev => prev.map(c => ({ ...c, _lastNote: lastByContact[c.id] || null })));
+          }
+        };
+        fetchFeedbackChunked().catch(err => { if (import.meta.env.DEV) console.warn('fetch last feedback:', err); });
 
         // Fetch opportunity counts per contact (non-blocking)
         supabase.from('opportunities').select('contact_id')
