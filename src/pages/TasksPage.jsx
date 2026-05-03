@@ -13,6 +13,7 @@ import {
   Edit3, SkipForward, Calendar, AlertCircle
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
+import supabase from '../lib/supabase';
 import { createActivity } from '../services/contactsService';
 import { Button, Card, Input, Select, Textarea, Badge, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
@@ -989,31 +990,35 @@ export default function TasksPage() {
     return { status: statusF?.value, priority: priorityF?.value, dept: deptF?.value, agentName: agentF?.value };
   }, [smartFilters]);
 
+  // Shared filter args used by both loadTasks and loadStats so the KPIs
+  // and the visible list always agree on what's currently filtered.
+  const baseQueryArgs = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return {
+      role: profile?.role, userId: profile?.id, teamId: profile?.team_id,
+      search: search || undefined,
+      status: serverFilters.status || (statusFilter !== 'all' ? statusFilter : undefined),
+      priority: serverFilters.priority || (priorityFilter !== 'all' ? priorityFilter : undefined),
+      dept: serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined),
+      agentName: serverFilters.agentName || (agentFilter !== 'all' ? agentFilter : undefined) || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
+      ...(dateFilter === 'today' ? { dueDateFrom: todayStr + 'T00:00:00', dueDateTo: todayStr + 'T23:59:59' } : {}),
+      ...(dateFilter === 'week' ? { dueDateFrom: todayStr + 'T00:00:00', dueDateTo: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) + 'T23:59:59' } : {}),
+      ...(dateFilter === 'overdue' ? { overdueOnly: true } : {}),
+    };
+  }, [profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.department, globalFilter?.agentName, statusFilter, priorityFilter, dateFilter, agentFilter]);
+
   const loadTasks = useCallback(async (pg) => {
     setLoading(true);
     try {
       const currentPage = pg || page || 1;
-      const agentValue = serverFilters.agentName || (agentFilter !== 'all' ? agentFilter : undefined) || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined);
-      const deptValue = serverFilters.dept || ((globalFilter?.department && globalFilter.department !== 'all') ? globalFilter.department : undefined);
-      const result = await fetchTasks({
-        page: currentPage, pageSize, sortBy,
-        role: profile?.role, userId: profile?.id, teamId: profile?.team_id,
-        search: search || undefined,
-        status: serverFilters.status || (statusFilter !== 'all' ? statusFilter : undefined),
-        priority: serverFilters.priority || (priorityFilter !== 'all' ? priorityFilter : undefined),
-        dept: deptValue,
-        agentName: agentValue,
-        ...(dateFilter === 'today' ? { dueDateFrom: new Date().toISOString().slice(0, 10) + 'T00:00:00', dueDateTo: new Date().toISOString().slice(0, 10) + 'T23:59:59' } : {}),
-        ...(dateFilter === 'week' ? { dueDateFrom: new Date().toISOString().slice(0, 10) + 'T00:00:00', dueDateTo: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) + 'T23:59:59' } : {}),
-        ...(dateFilter === 'overdue' ? { overdueOnly: true } : {}),
-      });
+      const result = await fetchTasks({ ...baseQueryArgs, page: currentPage, pageSize, sortBy });
       setTasks(result?.data || []);
       setTotalCount(result?.count || 0);
     } catch (err) {
       console.error('Tasks load error:', err);
       setTasks([]);
     } finally { setLoading(false); }
-  }, [page, pageSize, sortBy, profile?.role, profile?.id, profile?.team_id, search, serverFilters, globalFilter?.agentName, globalFilter?.department, statusFilter, priorityFilter, dateFilter, agentFilter]);
+  }, [page, pageSize, sortBy, baseQueryArgs]);
 
   useEffect(() => { if (profile) loadTasks(); }, [profile, loadTasks]);
 
@@ -1032,19 +1037,32 @@ export default function TasksPage() {
   // Stats — from server
   const loadStats = useCallback(async () => {
     try {
-      const baseArgs = { role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: 1, pageSize: 1 };
       const todayStr = new Date().toISOString().slice(0, 10);
-      const nowISO = new Date().toISOString();
+      // Strip server-side narrowing fields so each stat slice can apply
+      // its own (e.g. overdue-only ignores the status filter, total
+      // ignores both). Everything else from baseQueryArgs (role, dept,
+      // agent, search) still applies so the KPIs reflect the user's
+      // current view AND respect RLS via fetchTasks's role plumbing.
+      const { status: _s, priority: _p, dueDateFrom: _df, dueDateTo: _dt, overdueOnly: _o, ...filterArgs } = baseQueryArgs;
+      const baseArgs = { ...filterArgs, page: 1, pageSize: 1 };
       const [totalRes, pendingRes, doneRes, overdueRes, todayRes, doneTodayRes] = await Promise.all([
-        fetchTasks({ ...baseArgs }),
+        fetchTasks(baseArgs),
         fetchTasks({ ...baseArgs, status: 'pending' }),
         fetchTasks({ ...baseArgs, status: 'done' }),
-        // Overdue = pending + due_date < now (need custom query)
-        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'pending').lt('due_date', nowISO),
-        // Today = due_date starts with today
-        supabase.from('tasks').select('id', { count: 'exact', head: true }).gte('due_date', todayStr + 'T00:00:00').lte('due_date', todayStr + 'T23:59:59'),
-        // Done today
-        supabase.from('tasks').select('id', { count: 'exact', head: true }).eq('status', 'done').gte('updated_at', todayStr + 'T00:00:00'),
+        fetchTasks({ ...baseArgs, overdueOnly: true }),
+        fetchTasks({ ...baseArgs, dueDateFrom: todayStr + 'T00:00:00', dueDateTo: todayStr + 'T23:59:59' }),
+        // 'doneToday' has no first-class support in fetchTasks; fall back
+        // to a direct supabase query but apply the same role scoping the
+        // rest of the page uses (sales_agent → own only, TL/manager → team).
+        (async () => {
+          let q = supabase.from('tasks').select('id', { count: 'exact', head: true })
+            .eq('status', 'done')
+            .gte('updated_at', todayStr + 'T00:00:00');
+          if (profile?.role === 'sales_agent' && profile.id) {
+            q = q.eq('assigned_to', profile.id);
+          }
+          return q;
+        })(),
       ]);
       setStats({
         total: totalRes?.count || 0,
@@ -1055,7 +1073,7 @@ export default function TasksPage() {
         doneToday: doneTodayRes?.count || 0,
       });
     } catch { /* ignore */ }
-  }, [profile?.role, profile?.id, profile?.team_id]);
+  }, [baseQueryArgs, profile?.role, profile?.id]);
 
   useEffect(() => { if (profile) loadStats(); }, [profile, loadStats]);
 
@@ -1093,10 +1111,21 @@ export default function TasksPage() {
     try {
       const t = await createTask({ ...form, assigned_to: profile?.id || null, assigned_to_name_ar: profile?.full_name_ar || '', assigned_to_name_en: profile?.full_name_en || '' });
       logAction({ action: 'create', entity: 'task', entityId: t.id, entityName: t.title || '', description: 'Created task', userName: profile?.full_name_ar || profile?.full_name_en || '' });
-      notifyTaskAssigned({ taskTitle: t.title, assigneeId: t.assigned_to || profile?.id || 'all', assignedBy: profile?.full_name_ar || profile?.full_name_en || '' });
+      // Skip the notification when there's no real assignee — falling
+      // back to 'all' broadcast a creator's own task to every user.
+      const assigneeId = t.assigned_to || profile?.id;
+      if (assigneeId) {
+        notifyTaskAssigned({ taskTitle: t.title, assigneeId, assignedBy: profile?.full_name_ar || profile?.full_name_en || '' });
+      }
       setTasks(prev => [t, ...prev]);
       setForm({ title: '', type: 'general', priority: 'medium', status: 'pending', dept: 'sales', due_date: '', notes: '', contact_name: '', opportunity_name: '' });
       setShowAdd(false);
+      toast.success(isRTL ? 'تم حفظ المهمة' : 'Task saved');
+    } catch (err) {
+      // Without this catch the form silently closed even when createTask
+      // rejected — the user thought their task was saved.
+      console.error('Task save error:', err);
+      toast.error(isRTL ? `فشل حفظ المهمة: ${err?.message || ''}` : `Failed to save task: ${err?.message || ''}`);
     } finally { setSaving(false); }
   };
 
