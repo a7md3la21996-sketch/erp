@@ -663,24 +663,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   }, [activities, isRTL]);
   const agentCount = uniqueAgents.length;
 
-  // Detect ghost workers — users who logged activities on this contact but
-  // are NOT in assigned_to_names AND were never previously assigned to it.
-  // After Phase 3 (single-assignment), every reassigned lead would otherwise
-  // surface its prior owner as a "ghost" — pure noise. We now exclude anyone
-  // who appears in assignment_history (as either from or to), so the banner
-  // only fires on the real C-21807 pattern: someone working on a lead they
-  // were never assigned to. Only shown to admin/operations.
-  const ghostWorkers = useMemo(() => {
-    if (!isAdmin) return [];
-    const assigned = new Set(contact?.assigned_to_names || []);
-    const everAssigned = new Set();
-    (assignmentHistory || []).forEach(h => {
-      if (h.from) everAssigned.add(h.from);
-      if (h.to) everAssigned.add(h.to);
-    });
-    return uniqueAgents.filter(a => a.name && !assigned.has(a.name) && !everAssigned.has(a.name));
-  }, [uniqueAgents, contact?.assigned_to_names, assignmentHistory, isAdmin]);
-
   const actCount = activities.length;
   const oppCount = opportunities.length;
   const openTaskCount = (tasks || []).filter(t => t.status !== 'done' && t.status !== 'cancelled').length;
@@ -1878,32 +1860,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                     ? `بتشوف الأنشطة من ${myAssignmentDate.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric', year: 'numeric' })} — الأنشطة السابقة مخفية`
                     : `Showing activities from ${myAssignmentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} — previous history hidden`}
                 </p>
-              </div>
-            )}
-
-            {/* Ghost Worker Drift Banner — admin-only.
-                Shows when activities were logged by users not in
-                assigned_to_names (the C-21807 pattern). After Phase 1
-                migration this should be rare, but the banner stays as
-                drift detection for any future regressions. */}
-            {ghostWorkers.length > 0 && (
-              <div className="mb-3 p-3 rounded-xl bg-rose-500/[0.05] border border-rose-500/20">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <History size={12} className="text-rose-500" />
-                  <span className="text-[11px] font-bold text-rose-600 dark:text-rose-400">
-                    {isRTL
-                      ? `⚠️ ${ghostWorkers.length} مستخدم سجّل أنشطة على هذا العميل دون أن يكون معينًا عليه`
-                      : `⚠️ ${ghostWorkers.length} user(s) logged activity on this lead without being assigned`}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {ghostWorkers.slice(0, 5).map(g => (
-                    <span key={g.id} className="text-[10px] bg-rose-500/[0.1] text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded-full">
-                      {g.name} <span className="opacity-60">({g.count} {isRTL ? 'نشاط' : 'acts'})</span>
-                    </span>
-                  ))}
-                  {ghostWorkers.length > 5 && <span className="text-[10px] text-rose-500">+{ghostWorkers.length - 5}</span>}
-                </div>
               </div>
             )}
 
