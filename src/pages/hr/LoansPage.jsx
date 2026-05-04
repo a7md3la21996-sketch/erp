@@ -69,13 +69,13 @@ export default function LoansPage() {
   };
 
   const calcRemaining = (loan) => {
-    if (loan.status === 'paid') return 0;
+    if (loan.status === 'paid' || loan.status === 'closed') return 0;
     if (loan.status === 'cancelled') return Number(loan.amount) || 0;
-    const start = new Date(loan.start_date);
-    const now = new Date();
-    const monthsElapsed = Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()));
-    const totalPaid = monthsElapsed * (Number(loan.monthly_deduction) || 0);
-    return Math.max(0, (Number(loan.amount) || 0) - totalPaid);
+    // Authoritative balance comes from DB (updated by payroll runs); the
+    // old elapsed-months estimate drifts when payroll runs late or skips.
+    const amount = Number(loan.amount) || 0;
+    const paid = Number(loan.balance_paid) || 0;
+    return Math.max(0, amount - paid);
   };
 
   const openAddModal = () => {

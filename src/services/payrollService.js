@@ -93,7 +93,88 @@ export async function savePayrollRun(runData, items) {
   const { error: itemErr } = await supabase.from('payroll_items').insert(itemRows);
   if (itemErr) throw itemErr;
 
+  // Sync loan balances for every employee with a deduction this run.
+  // Runs idempotently: re-running payroll for the same month replaces items,
+  // so the sum-from-history below stays correct.
+  // Wrapped in try/catch so a missing balance_paid column (pre-migration)
+  // never blocks the payroll save itself.
+  const empIdsWithLoans = [...new Set(items.filter(i => (i.loan_deduction || 0) > 0).map(i => i.employee_id))];
+  if (empIdsWithLoans.length > 0) {
+    try {
+      await syncLoanBalances(empIdsWithLoans);
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('[payroll] loan balance sync skipped:', err.message);
+    }
+  }
+
   return run;
+}
+
+// ── Loan balance sync ────────────────────────────────────────
+// Recomputes balance_paid for each loan by summing loan_deduction across
+// every payroll_item for that employee since the loan started. Idempotent.
+// NOTE: when an employee has multiple active loans simultaneously, the
+// total loan_deduction is split equally based on each loan's monthly_deduction
+// share. Most employees only have one active loan at a time.
+export async function syncLoanBalances(employeeIds) {
+  const ids = Array.isArray(employeeIds) ? employeeIds : [employeeIds];
+  if (ids.length === 0) return;
+
+  // Pull every active loan for the affected employees + their full payroll history
+  const { data: loans } = await supabase
+    .from('employee_loans')
+    .select('id, employee_id, amount, monthly_deduction, start_date, created_at, status')
+    .in('employee_id', ids);
+
+  if (!loans?.length) return;
+
+  // Group payroll history by employee
+  const { data: items } = await supabase
+    .from('payroll_items')
+    .select('employee_id, loan_deduction, payroll_runs!inner(run_date, year, month)')
+    .in('employee_id', ids);
+
+  const itemsByEmp = {};
+  for (const it of items || []) {
+    if (!itemsByEmp[it.employee_id]) itemsByEmp[it.employee_id] = [];
+    itemsByEmp[it.employee_id].push(it);
+  }
+
+  // For each employee, distribute loan_deduction across their active loans by share
+  const updates = [];
+  for (const empId of ids) {
+    const empLoans = loans.filter(l => l.employee_id === empId);
+    const empItems = itemsByEmp[empId] || [];
+    if (empLoans.length === 0) continue;
+
+    // Each loan's share of monthly deduction
+    const totalMonthlyShare = empLoans.reduce((s, l) => s + (Number(l.monthly_deduction) || 0), 0);
+    if (totalMonthlyShare === 0) continue;
+
+    for (const loan of empLoans) {
+      const cutoff = loan.start_date || loan.created_at;
+      const share = (Number(loan.monthly_deduction) || 0) / totalMonthlyShare;
+      const totalPaidAcrossEmp = empItems
+        .filter(i => !cutoff || i.payroll_runs?.run_date >= cutoff)
+        .reduce((s, i) => s + (Number(i.loan_deduction) || 0), 0);
+      const paidForThisLoan = Math.min(Number(loan.amount) || 0, totalPaidAcrossEmp * share);
+      const newStatus = paidForThisLoan >= (Number(loan.amount) || 0) && loan.status === 'active' ? 'closed' : loan.status;
+      updates.push({
+        id: loan.id,
+        balance_paid: Math.round(paidForThisLoan * 100) / 100,
+        last_deducted_at: new Date().toISOString(),
+        status: newStatus,
+      });
+    }
+  }
+
+  // Apply updates one-by-one (small N — no batch RPC available without DB function)
+  for (const u of updates) {
+    await supabase
+      .from('employee_loans')
+      .update({ balance_paid: u.balance_paid, last_deducted_at: u.last_deducted_at, status: u.status })
+      .eq('id', u.id);
+  }
 }
 
 // ── Loans ────────────────────────────────────────────────────
