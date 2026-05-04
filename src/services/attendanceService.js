@@ -6,27 +6,46 @@ import { P } from '../config/roles';
 
 // ── Attendance ────────────────────────────────────────────────
 
+const PAGE_SIZE = 1000;
+
+// Companies with > 50 employees easily blow past Supabase's 1000-row default
+// per month. Page through results so we never silently drop attendance rows.
+async function fetchAllPages(buildQuery) {
+  const all = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    const batch = data || [];
+    all.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  return all;
+}
+
 export async function fetchAttendance({ month, year, employeeId } = {}) {
   try {
-    let query = supabase
-      .from('attendance')
-      .select(`
-        *,
-        employees ( id, full_name_ar, full_name_en, department_id )
-      `)
-      .order('date', { ascending: true });
+    const buildQuery = () => {
+      let query = supabase
+        .from('attendance')
+        .select(`
+          *,
+          employees ( id, full_name_ar, full_name_en, department_id )
+        `)
+        .order('date', { ascending: true });
 
-    if (month && year) {
-      const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-      const endDay = new Date(year, month, 0).getDate();
-      const endDate = `${year}-${String(month).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
-      query = query.gte('date', startDate).lte('date', endDate);
-    }
-    if (employeeId) query = query.eq('employee_id', employeeId);
+      if (month && year) {
+        const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+        const endDay = new Date(year, month, 0).getDate();
+        const endDate = `${year}-${String(month).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
+        query = query.gte('date', startDate).lte('date', endDate);
+      }
+      if (employeeId) query = query.eq('employee_id', employeeId);
+      return query;
+    };
 
-    const { data, error } = await query.range(0, 999);
-    if (error) throw error;
-    return data || [];
+    return await fetchAllPages(buildQuery);
   } catch (err) { reportError('attendanceService', 'query', err);
     if (!month || !year) {
       const now = new Date();
@@ -120,13 +139,13 @@ export async function getAttendanceSummary(month, year) {
     const endDay = new Date(year, month, 0).getDate();
     const endDate = `${year}-${String(month).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
 
-    const { data, error } = await supabase
-      .from('attendance')
-      .select('employee_id, status')
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .range(0, 999);
-    if (error) throw error;
+    const data = await fetchAllPages(() =>
+      supabase
+        .from('attendance')
+        .select('employee_id, status')
+        .gte('date', startDate)
+        .lte('date', endDate)
+    );
 
     const summary = { total: 0, present: 0, absent: 0, late: 0, leave: 0 };
     (data || []).forEach(r => {

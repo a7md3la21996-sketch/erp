@@ -2,18 +2,15 @@ import supabase from '../../lib/supabase';
 import { reportError } from '../../utils/errorReporter';
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchEmployees } from '../../services/employeesService';
+import { logAction } from '../../services/auditService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
-import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, ShieldAlert } from 'lucide-react';
-import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
+import { Shield, AlertTriangle, XCircle, CheckCircle2, Plus, ShieldAlert, Edit2, Trash2 } from 'lucide-react';
+import { Button, Card, KpiCard, Table, Th, Tr, Td, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination, Modal, ModalFooter, Select } from '../../components/ui';
 
 const TABLE = 'disciplinary';
-const DEFAULT_CASES = [
-  { emp_id:'EMP-001', type:'warning', reason:'تأخير متكرر', date:'2026-02-10', status:'open', severity:'low' },
-  { emp_id:'EMP-002', type:'suspension', reason:'غياب بدون إذن', date:'2026-01-20', status:'closed', severity:'high' },
-  { emp_id:'EMP-003', type:'warning', reason:'سلوك غير لائق', date:'2026-03-01', status:'open', severity:'medium' },
-  { emp_id:'EMP-004', type:'termination', reason:'خرق سياسة الشركة', date:'2026-02-28', status:'closed', severity:'high' },
-];
 
 /* ─── Dynamic Badge ─── */
 function DynBadge({ label, color = '#4A7AAB' }) {
@@ -29,7 +26,23 @@ function DynBadge({ label, color = '#4A7AAB' }) {
 
 export default function DisciplinaryPage() {
   const { i18n } = useTranslation();
+  const { profile } = useAuth();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
+
+  // Disciplinary records are confidential — only admin and HR may view.
+  if (profile && !['admin', 'hr'].includes(profile.role)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg font-bold text-content dark:text-content-dark">
+          {isRTL ? 'غير مصرح' : 'Unauthorized'}
+        </p>
+      </div>
+    );
+  }
+
+  const toast = useToast();
+  const userName = profile?.full_name_ar || profile?.full_name_en || '';
+
   const [cases, setCases] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [page, setPage] = useState(1);
@@ -38,20 +51,30 @@ export default function DisciplinaryPage() {
   const [search, setSearch] = useState('');
 
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingCase, setEditingCase] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [saving, setSaving] = useState(false);
 
-  // Fetch cases from Supabase on mount; seed defaults if empty
+  const emptyForm = {
+    emp_id: '',
+    type: 'warning',
+    reason: '',
+    date: new Date().toISOString().slice(0, 10),
+    severity: 'low',
+    status: 'open',
+    notes: '',
+  };
+  const [form, setForm] = useState(emptyForm);
+
+  // Fetch cases from Supabase on mount. No auto-seeding — disciplinary
+  // records about real-looking employee IDs are unsafe to inject into a
+  // fresh production DB.
   const fetchCases = useCallback(async () => {
     try {
       const { data, error } = await supabase.from(TABLE).select('*').order('created_at', { ascending: false });
       if (error) throw error;
-      if (data && data.length > 0) {
-        setCases(data);
-      } else {
-        // Seed default data
-        const { data: seeded, error: seedErr } = await supabase.from(TABLE).insert(DEFAULT_CASES).select();
-        if (seedErr) throw seedErr;
-        setCases(seeded || []);
-      }
+      setCases(data || []);
     } catch (err) {
       reportError(`supabase.${TABLE}`, 'fetch', err);
     }
@@ -129,6 +152,91 @@ export default function DisciplinaryPage() {
   const typeLabel     = (t,lang) => ({ warning:lang==='ar'?'إنذار':'Warning', suspension:lang==='ar'?'إيقاف':'Suspension', termination:lang==='ar'?'فصل':'Termination' }[t]||t);
   const statusLabel   = (s,lang) => ({ open:lang==='ar'?'مفتوح':'Open', closed:lang==='ar'?'مغلق':'Closed' }[s]||s);
 
+  const openNew = () => {
+    setEditingCase(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
+  const openEdit = (cas) => {
+    setEditingCase(cas);
+    setForm({
+      emp_id: cas.emp_id || '',
+      type: cas.type || 'warning',
+      reason: cas.reason || '',
+      date: cas.date || new Date().toISOString().slice(0, 10),
+      severity: cas.severity || 'low',
+      status: cas.status || 'open',
+      notes: cas.notes || '',
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.emp_id || !form.reason.trim()) {
+      toast.error(lang === 'ar' ? 'يجب اختيار الموظف وكتابة السبب' : 'Employee and reason are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editingCase) {
+        const { data, error } = await supabase
+          .from(TABLE)
+          .update({ ...form, updated_at: new Date().toISOString() })
+          .eq('id', editingCase.id)
+          .select('*')
+          .single();
+        if (error) throw error;
+        setCases(prev => prev.map(c => c.id === editingCase.id ? data : c));
+        logAction({
+          action: 'update', entity: 'disciplinary', entityId: editingCase.id,
+          entityName: form.emp_id, description: `Updated disciplinary case: ${form.reason}`,
+          oldValue: JSON.stringify(editingCase), newValue: JSON.stringify(data), userName,
+        });
+        toast.success(lang === 'ar' ? 'تم حفظ التعديلات' : 'Case updated');
+      } else {
+        const { data, error } = await supabase
+          .from(TABLE)
+          .insert([{ ...form, created_at: new Date().toISOString() }])
+          .select('*')
+          .single();
+        if (error) throw error;
+        setCases(prev => [data, ...prev]);
+        logAction({
+          action: 'create', entity: 'disciplinary', entityId: data.id,
+          entityName: form.emp_id, description: `Created disciplinary case: ${form.reason}`,
+          newValue: JSON.stringify(data), userName,
+        });
+        toast.success(lang === 'ar' ? 'تم إضافة الحالة' : 'Case created');
+      }
+      setModalOpen(false);
+    } catch (err) {
+      toast.error(lang === 'ar' ? 'فشل الحفظ' : 'Save failed');
+      reportError(`supabase.${TABLE}`, 'save', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const { error } = await supabase.from(TABLE).delete().eq('id', deleteTarget.id);
+      if (error) throw error;
+      setCases(prev => prev.filter(c => c.id !== deleteTarget.id));
+      logAction({
+        action: 'delete', entity: 'disciplinary', entityId: deleteTarget.id,
+        entityName: deleteTarget.emp_id, description: `Deleted disciplinary case: ${deleteTarget.reason}`,
+        oldValue: JSON.stringify(deleteTarget), userName,
+      });
+      toast.success(lang === 'ar' ? 'تم الحذف' : 'Deleted');
+    } catch (err) {
+      toast.error(lang === 'ar' ? 'فشل الحذف' : 'Delete failed');
+      reportError(`supabase.${TABLE}`, 'delete', err);
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
       <PageSkeleton hasKpis kpiCount={4} tableRows={4} tableCols={6} />
@@ -161,7 +269,7 @@ export default function DisciplinaryPage() {
               { header: isRTL ? 'الحالة' : 'Status', key: r => statusLabel(r.status, lang) },
             ]}
           />
-          <Button size="md">
+          <Button size="md" onClick={openNew}>
             <Plus size={16} />{lang==='ar'?'+ حالة جديدة':'+ New Case'}
           </Button>
         </div>
@@ -187,7 +295,7 @@ export default function DisciplinaryPage() {
         <Table>
           <thead>
             <tr>
-              {[lang==='ar'?'الموظف':'Employee', lang==='ar'?'النوع':'Type', lang==='ar'?'السبب':'Reason', lang==='ar'?'التاريخ':'Date', lang==='ar'?'الخطورة':'Severity', lang==='ar'?'الحالة':'Status'].map((h,i)=>(
+              {[lang==='ar'?'الموظف':'Employee', lang==='ar'?'النوع':'Type', lang==='ar'?'السبب':'Reason', lang==='ar'?'التاريخ':'Date', lang==='ar'?'الخطورة':'Severity', lang==='ar'?'الحالة':'Status', ''].map((h,i)=>(
                 <Th key={i}>{h}</Th>
               ))}
             </tr>
@@ -195,7 +303,7 @@ export default function DisciplinaryPage() {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <div className="text-center py-16 px-5">
                     <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                       <ShieldAlert size={24} color="#4A7AAB" />
@@ -216,6 +324,24 @@ export default function DisciplinaryPage() {
                   <Td className="text-content-muted dark:text-content-muted-dark">{cas.date}</Td>
                   <Td><DynBadge label={severityLabel(cas.severity,lang)} color={severityColor(cas.severity)} /></Td>
                   <Td><DynBadge label={statusLabel(cas.status,lang)} color={cas.status==='open'?'#6B8DB5':'#4A7AAB'} /></Td>
+                  <Td>
+                    <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <button
+                        onClick={() => openEdit(cas)}
+                        title={lang === 'ar' ? 'تعديل' : 'Edit'}
+                        className="p-1.5 rounded-lg text-content-muted hover:bg-brand-500/10 hover:text-brand-500 transition-colors"
+                      >
+                        <Edit2 size={15} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(cas)}
+                        title={lang === 'ar' ? 'حذف' : 'Delete'}
+                        className="p-1.5 rounded-lg text-content-muted hover:bg-red-500/10 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </Td>
                 </Tr>
               );
             })}
@@ -223,6 +349,135 @@ export default function DisciplinaryPage() {
         </Table>
         <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
       </Card>
+
+      {/* ── Add / Edit Modal ── */}
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingCase
+          ? (lang === 'ar' ? 'تعديل الحالة' : 'Edit Case')
+          : (lang === 'ar' ? 'حالة تأديبية جديدة' : 'New Disciplinary Case')}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'الموظف' : 'Employee'} *
+            </label>
+            <Select value={form.emp_id} onChange={e => setForm(f => ({ ...f, emp_id: e.target.value }))}>
+              <option value="">{lang === 'ar' ? 'اختر موظف' : 'Select employee'}</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.employee_id || emp.id}>
+                  {(isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar}
+                  {emp.employee_id ? ` (${emp.employee_id})` : ''}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'النوع' : 'Type'}
+            </label>
+            <Select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+              <option value="warning">{lang === 'ar' ? 'إنذار' : 'Warning'}</option>
+              <option value="suspension">{lang === 'ar' ? 'إيقاف' : 'Suspension'}</option>
+              <option value="termination">{lang === 'ar' ? 'فصل' : 'Termination'}</option>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'الخطورة' : 'Severity'}
+            </label>
+            <Select value={form.severity} onChange={e => setForm(f => ({ ...f, severity: e.target.value }))}>
+              <option value="low">{lang === 'ar' ? 'منخفض' : 'Low'}</option>
+              <option value="medium">{lang === 'ar' ? 'متوسط' : 'Medium'}</option>
+              <option value="high">{lang === 'ar' ? 'عالي' : 'High'}</option>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'التاريخ' : 'Date'}
+            </label>
+            <input
+              type="date"
+              value={form.date}
+              onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'الحالة' : 'Status'}
+            </label>
+            <Select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+              <option value="open">{lang === 'ar' ? 'مفتوح' : 'Open'}</option>
+              <option value="closed">{lang === 'ar' ? 'مغلق' : 'Closed'}</option>
+            </Select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'السبب' : 'Reason'} *
+            </label>
+            <input
+              value={form.reason}
+              onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+              placeholder={lang === 'ar' ? 'مثال: تأخير متكرر' : 'e.g. Repeated tardiness'}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'ملاحظات' : 'Notes'}
+            </label>
+            <textarea
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              rows={3}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm resize-none"
+            />
+          </div>
+        </div>
+
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setModalOpen(false)}>
+            {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+          </Button>
+          <Button onClick={handleSave} disabled={saving || !form.emp_id || !form.reason.trim()}>
+            {saving ? (lang === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (lang === 'ar' ? 'حفظ' : 'Save')}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* ── Delete Confirm Modal ── */}
+      <Modal
+        open={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        title={lang === 'ar' ? 'تأكيد الحذف' : 'Confirm Delete'}
+      >
+        <p className="text-sm text-content dark:text-content-dark mb-2">
+          {lang === 'ar'
+            ? `هل أنت متأكد من حذف هذه الحالة التأديبية؟ لا يمكن التراجع عن هذا الإجراء.`
+            : 'Are you sure you want to delete this disciplinary case? This action cannot be undone.'}
+        </p>
+        {deleteTarget && (
+          <p className="text-xs text-content-muted dark:text-content-muted-dark">
+            {deleteTarget.emp_id} — {deleteTarget.reason}
+          </p>
+        )}
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>
+            {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+          </Button>
+          <Button variant="danger" onClick={handleDelete}>
+            {lang === 'ar' ? 'حذف' : 'Delete'}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

@@ -1,10 +1,11 @@
 import { syncToSupabase } from '../../utils/supabaseSync';
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchEmployees } from '../../services/employeesService';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { Package, CheckCircle2, AlertCircle, Clock, Plus, Edit2, Trash2 } from 'lucide-react';
-import { Button, Card, KpiCard, Th, Tr, Td, FilterPill, ExportButton, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
+import { Button, Card, KpiCard, Th, Tr, Td, FilterPill, ExportButton, Pagination, SmartFilter, applySmartFilters, Modal, ModalFooter, Select } from '../../components/ui';
 
 
 const STORAGE_KEY = 'platform_hr_assets';
@@ -32,6 +33,7 @@ function saveData(data) {
 
 export default function AssetsPage() {
   const { i18n } = useTranslation();
+  const toast = useToast();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [assets, setAssets] = useState(loadData);
 
@@ -42,6 +44,66 @@ export default function AssetsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [smartFilters, setSmartFilters] = useState([]);
+
+  const emptyForm = {
+    name: '', type: 'laptop', serial: '', assigned_to: '',
+    status: 'available', condition: 'good', value: 0,
+    acquired: new Date().toISOString().slice(0, 10),
+  };
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+
+  const openNew = () => { setEditingAsset(null); setForm(emptyForm); setModalOpen(true); };
+  const openEdit = (asset) => {
+    setEditingAsset(asset);
+    setForm({
+      name: asset.name || '',
+      type: asset.type || 'laptop',
+      serial: asset.serial || '',
+      assigned_to: asset.assigned_to || '',
+      status: asset.status || 'available',
+      condition: asset.condition || 'good',
+      value: asset.value || 0,
+      acquired: asset.acquired || new Date().toISOString().slice(0, 10),
+    });
+    setModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!form.name.trim() || !form.serial.trim()) {
+      toast.error(lang === 'ar' ? 'الاسم والرقم التسلسلي مطلوبان' : 'Name and serial are required');
+      return;
+    }
+    // Serial uniqueness check (skip the one we're editing)
+    const collision = assets.find(a => a.serial === form.serial && a.id !== editingAsset?.id);
+    if (collision) {
+      toast.error(lang === 'ar' ? `الرقم التسلسلي مستخدم في "${collision.name}"` : `Serial already used by "${collision.name}"`);
+      return;
+    }
+    const payload = {
+      ...form,
+      value: Number(form.value) || 0,
+      assigned_to: form.assigned_to || null,
+    };
+    if (editingAsset) {
+      setAssets(prev => prev.map(a => a.id === editingAsset.id ? { ...a, ...payload } : a));
+      toast.success(lang === 'ar' ? 'تم حفظ التعديلات' : 'Asset updated');
+    } else {
+      const nextId = Math.max(0, ...assets.map(a => a.id || 0)) + 1;
+      setAssets(prev => [{ id: nextId, ...payload }, ...prev]);
+      toast.success(lang === 'ar' ? 'تم إضافة الأصل' : 'Asset added');
+    }
+    setModalOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    setAssets(prev => prev.filter(a => a.id !== deleteTarget.id));
+    toast.success(lang === 'ar' ? 'تم الحذف' : 'Deleted');
+    setDeleteTarget(null);
+  };
 
   const { auditFields, applyAuditFilters } = useAuditFilter('asset');
 
@@ -105,7 +167,7 @@ export default function AssetsPage() {
               { header: isRTL ? 'القيمة' : 'Value', key: 'value' },
             ]}
           />
-          <Button size="md">
+          <Button size="md" onClick={openNew}>
             <Plus size={16} />{lang==='ar'?'+ أضف أصل':'+ Add Asset'}
           </Button>
         </div>
@@ -125,7 +187,7 @@ export default function AssetsPage() {
             {filters.map(f => (
               <FilterPill key={f.key} label={f.label} active={filter===f.key} onClick={()=>setFilter(f.key)} />
             ))}
-            <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
+            <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onFiltersChange={setSmartFilters} />
           </div>
         </div>
         {filtered.length === 0 ? (
@@ -148,7 +210,15 @@ export default function AssetsPage() {
           </thead>
           <tbody>
             {paged.map(asset => (
-              <AssetRow key={asset.id} asset={asset} isRTL={isRTL} lang={lang} statusColor={statusColor} statusLabel={statusLabel} employees={employees} />
+              <AssetRow
+                key={asset.id}
+                asset={asset}
+                isRTL={isRTL} lang={lang}
+                statusColor={statusColor} statusLabel={statusLabel}
+                employees={employees}
+                onEdit={() => openEdit(asset)}
+                onDelete={() => setDeleteTarget(asset)}
+              />
             ))}
           </tbody>
         </table>
@@ -160,11 +230,124 @@ export default function AssetsPage() {
         </>)}
       </Card>
       <Pagination page={safePage} totalPages={totalPages} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(s) => { setPageSize(s); setPage(1); }} totalItems={filtered.length} />
+
+      {/* ── Add / Edit Modal ── */}
+      <Modal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={editingAsset
+          ? (lang === 'ar' ? 'تعديل الأصل' : 'Edit Asset')
+          : (lang === 'ar' ? 'إضافة أصل' : 'Add Asset')}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'اسم الأصل' : 'Asset Name'} *</label>
+            <input
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+              placeholder={lang === 'ar' ? 'مثال: MacBook Pro 14"' : 'e.g. MacBook Pro 14"'}
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'النوع' : 'Type'}</label>
+            <Select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}>
+              <option value="laptop">{lang === 'ar' ? 'لابتوب' : 'Laptop'}</option>
+              <option value="phone">{lang === 'ar' ? 'هاتف' : 'Phone'}</option>
+              <option value="tablet">{lang === 'ar' ? 'تابلت' : 'Tablet'}</option>
+              <option value="monitor">{lang === 'ar' ? 'شاشة' : 'Monitor'}</option>
+              <option value="printer">{lang === 'ar' ? 'طابعة' : 'Printer'}</option>
+              <option value="vehicle">{lang === 'ar' ? 'سيارة' : 'Vehicle'}</option>
+              <option value="other">{lang === 'ar' ? 'أخرى' : 'Other'}</option>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'الرقم التسلسلي' : 'Serial'} *</label>
+            <input
+              value={form.serial}
+              onChange={e => setForm(f => ({ ...f, serial: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'مخصص لـ' : 'Assigned To'}</label>
+            <Select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))}>
+              <option value="">{lang === 'ar' ? 'غير مخصص' : 'Unassigned'}</option>
+              {employees.map(emp => (
+                <option key={emp.id} value={emp.employee_id || emp.id}>
+                  {(isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar}
+                  {emp.employee_id ? ` (${emp.employee_id})` : ''}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'الحالة' : 'Status'}</label>
+            <Select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))}>
+              <option value="available">{lang === 'ar' ? 'متاح' : 'Available'}</option>
+              <option value="active">{lang === 'ar' ? 'مستخدم' : 'Active'}</option>
+              <option value="maintenance">{lang === 'ar' ? 'صيانة' : 'Maintenance'}</option>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'الحالة الفنية' : 'Condition'}</label>
+            <Select value={form.condition} onChange={e => setForm(f => ({ ...f, condition: e.target.value }))}>
+              <option value="excellent">{lang === 'ar' ? 'ممتازة' : 'Excellent'}</option>
+              <option value="good">{lang === 'ar' ? 'جيدة' : 'Good'}</option>
+              <option value="fair">{lang === 'ar' ? 'متوسطة' : 'Fair'}</option>
+              <option value="poor">{lang === 'ar' ? 'سيئة' : 'Poor'}</option>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'القيمة (ج.م)' : 'Value (EGP)'}</label>
+            <input
+              type="number"
+              min="0"
+              value={form.value}
+              onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'تاريخ الاستلام' : 'Acquired Date'}</label>
+            <input
+              type="date"
+              value={form.acquired}
+              onChange={e => setForm(f => ({ ...f, acquired: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+            />
+          </div>
+        </div>
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setModalOpen(false)}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleSave} disabled={!form.name.trim() || !form.serial.trim()}>
+            {lang === 'ar' ? 'حفظ' : 'Save'}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* ── Delete Confirm ── */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={lang === 'ar' ? 'تأكيد الحذف' : 'Confirm Delete'}>
+        <p className="text-sm text-content dark:text-content-dark mb-2">
+          {lang === 'ar'
+            ? 'هل أنت متأكد من حذف هذا الأصل؟ لا يمكن التراجع.'
+            : 'Are you sure you want to delete this asset? This cannot be undone.'}
+        </p>
+        {deleteTarget && (
+          <p className="text-xs text-content-muted dark:text-content-muted-dark">
+            {deleteTarget.name} — {deleteTarget.serial}
+          </p>
+        )}
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+          <Button variant="danger" onClick={handleDelete}>{lang === 'ar' ? 'حذف' : 'Delete'}</Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
 
-function AssetRow({ asset, isRTL, lang, statusColor, statusLabel, employees }) {
+function AssetRow({ asset, isRTL, lang, statusColor, statusLabel, employees, onEdit, onDelete }) {
   const emp = employees.find(e=>e.employee_id===asset.assigned_to||e.id===asset.assigned_to);
   const empName = emp ? ((isRTL?emp.full_name_ar:emp.full_name_en)||emp.full_name_ar) : (lang==='ar'?'غير مخصص':'Unassigned');
   return (
@@ -190,10 +373,18 @@ function AssetRow({ asset, isRTL, lang, statusColor, statusLabel, employees }) {
       <Td className="font-bold text-brand-500">{asset.value.toLocaleString()} ج.م</Td>
       <Td>
         <div className="flex gap-1.5">
-          <button className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-brand-500/15 hover:border-brand-500/60 cursor-pointer flex items-center justify-center transition-all duration-150 text-content-muted dark:text-content-muted-dark hover:text-brand-500">
+          <button
+            onClick={onEdit}
+            title={lang === 'ar' ? 'تعديل' : 'Edit'}
+            className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-brand-500/15 hover:border-brand-500/60 cursor-pointer flex items-center justify-center transition-all duration-150 text-content-muted dark:text-content-muted-dark hover:text-brand-500"
+          >
             <Edit2 size={13} />
           </button>
-          <button className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-red-500/15 hover:border-red-500/60 cursor-pointer flex items-center justify-center transition-all duration-150 text-content-muted dark:text-content-muted-dark hover:text-red-500">
+          <button
+            onClick={onDelete}
+            title={lang === 'ar' ? 'حذف' : 'Delete'}
+            className="w-[30px] h-[30px] rounded-lg border border-edge dark:border-edge-dark bg-transparent hover:bg-red-500/15 hover:border-red-500/60 cursor-pointer flex items-center justify-center transition-all duration-150 text-content-muted dark:text-content-muted-dark hover:text-red-500"
+          >
             <Trash2 size={13} />
           </button>
         </div>

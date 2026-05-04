@@ -433,7 +433,7 @@ export default function PayrollPage() {
         </div>
       )}
 
-      <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
+      <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onFiltersChange={setSmartFilters} />
 
       <Card className="!rounded-xl overflow-hidden">
         <div className={`px-4 py-3.5 border-b border-edge dark:border-edge-dark flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>

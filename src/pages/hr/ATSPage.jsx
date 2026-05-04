@@ -197,6 +197,22 @@ export default function ATSPage() {
 
   const handleSaveApp = async () => {
     if (!appForm.name || !appForm.posting_id) return;
+    // Validate resume URL is http(s) — applicant URLs come from a public form,
+    // so we don't want javascript: or data: schemes leaking through.
+    if (appForm.resume_url) {
+      try {
+        const u = new URL(appForm.resume_url);
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('bad protocol');
+      } catch {
+        toast.error(lang === 'ar' ? 'رابط السيرة الذاتية غير صالح' : 'Invalid resume URL');
+        return;
+      }
+    }
+    // Email format check (basic — Supabase will enforce stricter via column)
+    if (appForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(appForm.email)) {
+      toast.error(lang === 'ar' ? 'بريد إلكتروني غير صالح' : 'Invalid email');
+      return;
+    }
     setSavingApp(true);
     try {
       const payload = {
@@ -214,8 +230,9 @@ export default function ATSPage() {
       setApplicants(prev => [data, ...prev]);
       setShowAppModal(false);
       toast.success(lang === 'ar' ? 'تمت الإضافة بنجاح' : 'Added successfully');
-    } catch {
+    } catch (err) {
       toast.error(lang === 'ar' ? 'فشل الحفظ' : 'Save failed');
+      if (import.meta.env.DEV) console.error('ATS save applicant failed:', err);
     } finally {
       setSavingApp(false);
     }
@@ -226,8 +243,9 @@ export default function ATSPage() {
       const { data, error } = await supabase.from(APP_TABLE).update({ status: newStatus }).eq('id', app.id).select().single();
       if (error) throw error;
       setApplicants(prev => prev.map(a => a.id === app.id ? data : a));
-    } catch {
+    } catch (err) {
       toast.error(lang === 'ar' ? 'فشل التحديث' : 'Update failed');
+      if (import.meta.env.DEV) console.error('ATS status change failed:', err);
     }
   };
 
@@ -238,8 +256,9 @@ export default function ATSPage() {
       setApplicants(prev => prev.filter(a => a.id !== id));
       setDeleteAppConfirm(null);
       toast.success(lang === 'ar' ? 'تم الحذف' : 'Deleted');
-    } catch {
+    } catch (err) {
       toast.error(lang === 'ar' ? 'فشل الحذف' : 'Delete failed');
+      if (import.meta.env.DEV) console.error('ATS delete applicant failed:', err);
     }
   };
 
@@ -584,9 +603,14 @@ export default function ATSPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'رابط السيرة الذاتية' : 'Resume URL'}</label>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'رابط السيرة الذاتية' : 'Resume URL'}
+              <span className="font-normal text-content-muted dark:text-content-muted-dark"> ({lang === 'ar' ? 'http/https فقط' : 'http/https only'})</span>
+            </label>
             <input
               type="url"
+              pattern="https?://.+"
+              placeholder="https://..."
               value={appForm.resume_url}
               onChange={e => setAppForm(f => ({ ...f, resume_url: e.target.value }))}
               className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"

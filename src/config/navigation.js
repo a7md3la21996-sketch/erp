@@ -39,6 +39,7 @@ export const NAV_ITEMS = [
     { id: 'mkt-roi', label: { ar: 'تقرير الأداء و ROI', en: 'ROI Report' }, path: '/marketing/roi', permission: P.CAMPAIGNS_VIEW },
   ]},
   { id: 'hr', label: { ar: 'الموارد البشرية', en: 'HR' }, icon: UserCog, permission: P.HR_VIEW_OWN, children: [
+    { id: 'hr-home',      label: { ar: 'لوحة الموارد البشرية', en: 'HR Dashboard' }, path: '/hr',             permission: P.HR_VIEW_ALL },
     // ── الموظفين
     { group: { ar: 'الموظفين', en: 'People' } },
     { id: 'employees',    label: { ar: 'الموظفين',        en: 'Employees' },    path: '/hr/employees',    permission: P.HR_VIEW_OWN },
@@ -53,6 +54,7 @@ export const NAV_ITEMS = [
     { id: 'overtime',     label: { ar: 'الأوفرتايم',     en: 'Overtime' },     path: '/hr/overtime',     permission: P.HR_VIEW_ALL },
     // ── المالي
     { group: { ar: 'المالي', en: 'Financial' } },
+    { id: 'payroll-run',  label: { ar: 'تشغيل المرتبات', en: 'Run Payroll' }, path: '/hr/payroll/run', permission: P.PAYROLL_MANAGE },
     { id: 'payroll',      label: { ar: 'الرواتب',         en: 'Payroll' },      path: '/hr/payroll',      permission: P.PAYROLL_VIEW },
     { id: 'payroll-rules', label: { ar: 'قواعد المرتبات', en: 'Payroll Rules' }, path: '/hr/payroll-rules', permission: P.PAYROLL_VIEW },
     { id: 'loans',        label: { ar: 'السلف والقروض',  en: 'Loans' },        path: '/hr/loans',        permission: P.PAYROLL_VIEW },

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   getClaims, createClaim, updateClaim, deleteClaim, approveClaim, rejectClaim,
   markClaimPaid, getClaimStats, EXPENSE_CATEGORIES, seedExpenseClaims,
@@ -29,6 +30,7 @@ const STATUS_CONFIG = {
 export default function ExpenseClaimsPage() {
   const { i18n } = useTranslation();
   const { theme } = useTheme();
+  const { profile } = useAuth();
   const isDark = theme === 'dark';
   const isRTL = i18n.language === 'ar';
 
@@ -141,13 +143,17 @@ export default function ExpenseClaimsPage() {
 
   const handleSubmit = async () => {
     if (!form.title.trim()) return;
+    if (!editingClaim && !profile?.id) {
+      alert(isRTL ? 'يجب تسجيل الدخول قبل تقديم طلب مصروف.' : 'You must be logged in to submit an expense claim.');
+      return;
+    }
     const cleanItems = form.items.filter(it => it.description.trim() && Number(it.amount) > 0).map(it => ({ description: it.description, amount: Number(it.amount) }));
     const amt = cleanItems.length ? cleanItems.reduce((s, it) => s + it.amount, 0) : totalAmount;
 
     if (editingClaim) {
       await updateClaim(editingClaim.id, { title: form.title, category: form.category, date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, amount: amt });
     } else {
-      await createClaim({ title: form.title, category: form.category, amount: amt, currency: 'EGP', date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, employee_id: profile?.id || '', employee_name: profile?.full_name_ar || profile?.full_name_en || '' });
+      await createClaim({ title: form.title, category: form.category, amount: amt, currency: 'EGP', date: form.date, description: form.description, receipt_ref: form.receipt_ref, items: cleanItems, employee_id: profile.id, employee_name: profile.full_name_ar || profile.full_name_en || '' });
     }
     setShowModal(false);
     reload();

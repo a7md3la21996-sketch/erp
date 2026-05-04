@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { fetchEmployees } from '../../services/employeesService';
 import { FileText, Plus, Trash2, Download, AlertTriangle } from 'lucide-react';
 import { Button, Card, CardHeader, Table, Th, Td, Tr, Modal, ModalFooter, Select, PageSkeleton } from '../../components/ui';
 import supabase from '../../lib/supabase';
 
 const DOC_TYPES = ['contract', 'id', 'certificate', 'other'];
+
+// Upload constraints — keep aligned with Supabase Storage bucket policy.
+const MAX_FILE_SIZE_MB = 10;
+const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+const ALLOWED_FILE_EXTS = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png', 'webp'];
+const ACCEPT_ATTR = '.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,application/pdf,image/*';
 
 const TYPE_COLORS = {
   contract: { bg: 'bg-brand-500/15', text: 'text-brand-500', border: 'border-brand-500/30' },
@@ -39,9 +46,21 @@ const EMPTY_FORM = { employee_id: '', name: '', type: 'contract', expiry_date: '
 ══════════════════════════════════════════════ */
 export default function DocumentsPage() {
   const { i18n } = useTranslation();
+  const { profile } = useAuth();
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
   const { showToast } = useToast();
+
+  // Employee documents include contracts, IDs, certificates — restrict to HR/admin.
+  if (profile && !['admin', 'hr'].includes(profile.role)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg font-bold text-content dark:text-content-dark">
+          {isRTL ? 'غير مصرح' : 'Unauthorized'}
+        </p>
+      </div>
+    );
+  }
 
   const [employees, setEmployees] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -89,10 +108,33 @@ export default function DocumentsPage() {
       showToast(lang === 'ar' ? 'يرجى ملء الحقول المطلوبة' : 'Please fill required fields', 'error');
       return;
     }
+    const file = form.file;
+    // Size check
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      showToast(
+        lang === 'ar'
+          ? `حجم الملف يتعدى ${MAX_FILE_SIZE_MB} ميجا`
+          : `File exceeds ${MAX_FILE_SIZE_MB} MB`,
+        'error'
+      );
+      return;
+    }
+    // Extension check (defense in depth — `accept` is just a hint)
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!ALLOWED_FILE_EXTS.includes(ext)) {
+      showToast(
+        lang === 'ar'
+          ? 'نوع الملف غير مسموح. المسموح: PDF, DOC, DOCX, JPG, PNG, WEBP'
+          : 'File type not allowed. Allowed: PDF, DOC, DOCX, JPG, PNG, WEBP',
+        'error'
+      );
+      return;
+    }
     setSaving(true);
     try {
-      const file = form.file;
-      const filePath = `${form.employee_id}/${Date.now()}_${file.name}`;
+      // Sanitize filename to keep storage paths predictable and safe.
+      const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, '_');
+      const filePath = `${form.employee_id}/${Date.now()}_${safeName}`;
       const { error: uploadErr } = await supabase.storage.from('documents').upload(filePath, file);
       if (uploadErr) throw uploadErr;
 
@@ -297,9 +339,15 @@ export default function DocumentsPage() {
 
           {/* File upload */}
           <div>
-            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'الملف' : 'File'} *</label>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
+              {lang === 'ar' ? 'الملف' : 'File'} *{' '}
+              <span className="text-content-muted dark:text-content-muted-dark font-normal">
+                ({lang === 'ar' ? `حد أقصى ${MAX_FILE_SIZE_MB} ميجا` : `max ${MAX_FILE_SIZE_MB} MB`})
+              </span>
+            </label>
             <input
               type="file"
+              accept={ACCEPT_ATTR}
               onChange={e => setForm(f => ({ ...f, file: e.target.files?.[0] || null }))}
               className="w-full text-sm text-content dark:text-content-dark file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border file:border-edge dark:file:border-edge-dark file:text-xs file:font-semibold file:bg-surface-card dark:file:bg-surface-card-dark file:text-content dark:file:text-content-dark file:cursor-pointer"
             />

@@ -758,7 +758,7 @@ export default function AttendancePage() {
               {[1, 2, 3, 4, 5].map(w => <option key={w} value={w}>{lang === 'ar' ? `أسبوع ${w}` : `Week ${w}`}</option>)}
             </Select>
           )}
-          <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
+          <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onFiltersChange={setSmartFilters} />
           <Select value={month} onChange={e => setMonth(+e.target.value)}>
             {MONTHS_AR.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </Select>

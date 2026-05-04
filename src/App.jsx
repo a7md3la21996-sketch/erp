@@ -67,6 +67,8 @@ const PerformancePage = lazyRetry(() => import('./pages/PerformancePage'));
 const FinancePage = lazyRetry(() => import('./pages/finance/FinancePage'));
 const SettingsPage = lazyRetry(() => import('./pages/settings/SettingsPage'));
 const EmployeesPage = lazyRetry(() => import('./pages/hr/EmployeesPage'));
+const EmployeeDetailPage = lazyRetry(() => import('./pages/hr/EmployeeDetailPage'));
+const HRHomePage = lazyRetry(() => import('./pages/hr/HRHomePage'));
 const HRPoliciesPage = lazyRetry(() => import('./pages/hr/HRPoliciesPage'));
 const AttendancePage = lazyRetry(() => import('./pages/hr/AttendancePage'));
 const DepartmentsPage = lazyRetry(() => import('./pages/hr/DepartmentsPage'));
@@ -74,6 +76,7 @@ const ShiftsPage = lazyRetry(() => import('./pages/hr/ShiftsPage'));
 const HolidaysPage = lazyRetry(() => import('./pages/hr/HolidaysPage'));
 const LeavePage = lazyRetry(() => import('./pages/hr/LeavePage'));
 const PayrollPage = lazyRetry(() => import('./pages/hr/PayrollPage'));
+const PayrollRunWizard = lazyRetry(() => import('./pages/hr/PayrollRunWizard'));
 const PayrollRulesPage = lazyRetry(() => import('./pages/hr/PayrollRulesPage'));
 const LoansPage = lazyRetry(() => import('./pages/hr/LoansPage'));
 const HRReportsPage = lazyRetry(() => import('./pages/hr/HRReportsPage'));
@@ -254,7 +257,9 @@ export default function App() {
                 <Route path="/finance" element={<ProtectedRoute permission={P.FINANCE_VIEW}><Guarded><FinancePage /></Guarded></ProtectedRoute>} />
                 <Route path="/finance/*" element={<ProtectedRoute permission={P.FINANCE_VIEW}><Guarded><FinancePage /></Guarded></ProtectedRoute>} />
                 {/* HR — admin/HR only for the management pages */}
+                <Route path="/hr" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><HRHomePage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/employees" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><EmployeesPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/employee/:id" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><EmployeeDetailPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/policies" element={<ProtectedRoute permission={P.HR_POLICIES_MANAGE}><Guarded><HRPoliciesPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/departments" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><DepartmentsPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/shifts" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><ShiftsPage /></Guarded></ProtectedRoute>} />
@@ -264,6 +269,7 @@ export default function App() {
                 {/* /hr/leave open — employees submit own leave (data filtered by RLS) */}
                 <Route path="/hr/leave" element={<Guarded><LeavePage /></Guarded>} />
                 <Route path="/hr/payroll" element={<ProtectedRoute permission={P.PAYROLL_VIEW}><Guarded><PayrollPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/payroll/run" element={<ProtectedRoute permission={P.PAYROLL_MANAGE}><Guarded><PayrollRunWizard /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/payroll-rules" element={<ProtectedRoute permission={P.PAYROLL_MANAGE}><Guarded><PayrollRulesPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/loans" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><LoansPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/competencies" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><CompetenciesPage /></Guarded></ProtectedRoute>} />

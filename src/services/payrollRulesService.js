@@ -3,6 +3,10 @@ import { requirePerm } from '../utils/permissionGuard';
 import { P } from '../config/roles';
 
 let _cachedRules = null;
+let _cachedAt = 0;
+// 5 min TTL bounds how long another tab (or a Supabase dashboard edit) can
+// stay invisible before this client picks up new payroll rules.
+const RULES_CACHE_TTL_MS = 5 * 60 * 1000;
 
 export async function fetchPayrollRules() {
   const { data, error } = await supabase
@@ -15,16 +19,20 @@ export async function fetchPayrollRules() {
 }
 
 export async function loadRulesMap() {
-  if (_cachedRules) return _cachedRules;
+  if (_cachedRules && (Date.now() - _cachedAt) < RULES_CACHE_TTL_MS) {
+    return _cachedRules;
+  }
   const rules = await fetchPayrollRules();
   const map = {};
   rules.forEach(r => { map[r.rule_key] = r.rule_value; });
   _cachedRules = map;
+  _cachedAt = Date.now();
   return map;
 }
 
 export function clearRulesCache() {
   _cachedRules = null;
+  _cachedAt = 0;
 }
 
 export async function updateRule(id, value) {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchEmployees } from '../../services/employeesService';
 import { fetchLeaveRequests, approveLeaveRequest, rejectLeaveRequest, createLeaveRequest } from '../../services/leaveService';
 import { createApproval, getApprovals, approveRequest, rejectRequest, getApprovalByEntity } from '../../services/approvalService';
@@ -44,6 +45,7 @@ function ApprovalBadge({ status, approverName, comments, lang }) {
 
 export default function LeavePage() {
   const { i18n } = useTranslation();
+  const toast = useToast();
   const isRTL = i18n.language==='ar'; const lang = i18n.language;
   const [leaves, setLeaves] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -278,7 +280,7 @@ export default function LeavePage() {
       </Card>
 
       {/* Smart Filters */}
-      <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onChange={setSmartFilters} />
+      <SmartFilter fields={SMART_FIELDS} filters={smartFilters} onFiltersChange={setSmartFilters} />
 
       {/* Leave Requests Table */}
       <Card className="overflow-hidden">
@@ -405,7 +407,10 @@ export default function LeavePage() {
                   setLeaves(prev => [result, ...prev]);
                   setShowRequestModal(false);
                   setReqForm({ employee_id: '', type: 'annual', start_date: '', end_date: '', notes: '' });
-                } catch {} finally { setReqSaving(false); }
+                } catch (err) {
+                  toast.error(lang === 'ar' ? 'فشل إرسال طلب الإجازة' : 'Failed to submit leave request');
+                  if (import.meta.env.DEV) console.error('Leave request failed:', err);
+                } finally { setReqSaving(false); }
               }}>
                 {reqSaving ? (isRTL ? 'جاري الإرسال...' : 'Submitting...') : (isRTL ? 'إرسال الطلب' : 'Submit Request')}
               </Button>

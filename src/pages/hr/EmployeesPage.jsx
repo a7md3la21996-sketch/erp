@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -45,6 +46,7 @@ function DynBadge({ label, color = '#4A7AAB' }) {
 ══════════════════════════════════════════════ */
 export default function EmployeesPage() {
   const { i18n } = useTranslation();
+  const navigate = useNavigate();
   const isRTL = i18n.language === 'ar';
   const lang  = i18n.language;
   const { profile } = useAuth();
@@ -68,7 +70,10 @@ export default function EmployeesPage() {
   const [showBulkShift, setShowBulkShift] = useState(false);
 
   const { auditFields, applyAuditFilters } = useAuditFilter('employee');
+  const toast = useToast();
   const userName = profile?.full_name_ar || profile?.full_name_en || '';
+  // Salary is sensitive: only admin / finance / hr roles may see it.
+  const canViewSalary = ['admin', 'finance', 'hr'].includes(profile?.role);
 
   const loadEmployees = () => {
     setLoading(true);
@@ -172,7 +177,10 @@ export default function EmployeesPage() {
         userName,
       });
       setEmployees(prev => prev.map(e => e.id === emp.id ? { ...e, ...result, is_active: true, status: 'active' } : e));
-    } catch {}
+    } catch (err) {
+      toast.error(lang === 'ar' ? 'فشل إعادة التعيين' : 'Failed to reinstate employee');
+      if (import.meta.env.DEV) console.error('Reinstate failed:', err);
+    }
   };
 
   const handleStatusChange = async (id, newStatus) => {
@@ -300,7 +308,7 @@ export default function EmployeesPage() {
               { header: isRTL ? 'الوظيفة' : 'Job Title', key: r => isRTL ? r.job_title_ar : r.job_title_en },
               { header: isRTL ? 'القسم' : 'Department', key: 'department' },
               { header: isRTL ? 'الحالة' : 'Status', key: 'status' },
-              { header: isRTL ? 'الراتب' : 'Salary', key: 'salary' },
+              ...(canViewSalary ? [{ header: isRTL ? 'الراتب' : 'Salary', key: 'salary' }] : []),
               { header: isRTL ? 'تاريخ التعيين' : 'Hire Date', key: 'hire_date' },
             ]}
           />
@@ -398,7 +406,7 @@ export default function EmployeesPage() {
                 lang === 'ar' ? 'الموظف' : 'Employee',
                 lang === 'ar' ? 'القسم'  : 'Department',
                 lang === 'ar' ? 'نوع العقد' : 'Contract',
-                lang === 'ar' ? 'الراتب' : 'Salary',
+                ...(canViewSalary ? [lang === 'ar' ? 'الراتب' : 'Salary'] : []),
                 lang === 'ar' ? 'رصيد الإجازة' : 'Leave Bal.',
                 lang === 'ar' ? 'الحالة' : 'Status',
                 '',
@@ -417,7 +425,7 @@ export default function EmployeesPage() {
               const avatarBg = avatarColors[name?.charCodeAt(0) % avatarColors.length] || '#4A7AAB';
 
               return (
-                <Tr key={emp.id} onClick={() => setSelected(emp)} className="cursor-pointer">
+                <Tr key={emp.id} onClick={() => navigate(`/hr/employee/${emp.id}`)} className="cursor-pointer">
                   <Td>
                     <input
                       type="checkbox"
@@ -453,9 +461,11 @@ export default function EmployeesPage() {
                   <Td>
                     <DynBadge label={emp.employment_type === 'full_time' ? (lang === 'ar' ? 'دوام كامل' : 'Full Time') : emp.employment_type === 'probation' ? (lang === 'ar' ? 'تجربة' : 'Probation') : (lang === 'ar' ? 'جزئي' : 'Part Time')} color={emp.employment_type === 'probation' ? '#6B8DB5' : '#4A7AAB'} />
                   </Td>
-                  <Td className="font-bold">
-                    {emp.salary ? emp.salary.toLocaleString() + ' ج.م' : '—'}
-                  </Td>
+                  {canViewSalary && (
+                    <Td className="font-bold">
+                      {emp.salary ? emp.salary.toLocaleString() + ' ج.م' : '—'}
+                    </Td>
+                  )}
                   <Td>
                     <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <div className="h-1 w-[50px] rounded-sm bg-gray-200 dark:bg-white/[0.08] overflow-hidden">
@@ -505,7 +515,7 @@ export default function EmployeesPage() {
       )}
 
       {/* ── Employee Detail Modal ── */}
-      <EmployeeModal emp={selected} onClose={() => setSelected(null)} isRTL={isRTL} lang={lang} />
+      <EmployeeModal emp={selected} onClose={() => setSelected(null)} isRTL={isRTL} lang={lang} canViewSalary={canViewSalary} />
 
       {/* ── Termination Modal ── */}
       {terminateTarget && (
@@ -570,6 +580,7 @@ export default function EmployeesPage() {
 }
 
 function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, onSave }) {
+  const toast = useToast();
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [shifts, setShifts] = useState([]);
@@ -610,7 +621,10 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
     setSaving(true);
     try {
       await onSave(form);
-    } catch {} finally {
+    } catch (err) {
+      toast.error(lang === 'ar' ? 'فشل حفظ الموظف' : 'Failed to save employee');
+      if (import.meta.env.DEV) console.error('Save employee failed:', err);
+    } finally {
       setSaving(false);
     }
   };
@@ -808,6 +822,7 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
 
 /* ─── Bulk Edit Modal ─── */
 function BulkEditModal({ open, selectedIds, departments, isRTL, lang, onClose, onSave }) {
+  const toast = useToast();
   const [form, setForm] = useState({});
   const [enabled, setEnabled] = useState({});
   const [saving, setSaving] = useState(false);
@@ -848,7 +863,10 @@ function BulkEditModal({ open, selectedIds, departments, isRTL, lang, onClose, o
     setSaving(true);
     try {
       await onSave(fields);
-    } catch {} finally {
+    } catch (err) {
+      toast.error(lang === 'ar' ? 'فشل التحديث الجماعي' : 'Bulk update failed');
+      if (import.meta.env.DEV) console.error('Bulk update failed:', err);
+    } finally {
       setSaving(false);
     }
   };
@@ -1014,7 +1032,7 @@ function BulkEditModal({ open, selectedIds, departments, isRTL, lang, onClose, o
   );
 }
 
-function EmployeeModal({ emp, onClose, isRTL, lang }) {
+function EmployeeModal({ emp, onClose, isRTL, lang, canViewSalary }) {
   if (!emp) return null;
   const name = (isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar;
   const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
@@ -1022,7 +1040,9 @@ function EmployeeModal({ emp, onClose, isRTL, lang }) {
     [lang === 'ar' ? 'كود الموظف' : 'Employee ID', emp.employee_id || '—'],
     [lang === 'ar' ? 'الإيميل' : 'Email', emp.email || '—'],
     [lang === 'ar' ? 'الموبايل' : 'Phone', emp.phone || '—'],
-    [lang === 'ar' ? 'الراتب' : 'Salary', emp.salary ? emp.salary.toLocaleString() + ' ج.م' : '—'],
+    ...(canViewSalary
+      ? [[lang === 'ar' ? 'الراتب' : 'Salary', emp.salary ? emp.salary.toLocaleString() + ' ج.م' : '—']]
+      : []),
     [lang === 'ar' ? 'نوع العمل' : 'Work Type', emp.work_type || '—'],
     [lang === 'ar' ? 'تاريخ الانضمام' : 'Join Date', emp.hire_date || '—'],
     [lang === 'ar' ? 'انتهاء العقد' : 'Contract End', emp.contract_end || '—'],
