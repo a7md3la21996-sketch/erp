@@ -1563,6 +1563,7 @@ export default function ContactsPage() {
         MERGE_LIMIT={MERGE_LIMIT}
         setSelected={setSelected}
         toggleSelect={toggleSelect}
+        toggleSelectAll={toggleSelectAll}
         togglePin={togglePin}
         MAX_PINS={MAX_PINS}
         setLogCallTarget={setLogCallTarget}

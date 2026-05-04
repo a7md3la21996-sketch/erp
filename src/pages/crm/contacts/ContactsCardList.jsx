@@ -74,6 +74,7 @@ export default function ContactsCardList({
   MERGE_LIMIT,
   setSelected,
   toggleSelect,
+  toggleSelectAll,
   togglePin,
   MAX_PINS,
   setLogCallTarget,
@@ -196,6 +197,31 @@ export default function ContactsCardList({
           </span>
         </div>
       )}
+      {/* Select-all header — desktop has it in the table th; mobile cards
+          had nothing, so bulk-select on mobile required tapping every
+          card individually. This row exposes the same affordance. */}
+      {toggleSelectAll && paged.length > 0 && (() => {
+        const allOnPageSelected = paged.every(c => selectedIdSet?.has?.(c.id));
+        const someSelected = !allOnPageSelected && paged.some(c => selectedIdSet?.has?.(c.id));
+        const selectedCount = paged.filter(c => selectedIdSet?.has?.(c.id)).length;
+        return (
+          <div className="flex items-center gap-2.5 px-3 py-2 border-b border-edge dark:border-edge-dark bg-surface-bg/40 dark:bg-surface-bg-dark/40">
+            <input
+              type="checkbox"
+              checked={allOnPageSelected}
+              ref={el => { if (el) el.indeterminate = someSelected; }}
+              onChange={toggleSelectAll}
+              className="w-5 h-5 cursor-pointer accent-brand-500"
+              aria-label={isRTL ? 'تحديد كل الظاهر' : 'Select all visible'}
+            />
+            <span className="text-[12px] font-semibold text-content dark:text-content-dark">
+              {selectedCount > 0
+                ? (isRTL ? `${selectedCount} محدّد` : `${selectedCount} selected`)
+                : (isRTL ? 'تحديد كل الظاهر' : 'Select all visible')}
+            </span>
+          </div>
+        );
+      })()}
       <ul className="space-y-2 p-2">
         {paged.map(c => {
           const isSelected = selectedIdSet?.has?.(c.id);
