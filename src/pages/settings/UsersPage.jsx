@@ -5,9 +5,10 @@ import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabase';
+import { logAudit } from '../../services/auditService';
 import {
   Users, Shield, UserCheck, UserX, Clock,
-  ToggleLeft, ToggleRight, Plus, Pencil, KeyRound, Trash2, Eye, EyeOff,
+  ToggleLeft, ToggleRight, Plus, Pencil, KeyRound, Eye, EyeOff,
 } from 'lucide-react';
 import {
   Button, Badge, KpiCard, Table, Th, Td, Tr,
@@ -262,12 +263,33 @@ export default function UsersPage() {
     const user = users.find(u => u.id === userId);
     if (!user) return;
     const newStatus = user.status === 'active' ? 'inactive' : 'active';
+    // Confirm prompt — protects against misclicking next to the (now-removed)
+    // delete button. Deactivation blocks login but preserves history; we still
+    // want an explicit yes from the admin.
+    const userLabel = user.full_name_ar || user.full_name_en || user.email;
+    const confirmMsg = newStatus === 'inactive'
+      ? (lang === 'ar' ? `تعطيل ${userLabel}؟ لن يستطيع تسجيل الدخول.` : `Deactivate ${userLabel}? They will not be able to log in.`)
+      : (lang === 'ar' ? `تفعيل ${userLabel}؟` : `Activate ${userLabel}?`);
+    if (!confirm(confirmMsg)) return;
 
     try {
       const { error: dbErr } = await supabase.from('users').update({ status: newStatus, is_active: newStatus === 'active' }).eq('id', userId);
       if (dbErr) throw dbErr;
 
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+      // Audit trail — without this, we have no record of who deactivated whom.
+      // Earlier audit query came up empty for entity='user' precisely because
+      // these state changes were never being logged.
+      logAudit({
+        action: newStatus === 'inactive' ? 'deactivate' : 'activate',
+        entity: 'user',
+        entityId: userId,
+        entityName: user.full_name_en || user.full_name_ar || user.email,
+        oldData: { status: user.status, is_active: user.is_active },
+        newData: { status: newStatus, is_active: newStatus === 'active' },
+        description: `${newStatus === 'inactive' ? 'Deactivated' : 'Activated'} user ${userLabel}`,
+        userName: profile?.full_name_ar || profile?.full_name_en || '',
+      });
       toast.success(newStatus === 'inactive'
         ? (lang === 'ar' ? 'تم تعطيل المستخدم — لن يستطيع الدخول' : 'User deactivated — login blocked')
         : (lang === 'ar' ? 'تم تفعيل المستخدم' : 'User activated')
@@ -585,23 +607,12 @@ export default function UsersPage() {
                     >
                       <KeyRound size={14} className="text-amber-500" />
                     </button>
-                    <button
-                      title={lang === 'ar' ? 'حذف المستخدم' : 'Delete User'}
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        const confirmMsg = lang === 'ar' ? `حذف ${user.full_name_ar || user.email}؟` : `Delete ${user.full_name_en || user.email}?`;
-                        if (!confirm(confirmMsg)) return;
-                        try {
-                          await supabase.from('users').delete().eq('id', user.id);
-                          await supabase.rpc('delete_auth_user', { user_id: user.id });
-                          setUsers(prev => prev.filter(u => u.id !== user.id));
-                          toast.success(lang === 'ar' ? 'تم حذف المستخدم' : 'User deleted');
-                        } catch { toast.error(lang === 'ar' ? 'فشل الحذف' : 'Delete failed'); }
-                      }}
-                      className="w-8 h-8 rounded-lg border border-red-500/30 bg-transparent hover:bg-red-500/10 hover:scale-105 cursor-pointer flex items-center justify-center transition-all duration-150"
-                    >
-                      <Trash2 size={14} className="text-red-500" />
-                    </button>
+                    {/* Hard delete button intentionally removed — was the cause
+                        of permanent user loss (Sherif Elazaz, Abdelrahman Gamal,
+                        and others). Deactivation via the toggle on the left is
+                        the supported way to remove a user. If a true purge is
+                        ever needed (e.g. legal request), it must be done by an
+                        admin via Supabase dashboard with full audit trail. */}
                   </div>
                 </Td>
               </Tr>
