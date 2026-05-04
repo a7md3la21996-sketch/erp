@@ -745,29 +745,40 @@ export default function ContactsPage() {
   }, [noActivityFilter?.value]);
 
   // Fetch contacts with MULTIPLE agents (to exclude → show single agent only).
-  // Prefer the server-side RPC (returns just the IDs we need); if it isn't
-  // installed yet, fall back to the old client-side filter with a smaller
-  // window so we don't drag down a 20k-row payload on every toggle.
+  // 'Never Reassigned' filter — after Phase 3 single-assignment, the
+  // old 'multi-agent' logic returned an empty set (every contact has
+  // exactly one assignee now), making the filter useless. The user's
+  // real intent is 'still with the original sales agent since creation'
+  // so they can rotate stale leads. We compute that as: contacts that
+  // have NO activity row of type='reassignment' (recordAssignment
+  // writes one of those on every hand-off / bulk-reassign — see
+  // contactsService.recordAssignment line 58). We pass the EXCLUDE
+  // list (contacts that HAVE been reassigned) downstream — keeping the
+  // existing excludeContactIds plumbing without changing the schema.
   useEffect(() => {
     if (!showSingleAgent) { setSingleAgentIds(null); return; }
     let cancelled = false;
     (async () => {
       try {
-        const rpc = await supabase.rpc('get_multi_agent_contact_ids');
-        if (!rpc.error && Array.isArray(rpc.data)) {
+        const reassignedIds = new Set();
+        const CHUNK = 1000;
+        for (let offset = 0; ; offset += CHUNK) {
+          const { data } = await supabase
+            .from('activities')
+            .select('contact_id')
+            .eq('type', 'reassignment')
+            .not('contact_id', 'is', null)
+            .range(offset, offset + CHUNK - 1);
           if (cancelled) return;
-          const ids = rpc.data.map(r => r.id).filter(Boolean);
-          setSingleAgentIds(ids.length ? ids : ['none']);
-          return;
+          if (!data?.length) break;
+          data.forEach(a => { if (a.contact_id) reassignedIds.add(a.contact_id); });
+          if (data.length < CHUNK) break;
         }
-        // Fallback: client-side filter on a capped window.
-        const { data } = await supabase.from('contacts')
-          .select('id, assigned_to_names')
-          .not('assigned_to_names', 'is', null)
-          .range(0, 5000);
         if (cancelled) return;
-        const multiAgentIds = (data || []).filter(c => Array.isArray(c.assigned_to_names) && c.assigned_to_names.length > 1).map(c => c.id);
-        setSingleAgentIds(multiAgentIds.length ? multiAgentIds : ['none']);
+        const excludeIds = [...reassignedIds];
+        // 'none' sentinel signals 'nothing to exclude' to the service —
+        // matches the noOppsIds pattern.
+        setSingleAgentIds(excludeIds.length ? excludeIds : ['none']);
       } catch {
         if (!cancelled) setSingleAgentIds([]);
       }
@@ -1407,7 +1418,7 @@ export default function ContactsPage() {
           { label: 'متابعة اليوم', labelEn: "Today's Follow-ups", filters: [{ field: 'contact_status', operator: 'is', value: '__today_followup' }] },
           { label: 'مهام متأخرة', labelEn: 'Overdue Tasks', filters: [{ field: 'contact_status', operator: 'is', value: '__overdue_tasks' }] },
           { label: 'بدون فرص', labelEn: 'No Opportunities', filters: [{ field: 'contact_status', operator: 'is', value: '__no_opps' }] },
-          ...(profile?.role !== 'sales_agent' ? [{ label: 'مسؤول واحد', labelEn: 'Single Agent', filters: [{ field: 'contact_status', operator: 'is', value: '__single_agent' }] }] : []),
+          ...(profile?.role !== 'sales_agent' ? [{ label: 'لم يتم نقله', labelEn: 'Never Reassigned', filters: [{ field: 'contact_status', operator: 'is', value: '__single_agent' }] }] : []),
         ]}
       />
 
