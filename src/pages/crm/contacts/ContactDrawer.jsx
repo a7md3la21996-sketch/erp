@@ -551,7 +551,18 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     }
 
     if (newStatus && newStatus !== currentStatus) {
-      if (onUpdate) onUpdate({ ...contact, contact_status: newStatus });
+      // Await so we can surface a status-update failure separately from the
+      // activity save. Earlier this was fire-and-forget — the activity got
+      // saved + toast'd success, but a silent status-update failure left
+      // the contact stuck on the old status.
+      if (onUpdate) {
+        try {
+          await onUpdate({ ...contact, contact_status: newStatus });
+        } catch {
+          // onUpdate already showed an error toast + rolled back. Nothing
+          // more to do here — the activity is still saved correctly.
+        }
+      }
     }
   };
 

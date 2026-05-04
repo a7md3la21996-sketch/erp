@@ -151,7 +151,15 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     if (isAdmin) {
       import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
         fetchSalesAgents().then(agents => {
-          setAgentsList(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
+          // Keep id alongside name so the admin override below can write
+          // assigned_to (UUID) directly. Name-only writes get clobbered by
+          // the contacts.assigned_to/_name sync trigger.
+          setAgentsList(
+            (agents || [])
+              .filter(a => a.id && (a.full_name_en || a.full_name_ar))
+              .map(a => ({ id: a.id, name: a.full_name_en || a.full_name_ar }))
+              .sort((a, b) => a.name.localeCompare(b.name))
+          );
         }).catch(err => { if (import.meta.env.DEV) console.warn('fetch sales agents:', err); });
       }).catch(err => { if (import.meta.env.DEV) console.warn('import opportunitiesService:', err); });
     }
@@ -293,14 +301,18 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
       // Validate that the typed/selected name is in the active agents list —
       // a malicious admin could mutate the dropdown options in devtools.
       if (isAdmin && assignTo) {
-        if (!agentsList.includes(assignTo)) {
+        const matched = agentsList.find(a => a.name === assignTo);
+        if (!matched) {
           toast.error(isRTL ? 'الـ agent المختار غير موجود' : 'Selected agent does not exist');
           setSaving(false);
           savingRef.current = false;
           return;
         }
-        saveData.assigned_to_name = assignTo;
-        saveData.assigned_to_names = [assignTo];
+        // Pair name with UUID — name alone gets reset by the assigned_to/_name
+        // sync trigger, so the admin override would silently no-op.
+        saveData.assigned_to = matched.id;
+        saveData.assigned_to_name = matched.name;
+        saveData.assigned_to_names = [matched.name];
       }
       // Always remove client-supplied created_by — it must come from auth.uid()
       // via the DB trigger, not from form data.
@@ -368,7 +380,7 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                 <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{isRTL ? 'تعيين لسيلز' : 'Assign to Agent'}</label>
                 <Select value={assignTo} onChange={e => setAssignTo(e.target.value)}>
                   <option value="">{isRTL ? 'تلقائي (أنا)' : 'Auto (me)'}</option>
-                  {agentsList.map(a => <option key={a} value={a}>{a}</option>)}
+                  {agentsList.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                 </Select>
               </div>
               )}

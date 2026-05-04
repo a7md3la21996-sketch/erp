@@ -336,6 +336,27 @@ export async function createContact(contactData) {
     if (hasAssignee) sanitized.assigned_at = new Date().toISOString();
   }
 
+  // Mirror updateContact's resolver: when a caller passes assigned_to_name
+  // without the UUID, look it up so the row isn't created with a name that
+  // doesn't match its assigned_to. The DB trigger that resyncs name from
+  // UUID would otherwise wipe the name on the very next update.
+  if ('assigned_to_name' in sanitized && !('assigned_to' in sanitized)) {
+    const newName = sanitized.assigned_to_name;
+    if (newName) {
+      try {
+        const { data: u } = await supabase
+          .from('users')
+          .select('id')
+          .or(`full_name_en.eq.${newName},full_name_ar.eq.${newName}`)
+          .limit(1)
+          .maybeSingle();
+        if (u?.id) sanitized.assigned_to = u.id;
+      } catch (lookupErr) {
+        if (import.meta.env.DEV) console.warn('[createContact] could not resolve assigned_to_name to uuid:', newName, lookupErr);
+      }
+    }
+  }
+
   try {
     const { data, error } = await supabase
       .from('contacts')
@@ -671,13 +692,29 @@ export async function handOffLead(contactId, toUserId, options = {}) {
     supabase.from('contacts').update(updates).eq('id', contactId).select('*').single(), 'handOffLead.update');
   if (error) throw error;
 
-  // Audit log entry — captures the hand-off explicitly
-  logAudit('contact', contactId, 'hand_off', {
-    from_user_id: before.assigned_to,
-    from_user_name: before.assigned_to_name,
-    to_user_id: toUserId,
-    to_user_name: targetName,
-    by: options.assignedByName,
+  // Audit log entry — captures the hand-off explicitly. logAudit takes
+  // a single object (action / entity / entityId destructured) — the prior
+  // positional call silently wrote a row with action=undefined that never
+  // showed up in the timeline.
+  logAudit({
+    action: 'hand_off',
+    entity: 'contact',
+    entityId: contactId,
+    entityName: data?.full_name || '',
+    oldData: { assigned_to: before.assigned_to, assigned_to_name: before.assigned_to_name },
+    newData: { assigned_to: toUserId, assigned_to_name: targetName },
+    description: `Handed off ${data?.full_name || 'contact'} from ${before.assigned_to_name || '—'} to ${targetName}${options.assignedByName ? ' by ' + options.assignedByName : ''}`,
+    userName: options.assignedByName || '',
+  });
+
+  // Also record the assignment as an activity row so it shows up in the
+  // contact's timeline alongside calls/notes (the audit log is for the
+  // settings page; activities feed the drawer). Fire-and-forget — the
+  // service handles its own error reporting.
+  recordAssignment(contactId, {
+    fromAgent: before.assigned_to_name,
+    toAgent: targetName,
+    assignedBy: options.assignedByName || '',
   });
 
   return data;
@@ -755,8 +792,15 @@ export async function distributeLeadToAgents(originContactId, targetUserIds) {
       const { data, error } = await supabase.from('contacts').insert(clone).select('id, contact_number').single();
       if (error) throw error;
       created.push({ ...data, user_id: userId, name });
-      // Audit log
-      logAudit('contact', data.id, 'distribute', { from_origin: originContactId, to_user: userId, agent_name: name });
+      // Audit log — logAudit takes a single object (not positional args).
+      logAudit({
+        action: 'distribute',
+        entity: 'contact',
+        entityId: data.id,
+        entityName: origin.full_name || '',
+        newData: { from_origin: originContactId, to_user_id: userId, to_user_name: name },
+        description: `Distributed ${origin.full_name || 'contact'} clone to ${name}`,
+      });
     } catch (err) {
       errors.push({ userId, name, error: err.message });
     }

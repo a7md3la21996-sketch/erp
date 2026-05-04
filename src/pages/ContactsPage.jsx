@@ -428,7 +428,17 @@ export default function ContactsPage() {
     }
   };
 
-  const handleBulkReassign = async (agentName, bulkStatus, bulkTemp) => {
+  const handleBulkReassign = async (agent, bulkStatus, bulkTemp) => {
+    // Modal now passes { id, name } so we don't have to reverse-lookup the
+    // UUID from a name (that path is fragile and was the root cause of the
+    // 'reassign recorded but lead still with old owner' bug — the DB trigger
+    // resets assigned_to_name back when assigned_to UUID didn't change).
+    const agentId = agent?.id || null;
+    const agentName = agent?.name || (typeof agent === 'string' ? agent : '');
+    if (!agentName) {
+      toast.error(isRTL ? 'لم يتم اختيار سيلز' : 'No agent selected');
+      return;
+    }
     // Validate the target agent: must be a real user AND within the
     // caller's team scope. Catches typos and cross-team escalation
     // attempts before any DB write happens.
@@ -437,6 +447,14 @@ export default function ContactsPage() {
       toast.error(isRTL
         ? (v.outOfScope.length ? `لا يمكنك التعيين لهذا السيلز — خارج فريقك` : `سيلز غير موجود: ${v.unknown.join(', ')}`)
         : (v.outOfScope.length ? `Cannot reassign to that agent — outside your team scope` : `Unknown agent: ${v.unknown.join(', ')}`));
+      return;
+    }
+    if (!agentId) {
+      // Fallback path (modal couldn't load users) — refuse rather than write
+      // a half-update that leaves rows stuck with the old owner.
+      toast.error(isRTL
+        ? `لم يتم العثور على معرّف ${agentName} — أعد فتح المودال`
+        : `Could not resolve UUID for ${agentName} — please reopen the modal`);
       return;
     }
     const assignedByName = profile?.full_name_ar || '—';
@@ -449,6 +467,7 @@ export default function ContactsPage() {
     if (bulkTemp) extraUpdates.temperature = bulkTemp; // bulk reassign sets global (admin/ops action)
     const updated = contacts.map(c => selectedIds.includes(c.id) ? {
       ...c,
+      assigned_to: agentId,
       assigned_to_name: agentName,
       assigned_to_names: [agentName],
       assigned_by_name: assignedByName,
@@ -476,6 +495,7 @@ export default function ContactsPage() {
       // updateContact already retries internally — service-level retry is the single source of truth
       const results = await Promise.allSettled(
         idsToUpdate.map(id => updateContact(id, {
+          assigned_to: agentId,
           assigned_to_name: agentName,
           assigned_to_names: [agentName],
           assigned_by_name: assignedByName,
@@ -499,20 +519,48 @@ export default function ContactsPage() {
     const count = selectedIds.length;
     const names = contacts.filter(c => selectedIds.includes(c.id)).map(c => c.full_name).join(', ');
     const idsToUpdate = [...selectedIds];
+    // Snapshot the rows we're about to mutate so we can roll back any
+    // individual failures. Without this the optimistic state stuck on
+    // "updated" even when half the rows had RLS-denied — and the audit /
+    // success toast had already fired.
+    const beforeSnapshot = new Map(contacts.filter(c => selectedIds.includes(c.id)).map(c => [c.id, c]));
     const updated = contacts.map(c => selectedIds.includes(c.id) ? { ...c, [field]: value } : c);
     setContacts(updated);
-        logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: selectedIds.join(','), description: `Bulk changed ${field} to "${value}" for ${count} contacts: ${names}`, newValue: value, userName: profile?.full_name_ar });
-    createNotification({ type: 'system', title_en: `Bulk ${actionLabel}`, title_ar: `تغيير جماعي — ${actionLabel}`, body_en: `Changed ${field} to "${value}" for ${count} leads`, body_ar: `تم تغيير ${field} إلى "${value}" لـ ${count} عميل`, for_user_id: 'all' });
-    toast.success(isRTL ? `تم تحديث ${count} عميل` : `${count} leads updated`);
-    setSelectedIds([]);
     setBulkDropdownOpen(null);
     setShowBulkMenu(false);
+    // DB write FIRST, then audit/toast/notification only for what actually
+    // saved. Original code logged + toast'd success before the write, so a
+    // failed update still surfaced as "X leads updated" + an audit row.
     const results = await Promise.allSettled(idsToUpdate.map(id => updateContact(id, { [field]: value })));
-    const failed = results.filter(r => r.status === 'rejected');
-    if (failed.length > 0) {
-      failed.forEach(r => reportError('ContactsPage', `bulkChange_${field}`, r.reason));
-      toast.error(isRTL ? `فشل تحديث ${failed.length} عميل` : `Failed to update ${failed.length} leads`);
+    const succeeded = [];
+    const failedIdx = [];
+    results.forEach((r, i) => {
+      if (r.status === 'fulfilled') succeeded.push(idsToUpdate[i]);
+      else failedIdx.push(i);
+    });
+    if (failedIdx.length > 0) {
+      // Roll back the optimistic state for failed rows so the UI doesn't
+      // pretend the change stuck. This was the root of "I changed status
+      // but it didn't actually change" — the timeline saw the optimistic
+      // success while the DB row stayed put.
+      setContacts(prev => prev.map(c => {
+        if (!failedIdx.some(i => idsToUpdate[i] === c.id)) return c;
+        const original = beforeSnapshot.get(c.id);
+        return original || c;
+      }));
+      failedIdx.forEach(i => reportError('ContactsPage', `bulkChange_${field}`, results[i].reason));
+      const failedNames = failedIdx.map(i => beforeSnapshot.get(idsToUpdate[i])?.full_name || idsToUpdate[i]).filter(Boolean);
+      const preview = failedNames.slice(0, 3).join(', ');
+      const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
+      toast.error(isRTL ? `فشل تحديث ${failedIdx.length} عميل: ${preview}${more}` : `Failed to update ${failedIdx.length} leads: ${preview}${more}`);
     }
+    if (succeeded.length > 0) {
+      const succeededNames = succeeded.map(id => beforeSnapshot.get(id)?.full_name).filter(Boolean).join(', ');
+      logAction({ action: `bulk_${field}_change`, entity: 'contact', entityId: succeeded.join(','), description: `Bulk changed ${field} to "${value}" for ${succeeded.length} contacts: ${succeededNames || names}`, newValue: value, userName: profile?.full_name_ar });
+      createNotification({ type: 'system', title_en: `Bulk ${actionLabel}`, title_ar: `تغيير جماعي — ${actionLabel}`, body_en: `Changed ${field} to "${value}" for ${succeeded.length} leads`, body_ar: `تم تغيير ${field} إلى "${value}" لـ ${succeeded.length} عميل`, for_user_id: 'all' });
+      toast.success(isRTL ? `تم تحديث ${succeeded.length} عميل` : `${succeeded.length} leads updated`);
+    }
+    setSelectedIds([]);
   };
 
   const handleBulkSMS = async () => {
@@ -1168,6 +1216,11 @@ export default function ContactsPage() {
       ? [{ campaign: form.campaign_name, campaign_id: matchedCampaign?.id || null, source: form.source, platform: form.platform, date: new Date().toISOString() }]
       : [];
     const myName = profile?.full_name_en || profile?.full_name_ar || '—';
+    // Pair the name with the UUID up front. The form may have set
+    // assigned_to (admin override) — keep that. Otherwise self-assign,
+    // and the AddContactModal admin path also fills it; but if only the
+    // name reaches us, defer to createContact's resolver.
+    const assigneeId = form.assigned_to || (form.assigned_to_name ? null : profile?.id || null);
     const newContact = {
       ...form,
       id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -1175,8 +1228,9 @@ export default function ContactsPage() {
       temperature: 'hot',
       contact_status: 'new',
       is_blacklisted: false,
-      assigned_to_name: myName,
-      assigned_to_names: [myName].filter(n => n !== '—'),
+      assigned_to: assigneeId,
+      assigned_to_name: form.assigned_to_name || myName,
+      assigned_to_names: form.assigned_to_names || [myName].filter(n => n !== '—'),
       assigned_by_name: profile?.full_name_ar || '—',
       created_by: profile?.id || null,
       created_by_name: profile?.full_name_ar || profile?.full_name_en || '—',
@@ -1189,9 +1243,15 @@ export default function ContactsPage() {
     try {
       const assigneeName = cleanForm.assigned_to_name || profile?.full_name_en || profile?.full_name_ar || null;
       const assigneeNames = cleanForm.assigned_to_names || [assigneeName].filter(Boolean);
+      // Pass the UUID alongside the name when we already have it (admin
+      // override or self-assignment). createContact's resolver covers the
+      // case where only the name is known.
+      const explicitAssigneeId = cleanForm.assigned_to
+        || (assigneeName === myName ? profile?.id || null : null);
       const saved = await createContact({
         ...cleanForm,
         campaign_interactions,
+        ...(explicitAssigneeId ? { assigned_to: explicitAssigneeId } : {}),
         assigned_to_name: assigneeName,
         assigned_to_names: assigneeNames,
         assigned_by_name: profile?.full_name_ar || profile?.full_name_en || null,
@@ -1649,6 +1709,13 @@ export default function ContactsPage() {
                 return prevTime > oldTime ? prevSel : old;
               });
             }
+            // Re-throw so awaiting callers (drawer's handleStatusChange /
+            // handleTemperatureChange) can skip their side effects — without
+            // this, a failed status update was rolled back here while the
+            // drawer cheerfully wrote a status_change activity to the
+            // timeline + toast'd success. The user's report of "status
+            // didn't change but timeline shows it" was this exact path.
+            throw err;
           }
         }
         const changedFields = old ? Object.keys(updated).filter(k => JSON.stringify(old[k]) !== JSON.stringify(updated[k]) && !['updated_at'].includes(k)) : [];
@@ -1718,8 +1785,30 @@ export default function ContactsPage() {
         // Import directly to Supabase using batch insert
         const { batchInsert } = await import('../utils/batchOperations');
         const { stripInternalFields } = await import('../utils/sanitizeForSupabase');
-        // Only allow known contacts table columns
-        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to_name','assigned_to_names','assigned_by_name','assigned_at','created_by','created_by_name','budget_min','budget_max','lead_score','is_blacklisted','last_activity_at','created_at']);
+        // Only allow known contacts table columns. assigned_to is included so
+        // imports can carry the agent UUID — name-only writes get reverted by
+        // the assigned_to/_name sync trigger and orphan rows from RLS.
+        const ALLOWED_COLS = new Set(['full_name','prefix','phone','phone2','extra_phones','email','company','job_title','department','source','contact_type','contact_status','notes','gender','nationality','birth_date','preferred_location','interested_in_type','campaign_name','campaign_id','campaign_interactions','temperature','platform','assigned_to','assigned_to_name','assigned_to_names','assigned_by_name','assigned_at','created_by','created_by_name','budget_min','budget_max','lead_score','is_blacklisted','last_activity_at','created_at']);
+        // Resolve agent names → UUIDs once, in bulk, BEFORE batch insert.
+        // Per-row lookups inside createContact would race + each one is its
+        // own RLS-gated round-trip; one call here is the whole list.
+        const uniqueAgentNames = [...new Set(newContacts.map(c => c.assigned_to_name?.trim()).filter(Boolean))];
+        let agentNameToId = new Map();
+        if (uniqueAgentNames.length > 0) {
+          try {
+            const { data: agentRows } = await import('../lib/supabase').then(m => m.default
+              .from('users')
+              .select('id, full_name_en, full_name_ar')
+              .or(uniqueAgentNames.flatMap(n => [`full_name_en.eq."${n}"`, `full_name_ar.eq."${n}"`]).join(',')));
+            (agentRows || []).forEach(u => {
+              if (u.full_name_en) agentNameToId.set(u.full_name_en, u.id);
+              if (u.full_name_ar) agentNameToId.set(u.full_name_ar, u.id);
+            });
+          } catch (e) { if (import.meta.env.DEV) console.warn('[Import] agent uuid lookup failed:', e); }
+        }
+        const myId = profile?.id || null;
+        const myName = profile?.full_name_en || profile?.full_name_ar || null;
+        const unresolvedAgentNames = new Set();
         const clean = newContacts.map(c => {
           const stripped = stripInternalFields(c);
           const safe = {};
@@ -1730,17 +1819,28 @@ export default function ContactsPage() {
           if (safe.id && !safe.id.match(/^[0-9a-f-]{36}$/)) delete safe.id;
           // Don't set last_activity_at on import - only set when actual activity happens
           safe.created_at = safe.created_at || new Date().toISOString();
-          // Sync assigned_to_name → assigned_to_names so the legacy multi-name
-          // column stays consistent with the single-assignment scalar.
-          const agentName = safe.assigned_to_name || profile?.full_name_en || profile?.full_name_ar;
+          // Resolve agent: prefer the name from the row, fall back to caller.
+          const agentName = safe.assigned_to_name || myName;
           if (agentName) {
             safe.assigned_to_name = agentName;
             safe.assigned_to_names = [agentName];
-            // Stamp assignment time so "Sort: Assignment Date" shows imports correctly
             if (!safe.assigned_at) safe.assigned_at = new Date().toISOString();
+            // Pair the name with its UUID — without it RLS hides the row from
+            // the new owner and the DB trigger resets the name back to whatever
+            // assigned_to currently points at.
+            if (!safe.assigned_to) {
+              const resolved = agentNameToId.get(agentName) || (agentName === myName ? myId : null);
+              if (resolved) safe.assigned_to = resolved;
+              else unresolvedAgentNames.add(agentName);
+            }
           }
           return safe;
         });
+        if (unresolvedAgentNames.size > 0) {
+          toast.warning(isRTL
+            ? `لم يتم العثور على مستخدمين لـ: ${[...unresolvedAgentNames].join('، ')} — هتتورد بدون مالك`
+            : `Could not match users for: ${[...unresolvedAgentNames].join(', ')} — rows imported unowned`);
+        }
         try {
           console.log('[Import] Sending', clean.length, 'contacts. Sample:', JSON.stringify(clean[0]).slice(0, 200));
           const inserted = await batchInsert('contacts', clean, 20);

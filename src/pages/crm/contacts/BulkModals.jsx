@@ -317,15 +317,29 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
     if (!bulkReassignModal) return;
     import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
       fetchSalesAgents().then(data => {
-        setAllAgents((data || []).map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
+        // Keep id alongside the display name — without the UUID the bulk
+        // reassign falls back to a fragile name→uuid lookup in updateContact
+        // that the May 3 audit found can silently leave assigned_to pointing
+        // at the old owner (and the DB trigger then resets the name back too).
+        const list = (data || [])
+          .filter(a => a.id && (a.full_name_en || a.full_name_ar))
+          .map(a => ({ id: a.id, name: a.full_name_en || a.full_name_ar }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setAllAgents(list);
       }).catch(() => {});
     });
   }, [bulkReassignModal]);
 
   if (!bulkReassignModal) return null;
 
-  const agents = allAgents.length > 0 ? allAgents : [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))].sort();
-  const filtered = search ? agents.filter(a => a.toLowerCase().includes(search.toLowerCase())) : agents;
+  const agents = allAgents.length > 0
+    ? allAgents
+    // Fallback only if the users fetch failed — names without ids will go
+    // through the lookup path. Surface a warning when this fires.
+    : [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))]
+        .sort()
+        .map(name => ({ id: null, name }));
+  const filtered = search ? agents.filter(a => a.name.toLowerCase().includes(search.toLowerCase())) : agents;
   const selectedContacts = (contacts || []).filter(c => selectedIds.includes(c.id));
 
   return (
@@ -374,25 +388,28 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
             <p className="text-center text-xs text-content-muted dark:text-content-muted-dark py-6">
               {isRTL ? 'مفيش نتائج' : 'No results'}
             </p>
-          ) : filtered.map(agent => (
-            <button key={agent} onClick={() => setSelected(agent)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 border-none cursor-pointer text-start transition-colors ${
-                selected === agent
-                  ? 'bg-brand-500/10 ring-1 ring-brand-500'
-                  : 'bg-transparent hover:bg-surface-bg dark:hover:bg-surface-bg-dark'
-              }`}>
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold ${
-                selected === agent ? 'bg-brand-500 text-white' : 'bg-brand-500/10 text-brand-500'
-              }`}>
-                {agent.charAt(0).toUpperCase()}
-              </div>
-              <span className={`text-sm font-semibold ${
-                selected === agent ? 'text-brand-500' : 'text-content dark:text-content-dark'
-              }`}>
-                {agent}
-              </span>
-            </button>
-          ))}
+          ) : filtered.map(agent => {
+            const isSelected = selected?.id === agent.id && selected?.name === agent.name;
+            return (
+              <button key={agent.id || agent.name} onClick={() => setSelected(agent)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl mb-1 border-none cursor-pointer text-start transition-colors ${
+                  isSelected
+                    ? 'bg-brand-500/10 ring-1 ring-brand-500'
+                    : 'bg-transparent hover:bg-surface-bg dark:hover:bg-surface-bg-dark'
+                }`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-bold ${
+                  isSelected ? 'bg-brand-500 text-white' : 'bg-brand-500/10 text-brand-500'
+                }`}>
+                  {agent.name.charAt(0).toUpperCase()}
+                </div>
+                <span className={`text-sm font-semibold ${
+                  isSelected ? 'text-brand-500' : 'text-content dark:text-content-dark'
+                }`}>
+                  {agent.name}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Bulk Status & Temperature */}
@@ -440,7 +457,7 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
             className={`flex-1 px-4 py-2.5 rounded-xl border-none text-xs font-bold cursor-pointer transition-colors ${
               selected ? 'bg-brand-500 text-white hover:bg-brand-600' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark cursor-not-allowed'
             }`}>
-            {isRTL ? `تعيين لـ ${selected || '...'}` : `Assign to ${selected || '...'}`}
+            {isRTL ? `تعيين لـ ${selected?.name || '...'}` : `Assign to ${selected?.name || '...'}`}
           </button>
         </div>
       </div>
