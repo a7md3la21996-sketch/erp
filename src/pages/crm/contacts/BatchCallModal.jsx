@@ -1,4 +1,5 @@
-import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo } from 'lucide-react';
+import { useState } from 'react';
+import { Phone, MessageCircle, PhoneCall, X, SkipForward, CheckCircle2, ListTodo, AlertTriangle } from 'lucide-react';
 import { createActivity, updateContact } from '../../../services/contactsService';
 import { createTask } from '../../../services/tasksService';
 import { logAction } from '../../../services/auditService';
@@ -42,6 +43,7 @@ export default function BatchCallModal({
   isRTL,
 }) {
   const toast = useToast();
+  const [saving, setSaving] = useState(false);
 
   if (!batchCallMode) return null;
 
@@ -66,6 +68,7 @@ export default function BatchCallModal({
   if (showSummary) {
     const summary = {};
     batchCallLog.forEach(l => { summary[l.result] = (summary[l.result] || 0) + 1; });
+    const failedCount = batchCallLog.filter(l => l.activityFailed || l.statusFailed || l.taskFailed).length;
     return (
       <div dir={isRTL ? 'rtl' : 'ltr'} className="fixed inset-0 bg-black/60 z-[1200] flex items-center justify-center p-5">
         <div className="modal-content bg-surface-card dark:bg-surface-card-dark rounded-[20px] w-full max-w-[520px] overflow-hidden">
@@ -85,13 +88,32 @@ export default function BatchCallModal({
                 </div>
               ))}
             </div>
+            {failedCount > 0 && (
+              <div className="flex items-start gap-2 px-3 py-2 mb-3 rounded-lg bg-red-500/10 border border-red-500/30 text-[11px] text-red-500">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold">{isRTL ? `فشل حفظ ${failedCount} مكالمة` : `${failedCount} call(s) failed to save`}</div>
+                  <div className="opacity-80">{isRTL ? 'الصفوف الحمراء تحت لم تُحفظ بالكامل — راجعها يدوياً.' : 'Red rows below did not fully save — review manually.'}</div>
+                </div>
+              </div>
+            )}
             <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 16 }}>
               {batchCallLog.map((l, i) => {
                 const rInfo = CALL_RESULTS.find(r => r.value === l.result);
+                const hasFailure = l.activityFailed || l.statusFailed || l.taskFailed;
+                const failParts = [];
+                if (l.activityFailed) failParts.push(isRTL ? 'سجل المكالمة' : 'call log');
+                if (l.statusFailed) failParts.push(isRTL ? 'الحالة' : 'status');
+                if (l.taskFailed) failParts.push(isRTL ? 'المهمة' : 'task');
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid rgba(148,163,184,0.1)' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid rgba(148,163,184,0.1)', background: hasFailure ? 'rgba(239,68,68,0.06)' : undefined }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: rInfo?.color || '#6b7280', flexShrink: 0 }} />
                     <span className="text-xs font-semibold text-content dark:text-content-dark flex-1">{l.name}</span>
+                    {hasFailure && (
+                      <span title={(isRTL ? 'فشل: ' : 'Failed: ') + failParts.join('، ')} className="flex items-center gap-1 text-[10px] font-bold text-red-500">
+                        <AlertTriangle size={11} /> {isRTL ? 'فشل' : 'fail'}
+                      </span>
+                    )}
                     <span style={{ fontSize: 10, color: rInfo?.color, fontWeight: 600 }}>{rInfo?.label}</span>
                     {l.notes && <span className="text-[10px] text-content-muted dark:text-content-muted-dark truncate max-w-[100px]" title={l.notes}>{l.notes}</span>}
                   </div>
@@ -121,7 +143,14 @@ export default function BatchCallModal({
           </div>
           <div className="flex items-center gap-3">
             <span className="text-white/80 text-xs font-semibold">{progress}/{total}</span>
-            <button onClick={() => setBatchCallMode(false)} className="bg-white/15 border-none rounded-md w-7 h-7 flex items-center justify-center cursor-pointer text-white"><X size={14} /></button>
+            <button disabled={saving} onClick={() => {
+              if (saving) return;
+              // If user has logged calls, fire the audit before closing so we don't lose it
+              if (batchCallLog.length > 0) {
+                logAction({ action: 'batch_call', entity: 'contact', entityId: batchCallLog.map(l => l.id).join(','), description: `Batch called ${batchCallLog.length} contacts (closed early): ${batchCallLog.map(l => `${l.name}(${l.result})`).join(', ')}`, userName: profile?.full_name_ar || '' });
+              }
+              setBatchCallMode(false);
+            }} className={`bg-white/15 border-none rounded-md w-7 h-7 flex items-center justify-center text-white ${saving ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}><X size={14} /></button>
           </div>
         </div>
         <div className="h-[3px] bg-gray-200 dark:bg-gray-700">
@@ -231,101 +260,134 @@ export default function BatchCallModal({
 
           {/* Navigation */}
           <div className="flex gap-2.5 justify-between">
-            <button disabled={batchCallIndex === 0} onClick={() => { setBatchCallIndex(i => i - 1); setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
-              className={`flex-1 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs ${batchCallIndex === 0 ? 'text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-40' : 'text-content dark:text-content-dark cursor-pointer'}`}>
+            <button disabled={batchCallIndex === 0 || saving} onClick={() => { setBatchCallIndex(i => i - 1); setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); }}
+              className={`flex-1 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs ${(batchCallIndex === 0 || saving) ? 'text-content-muted dark:text-content-muted-dark cursor-not-allowed opacity-40' : 'text-content dark:text-content-dark cursor-pointer'}`}>
               {isRTL ? 'السابق' : 'Previous'}
             </button>
-            <button onClick={() => { setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); if (batchCallIndex < batchContacts.length - 1) { setBatchCallIndex(i => i + 1); } else { setBatchCallIndex(batchContacts.length); } }}
-              className="px-3 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs text-content-muted dark:text-content-muted-dark cursor-pointer">
+            <button disabled={saving} onClick={() => { setBatchCallNotes(''); setBatchCallResult(''); setBatchTaskOpen(false); setBatchTaskForm({ title: '', due: '', priority: 'medium' }); if (batchCallIndex < batchContacts.length - 1) { setBatchCallIndex(i => i + 1); } else { setBatchCallIndex(batchContacts.length); } }}
+              className={`px-3 p-2.5 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-xs text-content-muted dark:text-content-muted-dark ${saving ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}>
               {isRTL ? 'تخطي' : 'Skip'}
             </button>
-            <Button size="sm" className="flex-[2] justify-center" onClick={async () => {
-              if (batchCallResult) {
-                // Idempotency guard: if this contact already has a log entry,
-                // user is re-saving via Previous → Save. Refuse to create a
-                // duplicate activity row — the original audit flagged this.
-                const alreadyLogged = (batchCallLog || []).some(e => e.id === current.id);
-                if (alreadyLogged) {
-                  toast.warning(isRTL
-                    ? `هذه المكالمة مسجلة بالفعل لـ ${current.full_name}. تم تخطيها لتجنب التكرار.`
-                    : `Call already logged for ${current.full_name}. Skipping to avoid duplicate.`);
-                  // Still advance to next contact
-                  setBatchTaskOpen(false);
-                  setBatchTaskForm({ title: '', due: '', priority: 'medium' });
-                  if (batchCallIndex < batchContacts.length - 1) {
-                    setBatchCallIndex(i => i + 1);
-                  } else {
-                    setBatchCallIndex(batchContacts.length);
+            <Button size="sm" className="flex-[2] justify-center" disabled={saving} onClick={async () => {
+              if (saving) return; // belt-and-braces guard against double-click
+              setSaving(true);
+              let logEntry = null;
+              let activitySaved = true;
+              let statusSaved = true;
+              let taskSaved = true;
+              try {
+                if (batchCallResult) {
+                  // Idempotency guard: if this contact already has a log entry,
+                  // user is re-saving via Previous → Save. Refuse to create a
+                  // duplicate activity row — the original audit flagged this.
+                  const alreadyLogged = (batchCallLog || []).some(e => e.id === current.id);
+                  if (alreadyLogged) {
+                    toast.warning(isRTL
+                      ? `هذه المكالمة مسجلة بالفعل لـ ${current.full_name}. تم تخطيها لتجنب التكرار.`
+                      : `Call already logged for ${current.full_name}. Skipping to avoid duplicate.`);
+                    setBatchTaskOpen(false);
+                    setBatchTaskForm({ title: '', due: '', priority: 'medium' });
+                    if (batchCallIndex < batchContacts.length - 1) {
+                      setBatchCallIndex(i => i + 1);
+                    } else {
+                      setBatchCallIndex(batchContacts.length);
+                    }
+                    setBatchCallNotes('');
+                    setBatchCallResult('');
+                    return;
                   }
-                  setBatchCallNotes('');
-                  setBatchCallResult('');
-                  return;
+                  const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
+                  const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
+                  try {
+                    await createActivity(activity);
+                  } catch (err) {
+                    activitySaved = false;
+                    reportError('BatchCallModal', 'createActivity', err);
+                  }
+                  // Only update contact_status if the activity was saved — otherwise
+                  // we'd flip the status with no audit trail explaining why.
+                  if (activitySaved) {
+                    const myStatus = current.contact_status;
+                    let newStatus = myStatus;
+                    if (myStatus === 'disqualified') {
+                      newStatus = myStatus;
+                    } else if (['no_answer', 'busy', 'switched_off'].includes(batchCallResult)) {
+                      newStatus = 'contacted';
+                    } else if (batchCallResult === 'answered') {
+                      newStatus = 'following';
+                    } else if (myStatus === 'new' || !myStatus) {
+                      newStatus = 'following';
+                    }
+                    const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus };
+                    try {
+                      await updateContact(current.id, statusUpdate);
+                      setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
+                    } catch (err) {
+                      statusSaved = false;
+                      reportError('BatchCallModal', 'updateContactStatus', err);
+                    }
+                  } else {
+                    statusSaved = false; // didn't even attempt
+                  }
+                  logEntry = { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes, activityFailed: !activitySaved, statusFailed: !statusSaved };
+                  setBatchCallLog(prev => [...prev, logEntry]);
                 }
-                const resultLabel = CALL_RESULTS.find(r => r.value === batchCallResult)?.label || batchCallResult;
-                const activity = { type: 'call', result: batchCallResult, description: `${isRTL ? 'مكالمة' : 'Call'}: ${resultLabel}${batchCallNotes ? ' — ' + batchCallNotes : ''}`, contact_id: current.id, user_id: profile?.id || null, user_name_ar: profile?.full_name_ar || '', user_name_en: profile?.full_name_en || '', created_at: new Date().toISOString() };
-                try { await createActivity(activity); } catch (err) { if (import.meta.env.DEV) console.warn('batch call create activity:', err); }
-                const myStatus = current.contact_status;
-                let newStatus = myStatus;
-                // disqualified → never auto-change
-                if (myStatus === 'disqualified') {
-                  newStatus = myStatus;
-                } else if (['no_answer', 'busy', 'switched_off'].includes(batchCallResult)) {
-                  newStatus = 'contacted';
-                } else if (batchCallResult === 'answered') {
-                  newStatus = 'following';
-                } else if (myStatus === 'new' || !myStatus) {
-                  newStatus = 'following';
+                // Create follow-up task if filled
+                if (batchTaskOpen && batchTaskForm.title.trim() && batchTaskForm.due) {
+                  try {
+                    await createTask({
+                      title: batchTaskForm.title,
+                      description: `${isRTL ? 'متابعة' : 'Follow-up'}: ${current.full_name}${batchCallNotes ? ' — ' + batchCallNotes : ''}`,
+                      priority: batchTaskForm.priority,
+                      due_date: batchTaskForm.due || null,
+                      status: 'pending',
+                      dept: 'sales',
+                      contact_id: current.id,
+                      contact_name: current.full_name,
+                      assigned_to: profile?.id || null,
+                      assigned_to_name: profile?.full_name_ar || profile?.full_name_en || '',
+                      assigned_to_name_ar: profile?.full_name_ar || '',
+                      assigned_to_name_en: profile?.full_name_en || '',
+                    });
+                  } catch (err) {
+                    taskSaved = false;
+                    reportError('BatchCallModal', 'createFollowUpTask', err);
+                    if (logEntry) {
+                      // Tag the existing log entry as having a failed task too
+                      setBatchCallLog(prev => prev.map(e => e === logEntry ? { ...e, taskFailed: true } : e));
+                    }
+                  }
                 }
-                const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus };
-                let writeOk = true;
-                try {
-                  await updateContact(current.id, statusUpdate);
-                } catch (err) {
-                  writeOk = false;
-                  // Surface failures via the batch log so the user sees which calls didn't save.
-                  // Toast surfacing happens at the modal-close summary so we don't spam mid-batch.
-                  if (import.meta.env.DEV) console.error('[batch call] save failed:', current.full_name, err?.message || err);
+                // Surface mid-batch failures so the agent isn't blindsided at the end
+                if (!activitySaved || !statusSaved || !taskSaved) {
+                  const failures = [];
+                  if (!activitySaved) failures.push(isRTL ? 'سجل المكالمة' : 'call log');
+                  if (!statusSaved && activitySaved) failures.push(isRTL ? 'حالة العميل' : 'status');
+                  if (!taskSaved) failures.push(isRTL ? 'المهمة' : 'task');
+                  toast.error(isRTL
+                    ? `فشل حفظ ${failures.join('، ')} لـ ${current.full_name}`
+                    : `Failed to save ${failures.join(', ')} for ${current.full_name}`);
                 }
-                if (writeOk) {
-                  setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
+                // Reset task form for next contact
+                setBatchTaskOpen(false);
+                setBatchTaskForm({ title: '', due: '', priority: 'medium' });
+                if (batchCallIndex < batchContacts.length - 1) {
+                  setBatchCallIndex(i => i + 1);
+                  setBatchCallNotes(''); setBatchCallResult('');
+                } else {
+                  // Show summary — log entry already pushed above
+                  setBatchCallIndex(batchContacts.length);
+                  // Audit covers the whole batch (activities table is per-call source of truth)
+                  const finalLog = logEntry ? [...batchCallLog, logEntry] : batchCallLog;
+                  if (finalLog.length > 0) {
+                    logAction({ action: 'batch_call', entity: 'contact', entityId: finalLog.map(l => l.id).join(','), description: `Batch called ${finalLog.length} contacts: ${finalLog.map(l => `${l.name}(${l.result})`).join(', ')}`, userName: profile?.full_name_ar || '' });
+                  }
                 }
-                setBatchCallLog(prev => [...prev, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes, failed: !writeOk }]);
-              }
-              // Create follow-up task if filled
-              if (batchTaskOpen && batchTaskForm.title.trim() && batchTaskForm.due) {
-                try {
-                  await createTask({
-                    title: batchTaskForm.title,
-                    description: `${isRTL ? 'متابعة' : 'Follow-up'}: ${current.full_name}${batchCallNotes ? ' — ' + batchCallNotes : ''}`,
-                    priority: batchTaskForm.priority,
-                    due_date: batchTaskForm.due || null,
-                    status: 'pending',
-                    dept: 'sales',
-                    contact_id: current.id,
-                    contact_name: current.full_name,
-                    assigned_to: profile?.id || null,
-                    assigned_to_name: profile?.full_name_ar || profile?.full_name_en || '',
-                    assigned_to_name_ar: profile?.full_name_ar || '',
-                    assigned_to_name_en: profile?.full_name_en || '',
-                  });
-                } catch (err) { reportError('BatchCallModal', 'createFollowUpTask', err); }
-              }
-              // Reset task form for next contact
-              setBatchTaskOpen(false);
-              setBatchTaskForm({ title: '', due: '', priority: 'medium' });
-              if (batchCallIndex < batchContacts.length - 1) {
-                setBatchCallIndex(i => i + 1);
-                setBatchCallNotes(''); setBatchCallResult('');
-              } else {
-                // Show summary
-                const finalLog = batchCallResult ? [...batchCallLog, { id: current.id, name: current.full_name, result: batchCallResult, notes: batchCallNotes }] : batchCallLog;
-                setBatchCallLog(finalLog);
-                setBatchCallIndex(batchContacts.length); // trigger summary view
-                logAction({ action: 'batch_call', entity: 'contact', entityId: finalLog.map(l => l.id).join(','), description: `Batch called ${finalLog.length} contacts: ${finalLog.map(l => `${l.name}(${l.result})`).join(', ')}`, userName: profile?.full_name_ar || '' });
-                // No full refresh needed — contacts state is already updated optimistically above
+              } finally {
+                setSaving(false);
               }
             }}>
-              {batchCallIndex < batchContacts.length - 1 ? (<>{isRTL ? 'التالي' : 'Next'} <SkipForward size={13} /></>) : (isRTL ? 'إنهاء' : 'Finish')}
+              {saving ? (isRTL ? 'جاري الحفظ...' : 'Saving...') : (batchCallIndex < batchContacts.length - 1 ? (<>{isRTL ? 'التالي' : 'Next'} <SkipForward size={13} /></>) : (isRTL ? 'إنهاء' : 'Finish'))}
             </Button>
           </div>
         </div>
