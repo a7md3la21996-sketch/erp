@@ -183,7 +183,7 @@ export default function BulkActionToolbar({
       </button>}
 
       {/* Send SMS */}
-      {perms.canBulkContacts && <button
+      {(perms.canBulkContacts || perms.canBulkContactsBasic) && <button
         onClick={() => { setBulkSMSModal(true); setBulkSMSState({ templateId: '', lang: isRTL ? 'ar' : 'en', sending: false, progress: 0, total: 0, done: false, results: [] }); }}
         className={`${btnBase} ${btnVariants.emerald}`}>
         <MessageSquare size={12} /> {isRTL ? 'رسالة SMS' : 'Send SMS'}
@@ -196,7 +196,7 @@ export default function BulkActionToolbar({
       </button>}
 
       {/* Batch Call */}
-      {perms.canBulkContacts && <button
+      {(perms.canBulkContacts || perms.canBulkContactsBasic) && <button
         onClick={() => { setBatchCallMode(true); setBatchCallIndex(0); setBatchCallLog([]); setBatchCallNotes(''); setBatchCallResult(''); }}
         className={`${btnBase} ${btnVariants.emerald}`}>
         <PhoneCall size={12} /> {isRTL ? 'اتصال جماعي' : 'Batch Call'}

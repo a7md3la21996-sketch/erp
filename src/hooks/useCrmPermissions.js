@@ -19,6 +19,8 @@ export function useCrmPermissions() {
     const canExportContacts = hasPermission(P.CONTACTS_EXPORT);
     const canImportContacts = hasPermission(P.CONTACTS_IMPORT);
     const canBulkContacts = hasPermission(P.CONTACTS_BULK);
+    // Basic bulk = Batch Call + SMS only (for sales agents). Full canBulkContacts implies it.
+    const canBulkContactsBasic = canBulkContacts || hasPermission(P.CONTACTS_BULK_BASIC);
 
     // Check if user can edit a specific contact
     const canEditContact = (contact) => {
@@ -51,6 +53,7 @@ export function useCrmPermissions() {
       canExportContacts,
       canImportContacts,
       canBulkContacts,
+      canBulkContactsBasic,
       // Opportunities
       canViewAllOpps,
       canEditOpp,

@@ -34,6 +34,7 @@ export const P = {
   CONTACTS_EXPORT: 'contacts.export',
   CONTACTS_IMPORT: 'contacts.import',
   CONTACTS_BULK: 'contacts.bulk',
+  CONTACTS_BULK_BASIC: 'contacts.bulk_basic',
 
   // Opportunities
   OPPS_VIEW_OWN: 'opps.view_own',
@@ -149,8 +150,8 @@ export const ROLE_PERMISSIONS = {
 
   sales_agent: [
     P.DASHBOARD,
-    // Contacts: view own + edit own only
-    P.CONTACTS_VIEW_OWN, P.CONTACTS_EDIT_OWN,
+    // Contacts: view own + edit own + basic bulk (Batch Call + SMS only)
+    P.CONTACTS_VIEW_OWN, P.CONTACTS_EDIT_OWN, P.CONTACTS_BULK_BASIC,
     // Opportunities: view own + edit own only
     P.OPPS_VIEW_OWN, P.OPPS_EDIT_OWN,
     // Deals
