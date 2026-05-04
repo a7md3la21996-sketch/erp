@@ -912,12 +912,19 @@ export async function fetchMasterProfileDeals(contactIds) {
 
 export async function fetchContactActivities(contactId, { role, userId, teamId } = {}) {
   try {
-    // When viewing a specific contact's activities, show ALL activities on that contact
-    // The contact itself is already role-filtered (agent can only open contacts assigned to them)
-    // So if they can see the contact, they should see all its history (including from previous agents)
+    // Embed the from/to users via the FK columns added in May 2026 — without
+    // this, the drawer falls back to the static text in `notes` ("X → Y") which
+    // becomes wrong the moment a user is renamed. Joining at fetch time means
+    // the display always shows the current user name. Legacy rows where these
+    // IDs are NULL still render via notes (handled in the drawer).
     const { data, error } = await rq(() => supabase
       .from('activities')
-      .select('*')
+      .select(`
+        *,
+        users:user_id(id, full_name_en, full_name_ar),
+        from_user:from_user_id(id, full_name_en, full_name_ar),
+        to_user:to_user_id(id, full_name_en, full_name_ar)
+      `)
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50), 'fetchContactActivities');

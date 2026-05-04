@@ -1091,7 +1091,21 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         return (
           <>
             <div className="flex items-center gap-2">
-              <div className="text-xs font-semibold text-content dark:text-content-dark leading-snug flex-1">{item.notes || item.description || (isRTL ? 'نشاط' : 'Activity')}</div>
+              <div className="text-xs font-semibold text-content dark:text-content-dark leading-snug flex-1">{(() => {
+                // For reassignments, prefer the embedded users' CURRENT names
+                // (joined via from_user_id / to_user_id in fetchContactActivities)
+                // so a later rename of an agent updates the timeline retroactively.
+                // Fall back to the legacy notes text only when those FKs are NULL.
+                if (item.type === 'reassignment' && (item.from_user || item.to_user)) {
+                  const pickName = (u) => u && (isRTL ? (u.full_name_ar || u.full_name_en) : (u.full_name_en || u.full_name_ar));
+                  const fromName = pickName(item.from_user)
+                    || (item.notes ? item.notes.split('→')[0]?.trim() : '—');
+                  const toName = pickName(item.to_user)
+                    || (item.notes ? item.notes.split('→')[1]?.split(':')[0]?.trim() : '');
+                  return `${fromName || '—'} → ${toName || '—'}`;
+                }
+                return item.notes || item.description || (isRTL ? 'نشاط' : 'Activity');
+              })()}</div>
               {actStatus !== 'completed' && (
                 <span className="text-[10px] px-1.5 py-px rounded-[5px] font-semibold shrink-0" style={{ background: STATUS_COLORS[actStatus] + '22', color: STATUS_COLORS[actStatus] }}>
                   {isRTL ? STATUS_LABELS[actStatus]?.ar : STATUS_LABELS[actStatus]?.en}
