@@ -11,6 +11,14 @@ import { reportError } from '../../../utils/errorReporter';
 import { Button } from '../../../components/ui';
 import { useToast } from '../../../contexts/ToastContext';
 
+const STATUS_DEFS = {
+  new:             { ar: 'جديد',        en: 'New',           color: '#4A7AAB' },
+  contacted:       { ar: 'تم التواصل',  en: 'Contacted',     color: '#F59E0B' },
+  following:       { ar: 'متابعة',      en: 'Following',     color: '#10B981' },
+  has_opportunity: { ar: 'لديه فرصة',   en: 'Has Opp',       color: '#059669' },
+  disqualified:    { ar: 'غير مؤهل',    en: 'DQ',            color: '#EF4444' },
+};
+
 export default function BatchCallModal({
   batchCallMode,
   setBatchCallMode,
@@ -125,14 +133,26 @@ export default function BatchCallModal({
             <div className="w-[50px] h-[50px] rounded-xl flex items-center justify-center text-lg font-bold text-white" style={{ background: avatarColor(current.id) }}>
               {initials(current.full_name)}
             </div>
-            <div className="flex-1">
-              <div className="font-bold text-base text-content dark:text-content-dark">{current.full_name}</div>
+            <div className="flex-1 min-w-0">
+              <div className="font-bold text-base text-content dark:text-content-dark truncate">{current.full_name}</div>
               <div className="text-xs text-content-muted dark:text-content-muted-dark text-start" dir="ltr">{current.phone}</div>
               {current.phone2 && <div className="text-[11px] text-content-muted dark:text-content-muted-dark text-start" dir="ltr">{current.phone2}</div>}
               {Array.isArray(current.extra_phones) && current.extra_phones.filter(Boolean).map((p, i) => <div key={i} className="text-[11px] text-content-muted dark:text-content-muted-dark text-start" dir="ltr">{p}</div>)}
-              {current.company && <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">{current.company}</div>}
+              {current.company && <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 truncate">{current.company}</div>}
+              {current.campaign_name && (
+                <div className="flex items-center gap-1 text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 truncate" title={current.campaign_name}>
+                  <span className="opacity-70">{isRTL ? 'كامبين:' : 'Campaign:'}</span>
+                  <span className="truncate text-content dark:text-content-dark">{current.campaign_name}</span>
+                </div>
+              )}
             </div>
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              {(() => {
+                const s = current.contact_status || 'new';
+                const def = STATUS_DEFS[s];
+                if (!def) return null;
+                return <Chip label={isRTL ? def.ar : def.en} color={def.color} bg={def.color + '1A'} />;
+              })()}
               {TYPE[current.contact_type] && <Chip label={isRTL ? TYPE[current.contact_type].label : TYPE[current.contact_type].labelEn} color={TYPE[current.contact_type].color} bg={TYPE[current.contact_type].bg} />}
               {daysAgo !== null && (
                 <span className={`text-[10px] font-semibold ${daysAgo === 0 ? 'text-emerald-500' : daysAgo <= 3 ? 'text-[#6B8DB5]' : 'text-red-500'}`}>
