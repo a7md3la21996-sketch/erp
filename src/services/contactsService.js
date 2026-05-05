@@ -912,24 +912,48 @@ export async function fetchMasterProfileDeals(contactIds) {
 
 export async function fetchContactActivities(contactId, { role, userId, teamId } = {}) {
   try {
-    // Embed the from/to users via the FK columns added in May 2026 — without
-    // this, the drawer falls back to the static text in `notes` ("X → Y") which
-    // becomes wrong the moment a user is renamed. Joining at fetch time means
-    // the display always shows the current user name. Legacy rows where these
-    // IDs are NULL still render via notes (handled in the drawer).
-    const { data, error } = await rq(() => supabase
+    // Embed the from/to users via the FK columns so the drawer can render
+    // current names instead of the (rename-stale) text in `notes`. We fetch
+    // activities first, then resolve the user IDs in a separate query — this
+    // avoids relying on PostgREST embed inference for FKs that may not have
+    // been picked up by the schema cache yet (we got a "Server connection
+    // failed" error in production from the `users:user_id(...)` syntax).
+    const { data: activities, error } = await rq(() => supabase
       .from('activities')
-      .select(`
-        *,
-        users:user_id(id, full_name_en, full_name_ar),
-        from_user:from_user_id(id, full_name_en, full_name_ar),
-        to_user:to_user_id(id, full_name_en, full_name_ar)
-      `)
+      .select('*')
       .eq('contact_id', contactId)
       .order('created_at', { ascending: false })
       .limit(50), 'fetchContactActivities');
     if (error) throw error;
-    return data || [];
+    if (!activities?.length) return [];
+
+    // Collect every UUID we want to resolve in one batched lookup
+    const userIds = new Set();
+    for (const a of activities) {
+      if (a.user_id) userIds.add(a.user_id);
+      if (a.from_user_id) userIds.add(a.from_user_id);
+      if (a.to_user_id) userIds.add(a.to_user_id);
+    }
+
+    let userMap = {};
+    if (userIds.size > 0) {
+      try {
+        const { data: users } = await supabase
+          .from('users')
+          .select('id, full_name_en, full_name_ar')
+          .in('id', [...userIds]);
+        userMap = Object.fromEntries((users || []).map(u => [u.id, u]));
+      } catch (lookupErr) {
+        if (import.meta.env.DEV) console.warn('[fetchContactActivities] user resolve failed', lookupErr);
+      }
+    }
+
+    return activities.map(a => ({
+      ...a,
+      users:     a.user_id      ? userMap[a.user_id]      : null,
+      from_user: a.from_user_id ? userMap[a.from_user_id] : null,
+      to_user:   a.to_user_id   ? userMap[a.to_user_id]   : null,
+    }));
   } catch (err) {
     reportError('contactsService', 'fetchContactActivities', err);
     return [];
