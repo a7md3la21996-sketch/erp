@@ -1088,7 +1088,12 @@ export default function ContactsPage() {
         if (myName && !names.includes(myName)) return;
       } else if (profile?.role === 'team_leader' || profile?.role === 'sales_manager') {
         if (payload.eventType === 'INSERT') {
-          // Don't auto-add new contacts from realtime — let the next page load pick them up
+          // For managers, INSERT events from realtime can't be safely merged
+          // into the current page (no way to know if the new lead matches the
+          // active filter / belongs on the user's current page). Earlier this
+          // returned silently, so managers wouldn't see new leads until manual
+          // reload. Trigger a re-fetch instead so the page stays in sync.
+          loadContactsDataRef.current();
           return;
         }
       }
@@ -1136,8 +1141,16 @@ export default function ContactsPage() {
       const agentNameFilter = (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : null;
       let agentIdFilter = null;
       if (agentNameFilter) {
-        const { data: u } = await supabase.from('users').select('id').or(`full_name_en.eq.${agentNameFilter},full_name_ar.eq.${agentNameFilter}`).maybeSingle();
-        agentIdFilter = u?.id || null;
+        // .maybeSingle() throws PGRST116 if more than one row matches (e.g.
+        // two users sharing partial name across en/ar). Use .limit(1) so
+        // we deterministically take the first match. Also escape quotes
+        // in the name to keep the .or() tokenizer happy.
+        const safe = String(agentNameFilter).replace(/"/g, '\\"');
+        const { data: u } = await supabase
+          .from('users').select('id')
+          .or(`full_name_en.eq."${safe}",full_name_ar.eq."${safe}"`)
+          .limit(1);
+        agentIdFilter = u?.[0]?.id || null;
       }
       // For sales_agent, lock the filter to themselves regardless of global filter
       if (profile?.role === 'sales_agent' && profile.id) agentIdFilter = profile.id;

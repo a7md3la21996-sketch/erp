@@ -216,18 +216,46 @@ export async function fetchContacts({ role, userId, teamId, filters = {}, page, 
         ? filters.assigned_to_name.filter(Boolean)
         : [filters.assigned_to_name];
       if (agentValues.length > 0) {
-        if (filters.assigned_to_name_not) {
-          // is_not / not_in: exclude any contact that has any of these agents.
-          // Each .not() chains as an AND, which is exactly the "none of" semantic.
-          // After Phase 1: filter by singular assigned_to_name (text) — faster
-          // and avoids jsonb @> overhead. Replaces the old cs.[name] pattern.
-          agentValues.forEach(v => {
-            query = query.neq('assigned_to_name', v);
-          });
-        } else if (agentValues.length === 1) {
-          query = query.eq('assigned_to_name', agentValues[0]);
+        // Resolve names to UUIDs and filter on assigned_to (UUID) instead of
+        // the denormalized assigned_to_name (text). Reason: when an agent is
+        // renamed, the contacts.assigned_to_name column is only resync'd by
+        // a trigger that fires on contact UPDATE — leads that haven't been
+        // touched since the rename keep the OLD name, so a text filter for
+        // "is_not <new name>" silently includes them. UUID is invariant.
+        // Falls back to the legacy text filter only if the lookup fails so
+        // we don't break filtering when something goes wrong.
+        let agentUuids = null;
+        try {
+          // Build .or() with explicit double-quoting so names containing
+          // commas / parens / spaces don't break the PostgREST tokenizer.
+          const orConds = agentValues.flatMap(n => {
+            const safe = String(n).replace(/"/g, '\\"');
+            return [`full_name_en.eq."${safe}"`, `full_name_ar.eq."${safe}"`];
+          }).join(',');
+          const { data: matchedUsers } = await supabase
+            .from('users').select('id').or(orConds);
+          if (Array.isArray(matchedUsers) && matchedUsers.length > 0) {
+            agentUuids = matchedUsers.map(u => u.id);
+          }
+        } catch { /* fall through to text-based filter */ }
+
+        if (agentUuids && agentUuids.length > 0) {
+          if (filters.assigned_to_name_not) {
+            agentUuids.forEach(uuid => { query = query.neq('assigned_to', uuid); });
+          } else if (agentUuids.length === 1) {
+            query = query.eq('assigned_to', agentUuids[0]);
+          } else {
+            query = query.in('assigned_to', agentUuids);
+          }
         } else {
-          query = query.in('assigned_to_name', agentValues);
+          // Lookup failed / no matches — fall back to legacy text filter.
+          if (filters.assigned_to_name_not) {
+            agentValues.forEach(v => { query = query.neq('assigned_to_name', v); });
+          } else if (agentValues.length === 1) {
+            query = query.eq('assigned_to_name', agentValues[0]);
+          } else {
+            query = query.in('assigned_to_name', agentValues);
+          }
         }
       }
     }
