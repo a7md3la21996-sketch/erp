@@ -27,9 +27,12 @@ export default function DistributeLeadModal({ contact, onClose, onSuccess }) {
   const currentOwnerId = contact?.assigned_to;
   const currentOwnerName = contact?.assigned_to_name;
 
-  // Eligible agents: not the current owner
+  // Eligible agents: active only, and not the current owner. HandOffLeadModal
+  // already filters by status='active'; Distribute used to skip that filter so
+  // you could clone a lead onto a deactivated agent — leads then sat under an
+  // account no one can log into.
   const eligible = useMemo(() => {
-    return agents.filter(a => a.id !== currentOwnerId);
+    return agents.filter(a => a.id !== currentOwnerId && a.status !== 'inactive');
   }, [agents, currentOwnerId]);
 
   const filtered = useMemo(() => {

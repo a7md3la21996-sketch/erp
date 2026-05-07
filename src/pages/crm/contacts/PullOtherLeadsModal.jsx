@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Award, AlertTriangle, X } from 'lucide-react';
 import { Modal, ModalFooter, Button, Input } from '../../../components/ui';
-import { fetchContactsByPhone } from '../../../services/contactsService';
-import supabase from '../../../lib/supabase';
+import { fetchContactsByPhone, updateContact } from '../../../services/contactsService';
 import { useToast } from '../../../contexts/ToastContext';
 
 const STATUS_COLORS = {
@@ -67,17 +66,18 @@ export default function PullOtherLeadsModal({ contact, onClose, onSuccess }) {
     setSubmitting(true);
     try {
       const toUpdate = others.filter(c => selected.has(c.id));
+      // Route through updateContact so the standard pipeline runs:
+      // optimistic-locking, audit log via logUpdate, the assigned_to/_name
+      // resolver, retries — direct supabase.update bypasses all of those.
       const results = await Promise.allSettled(toUpdate.map(c =>
-        supabase.from('contacts').update({
+        updateContact(c.id, {
           contact_status: 'disqualified',
           disqualify_reason: 'won_by_other_agent',
           disqualify_note: reason,
-        }).eq('id', c.id)
+        })
       ));
-      // Supabase calls don't throw on errors — they resolve with { error: {...} }.
-      // Count both rejected promises AND fulfilled-with-error as failures, otherwise
-      // the user sees "Pulled N" while half the rows actually never updated.
-      const ok = results.filter(r => r.status === 'fulfilled' && !r.value?.error).length;
+      // updateContact throws on error, so allSettled rejection means failure.
+      const ok = results.filter(r => r.status === 'fulfilled').length;
       const fail = results.length - ok;
       toast.success(isRTL
         ? `تم سحب ${ok} ليد${fail ? ` (${fail} فشل)` : ''}`
