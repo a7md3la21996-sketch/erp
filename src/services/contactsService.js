@@ -44,7 +44,11 @@ export async function incrementLeadScore(contactId, increment) {
   }
 }
 
-export async function recordAssignment(contactId, { fromAgent, toAgent, assignedBy, notes = '' }) {
+export async function recordAssignment(contactId, {
+  fromAgent, toAgent,
+  fromAgentId = null, toAgentId = null,   // UUIDs — preferred over the text snapshot for display
+  assignedBy, notes = '',
+}) {
   const entry = {
     from: fromAgent || null,
     to: toAgent,
@@ -55,6 +59,9 @@ export async function recordAssignment(contactId, { fromAgent, toAgent, assigned
   // Persist to Supabase (fire-and-forget). Report both Supabase {error}
   // responses (RLS, schema) and promise rejections (network) — earlier
   // versions only caught the latter, so RLS denials disappeared silently.
+  // The text snapshot in `notes` stays as a legacy/archive field; the
+  // drawer always renders from from_user_id/to_user_id when present so a
+  // later rename of either user updates the timeline retroactively.
   supabase.from('activities').insert([{
     type: 'reassignment',
     entity_type: 'contact',
@@ -62,6 +69,8 @@ export async function recordAssignment(contactId, { fromAgent, toAgent, assigned
     notes: `${fromAgent || '—'} → ${toAgent}${notes ? ': ' + notes : ''}`,
     user_id: null,
     user_name_en: assignedBy || null,
+    from_user_id: fromAgentId,
+    to_user_id: toAgentId,
     status: 'completed',
     created_at: entry.at,
   }])
@@ -714,6 +723,8 @@ export async function handOffLead(contactId, toUserId, options = {}) {
   recordAssignment(contactId, {
     fromAgent: before.assigned_to_name,
     toAgent: targetName,
+    fromAgentId: before.assigned_to,   // ← UUID (may be NULL if contact had no prior owner)
+    toAgentId: toUserId,                // ← UUID of the new owner
     assignedBy: options.assignedByName || '',
   });
 

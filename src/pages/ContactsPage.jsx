@@ -475,10 +475,18 @@ export default function ContactsPage() {
     } : c);
     setContacts(updated);
         logAction({ action: 'bulk_reassign', entity: 'contact', entityId: selectedIds.join(','), description: `Reassigned ${selectedIds.length} contacts to ${agentName}: ${names}`, newValue: agentName, userName: profile?.full_name_ar });
-    // Record assignment history for each contact (uses fetched data so off-page rows are included)
+    // Record assignment history for each contact (uses fetched data so off-page rows are included).
+    // Pass UUIDs alongside names so the timeline renders current names — a
+    // later rename of either agent updates every historical row automatically.
     const reassignedContacts = allSelected;
     reassignedContacts.forEach(c => {
-      recordAssignment(c.id, { fromAgent: c.assigned_to_name, toAgent: agentName, assignedBy: assignedByName });
+      recordAssignment(c.id, {
+        fromAgent: c.assigned_to_name,
+        toAgent: agentName,
+        fromAgentId: c.assigned_to || null,
+        toAgentId: agentId,
+        assignedBy: assignedByName,
+      });
     });
     // Single notification for bulk assign (not one per lead)
     if (reassignedContacts.length === 1) {
