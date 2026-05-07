@@ -490,9 +490,9 @@ export default function ContactsPage() {
     });
     // Single notification for bulk assign (not one per lead)
     if (reassignedContacts.length === 1) {
-      notifyLeadReassigned({ contactName: reassignedContacts[0].full_name || reassignedContacts[0].phone || '—', contactId: reassignedContacts[0].id, newAgentName: agentName, assignedBy: assignedByName });
+      notifyLeadReassigned({ contactName: reassignedContacts[0].full_name || reassignedContacts[0].phone || '—', contactId: reassignedContacts[0].id, newAgentId: agentId, newAgentName: agentName, assignedBy: assignedByName });
     } else if (reassignedContacts.length > 1) {
-      notifyLeadAssigned({ contactName: `${reassignedContacts.length} ليد جديد`, contactId: null, agentId: agentName, agentName, assignedBy: assignedByName });
+      notifyLeadAssigned({ contactName: `${reassignedContacts.length} ليد جديد`, contactId: null, agentId, agentName, assignedBy: assignedByName });
     }
     // Opportunities reassignment is handled via Supabase in updateContact
     toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} عميل` : `${selectedIds.length} leads reassigned`);
@@ -1271,10 +1271,19 @@ export default function ContactsPage() {
             if (cfValues) setCFValues('contact', saved.id, cfValues);
       logAction({ action: 'create', entity: 'contact', entityId: saved.id, entityName: cleanForm.full_name, description: `Created contact: ${cleanForm.full_name} (${cleanForm.contact_type})`, userName: profile?.full_name_ar });
       evaluateTriggers('contact', 'created', saved);
-      // Notify assigned agent about new lead
-      const assignedName = profile?.full_name_en || profile?.full_name_ar;
-      if (assignedName) {
-        notifyLeadAssigned({ contactName: cleanForm.full_name || cleanForm.phone || '—', contactId: saved.id, agentId: assignedName, agentName: assignedName, assignedBy: profile?.full_name_ar || '—' });
+      // Notify assigned agent about new lead. The actual recipient is whoever
+      // owns the saved contact — saved.assigned_to is the UUID; fall back to
+      // self-assignment for the displayed name.
+      const recipientId = saved.assigned_to || profile?.id || null;
+      const recipientName = saved.assigned_to_name || profile?.full_name_en || profile?.full_name_ar || null;
+      if (recipientId || recipientName) {
+        notifyLeadAssigned({
+          contactName: cleanForm.full_name || cleanForm.phone || '—',
+          contactId: saved.id,
+          agentId: recipientId,
+          agentName: recipientName,
+          assignedBy: profile?.full_name_ar || '—',
+        });
       }
     } catch (err) {
       console.error('[handleSave] Failed to create contact:', err?.message || err);

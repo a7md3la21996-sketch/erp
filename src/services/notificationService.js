@@ -105,8 +105,20 @@ export async function getNotifications({ limit = 50, offset = 0, unreadOnly = fa
 /**
  * Add a new notification
  */
-export async function addNotification({ type, title, titleEn, message, messageEn, entity, entityId, priority = 'medium', actionUrl, icon, forUserId }) {
-  // Build object matching Supabase columns exactly
+export async function addNotification({ type, title, titleEn, message, messageEn, entity, entityId, priority = 'medium', actionUrl, icon, forUserId, forUserName }) {
+  // forUserId is the UUID (or 'all' marker). forUserName is an optional
+  // snapshot of the recipient's name for legacy/text-based lookups.
+  // Earlier this function shoved a single `forUserId` into BOTH columns,
+  // which meant callers passing a name (most of them) wrote the name
+  // into the UUID column too — making for_user_id useless as a UUID
+  // and breaking lookups by ID after a rename.
+  // UUID detection: standard 36-char with dashes, OR the literal 'all'.
+  const isUuid = typeof forUserId === 'string'
+    && (forUserId === 'all' || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(forUserId));
+  const cleanId = isUuid ? forUserId : null;
+  // If caller passed a non-UUID into forUserId (legacy), treat it as the
+  // name fallback so we don't silently drop the recipient.
+  const cleanName = forUserName || (!isUuid && forUserId ? forUserId : null);
   const dbRecord = {
     type: type || 'system_alert',
     title_ar: title || '',
@@ -117,8 +129,8 @@ export async function addNotification({ type, title, titleEn, message, messageEn
     priority: priority || 'normal',
     read: false,
     url: actionUrl || null,
-    for_user_id: forUserId || null,
-    for_user_name: forUserId || null,
+    for_user_id: cleanId,
+    for_user_name: cleanName,
     from_user: null,
   };
 
@@ -328,7 +340,8 @@ export function notifyLeadAssigned({ contactName, contactId, agentId, agentName,
     entityId: contactId,
     actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
     priority: 'high',
-    forUserId: agentName || agentId || null,
+    forUserId: agentId || null,
+    forUserName: agentName || null,
   });
 }
 
@@ -495,7 +508,7 @@ export function notifyAgentAdded({ contactName, contactId, agentName, addedBy })
 }
 
 // ── Lead Reassigned (notify new agent only) ──
-export function notifyLeadReassigned({ contactName, contactId, newAgentName, assignedBy }) {
+export function notifyLeadReassigned({ contactName, contactId, newAgentId, newAgentName, assignedBy }) {
   return addNotification({
     type: 'lead_reassigned',
     title: 'ليد اتنقل ليك',
@@ -506,7 +519,8 @@ export function notifyLeadReassigned({ contactName, contactId, newAgentName, ass
     entityId: contactId,
     actionUrl: contactId ? `/contacts?highlight=${contactId}` : '/contacts',
     priority: 'high',
-    forUserId: newAgentName,
+    forUserId: newAgentId || null,
+    forUserName: newAgentName || null,
   });
 }
 
