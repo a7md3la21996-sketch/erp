@@ -1045,7 +1045,15 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       }
       if (item._type === 'comment') return item.author_name || (isRTL ? 'مجهول' : 'Unknown');
       if (item._type === 'document') return item.uploaded_by || (isRTL ? 'النظام' : 'System');
-      if (item._type === 'audit') return item.user_name || (isRTL ? 'النظام' : 'System');
+      if (item._type === 'audit') {
+        // Prefer the resolved current name (joined via user_id in
+        // getAuditLogs) over the stored user_name snapshot — keeps audit
+        // entries up-to-date when an actor is renamed later.
+        const liveName = isRTL
+          ? (item.users?.full_name_ar || item.users?.full_name_en)
+          : (item.users?.full_name_en || item.users?.full_name_ar);
+        return liveName || item.user_name || (isRTL ? 'النظام' : 'System');
+      }
       if (item._type === 'deal') return isRTL ? (item.agent_ar || 'مجهول') : (item.agent_en || item.agent_ar || 'Unknown');
       return '';
     })();

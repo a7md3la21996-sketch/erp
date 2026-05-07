@@ -38,7 +38,27 @@ export async function getAuditLogs({ limit = 50, offset = 0, action, entity, sea
     if (search) query = query.or(`description.ilike.%${search}%,entity_name.ilike.%${search}%`);
     const { data, error, count } = await query;
     if (error) return { data: [], total: 0 };
-    return { data: data || [], total: count || (data?.length || 0) };
+
+    // Resolve actor names from user_id (UUID) so a later rename of the user
+    // updates every historical audit row. The stored user_name stays as a
+    // fallback for rows where user_id is NULL (legacy / pre-migration).
+    const rows = data || [];
+    if (rows.length > 0) {
+      const userIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        try {
+          const { data: users } = await supabase
+            .from('users')
+            .select('id, full_name_en, full_name_ar')
+            .in('id', userIds);
+          const userMap = Object.fromEntries((users || []).map(u => [u.id, u]));
+          for (const r of rows) {
+            if (r.user_id && userMap[r.user_id]) r.users = userMap[r.user_id];
+          }
+        } catch { /* lookup is best-effort; fall back to user_name snapshot */ }
+      }
+    }
+    return { data: rows, total: count || rows.length };
   } catch { return { data: [], total: 0 }; }
 }
 
