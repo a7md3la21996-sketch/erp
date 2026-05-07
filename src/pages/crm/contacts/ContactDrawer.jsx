@@ -1033,7 +1033,16 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     const createdBy = (() => {
       if (item._type === 'activity') return isRTL ? (item.users?.full_name_ar || item.user_name_ar || item.user_name_en || 'مجهول') : (item.users?.full_name_en || item.user_name_en || item.users?.full_name_ar || item.user_name_ar || 'Unknown');
       if (item._type === 'task') return isRTL ? (item.users?.full_name_ar || item.assigned_to_name_ar || item.created_by_name || 'مجهول') : (item.users?.full_name_en || item.assigned_to_name_en || item.users?.full_name_ar || item.created_by_name || 'Unknown');
-      if (item._type === 'opportunity') return isRTL ? (item.users?.full_name_ar || item.agent_name || 'مجهول') : (item.users?.full_name_en || item.users?.full_name_ar || item.agent_name || 'Unknown');
+      if (item._type === 'opportunity') {
+        // Use the actual stored fields — created_by_name + assigned_to_name —
+        // before falling back to "Unknown". The previous version only checked
+        // item.users (never embedded) and item.agent_name (often null on
+        // newer opps), so opportunities like the May 1 Yassin one rendered
+        // as "Unknown" even though both names were sitting on the row.
+        return isRTL
+          ? (item.users?.full_name_ar || item.created_by_name || item.assigned_to_name || item.agent_name || 'مجهول')
+          : (item.users?.full_name_en || item.users?.full_name_ar || item.created_by_name || item.assigned_to_name || item.agent_name || 'Unknown');
+      }
       if (item._type === 'comment') return item.author_name || (isRTL ? 'مجهول' : 'Unknown');
       if (item._type === 'document') return item.uploaded_by || (isRTL ? 'النظام' : 'System');
       if (item._type === 'audit') return item.user_name || (isRTL ? 'النظام' : 'System');
