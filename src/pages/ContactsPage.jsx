@@ -1739,7 +1739,7 @@ export default function ContactsPage() {
         const desc = changedFields.length ? changedFields.map(k => `${k}: "${old?.[k] || ''}" → "${updated[k] || ''}"`).join(', ') : `Updated contact: ${updated.full_name}`;
         logAction({ action: 'update', entity: 'contact', entityId: updated.id, entityName: updated.full_name, description: desc, oldValue: old || null, newValue: updated, userName: profile?.full_name_ar || '' }).catch(() => {});
       }} initialAction={openWithAction} onPrev={handlePrev} onNext={handleNext} onPin={togglePin} isPinned={pinnedIds.includes(selected.id)} onLogCall={c => { setLogCallTarget(c); }} onReminder={c => { setReminderTarget(c); }} onDelete={id => { handleDelete(id); setSelected(null); }} />}
-      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onUpdate={(updated) => {
+      {logCallTarget && <LogCallModal contact={logCallTarget} onClose={() => setLogCallTarget(null)} onRequestDisqualify={c => { setDisqualifyModal(c); setDqReason('not_interested'); setDqNote(''); setLogCallTarget(null); }} onUpdate={(updated) => {
         const previous = contacts.find(c => c.id === updated.id);
         setContacts(prev => prev.map(c => c.id === updated.id ? updated : c));
         updateContact(updated.id, updated).catch(err => {

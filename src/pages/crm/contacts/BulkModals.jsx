@@ -469,16 +469,42 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
 export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBulkOppForm, bulkOppSaving, setBulkOppSaving, contacts, selectedIds, setSelectedIds, setContacts, projectsList, profile, isRTL }) {
   const toast = useToast();
   const savingRef = useRef(false); // sync guard against double-submit
+  const [salesAgents, setSalesAgents] = useState([]); // [{id, name}] from users table
+
+  useEffect(() => {
+    if (!bulkOppModal) return;
+    // Fetch ACTIVE agents with their UUIDs. Picking by name string only would
+    // make the assigned_to UUID flaky after a rename and matched the bulk-
+    // reassign drift bug we just fixed. Fall back to contact-derived names
+    // only if the users fetch fails.
+    import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
+      fetchSalesAgents().then(data => {
+        const list = (data || [])
+          .filter(a => a.id && a.status !== 'inactive' && (a.full_name_en || a.full_name_ar))
+          .map(a => ({ id: a.id, name: a.full_name_en || a.full_name_ar }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        setSalesAgents(list);
+      }).catch(() => {});
+    });
+  }, [bulkOppModal]);
 
   if (!bulkOppModal) return null;
 
   const selContacts = (contacts || []).filter(c => selectedIds.includes(c.id));
-  const agents = [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))];
+  const agents = salesAgents.length > 0
+    ? salesAgents
+    : [...new Set(contacts.map(ct => ct.assigned_to_name?.trim()).filter(Boolean))]
+        .map(name => ({ id: null, name }));
   const stages = getDeptStages('sales');
 
   const handleCreate = async () => {
     if (savingRef.current) return; // prevent double-submit
     if (!bulkOppForm.assigned_to_name) { toast.error(isRTL ? 'اختر السيلز المسؤول' : 'Select sales agent'); return; }
+    // Resolve UUID from the picked name. Without this every opp's
+    // assigned_to is set by the auto_resolve_assigned_to_opps trigger
+    // which name-lookups against users — fragile to special chars + slow.
+    const matched = agents.find(a => a.name === bulkOppForm.assigned_to_name);
+    const assignedToId = matched?.id || bulkOppForm.assigned_to_id || null;
     savingRef.current = true;
     setBulkOppSaving(true);
     // Concurrency-limited parallel creates — was previously sequential, which made
@@ -493,6 +519,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
         try {
           await createOpportunity({
             contact_id: c.id,
+            assigned_to: assignedToId,
             assigned_to_name: bulkOppForm.assigned_to_name,
             stage: bulkOppForm.stage,
             priority: bulkOppForm.priority,
@@ -559,7 +586,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
             <label className={labelCls}>{isRTL ? 'السيلز المسؤول *' : 'Sales Agent *'}</label>
             <select value={bulkOppForm.assigned_to_name} onChange={e => setBulkOppForm(f => ({ ...f, assigned_to_name: e.target.value }))} className={fieldCls}>
               <option value="">{isRTL ? '— اختر —' : '— Select —'}</option>
-              {agents.map(a => <option key={a} value={a}>{a}</option>)}
+              {agents.map(a => <option key={a.id || a.name} value={a.name}>{a.name}</option>)}
             </select>
           </div>
 

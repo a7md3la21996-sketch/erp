@@ -30,7 +30,7 @@ const FOLLOWUP_TYPES = [
   { value: 'email', ar: 'إيميل', en: 'Email' },
 ];
 
-export default function LogCallModal({ contact, onClose, onUpdate }) {
+export default function LogCallModal({ contact, onClose, onUpdate, onRequestDisqualify }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -109,6 +109,7 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
     if (onUpdate) {
       const myStatus = contact.contact_status;
       let newStatus = myStatus;
+      let needsDqModal = false;
       // disqualified → never auto-change
       if (myStatus === 'disqualified') {
         newStatus = myStatus;
@@ -117,12 +118,26 @@ export default function LogCallModal({ contact, onClose, onUpdate }) {
       } else if (callResult === 'answered') {
         newStatus = 'following';
       } else if (callResult === 'not_interested' && myStatus !== 'has_opportunity' && myStatus !== 'following') {
-        newStatus = 'disqualified';
+        // Auto-DQ on "not interested" must capture a reason — defer to the
+        // parent's DisqualifyModal instead of writing contact_status=
+        // disqualified with dq_reason=NULL (the orphan-DQ pattern we just
+        // cleaned up across 150+ contacts).
+        needsDqModal = true;
       } else if (myStatus === 'new' || !myStatus) {
         newStatus = 'following';
       }
-      if (newStatus !== myStatus) {
-        onUpdate({ ...contact, contact_status: newStatus });
+      if (needsDqModal && onRequestDisqualify) {
+        onRequestDisqualify(contact);
+      } else if (newStatus !== myStatus) {
+        // Await + catch so we surface a failed status update separately
+        // from the activity save (which already succeeded above). Earlier
+        // this was fire-and-forget — same drift pattern fixed in the
+        // drawer's handleSaveActivity today.
+        try {
+          await onUpdate({ ...contact, contact_status: newStatus });
+        } catch {
+          // Parent already toast'd + rolled back the optimistic state.
+        }
       }
     }
 
@@ -255,4 +270,5 @@ LogCallModal.propTypes = {
   contact: contactPropType.isRequired,
   onClose: PropTypes.func.isRequired,
   onUpdate: PropTypes.func,
+  onRequestDisqualify: PropTypes.func,
 };
