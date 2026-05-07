@@ -93,7 +93,7 @@ const DEPT_TABS = {
 };
 
 // ── Contact Drawer ─────────────────────────────────────────────────────────
-export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, initialAction = false, onPrev, onNext, onPin, isPinned, onLogCall, onReminder, onDelete }) {
+export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate, initialAction = false, onPrev, onNext, onPin, isPinned, onLogCall, onReminder, onDelete, onRequestDisqualify }) {
   // Drawer ref for focus trap + restore — was missing accessibility scaffolding.
   // Tabbing now stays inside the drawer; focus returns to the opener on close.
   const drawerRef = useRef(null);
@@ -1788,7 +1788,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                                 return (
                                   <button key={opt.v}
                                     role="menuitem"
-                                    onClick={() => { setShowQuickStatus(false); if (!isCurrent) handleStatusChange(opt.v); }}
+                                    onClick={() => {
+                                      setShowQuickStatus(false);
+                                      if (isCurrent) return;
+                                      // Disqualified must capture a reason — defer to the parent's
+                                      // DisqualifyModal so the user picks a reason instead of
+                                      // dropping a status=disqualified row with dq_reason=NULL.
+                                      // The previous direct handleStatusChange call left ~150
+                                      // contacts in DQ-without-reason state.
+                                      if (opt.v === 'disqualified' && onRequestDisqualify) {
+                                        onRequestDisqualify(contact);
+                                      } else {
+                                        handleStatusChange(opt.v);
+                                      }
+                                    }}
                                     className={`w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer border-none bg-transparent text-start hover:bg-brand-500/10 ${isCurrent ? 'font-bold' : ''}`}
                                     style={isCurrent ? { color: opt.color, background: opt.color + '12' } : undefined}>
                                     <span className="w-2 h-2 rounded-full shrink-0" style={{ background: opt.color }} />

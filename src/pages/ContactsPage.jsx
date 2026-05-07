@@ -1694,7 +1694,7 @@ export default function ContactsPage() {
             setContacts(prev => rollbackContact(prev, contact));
           });
       }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onUpdate={async (updated) => {
+      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onRequestDisqualify={c => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); }} onUpdate={async (updated) => {
         const old = contacts.find(c => c.id === updated.id);
         const { _skipDbUpdate, ...cleanUpdated } = updated;
         setContacts(prev => prev.map(c => c.id === cleanUpdated.id ? cleanUpdated : c));
