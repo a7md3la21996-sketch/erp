@@ -47,6 +47,13 @@ import BatchCallModal from './crm/contacts/BatchCallModal';
 import BulkActionToolbar from './crm/contacts/BulkActionToolbar';
 import { MergePreviewModal, ConfirmModal, DisqualifyModal, BulkReassignModal, BulkOppModal, BulkSMSModal, BulkCampaignModal } from './crm/contacts/BulkModals';
 import BulkDistributeModal from './crm/contacts/BulkDistributeModal';
+
+// Session-scoped Set to dedupe the auto-mark-inactive write. Without this,
+// every page navigation re-fired updateContact(...,{contact_status:'contacted'})
+// for every following lead past the threshold, plus mutated the React state
+// array directly which broke memoization.
+const _autoInactiveSeen = new Set();
+
 export default function ContactsPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
@@ -976,14 +983,31 @@ export default function ContactsPage() {
       if (list.length) {
         // Auto-mark inactive contacts as 'contacted' if their last activity is past
         // the threshold. Single-assignment now — contact_status alone is the signal.
+        // Earlier this loop mutated `c.contact_status` in place on the React state
+        // array AND re-fired the same updateContact write every page load — both
+        // are wrong. Now we collect the ids, write once per ID via a session-scoped
+        // sentinel so we don't re-write on the next page navigation, and update
+        // state via setContacts(prev => prev.map(...)) so React sees the change.
         const now = Date.now();
         const inactiveThreshold = INACTIVE_DAYS * 86400000;
-        list.forEach(c => {
-          if (c.contact_status === 'following' && c.last_activity_at && (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold) {
-            c.contact_status = 'contacted';
+        const toMark = list.filter(c =>
+          c.contact_status === 'following'
+          && c.last_activity_at
+          && (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold
+          && !_autoInactiveSeen.has(c.id)
+        );
+        if (toMark.length > 0) {
+          toMark.forEach(c => _autoInactiveSeen.add(c.id));
+          const markedIds = new Set(toMark.map(c => c.id));
+          // Best-effort writes — failures already report via reportError; we
+          // keep the optimistic state change so the user sees the result.
+          for (const c of toMark) {
             updateContact(c.id, { contact_status: 'contacted' }).catch(err => reportError('ContactsPage', 'auto-contacted', err));
           }
-        });
+          setContacts(prev => prev.map(c =>
+            markedIds.has(c.id) ? { ...c, contact_status: 'contacted' } : c
+          ));
+        }
 
         // Fetch last feedback (non-blocking).
         // Two bugs fixed here that were 500-ing on the leads page:
@@ -1180,6 +1204,33 @@ export default function ContactsPage() {
     }
   };
   const selectAllPages = async () => {
+    // The original implementation only mirrored a subset of filters
+    // (search/type/temp/status/blacklist/unassigned/dept/agent) and
+    // silently ignored smartFilters, activity scope (overdue / today /
+    // no-opps / never-reassigned / stage), date range, and the team
+    // visibility scope. A user could narrow to "stage=Negotiation" then
+    // hit Select-all-pages and end up selecting EVERY non-stage lead in
+    // their dept — which a follow-up bulk delete would then nuke.
+    //
+    // Refuse to enable all-pages selection when any of those advanced
+    // filters are active. The fallback ("select visible page only") is
+    // still available — admin who wants more rows just paginates
+    // through and selects each page.
+    const hasComplexFilter = (
+      smartFilters.length > 0
+      || (stageContactIds && stageContactIds.length > 0)
+      || (overdueContactIds && overdueContactIds.length > 0)
+      || (todayFollowupIds && todayFollowupIds.length > 0)
+      || (noOppsIds && noOppsIds.length > 0)
+      || (singleAgentIds && singleAgentIds.length > 0)
+      || (noActivityExcludeIds && noActivityExcludeIds.length > 0)
+    );
+    if (hasComplexFilter) {
+      toast.warning(isRTL
+        ? 'لا يمكن "تحديد كل الصفحات" مع الفلاتر المتقدمة. اختر يدوياً من كل صفحة.'
+        : 'Cannot "select all pages" while advanced filters are active. Select per page manually.');
+      return;
+    }
     try {
       // Fetch all matching contact IDs from server (not just current page)
       let query = supabase.from('contacts').select('id');
