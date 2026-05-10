@@ -5,11 +5,11 @@
 //
 // Backed by master_leads_list / master_leads_count RPCs.
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { Search, Users, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X } from 'lucide-react';
+import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X } from 'lucide-react';
 import { fetchMasterLeads } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import DistributeLeadModal from './contacts/DistributeLeadModal';
@@ -149,15 +149,36 @@ export default function MasterLeadsPage() {
     return () => clearTimeout(t);
   }, [search]);
 
-  // Load agent list once
+  // Load agent list once. Active first then inactive (so the admin can still
+  // filter on a deactivated user who has legacy copies, but the active
+  // people sit at the top of the dropdown). Inactive entries are tagged so
+  // it's obvious in the option label.
   useEffect(() => {
     fetchSalesAgents().then(list => {
-      setAgents((list || [])
+      const all = (list || [])
         .filter(a => a.id && (a.full_name_en || a.full_name_ar))
-        .map(a => ({ id: a.id, name: a.full_name_en || a.full_name_ar }))
-        .sort((a, b) => a.name.localeCompare(b.name)));
+        .map(a => ({
+          id: a.id,
+          name: a.full_name_en || a.full_name_ar,
+          inactive: a.status === 'inactive',
+        }));
+      all.sort((a, b) => {
+        if (a.inactive !== b.inactive) return a.inactive ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      });
+      setAgents(all);
     }).catch(() => {});
   }, []);
+
+  // Hold mutable refs for things that change reference on every render
+  // (toast comes from a context, isRTL flips on language toggle). Putting
+  // them in `load`'s deps would cause an extra fetch every render —
+  // ref'ing keeps `load` stable and the effect tied only to actual filter
+  // changes.
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  const isRTLRef = useRef(isRTL);
+  isRTLRef.current = isRTL;
 
   const load = useCallback(async () => {
     if (!isAdmin) return;
@@ -171,19 +192,25 @@ export default function MasterLeadsPage() {
         pageSize,
       });
       if (error) {
-        toast.error(isRTL ? 'فشل تحميل البيانات' : 'Failed to load data');
+        toastRef.current.error(isRTLRef.current ? 'فشل تحميل البيانات' : 'Failed to load data');
       }
       setRows(r);
       setTotal(t);
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, debouncedSearch, minClones, ownerId, page, pageSize, isRTL, toast]);
+  }, [isAdmin, debouncedSearch, minClones, ownerId, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
 
-  // Reset page when filters change
-  useEffect(() => { setPage(1); }, [debouncedSearch, minClones, ownerId]);
+  // Reset page + clear bulk selection whenever the filter changes — the
+  // selectedPhones set lives across renders, so without this the user could
+  // narrow to a different agent and still see "5 selected" from a previous
+  // filter even though those families are no longer visible.
+  useEffect(() => {
+    setPage(1);
+    setSelectedPhones(new Set());
+  }, [debouncedSearch, minClones, ownerId]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -253,7 +280,11 @@ export default function MasterLeadsPage() {
           className="px-3 py-2 text-sm rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark outline-none cursor-pointer min-w-[180px]"
         >
           <option value="">{isRTL ? 'كل السيلز' : 'Any owner'}</option>
-          {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          {agents.map(a => (
+            <option key={a.id} value={a.id}>
+              {a.name}{a.inactive ? (isRTL ? ' (غير نشط)' : ' (inactive)') : ''}
+            </option>
+          ))}
         </select>
         {/* Total */}
         <div className="flex items-center px-3 text-xs text-content-muted dark:text-content-muted-dark">

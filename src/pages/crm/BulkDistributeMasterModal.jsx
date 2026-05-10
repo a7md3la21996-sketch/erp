@@ -24,6 +24,10 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
   const [search, setSearch] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
+  // After-batch breakdown: how many failed for the same reason. Lets us
+  // tell the user "30 already had a copy" vs a generic "30 failed", so
+  // they can act on it (try a different agent set, etc).
+  const [errorSummary, setErrorSummary] = useState(null);
 
   useEffect(() => {
     fetchSalesAgents().then(list => setAgents(list || [])).catch(() => {});
@@ -65,6 +69,17 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
     }).filter(Boolean);
   }, [families]);
 
+  // Bucket common failure modes so we can tell the user *why* something
+  // failed instead of a generic "X failed". The duplicate-prevent trigger
+  // we just added throws unique_violation; RLS denials show up as
+  // permission errors; everything else falls into "other".
+  const classifyError = (err) => {
+    const msg = String(err?.message || err?.toString?.() || '');
+    if (/unique_violation|already has a non-deleted contact|duplicate key/i.test(msg)) return 'duplicate';
+    if (/row-level security|rls|permission denied|not allowed/i.test(msg)) return 'permission';
+    return 'other';
+  };
+
   const handleSubmit = async () => {
     if (selected.size === 0) {
       toast.warning(isRTL ? 'اختر agent واحد على الأقل' : 'Select at least one agent');
@@ -76,10 +91,12 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
     }
     const targets = [...selected];
     setSubmitting(true);
+    setErrorSummary(null);
     setProgress({ done: 0, total: familySources.length, failed: 0 });
 
     let done = 0;
     let failed = 0;
+    const errorBuckets = { duplicate: 0, permission: 0, other: 0 };
     const queue = [...familySources];
     const runWorker = async () => {
       while (queue.length) {
@@ -89,6 +106,7 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
           await distributeLeadToAgents(f.contactId, targets);
         } catch (err) {
           failed++;
+          errorBuckets[classifyError(err)]++;
           reportError('BulkDistributeMaster', 'distribute', err);
         }
         done++;
@@ -103,13 +121,46 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
       toast.success(isRTL
         ? `تم توزيع ${okCount} عيلة على ${targets.length} agent`
         : `${okCount} families distributed to ${targets.length} agent(s)`);
+      onSuccess?.({ done, failed });
+      onClose();
     } else {
-      toast.error(isRTL
-        ? `نجح ${okCount}، فشل ${failed} — راجع السجلات`
-        : `${okCount} succeeded, ${failed} failed — check logs`);
+      // Keep the modal open so the user can read the breakdown and decide
+      // whether to retry with different agents. onSuccess still fires so
+      // the page refreshes the partial successes.
+      setErrorSummary({ ok: okCount, failed, buckets: errorBuckets, targets: targets.length });
+      onSuccess?.({ done, failed });
     }
-    onSuccess?.({ done, failed });
-    onClose();
+  };
+
+  const errorMessageBlock = () => {
+    if (!errorSummary) return null;
+    const { ok, failed, buckets, targets } = errorSummary;
+    const lines = [];
+    if (buckets.duplicate > 0) {
+      lines.push(isRTL
+        ? `• ${buckets.duplicate} السيلز عنده النسخة بالفعل (مفيش داعي تعيد توزيع نفس الرقم لنفس السيلز)`
+        : `• ${buckets.duplicate} the agent already has a copy of this lead`);
+    }
+    if (buckets.permission > 0) {
+      lines.push(isRTL
+        ? `• ${buckets.permission} مرفوض لأسباب صلاحيات (RLS)`
+        : `• ${buckets.permission} blocked by permissions (RLS)`);
+    }
+    if (buckets.other > 0) {
+      lines.push(isRTL
+        ? `• ${buckets.other} فشل بأسباب أخرى — راجع السجلات`
+        : `• ${buckets.other} failed for other reasons — check logs`);
+    }
+    return (
+      <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-700 dark:text-amber-300 space-y-1.5">
+        <div className="font-bold">
+          {isRTL
+            ? `نجح ${ok} عيلة، فشل ${failed} (لـ ${targets} agent)`
+            : `${ok} succeeded, ${failed} failed (across ${targets} agents)`}
+        </div>
+        {lines.map((l, i) => <div key={i}>{l}</div>)}
+      </div>
+    );
   };
 
   return (
@@ -167,6 +218,9 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
           })}
         </div>
 
+        {/* Post-batch error breakdown (only shown when something failed) */}
+        {errorMessageBlock()}
+
         {/* Progress bar (visible during submit) */}
         {submitting && (
           <div className="space-y-1">
@@ -198,13 +252,20 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
 
       <ModalFooter>
         <Button variant="secondary" onClick={onClose} disabled={submitting}>
-          {isRTL ? 'إلغاء' : 'Cancel'}
+          {errorSummary ? (isRTL ? 'إغلاق' : 'Close') : (isRTL ? 'إلغاء' : 'Cancel')}
         </Button>
-        <Button onClick={handleSubmit} disabled={submitting || selected.size === 0 || familySources.length === 0}>
-          {submitting
-            ? (isRTL ? 'جارٍ التوزيع...' : 'Distributing...')
-            : (isRTL ? `وزع لـ ${selected.size} agent` : `Distribute to ${selected.size} agent(s)`)}
-        </Button>
+        {!errorSummary && (
+          <Button onClick={handleSubmit} disabled={submitting || selected.size === 0 || familySources.length === 0}>
+            {submitting
+              ? (isRTL ? 'جارٍ التوزيع...' : 'Distributing...')
+              : (isRTL ? `وزع لـ ${selected.size} agent` : `Distribute to ${selected.size} agent(s)`)}
+          </Button>
+        )}
+        {errorSummary && (
+          <Button onClick={() => { setErrorSummary(null); setSelected(new Set()); }}>
+            {isRTL ? 'حاول من جديد' : 'Try again'}
+          </Button>
+        )}
       </ModalFooter>
     </Modal>
   );
