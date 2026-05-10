@@ -51,7 +51,7 @@ function daysSince(dateStr) {
 export default function MasterLeadsPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
-  const { profile } = useAuth();
+  const { profile, hasPermission } = useAuth();
   const toast = useToast();
 
   const [rows, setRows] = useState([]);
@@ -141,7 +141,10 @@ export default function MasterLeadsPage() {
     }
   };
 
-  const isAdmin = profile?.role === 'admin';
+  // Gated by the POOL_SETTINGS permission (admin + operations have it).
+  // Was previously a hardcoded role==='admin' check, which locked Nada
+  // (operations) out of her own distribution-management page.
+  const canView = hasPermission ? hasPermission('pool.settings') : profile?.role === 'admin';
 
   // Debounce search
   useEffect(() => {
@@ -181,7 +184,7 @@ export default function MasterLeadsPage() {
   isRTLRef.current = isRTL;
 
   const load = useCallback(async () => {
-    if (!isAdmin) return;
+    if (!canView) return;
     setLoading(true);
     try {
       const { rows: r, total: t, error } = await fetchMasterLeads({
@@ -199,7 +202,7 @@ export default function MasterLeadsPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, debouncedSearch, minClones, ownerId, page, pageSize]);
+  }, [canView, debouncedSearch, minClones, ownerId, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -222,13 +225,13 @@ export default function MasterLeadsPage() {
     });
   };
 
-  if (!isAdmin) {
+  if (!canView) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="text-center">
           <AlertTriangle size={48} className="text-amber-500 mx-auto mb-3" />
           <h2 className="text-lg font-semibold text-content dark:text-content-dark">
-            {isRTL ? 'هذه الصفحة مخصصة للأدمن فقط' : 'Admin only'}
+            {isRTL ? 'لا تملك صلاحية الوصول لهذه الصفحة' : 'Access denied'}
           </h2>
         </div>
       </div>

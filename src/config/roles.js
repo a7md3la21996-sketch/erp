@@ -176,7 +176,7 @@ export const ROLE_PERMISSIONS = {
     // Marketing
     P.CAMPAIGNS_VIEW,
     // Lead Distribution
-    P.POOL_VIEW, P.POOL_MANAGE, P.POOL_ASSIGN,
+    P.POOL_VIEW, P.POOL_MANAGE, P.POOL_ASSIGN, P.POOL_SETTINGS,
     // User management — operations now provisions new users
     P.USERS_MANAGE,
     // Ads Integration
