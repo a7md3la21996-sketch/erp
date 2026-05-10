@@ -990,6 +990,10 @@ export default function ContactsPage() {
         // state via setContacts(prev => prev.map(...)) so React sees the change.
         const now = Date.now();
         const inactiveThreshold = INACTIVE_DAYS * 86400000;
+        // Only `following` demotes to `contacted` — `contacted`-and-stale
+        // is left alone on purpose so a contact never "rewinds" past a
+        // call already logged. Reactivation belongs to the next call/note,
+        // not a passive timer.
         const toMark = list.filter(c =>
           c.contact_status === 'following'
           && c.last_activity_at
@@ -2058,6 +2062,7 @@ export default function ContactsPage() {
         projectsList={projectsList}
         profile={profile}
         isRTL={isRTL}
+        onRefresh={loadContactsData}
       />
 
       {/* Bulk Action Toolbar */}

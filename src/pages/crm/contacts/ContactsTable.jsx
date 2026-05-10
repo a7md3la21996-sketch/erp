@@ -195,7 +195,7 @@ export default function ContactsTable({
                       </span>
                       <div className="mt-0.5" onClick={e => e.stopPropagation()}><PhoneCell phone={c.phone} small /></div>
                       {c.phone2 && <div onClick={e => e.stopPropagation()}><PhoneCell phone={c.phone2} small /></div>}
-                      {Array.isArray(c.extra_phones) && c.extra_phones.map((p, i) => p ? <div key={`${c.id}-xp-${p}-${i}`} onClick={e => e.stopPropagation()}><PhoneCell phone={p} small /></div> : null)}
+                      {Array.isArray(c.extra_phones) && c.extra_phones.map((p, i) => p ? <div key={`${c.id}-xp-${i}`} onClick={e => e.stopPropagation()}><PhoneCell phone={p} small /></div> : null)}
                     </div>
                     {/* Call + WhatsApp buttons */}
                     <div className="flex flex-col gap-1 shrink-0" onClick={e => e.stopPropagation()}>

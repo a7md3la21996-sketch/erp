@@ -167,7 +167,7 @@ export default function BulkActionToolbar({
                   if (opt.value === 'disqualified') { setDisqualifyModal('bulk'); setDqReason(''); setDqNote(''); setBulkDropdownOpen(null); }
                   else handleBulkChangeField('contact_status', opt.value, 'Status Change');
                 }}
-                className={`${dropdownItemCls} ${opt.value === 'disqualified' ? '!text-red-500' : ''}`}>
+                className={`${dropdownItemCls} ${opt.value === 'disqualified' ? 'text-red-500' : ''}`}>
                 {opt.label}
               </button>
             ))}

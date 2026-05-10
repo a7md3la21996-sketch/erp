@@ -466,7 +466,7 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
 }
 
 // ── Bulk Create Opportunities Modal ──────────────────────────────────
-export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBulkOppForm, bulkOppSaving, setBulkOppSaving, contacts, selectedIds, setSelectedIds, setContacts, projectsList, profile, isRTL }) {
+export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBulkOppForm, bulkOppSaving, setBulkOppSaving, contacts, selectedIds, setSelectedIds, setContacts, projectsList, profile, isRTL, onRefresh }) {
   const toast = useToast();
   const savingRef = useRef(false); // sync guard against double-submit
   const [salesAgents, setSalesAgents] = useState([]); // [{id, name}] from users table
@@ -545,8 +545,15 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
     savingRef.current = false;
     setBulkOppModal(false);
     setSelectedIds([]);
-    // Refresh contacts
-    try { const { fetchContacts: fc } = await import('../../../services/contactsService'); const fresh = await fc({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }); setContacts(fresh); } catch (err) { reportError('BulkModals', 'refreshContactsAfterBulkOpp', err); }
+    // Refresh contacts via the parent's loader so the user keeps their
+    // current filter + page. The previous unfiltered fetch wiped pagination
+    // and capped at 1000 rows. Fall back to the old path only if the
+    // parent didn't pass a refresher (older callers).
+    if (typeof onRefresh === 'function') {
+      try { await onRefresh(); } catch (err) { reportError('BulkModals', 'refreshContactsAfterBulkOpp', err); }
+    } else {
+      try { const { fetchContacts: fc } = await import('../../../services/contactsService'); const fresh = await fc({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }); setContacts(fresh); } catch (err) { reportError('BulkModals', 'refreshContactsAfterBulkOpp', err); }
+    }
   };
 
   const fieldCls = "w-full px-3 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-xs text-content dark:text-content-dark outline-none focus:border-brand-500";
