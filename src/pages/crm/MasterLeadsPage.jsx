@@ -9,9 +9,13 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { Search, Users, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle } from 'lucide-react';
+import { Search, Users, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2 } from 'lucide-react';
 import { fetchMasterLeads } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
+import DistributeLeadModal from './contacts/DistributeLeadModal';
+import HandOffLeadModal from './contacts/HandOffLeadModal';
+import { deleteContact } from '../../services/contactsService';
+import supabase from '../../lib/supabase';
 
 const STATUS_COLORS = {
   new:             '#4A7AAB',
@@ -62,6 +66,48 @@ export default function MasterLeadsPage() {
 
   const [agents, setAgents] = useState([]);
   const [expanded, setExpanded] = useState(new Set());
+  // Action modals — operate on a single contact picked from the family.
+  // Distribute uses the family's first/origin copy as the source of truth
+  // for cloning. Handoff/delete operate on the specific clone the user picks.
+  const [distributeContact, setDistributeContact] = useState(null);
+  const [handoffContact, setHandoffContact] = useState(null);
+
+  // Fetches a single full contact row (the modals expect the complete record,
+  // but our list only carries the slim copy projection). Cheap one-row read.
+  const fetchFullContact = async (id) => {
+    try {
+      const { data, error } = await supabase.from('contacts').select('*').eq('id', id).single();
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      toast.error(isRTL ? 'تعذر تحميل بيانات العميل' : 'Could not load contact');
+      return null;
+    }
+  };
+
+  const handleDistribute = async (copyId) => {
+    const c = await fetchFullContact(copyId);
+    if (c) setDistributeContact(c);
+  };
+
+  const handleHandoff = async (copyId) => {
+    const c = await fetchFullContact(copyId);
+    if (c) setHandoffContact(c);
+  };
+
+  const handleSoftDelete = async (copy) => {
+    const ok = window.confirm(isRTL
+      ? `حذف هذه النسخة من "${copy.full_name || copy.owner_name}"؟ يمكن استرجاعها لاحقاً.`
+      : `Delete this copy of "${copy.full_name || copy.owner_name}"? It can be restored later.`);
+    if (!ok) return;
+    try {
+      await deleteContact(copy.id);
+      toast.success(isRTL ? 'تم الحذف' : 'Deleted');
+      load();
+    } catch (err) {
+      toast.error((isRTL ? 'فشل الحذف: ' : 'Delete failed: ') + (err?.message || ''));
+    }
+  };
 
   const isAdmin = profile?.role === 'admin';
 
@@ -252,20 +298,21 @@ export default function MasterLeadsPage() {
               {isOpen && (
                 <div className="px-4 pb-4 bg-surface-bg/30 dark:bg-surface-bg-dark/30">
                   <div className="rounded-lg border border-edge dark:border-edge-dark overflow-hidden">
-                    <div className="grid grid-cols-[40px_2fr_1.5fr_1fr_1fr_1.5fr] gap-2 px-3 py-2 bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark text-[10px] font-semibold text-content-muted dark:text-content-muted-dark uppercase">
+                    <div className="grid grid-cols-[40px_1.6fr_1.2fr_0.9fr_0.9fr_1.2fr_120px] gap-2 px-3 py-2 bg-surface-card dark:bg-surface-card-dark border-b border-edge dark:border-edge-dark text-[10px] font-semibold text-content-muted dark:text-content-muted-dark uppercase">
                       <div>#</div>
                       <div>{isRTL ? 'المالك الحالي' : 'Current Owner'}</div>
                       <div>{isRTL ? 'الحالة' : 'Status'}</div>
                       <div>{isRTL ? 'تاريخ النسخة' : 'Copy Date'}</div>
                       <div>{isRTL ? 'آخر نشاط' : 'Last Act'}</div>
                       <div>{isRTL ? 'أنشأها' : 'Created By'}</div>
+                      <div className="text-center">{isRTL ? 'إجراءات' : 'Actions'}</div>
                     </div>
                     {copies.map((c, i) => {
                       const status = c.status || 'new';
                       const color = STATUS_COLORS[status] || '#6b7280';
                       const cDays = daysSince(c.last_activity_at);
                       return (
-                        <div key={c.id} className="grid grid-cols-[40px_2fr_1.5fr_1fr_1fr_1.5fr] gap-2 px-3 py-2 items-center border-b border-edge/40 dark:border-edge-dark/40 last:border-b-0 text-xs">
+                        <div key={c.id} className="grid grid-cols-[40px_1.6fr_1.2fr_0.9fr_0.9fr_1.2fr_120px] gap-2 px-3 py-2 items-center border-b border-edge/40 dark:border-edge-dark/40 last:border-b-0 text-xs">
                           <div className="text-content-muted dark:text-content-muted-dark font-mono">
                             {i === 0 ? (isRTL ? 'أصلية' : 'orig') : `#${i + 1}`}
                           </div>
@@ -294,6 +341,29 @@ export default function MasterLeadsPage() {
                           <div className="text-content-muted dark:text-content-muted-dark truncate">
                             {c.created_by_name || '—'}
                           </div>
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleDistribute(c.id)}
+                              title={isRTL ? 'وزع نسخ إضافية' : 'Distribute (clone to more agents)'}
+                              className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-emerald-500/10 hover:border-emerald-500/30 flex items-center justify-center cursor-pointer text-emerald-500"
+                            >
+                              <Share2 size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleHandoff(c.id)}
+                              title={isRTL ? 'انقل لسيلز آخر' : 'Hand off (move to another agent)'}
+                              className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-blue-500/10 hover:border-blue-500/30 flex items-center justify-center cursor-pointer text-blue-500"
+                            >
+                              <ArrowRightLeft size={12} />
+                            </button>
+                            <button
+                              onClick={() => handleSoftDelete(c)}
+                              title={isRTL ? 'احذف هذه النسخة' : 'Soft-delete this copy'}
+                              className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-red-500/10 hover:border-red-500/30 flex items-center justify-center cursor-pointer text-red-500"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -310,6 +380,22 @@ export default function MasterLeadsPage() {
           </div>
         )}
       </div>
+
+      {/* Action modals */}
+      {distributeContact && (
+        <DistributeLeadModal
+          contact={distributeContact}
+          onClose={() => setDistributeContact(null)}
+          onSuccess={() => { setDistributeContact(null); load(); }}
+        />
+      )}
+      {handoffContact && (
+        <HandOffLeadModal
+          contact={handoffContact}
+          onClose={() => setHandoffContact(null)}
+          onSuccess={() => { setHandoffContact(null); load(); }}
+        />
+      )}
 
       {/* Pagination */}
       {totalPages > 1 && (
