@@ -61,6 +61,7 @@ const ContactsPage = lazyRetry(() => import('./pages/ContactsPage'));
 const OpportunitiesPage = lazyRetry(() => import('./pages/crm/OpportunitiesPage'));
 const LeadPoolPage = lazyRetry(() => import('./pages/crm/LeadPoolPage'));
 const MasterProfilePage = lazyRetry(() => import('./pages/crm/MasterProfilePage'));
+const MasterLeadsPage = lazyRetry(() => import('./pages/crm/MasterLeadsPage'));
 const ActivitiesPage = lazyRetry(() => import('./pages/ActivitiesPage'));
 const TasksPage = lazyRetry(() => import('./pages/TasksPage'));
 const PerformancePage = lazyRetry(() => import('./pages/PerformancePage'));
@@ -69,6 +70,7 @@ const SettingsPage = lazyRetry(() => import('./pages/settings/SettingsPage'));
 const EmployeesPage = lazyRetry(() => import('./pages/hr/EmployeesPage'));
 const EmployeeDetailPage = lazyRetry(() => import('./pages/hr/EmployeeDetailPage'));
 const HRHomePage = lazyRetry(() => import('./pages/hr/HRHomePage'));
+const ManagerDashboardPage = lazyRetry(() => import('./pages/hr/ManagerDashboardPage'));
 const HRPoliciesPage = lazyRetry(() => import('./pages/hr/HRPoliciesPage'));
 const AttendancePage = lazyRetry(() => import('./pages/hr/AttendancePage'));
 const DepartmentsPage = lazyRetry(() => import('./pages/hr/DepartmentsPage'));
@@ -76,6 +78,11 @@ const ShiftsPage = lazyRetry(() => import('./pages/hr/ShiftsPage'));
 const HolidaysPage = lazyRetry(() => import('./pages/hr/HolidaysPage'));
 const LeavePage = lazyRetry(() => import('./pages/hr/LeavePage'));
 const PayrollPage = lazyRetry(() => import('./pages/hr/PayrollPage'));
+const PayrollHubPage = lazyRetry(() => import('./pages/hr/PayrollHubPage'));
+const TimeHubPage = lazyRetry(() => import('./pages/hr/TimeHubPage'));
+const DevelopmentHubPage = lazyRetry(() => import('./pages/hr/DevelopmentHubPage'));
+const TalentHubPage = lazyRetry(() => import('./pages/hr/TalentHubPage'));
+const AdminHubPage = lazyRetry(() => import('./pages/hr/AdminHubPage'));
 const PayrollRunWizard = lazyRetry(() => import('./pages/hr/PayrollRunWizard'));
 const PayrollRulesPage = lazyRetry(() => import('./pages/hr/PayrollRulesPage'));
 const LoansPage = lazyRetry(() => import('./pages/hr/LoansPage'));
@@ -242,6 +249,7 @@ export default function App() {
                 <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
                 <Route path="/crm/opportunities" element={<Guarded><OpportunitiesPage /></Guarded>} />
                 <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
+                <Route path="/crm/master-leads" element={<Guarded><MasterLeadsPage /></Guarded>} />
                 <Route path="/contacts/master/:phone" element={<ProtectedRoute permission={P.CONTACTS_VIEW_ALL}><Guarded><MasterProfilePage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/performance" element={<Guarded><PerformancePage /></Guarded>} />
                 <Route path="/hr/goals" element={<Guarded><GoalsPage /></Guarded>} />
@@ -258,6 +266,7 @@ export default function App() {
                 <Route path="/finance/*" element={<ProtectedRoute permission={P.FINANCE_VIEW}><Guarded><FinancePage /></Guarded></ProtectedRoute>} />
                 {/* HR — admin/HR only for the management pages */}
                 <Route path="/hr" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><HRHomePage /></Guarded></ProtectedRoute>} />
+                <Route path="/manager" element={<Guarded><ManagerDashboardPage /></Guarded>} />
                 <Route path="/hr/employees" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><EmployeesPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/employee/:id" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><EmployeeDetailPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/policies" element={<ProtectedRoute permission={P.HR_POLICIES_MANAGE}><Guarded><HRPoliciesPage /></Guarded></ProtectedRoute>} />
@@ -268,31 +277,40 @@ export default function App() {
                 <Route path="/hr/attendance" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><AttendancePage /></Guarded></ProtectedRoute>} />
                 {/* /hr/leave open — employees submit own leave (data filtered by RLS) */}
                 <Route path="/hr/leave" element={<Guarded><LeavePage /></Guarded>} />
-                <Route path="/hr/payroll" element={<ProtectedRoute permission={P.PAYROLL_VIEW}><Guarded><PayrollPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/payroll" element={<ProtectedRoute permission={P.PAYROLL_VIEW}><Guarded><PayrollHubPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/payroll/run" element={<ProtectedRoute permission={P.PAYROLL_MANAGE}><Guarded><PayrollRunWizard /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/payroll-rules" element={<ProtectedRoute permission={P.PAYROLL_MANAGE}><Guarded><PayrollRulesPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/loans" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><LoansPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/competencies" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><CompetenciesPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/recruitment" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><RecruitmentPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/disciplinary" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><DisciplinaryPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/training" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><TrainingPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/time" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><TimeHubPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/development" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><DevelopmentHubPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/talent" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><TalentHubPage /></Guarded></ProtectedRoute>} />
+                <Route path="/hr/admin" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><AdminHubPage /></Guarded></ProtectedRoute>} />
+
+                {/* Old routes redirect into hubs (keep links working) */}
+                <Route path="/hr/payroll-rules" element={<Navigate to="/hr/payroll?tab=rules" replace />} />
+                <Route path="/hr/loans" element={<Navigate to="/hr/payroll?tab=loans" replace />} />
+                <Route path="/hr/bonuses" element={<Navigate to="/hr/payroll?tab=bonuses" replace />} />
+                <Route path="/hr/expense-claims" element={<Navigate to="/hr/payroll?tab=expenses" replace />} />
+                <Route path="/hr/shifts" element={<Navigate to="/hr/time?tab=shifts" replace />} />
+                <Route path="/hr/holidays" element={<Navigate to="/hr/time?tab=holidays" replace />} />
+                <Route path="/hr/leave" element={<Navigate to="/hr/time?tab=leave" replace />} />
+                <Route path="/hr/leave-carryover" element={<Navigate to="/hr/time?tab=carryover" replace />} />
+                <Route path="/hr/overtime" element={<Navigate to="/hr/time?tab=overtime" replace />} />
+                <Route path="/hr/competencies" element={<Navigate to="/hr/development?tab=competencies" replace />} />
+                <Route path="/hr/training" element={<Navigate to="/hr/development?tab=training" replace />} />
+                <Route path="/hr/reviews" element={<Navigate to="/hr/development?tab=reviews" replace />} />
+                <Route path="/hr/recruitment" element={<Navigate to="/hr/talent?tab=recruitment" replace />} />
+                <Route path="/hr/ats" element={<Navigate to="/hr/talent?tab=ats" replace />} />
+                <Route path="/hr/onboarding" element={<Navigate to="/hr/talent?tab=onboarding" replace />} />
+                <Route path="/hr/documents" element={<Navigate to="/hr/admin?tab=documents" replace />} />
+                <Route path="/hr/contracts" element={<Navigate to="/hr/admin?tab=contracts" replace />} />
+                <Route path="/hr/assets" element={<Navigate to="/hr/admin?tab=assets" replace />} />
+                <Route path="/hr/policies" element={<Navigate to="/hr/admin?tab=policies" replace />} />
+                <Route path="/hr/disciplinary" element={<Navigate to="/hr/admin?tab=disciplinary" replace />} />
+
                 {/* Self-service open — employees see only their own data via RLS */}
                 <Route path="/hr/self-service" element={<Guarded><SelfServicePage /></Guarded>} />
-                <Route path="/hr/assets" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><AssetsPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/onboarding" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><OnboardingPage /></Guarded></ProtectedRoute>} />
-                {/* Expense claims open — employees submit own */}
-                <Route path="/hr/expense-claims" element={<Guarded><ExpenseClaimsPage /></Guarded>} />
-                <Route path="/hr/contracts" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><ContractsPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/leave-carryover" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><LeaveCarryoverPage /></Guarded></ProtectedRoute>} />
-                {/* Overtime open — employees submit own */}
-                <Route path="/hr/overtime" element={<Guarded><OvertimePage /></Guarded>} />
-                <Route path="/hr/bonuses" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><BonusesPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/reports" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><HRReportsPage /></Guarded></ProtectedRoute>} />
                 {/* Org chart open — informational */}
                 <Route path="/hr/org-chart" element={<Guarded><OrgChartPage /></Guarded>} />
-                <Route path="/hr/documents" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><DocumentsPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/ats" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><ATSPage /></Guarded></ProtectedRoute>} />
-                <Route path="/hr/reviews" element={<ProtectedRoute permission={P.HR_VIEW_ALL}><Guarded><PerformanceReviewPage /></Guarded></ProtectedRoute>} />
                 <Route path="/hr/*" element={<ComingSoon title="HR" />} />
                 {/* Operations — operations role only */}
                 <Route path="/operations" element={<ProtectedRoute permission={P.OPS_VIEW}><Guarded><OperationsPage /></Guarded></ProtectedRoute>} />
