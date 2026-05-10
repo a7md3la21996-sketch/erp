@@ -24,6 +24,29 @@ class ErrorBoundary extends Component {
       this.props.onError(error, errorInfo);
     }
     console.error('[ErrorBoundary]', error, errorInfo);
+
+    // Stale chunk after a Vercel deploy: the HTML loaded before the deploy
+    // points at chunk hashes that no longer exist on CDN, so React.lazy()
+    // throws "Importing a module script failed" / "Failed to fetch dynamically
+    // imported module". One automatic reload fetches the fresh HTML +
+    // chunks. Guarded by a sessionStorage flag so a real broken-chunk doesn't
+    // become an infinite reload loop.
+    const msg = String(error?.message || '');
+    const isChunkLoadError = (
+      error?.name === 'ChunkLoadError'
+      || /Importing a module script failed/i.test(msg)
+      || /Failed to fetch dynamically imported module/i.test(msg)
+      || /Loading chunk \d+ failed/i.test(msg)
+    );
+    if (isChunkLoadError) {
+      try {
+        const flag = 'platform_chunk_reload_attempted';
+        if (!sessionStorage.getItem(flag)) {
+          sessionStorage.setItem(flag, String(Date.now()));
+          window.location.reload();
+        }
+      } catch { /* sessionStorage unavailable — fall through to fallback UI */ }
+    }
   }
 
   handleReset = () => {
