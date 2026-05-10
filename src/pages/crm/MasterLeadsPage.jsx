@@ -6,10 +6,11 @@
 // Backed by master_leads_list / master_leads_count RPCs.
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X } from 'lucide-react';
+import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X, ExternalLink } from 'lucide-react';
 import { fetchMasterLeads } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import DistributeLeadModal from './contacts/DistributeLeadModal';
@@ -53,6 +54,13 @@ export default function MasterLeadsPage() {
   const isRTL = i18n.language === 'ar';
   const { profile, hasPermission } = useAuth();
   const toast = useToast();
+  const navigate = useNavigate();
+
+  // Open the standard contact drawer for a specific copy by deep-linking
+  // to /contacts with the ?highlight= param the page already understands.
+  const openLead = (copyId) => {
+    navigate(`/contacts?highlight=${copyId}`);
+  };
 
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
@@ -401,8 +409,15 @@ export default function MasterLeadsPage() {
                           <div className="text-content-muted dark:text-content-muted-dark font-mono">
                             {i === 0 ? (isRTL ? 'أصلية' : 'orig') : `#${i + 1}`}
                           </div>
-                          <div className="text-content dark:text-content-dark font-medium truncate">
-                            {c.owner_name || (isRTL ? 'غير معين' : 'Unassigned')}
+                          <div className="min-w-0">
+                            <button
+                              onClick={() => openLead(c.id)}
+                              title={isRTL ? 'افتح هذه النسخة في صفحة الليدز' : 'Open this copy in Leads page'}
+                              className="inline-flex items-center gap-1 text-content dark:text-content-dark font-medium truncate bg-transparent border-none p-0 cursor-pointer hover:text-brand-500 transition-colors"
+                            >
+                              <span className="truncate">{c.owner_name || (isRTL ? 'غير معين' : 'Unassigned')}</span>
+                              <ExternalLink size={10} className="shrink-0 opacity-60" />
+                            </button>
                           </div>
                           <div>
                             <span
