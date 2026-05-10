@@ -547,27 +547,45 @@ export default function ContactsPage() {
     setBulkReassignModal(false);
     setShowBulkMenu(false);
     try {
-      // updateContact already retries internally — service-level retry is the single source of truth
-      const results = await Promise.allSettled(
-        idsToUpdate.map(id => updateContact(id, {
-          assigned_to: agentId,
-          assigned_to_name: agentName,
-          assigned_to_names: [agentName],
-          assigned_by_name: assignedByName,
-          ...extraUpdates,
-        }))
-      );
-      const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
-      if (failedIdx.length > 0) {
-        // Surface the actual failures so the user can retry the right rows
-        // (and so the failure isn't silently absorbed into a count).
-        const failedNames = failedIdx.map(i => allSelectedById.get(idsToUpdate[i])?.full_name || idsToUpdate[i]).filter(Boolean);
-        const preview = failedNames.slice(0, 3).join(', ');
-        const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
-        toast.error(isRTL ? `فشل تحديث ${failedNames.length} عميل: ${preview}${more}` : `Failed to update ${failedNames.length} contacts: ${preview}${more}`);
-        failedIdx.forEach(i => reportError('ContactsPage', 'bulkReassign', results[i].reason));
+      // Atomic single-RPC instead of N updateContact round-trips. The DB
+      // function inserts the activity rows + updates contacts in one
+      // transaction — either all rows update or none do (no half-state).
+      // Status/temperature extraUpdates aren't covered by the RPC; if they
+      // were sent, fall back to the per-row path so we don't drop them.
+      const hasExtras = Object.keys(extraUpdates).length > 0;
+      if (hasExtras) {
+        const results = await Promise.allSettled(
+          idsToUpdate.map(id => updateContact(id, {
+            assigned_to: agentId,
+            assigned_to_name: agentName,
+            assigned_to_names: [agentName],
+            assigned_by_name: assignedByName,
+            ...extraUpdates,
+          }))
+        );
+        const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
+        if (failedIdx.length > 0) {
+          const failedNames = failedIdx.map(i => allSelectedById.get(idsToUpdate[i])?.full_name || idsToUpdate[i]).filter(Boolean);
+          const preview = failedNames.slice(0, 3).join(', ');
+          const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
+          toast.error(isRTL ? `فشل تحديث ${failedNames.length} عميل: ${preview}${more}` : `Failed to update ${failedNames.length} contacts: ${preview}${more}`);
+          failedIdx.forEach(i => reportError('ContactsPage', 'bulkReassign', results[i].reason));
+        }
+      } else {
+        const { data, error } = await supabase.rpc('bulk_reassign_contacts', {
+          p_contact_ids: idsToUpdate,
+          p_to_user_id: agentId,
+          p_assigned_by_name: assignedByName,
+        });
+        if (error) throw error;
+        if (typeof data === 'number' && data < idsToUpdate.length) {
+          // Some rows skipped by RLS — surface the count so the user knows.
+          toast.warning(isRTL
+            ? `تم نقل ${data} من ${idsToUpdate.length} (الباقي خارج صلاحيتك)`
+            : `Reassigned ${data} of ${idsToUpdate.length} (rest outside your scope)`);
+        }
       }
-    } catch (err) { toast.error(isRTL ? 'فشل إعادة التعيين' : 'Reassign failed'); console.error('bulk reassign:', err); }
+    } catch (err) { toast.error(isRTL ? 'فشل إعادة التعيين' : 'Reassign failed'); console.error('bulk reassign:', err); reportError('ContactsPage', 'bulkReassignRPC', err); }
   };
 
   const handleBulkChangeField = async (field, value, actionLabel) => {
@@ -586,7 +604,35 @@ export default function ContactsPage() {
     // DB write FIRST, then audit/toast/notification only for what actually
     // saved. Original code logged + toast'd success before the write, so a
     // failed update still surfaced as "X leads updated" + an audit row.
-    const results = await Promise.allSettled(idsToUpdate.map(id => updateContact(id, { [field]: value })));
+    //
+    // Use bulk_change_contact_status RPC for status changes — atomic single
+    // round-trip instead of N updateContact calls. Other fields fall through
+    // to the per-row updateContact path (rare — Type, Source, Dept, Campaign).
+    let results;
+    if (field === 'contact_status') {
+      const { data: count, error } = await supabase.rpc('bulk_change_contact_status', {
+        p_contact_ids: idsToUpdate,
+        p_new_status: value,
+        p_dq_reason: null,
+      });
+      // Synthesize per-row results so the rest of the function (rollback +
+      // toast + audit) keeps working unchanged. The RPC is all-or-nothing,
+      // so on success every id is fulfilled, on error every id is rejected.
+      if (error) {
+        results = idsToUpdate.map(() => ({ status: 'rejected', reason: error }));
+      } else if (typeof count === 'number' && count < idsToUpdate.length) {
+        // Some rows skipped by RLS — mark all-but-count as rejected
+        // (we can't tell which rows were skipped, so flag it but don't claim
+        // a specific row failed; the user gets a partial-success message).
+        results = idsToUpdate.map((_, i) => i < count
+          ? { status: 'fulfilled', value: null }
+          : { status: 'rejected', reason: new Error('skipped by RLS') });
+      } else {
+        results = idsToUpdate.map(() => ({ status: 'fulfilled', value: null }));
+      }
+    } else {
+      results = await Promise.allSettled(idsToUpdate.map(id => updateContact(id, { [field]: value })));
+    }
     const succeeded = [];
     const failedIdx = [];
     results.forEach((r, i) => {
