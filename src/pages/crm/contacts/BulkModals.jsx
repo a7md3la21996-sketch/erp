@@ -290,8 +290,12 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
                 toast.success(isRTL ? `تم استبعاد "${c.full_name}"` : `"${c.full_name}" disqualified`);
               } catch (err) {
                 setContacts(prev => prev.map(ct => ct.id === c.id ? before : ct));
-                toast.error(isRTL ? `فشل استبعاد "${c.full_name}" — حاول تاني` : `Failed to disqualify "${c.full_name}" — please retry`);
-                if (import.meta.env.DEV) console.error('[disqualify] failed:', err?.message || err);
+                // Surface the underlying error message so the user knows
+                // what to fix (e.g. a check constraint complaint) instead
+                // of a generic retry prompt.
+                const detail = err?.message ? ` — ${err.message}` : '';
+                toast.error(isRTL ? `فشل استبعاد "${c.full_name}"${detail}` : `Failed to disqualify "${c.full_name}"${detail}`);
+                console.error('[disqualify] failed:', err);
               }
             }
             setDisqualifyModal(null);

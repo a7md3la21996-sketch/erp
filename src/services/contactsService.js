@@ -446,6 +446,19 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
     const stripped = stripInternalFields({ ...cleanUpdates });
     console.log('[updateContact] id:', id, 'fields:', Object.keys(stripped));
   }
+  // Diagnostic: any DQ write that would violate the DB check constraint
+  // gets blocked + logged here with a clear message + the call site.
+  // Removes the round-trip and gives us a stack trace pointing at the
+  // caller that's missing a reason.
+  if (cleanUpdates.contact_status === 'disqualified') {
+    const r = cleanUpdates.disqualify_reason;
+    if (r == null || (typeof r === 'string' && (r.trim() === '' || r === '—'))) {
+      const err = new Error('Cannot disqualify without a reason (dq_requires_reason). Caller stack trace follows.');
+      console.error('[updateContact] BLOCKED dq-without-reason for', id, '— payload:', cleanUpdates);
+      console.error(err);
+      throw err;
+    }
+  }
   try {
     // Check for conflicts before saving (optimistic locking)
     if (lastKnownUpdatedAt) {
