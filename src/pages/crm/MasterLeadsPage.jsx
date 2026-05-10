@@ -9,7 +9,7 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { Search, Users, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2 } from 'lucide-react';
+import { Search, Users, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X } from 'lucide-react';
 import { fetchMasterLeads } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import DistributeLeadModal from './contacts/DistributeLeadModal';
@@ -76,6 +76,12 @@ export default function MasterLeadsPage() {
   // Bulk selection — Set of phone strings (one per family)
   const [selectedPhones, setSelectedPhones] = useState(new Set());
   const [bulkDistributeOpen, setBulkDistributeOpen] = useState(false);
+  // Delete is gated behind: kebab menu → confirm modal that requires
+  // explicit click. The previous inline Trash icon was one accidental
+  // click away from soft-deleting a copy — too risky next to two
+  // similar-looking action buttons.
+  const [openMenuFor, setOpenMenuFor] = useState(null); // copy id whose menu is open
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // copy object pending confirm
 
   const togglePhoneSelected = (phone, e) => {
     if (e) e.stopPropagation();
@@ -125,13 +131,10 @@ export default function MasterLeadsPage() {
   };
 
   const handleSoftDelete = async (copy) => {
-    const ok = window.confirm(isRTL
-      ? `حذف هذه النسخة من "${copy.full_name || copy.owner_name}"؟ يمكن استرجاعها لاحقاً.`
-      : `Delete this copy of "${copy.full_name || copy.owner_name}"? It can be restored later.`);
-    if (!ok) return;
     try {
       await deleteContact(copy.id);
       toast.success(isRTL ? 'تم الحذف' : 'Deleted');
+      setDeleteConfirm(null);
       load();
     } catch (err) {
       toast.error((isRTL ? 'فشل الحذف: ' : 'Delete failed: ') + (err?.message || ''));
@@ -389,7 +392,7 @@ export default function MasterLeadsPage() {
                           <div className="text-content-muted dark:text-content-muted-dark truncate">
                             {c.created_by_name || '—'}
                           </div>
-                          <div className="flex items-center justify-center gap-1">
+                          <div className="flex items-center justify-center gap-1 relative">
                             <button
                               onClick={() => handleDistribute(c.id)}
                               title={isRTL ? 'وزع نسخ إضافية' : 'Distribute (clone to more agents)'}
@@ -405,12 +408,27 @@ export default function MasterLeadsPage() {
                               <ArrowRightLeft size={12} />
                             </button>
                             <button
-                              onClick={() => handleSoftDelete(c)}
-                              title={isRTL ? 'احذف هذه النسخة' : 'Soft-delete this copy'}
-                              className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-red-500/10 hover:border-red-500/30 flex items-center justify-center cursor-pointer text-red-500"
+                              onClick={() => setOpenMenuFor(prev => prev === c.id ? null : c.id)}
+                              title={isRTL ? 'المزيد' : 'More'}
+                              className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-brand-500/10 hover:border-brand-500/30 flex items-center justify-center cursor-pointer text-content-muted dark:text-content-muted-dark"
                             >
-                              <Trash2 size={12} />
+                              <MoreVertical size={12} />
                             </button>
+                            {openMenuFor === c.id && (
+                              <>
+                                {/* backdrop closes the menu when clicking outside */}
+                                <div className="fixed inset-0 z-[60]" onClick={() => setOpenMenuFor(null)} />
+                                <div className={`absolute top-full mt-1 ${isRTL ? 'left-0' : 'right-0'} z-[61] min-w-[160px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg shadow-lg overflow-hidden`}>
+                                  <button
+                                    onClick={() => { setOpenMenuFor(null); setDeleteConfirm(c); }}
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer border-none bg-transparent text-start text-red-500 hover:bg-red-500/10 font-semibold"
+                                  >
+                                    <Trash2 size={12} />
+                                    {isRTL ? 'احذف هذه النسخة' : 'Delete this copy'}
+                                  </button>
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
@@ -474,6 +492,53 @@ export default function MasterLeadsPage() {
           onClose={() => setBulkDistributeOpen(false)}
           onSuccess={() => { setBulkDistributeOpen(false); clearSelection(); load(); }}
         />
+      )}
+
+      {/* Delete-copy confirm modal — explicit two-step confirmation
+          (open menu → click delete → confirm in modal). Replaces the
+          earlier inline Trash button that was misclick-prone. */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 z-[1300] flex items-center justify-center p-5" dir={isRTL ? 'rtl' : 'ltr'} onClick={() => setDeleteConfirm(null)}>
+          <div className="bg-surface-card dark:bg-surface-card-dark rounded-2xl w-full max-w-[440px] overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-edge dark:border-edge-dark flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-red-500/15 flex items-center justify-center">
+                  <Trash2 size={14} className="text-red-500" />
+                </div>
+                <h3 className="m-0 text-sm font-bold text-content dark:text-content-dark">
+                  {isRTL ? 'حذف نسخة من الليد' : 'Delete lead copy'}
+                </h3>
+              </div>
+              <button onClick={() => setDeleteConfirm(null)} className="bg-transparent border-none cursor-pointer text-content-muted dark:text-content-muted-dark"><X size={16} /></button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <p className="m-0 text-sm text-content dark:text-content-dark leading-relaxed">
+                {isRTL
+                  ? `أنت بتحذف نسخة العميل "${deleteConfirm.full_name || '—'}" اللي عند ${deleteConfirm.owner_name || (isRTL ? 'غير معين' : 'unassigned')}.`
+                  : `You are deleting the copy of "${deleteConfirm.full_name || '—'}" assigned to ${deleteConfirm.owner_name || 'unassigned'}.`}
+              </p>
+              <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+                {isRTL
+                  ? 'الباقي من نسخ نفس الرقم عند سيلز آخرين هتفضل زي ما هي. الحذف soft — يمكن استرجاعه.'
+                  : 'Other copies of this phone at other agents stay untouched. This is a soft delete — it can be restored.'}
+              </p>
+            </div>
+            <div className="px-5 py-3 bg-surface-bg/40 dark:bg-surface-bg-dark/40 border-t border-edge dark:border-edge-dark flex justify-end gap-2">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 rounded-lg border border-edge dark:border-edge-dark bg-transparent text-content dark:text-content-dark text-xs font-semibold cursor-pointer"
+              >
+                {isRTL ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={() => handleSoftDelete(deleteConfirm)}
+                className="px-4 py-2 rounded-lg border-none bg-red-500 hover:bg-red-600 text-white text-xs font-bold cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 size={12} /> {isRTL ? 'احذف النسخة' : 'Delete copy'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Pagination */}
