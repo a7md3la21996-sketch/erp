@@ -53,8 +53,12 @@ const KNOWN_COLUMNS = {
     // lifecycle
     'is_blacklisted', 'is_deleted', 'deleted_at', 'last_activity_at',
     'first_response_at', 'notes',
-    // disqualification
-    'disqualified_reason', 'disqualified_note', 'disqualified_at',
+    // disqualification — actual DB columns drop the trailing 'd'
+    // (`disqualify_reason`, not `disqualified_reason`). The misspelt names
+    // in here for months meant the sanitizer silently dropped any DQ
+    // payload, so contact_status='disqualified' arrived without a reason
+    // and PostgREST hit the dq_requires_reason check constraint.
+    'disqualify_reason', 'disqualify_note', 'disqualify_at',
     // misc
     'fingerprint_id', 'metadata',
     // legacy stub columns kept to absorb writes from old bundles —
