@@ -14,6 +14,7 @@ import { fetchMasterLeads } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import DistributeLeadModal from './contacts/DistributeLeadModal';
 import HandOffLeadModal from './contacts/HandOffLeadModal';
+import BulkDistributeMasterModal from './BulkDistributeMasterModal';
 import { deleteContact } from '../../services/contactsService';
 import supabase from '../../lib/supabase';
 import { PhoneCell } from './contacts/constants';
@@ -72,6 +73,33 @@ export default function MasterLeadsPage() {
   // for cloning. Handoff/delete operate on the specific clone the user picks.
   const [distributeContact, setDistributeContact] = useState(null);
   const [handoffContact, setHandoffContact] = useState(null);
+  // Bulk selection — Set of phone strings (one per family)
+  const [selectedPhones, setSelectedPhones] = useState(new Set());
+  const [bulkDistributeOpen, setBulkDistributeOpen] = useState(false);
+
+  const togglePhoneSelected = (phone, e) => {
+    if (e) e.stopPropagation();
+    setSelectedPhones(prev => {
+      const next = new Set(prev);
+      if (next.has(phone)) next.delete(phone); else next.add(phone);
+      return next;
+    });
+  };
+  const toggleSelectAllOnPage = () => {
+    setSelectedPhones(prev => {
+      const all = rows.every(r => prev.has(r.phone));
+      if (all) {
+        const next = new Set(prev);
+        rows.forEach(r => next.delete(r.phone));
+        return next;
+      }
+      const next = new Set(prev);
+      rows.forEach(r => next.add(r.phone));
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedPhones(new Set());
+  const selectedFamilies = rows.filter(r => selectedPhones.has(r.phone));
 
   // Fetches a single full contact row (the modals expect the complete record,
   // but our list only carries the slim copy projection). Cheap one-row read.
@@ -233,7 +261,17 @@ export default function MasterLeadsPage() {
       {/* List */}
       <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl overflow-hidden">
         {/* Header row */}
-        <div className="hidden sm:grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_30px] gap-3 px-4 py-2.5 bg-surface-bg/40 dark:bg-surface-bg-dark/40 border-b border-edge dark:border-edge-dark text-[11px] font-semibold text-content-muted dark:text-content-muted-dark uppercase">
+        <div className="hidden sm:grid grid-cols-[32px_2fr_1.5fr_0.7fr_1fr_1fr_30px] gap-3 px-4 py-2.5 bg-surface-bg/40 dark:bg-surface-bg-dark/40 border-b border-edge dark:border-edge-dark text-[11px] font-semibold text-content-muted dark:text-content-muted-dark uppercase">
+          <div className="flex items-center justify-center">
+            <input
+              type="checkbox"
+              checked={rows.length > 0 && rows.every(r => selectedPhones.has(r.phone))}
+              ref={el => { if (el) el.indeterminate = !rows.every(r => selectedPhones.has(r.phone)) && rows.some(r => selectedPhones.has(r.phone)); }}
+              onChange={toggleSelectAllOnPage}
+              className="w-4 h-4 cursor-pointer accent-brand-500"
+              title={isRTL ? 'تحديد الكل' : 'Select all on page'}
+            />
+          </div>
           <div>{isRTL ? 'الاسم' : 'Name'}</div>
           <div>{isRTL ? 'التليفون' : 'Phone'}</div>
           <div className="text-center">{isRTL ? 'النسخ' : 'Copies'}</div>
@@ -260,8 +298,16 @@ export default function MasterLeadsPage() {
               {/* Header row — clickable to expand */}
               <button
                 onClick={() => toggleExpand(family.phone)}
-                className="w-full grid grid-cols-[2fr_1.5fr_0.7fr_1fr_1fr_30px] gap-3 px-4 py-3 items-center text-start bg-transparent border-none cursor-pointer hover:bg-brand-500/[0.04] dark:hover:bg-brand-500/[0.06] transition-colors"
+                className="w-full grid grid-cols-[32px_2fr_1.5fr_0.7fr_1fr_1fr_30px] gap-3 px-4 py-3 items-center text-start bg-transparent border-none cursor-pointer hover:bg-brand-500/[0.04] dark:hover:bg-brand-500/[0.06] transition-colors"
               >
+                <div className="flex items-center justify-center" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={selectedPhones.has(family.phone)}
+                    onChange={(e) => togglePhoneSelected(family.phone, e)}
+                    className="w-4 h-4 cursor-pointer accent-brand-500"
+                  />
+                </div>
                 <div className="flex items-center gap-2 min-w-0">
                   {hasConflict && (
                     <span title={isRTL ? 'تعارض: نسخ متعددة شغّالة' : 'Conflict: multiple active copies'}>
@@ -383,6 +429,30 @@ export default function MasterLeadsPage() {
         )}
       </div>
 
+      {/* Bulk action bar — sticky bottom when families are selected */}
+      {selectedPhones.size > 0 && (
+        <div className="fixed bottom-0 inset-x-0 z-[300] px-5 py-3 flex items-center gap-3 flex-wrap
+                        bg-gradient-to-br from-[#0a1929] to-[#132337] border-t border-brand-500/30
+                        shadow-[0_-4px_20px_rgba(0,0,0,0.3)]" dir={isRTL ? 'rtl' : 'ltr'}>
+          <span className="text-sm font-bold text-slate-200">
+            {isRTL ? `${selectedPhones.size} عيلة محددة` : `${selectedPhones.size} families selected`}
+          </span>
+          <button
+            onClick={clearSelection}
+            className="px-2.5 py-1 rounded-md border border-slate-400/30 bg-transparent text-slate-400 text-[11px] cursor-pointer hover:border-slate-300/50"
+          >
+            {isRTL ? 'إلغاء' : 'Clear'}
+          </button>
+          <div className="w-px h-6 bg-slate-400/20" />
+          <button
+            onClick={() => setBulkDistributeOpen(true)}
+            className="px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-semibold cursor-pointer flex items-center gap-1.5"
+          >
+            <Share2 size={13} /> {isRTL ? 'وزع للسيلز' : 'Distribute to agents'}
+          </button>
+        </div>
+      )}
+
       {/* Action modals */}
       {distributeContact && (
         <DistributeLeadModal
@@ -396,6 +466,13 @@ export default function MasterLeadsPage() {
           contact={handoffContact}
           onClose={() => setHandoffContact(null)}
           onSuccess={() => { setHandoffContact(null); load(); }}
+        />
+      )}
+      {bulkDistributeOpen && (
+        <BulkDistributeMasterModal
+          families={selectedFamilies}
+          onClose={() => setBulkDistributeOpen(false)}
+          onSuccess={() => { setBulkDistributeOpen(false); clearSelection(); load(); }}
         />
       )}
 
