@@ -2,6 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './styles/globals.css';
+import { initSentry } from './lib/sentry';
+
+// Initialize Sentry as early as possible so init-time errors are captured.
+// No-op when VITE_SENTRY_DSN isn't set (so dev builds stay quiet).
+initSentry();
 
 // ── Clear legacy localStorage data (Supabase is now the only source of truth) ──
 const DATA_VERSION = 'v3_supabase_only';

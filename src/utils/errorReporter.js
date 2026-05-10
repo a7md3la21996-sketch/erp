@@ -35,6 +35,17 @@ export function reportError(service, operation, error) {
     try { fn(entry); } catch {}
   });
 
+  // Forward to Sentry (no-op when VITE_SENTRY_DSN isn't set).
+  // Lazy import so we don't pay the bundle cost when Sentry isn't enabled
+  // and so a Sentry init failure can't break the local-storage path above.
+  try {
+    // eslint-disable-next-line no-unused-expressions
+    import('../lib/sentry').then(({ captureException, captureMessage }) => {
+      if (error instanceof Error) captureException(error, { service, operation });
+      else captureMessage(`${service}.${operation}: ${msg}`, 'error', { service, operation });
+    }).catch(() => {});
+  } catch {}
+
   // Console warning in development
   if (import.meta.env.DEV) {
     console.warn(`[${service}] ${operation} failed:`, error?.message || error);

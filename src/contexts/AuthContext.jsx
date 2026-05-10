@@ -279,6 +279,13 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
+  // ── Mirror identity to Sentry so error events include the responsible user
+  useEffect(() => {
+    import('../lib/sentry').then(({ setSentryUser }) => {
+      setSentryUser(profile && user ? { ...user, full_name_en: profile.full_name_en, full_name_ar: profile.full_name_ar } : null);
+    }).catch(() => {});
+  }, [user, profile]);
+
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = async () => {
     endSession();
