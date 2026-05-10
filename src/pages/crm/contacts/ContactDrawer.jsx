@@ -639,6 +639,20 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         }
       }
       const oldStatus = contact.contact_status;
+      // DQ requires a reason — DB constraint enforces this. If the caller
+      // sent an empty/missing reason for a disqualified update, defer to
+      // the DisqualifyModal instead of trying the write (which would fail
+      // with "violates check constraint dq_requires_reason").
+      if (newStatus === 'disqualified' && !dqReason) {
+        if (onRequestDisqualify) {
+          onRequestDisqualify(contact);
+          return;
+        }
+        // No modal handler wired — bail out cleanly with a toast so the
+        // user knows what to do instead of seeing the raw DB error.
+        toast.warning(isRTL ? 'اختر سبب الاستبعاد من القائمة' : 'Pick a disqualify reason');
+        return;
+      }
       const updates = { ...contact, contact_status: newStatus };
       if (newStatus === 'disqualified' && dqReason) {
         updates.disqualify_reason = dqReason;
