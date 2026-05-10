@@ -16,6 +16,7 @@ import DistributeLeadModal from './contacts/DistributeLeadModal';
 import HandOffLeadModal from './contacts/HandOffLeadModal';
 import { deleteContact } from '../../services/contactsService';
 import supabase from '../../lib/supabase';
+import { PhoneCell } from './contacts/constants';
 
 const STATUS_COLORS = {
   new:             '#4A7AAB',
@@ -271,8 +272,9 @@ export default function MasterLeadsPage() {
                     {family.primary_name || (isRTL ? 'بدون اسم' : 'No name')}
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-content-muted dark:text-content-muted-dark" dir="ltr">
-                  <Phone size={11} /> {family.phone}
+                <div className="flex items-center gap-1.5 text-xs text-content-muted dark:text-content-muted-dark" onClick={e => e.stopPropagation()}>
+                  <Phone size={11} className="shrink-0" />
+                  <PhoneCell phone={family.phone} />
                 </div>
                 <div className="text-center">
                   <span className={`inline-flex items-center justify-center min-w-[28px] px-2 py-0.5 rounded-full text-[11px] font-bold ${family.family_count > 1 ? 'bg-blue-500/15 text-blue-500' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>
