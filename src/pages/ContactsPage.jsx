@@ -374,7 +374,17 @@ export default function ContactsPage() {
           await deleteContact(id);
           setContacts(prev => prev.filter(c => c.id !== id));
           logAction({ action: 'delete', entity: 'contact', entityId: id, entityName: contact?.full_name, description: `Deleted contact: ${contact?.full_name} (${linkedOpps} opps, ${linkedTasks} tasks, ${linkedActs} activities)`, userName: profile?.full_name_ar });
-          toast.success(isRTL ? 'تم الحذف بنجاح' : 'Deleted successfully');
+          // Undo toast — soft delete is reversible via restoreContact, so
+          // give the user 8s to take it back. Same UX as bulk delete.
+          toast.show({
+            type: 'success',
+            message: isRTL ? 'تم الحذف بنجاح' : 'Deleted successfully',
+            duration: 8000,
+            action: contact ? {
+              label: isRTL ? 'تراجع' : 'Undo',
+              onClick: () => restoreContacts([contact]),
+            } : undefined,
+          });
         } catch (err) {
           toast.error(isRTL ? 'فشل الحذف: ' + (err?.message || '') : 'Delete failed: ' + (err?.message || ''));
         } finally {
@@ -502,7 +512,37 @@ export default function ContactsPage() {
       notifyLeadAssigned({ contactName: `${reassignedContacts.length} ليد جديد`, contactId: null, agentId, agentName, assignedBy: assignedByName });
     }
     // Opportunities reassignment is handled via Supabase in updateContact
-    toast.success(isRTL ? `تم إعادة تعيين ${selectedIds.length} عميل` : `${selectedIds.length} leads reassigned`);
+    // Snapshot prior owners for the undo path so we can revert each row to
+    // exactly its previous owner (different leads may have come from
+    // different agents — can't just pick one global "previous" value).
+    const undoSnapshot = allSelected.map(c => ({
+      id: c.id,
+      assigned_to: c.assigned_to || null,
+      assigned_to_name: c.assigned_to_name || null,
+    }));
+    const undoReassign = async () => {
+      try {
+        await Promise.allSettled(undoSnapshot.map(s => updateContact(s.id, {
+          assigned_to: s.assigned_to,
+          assigned_to_name: s.assigned_to_name,
+          assigned_to_names: s.assigned_to_name ? [s.assigned_to_name] : [],
+        })));
+        setContacts(prev => prev.map(c => {
+          const snap = undoSnapshot.find(s => s.id === c.id);
+          return snap ? { ...c, assigned_to: snap.assigned_to, assigned_to_name: snap.assigned_to_name, assigned_to_names: snap.assigned_to_name ? [snap.assigned_to_name] : [] } : c;
+        }));
+        toast.success(isRTL ? 'تم التراجع عن النقل' : 'Reassign undone');
+      } catch (err) {
+        toast.error(isRTL ? 'فشل التراجع' : 'Undo failed');
+        reportError('ContactsPage', 'undoBulkReassign', err);
+      }
+    };
+    toast.show({
+      type: 'success',
+      message: isRTL ? `تم إعادة تعيين ${selectedIds.length} عميل` : `${selectedIds.length} leads reassigned`,
+      duration: 8000,
+      action: { label: isRTL ? 'تراجع' : 'Undo', onClick: undoReassign },
+    });
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
