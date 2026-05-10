@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import supabase from '../../lib/supabase';
 import { fetchEmployees } from '../../services/employeesService';
-import { fetchPayrollRun } from '../../services/payrollService';
+import { fetchPayrollRun, lockPayrollRun, unlockPayrollRun } from '../../services/payrollService';
 import { fetchAttendance } from '../../services/attendanceService';
 import {
   CheckCircle2, AlertTriangle, XCircle, Clock, Users, DollarSign,
@@ -251,10 +251,28 @@ export default function PayrollRunWizard() {
             month={month}
             year={year}
             currentRun={currentRun}
+            profile={profile}
             isRTL={isRTL}
             lang={lang}
             onBack={() => setStep(3)}
             onDone={() => navigate('/hr')}
+            onLockChange={async (locked) => {
+              if (!currentRun?.id) return;
+              try {
+                const updated = locked
+                  ? await lockPayrollRun(currentRun.id, profile?.id)
+                  : await unlockPayrollRun(currentRun.id);
+                setCurrentRun(updated);
+                toast.success(
+                  isRTL
+                    ? (locked ? 'تم قفل المسير' : 'تم فتح المسير')
+                    : (locked ? 'Payroll locked' : 'Payroll unlocked')
+                );
+              } catch (err) {
+                toast.error(isRTL ? 'فشلت العملية' : 'Action failed');
+                if (import.meta.env.DEV) console.error(err);
+              }
+            }}
           />
         )}
       </div>
@@ -570,18 +588,24 @@ function Step3Run({ month, year, currentRun, isRTL, lang, onBack, onNext }) {
 }
 
 /* ─── Step 4: Confirm ─── */
-function Step4Confirm({ month, year, currentRun, isRTL, lang, onBack, onDone }) {
+function Step4Confirm({ month, year, currentRun, profile, isRTL, lang, onBack, onDone, onLockChange }) {
+  const isLocked = !!currentRun?.locked_at;
+  const canLock = ['admin', 'hr', 'finance'].includes(profile?.role);
+  const version = currentRun?.version || 1;
   return (
     <div>
       <Card className="p-8 mb-4 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-green-500/15 flex items-center justify-center mx-auto mb-4">
-          <CheckCircle2 size={28} className="text-green-500" />
+        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 ${isLocked ? 'bg-brand-500/15' : 'bg-green-500/15'}`}>
+          {isLocked ? <Lock size={28} className="text-brand-500" /> : <CheckCircle2 size={28} className="text-green-500" />}
         </div>
         <p className="m-0 mb-2 text-lg font-bold text-content dark:text-content-dark">
-          {isRTL ? 'مرتبات الشهر تم تشغيلها' : 'Payroll Run Complete'}
+          {isLocked
+            ? (isRTL ? 'مسير المرتبات مُغلق' : 'Payroll Run Locked')
+            : (isRTL ? 'مرتبات الشهر تم تشغيلها' : 'Payroll Run Complete')}
         </p>
         <p className="m-0 mb-5 text-xs text-content-muted dark:text-content-muted-dark">
-          {isRTL ? `${(lang === 'ar' ? MONTHS_AR : MONTHS_EN)[month - 1]} ${year}` : `${MONTHS_EN[month - 1]} ${year}`}
+          {(lang === 'ar' ? MONTHS_AR : MONTHS_EN)[month - 1]} {year}
+          {version > 1 && ` · ${isRTL ? `الإصدار ${version}` : `version ${version}`}`}
         </p>
 
         {currentRun && (
@@ -601,7 +625,26 @@ function Step4Confirm({ month, year, currentRun, isRTL, lang, onBack, onDone }) 
           </div>
         )}
 
+        {isLocked && currentRun?.locked_at && (
+          <p className="m-0 mb-4 text-[11px] text-content-muted dark:text-content-muted-dark">
+            {isRTL ? `قُفل في ${currentRun.locked_at.slice(0, 16).replace('T', ' ')}` : `Locked at ${currentRun.locked_at.slice(0, 16).replace('T', ' ')}`}
+          </p>
+        )}
+
         <div className={`flex flex-wrap justify-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          {canLock && currentRun?.id && (
+            isLocked ? (
+              <Button variant="secondary" onClick={() => onLockChange(false)}>
+                <Lock size={13} />
+                {isRTL ? 'فتح للتعديل' : 'Unlock for corrections'}
+              </Button>
+            ) : (
+              <Button onClick={() => onLockChange(true)}>
+                <Lock size={13} />
+                {isRTL ? 'قفل المسير نهائياً' : 'Lock & Finalize'}
+              </Button>
+            )
+          )}
           <Link
             to="/hr/payroll"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-edge dark:border-edge-dark text-xs font-semibold text-content-muted dark:text-content-muted-dark hover:bg-brand-500/10 hover:text-brand-500"
@@ -617,6 +660,14 @@ function Step4Confirm({ month, year, currentRun, isRTL, lang, onBack, onDone }) 
             {isRTL ? 'التقارير' : 'Reports'}
           </Link>
         </div>
+
+        {!isLocked && currentRun?.id && (
+          <p className="m-0 mt-4 text-[11px] text-content-muted dark:text-content-muted-dark max-w-md mx-auto">
+            {isRTL
+              ? 'القفل يمنع أي تعديل لاحق على هذا الشهر. ينصح بالقفل بعد التأكد من المرتبات وصرفها.'
+              : 'Locking prevents any later modification of this month. Lock after payslips are verified and paid out.'}
+          </p>
+        )}
       </Card>
 
       <div className={`flex justify-between gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>

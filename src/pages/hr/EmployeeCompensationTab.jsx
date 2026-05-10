@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import supabase from '../../lib/supabase';
 import {
   DollarSign, TrendingUp, TrendingDown, Calendar, CreditCard,
-  Plus, Minus, AlertCircle, ChevronRight,
+  Plus, Minus, AlertCircle, ChevronRight, Printer,
 } from 'lucide-react';
 import { Card } from '../../components/ui';
+import { printPayslip } from '../../services/printService';
 
 /* ─────────────────────────────────────────────────────────────────────────
    Compensation tab — the "calculation transparency" view.
@@ -88,16 +89,22 @@ export default function EmployeeCompensationTab({ emp, isRTL, lang, canViewSalar
         currentYear={currentYear}
         isRTL={isRTL}
         lang={lang}
+        onPrint={(item) => printPayslip(item, emp, { month: item.payroll_runs?.month, year: item.payroll_runs?.year }, lang)}
       />
       <SalaryTimeline emp={emp} history={history} isRTL={isRTL} lang={lang} />
       <ActiveLoans loans={loans} isRTL={isRTL} lang={lang} />
-      <RecentPayslips payslips={recentPayslips} isRTL={isRTL} lang={lang} />
+      <RecentPayslips
+        payslips={recentPayslips}
+        isRTL={isRTL}
+        lang={lang}
+        onPrint={(item) => printPayslip(item, emp, { month: item.payroll_runs?.month, year: item.payroll_runs?.year }, lang)}
+      />
     </div>
   );
 }
 
 /* ─────────────── Current month breakdown card ─────────────── */
-function CurrentMonthBreakdown({ emp, adjustments, loans, recentPayslips, currentMonth, currentYear, isRTL, lang }) {
+function CurrentMonthBreakdown({ emp, adjustments, loans, recentPayslips, currentMonth, currentYear, isRTL, lang, onPrint }) {
   // Try to find the actual payroll item for the current month — most accurate.
   const currentItem = recentPayslips.find(p =>
     p.payroll_runs?.month === currentMonth && p.payroll_runs?.year === currentYear
@@ -116,9 +123,18 @@ function CurrentMonthBreakdown({ emp, adjustments, loans, recentPayslips, curren
               {isRTL ? `راتب ${monthName}` : `${monthName} salary`}
             </p>
           </div>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/15 text-green-600 border border-green-500/30">
-            {isRTL ? 'تم التشغيل' : 'Run'}
-          </span>
+          <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-500/15 text-green-600 border border-green-500/30">
+              {isRTL ? 'تم التشغيل' : 'Run'}
+            </span>
+            <button
+              onClick={() => onPrint(currentItem)}
+              title={isRTL ? 'طباعة كشف الراتب' : 'Print payslip'}
+              className="p-1.5 rounded-lg text-content-muted hover:bg-brand-500/10 hover:text-brand-500 transition-colors"
+            >
+              <Printer size={14} />
+            </button>
+          </div>
         </div>
         <BreakdownLines item={currentItem} isRTL={isRTL} lang={lang} />
       </Card>
@@ -374,7 +390,7 @@ function ActiveLoans({ loans, isRTL, lang }) {
 }
 
 /* ─────────────── Recent payslips ─────────────── */
-function RecentPayslips({ payslips, isRTL, lang }) {
+function RecentPayslips({ payslips, isRTL, lang, onPrint }) {
   return (
     <Card className="overflow-hidden">
       <div className={`px-5 py-3.5 border-b border-edge dark:border-edge-dark flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -405,9 +421,20 @@ function RecentPayslips({ payslips, isRTL, lang }) {
                   {isRTL ? `قاعدة ${Number(p.base_salary || 0).toLocaleString()}` : `Base ${Number(p.base_salary || 0).toLocaleString()}`}
                 </p>
               </div>
-              <span className="text-sm font-extrabold text-brand-500 tabular-nums">
-                {Number(p.net_salary || 0).toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}
-              </span>
+              <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-sm font-extrabold text-brand-500 tabular-nums">
+                  {Number(p.net_salary || 0).toLocaleString()} {isRTL ? 'ج.م' : 'EGP'}
+                </span>
+                {onPrint && (
+                  <button
+                    onClick={() => onPrint(p)}
+                    title={isRTL ? 'طباعة' : 'Print'}
+                    className="p-1 rounded text-content-muted hover:bg-brand-500/10 hover:text-brand-500 transition-colors"
+                  >
+                    <Printer size={12} />
+                  </button>
+                )}
+              </div>
             </div>
           );
         })}

@@ -69,6 +69,7 @@ export default function DocumentsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -138,14 +139,13 @@ export default function DocumentsPage() {
       const { error: uploadErr } = await supabase.storage.from('documents').upload(filePath, file);
       if (uploadErr) throw uploadErr;
 
-      const { data: { publicUrl } } = supabase.storage.from('documents').getPublicUrl(filePath);
-
+      // No more `file_url` (was a permanent public URL — security hole if leaked).
+      // We generate a short-lived signed URL on demand when someone clicks Download.
       const record = {
         employee_id: form.employee_id,
         name: form.name,
         type: form.type,
         file_name: file.name,
-        file_url: publicUrl,
         file_path: filePath,
         expiry_date: form.expiry_date || null,
         created_at: new Date().toISOString(),
@@ -165,9 +165,28 @@ export default function DocumentsPage() {
     setSaving(false);
   };
 
+  /* ─── Download (generates a fresh 1-hour signed URL) ─── */
+  const handleDownload = async (doc) => {
+    if (!doc.file_path) {
+      showToast(lang === 'ar' ? 'الملف غير موجود' : 'File path missing', 'error');
+      return;
+    }
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.file_path, 3600); // 1 hour
+      if (error) throw error;
+      window.open(data.signedUrl, '_blank');
+    } catch (err) {
+      console.error(err);
+      showToast(lang === 'ar' ? 'فشل توليد رابط التحميل' : 'Failed to generate download link', 'error');
+    }
+  };
+
   /* ─── Delete ─── */
-  const handleDelete = async (doc) => {
-    if (!window.confirm(lang === 'ar' ? 'حذف هذا المستند؟' : 'Delete this document?')) return;
+  const handleDelete = async () => {
+    const doc = deleteTarget;
+    if (!doc) return;
     try {
       // Delete from storage
       if (doc.file_path) {
@@ -177,8 +196,11 @@ export default function DocumentsPage() {
       if (error) throw error;
       setDocuments(prev => prev.filter(d => d.id !== doc.id));
       showToast(lang === 'ar' ? 'تم الحذف' : 'Deleted', 'success');
-    } catch {
+    } catch (err) {
       showToast(lang === 'ar' ? 'فشل الحذف' : 'Delete failed', 'error');
+      if (import.meta.env.DEV) console.error(err);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -265,17 +287,17 @@ export default function DocumentsPage() {
                   </Td>
                   <Td>
                     <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                      {doc.file_url && (
+                      {doc.file_path && (
                         <button
-                          onClick={() => window.open(doc.file_url, '_blank')}
-                          title={lang === 'ar' ? 'تحميل' : 'Download'}
+                          onClick={() => handleDownload(doc)}
+                          title={lang === 'ar' ? 'تحميل (لينك مؤقت ساعة)' : 'Download (1h signed URL)'}
                           className="p-1.5 rounded-lg text-content-muted hover:bg-brand-500/10 hover:text-brand-500 transition-colors"
                         >
                           <Download size={15} />
                         </button>
                       )}
                       <button
-                        onClick={() => handleDelete(doc)}
+                        onClick={() => setDeleteTarget(doc)}
                         title={lang === 'ar' ? 'حذف' : 'Delete'}
                         className="p-1.5 rounded-lg text-content-muted hover:bg-red-500/10 hover:text-red-500 transition-colors"
                       >
@@ -359,6 +381,24 @@ export default function DocumentsPage() {
           <Button disabled={saving || !form.employee_id || !form.name || !form.file} onClick={handleSave}>
             {saving ? (lang === 'ar' ? 'جاري الرفع...' : 'Uploading...') : (lang === 'ar' ? 'رفع' : 'Upload')}
           </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Delete confirm */}
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} title={lang === 'ar' ? 'تأكيد الحذف' : 'Confirm Delete'}>
+        <p className="text-sm text-content dark:text-content-dark mb-2">
+          {lang === 'ar'
+            ? 'سيتم حذف الملف من التخزين والسجل. لا يمكن التراجع.'
+            : 'The file will be removed from storage and the database. This cannot be undone.'}
+        </p>
+        {deleteTarget && (
+          <p className="text-xs text-content-muted dark:text-content-muted-dark">
+            {deleteTarget.name} — {deleteTarget.file_name}
+          </p>
+        )}
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setDeleteTarget(null)}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+          <Button variant="danger" onClick={handleDelete}>{lang === 'ar' ? 'حذف' : 'Delete'}</Button>
         </ModalFooter>
       </Modal>
     </div>

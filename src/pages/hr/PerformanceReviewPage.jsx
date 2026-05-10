@@ -9,6 +9,20 @@ import supabase from '../../lib/supabase';
 /* ─── Helpers ─── */
 const REVIEW_TABLE = 'performance_reviews';
 
+function computeWeightedScore(ratings, competencies) {
+  let weightSum = 0;
+  let weightedTotal = 0;
+  for (const c of competencies) {
+    const r = Number(ratings?.[c.key]);
+    const w = Number(c.weight) || 0;
+    if (!r || w <= 0) continue;
+    weightedTotal += r * w;
+    weightSum += w;
+  }
+  if (weightSum === 0) return null;
+  return Number((weightedTotal / weightSum).toFixed(2));
+}
+
 function StarRating({ value = 0, size = 14 }) {
   return (
     <span className="inline-flex gap-0.5">
@@ -76,25 +90,28 @@ export default function PerformanceReviewPage() {
   const [yearFilter, setYearFilter] = useState(now.getFullYear());
   const [employees, setEmployees] = useState([]);
   const [reviews, setReviews] = useState([]);
+  const [competencies, setCompetencies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingReview, setEditingReview] = useState(null);
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const defaultForm = { employee_id: '', reviewer_id: '', period: 'Q1', year: now.getFullYear(), overall_rating: 3, strengths: '', improvements: '', goals: '', comments: '' };
+  const defaultForm = { employee_id: '', reviewer_id: '', period: 'Q1', year: now.getFullYear(), overall_rating: 3, competency_ratings: {}, strengths: '', improvements: '', goals: '', comments: '' };
   const [form, setForm] = useState({ ...defaultForm });
 
   /* ─── Load Data ─── */
   const loadData = async () => {
     setLoading(true);
     try {
-      const [{ data: reviewsData }, emps] = await Promise.all([
+      const [{ data: reviewsData }, emps, { data: compsData }] = await Promise.all([
         supabase.from(REVIEW_TABLE).select('*').eq('year', yearFilter).order('created_at', { ascending: false }),
         fetchEmployees(),
+        supabase.from('competencies').select('*').order('created_at'),
       ]);
       setReviews(reviewsData || []);
       setEmployees(emps || []);
+      setCompetencies(compsData || []);
     } catch {
       toast.error(lang === 'ar' ? 'فشل تحميل البيانات' : 'Failed to load data');
     } finally {
@@ -150,6 +167,7 @@ export default function PerformanceReviewPage() {
       period: review.period || 'Q1',
       year: review.year || yearFilter,
       overall_rating: review.overall_rating || 3,
+      competency_ratings: review.competency_ratings || {},
       strengths: review.strengths || '',
       improvements: review.improvements || '',
       goals: review.goals || '',
@@ -162,12 +180,15 @@ export default function PerformanceReviewPage() {
     if (!form.employee_id) return;
     setSaving(true);
     try {
+      const weightedScore = computeWeightedScore(form.competency_ratings, competencies);
       const payload = {
         employee_id: form.employee_id,
         reviewer_id: form.reviewer_id || null,
         period: form.period,
         year: form.year,
         overall_rating: Number(form.overall_rating),
+        competency_ratings: form.competency_ratings || {},
+        weighted_score: weightedScore,
         strengths: form.strengths || null,
         improvements: form.improvements || null,
         goals: form.goals || null,
@@ -210,7 +231,7 @@ export default function PerformanceReviewPage() {
 
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
-      <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={7} />
+      <PageSkeleton hasKpis kpiCount={4} tableRows={6} tableCols={8} />
     </div>
   );
 
@@ -265,6 +286,7 @@ export default function PerformanceReviewPage() {
                 lang === 'ar' ? 'الفترة' : 'Period',
                 lang === 'ar' ? 'السنة' : 'Year',
                 lang === 'ar' ? 'التقييم' : 'Rating',
+                lang === 'ar' ? 'الدرجة المرجحة' : 'Weighted',
                 lang === 'ar' ? 'الحالة' : 'Status',
                 '',
               ].map((h, i) => <Th key={i}>{h}</Th>)}
@@ -273,7 +295,7 @@ export default function PerformanceReviewPage() {
           <tbody>
             {reviews.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-16 px-5">
+                <td colSpan={8} className="text-center py-16 px-5">
                   <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
                     <Star size={24} color="#4A7AAB" />
                   </div>
@@ -290,6 +312,15 @@ export default function PerformanceReviewPage() {
                 </Td>
                 <Td className="text-content-muted dark:text-content-muted-dark">{review.year}</Td>
                 <Td><StarRating value={review.overall_rating} /></Td>
+                <Td>
+                  {review.weighted_score != null ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-brand-500/[0.12] text-brand-500 border border-brand-500/25">
+                      {Number(review.weighted_score).toFixed(2)} / 5
+                    </span>
+                  ) : (
+                    <span className="text-content-muted dark:text-content-muted-dark text-xs">—</span>
+                  )}
+                </Td>
                 <Td><StatusBadge status={review.status} config={statusConfig} /></Td>
                 <Td>
                   {deleteConfirm === review.id ? (
@@ -353,6 +384,52 @@ export default function PerformanceReviewPage() {
             <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1.5">{lang === 'ar' ? 'التقييم العام' : 'Overall Rating'}</label>
             <StarInput value={form.overall_rating} onChange={v => setForm(f => ({ ...f, overall_rating: v }))} />
           </div>
+
+          {/* Per-competency ratings */}
+          {competencies.length > 0 && (
+            <div className="col-span-full">
+              <div className={`flex items-center justify-between gap-2 mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <label className="block text-xs font-semibold text-content dark:text-content-dark">
+                  {lang === 'ar' ? 'تقييم الكفاءات' : 'Competency Ratings'}
+                </label>
+                {(() => {
+                  const w = computeWeightedScore(form.competency_ratings, competencies);
+                  return w != null ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold bg-brand-500/[0.12] text-brand-500 border border-brand-500/25">
+                      {lang === 'ar' ? 'الدرجة المرجحة:' : 'Weighted:'} {w.toFixed(2)} / 5
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+              <div className="rounded-xl border border-edge dark:border-edge-dark divide-y divide-edge dark:divide-edge-dark overflow-hidden">
+                {competencies.map(comp => {
+                  const cName = isRTL ? (comp.name_ar || comp.name_en) : (comp.name_en || comp.name_ar);
+                  const val = Number(form.competency_ratings?.[comp.key] || 0);
+                  return (
+                    <div
+                      key={comp.id || comp.key}
+                      className={`flex items-center justify-between gap-3 px-3 py-2.5 bg-surface-card dark:bg-surface-card-dark ${isRTL ? 'flex-row-reverse' : ''}`}
+                    >
+                      <div className={`flex flex-col ${isRTL ? 'items-end' : 'items-start'} min-w-0`}>
+                        <span className="text-sm font-semibold text-content dark:text-content-dark truncate">{cName}</span>
+                        <span className="text-[11px] text-content-muted dark:text-content-muted-dark">
+                          {lang === 'ar' ? 'الوزن:' : 'Weight:'} {comp.weight || 0}%
+                        </span>
+                      </div>
+                      <StarInput
+                        value={val}
+                        onChange={v => setForm(f => ({
+                          ...f,
+                          competency_ratings: { ...(f.competency_ratings || {}), [comp.key]: v },
+                        }))}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="col-span-full">
             <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'نقاط القوة' : 'Strengths'}</label>
             <textarea

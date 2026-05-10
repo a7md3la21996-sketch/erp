@@ -1,12 +1,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useToast } from '../../contexts/ToastContext';
 import { useAuditFilter } from '../../hooks/useAuditFilter';
 import {
-  UserPlus, CheckCircle2, Clock, AlertCircle,
+  UserPlus, CheckCircle2, Clock, AlertCircle, Plus,
   ChevronRight, UserCheck, Timer, CheckSquare, Square,
 } from 'lucide-react';
-import { KpiCard, SmartFilter, applySmartFilters, Pagination } from '../../components/ui';
+import { KpiCard, SmartFilter, applySmartFilters, Pagination, PageSkeleton, Button, Modal, ModalFooter, Select } from '../../components/ui';
+import {
+  fetchOnboardingRecords,
+  createOnboarding,
+  toggleChecklistItem as svcToggle,
+  DEFAULT_CHECKLIST,
+} from '../../services/onboardingService';
+import { fetchEmployees, fetchDepartments } from '../../services/employeesService';
+import { useAuth } from '../../contexts/AuthContext';
 
 /* ─── Checklist Template ─── */
 const CHECKLIST_ITEMS = [
@@ -20,213 +29,44 @@ const CHECKLIST_ITEMS = [
   { id: 'first_review',    label_ar: 'جدولة المراجعة الأولى',  label_en: 'First Review Scheduled',   icon: '📅' },
 ];
 
-/* ─── localStorage helpers for onboarding records ─── */
-const STORAGE_KEY = 'platform_hr_onboarding';
+// Onboarding records now live in Supabase (employee_onboarding table).
+// The localStorage helpers were removed — they leaked sensitive HR data
+// to the browser and didn't sync across devices.
 
-function loadOnboardingData() {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_ONBOARDING));
-  return [...DEFAULT_ONBOARDING];
+// Normalizes a joined Supabase row into the flat shape the rest of the
+// page expects (employee_name_ar/en, mentor_name, department, etc).
+function normalizeRecord(row, deptMap) {
+  const emp = row.employee || {};
+  const mentor = row.mentor || {};
+  const dept = deptMap[emp.department_id];
+  return {
+    id: row.id,
+    employee_id: row.employee_id,
+    employee_name_ar: emp.full_name_ar || '',
+    employee_name_en: emp.full_name_en || '',
+    department: dept?.key || emp.department_id || '',
+    department_label_ar: dept?.name_ar || '',
+    department_label_en: dept?.name_en || '',
+    position: emp.position || '',
+    position_en: emp.position || '',
+    start_date: row.start_date,
+    target_completion_date: row.target_completion_date,
+    mentor_name: mentor.full_name_ar || '',
+    mentor_name_en: mentor.full_name_en || '',
+    status: row.status,
+    checklist: { ...DEFAULT_CHECKLIST, ...(row.checklist || {}) },
+    notes: row.notes,
+  };
 }
 
-function saveOnboardingData(data) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
-}
-
-/* ─── Comprehensive Default Data ─── */
-const DEFAULT_ONBOARDING = [
-  {
-    id: 'OB-001',
-    employee_name_ar: 'أحمد محمد علي',
-    employee_name_en: 'Ahmed Mohamed Ali',
-    department: 'engineering',
-    position: 'مهندس برمجيات أول',
-    position_en: 'Senior Software Engineer',
-    start_date: '2026-03-01',
-    mentor_name: 'خالد يوسف',
-    mentor_name_en: 'Khaled Youssef',
-    status: 'in_progress',
-    checklist: { documents: true, it_setup: true, workspace: true, orientation: true, team_intro: true, policy_ack: true, training: false, first_review: false },
-  },
-  {
-    id: 'OB-002',
-    employee_name_ar: 'سارة أحمد حسن',
-    employee_name_en: 'Sara Ahmed Hassan',
-    department: 'marketing',
-    position: 'مدير تسويق رقمي',
-    position_en: 'Digital Marketing Manager',
-    start_date: '2026-03-08',
-    mentor_name: 'نورا عبدالله',
-    mentor_name_en: 'Noura Abdullah',
-    status: 'in_progress',
-    checklist: { documents: true, it_setup: true, workspace: false, orientation: false, team_intro: false, policy_ack: false, training: false, first_review: false },
-  },
-  {
-    id: 'OB-003',
-    employee_name_ar: 'محمد عبدالرحمن',
-    employee_name_en: 'Mohamed Abdelrahman',
-    department: 'finance',
-    position: 'محاسب مالي',
-    position_en: 'Financial Accountant',
-    start_date: '2026-02-15',
-    mentor_name: 'عمرو سعيد',
-    mentor_name_en: 'Amr Saeed',
-    status: 'completed',
-    checklist: { documents: true, it_setup: true, workspace: true, orientation: true, team_intro: true, policy_ack: true, training: true, first_review: true },
-  },
-  {
-    id: 'OB-004',
-    employee_name_ar: 'فاطمة الزهراء',
-    employee_name_en: 'Fatma Al-Zahraa',
-    department: 'hr',
-    position: 'أخصائي موارد بشرية',
-    position_en: 'HR Specialist',
-    start_date: '2026-03-10',
-    mentor_name: 'هدى محمود',
-    mentor_name_en: 'Huda Mahmoud',
-    status: 'not_started',
-    checklist: { documents: false, it_setup: false, workspace: false, orientation: false, team_intro: false, policy_ack: false, training: false, first_review: false },
-  },
-  {
-    id: 'OB-005',
-    employee_name_ar: 'عمر خالد سليمان',
-    employee_name_en: 'Omar Khaled Soliman',
-    department: 'engineering',
-    position: 'مهندس DevOps',
-    position_en: 'DevOps Engineer',
-    start_date: '2026-02-20',
-    mentor_name: 'خالد يوسف',
-    mentor_name_en: 'Khaled Youssef',
-    status: 'completed',
-    checklist: { documents: true, it_setup: true, workspace: true, orientation: true, team_intro: true, policy_ack: true, training: true, first_review: true },
-  },
-  {
-    id: 'OB-006',
-    employee_name_ar: 'ياسمين طارق',
-    employee_name_en: 'Yasmin Tarek',
-    department: 'sales',
-    position: 'مسؤول مبيعات',
-    position_en: 'Sales Executive',
-    start_date: '2026-03-05',
-    mentor_name: 'سامي رضا',
-    mentor_name_en: 'Sami Reda',
-    status: 'in_progress',
-    checklist: { documents: true, it_setup: true, workspace: true, orientation: true, team_intro: false, policy_ack: true, training: false, first_review: false },
-  },
-  {
-    id: 'OB-007',
-    employee_name_ar: 'كريم مصطفى',
-    employee_name_en: 'Karim Mostafa',
-    department: 'operations',
-    position: 'منسق عمليات',
-    position_en: 'Operations Coordinator',
-    start_date: '2026-03-12',
-    mentor_name: 'محسن فؤاد',
-    mentor_name_en: 'Mohsen Fouad',
-    status: 'not_started',
-    checklist: { documents: false, it_setup: false, workspace: false, orientation: false, team_intro: false, policy_ack: false, training: false, first_review: false },
-  },
-  {
-    id: 'OB-008',
-    employee_name_ar: 'نادية حسين',
-    employee_name_en: 'Nadia Hussein',
-    department: 'engineering',
-    position: 'مصممة UI/UX',
-    position_en: 'UI/UX Designer',
-    start_date: '2026-02-25',
-    mentor_name: 'منى إبراهيم',
-    mentor_name_en: 'Mona Ibrahim',
-    status: 'in_progress',
-    checklist: { documents: true, it_setup: true, workspace: true, orientation: true, team_intro: true, policy_ack: true, training: true, first_review: false },
-  },
-  {
-    id: 'OB-009',
-    employee_name_ar: 'تامر عادل',
-    employee_name_en: 'Tamer Adel',
-    department: 'finance',
-    position: 'محلل مالي',
-    position_en: 'Financial Analyst',
-    start_date: '2026-03-03',
-    mentor_name: 'عمرو سعيد',
-    mentor_name_en: 'Amr Saeed',
-    status: 'in_progress',
-    checklist: { documents: true, it_setup: true, workspace: true, orientation: false, team_intro: false, policy_ack: true, training: false, first_review: false },
-  },
-  {
-    id: 'OB-010',
-    employee_name_ar: 'ريم السيد',
-    employee_name_en: 'Reem Al-Sayed',
-    department: 'marketing',
-    position: 'كاتبة محتوى',
-    position_en: 'Content Writer',
-    start_date: '2026-02-10',
-    mentor_name: 'نورا عبدالله',
-    mentor_name_en: 'Noura Abdullah',
-    status: 'completed',
-    checklist: { documents: true, it_setup: true, workspace: true, orientation: true, team_intro: true, policy_ack: true, training: true, first_review: true },
-  },
-  {
-    id: 'OB-011',
-    employee_name_ar: 'حسام الدين',
-    employee_name_en: 'Hossam El-Din',
-    department: 'sales',
-    position: 'مدير حسابات',
-    position_en: 'Account Manager',
-    start_date: '2026-03-07',
-    mentor_name: 'سامي رضا',
-    mentor_name_en: 'Sami Reda',
-    status: 'in_progress',
-    checklist: { documents: true, it_setup: false, workspace: false, orientation: false, team_intro: false, policy_ack: false, training: false, first_review: false },
-  },
-  {
-    id: 'OB-012',
-    employee_name_ar: 'لينا جمال',
-    employee_name_en: 'Lina Gamal',
-    department: 'hr',
-    position: 'مسؤول توظيف',
-    position_en: 'Recruitment Officer',
-    start_date: '2026-02-18',
-    mentor_name: 'هدى محمود',
-    mentor_name_en: 'Huda Mahmoud',
-    status: 'completed',
-    checklist: { documents: true, it_setup: true, workspace: true, orientation: true, team_intro: true, policy_ack: true, training: true, first_review: true },
-  },
-];
-
-/* ─── Department labels ─── */
-const DEPARTMENTS = {
-  engineering: { ar: 'الهندسة', en: 'Engineering' },
-  marketing:   { ar: 'التسويق', en: 'Marketing' },
-  finance:     { ar: 'المالية', en: 'Finance' },
-  hr:          { ar: 'الموارد البشرية', en: 'Human Resources' },
-  sales:       { ar: 'المبيعات', en: 'Sales' },
-  operations:  { ar: 'العمليات', en: 'Operations' },
-};
+// DEFAULT_ONBOARDING was 12 fabricated records — removed since real data
+// now comes from the employee_onboarding table.
 
 const STATUS_CONFIG = {
   in_progress: { ar: 'قيد التنفيذ', en: 'In Progress', color: '#6B8DB5' },
   completed:   { ar: 'مكتمل',      en: 'Completed',   color: '#4A7AAB' },
   not_started: { ar: 'لم يبدأ',     en: 'Not Started', color: '#EF4444' },
 };
-
-/* ─── localStorage key for checklist state ─── */
-const LS_KEY = 'onboarding_checklist_state';
-
-function loadChecklistState() {
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
-function saveChecklistState(state) {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
-  } catch { /* ignore */ }
-}
 
 /* ─── Helper: compute progress ─── */
 function getProgress(checklist) {
@@ -252,8 +92,13 @@ export default function OnboardingPage() {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const lang = i18n.language;
+  const toast = useToast();
 
-  const [onboardingRecords, setOnboardingRecords] = useState(loadOnboardingData);
+  const { profile } = useAuth();
+  const [onboardingRecords, setOnboardingRecords] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [smartFilters, setSmartFilters] = useState([]);
   const [page, setPage] = useState(1);
@@ -261,68 +106,146 @@ export default function OnboardingPage() {
 
   const { auditFields, applyAuditFilters } = useAuditFilter('onboarding');
 
-  // Persist onboarding records to localStorage
-  useEffect(() => { saveOnboardingData(onboardingRecords); }, [onboardingRecords]);
+  // Add modal state
+  const emptyForm = {
+    employee_id: '',
+    mentor_id: '',
+    start_date: new Date().toISOString().slice(0, 10),
+    target_completion_date: '',
+    status: 'not_started',
+    notes: '',
+  };
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
 
-  /* ─── Checklist state (localStorage persistence) ─── */
-  const [checklistState, setChecklistState] = useState(() => {
-    const saved = loadChecklistState();
-    if (saved) return saved;
-    // Initialize from loaded data
-    const init = {};
-    onboardingRecords.forEach(ob => { init[ob.id] = { ...ob.checklist }; });
-    return init;
-  });
-
-  // Persist to localStorage on change
+  // Load from Supabase + departments + employees lookup
   useEffect(() => {
-    saveChecklistState(checklistState);
-  }, [checklistState]);
+    let cancelled = false;
+    Promise.all([
+      fetchOnboardingRecords(),
+      fetchDepartments(),
+      fetchEmployees(),
+    ])
+      .then(([records, depts, emps]) => {
+        if (cancelled) return;
+        setOnboardingRecords(records || []);
+        setDepartments(depts || []);
+        setEmployees(emps || []);
+      })
+      .catch(err => {
+        toast.error(isRTL ? 'فشل تحميل بيانات التهيئة' : 'Failed to load onboarding');
+        if (import.meta.env.DEV) console.error(err);
+      })
+      .finally(() => !cancelled && setLoading(false));
+    return () => { cancelled = true; };
+    // toast is omitted from deps — its identity changes on every render and
+    // would create an infinite loop hammering Supabase.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const toggleChecklistItem = (obId, itemId) => {
-    setChecklistState(prev => ({
-      ...prev,
-      [obId]: {
-        ...prev[obId],
-        [itemId]: !prev[obId]?.[itemId],
-      },
-    }));
+  const openAdd = () => { setAddForm(emptyForm); setAddOpen(true); };
+  const handleAdd = async () => {
+    if (!addForm.employee_id || !addForm.start_date) {
+      toast.error(isRTL ? 'الموظف وتاريخ البدء مطلوبان' : 'Employee and start date are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const created = await createOnboarding({
+        ...addForm,
+        mentor_id: addForm.mentor_id || null,
+        target_completion_date: addForm.target_completion_date || null,
+        notes: addForm.notes || null,
+        created_by: profile?.id || null,
+      });
+      setOnboardingRecords(prev => [created, ...prev]);
+      setAddOpen(false);
+      toast.success(isRTL ? 'تم بدء التهيئة' : 'Onboarding started');
+    } catch (err) {
+      // FK / unique-constraint errors get a nicer message
+      const msg = /unique|duplicate/i.test(err?.message || '')
+        ? (isRTL ? 'هذا الموظف لديه سجل تهيئة بالفعل' : 'This employee already has an onboarding record')
+        : (isRTL ? 'فشل الحفظ' : 'Save failed');
+      toast.error(msg);
+      if (import.meta.env.DEV) console.error(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  /* ─── Enrich data with live checklist state ─── */
+  // Filter out employees who already have an onboarding record
+  const availableEmployees = useMemo(() => {
+    const taken = new Set(onboardingRecords.map(r => r.employee_id));
+    return employees.filter(e => !taken.has(e.id) && (e.is_active !== false));
+  }, [employees, onboardingRecords]);
+
+  // Build dept lookup map keyed by id
+  const deptMap = useMemo(() => {
+    const map = {};
+    for (const d of departments) {
+      map[d.id] = { key: d.id, name_ar: d.name_ar, name_en: d.name_en };
+    }
+    return map;
+  }, [departments]);
+
+  // Toggle checklist item — writes through to DB
+  const toggleChecklistItem = async (obId, itemKey) => {
+    const ob = onboardingRecords.find(r => r.id === obId);
+    if (!ob) return;
+    // Optimistic update
+    const newChecklist = { ...ob.checklist, [itemKey]: !ob.checklist?.[itemKey] };
+    setOnboardingRecords(prev => prev.map(r => r.id === obId ? { ...r, checklist: newChecklist } : r));
+    try {
+      const updated = await svcToggle(obId, itemKey, ob.checklist || {});
+      setOnboardingRecords(prev => prev.map(r => r.id === obId ? updated : r));
+    } catch (err) {
+      // Revert on failure
+      setOnboardingRecords(prev => prev.map(r => r.id === obId ? ob : r));
+      toast.error(isRTL ? 'فشل تحديث القائمة' : 'Failed to update checklist');
+      if (import.meta.env.DEV) console.error(err);
+    }
+  };
+
+  /* ─── Enrich data with normalized fields ─── */
   const enrichedData = useMemo(() => {
-    return onboardingRecords.map(ob => {
-      const checklist = checklistState[ob.id] || ob.checklist;
-      const { done, total, pct } = getProgress(checklist);
-      const status = deriveStatus(checklist);
-      return { ...ob, checklist, progress: pct, done, total, status };
+    return onboardingRecords.map(row => {
+      const ob = normalizeRecord(row, deptMap);
+      const { done, total, pct } = getProgress(ob.checklist);
+      // Status comes from DB (kept in sync by service.toggleChecklistItem)
+      return { ...ob, progress: pct, done, total };
     });
-  }, [onboardingRecords, checklistState]);
+  }, [onboardingRecords, deptMap]);
 
   /* ─── Smart Filter fields ─── */
-  const SMART_FIELDS = useMemo(() => [
-    {
-      id: 'department', label: 'القسم', labelEn: 'Department', type: 'select',
-      options: Object.entries(DEPARTMENTS).map(([val, lbl]) => ({
-        value: val, label: lbl.ar, labelEn: lbl.en,
-      })),
-    },
-    {
-      id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select',
-      options: Object.entries(STATUS_CONFIG).map(([val, cfg]) => ({
-        value: val, label: cfg.ar, labelEn: cfg.en,
-      })),
-    },
-    { id: 'start_date', label: 'تاريخ البدء', labelEn: 'Start Date', type: 'date' },
-    {
-      id: 'mentor_name', label: 'المرشد', labelEn: 'Mentor', type: 'select',
-      options: [...new Set(DEFAULT_ONBOARDING.map(ob => ob.mentor_name))].map(m => {
-        const ob = DEFAULT_ONBOARDING.find(o => o.mentor_name === m);
-        return { value: m, label: m, labelEn: ob?.mentor_name_en || m };
-      }),
-    },
-    ...auditFields,
-  ], [auditFields]);
+  const SMART_FIELDS = useMemo(() => {
+    // Department options come from the live departments table (no more hardcoded list).
+    const deptOptions = departments.map(d => ({
+      value: d.id, label: d.name_ar || d.name_en, labelEn: d.name_en || d.name_ar,
+    }));
+    // Mentor options derive from records that actually have a mentor assigned.
+    const mentorOptions = [...new Map(
+      onboardingRecords
+        .filter(r => r.mentor_id && r.mentor)
+        .map(r => [r.mentor_id, r.mentor])
+    ).values()].map(m => ({
+      value: m.full_name_ar || m.full_name_en,
+      label: m.full_name_ar || m.full_name_en,
+      labelEn: m.full_name_en || m.full_name_ar,
+    }));
+    return [
+      { id: 'department', label: 'القسم', labelEn: 'Department', type: 'select', options: deptOptions },
+      {
+        id: 'status', label: 'الحالة', labelEn: 'Status', type: 'select',
+        options: Object.entries(STATUS_CONFIG).map(([val, cfg]) => ({
+          value: val, label: cfg.ar, labelEn: cfg.en,
+        })),
+      },
+      { id: 'start_date', label: 'تاريخ البدء', labelEn: 'Start Date', type: 'date' },
+      { id: 'mentor_name', label: 'المرشد', labelEn: 'Mentor', type: 'select', options: mentorOptions },
+      ...auditFields,
+    ];
+  }, [auditFields, departments, onboardingRecords]);
 
   /* ─── Filtering ─── */
   const filtered = useMemo(() => {
@@ -358,6 +281,12 @@ export default function OnboardingPage() {
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [smartFilters]);
 
+  if (loading) return (
+    <div className="px-4 py-4 md:px-7 md:py-6">
+      <PageSkeleton hasKpis kpiCount={4} tableRows={4} tableCols={3} />
+    </div>
+  );
+
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen">
       {/* ─── Header ─── */}
@@ -375,6 +304,10 @@ export default function OnboardingPage() {
             </p>
           </div>
         </div>
+        <Button size="md" onClick={openAdd}>
+          <Plus size={16} />
+          {lang === 'ar' ? 'بدء تهيئة موظف' : 'Start Onboarding'}
+        </Button>
       </div>
 
       {/* ─── KPI Cards ─── */}
@@ -436,6 +369,88 @@ export default function OnboardingPage() {
           />
         </div>
       )}
+
+      {/* ── Add Onboarding Modal ── */}
+      <Modal open={addOpen} onClose={() => setAddOpen(false)} title={lang === 'ar' ? 'بدء تهيئة موظف' : 'Start Onboarding'}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'الموظف' : 'Employee'} *</label>
+            <Select value={addForm.employee_id} onChange={e => setAddForm(f => ({ ...f, employee_id: e.target.value }))}>
+              <option value="">{lang === 'ar' ? 'اختر موظف' : 'Select employee'}</option>
+              {availableEmployees.map(emp => (
+                <option key={emp.id} value={emp.id}>
+                  {(isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar}
+                  {emp.employee_id ? ` (${emp.employee_id})` : ''}
+                </option>
+              ))}
+            </Select>
+            {availableEmployees.length === 0 && (
+              <p className="m-0 mt-1 text-[11px] text-content-muted dark:text-content-muted-dark">
+                {isRTL ? 'كل الموظفين النشطين عندهم سجل تهيئة بالفعل' : 'All active employees already have an onboarding record'}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'المرشد' : 'Mentor'}</label>
+            <Select value={addForm.mentor_id} onChange={e => setAddForm(f => ({ ...f, mentor_id: e.target.value }))}>
+              <option value="">{lang === 'ar' ? 'بدون مرشد' : 'No mentor'}</option>
+              {employees
+                .filter(e => e.id !== addForm.employee_id && e.is_active !== false)
+                .map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {(isRTL ? emp.full_name_ar : emp.full_name_en) || emp.full_name_ar}
+                  </option>
+                ))}
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'تاريخ البدء' : 'Start Date'} *</label>
+            <input
+              type="date"
+              value={addForm.start_date}
+              onChange={e => setAddForm(f => ({ ...f, start_date: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'تاريخ الإكمال المستهدف' : 'Target Completion'}</label>
+            <input
+              type="date"
+              value={addForm.target_completion_date}
+              onChange={e => setAddForm(f => ({ ...f, target_completion_date: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'الحالة الابتدائية' : 'Initial Status'}</label>
+            <Select value={addForm.status} onChange={e => setAddForm(f => ({ ...f, status: e.target.value }))}>
+              <option value="not_started">{lang === 'ar' ? 'لم يبدأ' : 'Not Started'}</option>
+              <option value="in_progress">{lang === 'ar' ? 'قيد التنفيذ' : 'In Progress'}</option>
+            </Select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">{lang === 'ar' ? 'ملاحظات' : 'Notes'}</label>
+            <textarea
+              rows={2}
+              value={addForm.notes}
+              onChange={e => setAddForm(f => ({ ...f, notes: e.target.value }))}
+              className="w-full px-3 py-2 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark text-content dark:text-content-dark text-sm resize-none"
+            />
+          </div>
+        </div>
+
+        <ModalFooter>
+          <Button variant="secondary" onClick={() => setAddOpen(false)}>{lang === 'ar' ? 'إلغاء' : 'Cancel'}</Button>
+          <Button onClick={handleAdd} disabled={saving || !addForm.employee_id || !addForm.start_date}>
+            {saving ? (lang === 'ar' ? 'جاري الحفظ...' : 'Saving...') : (lang === 'ar' ? 'بدء التهيئة' : 'Start')}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
@@ -445,13 +460,13 @@ export default function OnboardingPage() {
 ══════════════════════════════════════════════ */
 function OnboardingCard({ ob, isExpanded, isRTL, lang, isDark, onToggle, onChecklistToggle }) {
   const [hov, setHov] = useState(false);
-  const name = isRTL ? ob.employee_name_ar : ob.employee_name_en;
+  const name = (isRTL ? ob.employee_name_ar : ob.employee_name_en) || ob.employee_name_ar || ob.employee_name_en || '—';
   const initials = name?.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase() || '??';
   const { pct, done, total } = getProgress(ob.checklist);
   const statusCfg = STATUS_CONFIG[ob.status] || STATUS_CONFIG.not_started;
-  const deptLabel = DEPARTMENTS[ob.department] ? (lang === 'ar' ? DEPARTMENTS[ob.department].ar : DEPARTMENTS[ob.department].en) : ob.department;
-  const mentorLabel = isRTL ? ob.mentor_name : ob.mentor_name_en;
-  const positionLabel = isRTL ? ob.position : ob.position_en;
+  const deptLabel = (isRTL ? ob.department_label_ar : ob.department_label_en) || ob.department || '—';
+  const mentorLabel = (isRTL ? ob.mentor_name : ob.mentor_name_en) || '—';
+  const positionLabel = ob.position || '—';
 
   return (
     <div

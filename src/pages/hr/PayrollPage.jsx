@@ -13,6 +13,7 @@ import { useAuditFilter } from '../../hooks/useAuditFilter';
 import { useToast } from '../../contexts/ToastContext';
 import { DollarSign, TrendingUp, Users, FileText, ChevronDown, Download, Settings, Clock, AlertTriangle, Printer } from 'lucide-react';
 import { Button, Card, CardHeader, KpiCard, Table, Tr, Td, Th, PageSkeleton, ExportButton, Select, Modal, ModalFooter, Pagination, SmartFilter, applySmartFilters } from '../../components/ui';
+import PayrollBreakdownModal from './PayrollBreakdownModal';
 
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
@@ -227,6 +228,9 @@ export default function PayrollPage() {
       const empAdj = adjustments.filter(a => a.employee_id === empRaw.id);
       const otherAdditions = empAdj.filter(a => a.type === 'addition' || a.type === 'bonus' || a.type === 'commission').reduce((s, a) => s + Number(a.amount), 0);
       const otherDeductions = empAdj.filter(a => a.type === 'deduction' || a.type === 'penalty').reduce((s, a) => s + Number(a.amount), 0);
+      // Track which adjustments contributed so deleted bonuses are still
+      // traceable from the payslip during disputes.
+      const adjustmentIds = empAdj.map(a => a.id).filter(Boolean);
 
       // 8. OVERTIME (only if enabled)
       const defaultOTRate = R.default_overtime_rate || 1.5;
@@ -234,9 +238,35 @@ export default function PayrollPage() {
         ? Math.round(stats.totalOvertimeMinutes * minuteRate * (emp.overtime_rate || defaultOTRate))
         : 0;
 
+      // 9. EARLY-LEAVE DEDUCTION (auto, hour-based)
+      // Reads check_out vs shift end. Skips if employee is exempt or remote.
+      // Rules:
+      //   early_leave_enabled (default 1)   — global on/off
+      //   early_leave_grace_minutes (5)     — ignore if early ≤ this
+      //   early_leave_multiplier (1)        — 1=hour-rate, 0.5=half-day rate, 0=off
+      let earlyLeaveDeduction = 0;
+      let totalEarlyMinutes = 0;
+      const earlyEnabled = R.early_leave_enabled !== 0 && !emp.early_leave_exempt;
+      if (earlyEnabled && !isRemote) {
+        const earlyGrace = Number(R.early_leave_grace_minutes ?? 5);
+        const earlyMult = Number(R.early_leave_multiplier ?? 1);
+        const shiftEndStr = shiftConfig?.official_end || emp.work_end || '18:00';
+        const [endH, endM] = String(shiftEndStr).split(':').map(Number);
+        const endTotalMin = (endH || 0) * 60 + (endM || 0);
+        for (const a of empAttendance) {
+          if (!a.check_out || a.status === 'absent' || a.status === 'leave') continue;
+          const [oh, om] = String(a.check_out).split(':').map(Number);
+          if (isNaN(oh)) continue;
+          const outMin = oh * 60 + (om || 0);
+          const earlyBy = endTotalMin - outMin;
+          if (earlyBy > earlyGrace) totalEarlyMinutes += earlyBy;
+        }
+        earlyLeaveDeduction = Math.round(totalEarlyMinutes * minuteRate * earlyMult);
+      }
+
       // ═══ TOTALS ═══
       const gross = baseSalary + allowances + overtimeBonus + otherAdditions;
-      const rawDeductions = tax + socialInsurance + lateDeduction + absentDeduction + halfDayDeduction + loanDeduction + otherDeductions;
+      const rawDeductions = tax + socialInsurance + lateDeduction + absentDeduction + halfDayDeduction + loanDeduction + otherDeductions + earlyLeaveDeduction;
 
       // Max deduction cap (default 70%)
       const maxDeductionPercent = (R.max_deduction_percent || 70) / 100;
@@ -261,9 +291,12 @@ export default function PayrollPage() {
         loanDeduction,
         otherAdditions,
         otherDeductions,
+        adjustmentIds,
         totalDeductions,
         netSalary,
         halfDayDeduction,
+        earlyLeaveDeduction,
+        totalEarlyMinutes,
         effectiveLateMinutes,
         graceMinutes,
         hasAttendance: empAttendance.length > 0,
@@ -308,6 +341,7 @@ export default function PayrollPage() {
       total_gross: activeEmployees.reduce((sum, e) => sum + e.baseSalary + e.allowances + e.overtimeBonus + e.otherAdditions, 0),
       total_deductions: activeEmployees.reduce((sum, e) => sum + e.totalDeductions, 0),
       total_net: activeEmployees.reduce((sum, e) => sum + e.netSalary, 0),
+      created_by: profile?.id || null,
     };
 
     const items = activeEmployees.map(e => ({
@@ -323,7 +357,10 @@ export default function PayrollPage() {
       overtime_bonus: e.overtimeBonus,
       loan_deduction: e.loanDeduction,
       other_additions: e.otherAdditions,
-      other_deductions: e.otherDeductions,
+      // Roll the auto early-leave deduction into other_deductions so it
+      // shows up in existing payroll_items columns without a schema change.
+      other_deductions: (e.otherDeductions || 0) + (e.earlyLeaveDeduction || 0),
+      adjustment_ids: e.adjustmentIds || [],
       total_deductions: e.totalDeductions,
       net_salary: e.netSalary,
       present_days: e.stats.presentDays,
@@ -341,13 +378,14 @@ export default function PayrollPage() {
           : `Payroll for ${MONTHS_AR[month - 1]} processed successfully - ${activeEmployees.length} employees`,
         'success'
       );
-    } catch {
-      toast.success(
-        lang === 'ar' ? 'فشل حفظ المسير' : 'Failed to save payroll run',
-        'error'
-      );
+    } catch (err) {
+      const lockedMsg = err?.code === 'PAYROLL_LOCKED'
+        ? (lang === 'ar' ? `مسير ${MONTHS_AR[month - 1]} مقفل. افتحه أولاً للتعديل.` : `${MONTHS_AR[month - 1]} payroll is locked. Unlock it first to make corrections.`)
+        : (lang === 'ar' ? 'فشل حفظ المسير' : 'Failed to save payroll run');
+      toast.error(lockedMsg);
+      if (import.meta.env.DEV) console.error('Payroll save failed:', err);
     }
-  }, [payrollData, month, year, lang, isRTL]);
+  }, [payrollData, month, year, lang, isRTL, profile?.id]);
 
   if (loading) return (
     <div className="px-4 py-4 md:px-7 md:py-6">
@@ -478,9 +516,9 @@ export default function PayrollPage() {
         />
       )}
 
-      {/* Payroll Detail Modal */}
+      {/* Payroll Detail Modal — new unified breakdown view */}
       {detailEmp && (
-        <PayrollDetailModal
+        <PayrollBreakdownModal
           emp={detailEmp}
           config={config}
           onClose={() => setDetailEmp(null)}
@@ -488,7 +526,6 @@ export default function PayrollPage() {
           isRTL={isRTL}
           month={month}
           year={year}
-          MONTHS_AR={MONTHS_AR}
         />
       )}
     </div>

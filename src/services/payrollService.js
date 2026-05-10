@@ -4,6 +4,33 @@ import { P } from '../config/roles';
 
 // ── Payroll Runs ─────────────────────────────────────────────
 
+export async function lockPayrollRun(runId, userId) {
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to lock payroll');
+  const { data, error } = await supabase
+    .from('payroll_runs')
+    .update({ locked_at: new Date().toISOString(), locked_by: userId || null })
+    .eq('id', runId)
+    .is('locked_at', null)        // never re-lock (preserves the original locker)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function unlockPayrollRun(runId) {
+  // Unlock requires admin only — corrections to a finalized run should be rare
+  // and explicit. The frontend gates this further with role checks.
+  requirePerm(P.PAYROLL_MANAGE, 'Not allowed to unlock payroll');
+  const { data, error } = await supabase
+    .from('payroll_runs')
+    .update({ locked_at: null, locked_by: null })
+    .eq('id', runId)
+    .select('*')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export async function fetchPayrollRuns() {
   const { data, error } = await supabase
     .from('payroll_runs')
@@ -15,12 +42,14 @@ export async function fetchPayrollRuns() {
 }
 
 export async function fetchPayrollRun(month, year) {
+  // maybeSingle() returns null gracefully when no row matches (vs .single()
+  // which 406s and floods the console).
   const { data, error } = await supabase
     .from('payroll_runs')
     .select('*')
     .eq('month', month)
     .eq('year', year)
-    .single();
+    .maybeSingle();
   if (error) return null;
   return data;
 }
@@ -40,6 +69,16 @@ export async function savePayrollRun(runData, items) {
   // money impact. Service-layer guard catches devtools-only calls before
   // they reach RLS, with a clear error.
   requirePerm(P.PAYROLL_MANAGE, 'Not allowed to save payroll runs');
+
+  // Block save if this month is already locked. The DB trigger also enforces
+  // this, but checking here gives a clearer error message.
+  const existing = await fetchPayrollRun(runData.month, runData.year);
+  if (existing?.locked_at) {
+    const err = new Error(`Payroll for ${runData.month}/${runData.year} is locked. Unlock it first to make corrections.`);
+    err.code = 'PAYROLL_LOCKED';
+    throw err;
+  }
+
   // Upsert the run
   const { data: run, error: runErr } = await supabase
     .from('payroll_runs')
@@ -54,6 +93,7 @@ export async function savePayrollRun(runData, items) {
       status: 'completed',
       notes: runData.notes || null,
       created_by: runData.created_by || null,
+      last_modified_by: runData.created_by || null,
       created_at: new Date().toISOString(),
     }, { onConflict: 'month,year' })
     .select('*')
@@ -86,6 +126,9 @@ export async function savePayrollRun(runData, items) {
     late_minutes: item.late_minutes || 0,
     overtime_minutes: item.overtime_minutes || 0,
     absent_from_leave: item.absent_from_leave || 0,
+    // Track which adjustments contributed so a deleted bonus can still be
+    // traced back from the payslip during disputes.
+    adjustment_ids: Array.isArray(item.adjustment_ids) ? item.adjustment_ids : [],
     notes: item.notes || null,
     created_at: new Date().toISOString(),
   }));
@@ -124,7 +167,8 @@ export async function syncLoanBalances(employeeIds) {
   const { data: loans } = await supabase
     .from('employee_loans')
     .select('id, employee_id, amount, monthly_deduction, start_date, created_at, status')
-    .in('employee_id', ids);
+    .in('employee_id', ids)
+    .is('deleted_at', null);
 
   if (!loans?.length) return;
 
@@ -179,9 +223,10 @@ export async function syncLoanBalances(employeeIds) {
 
 // ── Loans ────────────────────────────────────────────────────
 
-export async function fetchLoans(employeeId) {
+export async function fetchLoans(employeeId, { includeDeleted = false } = {}) {
   let query = supabase.from('employee_loans').select('*').order('created_at', { ascending: false });
   if (employeeId) query = query.eq('employee_id', employeeId);
+  if (!includeDeleted) query = query.is('deleted_at', null);
   const { data, error } = await query;
   if (error) throw error;
   return data || [];
@@ -192,6 +237,7 @@ export async function fetchActiveLoans() {
     .from('employee_loans')
     .select('*')
     .eq('status', 'active')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data || [];
@@ -220,9 +266,24 @@ export async function updateLoan(id, updates) {
   return data;
 }
 
-export async function deleteLoan(id) {
+export async function deleteLoan(id, reason) {
+  // Soft-delete — preserves the loan record so balance disputes can be
+  // resolved. To permanently purge, run a SQL DELETE manually.
   requirePerm(P.PAYROLL_MANAGE, 'Not allowed to delete loans');
-  const { error } = await supabase.from('employee_loans').delete().eq('id', id);
+  let deletedBy = null;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    deletedBy = user?.id || null;
+  } catch { /* mock — leave null */ }
+  const { error } = await supabase
+    .from('employee_loans')
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: deletedBy,
+      deletion_reason: reason || null,
+      status: 'cancelled',
+    })
+    .eq('id', id);
   if (error) throw error;
 }
 

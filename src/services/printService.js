@@ -389,3 +389,127 @@ export function generateContactCardHTML(contact, companyInfo, lang) {
   `;
   return wrap(content, lang);
 }
+
+// ── Payslip print template ─────────────────────────────────────────
+// `item` is a row from payroll_items. `employee` and `runMeta` (month/year)
+// are the surrounding context. Generates a full A4-ready HTML payslip.
+export function generatePayslipHTML(item, employee, runMeta, companyInfo, lang) {
+  const ci = companyInfo || getCompanyInfo();
+  const isAr = lang === 'ar';
+  const name = (isAr ? employee?.full_name_ar : employee?.full_name_en) || employee?.full_name_ar || '—';
+  const empId = employee?.employee_id || '—';
+  const dept = employee?.department || '—';
+  const position = employee?.position || employee?.job_title_ar || '—';
+
+  const monthName = runMeta?.month && runMeta?.year
+    ? new Date(runMeta.year, runMeta.month - 1).toLocaleString(isAr ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })
+    : '—';
+
+  const earnings = [
+    { label_ar: 'الراتب الأساسي', label_en: 'Base Salary', amount: Number(item.base_salary) || 0 },
+    { label_ar: 'البدلات', label_en: 'Allowances', amount: Number(item.allowances) || 0 },
+    { label_ar: 'بونص الأوفرتايم', label_en: 'Overtime Bonus', amount: Number(item.overtime_bonus) || 0 },
+    { label_ar: 'إضافات أخرى', label_en: 'Other Additions', amount: Number(item.other_additions) || 0 },
+  ].filter(r => r.amount > 0);
+
+  const deductions = [
+    { label_ar: 'تأمين اجتماعي', label_en: 'Social Insurance', amount: Number(item.social_insurance) || 0 },
+    { label_ar: 'ضريبة الدخل', label_en: 'Income Tax', amount: Number(item.tax) || 0 },
+    { label_ar: 'خصم تأخير', label_en: 'Late Deduction', amount: Number(item.late_deduction) || 0 },
+    { label_ar: 'خصم غياب', label_en: 'Absence Deduction', amount: Number(item.absent_deduction) || 0 },
+    { label_ar: 'قسط قرض', label_en: 'Loan Installment', amount: Number(item.loan_deduction) || 0 },
+    { label_ar: 'خصومات أخرى', label_en: 'Other Deductions', amount: Number(item.other_deductions) || 0 },
+  ].filter(r => r.amount > 0);
+
+  const totalEarnings = earnings.reduce((s, r) => s + r.amount, 0);
+  const totalDeductions = Number(item.total_deductions) || deductions.reduce((s, r) => s + r.amount, 0);
+  const netSalary = Number(item.net_salary) || (totalEarnings - totalDeductions);
+
+  const row = (label, amount, isDeduction = false) => `
+    <div class="detail-row">
+      <span class="detail-label">${label}</span>
+      <span class="detail-value" style="color:${isDeduction ? '#EF4444' : '#1e293b'}">
+        ${isDeduction ? '-' : ''}${fmtNum(amount)} ${isAr ? 'ج.م' : 'EGP'}
+      </span>
+    </div>`;
+
+  const content = `
+    ${buildHeader(ci, lang)}
+    <div class="doc-title">${isAr ? `كشف راتب — ${monthName}` : `Payslip — ${monthName}`}</div>
+
+    <div class="info-grid">
+      <div class="info-box">
+        <div class="info-label">${isAr ? 'الموظف' : 'Employee'}</div>
+        <div class="info-value">${escapeHtml(name)}</div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">${isAr ? 'كود الموظف' : 'Employee ID'}</div>
+        <div class="info-value">${escapeHtml(empId)}</div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">${isAr ? 'القسم' : 'Department'}</div>
+        <div class="info-value">${escapeHtml(dept)}</div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">${isAr ? 'المنصب' : 'Position'}</div>
+        <div class="info-value">${escapeHtml(position)}</div>
+      </div>
+    </div>
+
+    <div class="info-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="info-box">
+        <div class="info-label">${isAr ? 'المكتسبات' : 'Earnings'}</div>
+        <div class="contact-details ${isAr ? 'rtl-details' : ''}" style="margin-top:6px">
+          ${earnings.length > 0 ? earnings.map(r => row(isAr ? r.label_ar : r.label_en, r.amount)).join('') : `<div class="detail-row"><span style="color:#94a3b8">${isAr ? 'لا يوجد' : 'None'}</span></div>`}
+          <div class="detail-row" style="border-top:2px solid #4A7AAB;font-weight:700">
+            <span class="detail-label">${isAr ? 'إجمالي المكتسبات' : 'Total Earnings'}</span>
+            <span class="detail-value">${fmtNum(totalEarnings)} ${isAr ? 'ج.م' : 'EGP'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="info-box">
+        <div class="info-label">${isAr ? 'الخصومات' : 'Deductions'}</div>
+        <div class="contact-details ${isAr ? 'rtl-details' : ''}" style="margin-top:6px">
+          ${deductions.length > 0 ? deductions.map(r => row(isAr ? r.label_ar : r.label_en, r.amount, true)).join('') : `<div class="detail-row"><span style="color:#94a3b8">${isAr ? 'لا يوجد' : 'None'}</span></div>`}
+          <div class="detail-row" style="border-top:2px solid #EF4444;font-weight:700">
+            <span class="detail-label">${isAr ? 'إجمالي الخصومات' : 'Total Deductions'}</span>
+            <span class="detail-value" style="color:#EF4444">-${fmtNum(totalDeductions)} ${isAr ? 'ج.م' : 'EGP'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="totals-section">
+      <div class="totals-box">
+        <div class="total-row grand">
+          <span>${isAr ? 'صافي الراتب' : 'Net Salary'}</span>
+          <span>${fmtNum(netSalary)} ${isAr ? 'ج.م' : 'EGP'}</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;padding:12px;background:#f8fafc;border-radius:8px;font-size:11px;color:#64748b">
+      <strong>${isAr ? 'تفاصيل الحضور:' : 'Attendance:'}</strong>
+      ${isAr ? 'حضور' : 'Present'} ${item.present_days || 0} ·
+      ${isAr ? 'غياب' : 'Absent'} ${item.absent_days || 0} ·
+      ${isAr ? 'دقائق تأخير' : 'Late mins'} ${item.late_minutes || 0} ·
+      ${isAr ? 'دقائق أوفرتايم' : 'OT mins'} ${item.overtime_minutes || 0}
+    </div>
+
+    ${buildFooter(ci, lang)}
+  `;
+  return wrap(content, lang);
+}
+
+// Helper: open the printable HTML in a new tab and trigger print dialog
+export function printPayslip(item, employee, runMeta, lang) {
+  const html = generatePayslipHTML(item, employee, runMeta, undefined, lang);
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  // Auto-trigger the print dialog once the doc renders
+  setTimeout(() => { try { w.print(); } catch { /* user can press Ctrl+P */ } }, 500);
+}

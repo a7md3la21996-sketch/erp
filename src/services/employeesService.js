@@ -85,15 +85,25 @@ export async function updateEmployee(id, updates) {
       .single();
     if (error) throw error;
 
-    // Track salary change in salary_history
+    // Track salary change in salary_history with full audit context
     const oldSalary = Number(old?.salary) || 0;
     const newSalary = Number(updates.salary) || 0;
     if (newSalary && newSalary !== oldSalary) {
+      // Resolve current user for audit trail (works with both real auth + mock)
+      let changedBy = null;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        changedBy = user?.id || null;
+      } catch { /* mock auth — leave null */ }
+
       await supabase.from('salary_history').insert({
         employee_id: id,
         salary: newSalary,
+        previous_salary: oldSalary || null,
         effective_date: new Date().toISOString().slice(0, 10),
         notes: oldSalary ? `Changed from ${oldSalary} to ${newSalary}` : 'Initial salary',
+        change_reason: updates._salary_change_reason || null,
+        changed_by: changedBy,
       });
     }
 

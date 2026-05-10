@@ -535,6 +535,7 @@ export default function EmployeesPage() {
         departments={departments}
         isRTL={isRTL}
         lang={lang}
+        canViewSalary={canViewSalary}
         onClose={() => { setShowCreateModal(false); setEditTarget(null); }}
         onSave={async (data) => {
           if (editTarget) {
@@ -554,6 +555,7 @@ export default function EmployeesPage() {
         departments={departments}
         isRTL={isRTL}
         lang={lang}
+        canViewSalary={canViewSalary}
         onClose={() => setShowBulkEdit(false)}
         onSave={async (fields) => {
           for (const id of selectedIds) {
@@ -579,7 +581,7 @@ export default function EmployeesPage() {
   );
 }
 
-function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, onSave }) {
+function EmployeeFormModal({ open, employee, departments, isRTL, lang, canViewSalary, onClose, onSave }) {
   const toast = useToast();
   const [form, setForm] = useState({});
   const [saving, setSaving] = useState(false);
@@ -690,40 +692,44 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
           </div>
         </div>
 
-        {/* ── Section 2: Salary & Deductions ── */}
-        <h3 className={sectionCls}>{lang === 'ar' ? 'المرتب والخصومات' : 'Salary & Deductions'}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div>
-            <label className={labelCls}>{lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary'}</label>
-            <input type="number" value={form.salary ?? ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>{lang === 'ar' ? 'نسبة البدلات %' : 'Allowance Rate %'}</label>
-            <input type="number" value={form.allowance_rate ?? ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>{lang === 'ar' ? 'أو بدلات مبلغ ثابت' : 'Or Fixed Allowance'}</label>
-            <input type="number" value={form.allowance_fixed ?? ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>{lang === 'ar' ? 'نسبة الضرايب %' : 'Tax Rate %'}</label>
-            <input type="number" value={form.tax_rate ?? ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
-          </div>
-          <div>
-            <label className={labelCls}>{lang === 'ar' ? 'نسبة التأمينات %' : 'Insurance Rate %'}</label>
-            <input type="number" value={form.insurance_rate ?? ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
-          </div>
-          <div className="flex items-center gap-6 sm:col-span-2 pt-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={!!form.tax_exempt} onChange={e => set('tax_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
-              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'إعفاء من الضرايب' : 'Tax Exempt'}</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={!!form.insurance_exempt} onChange={e => set('insurance_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
-              <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'إعفاء من التأمينات' : 'Insurance Exempt'}</span>
-            </label>
-          </div>
-        </div>
+        {/* ── Section 2: Salary & Deductions (gated to admin/finance/hr) ── */}
+        {canViewSalary && (
+          <>
+            <h3 className={sectionCls}>{lang === 'ar' ? 'المرتب والخصومات' : 'Salary & Deductions'}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className={labelCls}>{lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary'}</label>
+                <input type="number" value={form.salary ?? ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{lang === 'ar' ? 'نسبة البدلات %' : 'Allowance Rate %'}</label>
+                <input type="number" value={form.allowance_rate ?? ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{lang === 'ar' ? 'أو بدلات مبلغ ثابت' : 'Or Fixed Allowance'}</label>
+                <input type="number" value={form.allowance_fixed ?? ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{lang === 'ar' ? 'نسبة الضرايب %' : 'Tax Rate %'}</label>
+                <input type="number" value={form.tax_rate ?? ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>{lang === 'ar' ? 'نسبة التأمينات %' : 'Insurance Rate %'}</label>
+                <input type="number" value={form.insurance_rate ?? ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
+              </div>
+              <div className="flex items-center gap-6 sm:col-span-2 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!form.tax_exempt} onChange={e => set('tax_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+                  <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'إعفاء من الضرايب' : 'Tax Exempt'}</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!form.insurance_exempt} onChange={e => set('insurance_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+                  <span className="text-xs text-content dark:text-content-dark">{lang === 'ar' ? 'إعفاء من التأمينات' : 'Insurance Exempt'}</span>
+                </label>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ── Section 3: Work Schedule ── */}
         <h3 className={sectionCls}>{lang === 'ar' ? 'الدوام' : 'Work Schedule'}</h3>
@@ -821,7 +827,7 @@ function EmployeeFormModal({ open, employee, departments, isRTL, lang, onClose, 
 }
 
 /* ─── Bulk Edit Modal ─── */
-function BulkEditModal({ open, selectedIds, departments, isRTL, lang, onClose, onSave }) {
+function BulkEditModal({ open, selectedIds, departments, isRTL, lang, canViewSalary, onClose, onSave }) {
   const toast = useToast();
   const [form, setForm] = useState({});
   const [enabled, setEnabled] = useState({});
@@ -904,45 +910,49 @@ function BulkEditModal({ open, selectedIds, departments, isRTL, lang, onClose, o
           </p>
         </div>
 
-        {/* ── Salary & Deductions ── */}
-        <h3 className={sectionCls}>{lang === 'ar' ? 'المرتب والخصومات' : 'Salary & Deductions'}</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {fieldRow('salary', lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary',
-            <input type="number" value={form.salary ?? ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
-          )}
-          {fieldRow('allowance_rate', lang === 'ar' ? 'نسبة البدلات %' : 'Allowance Rate %',
-            <input type="number" value={form.allowance_rate ?? ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
-          )}
-          {fieldRow('allowance_fixed', lang === 'ar' ? 'بدلات مبلغ ثابت' : 'Fixed Allowance',
-            <input type="number" value={form.allowance_fixed ?? ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
-          )}
-          {fieldRow('tax_rate', lang === 'ar' ? 'نسبة الضرايب %' : 'Tax Rate %',
-            <input type="number" value={form.tax_rate ?? ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
-          )}
-          {fieldRow('insurance_rate', lang === 'ar' ? 'نسبة التأمينات %' : 'Insurance Rate %',
-            <input type="number" value={form.insurance_rate ?? ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
-          )}
-          <div className="flex items-center gap-6 sm:col-span-2 pt-1">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={!!enabled.tax_exempt} onChange={() => toggle('tax_exempt')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
-              <span className={`text-xs ${!enabled.tax_exempt ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
-                {lang === 'ar' ? 'إعفاء من الضرايب' : 'Tax Exempt'}
-              </span>
-              {enabled.tax_exempt && (
-                <input type="checkbox" checked={!!form.tax_exempt} onChange={e => set('tax_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+        {/* ── Salary & Deductions (gated to admin/finance/hr) ── */}
+        {canViewSalary && (
+          <>
+            <h3 className={sectionCls}>{lang === 'ar' ? 'المرتب والخصومات' : 'Salary & Deductions'}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              {fieldRow('salary', lang === 'ar' ? 'الراتب الأساسي' : 'Base Salary',
+                <input type="number" value={form.salary ?? ''} onChange={e => set('salary', e.target.value)} className={inputCls} />
               )}
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={!!enabled.insurance_exempt} onChange={() => toggle('insurance_exempt')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
-              <span className={`text-xs ${!enabled.insurance_exempt ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
-                {lang === 'ar' ? 'إعفاء من التأمينات' : 'Insurance Exempt'}
-              </span>
-              {enabled.insurance_exempt && (
-                <input type="checkbox" checked={!!form.insurance_exempt} onChange={e => set('insurance_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+              {fieldRow('allowance_rate', lang === 'ar' ? 'نسبة البدلات %' : 'Allowance Rate %',
+                <input type="number" value={form.allowance_rate ?? ''} onChange={e => set('allowance_rate', e.target.value)} placeholder={lang === 'ar' ? 'اتركه فارغ للقيمة الافتراضية' : 'Leave empty for default'} className={inputCls} />
               )}
-            </label>
-          </div>
-        </div>
+              {fieldRow('allowance_fixed', lang === 'ar' ? 'بدلات مبلغ ثابت' : 'Fixed Allowance',
+                <input type="number" value={form.allowance_fixed ?? ''} onChange={e => set('allowance_fixed', e.target.value)} className={inputCls} />
+              )}
+              {fieldRow('tax_rate', lang === 'ar' ? 'نسبة الضرايب %' : 'Tax Rate %',
+                <input type="number" value={form.tax_rate ?? ''} onChange={e => set('tax_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 14%' : 'Default 14%'} className={inputCls} />
+              )}
+              {fieldRow('insurance_rate', lang === 'ar' ? 'نسبة التأمينات %' : 'Insurance Rate %',
+                <input type="number" value={form.insurance_rate ?? ''} onChange={e => set('insurance_rate', e.target.value)} placeholder={lang === 'ar' ? 'افتراضي 11%' : 'Default 11%'} className={inputCls} />
+              )}
+              <div className="flex items-center gap-6 sm:col-span-2 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!enabled.tax_exempt} onChange={() => toggle('tax_exempt')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
+                  <span className={`text-xs ${!enabled.tax_exempt ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
+                    {lang === 'ar' ? 'إعفاء من الضرايب' : 'Tax Exempt'}
+                  </span>
+                  {enabled.tax_exempt && (
+                    <input type="checkbox" checked={!!form.tax_exempt} onChange={e => set('tax_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+                  )}
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!enabled.insurance_exempt} onChange={() => toggle('insurance_exempt')} className="w-3.5 h-3.5 rounded border-edge accent-brand-500" />
+                  <span className={`text-xs ${!enabled.insurance_exempt ? 'text-content-muted dark:text-content-muted-dark' : 'text-content dark:text-content-dark'}`}>
+                    {lang === 'ar' ? 'إعفاء من التأمينات' : 'Insurance Exempt'}
+                  </span>
+                  {enabled.insurance_exempt && (
+                    <input type="checkbox" checked={!!form.insurance_exempt} onChange={e => set('insurance_exempt', e.target.checked)} className="w-4 h-4 rounded border-edge accent-brand-500" />
+                  )}
+                </label>
+              </div>
+            </div>
+          </>
+        )}
 
         {/* ── Work Schedule ── */}
         <h3 className={sectionCls}>{lang === 'ar' ? 'الدوام' : 'Work Schedule'}</h3>

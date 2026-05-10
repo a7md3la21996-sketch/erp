@@ -11,6 +11,9 @@ import {
 import { Card, KpiCard, PageSkeleton } from '../../components/ui';
 import EmployeeCompensationTab from './EmployeeCompensationTab';
 import EmployeeTimeTab from './EmployeeTimeTab';
+import EmployeeDocumentsTab from './EmployeeDocumentsTab';
+import EmployeePerformanceTab from './EmployeePerformanceTab';
+import EmployeeDisciplinaryTab from './EmployeeDisciplinaryTab';
 
 /* ─────────────────────────────────────────────────────────────────────────
    Person-centric employee detail page. The hub for everything about one
@@ -135,45 +138,13 @@ export default function EmployeeDetailPage() {
         <EmployeeTimeTab emp={emp} isRTL={isRTL} lang={lang} />
       )}
       {activeTab === 'documents' && (
-        <ComingSoonTab
-          icon={FileText}
-          title_ar="المستندات"
-          title_en="Documents"
-          desc_ar="عقود الموظف، الهوية، الشهادات، وأي مستندات مرفوعة."
-          desc_en="The employee's contracts, ID, certificates, and uploaded documents."
-          links={[
-            { to: '/hr/documents', label_ar: 'صفحة المستندات', label_en: 'Documents page' },
-            { to: '/hr/contracts', label_ar: 'العقود', label_en: 'Contracts' },
-          ]}
-          isRTL={isRTL} lang={lang}
-        />
+        <EmployeeDocumentsTab emp={emp} isRTL={isRTL} lang={lang} />
       )}
       {activeTab === 'performance' && (
-        <ComingSoonTab
-          icon={Award}
-          title_ar="الأداء"
-          title_en="Performance"
-          desc_ar="تقييمات الأداء، الـ KPIs الشخصية، الأهداف، والكفاءات."
-          desc_en="Performance reviews, personal KPIs, goals, and competencies."
-          links={[
-            { to: '/hr/performance', label_ar: 'صفحة الأداء', label_en: 'Performance page' },
-            { to: '/hr/goals', label_ar: 'الأهداف', label_en: 'Goals' },
-          ]}
-          isRTL={isRTL} lang={lang}
-        />
+        <EmployeePerformanceTab emp={emp} isRTL={isRTL} lang={lang} />
       )}
       {activeTab === 'disciplinary' && canViewDisciplinary && (
-        <ComingSoonTab
-          icon={Shield}
-          title_ar="الشؤون التأديبية"
-          title_en="Disciplinary"
-          desc_ar="حالات تأديبية مسجلة على الموظف، ولا تظهر إلا للـ HR والإدارة."
-          desc_en="Disciplinary cases on file for this employee — visible only to HR and admin."
-          links={[
-            { to: '/hr/disciplinary', label_ar: 'صفحة الشؤون التأديبية', label_en: 'Disciplinary page' },
-          ]}
-          isRTL={isRTL} lang={lang}
-        />
+        <EmployeeDisciplinaryTab emp={emp} isRTL={isRTL} lang={lang} />
       )}
     </div>
   );

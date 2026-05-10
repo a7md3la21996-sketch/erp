@@ -83,9 +83,14 @@ export function ToastProvider({ children }) {
   const warning  = useCallback((message, title) => show({ type: 'warning', message, title }), [show]);
   const info     = useCallback((message, title) => show({ type: 'info',    message, title }), [show]);
   const loading  = useCallback((message, title) => show({ type: 'loading', message, title }), [show]);
+  // Back-compat alias used across many HR pages: showToast(msg, 'error') style
+  const showToast = useCallback(
+    (message, type = 'info', title) => show({ type, message, title }),
+    [show]
+  );
 
   return (
-    <ToastContext.Provider value={{ show, dismiss, success, error, warning, info, loading }}>
+    <ToastContext.Provider value={{ show, dismiss, success, error, warning, info, loading, showToast }}>
       {children}
       <div className="fixed bottom-6 start-6 z-[9999] flex flex-col-reverse gap-2.5 pointer-events-none">
         {toasts.map(t => (
