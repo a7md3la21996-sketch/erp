@@ -37,6 +37,10 @@ class ErrorBoundary extends Component {
       || /Importing a module script failed/i.test(msg)
       || /Failed to fetch dynamically imported module/i.test(msg)
       || /Loading chunk \d+ failed/i.test(msg)
+      // Safari surfaces the same condition with this message — the server
+      // returns the SPA index.html (text/html) when the chunk is gone.
+      || /not a valid JavaScript MIME type/i.test(msg)
+      || /Unable to preload/i.test(msg)
     );
     if (isChunkLoadError) {
       try {
