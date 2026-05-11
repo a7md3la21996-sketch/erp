@@ -94,6 +94,43 @@ export function MergePreviewModal({ mergePreview, setMergePreview, setMergeTarge
               toast.error(isRTL ? `فشل تحديث الليد المدموج: ${err.message || ''}` : `Merge update failed: ${err.message || ''}`);
               return;
             }
+            // Reparent every FK on c2 → c1 BEFORE soft-deleting c2. Without
+            // this, the activities / tasks / opportunities / deals attached
+            // to c2 keep contact_id = c2.id, and when c2 is soft-deleted any
+            // timeline filter (is_deleted=false on the contact join) drops
+            // them — the merged record loses its full history. Bug surfaced
+            // when admin merged C-77LL7S4U-J8R5 and reported lost actions.
+            //
+            // Two FK patterns in the schema:
+            //   - contact_id column (activities, tasks, opportunities, deals)
+            //   - polymorphic entity_id + entity_type (comments, documents)
+            // Both get reparented in parallel via allSettled so a single
+            // table miss doesn't abort the merge.
+            try {
+              const { default: supabase } = await import('../../../lib/supabase');
+              const contactIdTables = ['activities', 'tasks', 'opportunities', 'deals'];
+              const polymorphicTables = ['comments', 'documents'];
+              const results = await Promise.allSettled([
+                ...contactIdTables.map(t =>
+                  supabase.from(t).update({ contact_id: c1.id }).eq('contact_id', c2.id)
+                ),
+                ...polymorphicTables.map(t =>
+                  supabase.from(t).update({ entity_id: c1.id })
+                    .eq('entity_id', c2.id).eq('entity_type', 'contact')
+                ),
+              ]);
+              const allTables = [...contactIdTables, ...polymorphicTables];
+              const errs = results
+                .map((r, i) => r.status === 'rejected' || r.value?.error
+                  ? `${allTables[i]}: ${r.reason?.message || r.value?.error?.message || 'unknown'}`
+                  : null)
+                .filter(Boolean);
+              if (errs.length > 0 && import.meta.env.DEV) {
+                console.warn('[merge] reparent partial failures:', errs);
+              }
+            } catch (e) {
+              if (import.meta.env.DEV) console.warn('[merge] reparent error:', e);
+            }
             try {
               await deleteContact(c2.id);
             } catch (err) {
