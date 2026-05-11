@@ -12,7 +12,7 @@ import { useAuth } from '../../../contexts/AuthContext';
  * Unlike Distribute (which clones), this MOVES the same record so the
  * current owner loses it from their pipeline.
  */
-export default function HandOffLeadModal({ contact, onClose, onSuccess }) {
+export default function HandOffLeadModal({ contact, onClose, onSuccess, eligibleUserIds = null }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -35,10 +35,16 @@ export default function HandOffLeadModal({ contact, onClose, onSuccess }) {
   const currentOwnerId = contact?.assigned_to;
   const currentOwnerName = contact?.assigned_to_name;
 
-  // Eligible: not the current owner, active sales agents only
+  // Eligible: not the current owner, active sales agents only.
+  // When eligibleUserIds is passed (Master Leads opened by a team-scoped
+  // role), additionally restrict to that team's user ids.
   const eligible = useMemo(() => {
-    return agents.filter(a => a.id !== currentOwnerId && a.role === 'sales_agent');
-  }, [agents, currentOwnerId]);
+    return agents.filter(a =>
+      a.id !== currentOwnerId
+      && a.role === 'sales_agent'
+      && (!eligibleUserIds || eligibleUserIds.has(a.id))
+    );
+  }, [agents, currentOwnerId, eligibleUserIds]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return eligible;

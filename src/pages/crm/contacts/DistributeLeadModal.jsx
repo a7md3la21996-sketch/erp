@@ -6,7 +6,7 @@ import { distributeLeadToAgents } from '../../../services/contactsService';
 import { fetchSalesAgents } from '../../../services/opportunitiesService';
 import { useToast } from '../../../contexts/ToastContext';
 
-export default function DistributeLeadModal({ contact, onClose, onSuccess }) {
+export default function DistributeLeadModal({ contact, onClose, onSuccess, eligibleUserIds = null }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -32,8 +32,15 @@ export default function DistributeLeadModal({ contact, onClose, onSuccess }) {
   // you could clone a lead onto a deactivated agent — leads then sat under an
   // account no one can log into.
   const eligible = useMemo(() => {
-    return agents.filter(a => a.id !== currentOwnerId && a.status !== 'inactive');
-  }, [agents, currentOwnerId]);
+    return agents.filter(a =>
+      a.id !== currentOwnerId
+      && a.status !== 'inactive'
+      // When the caller passes a team-scope set (e.g. Master Leads opened
+      // by a sales_manager), narrow the picker to that team so a manager
+      // can't distribute onto agents outside their scope.
+      && (!eligibleUserIds || eligibleUserIds.has(a.id))
+    );
+  }, [agents, currentOwnerId, eligibleUserIds]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return eligible;

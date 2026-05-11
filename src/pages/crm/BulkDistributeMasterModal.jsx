@@ -14,7 +14,7 @@ import { reportError } from '../../utils/errorReporter';
 
 const CONCURRENCY = 4; // be polite to RLS
 
-export default function BulkDistributeMasterModal({ families, onClose, onSuccess }) {
+export default function BulkDistributeMasterModal({ families, onClose, onSuccess, eligibleUserIds = null }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
@@ -34,10 +34,15 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
   }, []);
 
   // Active agents only — distributing onto an inactive account makes the
-  // clone invisible until the account is reactivated.
+  // clone invisible until the account is reactivated. When eligibleUserIds
+  // is passed, additionally narrow to that team scope.
   const eligible = useMemo(
-    () => agents.filter(a => a.status !== 'inactive' && (a.full_name_en || a.full_name_ar)),
-    [agents]
+    () => agents.filter(a =>
+      a.status !== 'inactive'
+      && (a.full_name_en || a.full_name_ar)
+      && (!eligibleUserIds || eligibleUserIds.has(a.id))
+    ),
+    [agents, eligibleUserIds]
   );
 
   const filtered = useMemo(() => {

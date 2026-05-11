@@ -13,6 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X, ExternalLink } from 'lucide-react';
 import { fetchMasterLeads } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
+import { getTeamMemberIds } from '../../utils/teamHelper';
 import DistributeLeadModal from './contacts/DistributeLeadModal';
 import HandOffLeadModal from './contacts/HandOffLeadModal';
 import BulkDistributeMasterModal from './BulkDistributeMasterModal';
@@ -149,10 +150,26 @@ export default function MasterLeadsPage() {
     }
   };
 
-  // Gated by the POOL_SETTINGS permission (admin + operations have it).
-  // Was previously a hardcoded role==='admin' check, which locked Nada
-  // (operations) out of her own distribution-management page.
+  // Gated by the POOL_SETTINGS permission (admin + operations + sales_manager).
   const canView = hasPermission ? hasPermission('pool.settings') : profile?.role === 'admin';
+
+  // Sales managers + team leaders are scoped to their own team's agents.
+  // Admin / operations see everyone. We fetch the team member uuids once
+  // and use them to (a) filter the Owner dropdown, (b) hide non-team copy
+  // owners in the table, (c) constrain the Distribute / Hand-off pickers.
+  const isTeamScoped = profile?.role === 'sales_manager' || profile?.role === 'team_leader';
+  const [teamUserIds, setTeamUserIds] = useState(null); // null = unscoped (admin/ops)
+  useEffect(() => {
+    if (!canView) return;
+    if (!isTeamScoped) { setTeamUserIds(null); return; }
+    getTeamMemberIds(profile?.role, profile?.team_id).then(ids => {
+      setTeamUserIds(new Set(ids || []));
+    }).catch(() => setTeamUserIds(new Set()));
+  }, [canView, isTeamScoped, profile?.role, profile?.team_id]);
+
+  // Destructive delete is admin/operations only — sales_manager can move
+  // leads around but can't permanently remove them.
+  const canDelete = hasPermission ? hasPermission('contacts.delete') : profile?.role === 'admin';
 
   // Debounce search
   useEffect(() => {
@@ -166,20 +183,24 @@ export default function MasterLeadsPage() {
   // it's obvious in the option label.
   useEffect(() => {
     fetchSalesAgents().then(list => {
-      const all = (list || [])
+      let all = (list || [])
         .filter(a => a.id && (a.full_name_en || a.full_name_ar))
         .map(a => ({
           id: a.id,
           name: a.full_name_en || a.full_name_ar,
           inactive: a.status === 'inactive',
         }));
+      // Team-scoped roles only see their own team in the Owner filter
+      if (isTeamScoped && teamUserIds) {
+        all = all.filter(a => teamUserIds.has(a.id));
+      }
       all.sort((a, b) => {
         if (a.inactive !== b.inactive) return a.inactive ? 1 : -1;
         return a.name.localeCompare(b.name);
       });
       setAgents(all);
     }).catch(() => {});
-  }, []);
+  }, [isTeamScoped, teamUserIds]);
 
   // Hold mutable refs for things that change reference on every render
   // (toast comes from a context, isRTL flips on language toggle). Putting
@@ -404,20 +425,32 @@ export default function MasterLeadsPage() {
                       const status = c.status || 'new';
                       const color = STATUS_COLORS[status] || '#6b7280';
                       const cDays = daysSince(c.last_activity_at);
+                      // Team scoping: managers/leaders see masked rows for
+                      // copies owned by people outside their team. The phone
+                      // family is still visible (so they know the lead has
+                      // copies elsewhere), but the owner name + actions
+                      // are hidden.
+                      const isOutsideTeam = isTeamScoped && teamUserIds && c.owner_id && !teamUserIds.has(c.owner_id);
                       return (
-                        <div key={c.id} className="grid grid-cols-[40px_1.6fr_1.2fr_0.9fr_0.9fr_1.2fr_120px] gap-2 px-3 py-2 items-center border-b border-edge/40 dark:border-edge-dark/40 last:border-b-0 text-xs">
+                        <div key={c.id} className={`grid grid-cols-[40px_1.6fr_1.2fr_0.9fr_0.9fr_1.2fr_120px] gap-2 px-3 py-2 items-center border-b border-edge/40 dark:border-edge-dark/40 last:border-b-0 text-xs ${isOutsideTeam ? 'opacity-50' : ''}`}>
                           <div className="text-content-muted dark:text-content-muted-dark font-mono">
                             {i === 0 ? (isRTL ? 'أصلية' : 'orig') : `#${i + 1}`}
                           </div>
                           <div className="min-w-0">
-                            <button
-                              onClick={() => openLead(c.id)}
-                              title={isRTL ? 'افتح هذه النسخة في صفحة الليدز' : 'Open this copy in Leads page'}
-                              className="inline-flex items-center gap-1 text-content dark:text-content-dark font-medium truncate bg-transparent border-none p-0 cursor-pointer hover:text-brand-500 transition-colors"
-                            >
-                              <span className="truncate">{c.owner_name || (isRTL ? 'غير معين' : 'Unassigned')}</span>
-                              <ExternalLink size={10} className="shrink-0 opacity-60" />
-                            </button>
+                            {isOutsideTeam ? (
+                              <span className="inline-flex items-center gap-1 text-content-muted dark:text-content-muted-dark italic">
+                                {isRTL ? 'خارج فريقك' : 'Outside your team'}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => openLead(c.id)}
+                                title={isRTL ? 'افتح هذه النسخة في صفحة الليدز' : 'Open this copy in Leads page'}
+                                className="inline-flex items-center gap-1 text-content dark:text-content-dark font-medium truncate bg-transparent border-none p-0 cursor-pointer hover:text-brand-500 transition-colors"
+                              >
+                                <span className="truncate">{c.owner_name || (isRTL ? 'غير معين' : 'Unassigned')}</span>
+                                <ExternalLink size={10} className="shrink-0 opacity-60" />
+                              </button>
+                            )}
                           </div>
                           <div>
                             <span
@@ -442,40 +475,50 @@ export default function MasterLeadsPage() {
                             {c.created_by_name || '—'}
                           </div>
                           <div className="flex items-center justify-center gap-1 relative">
-                            <button
-                              onClick={() => handleDistribute(c.id)}
-                              title={isRTL ? 'وزع نسخ إضافية' : 'Distribute (clone to more agents)'}
-                              className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-emerald-500/10 hover:border-emerald-500/30 flex items-center justify-center cursor-pointer text-emerald-500"
-                            >
-                              <Share2 size={12} />
-                            </button>
-                            <button
-                              onClick={() => handleHandoff(c.id)}
-                              title={isRTL ? 'انقل لسيلز آخر' : 'Hand off (move to another agent)'}
-                              className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-blue-500/10 hover:border-blue-500/30 flex items-center justify-center cursor-pointer text-blue-500"
-                            >
-                              <ArrowRightLeft size={12} />
-                            </button>
-                            <button
-                              onClick={() => setOpenMenuFor(prev => prev === c.id ? null : c.id)}
-                              title={isRTL ? 'المزيد' : 'More'}
-                              className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-brand-500/10 hover:border-brand-500/30 flex items-center justify-center cursor-pointer text-content-muted dark:text-content-muted-dark"
-                            >
-                              <MoreVertical size={12} />
-                            </button>
-                            {openMenuFor === c.id && (
+                            {isOutsideTeam ? (
+                              <span className="text-[10px] text-content-muted dark:text-content-muted-dark italic">
+                                {isRTL ? '—' : '—'}
+                              </span>
+                            ) : (
                               <>
-                                {/* backdrop closes the menu when clicking outside */}
-                                <div className="fixed inset-0 z-[60]" onClick={() => setOpenMenuFor(null)} />
-                                <div className={`absolute top-full mt-1 ${isRTL ? 'left-0' : 'right-0'} z-[61] min-w-[160px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg shadow-lg overflow-hidden`}>
+                                <button
+                                  onClick={() => handleDistribute(c.id)}
+                                  title={isRTL ? 'وزع نسخ إضافية' : 'Distribute (clone to more agents)'}
+                                  className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-emerald-500/10 hover:border-emerald-500/30 flex items-center justify-center cursor-pointer text-emerald-500"
+                                >
+                                  <Share2 size={12} />
+                                </button>
+                                <button
+                                  onClick={() => handleHandoff(c.id)}
+                                  title={isRTL ? 'انقل لسيلز آخر' : 'Hand off (move to another agent)'}
+                                  className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-blue-500/10 hover:border-blue-500/30 flex items-center justify-center cursor-pointer text-blue-500"
+                                >
+                                  <ArrowRightLeft size={12} />
+                                </button>
+                                {canDelete && (
                                   <button
-                                    onClick={() => { setOpenMenuFor(null); setDeleteConfirm(c); }}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer border-none bg-transparent text-start text-red-500 hover:bg-red-500/10 font-semibold"
+                                    onClick={() => setOpenMenuFor(prev => prev === c.id ? null : c.id)}
+                                    title={isRTL ? 'المزيد' : 'More'}
+                                    className="w-7 h-7 rounded-md border border-edge dark:border-edge-dark bg-transparent hover:bg-brand-500/10 hover:border-brand-500/30 flex items-center justify-center cursor-pointer text-content-muted dark:text-content-muted-dark"
                                   >
-                                    <Trash2 size={12} />
-                                    {isRTL ? 'احذف هذه النسخة' : 'Delete this copy'}
+                                    <MoreVertical size={12} />
                                   </button>
-                                </div>
+                                )}
+                                {canDelete && openMenuFor === c.id && (
+                                  <>
+                                    {/* backdrop closes the menu when clicking outside */}
+                                    <div className="fixed inset-0 z-[60]" onClick={() => setOpenMenuFor(null)} />
+                                    <div className={`absolute top-full mt-1 ${isRTL ? 'left-0' : 'right-0'} z-[61] min-w-[160px] bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-lg shadow-lg overflow-hidden`}>
+                                      <button
+                                        onClick={() => { setOpenMenuFor(null); setDeleteConfirm(c); }}
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs cursor-pointer border-none bg-transparent text-start text-red-500 hover:bg-red-500/10 font-semibold"
+                                      >
+                                        <Trash2 size={12} />
+                                        {isRTL ? 'احذف هذه النسخة' : 'Delete this copy'}
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
                               </>
                             )}
                           </div>
@@ -526,6 +569,7 @@ export default function MasterLeadsPage() {
           contact={distributeContact}
           onClose={() => setDistributeContact(null)}
           onSuccess={() => { setDistributeContact(null); load(); }}
+          eligibleUserIds={isTeamScoped ? teamUserIds : null}
         />
       )}
       {handoffContact && (
@@ -533,6 +577,7 @@ export default function MasterLeadsPage() {
           contact={handoffContact}
           onClose={() => setHandoffContact(null)}
           onSuccess={() => { setHandoffContact(null); load(); }}
+          eligibleUserIds={isTeamScoped ? teamUserIds : null}
         />
       )}
       {bulkDistributeOpen && (
@@ -540,6 +585,7 @@ export default function MasterLeadsPage() {
           families={selectedFamilies}
           onClose={() => setBulkDistributeOpen(false)}
           onSuccess={() => { setBulkDistributeOpen(false); clearSelection(); load(); }}
+          eligibleUserIds={isTeamScoped ? teamUserIds : null}
         />
       )}
 
