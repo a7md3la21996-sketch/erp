@@ -1018,6 +1018,32 @@ export async function createActivity(activityData) {
   for (const [k, v] of Object.entries(activityData)) {
     cleaned[k] = v === '' ? null : v;
   }
+  // Block activities on soft-deleted contacts — caught a real case where
+  // an agent had a stale tab open after a merge and logged a call against
+  // the c2 (deleted) record, orphaning it from the surviving lead's
+  // timeline. The friendlier message here arrives before the (also-deployed)
+  // DB trigger fires its raw RAISE.
+  if (activityData.contact_id) {
+    try {
+      const { data: contact } = await supabase
+        .from('contacts')
+        .select('id, is_deleted')
+        .eq('id', activityData.contact_id)
+        .maybeSingle();
+      if (!contact) {
+        throw new Error('Contact not found — refresh the page and try again');
+      }
+      if (contact.is_deleted) {
+        throw new Error('This contact was merged or deleted. Refresh the page to find the surviving record.');
+      }
+    } catch (e) {
+      // Re-throw any check error; swallowing here would defeat the purpose.
+      if (e?.message?.includes('refresh') || e?.message?.includes('merged')) throw e;
+      // Unknown error in the check — log but don't block, let the DB
+      // trigger be the last line of defense.
+      if (import.meta.env.DEV) console.warn('[createActivity] deleted-check failed:', e);
+    }
+  }
   // Try Supabase FIRST — source of truth
   try {
     const { data, error } = await supabase
