@@ -1018,16 +1018,23 @@ export default function DashboardPage() {
   const mutedColor = isDark ? '#8BA8C8' : '#64748B';
 
   const DashKpiCard = ({ icon: Icon, label, value, sub, trend, trendUp, color = '#4A7AAB', onClick }) => (
-    <Card className={`relative overflow-hidden px-5 py-[18px] ${onClick ? 'cursor-pointer hover:shadow-md transition-shadow duration-200' : ''}`} onClick={onClick}>
-      <div className="absolute top-0 start-0 w-1 h-full rounded-s-xl" style={{ background: 'linear-gradient(180deg,' + color + ',transparent)' }} />
-      <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-        <div className="text-start">
-          <p className="m-0 mb-1.5 text-xs text-content-muted dark:text-content-muted-dark font-medium">{safeChild(label)}</p>
-          <p className="m-0 text-2xl font-bold text-content dark:text-content-dark leading-none">{safeChild(value)}</p>
-          {sub && <p className="m-0 mt-1 text-xs text-content-muted dark:text-content-muted-dark">{safeChild(sub)}</p>}
-          {trend && <div className={`flex items-center gap-1 mt-1.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>{trendUp ? <ArrowUpRight size={12} className="text-brand-500" /> : <ArrowDownRight size={12} className="text-red-500" />}<span className={`text-xs font-semibold ${trendUp ? 'text-brand-500' : 'text-red-500'}`}>{safeChild(trend)}</span></div>}
+    <Card className={`relative overflow-hidden px-5 py-5 ${onClick ? 'cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200' : ''}`} onClick={onClick}>
+      {/* Subtle full-card tint instead of a hard side stripe — reads cleaner
+          and gives the grid a calmer visual rhythm. */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.04]" style={{ background: `radial-gradient(circle at 100% 0%, ${color}, transparent 65%)` }} />
+      <div className={`relative flex justify-between items-start gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className="text-start min-w-0 flex-1">
+          <p className="m-0 mb-2 text-[11px] uppercase tracking-wide text-content-muted dark:text-content-muted-dark font-semibold truncate">{safeChild(label)}</p>
+          <p className="m-0 text-[28px] font-bold text-content dark:text-content-dark leading-none tabular-nums">{safeChild(value)}</p>
+          {sub && <p className="m-0 mt-1 text-[10px] uppercase tracking-wide text-content-muted dark:text-content-muted-dark">{safeChild(sub)}</p>}
+          {trend && (
+            <div className={`flex items-center gap-1 mt-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              {trendUp ? <ArrowUpRight size={12} className="text-emerald-500" /> : <ArrowDownRight size={12} className="text-red-500" />}
+              <span className={`text-[11px] font-semibold ${trendUp ? 'text-emerald-500' : 'text-red-500'}`}>{safeChild(trend)}</span>
+            </div>
+          )}
         </div>
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: color + '18' }}><Icon size={20} color={color} /></div>
+        <div className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0" style={{ background: color + '15', color }}><Icon size={20} /></div>
       </div>
     </Card>
   );
@@ -1502,118 +1509,125 @@ export default function DashboardPage() {
   const noCardWidgets = ['kpi_overview', 'recent_activities', 'hr_overview'];
 
   return (
-    <div className="px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16 overflow-x-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Hero banner */}
-      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-4 py-4 md:px-7 md:py-6 mb-5 flex flex-wrap md:flex-nowrap justify-between items-center gap-4 relative overflow-hidden ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-        <div className={`absolute w-40 h-40 rounded-full bg-white/[0.04] pointer-events-none ${isRTL ? '-left-5 top-[-40px]' : '-right-5 top-[-40px]'}`} />
-        <div className="relative">
-          <p className="m-0 mb-1 text-xl font-bold text-white">{greeting}، {name}</p>
-          <p className="m-0 text-xs text-white/65">{roleLabel} · {dateStr}</p>
-        </div>
-        <div className={`flex gap-3 relative ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-          {[{ l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth }, { l: lang === 'ar' ? 'صفقة مغلقة' : 'Closed', v: filteredCrm.closedDeals }, { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' }].map((s, i) => (
-            <div key={i} className="text-center px-4 py-2 bg-white/10 rounded-xl">
-              <p className="m-0 text-xl font-bold text-white">{safeChild(s.v)}</p>
-              <p className="m-0 text-xs text-white/65">{s.l}</p>
-            </div>
-          ))}
+    <div className="px-4 py-5 md:px-8 md:py-7 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-20 overflow-x-hidden max-w-[1600px] mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Hero banner — slimmer, cleaner. The KPI bubbles duplicate cards
+          below, so they're styled as light chips that complement rather
+          than compete with the main KPI row. */}
+      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-5 py-5 md:px-7 md:py-5 mb-6 relative overflow-hidden`}>
+        <div className={`absolute w-48 h-48 rounded-full bg-white/[0.05] pointer-events-none ${isRTL ? '-left-8 -top-12' : '-right-8 -top-12'}`} />
+        <div className={`absolute w-24 h-24 rounded-full bg-white/[0.04] pointer-events-none ${isRTL ? 'left-32 top-8' : 'right-32 top-8'}`} />
+        <div className={`relative flex flex-wrap md:flex-nowrap justify-between items-center gap-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className="min-w-0">
+            <p className="m-0 mb-1 text-xl md:text-2xl font-bold text-white truncate">{greeting}، {name}</p>
+            <p className="m-0 text-xs text-white/70">{roleLabel} · {dateStr}</p>
+          </div>
+          <div className={`flex gap-2 md:gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+            {[
+              { l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth },
+              { l: lang === 'ar' ? 'مغلقة' : 'Closed', v: filteredCrm.closedDeals },
+              { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' },
+            ].map((s, i) => (
+              <div key={i} className="text-center px-3.5 py-2 bg-white/[0.12] backdrop-blur-sm rounded-xl border border-white/10 min-w-[72px]">
+                <p className="m-0 text-lg md:text-xl font-bold text-white tabular-nums">{safeChild(s.v)}</p>
+                <p className="m-0 text-[10px] uppercase tracking-wide text-white/70">{s.l}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Smart Suggestions Panel */}
       <SuggestionsPanel />
 
-      {/* Dashboard controls: Date range + Customize button */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-        flexDirection: isRTL ? 'row-reverse' : 'row',
-        flexWrap: 'wrap',
-        gap: 12,
-      }}>
-        {sections.showCRM ? (
-          <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-            <Clock size={14} className="text-content-muted dark:text-content-muted-dark" />
-            <div className={`flex gap-1.5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-              {DATE_RANGE_OPTIONS.map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setDateRange(opt.value)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${
-                    dateRange === opt.value
-                      ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
-                      : 'bg-surface-card dark:bg-surface-card-dark text-content-muted dark:text-content-muted-dark border-edge dark:border-edge-dark hover:border-brand-500 hover:text-brand-500'
-                  }`}
-                >
-                  {lang === 'ar' ? opt.label_ar : opt.label_en}
-                </button>
-              ))}
-            </div>
+      {/* Dashboard controls: Date range filter */}
+      {sections.showCRM && (
+        <div className={`flex items-center justify-between gap-3 mb-5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className={`inline-flex items-center gap-1.5 px-1 py-1 rounded-xl bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+            {DATE_RANGE_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setDateRange(opt.value)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  dateRange === opt.value
+                    ? 'bg-brand-500 text-white shadow-sm'
+                    : 'bg-transparent text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark'
+                }`}
+              >
+                {lang === 'ar' ? opt.label_ar : opt.label_en}
+              </button>
+            ))}
           </div>
-        ) : <div />}
+        </div>
+      )}
 
-        {/* Customize button hidden */}
-      </div>
-
-      {/* Q Goals summary */}
+      {/* Q Goals summary — converted from inline styles to Tailwind so it
+          uses the same surface/edge tokens as every other dashboard card.
+          Keeps a single full-width row above the widget grid. */}
       {(() => {
         const currentMonth = new Date().getMonth();
         const cq = currentMonth < 3 ? 'Q1' : currentMonth < 6 ? 'Q2' : currentMonth < 9 ? 'Q3' : 'Q4';
-        const cy = new Date().getFullYear();
         const gs = dashQuarterSummary;
         if (gs.total === 0) return null;
-        const pColor = gs.avgProgress >= 70 ? '#10B981' : gs.avgProgress >= 40 ? '#F59E0B' : '#EF4444';
+        const isOnTrack = gs.avgProgress >= 70;
+        const isAtRisk = gs.avgProgress >= 40 && gs.avgProgress < 70;
+        const pColor = isOnTrack ? '#10B981' : isAtRisk ? '#F59E0B' : '#EF4444';
         return (
-          <div
+          <button
             onClick={() => navigate('/hr/goals')}
-            style={{
-              marginBottom: 16, padding: '14px 20px', borderRadius: 14, cursor: 'pointer',
-              background: isDark ? '#1a2332' : '#ffffff',
-              border: '1px solid ' + (isDark ? '#ffffff12' : '#e2e8f0'),
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              flexDirection: isRTL ? 'row-reverse' : 'row', gap: 16,
-            }}
+            className={`w-full mb-6 px-5 py-4 rounded-2xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark cursor-pointer hover:border-brand-500/40 hover:shadow-sm transition-all flex flex-wrap items-center justify-between gap-4 text-start ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(74,122,171,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Target size={18} color="#4A7AAB" />
+            <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-brand-500/[0.12] text-brand-500 shrink-0">
+                <Target size={18} />
               </div>
-              <div style={{ textAlign: isRTL ? 'right' : 'left' }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
+              <div>
+                <p className="m-0 text-sm font-bold text-content dark:text-content-dark">
                   {lang === 'ar' ? `أهداف ${cq}` : `${cq} Goals`}
                 </p>
-                <p style={{ margin: 0, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' }}>
+                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
                   {safeChild(gs.total)} {lang === 'ar' ? 'هدف' : 'objectives'}
                 </p>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-              <div style={{ width: 120 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, color: isDark ? '#94a3b8' : '#64748b' }}>{lang === 'ar' ? 'التقدم' : 'Progress'}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: pColor }}>{safeChild(gs.avgProgress)}%</span>
+            <div className={`flex items-center gap-4 md:gap-5 flex-wrap ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div className="w-32 md:w-40">
+                <div className="flex justify-between mb-1">
+                  <span className="text-[10px] uppercase tracking-wide text-content-muted dark:text-content-muted-dark">
+                    {lang === 'ar' ? 'التقدم' : 'Progress'}
+                  </span>
+                  <span className="text-xs font-bold tabular-nums" style={{ color: pColor }}>{safeChild(gs.avgProgress)}%</span>
                 </div>
-                <div style={{ width: '100%', height: 6, borderRadius: 3, background: isDark ? 'rgba(74,122,171,0.12)' : '#f1f5f9' }}>
-                  <div style={{ width: `${Math.min(gs.avgProgress, 100)}%`, height: '100%', borderRadius: 3, background: pColor, transition: 'width 0.4s' }} />
+                <div className="w-full h-1.5 rounded-full bg-edge dark:bg-edge-dark overflow-hidden">
+                  <div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${Math.min(gs.avgProgress, 100)}%`, background: pColor }} />
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 10, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#10B981' }}>{safeChild(gs.onTrack)} {lang === 'ar' ? 'على المسار' : 'on track'}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, color: '#F59E0B' }}>{safeChild(gs.atRisk)} {lang === 'ar' ? 'في خطر' : 'at risk'}</span>
-                {gs.behind > 0 && <span style={{ fontSize: 11, fontWeight: 600, color: '#EF4444' }}>{safeChild(gs.behind)} {lang === 'ar' ? 'متأخر' : 'behind'}</span>}
+              <div className={`flex gap-2.5 flex-wrap items-center ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {safeChild(gs.onTrack)} {lang === 'ar' ? 'على المسار' : 'on track'}
+                </span>
+                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-500">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  {safeChild(gs.atRisk)} {lang === 'ar' ? 'في خطر' : 'at risk'}
+                </span>
+                {gs.behind > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                    {safeChild(gs.behind)} {lang === 'ar' ? 'متأخر' : 'behind'}
+                  </span>
+                )}
               </div>
             </div>
-          </div>
+          </button>
         );
       })()}
 
-      {/* Widget grid */}
+      {/* Widget grid — slightly larger gap on desktop so the cards feel
+          less crammed, mobile stays tight to maximize content. */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: isMobileView ? '1fr' : 'repeat(4, 1fr)',
-        gap: isMobileView ? 12 : 16,
+        gridTemplateColumns: isMobileView ? '1fr' : 'repeat(4, minmax(0, 1fr))',
+        gap: isMobileView ? 14 : 20,
       }}>
         {visibleWidgets.map((item) => {
           const meta = getWidgetMeta(item.widgetId);
