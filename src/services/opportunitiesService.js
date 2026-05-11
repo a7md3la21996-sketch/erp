@@ -246,7 +246,11 @@ export async function fetchSalesAgents() {
   try {
     const { data, error } = await supabase
       .from('users')
-      .select('id, full_name_ar, full_name_en, role, team_id')
+      // `status` was missing for months — every caller that tried to filter
+      // by `a.status !== 'inactive'` ended up comparing undefined and let
+      // deactivated users (Sherif Elazaz, Anwar, the May-recovery placeholders)
+      // appear in Distribute / Hand-off / picker UIs.
+      .select('id, full_name_ar, full_name_en, role, team_id, status')
       .in('role', ['sales_agent', 'team_leader', 'sales_manager', 'sales_director', 'operations', 'admin'])
       .order('full_name_ar');
     if (error) throw error;
