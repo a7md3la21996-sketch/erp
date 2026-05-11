@@ -6,7 +6,6 @@
 // Backed by master_leads_list / master_leads_count RPCs.
 
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -55,13 +54,12 @@ export default function MasterLeadsPage() {
   const isRTL = i18n.language === 'ar';
   const { profile, hasPermission } = useAuth();
   const toast = useToast();
-  const navigate = useNavigate();
 
-  // Open the standard contact drawer for a specific copy by deep-linking
-  // to /contacts with the ?highlight= param the page already understands.
-  const openLead = (copyId) => {
-    navigate(`/contacts?highlight=${copyId}`);
-  };
+  // Helper that builds the deep-link URL the Leads page understands
+  // (?highlight=<id> auto-opens that contact's drawer on load).
+  // Used as the href on the owner-name link so middle-click, ⌘-click,
+  // and right-click → 'Open in new tab' all work natively.
+  const leadHref = (copyId) => `/contacts?highlight=${copyId}`;
 
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
@@ -442,14 +440,16 @@ export default function MasterLeadsPage() {
                                 {isRTL ? 'خارج فريقك' : 'Outside your team'}
                               </span>
                             ) : (
-                              <button
-                                onClick={() => openLead(c.id)}
-                                title={isRTL ? 'افتح هذه النسخة في صفحة الليدز' : 'Open this copy in Leads page'}
-                                className="inline-flex items-center gap-1 text-content dark:text-content-dark font-medium truncate bg-transparent border-none p-0 cursor-pointer hover:text-brand-500 transition-colors"
+                              <a
+                                href={leadHref(c.id)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={isRTL ? 'افتح هذه النسخة في تاب جديد' : 'Open this copy in a new tab'}
+                                className="inline-flex items-center gap-1 text-content dark:text-content-dark font-medium truncate no-underline hover:text-brand-500 transition-colors"
                               >
                                 <span className="truncate">{c.owner_name || (isRTL ? 'غير معين' : 'Unassigned')}</span>
                                 <ExternalLink size={10} className="shrink-0 opacity-60" />
-                              </button>
+                              </a>
                             )}
                           </div>
                           <div>
