@@ -8,7 +8,7 @@ import { MOCK_EMPLOYEES, DEPARTMENTS } from '../../data/hr_mock_data';
 import { getAttendanceForMonth } from '../../data/attendanceStore';
 import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fetchTodayReminders } from '../../services/remindersService';
-import { fetchAllDashboardData, buildPipelineData, getDateRange, buildRevenueTrend, buildTopSellers, filterStatsByRange } from '../../services/dashboardService';
+import { fetchAllDashboardData, buildPipelineData, getDateRange, getPreviousDateRange, buildRevenueTrend, buildTopSellers, filterStatsByRange } from '../../services/dashboardService';
 import { runTemperatureDecay } from '../../services/leadRecyclingService';
 import { checkContactBirthdays } from '../../services/birthdayService';
 import { getTopPerformers, getTeamOverallPct, METRIC_CONFIG } from '../../services/kpiTargetsService';
@@ -845,6 +845,108 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
   );
 }
 
+// "Today's Actionable Leads" — surfaces the leads most likely to slip away:
+// status = following, last activity > 3 days. Each row carries native call /
+// WhatsApp shortcuts so the agent can act in one tap instead of opening the
+// contact, finding the phone, then dialing. Scoped to the current agent;
+// admins/managers see the team-wide list (no owner filter).
+function ActionableLeadsWidget({ lang, isRTL, profile, navigate }) {
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const cutoff = new Date(Date.now() - 3 * 86400000).toISOString();
+        let q = supabase
+          .from('contacts')
+          .select('id, full_name, phone, last_activity_at, contact_status')
+          .eq('contact_status', 'following')
+          .or(`last_activity_at.lt.${cutoff},last_activity_at.is.null`)
+          .order('last_activity_at', { ascending: true, nullsFirst: true })
+          .limit(8);
+        if (profile?.role === 'sales_agent' && profile?.id) {
+          q = q.eq('assigned_to', profile.id);
+        }
+        const { data, error } = await q;
+        if (cancelled) return;
+        if (error) { setLeads([]); } else { setLeads(Array.isArray(data) ? data : []); }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [profile?.id, profile?.role]);
+
+  // Strip non-digits for tel: + WhatsApp links. Egypt-style international
+  // dialing uses + prefix; the wa.me URL needs digits only.
+  const cleanPhone = (p) => (p || '').replace(/[^0-9+]/g, '');
+
+  return (
+    <div>
+      <CardTitleStandalone icon={Phone} title={lang === 'ar' ? 'ليدز محتاجة اتصال' : 'Need a call'} sub={lang === 'ar' ? 'بدون نشاط من 3 أيام أو أكتر' : 'No activity in 3+ days'} isRTL={isRTL} />
+      {loading ? (
+        <div className="text-center py-6 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'جاري التحميل...' : 'Loading...'}</div>
+      ) : leads.length === 0 ? (
+        <div className="text-center py-6">
+          <CheckCircle size={28} className="text-emerald-500 opacity-60 mb-2 mx-auto" />
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'مفيش ليدز متأخرة — شغل نظيف!' : 'No stale follow-ups — clean slate!'}</p>
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {leads.map(l => {
+            const days = l.last_activity_at
+              ? Math.floor((Date.now() - new Date(l.last_activity_at).getTime()) / 86400000)
+              : null;
+            const tel = cleanPhone(l.phone);
+            return (
+              <div key={l.id} className={`flex items-center gap-2 px-2.5 py-2 rounded-lg bg-surface-bg dark:bg-white/[0.04] hover:bg-brand-500/[0.06] transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <button
+                  onClick={() => navigate(`/contacts?highlight=${l.id}`)}
+                  className="flex-1 min-w-0 text-start bg-transparent border-none cursor-pointer p-0"
+                >
+                  <p className="m-0 text-xs font-semibold text-content dark:text-content-dark truncate">{l.full_name || (lang === 'ar' ? 'بدون اسم' : 'No name')}</p>
+                  <p className="m-0 text-[10px] text-content-muted dark:text-content-muted-dark">
+                    {days == null
+                      ? (lang === 'ar' ? 'لا نشاط مسجّل' : 'No activity recorded')
+                      : (lang === 'ar' ? `آخر نشاط من ${days} يوم` : `last activity ${days}d ago`)}
+                  </p>
+                </button>
+                {tel && (
+                  <>
+                    <a href={`tel:${tel}`} title={lang === 'ar' ? 'اتصل' : 'Call'} className="w-7 h-7 rounded-md flex items-center justify-center bg-emerald-500/12 text-emerald-500 hover:bg-emerald-500/25 no-underline">
+                      <Phone size={12} />
+                    </a>
+                    <a href={`https://wa.me/${tel.replace(/^\+/, '')}`} target="_blank" rel="noopener noreferrer" title="WhatsApp" className="w-7 h-7 rounded-md flex items-center justify-center bg-green-500/12 text-green-600 hover:bg-green-500/25 no-underline">
+                      <MessageCircle size={12} />
+                    </a>
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Tiny standalone version of CardTitle for child widgets (the inner CardTitle
+// inside DashboardPage closes over isRTL/isDark via the parent — not in scope
+// for top-level widget functions).
+function CardTitleStandalone({ icon: Icon, title, sub, isRTL }) {
+  return (
+    <div className={`flex items-center gap-2.5 mb-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className="w-[34px] h-[34px] rounded-[9px] bg-brand-500/[0.12] flex items-center justify-center"><Icon size={16} className="text-brand-500" /></div>
+      <div className="text-start">
+        <p className="m-0 text-sm font-bold text-content dark:text-content-dark">{title}</p>
+        {sub && <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
@@ -995,6 +1097,29 @@ export default function DashboardPage() {
     return filterStatsByRange(rawOpps, activeDateRange);
   }, [rawOpps, activeDateRange]);
 
+  // Same-shape stats for the prior window so KPI cards can show "+/-X% vs
+  // previous". Uses the calendar-aligned previous period (last week / month /
+  // year) which lines up with how users mentally compare numbers.
+  const prevStats = useMemo(() => {
+    if (!rawOpps?.length) return null;
+    return filterStatsByRange(rawOpps, getPreviousDateRange(dateRange));
+  }, [rawOpps, dateRange]);
+
+  // Build "vs previous" delta strings — both for revenue and deal count.
+  // Returns null when prev = 0 (would yield Infinity%) so the trend slot
+  // stays empty instead of showing a misleading "∞% growth" badge.
+  const formatDelta = (curr, prev, lang) => {
+    if (prev == null || prev === 0) return null;
+    const pct = Math.round(((curr - prev) / prev) * 100);
+    const sign = pct > 0 ? '+' : '';
+    return lang === 'ar'
+      ? `${sign}${pct}% مقارنة بالفترة السابقة`
+      : `${sign}${pct}% vs previous period`;
+  };
+  const revenueDelta = formatDelta(rangeStats?.revenue || 0, prevStats?.revenue || 0, lang);
+  const dealsDelta = formatDelta(rangeStats?.closedDeals || 0, prevStats?.closedDeals || 0, lang);
+  const activeOppsDelta = formatDelta(rangeStats?.activeOpps || 0, prevStats?.activeOpps || 0, lang);
+
   const filteredCrm = useMemo(() => {
     if (rangeStats) {
       return {
@@ -1122,8 +1247,8 @@ export default function DashboardPage() {
           // old 4-col grid produced. Tablet falls back to 3, mobile to 2.
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
             <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/crm/contacts')} />
-            <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'active' } })} />
-            <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'closed_won' } })} />
+            <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={activeOppsDelta || (lang === 'ar' ? 'vs الفترة السابقة' : 'vs previous period')} trendUp={!activeOppsDelta || !activeOppsDelta.startsWith('-')} color="#2B4C6F" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'active' } })} />
+            <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={dealsDelta || (crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined)} trendUp={!dealsDelta || !dealsDelta.startsWith('-')} color="#6B8DB5" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'closed_won' } })} />
             <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue ? (filteredCrm.revenue / 1000).toFixed(0) + 'K' : '0')} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
             <DashKpiCard icon={TrendingUp} label={lang === 'ar' ? 'قيمة الـ Pipeline' : 'Pipeline Value'} value={dashLoading ? '...' : (() => { const pv = (rawOpps || []).filter(o => !['closed_won','closed_lost'].includes(o.stage)).reduce((s, o) => s + (o.budget || 0), 0); return pv ? (pv / 1000).toFixed(0) + 'K' : '0'; })()} sub="EGP" color="#2B4C6F" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'active' } })} />
           </div>
@@ -1561,6 +1686,10 @@ export default function DashboardPage() {
       case 'team_activity':
         if (!sections.showCRM) return null;
         return <TeamActivityWidget lang={lang} isRTL={isRTL} profile={profile} CardTitle={CardTitle} />;
+
+      case 'actionable_leads':
+        if (!sections.showCRM) return null;
+        return <ActionableLeadsWidget lang={lang} isRTL={isRTL} profile={profile} navigate={navigate} />;
 
       case 'smart_alerts':
         return <SmartAlertsWidget lang={lang} isRTL={isRTL} profile={profile} navigate={navigate} CardTitle={CardTitle} />;

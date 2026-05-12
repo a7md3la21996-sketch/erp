@@ -22,6 +22,47 @@ async function applyRoleFilter(query, field, { role, userId, teamId } = {}) {
  */
 
 // ── Date range helpers ────────────────────────────────────────────────────────
+// Returns the same-length window immediately before `rangeKey`. Used by KPI
+// cards to compute "+/-X% vs previous period" deltas. Calendar-aligned where
+// the original range is calendar-aligned (week/month/year), otherwise just
+// shifts by the duration so the comparison window matches in length.
+export function getPreviousDateRange(rangeKey) {
+  const now = new Date();
+  const start = new Date();
+  const end = new Date();
+  switch (rangeKey) {
+    case 'this_week':
+      start.setDate(now.getDate() - now.getDay() - 7);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(now.getDate() - now.getDay());
+      end.setHours(0, 0, 0, 0);
+      end.setMilliseconds(-1);
+      return { start, end };
+    case 'this_month':
+      start.setMonth(now.getMonth() - 1, 1);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(1);
+      end.setHours(0, 0, 0, 0);
+      end.setMilliseconds(-1);
+      return { start, end };
+    case 'last_3_months':
+      start.setMonth(now.getMonth() - 6, 1);
+      start.setHours(0, 0, 0, 0);
+      end.setMonth(now.getMonth() - 3, 1);
+      end.setHours(0, 0, 0, 0);
+      end.setMilliseconds(-1);
+      return { start, end };
+    case 'this_year':
+    default:
+      start.setFullYear(now.getFullYear() - 1, 0, 1);
+      start.setHours(0, 0, 0, 0);
+      end.setFullYear(now.getFullYear(), 0, 1);
+      end.setHours(0, 0, 0, 0);
+      end.setMilliseconds(-1);
+      return { start, end };
+  }
+}
+
 export function getDateRange(rangeKey) {
   const now = new Date();
   const start = new Date();

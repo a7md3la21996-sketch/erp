@@ -90,6 +90,15 @@ export const AVAILABLE_WIDGETS = [
     defaultSize: 'md',
   },
   {
+    id: 'actionable_leads',
+    title_ar: 'ليدز محتاجة اتصال النهاردة',
+    title_en: "Today's Actionable Leads",
+    description_ar: 'ليدز في "متابعة" بدون نشاط من أكتر من 3 أيام — محتاجة اتصال أو واتساب',
+    description_en: 'Following leads with no activity for 3+ days — need a call or WhatsApp',
+    category: 'general',
+    defaultSize: 'md',
+  },
+  {
     id: 'smart_alerts',
     title_ar: 'تنبيهات ذكية',
     title_en: 'Smart Alerts',
@@ -191,23 +200,77 @@ export const AVAILABLE_WIDGETS = [
 ];
 
 const CATEGORY_ROLES = {
-  sales: ['admin', 'sales_director', 'sales_manager', 'team_leader', 'sales_agent', 'marketing'],
+  sales: ['admin', 'sales_director', 'sales_manager', 'team_leader', 'sales_agent', 'marketing', 'operations'],
   hr: ['admin', 'hr'],
   finance: ['admin', 'finance'],
   general: null, // everyone
 };
 
+// Per-role default ORDER for the dashboard. Widgets named here surface first,
+// in this exact order; everything else allowed for the role still shows up
+// after, in registry order. Existing users' saved layouts are NOT touched —
+// this only governs the first render for someone who never customized.
+const ROLE_PRIORITY = {
+  sales_agent: [
+    'my_day', 'today_followups', 'actionable_leads', 'smart_alerts',
+    'recent_activities', 'kpi_overview', 'pipeline_chart', 'team_activity',
+    'recent_comments', 'announcements',
+  ],
+  sales_manager: [
+    'team_activity', 'smart_alerts', 'kpi_overview', 'pipeline_chart',
+    'top_sellers', 'team_performance', 'revenue_trend', 'actionable_leads',
+    'today_followups', 'announcements',
+  ],
+  team_leader: [
+    'team_activity', 'smart_alerts', 'kpi_overview', 'pipeline_chart',
+    'top_sellers', 'team_performance', 'today_followups', 'announcements',
+  ],
+  sales_director: [
+    'kpi_overview', 'pipeline_chart', 'revenue_trend', 'top_sellers',
+    'team_performance', 'team_activity', 'smart_alerts', 'announcements',
+  ],
+  admin: [
+    'kpi_overview', 'pipeline_chart', 'revenue_trend', 'top_sellers',
+    'team_performance', 'smart_alerts', 'hr_overview', 'announcements',
+  ],
+  operations: [
+    'kpi_overview', 'pipeline_chart', 'smart_alerts', 'today_followups',
+    'team_activity', 'announcements',
+  ],
+  hr: ['hr_overview', 'pending_approvals', 'leave_summary', 'announcements'],
+  finance: ['expense_summary', 'kpi_overview', 'revenue_trend', 'announcements'],
+  marketing: ['kpi_overview', 'pipeline_chart', 'announcements'],
+};
+
 /**
- * Get the default layout based on user role
+ * Get the default layout based on user role.
+ * Widgets named in ROLE_PRIORITY[role] appear first in that order; the rest
+ * follow in registry order. Anything outside the role's allowed categories
+ * is filtered out entirely.
  */
 export function getDefaultLayout(role = 'admin') {
-  const visible = AVAILABLE_WIDGETS.filter(w => {
-    const allowed = CATEGORY_ROLES[w.category];
-    if (!allowed) return true; // general = everyone
-    return allowed.includes(role);
+  const allowed = AVAILABLE_WIDGETS.filter(w => {
+    const allowedRoles = CATEGORY_ROLES[w.category];
+    if (!allowedRoles) return true; // general = everyone
+    return allowedRoles.includes(role);
   });
 
-  return visible.map((w, i) => ({
+  const priority = ROLE_PRIORITY[role] || [];
+  const byId = new Map(allowed.map(w => [w.id, w]));
+  const ordered = [];
+  // First pass: pick up priority-listed widgets in priority order
+  for (const id of priority) {
+    if (byId.has(id)) {
+      ordered.push(byId.get(id));
+      byId.delete(id);
+    }
+  }
+  // Second pass: remaining widgets stay in registry order
+  for (const w of allowed) {
+    if (byId.has(w.id)) ordered.push(w);
+  }
+
+  return ordered.map((w, i) => ({
     widgetId: w.id,
     visible: true,
     order: i,
