@@ -578,7 +578,13 @@ function TeamActivityWidget({ lang, isRTL, profile, CardTitle }) {
     <div>
       <CardTitle icon={Users} title={lang === 'ar' ? 'نشاط الفريق اليوم' : "Team Activity Today"} />
       {teamData.length === 0 ? (
-        <p className="text-xs text-content-muted dark:text-content-muted-dark text-center py-4">{lang === 'ar' ? 'لا نشاط اليوم بعد' : 'No activity yet today'}</p>
+        <div className="text-center py-5">
+          <p className="m-0 mb-2 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا نشاط اليوم بعد' : 'No activity yet today'}</p>
+          <Link to="/tasks" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
+            {lang === 'ar' ? 'سجل أول مهمة' : 'Log first task'}
+            <ArrowUpRight size={11} />
+          </Link>
+        </div>
       ) : (
         <div className="space-y-2">
           {teamData.map((t, i) => (
@@ -721,7 +727,7 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
   const sections = [
     { icon: Bell, label: lang === 'ar' ? 'متابعات اليوم' : "Today's Follow-ups", count: stats.followups, color: '#4A7AAB', link: '/tasks' },
     { icon: AlertTriangle, label: lang === 'ar' ? 'مهام متأخرة' : 'Overdue Tasks', count: stats.overdue, color: stats.overdue > 0 ? '#EF4444' : '#10B981', link: '/tasks' },
-    { icon: UserCheck, label: lang === 'ar' ? 'ليدز جديدة اليوم' : 'New Leads Today', count: stats.newLeads, color: '#8B5CF6', link: '/contacts' },
+    { icon: UserCheck, label: lang === 'ar' ? 'ليدز جديدة اليوم' : 'New Leads Today', count: stats.newLeads, color: '#2B4C6F', link: '/contacts' },
     { icon: Clock, label: lang === 'ar' ? 'محتاج متابعة' : 'Needs Follow-up', count: stats.needsFollowUp, color: '#F59E0B', link: '/contacts' },
   ];
 
@@ -801,7 +807,7 @@ function MyDayWidget({ lang, isRTL, isDark, userId, profile, navigate }) {
           </p>
           <div className="space-y-1.5">
             {todayTasksList.map(t => {
-              const priColors = { high: '#EF4444', medium: '#F97316', low: '#6B8DB5' };
+              const priColors = { high: '#EF4444', medium: '#F59E0B', low: '#6B8DB5' };
               return (
                 <div key={t.id} onClick={() => navigate('/tasks')}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-surface-bg dark:bg-white/[0.04] border border-edge dark:border-edge-dark cursor-pointer hover:border-brand-500/30 transition-colors"
@@ -828,7 +834,7 @@ export default function DashboardPage() {
   const { profile } = useAuth();
   const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const { isMobile: isMobileView } = useResponsive();
+  const { isMobile: isMobileView, isTablet: isTabletView } = useResponsive();
   const toast = useToast();
   const isRTL = i18n.language === 'ar'; const lang = i18n.language;
   const role = profile?.role || 'admin';
@@ -1057,7 +1063,9 @@ export default function DashboardPage() {
       case 'kpi_overview':
         if (!sections.showCRM) return null;
         return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+          // 5 KPIs sit in a single row on lg+ to avoid the orphan card that the
+          // old 4-col grid produced. Tablet falls back to 3, mobile to 2.
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
             <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/crm/contacts')} />
             <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
             <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities')} />
@@ -1077,9 +1085,9 @@ export default function DashboardPage() {
               </>
             )}
             {activityStats && (
-              <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#8B5CF6" trendUp onClick={() => navigate('/crm/opportunities')} />
+              <DashKpiCard icon={Activity} label={lang === 'ar' ? 'أنشطة الأسبوع' : 'Activities/Week'} value={activityStats.activitiesThisWeek} color="#2B4C6F" trendUp onClick={() => navigate('/crm/opportunities')} />
             )}
-            <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={filteredCrm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((filteredCrm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#10B981" onClick={() => navigate('/crm/opportunities')} />
+            <DashKpiCard icon={Target} label={lang === 'ar' ? 'معدل التحويل' : 'Conv. Rate'} value={filteredCrm.closedDeals > 0 && crm.totalLeads > 0 ? Math.round((filteredCrm.closedDeals / crm.totalLeads) * 100) + '%' : '0%'} color="#4A7AAB" onClick={() => navigate('/crm/opportunities')} />
           </div>
         );
 
@@ -1091,10 +1099,14 @@ export default function DashboardPage() {
             {chartData.length === 0 ? (
               <div className="text-center py-8">
                 <TrendingUp size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
-                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا بيانات إيرادات حتى الآن' : 'No revenue data yet'}</p>
+                <p className="m-0 mb-2.5 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا بيانات إيرادات حتى الآن' : 'No revenue data yet'}</p>
+                <Link to="/crm/opportunities" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
+                  {lang === 'ar' ? 'افتح الفرص' : 'Open opportunities'}
+                  <ArrowUpRight size={11} />
+                </Link>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={220}>
                 <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                   <defs><linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#4A7AAB" stopOpacity={0.25} /><stop offset="95%" stopColor="#4A7AAB" stopOpacity={0} /></linearGradient></defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.1)' : 'rgba(0,0,0,0.06)'} />
@@ -1120,10 +1132,14 @@ export default function DashboardPage() {
             {pipeData.length === 0 ? (
               <div className="text-center py-8">
                 <Activity size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
-                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا فرص في الأنابيب حتى الآن' : 'No pipeline data yet'}</p>
+                <p className="m-0 mb-2.5 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا فرص في الأنابيب حتى الآن' : 'No pipeline data yet'}</p>
+                <Link to="/crm/opportunities" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
+                  {lang === 'ar' ? 'أنشئ فرصة' : 'Create opportunity'}
+                  <ArrowUpRight size={11} />
+                </Link>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={185}>
+              <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }} style={{ cursor: 'pointer' }}
                   onClick={(e) => { if (e?.activePayload?.[0]?.payload?.stage_key) navigate('/crm/opportunities', { state: { initialStage: e.activePayload[0].payload.stage_key } }); }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
@@ -1145,7 +1161,11 @@ export default function DashboardPage() {
             {salesData.length === 0 ? (
               <div className="text-center py-6">
                 <Trophy size={32} className="text-brand-500 opacity-30 mb-2 mx-auto" />
-                <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا بيانات مبيعات حتى الآن' : 'No sales data yet'}</p>
+                <p className="m-0 mb-2.5 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'لا بيانات مبيعات حتى الآن' : 'No sales data yet'}</p>
+                <Link to="/crm/opportunities" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-[11px] font-semibold no-underline hover:bg-brand-500/20 transition-colors">
+                  {lang === 'ar' ? 'افتح الفرص' : 'Open opportunities'}
+                  <ArrowUpRight size={11} />
+                </Link>
               </div>
             ) : (
               <>
@@ -1193,7 +1213,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Box>
                 <CardTitle icon={Building2} title={lang === 'ar' ? 'توزيع الأقسام' : 'Departments'} sub={lang === 'ar' ? 'عدد الموظفين' : 'Headcount'} />
-                <ResponsiveContainer width="100%" height={160}>
+                <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={hr.deptCounts} layout="vertical" margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
                     <XAxis type="number" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
@@ -1498,10 +1518,17 @@ export default function DashboardPage() {
     if (isMobileView) {
       return { gridColumn: 'span 1' };
     }
+    // Tablet runs a 2-col grid so cards have real breathing room. Span values
+    // are clamped to 2 — without this, an `md`/`lg` widget plus a `full`
+    // widget would both try to claim 4 cols and overflow.
+    if (isTabletView) {
+      const spansT = { sm: 1, md: 2, lg: 2, full: 2 };
+      return { gridColumn: 'span ' + (spansT[size] || 2) };
+    }
     const spans = { sm: 1, md: 2, lg: 2, full: 4 };
     const span = spans[size] || 2;
     return { gridColumn: 'span ' + span };
-  }, [isMobileView]);
+  }, [isMobileView, isTabletView]);
 
   if (dashLoading) return <DashboardSkeleton />;
 
@@ -1510,29 +1537,28 @@ export default function DashboardPage() {
 
   return (
     <div className="px-4 py-5 md:px-8 md:py-7 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-20 overflow-x-hidden max-w-[1600px] mx-auto" dir={isRTL ? 'rtl' : 'ltr'}>
-      {/* Hero banner — slimmer, cleaner. The KPI bubbles duplicate cards
-          below, so they're styled as light chips that complement rather
-          than compete with the main KPI row. */}
-      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-5 py-5 md:px-7 md:py-5 mb-6 relative overflow-hidden`}>
-        <div className={`absolute w-48 h-48 rounded-full bg-white/[0.05] pointer-events-none ${isRTL ? '-left-8 -top-12' : '-right-8 -top-12'}`} />
-        <div className={`absolute w-24 h-24 rounded-full bg-white/[0.04] pointer-events-none ${isRTL ? 'left-32 top-8' : 'right-32 top-8'}`} />
-        <div className={`relative flex flex-wrap md:flex-nowrap justify-between items-center gap-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+      {/* Hero banner — slim greeting strip. The KPI chips duplicated the
+          card row below, so they're gone. Just role + date + the target
+          progress as a single inline indicator (more useful than three
+          numbers that repeat below). */}
+      <div className={`bg-gradient-to-br from-brand-900 via-brand-800 to-brand-500 rounded-2xl px-5 py-4 md:px-6 md:py-4 mb-5 relative overflow-hidden`}>
+        <div className={`absolute w-40 h-40 rounded-full bg-white/[0.05] pointer-events-none ${isRTL ? '-left-8 -top-12' : '-right-8 -top-12'}`} />
+        <div className={`relative flex flex-wrap md:flex-nowrap justify-between items-center gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className="min-w-0">
-            <p className="m-0 mb-1 text-xl md:text-2xl font-bold text-white truncate">{greeting}، {name}</p>
-            <p className="m-0 text-xs text-white/70">{roleLabel} · {dateStr}</p>
+            <p className="m-0 text-lg md:text-xl font-bold text-white truncate">{greeting}، {name}</p>
+            <p className="m-0 mt-0.5 text-[11px] text-white/70">{roleLabel} · {dateStr}</p>
           </div>
-          <div className={`flex gap-2 md:gap-3 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-            {[
-              { l: lang === 'ar' ? 'ليد جديد' : 'New Leads', v: crm.newLeadsThisMonth },
-              { l: lang === 'ar' ? 'مغلقة' : 'Closed', v: filteredCrm.closedDeals },
-              { l: lang === 'ar' ? 'التارجت' : 'Target', v: targetPct + '%' },
-            ].map((s, i) => (
-              <div key={i} className="text-center px-3.5 py-2 bg-white/[0.12] backdrop-blur-sm rounded-xl border border-white/10 min-w-[72px]">
-                <p className="m-0 text-lg md:text-xl font-bold text-white tabular-nums">{safeChild(s.v)}</p>
-                <p className="m-0 text-[10px] uppercase tracking-wide text-white/70">{s.l}</p>
+          {targetPct > 0 && sections.showCRM && (
+            <div className={`flex items-center gap-2.5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+              <div className="text-end">
+                <p className="m-0 text-[10px] uppercase tracking-wide text-white/70">{lang === 'ar' ? 'تقدم التارجت' : 'Target Progress'}</p>
+                <p className="m-0 text-base font-bold text-white tabular-nums">{targetPct}%</p>
               </div>
-            ))}
-          </div>
+              <div className="w-24 h-1.5 rounded-full bg-white/15 overflow-hidden">
+                <div className="h-full rounded-full bg-white transition-[width] duration-500" style={{ width: `${Math.min(targetPct, 100)}%` }} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1622,14 +1648,30 @@ export default function DashboardPage() {
         );
       })()}
 
-      {/* Widget grid — slightly larger gap on desktop so the cards feel
-          less crammed, mobile stays tight to maximize content. */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: isMobileView ? '1fr' : 'repeat(4, minmax(0, 1fr))',
-        gap: isMobileView ? 14 : 20,
-      }}>
-        {visibleWidgets.map((item) => {
+      {/* Widget grid — grouped by category with section headers so the
+          admin can find what they need without scanning a flat wall of cards.
+          Each section is its own 4-col grid; gap matches the old layout. */}
+      {(() => {
+        const SECTION_DEFS = [
+          { key: 'sales',   labelAr: 'نظرة عامة على المبيعات', labelEn: 'Sales Overview' },
+          { key: 'general', labelAr: 'الأداء اليومي',           labelEn: 'Daily Performance' },
+          { key: 'hr',      labelAr: 'الموارد البشرية',         labelEn: 'Human Resources' },
+          { key: 'finance', labelAr: 'المالية',                  labelEn: 'Finance' },
+        ];
+        const buckets = {};
+        for (const item of visibleWidgets) {
+          const meta = getWidgetMeta(item.widgetId);
+          const cat = meta?.category || 'general';
+          (buckets[cat] = buckets[cat] || []).push(item);
+        }
+        // kpi_overview is meta'd "general" but visually anchors Sales — pin it on top.
+        const kpi = (buckets.general || []).find(i => i.widgetId === 'kpi_overview');
+        if (kpi) {
+          buckets.general = buckets.general.filter(i => i.widgetId !== 'kpi_overview');
+          buckets.sales = [kpi, ...(buckets.sales || [])];
+        }
+
+        const renderItem = (item) => {
           const meta = getWidgetMeta(item.widgetId);
           if (!meta) return null;
           let content;
@@ -1689,8 +1731,29 @@ export default function DashboardPage() {
               </ErrorBoundary>
             </div>
           );
-        })}
-      </div>
+        };
+
+        return SECTION_DEFS.map(({ key, labelAr, labelEn }) => {
+          const items = buckets[key];
+          if (!items || items.length === 0) return null;
+          return (
+            <div key={key} className="mb-8 last:mb-0">
+              <h2 className="m-0 mb-3 text-[12px] uppercase tracking-[0.12em] font-bold text-content-muted dark:text-content-muted-dark/80">
+                {lang === 'ar' ? labelAr : labelEn}
+              </h2>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: isMobileView
+                  ? '1fr'
+                  : (isTabletView ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))'),
+                gap: isMobileView ? 14 : 20,
+              }}>
+                {items.map(renderItem)}
+              </div>
+            </div>
+          );
+        });
+      })()}
 
       {/* Customize panel modal */}
       {showCustomize && (

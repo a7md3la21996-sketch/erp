@@ -9,7 +9,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X, ExternalLink } from 'lucide-react';
+import { Search, Phone, ChevronDown, ChevronRight, Calendar, AlertTriangle, Share2, ArrowRightLeft, Trash2, MoreVertical, X, ExternalLink, Megaphone, Globe } from 'lucide-react';
 import { fetchMasterLeads } from '../../services/masterLeadsService';
 import { fetchSalesAgents } from '../../services/opportunitiesService';
 import { getTeamMemberIds } from '../../utils/teamHelper';
@@ -33,6 +33,25 @@ const STATUS_LABELS = {
   following:       { ar: 'متابعة',     en: 'Following' },
   has_opportunity: { ar: 'لديه فرصة',  en: 'Has Opp' },
   disqualified:    { ar: 'غير مؤهل',   en: 'DQ' },
+};
+// Human-friendly source labels — keys match the values stored on contacts.source.
+// Falls back to the raw key when unknown so we never silently drop new sources.
+const SOURCE_LABELS = {
+  facebook:   { ar: 'فيسبوك',         en: 'Facebook' },
+  instagram:  { ar: 'انستجرام',       en: 'Instagram' },
+  google_ads: { ar: 'إعلانات جوجل',   en: 'Google Ads' },
+  website:    { ar: 'الموقع',          en: 'Website' },
+  call:       { ar: 'اتصال',           en: 'Call' },
+  walk_in:    { ar: 'زيارة مباشرة',   en: 'Walk-in' },
+  referral:   { ar: 'إحالة',           en: 'Referral' },
+  developer:  { ar: 'مطور',            en: 'Developer' },
+  cold_call:  { ar: 'مكالمة باردة',   en: 'Cold call' },
+  other:      { ar: 'أخرى',            en: 'Other' },
+};
+const formatSource = (s, isRTL) => {
+  if (!s) return null;
+  const m = SOURCE_LABELS[s];
+  return m ? (isRTL ? m.ar : m.en) : s;
 };
 
 function formatDate(dateStr, isRTL) {
@@ -75,6 +94,11 @@ export default function MasterLeadsPage() {
 
   const [agents, setAgents] = useState([]);
   const [expanded, setExpanded] = useState(new Set());
+  // Per-copy source + campaign — fetched in bulk after the master_leads_list
+  // RPC returns, since the RPC's slim copy projection doesn't carry them.
+  // Keyed by copy id → { source, campaign_name } so the expanded rows can
+  // surface where each lead came from without an N+1 fetch.
+  const [copyMeta, setCopyMeta] = useState({});
   // Action modals — operate on a single contact picked from the family.
   // Distribute uses the family's first/origin copy as the source of truth
   // for cloning. Handoff/delete operate on the specific clone the user picks.
@@ -232,6 +256,33 @@ export default function MasterLeadsPage() {
   }, [canView, debouncedSearch, minClones, ownerId, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
+
+  // After every load, batch-fetch source + campaign for every copy on the
+  // current page. The master_leads_list RPC only returns a slim projection
+  // (owner/status/dates), so we hydrate the rest in one round-trip rather
+  // than N selects. RLS still applies — team-scoped users only get rows
+  // they're allowed to see, which matches what the RPC already filtered.
+  useEffect(() => {
+    if (!rows.length) { setCopyMeta({}); return; }
+    const ids = [];
+    rows.forEach(f => {
+      (Array.isArray(f.copies) ? f.copies : []).forEach(c => { if (c?.id) ids.push(c.id); });
+    });
+    if (ids.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('id, source, campaign_name')
+        .in('id', ids);
+      if (cancelled) return;
+      if (error || !Array.isArray(data)) return;
+      const map = {};
+      for (const r of data) map[r.id] = { source: r.source, campaign_name: r.campaign_name };
+      setCopyMeta(map);
+    })();
+    return () => { cancelled = true; };
+  }, [rows]);
 
   // Reset page + clear bulk selection whenever the filter changes — the
   // selectedPhones set lives across renders, so without this the user could
@@ -451,6 +502,31 @@ export default function MasterLeadsPage() {
                                 <ExternalLink size={10} className="shrink-0 opacity-60" />
                               </a>
                             )}
+                            {/* Source + campaign meta — surfaces *where the lead came from*
+                                under the owner cell so admins can see why each copy exists. */}
+                            {(() => {
+                              const meta = copyMeta[c.id];
+                              if (!meta) return null;
+                              const src = formatSource(meta.source, isRTL);
+                              const camp = meta.campaign_name;
+                              if (!src && !camp) return null;
+                              return (
+                                <div className="mt-0.5 flex items-center gap-2 text-[10px] text-content-muted dark:text-content-muted-dark min-w-0">
+                                  {src && (
+                                    <span className="inline-flex items-center gap-1 min-w-0" title={isRTL ? 'المصدر' : 'Source'}>
+                                      <Globe size={9} className="shrink-0 opacity-70" />
+                                      <span className="truncate">{src}</span>
+                                    </span>
+                                  )}
+                                  {camp && (
+                                    <span className="inline-flex items-center gap-1 min-w-0" title={isRTL ? 'الكامبين' : 'Campaign'}>
+                                      <Megaphone size={9} className="shrink-0 opacity-70" />
+                                      <span className="truncate">{camp}</span>
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                           <div>
                             <span

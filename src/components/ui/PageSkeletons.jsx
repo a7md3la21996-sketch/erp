@@ -44,11 +44,16 @@ export function TableSkeleton({ rows = 6, cols = 5 }) {
 }
 
 // ── KPI Skeleton ────────────────────────────────────────────────────────────
+// Picks the desktop column count from the static Tailwind palette so the
+// skeleton matches the live KPI grid (2 cols mobile, 3 tablet, then 4 or 5
+// at lg+). Tailwind needs full class names to be present at build time,
+// so we whitelist by `count` rather than build the class dynamically.
 export function KpiSkeleton({ count = 4 }) {
+  const lgClass = count >= 5 ? 'lg:grid-cols-5' : count === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4';
   return (
     <>
       <style>{shimmerStyle}</style>
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4" style={{ gridTemplateColumns: `repeat(${Math.min(count, 4)}, 1fr)` }}>
+      <div className={`grid gap-4 grid-cols-2 sm:grid-cols-3 ${lgClass}`}>
         {Array.from({ length: count }).map((_, i) => (
           <div key={i} className="rounded-xl border border-gray-200 dark:border-white/[0.08] p-5 flex flex-col gap-3 bg-white dark:bg-white/[0.02]">
             <div className="flex items-center justify-between">
@@ -76,18 +81,24 @@ export function DashboardSkeleton() {
         <ShimmerBar style={{ height: 12, width: 160 }} className="opacity-60" />
       </div>
 
-      {/* KPI row */}
-      <KpiSkeleton count={4} />
+      {/* Sales Overview section header */}
+      <ShimmerBar style={{ height: 10, width: 140 }} className="opacity-70 mt-1" />
+      {/* KPI row — 5 cards now (Total Leads · Active Opps · Deals · Revenue · Pipeline) */}
+      <KpiSkeleton count={5} />
 
-      {/* Charts row */}
+      {/* Charts row — match the standardized 220px chart height so the
+          skeleton has the same vertical footprint as the real charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[1, 2].map(i => (
           <div key={i} className="rounded-xl border border-gray-200 dark:border-white/[0.08] p-5 bg-white dark:bg-white/[0.02]">
             <ShimmerBar style={{ height: 12, width: '30%' }} className="mb-4" />
-            <div className="h-[180px] rounded-lg bg-gray-100 dark:bg-white/[0.04] animate-pulse" />
+            <div className="h-[220px] rounded-lg bg-gray-100 dark:bg-white/[0.04] animate-pulse" />
           </div>
         ))}
       </div>
+
+      {/* Daily Performance section header */}
+      <ShimmerBar style={{ height: 10, width: 130 }} className="opacity-70 mt-2" />
 
       {/* Bottom section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
