@@ -632,13 +632,18 @@ function SmartAlertsWidget({ lang, isRTL, profile, navigate, CardTitle }) {
         }
         const [staleRes, overdueRes, hotRes] = await Promise.allSettled([contactsQ, tasksQ, oppsQ]);
         const a = [];
-        const stale = staleRes.status === 'fulfilled' ? staleRes.value.count || 0 : 0;
-        if (stale > 0) a.push({ icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#F59E0B', link: '/contacts' });
+        // Severity drives both sort order and visual treatment — lower number
+        // = more urgent. Critical alerts (overdue) bubble to the top with
+        // a red accent; warnings (stale leads) follow; info (hot opps) sits
+        // last because it's a "good thing to do" not "must fix now".
         const overdue = overdueRes.status === 'fulfilled' ? overdueRes.value.count || 0 : 0;
-        if (overdue > 0) a.push({ icon: '🔴', text: lang === 'ar' ? `${overdue} مهمة متأخرة` : `${overdue} overdue tasks`, color: '#EF4444', link: '/tasks' });
+        if (overdue > 0) a.push({ severity: 1, icon: '🔴', text: lang === 'ar' ? `${overdue} مهمة متأخرة` : `${overdue} overdue tasks`, color: '#EF4444', link: '/tasks' });
+        const stale = staleRes.status === 'fulfilled' ? staleRes.value.count || 0 : 0;
+        if (stale > 0) a.push({ severity: 2, icon: '⚠️', text: lang === 'ar' ? `${stale} ليد بدون نشاط من أسبوع` : `${stale} leads with no activity for a week`, color: '#F59E0B', link: '/contacts' });
         const hot = hotRes.status === 'fulfilled' ? hotRes.value.count || 0 : 0;
-        if (hot > 0) a.push({ icon: '🔥', text: lang === 'ar' ? `${hot} فرصة ساخنة مفتوحة` : `${hot} hot opportunities open`, color: '#10B981', link: '/crm/opportunities' });
-        if (a.length === 0) a.push({ icon: '✅', text: lang === 'ar' ? 'كل شيء تمام!' : 'All good!', color: '#10B981' });
+        if (hot > 0) a.push({ severity: 3, icon: '🔥', text: lang === 'ar' ? `${hot} فرصة ساخنة مفتوحة` : `${hot} hot opportunities open`, color: '#10B981', link: '/crm/opportunities' });
+        if (a.length === 0) a.push({ severity: 4, icon: '✅', text: lang === 'ar' ? 'كل شيء تمام!' : 'All good!', color: '#10B981' });
+        a.sort((x, y) => x.severity - y.severity);
         setAlerts(a);
       } catch {}
     };
@@ -649,13 +654,24 @@ function SmartAlertsWidget({ lang, isRTL, profile, navigate, CardTitle }) {
     <div>
       <CardTitle icon={AlertTriangle} title={lang === 'ar' ? 'تنبيهات ذكية' : 'Smart Alerts'} />
       <div className="space-y-2">
-        {alerts.map((a, i) => (
-          <div key={i} onClick={() => a.link && navigate(a.link)}
-            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border border-edge dark:border-edge-dark ${a.link ? 'cursor-pointer hover:border-brand-500/30' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <span className="text-base">{a.icon}</span>
-            <span className="text-xs font-medium text-content dark:text-content-dark flex-1">{a.text}</span>
-          </div>
-        ))}
+        {alerts.map((a, i) => {
+          // Severity-based accent: critical alerts get a tinted background +
+          // colored start border so the eye lands on them first; everything
+          // else stays neutral.
+          const tint = a.severity === 1
+            ? 'bg-red-500/[0.06] border-red-500/30'
+            : a.severity === 2
+              ? 'bg-amber-500/[0.06] border-amber-500/30'
+              : 'border-edge dark:border-edge-dark';
+          return (
+            <div key={i} onClick={() => a.link && navigate(a.link)}
+              className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border ${tint} ${a.link ? 'cursor-pointer hover:border-brand-500/40' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}
+              style={{ borderInlineStartWidth: a.severity <= 2 ? 3 : 1 }}>
+              <span className="text-base">{a.icon}</span>
+              <span className="text-xs font-medium text-content dark:text-content-dark flex-1">{a.text}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -931,6 +947,21 @@ export default function DashboardPage() {
       setDashLoading(false);
       toast.error(lang === 'ar' ? 'فشل تحميل بيانات لوحة التحكم' : 'Failed to load dashboard data');
     });
+
+    // Soft refresh — re-fetch every 60s so KPI counts reflect new leads,
+    // closed deals, etc. without forcing a page reload. Doesn't toggle
+    // `dashLoading`, so the page never blanks back to the skeleton; users
+    // just see the numbers update in place. Pauses while the tab is
+    // hidden to avoid burning quota on a backgrounded tab.
+    const REFRESH_MS = 60_000;
+    const tick = () => {
+      if (document.hidden) return;
+      fetchAllDashboardData({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id })
+        .then(data => { if (data) setDashData(data); })
+        .catch(() => {}); // silent — initial load already surfaces failures
+    };
+    const intervalId = setInterval(tick, REFRESH_MS);
+    return () => clearInterval(intervalId);
   }, [profile?.role, profile?.id, profile?.team_id]);
 
   const crm = useMemo(() => {
@@ -1017,7 +1048,31 @@ export default function DashboardPage() {
     }
     return null;
   }, [dashData, rangeStats]);
-  const pipeData = useMemo(() => (realPipeline || []).map(d => ({ ...d, label: lang === 'ar' ? d.stage_ar : d.stage_en })), [realPipeline, lang]);
+  // Per-stage stale count: opps that have been in their current stage with
+  // no activity for >30 days. Surfaced on the pipeline chart so users see
+  // which stages are stagnant at a glance instead of having to drill in.
+  // Uses last_activity_at as the freshness signal (we don't track per-stage
+  // entry timestamps consistently).
+  const stalePerStage = useMemo(() => {
+    if (!Array.isArray(rawOpps) || rawOpps.length === 0) return {};
+    const cutoff = Date.now() - 30 * 86400000;
+    const map = {};
+    for (const o of rawOpps) {
+      if (!o?.stage || o.stage === 'closed_won' || o.stage === 'closed_lost') continue;
+      const last = o.last_activity_at ? new Date(o.last_activity_at).getTime() : new Date(o.created_at || 0).getTime();
+      if (last && last < cutoff) map[o.stage] = (map[o.stage] || 0) + 1;
+    }
+    return map;
+  }, [rawOpps]);
+
+  const pipeData = useMemo(
+    () => (realPipeline || []).map(d => ({
+      ...d,
+      label: lang === 'ar' ? d.stage_ar : d.stage_en,
+      staleCount: stalePerStage[d.stage_key] || 0,
+    })),
+    [realPipeline, lang, stalePerStage]
+  );
 
   const employeeCount = dashData?.employees?.totalEmployees ?? hr.total;
 
@@ -1067,10 +1122,10 @@ export default function DashboardPage() {
           // old 4-col grid produced. Tablet falls back to 3, mobile to 2.
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
             <DashKpiCard icon={Users}      label={lang === 'ar' ? 'إجمالي الليدز' : 'Total Leads'}  value={dashLoading ? '...' : crm.totalLeads}                        trend={crm.newLeadsThisMonth > 0 ? (lang === 'ar' ? '+' + crm.newLeadsThisMonth + ' هذا الشهر' : '+' + crm.newLeadsThisMonth + ' this month') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/crm/contacts')} />
-            <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
-            <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities')} />
+            <DashKpiCard icon={Activity}   label={lang === 'ar' ? 'فرص نشطة'      : 'Active Opps'}  value={dashLoading ? '...' : filteredCrm.activeOpps}                        trend={lang === 'ar' ? 'vs الشهر الماضي' : 'vs last month'} trendUp color="#2B4C6F" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'active' } })} />
+            <DashKpiCard icon={Trophy}     label={lang === 'ar' ? 'صفقات مغلقة'   : 'Deals Closed'} value={dashLoading ? '...' : filteredCrm.closedDeals}                       trend={crm.closedThisMonth > 0 ? (lang === 'ar' ? '+' + crm.closedThisMonth + ' هذا الشهر' : '+' + crm.closedThisMonth + ' this month') : undefined} trendUp color="#6B8DB5" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'closed_won' } })} />
             <DashKpiCard icon={DollarSign} label={lang === 'ar' ? 'الإيرادات'     : 'Revenue'}      value={dashLoading ? '...' : (filteredCrm.revenue ? (filteredCrm.revenue / 1000).toFixed(0) + 'K' : '0')} sub="EGP" trend={targetPct > 0 ? (lang === 'ar' ? targetPct + '% من التارجت' : targetPct + '% of target') : undefined} trendUp color="#4A7AAB" onClick={() => navigate('/finance')} />
-            <DashKpiCard icon={TrendingUp} label={lang === 'ar' ? 'قيمة الـ Pipeline' : 'Pipeline Value'} value={dashLoading ? '...' : (() => { const pv = (rawOpps || []).filter(o => !['closed_won','closed_lost'].includes(o.stage)).reduce((s, o) => s + (o.budget || 0), 0); return pv ? (pv / 1000).toFixed(0) + 'K' : '0'; })()} sub="EGP" color="#2B4C6F" onClick={() => navigate('/crm/opportunities')} />
+            <DashKpiCard icon={TrendingUp} label={lang === 'ar' ? 'قيمة الـ Pipeline' : 'Pipeline Value'} value={dashLoading ? '...' : (() => { const pv = (rawOpps || []).filter(o => !['closed_won','closed_lost'].includes(o.stage)).reduce((s, o) => s + (o.budget || 0), 0); return pv ? (pv / 1000).toFixed(0) + 'K' : '0'; })()} sub="EGP" color="#2B4C6F" onClick={() => navigate('/crm/opportunities', { state: { initialStage: 'active' } })} />
           </div>
         );
 
@@ -1139,16 +1194,43 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }} style={{ cursor: 'pointer' }}
-                  onClick={(e) => { if (e?.activePayload?.[0]?.payload?.stage_key) navigate('/crm/opportunities', { state: { initialStage: e.activePayload[0].payload.stage_key } }); }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
-                  <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ fill: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)' }} />
-                  <Bar dataKey="count" radius={[6, 6, 0, 0]} className="cursor-pointer">{pipeData.map((_, i) => <Cell key={i} fill={'rgba(74,122,171,' + (0.35 + i * 0.13) + ')'} />)}</Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={pipeData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }} style={{ cursor: 'pointer' }}
+                    onClick={(e) => { if (e?.activePayload?.[0]?.payload?.stage_key) navigate('/crm/opportunities', { state: { initialStage: e.activePayload[0].payload.stage_key } }); }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={isDark ? 'rgba(74,122,171,0.08)' : 'rgba(0,0,0,0.05)'} />
+                    <XAxis dataKey="label" tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fill: mutedColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <Tooltip content={<ChartTooltip isDark={isDark} isRTL={isRTL} />} cursor={{ fill: isDark ? 'rgba(74,122,171,0.1)' : 'rgba(74,122,171,0.06)' }} />
+                    {/* Bar fill: stages with stale opps (>30d no activity) get an
+                        amber tint so stagnation jumps out. Stages without stale
+                        opps keep the brand-blue gradient. */}
+                    <Bar dataKey="count" radius={[6, 6, 0, 0]} className="cursor-pointer">
+                      {pipeData.map((d, i) => {
+                        const stale = d.staleCount > 0;
+                        const fill = stale
+                          ? 'rgba(245,158,11,' + (0.45 + Math.min(d.staleCount / Math.max(d.count, 1), 1) * 0.35) + ')'
+                          : 'rgba(74,122,171,' + (0.35 + i * 0.13) + ')';
+                        return <Cell key={i} fill={fill} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+                {/* Legend strip — only renders when there's at least one stale
+                    stage, so it doesn't add noise on a healthy pipeline. */}
+                {pipeData.some(d => d.staleCount > 0) && (
+                  <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-content-muted dark:text-content-muted-dark">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-brand-500/60" />
+                      {lang === 'ar' ? 'صحي' : 'Healthy'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/70" />
+                      {lang === 'ar' ? 'فيها فرص راكدة (>30 يوم)' : 'Has stale opps (>30d)'}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         );

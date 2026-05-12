@@ -19,7 +19,14 @@ export default function useOppData({
   const filtered = useMemo(() => {
     let result = applySmartFilters(normalizedOpps, smartFilters, SMART_FIELDS);
     result = applyAuditFilters(result, smartFilters);
-    if (activeStage !== 'all') result = result.filter(o => o.stage === activeStage);
+    // 'active' is a pseudo-stage drilled into from the Dashboard's "Active
+    // Opps" KPI — match every open stage (anything not closed_won/_lost).
+    // Lets KPI cards pre-filter the page without inventing N URL conventions.
+    if (activeStage === 'active') {
+      result = result.filter(o => o.stage !== 'closed_won' && o.stage !== 'closed_lost');
+    } else if (activeStage !== 'all') {
+      result = result.filter(o => o.stage === activeStage);
+    }
     if (search) {
       const q = search.toLowerCase();
       result = result.filter(o => {
