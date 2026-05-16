@@ -25,7 +25,11 @@ function timeAgo(dateStr, lang) {
 
 export default function ActivityFeed({ entityType = 'contact', entityId, dept = 'sales', compact = false }) {
   const { i18n } = useTranslation();
-  const { user } = useAuth();
+  // role + team_id live on `profile`, not `user` (user is just {id, email}).
+  // Using `user.role` made activitiesService.fetchActivities early-return on
+  // a missing role check, which silently emptied this feed on every contact
+  // drawer for every viewer. Pull from profile + fall back to user for the id.
+  const { user, profile } = useAuth();
   const lang = i18n.language;
   const isRTL = lang === 'ar';
 
@@ -38,7 +42,14 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await fetchActivities({ entityType, entityId, dept: entityId ? undefined : dept, role: user?.role, userId: user?.id, teamId: user?.team_id });
+      const data = await fetchActivities({
+        entityType,
+        entityId,
+        dept: entityId ? undefined : dept,
+        role: profile?.role,
+        userId: profile?.id || user?.id,
+        teamId: profile?.team_id,
+      });
       setActivities(data);
     } finally { setLoading(false); }
   };
@@ -55,7 +66,7 @@ export default function ActivityFeed({ entityType = 'contact', entityId, dept = 
         entityType,
         entityId,
         dept,
-        userId: user?.id,
+        userId: profile?.id || user?.id,
       });
       setForm({ type: 'call', notes: '' });
       setAdding(false);

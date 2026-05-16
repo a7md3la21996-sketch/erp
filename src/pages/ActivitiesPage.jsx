@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import useDebouncedSearch from '../hooks/useDebouncedSearch';
@@ -10,11 +10,12 @@ import {
   Clock, Activity, TrendingUp, CloudOff
 } from 'lucide-react';
 import { fetchActivities, createActivity, updateActivity, ACTIVITY_TYPES } from '../services/activitiesService';
+import supabase from '../lib/supabase';
 import { Button, Card, Select, Textarea, Badge, KpiCard, PageSkeleton, ExportButton, SmartFilter, applySmartFilters, Pagination } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
 import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { useToast } from '../contexts/ToastContext';
-import { useRealtimeSubscription, applyRealtimePayload } from '../hooks/useRealtimeSubscription';
+import { useRealtimeSubscription } from '../hooks/useRealtimeSubscription';
 import ActivityDrawer from './ActivityDrawer';
 import ContactSearch from './crm/opportunities/ContactSearch';
 
@@ -108,17 +109,22 @@ export default function ActivitiesPage() {
 
   const uniqueUsers = useMemo(() => {
     if (allAgents.length > 0) {
+      // value = UUID so the agent filter survives a rename. The visible label
+      // still pulls from the user's current name, so the chip stays readable
+      // and updates automatically when somebody is renamed in /settings.
       return allAgents.map(u => ({
-        value: u.full_name_en || u.full_name_ar,
+        value: u.id,
         label: u.full_name_ar || u.full_name_en,
         labelEn: u.full_name_en || u.full_name_ar,
       })).sort((a, b) => a.labelEn.localeCompare(b.labelEn));
     }
-    // Fallback to current-page agents if the users fetch is still pending
+    // Fallback while the users fetch is still pending — use whatever's on the
+    // current page. Prefer user_id for the value; only fall back to the name
+    // when the row has no id (rare, legacy data).
     const map = new Map();
     (activities || []).forEach(a => {
-      const key = a.user_name_en || a.user_id || '';
-      if (key && !map.has(key)) map.set(key, { value: key, label: a.user_name_ar || key, labelEn: a.user_name_en || key });
+      const key = a.user_id || a.user_name_en || '';
+      if (key && !map.has(key)) map.set(key, { value: key, label: a.user_name_ar || a.user_name_en || key, labelEn: a.user_name_en || a.user_name_ar || key });
     });
     return [...map.values()];
   }, [allAgents, activities]);
@@ -187,10 +193,13 @@ export default function ActivitiesPage() {
         dateFrom = v[0]; dateTo = v[1] ? v[1] + 'T23:59:59' : undefined;
       }
     }
+    // agentFilter.value is now a UUID (uniqueUsers maps to u.id). Pass it as
+    // agentId so the service can do user_id.eq instead of the rename-fragile
+    // user_name_en.eq. The realtime predicate also uses the UUID — see below.
     return {
       type: typeFilter?.value,
       dept: deptFilter?.value,
-      agentName: agentFilter?.value,
+      agentId: agentFilter?.value,
       result: resultFilter?.value,
       dateFrom, dateTo,
     };
@@ -208,7 +217,10 @@ export default function ActivitiesPage() {
     result: serverFilters.result,
     dateFrom: serverFilters.dateFrom,
     dateTo: serverFilters.dateTo,
-    agentName: serverFilters.agentName || ((globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined),
+    // agentId (new) takes precedence; agentName kept for the legacy global
+    // filter which still passes names. Service prefers id when both are set.
+    agentId: serverFilters.agentId,
+    agentName: (globalFilter?.agentName && globalFilter.agentName !== 'all') ? globalFilter.agentName : undefined,
     search: search || undefined,
   }), [profile?.role, profile?.id, profile?.team_id, serverFilters, globalFilter?.department, globalFilter?.agentName, search]);
 
@@ -230,10 +242,80 @@ export default function ActivitiesPage() {
 
   useEffect(() => { if (profile) loadActivities(); }, [profile, loadActivities]);
 
-  // Realtime
+  // Realtime — view-aware. The generic applyRealtimePayload prepended every
+  // INSERT regardless of role/filter, so sales_agent would see other agents'
+  // rows pop in and admins on a typed filter would see off-type rows. We hold
+  // current filters in a ref so the subscription identity stays stable (no
+  // re-subscribe on every chip toggle).
+  const rtRef = useRef({});
+  rtRef.current = { profile, serverFilters, globalFilter, search };
+
   useRealtimeSubscription('activities', useCallback((payload) => {
-    if (payload?.eventType) {
-      setActivities(prev => applyRealtimePayload(prev, payload));
+    if (!payload?.eventType) return;
+    const { profile: p, serverFilters: sf, globalFilter: gf, search: sx } = rtRef.current;
+
+    // Predicate: does this row belong in the current view?
+    const matchesView = (row) => {
+      if (!row) return false;
+      // Sales agent only ever sees their own activities (RLS enforces it
+      // server-side, but realtime publications can leak so guard here too).
+      if (p?.role === 'sales_agent' && p?.id && row.user_id !== p.id) return false;
+      if (sf?.type && row.type !== sf.type) return false;
+      if (sf?.dept && row.dept !== sf.dept) return false;
+      if (sf?.result && row.result !== sf.result) return false;
+      if (sf?.agentId && row.user_id !== sf.agentId) return false;
+      if (gf?.department && gf.department !== 'all' && row.dept !== gf.department) return false;
+      if (sf?.dateFrom) {
+        const created = row.created_at ? new Date(row.created_at).getTime() : 0;
+        const from = new Date(sf.dateFrom).getTime();
+        if (created < from) return false;
+      }
+      if (sf?.dateTo) {
+        const created = row.created_at ? new Date(row.created_at).getTime() : 0;
+        const to = new Date(sf.dateTo).getTime();
+        if (created > to) return false;
+      }
+      if (sx) {
+        // Notes search is the only client-side text dimension; cheap check.
+        const q = sx.toLowerCase();
+        const hit = (row.notes || '').toLowerCase().includes(q)
+          || (row.entity_name || '').toLowerCase().includes(q);
+        if (!hit) return false;
+      }
+      return true;
+    };
+
+    setActivities(prev => {
+      if (payload.eventType === 'DELETE') return prev.filter(a => a.id !== payload.old?.id);
+      if (payload.eventType === 'INSERT') {
+        if (!matchesView(payload.new)) return prev;
+        if (prev.some(a => a.id === payload.new.id)) return prev;
+        return [payload.new, ...prev];
+      }
+      if (payload.eventType === 'UPDATE') {
+        const exists = prev.some(a => a.id === payload.new?.id);
+        if (exists) return prev.map(a => a.id === payload.new.id ? { ...a, ...payload.new } : a);
+        return matchesView(payload.new) ? [payload.new, ...prev] : prev;
+      }
+      return prev;
+    });
+
+    // Realtime payload has no entity_name (the batch contact-name resolve
+    // runs only post-fetch in activitiesService). Hydrate it inline so the
+    // newly-prepended row shows the real lead name instead of "Contact".
+    if (payload.eventType === 'INSERT'
+        && payload.new?.entity_type === 'contact'
+        && payload.new?.entity_id
+        && !payload.new?.entity_name) {
+      supabase
+        .from('contacts')
+        .select('full_name')
+        .eq('id', payload.new.entity_id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!data?.full_name) return;
+          setActivities(prev => prev.map(a => a.id === payload.new.id ? { ...a, entity_name: data.full_name } : a));
+        });
     }
   }, []));
 
@@ -486,13 +568,48 @@ export default function ActivitiesPage() {
       {/* Activities List */}
       <Card className={`overflow-hidden mt-4 transition-opacity ${loading ? 'opacity-60 pointer-events-none' : ''}`}>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-[60px] px-6 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
-              <Activity size={28} className="text-brand-500" strokeWidth={1.5} />
-            </div>
-            <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">{lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}</p>
-            <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started'}</p>
-          </div>
+          (() => {
+            const hasActive = !!searchInput
+              || (Array.isArray(smartFilters) && smartFilters.length > 0)
+              || (globalFilter?.department && globalFilter.department !== 'all')
+              || (globalFilter?.agentName && globalFilter.agentName !== 'all');
+            const handleClear = () => {
+              setSearchInput('');
+              setSmartFilters([]);
+              setPage(1);
+            };
+            return (
+              <div className="flex flex-col items-center justify-center py-[60px] px-6 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-brand-500/[0.12] border border-dashed border-brand-500/30 flex items-center justify-center mb-4">
+                  <Activity size={28} className="text-brand-500" strokeWidth={1.5} />
+                </div>
+                <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">
+                  {lang === 'ar' ? 'لا توجد أنشطة' : 'No activities found'}
+                </p>
+                <p className="m-0 mb-3 text-xs text-content-muted dark:text-content-muted-dark">
+                  {hasActive
+                    ? (lang === 'ar' ? 'الفلاتر الحالية مفيش بيها نتايج' : 'Current filters return nothing')
+                    : (lang === 'ar' ? 'سجّل نشاطاً جديداً للبدء' : 'Log a new activity to get started')}
+                </p>
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  {hasActive && (
+                    <button
+                      onClick={handleClear}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-xs font-semibold border-none cursor-pointer hover:bg-brand-500/20"
+                    >
+                      <X size={12} /> {lang === 'ar' ? 'مسح الفلاتر' : 'Clear filters'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setAdding(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-semibold border-none cursor-pointer hover:bg-brand-600"
+                  >
+                    <Plus size={12} /> {lang === 'ar' ? 'نشاط جديد' : 'New activity'}
+                  </button>
+                </div>
+              </div>
+            );
+          })()
         ) : (
           paged.map((act, idx) => {
             const typeDef = ACTIVITY_TYPES[act.type] || ACTIVITY_TYPES.note;

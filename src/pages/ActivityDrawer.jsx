@@ -32,10 +32,12 @@ const RESULT_LABELS = {
 };
 
 const DEPT_LABELS = {
-  crm:     { ar: 'CRM', en: 'CRM' },
-  sales:   { ar: 'المبيعات', en: 'Sales' },
-  hr:      { ar: 'HR', en: 'HR' },
-  finance: { ar: 'المالية', en: 'Finance' },
+  crm:        { ar: 'CRM', en: 'CRM' },
+  sales:      { ar: 'المبيعات', en: 'Sales' },
+  marketing:  { ar: 'التسويق', en: 'Marketing' },
+  hr:         { ar: 'الموارد البشرية', en: 'HR' },
+  finance:    { ar: 'المالية', en: 'Finance' },
+  operations: { ar: 'العمليات', en: 'Operations' },
 };
 
 export default function ActivityDrawer({ activity, onClose, onUpdate }) {

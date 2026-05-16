@@ -40,7 +40,7 @@ export const MEETING_SUBTYPES = {
 };
 
 // ── Service Functions ───────────────────────────────────────────────────────
-export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentName, dateFrom, dateTo, result } = {}) {
+export async function fetchActivities({ entityType, entityId, dept, limit = 50, page, pageSize, role, userId, teamId, search, type, agentId, agentName, dateFrom, dateTo, result } = {}) {
   let supaData = [];
   const isServerPaginated = typeof page === 'number' && typeof pageSize === 'number';
 
@@ -63,11 +63,14 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
       const s = search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, '');
       if (s.length > 0) query = query.or(`notes.ilike.%${s}%,description.ilike.%${s}%,user_name_en.ilike.%${s}%,user_name_ar.ilike.%${s}%,entity_name.ilike.%${s}%`);
     }
-    if (agentName && role !== 'sales_agent')  query = query.or(`user_name_en.eq.${agentName},user_name_ar.eq.${agentName}`);
+    // Prefer the UUID filter — renames don't break it. agentName stays as a
+    // fallback for legacy callers (the global filter still passes a name).
+    if (agentId && role !== 'sales_agent') query = query.eq('user_id', agentId);
+    else if (agentName && role !== 'sales_agent')  query = query.or(`user_name_en.eq.${agentName},user_name_ar.eq.${agentName}`);
 
     // Role-based filtering (skip if no role - don't show all data)
     if (!role || !userId) return isServerPaginated ? { data: [], count: 0 } : [];
-    if (!agentName || role === 'sales_agent') {
+    if ((!agentId && !agentName) || role === 'sales_agent') {
       if (role === 'sales_agent' && userId) {
         const { data: agentUser } = await supabase.from('users').select('full_name_en').eq('id', userId).maybeSingle();
         if (agentUser?.full_name_en) {
