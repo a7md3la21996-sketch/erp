@@ -129,6 +129,13 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
 export async function createActivity({ type, notes, entityType, entityId, dept, userId, userName_ar, userName_en, status = 'completed', scheduled_date, scheduledActivityId }) {
   requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN], 'Not allowed to log activities');
 
+  // Defensive coercion: callers occasionally pass the string 'null' or
+  // 'undefined' (typically from URL params or stale form state). Writing
+  // those as text into contact_id / opportunity_id breaks readers that
+  // expect actual null and forces every consumer to add a `!== 'null'`
+  // guard. Normalize at the writer once.
+  if (entityId === 'null' || entityId === 'undefined' || entityId === '') entityId = null;
+
   // Override userId/userName from session profile so a tampered client can't
   // log activities under another agent's name. RLS still has the final say,
   // but this rejects obvious spoofs (e.g. devtools call passing userId of a

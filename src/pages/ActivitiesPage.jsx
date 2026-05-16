@@ -147,7 +147,10 @@ export default function ActivitiesPage() {
       { value: 'finance', label: 'المالية', labelEn: 'Finance' },
       { value: 'operations', label: 'العمليات', labelEn: 'Operations' },
     ]},
-    { id: 'entity_name', label: 'الجهة', labelEn: 'Related Entity', type: 'select', options: uniqueEntities },
+    // Entity field is text (was select sourced from current-page rows only,
+    // which silently capped the dropdown — invisible entities on other pages
+    // were unreachable). Free-form text matches via ilike across all pages.
+    { id: 'entity_name', label: 'الجهة', labelEn: 'Related Entity', type: 'text' },
     { id: 'result', label: 'النتيجة', labelEn: 'Result', type: 'select', options: Object.entries(RESULT_LABELS).map(([k, v]) => ({ value: k, label: v.ar, labelEn: v.en })) },
     { id: 'created_at', label: 'التاريخ', labelEn: 'Date', type: 'date' },
     { id: 'notes', label: 'الملاحظات', labelEn: 'Notes', type: 'text' },
@@ -163,7 +166,8 @@ export default function ActivitiesPage() {
   ], []);
 
   const [totalCount, setTotalCount] = useState(0);
-  const [stats, setStats] = useState({ total: 0, today: 0, topType: null });
+  const [stats, setStats] = useState({ total: 0, today: 0, topType: null, topTypeApprox: false });
+  const TOP_TYPE_SAMPLE = 500;
 
   // Extract server-side filters from smartFilters. Anything that maps to
   // a single column.eq(value) belongs here so server-side count + pagination
@@ -321,23 +325,28 @@ export default function ActivitiesPage() {
 
   // Stats — from server, narrowed by the SAME filters as the list so the
   // KPIs and the visible rows always agree. topType is computed client-side
-  // from a sample of the filtered set.
+  // from a sample (server-side GROUP BY would be the right long-term fix
+  // via an RPC, but the sample is bounded so the KPI is "approximate" not
+  // "wrong" — flagged in the UI when total > sample). TOP_TYPE_SAMPLE
+  // lives outside the callback so the KPI's sub-label can also reference it.
   const loadStats = useCallback(async () => {
     try {
       const todayStr = new Date().toISOString().slice(0, 10);
       const [totalRes, todayRes, sampleRes] = await Promise.all([
         fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1 }),
         fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 1, dateFrom: todayStr }),
-        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: 100 }),
+        fetchActivities({ ...baseQueryArgs, page: 1, pageSize: TOP_TYPE_SAMPLE }),
       ]);
       const sample = Array.isArray(sampleRes?.data) ? sampleRes.data : (Array.isArray(sampleRes) ? sampleRes : []);
       const typeCounts = {};
       sample.forEach(a => { if (a?.type) typeCounts[a.type] = (typeCounts[a.type] || 0) + 1; });
       const top = Object.entries(typeCounts).sort((x, y) => y[1] - x[1])[0];
+      const total = totalRes?.count || 0;
       setStats({
-        total: totalRes?.count || 0,
+        total,
         today: todayRes?.count || 0,
         topType: top || null,
+        topTypeApprox: total > sample.length,
       });
     } catch { /* ignore */ }
   }, [baseQueryArgs]);
@@ -468,6 +477,7 @@ export default function ActivitiesPage() {
           icon={TrendingUp}
           label={lang === 'ar' ? 'النشاط الأكثر' : 'Top Activity'}
           value={stats.topType ? (lang === 'ar' ? ACTIVITY_TYPES[stats.topType[0]]?.ar : ACTIVITY_TYPES[stats.topType[0]]?.en) : '—'}
+          sub={stats.topTypeApprox ? (lang === 'ar' ? `~ من آخر ${TOP_TYPE_SAMPLE}` : `~ from last ${TOP_TYPE_SAMPLE}`) : undefined}
           color="#6B8DB5"
         />
       </div>
