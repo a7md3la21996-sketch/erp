@@ -94,6 +94,13 @@ export default function ContactsTable({
   isSalesAgent,
   isAdmin,
   agentName,
+  // UUID → live display name. Wins over the denormalized assigned_to_name
+  // column when set. See ContactsPage for fetch + rationale.
+  userMap,
+  // Empty-state CTA: when filters are active and produce no results, the
+  // empty state offers "Clear filters" instead of just "No results found".
+  hasActiveFilters,
+  onClearAllFilters,
   // myTeamNames removed in Phase 3 — chip clipping was for multi-agent rows
   deptView,
 }) {
@@ -171,6 +178,14 @@ export default function ContactsTable({
               <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
             </div>
             <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
+            {hasActiveFilters && onClearAllFilters && (
+              <button
+                onClick={onClearAllFilters}
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-xs font-semibold border-none cursor-pointer hover:bg-brand-500/20"
+              >
+                <X size={12} /> {isRTL ? 'مسح كل الفلاتر' : 'Clear all filters'}
+              </button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-edge/50 dark:divide-edge-dark/50">
@@ -305,7 +320,19 @@ export default function ContactsTable({
                     <Search size={28} color="#4A7AAB" strokeWidth={1.5} />
                   </div>
                   <p className="m-0 mb-1.5 font-bold text-sm text-content dark:text-content-dark">{isRTL ? 'لا توجد نتائج' : 'No results found'}</p>
-                  <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords'}</p>
+                  <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+                    {hasActiveFilters
+                      ? (isRTL ? 'الفلاتر الحالية مفيش بيها نتايج — جرّب توسّع الفترة أو تشيلها' : 'Current filters return nothing — try widening the date range or clearing them')
+                      : (isRTL ? 'جرّب البحث بكلمات مختلفة' : 'Try searching with different keywords')}
+                  </p>
+                  {hasActiveFilters && onClearAllFilters && (
+                    <button
+                      onClick={onClearAllFilters}
+                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-xs font-semibold border-none cursor-pointer hover:bg-brand-500/20"
+                    >
+                      <X size={12} /> {isRTL ? 'مسح كل الفلاتر' : 'Clear all filters'}
+                    </button>
+                  )}
                 </div>
               </td></tr>
             ) : paged.map((c) => {
@@ -392,11 +419,14 @@ export default function ContactsTable({
                   {Array.isArray(c.extra_phones) && c.extra_phones.map((p, i) => p ? <PhoneCell key={`${c.id}-xp-${p}-${i}`} phone={p} small /> : null)}
                 </td>}
 
-                {/* Assigned To — admin sees all; manager/TL see only their team */}
+                {/* Assigned To — admin sees all; manager/TL see only their team.
+                    Renders the live name from userMap[c.assigned_to] when the
+                    UUID is known, falls back to the denormalized
+                    assigned_to_name only for legacy rows. */}
                 {hasCol('assigned_to') && !isSalesAgent && (
                   <td className={`${tdCls} hidden md:table-cell`}>
                     <span className="text-xs font-medium text-content dark:text-content-dark">
-                      {c.assigned_to_name || '—'}
+                      {(c.assigned_to && userMap?.get?.(c.assigned_to)) || c.assigned_to_name || '—'}
                     </span>
                   </td>
                 )}

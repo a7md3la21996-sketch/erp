@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw } from 'lucide-react';
+import { Phone, MessageCircle, Pin, PhoneCall, Ban, Users, Megaphone, Facebook, Instagram, Globe, UserPlus, MapPin, Sparkles, RefreshCw, X as XIcon } from 'lucide-react';
 import { TYPE, TEMP, normalizePhone, agentInitials, avatarColor, PhoneCell } from './constants';
 import { Pagination } from '../../../components/ui';
 
@@ -89,6 +89,12 @@ export default function ContactsCardList({
   // on cards the viewer themself owns (it's redundant for them to see
   // their own name on every lead).
   agentName,
+  // UUID → live name. Wins over the stale assigned_to_name column.
+  userMap,
+  // Empty-state CTA: parent tells us whether filters are narrowing and
+  // hands us the reset action so the empty view can offer "Clear filters".
+  hasActiveFilters,
+  onClearAllFilters,
   isSalesAgent,
   // Pull-to-refresh — async function the parent supplies; if absent the
   // gesture is disabled. Returning the promise lets us show the spinner
@@ -163,8 +169,25 @@ export default function ContactsCardList({
   if (!paged?.length) {
     return (
       <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl">
-        <div className="text-center py-16 text-content-muted dark:text-content-muted-dark text-sm">
-          {isRTL ? 'لا توجد عملاء' : 'No contacts'}
+        <div className="text-center py-16 px-6 text-sm">
+          <p className="m-0 mb-1.5 font-bold text-content dark:text-content-dark">
+            {hasActiveFilters
+              ? (isRTL ? 'مفيش عملاء بالفلاتر دي' : 'No contacts match these filters')
+              : (isRTL ? 'لا توجد عملاء' : 'No contacts')}
+          </p>
+          <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">
+            {hasActiveFilters
+              ? (isRTL ? 'جرّب تشيل بعض الفلاتر' : 'Try removing some filters')
+              : (isRTL ? 'ضِف عميل جديد للبداية' : 'Add a contact to get started')}
+          </p>
+          {hasActiveFilters && onClearAllFilters && (
+            <button
+              onClick={onClearAllFilters}
+              className="mt-3 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-brand-500/12 text-brand-500 text-xs font-semibold border-none cursor-pointer hover:bg-brand-500/20"
+            >
+              <XIcon size={12} /> {isRTL ? 'مسح كل الفلاتر' : 'Clear all filters'}
+            </button>
+          )}
         </div>
       </div>
     );
@@ -365,12 +388,16 @@ export default function ContactsCardList({
 
                 {/* Meta: agent (only when relevant) + last activity */}
                 {(() => {
-                  const ownerIsViewer = agentName && c.assigned_to_name === agentName;
+                  // Live name from userMap; fall back to the denormalized
+                  // assigned_to_name only when the UUID isn't in the map
+                  // (legacy rows or already-rendered cache).
+                  const liveOwnerName = (c.assigned_to && userMap?.get?.(c.assigned_to)) || c.assigned_to_name;
+                  const ownerIsViewer = agentName && liveOwnerName === agentName;
                   // Sales agent looking at their own assigned lead → skip the
                   // agent line entirely (redundant). Admin / manager always
                   // see it because they're looking at multiple agents'
                   // contacts. Unassigned leads always show the placeholder.
-                  const showAgentRow = !c.assigned_to_name || !(isSalesAgent && ownerIsViewer);
+                  const showAgentRow = !liveOwnerName || !(isSalesAgent && ownerIsViewer);
                   if (!showAgentRow && !last) return null;
                   return (
                     <div className="flex items-center justify-between mt-2 text-[11px] gap-2">
@@ -378,7 +405,7 @@ export default function ContactsCardList({
                         <div className="flex items-center gap-1.5 text-content-muted dark:text-content-muted-dark min-w-0">
                           <Users size={11} className="shrink-0" />
                           <span className="truncate">
-                            {c.assigned_to_name || (isRTL ? 'غير معين' : 'Unassigned')}
+                            {liveOwnerName || (isRTL ? 'غير معين' : 'Unassigned')}
                           </span>
                         </div>
                       ) : <span />}

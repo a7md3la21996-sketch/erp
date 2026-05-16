@@ -17,6 +17,7 @@ import { logAction } from '../services/auditService';
 import { bulkSend } from '../services/smsTemplateService';
 import { createNotification } from '../services/notificationsService';
 import { setFieldValues as setCFValues } from '../services/customFieldsService';
+import { fetchSalesAgents } from '../services/opportunitiesService';
 import { fetchCampaigns, createCampaign } from '../services/marketingService';
 import { getDeptStages } from './crm/contacts/constants';
 import { notifyLeadAssigned } from '../services/notificationsService';
@@ -65,6 +66,11 @@ export default function ContactsPage() {
   const highlightId = searchParams.get('highlight');
 
   const [contacts, setContacts] = useState([]);
+  // Live user lookup: assigned_to UUID → current display name. Replaces the
+  // denormalized `assigned_to_name` column for rendering, which goes stale
+  // whenever someone is renamed. We still keep `assigned_to_name` as a
+  // fallback for legacy rows where assigned_to is null but a name was set.
+  const [userMap, setUserMap] = useState(() => new Map());
   const [filterTemp, setFilterTemp] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   // Stage sub-filter — only meaningful when filterStatus === 'has_opportunity'.
@@ -133,6 +139,25 @@ export default function ContactsPage() {
     });
   }, [profile?.role, profile?.id, profile?.team_id]);
 
+  // Build the live UUID → name map so list rows don't trust the stale
+  // assigned_to_name string. Fetched once on mount (RLS scopes the result
+  // anyway). When a user is renamed in /settings/users, the next page mount
+  // picks up the new name; existing rows fall back gracefully.
+  useEffect(() => {
+    let cancelled = false;
+    fetchSalesAgents().then(list => {
+      if (cancelled) return;
+      const m = new Map();
+      for (const u of list || []) {
+        if (!u?.id) continue;
+        const name = isRTL ? (u.full_name_ar || u.full_name_en) : (u.full_name_en || u.full_name_ar);
+        if (name) m.set(u.id, name);
+      }
+      setUserMap(m);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [isRTL]);
+
   // Names of agents in the viewer's team (manager / leader / director). Used
   // by the table to clip chips on shared contacts so a manager doesn't see
   // names from sibling teams. RLS already controls *which contacts* are
@@ -176,6 +201,37 @@ export default function ContactsPage() {
     profile,
     allAgentNames,
   });
+
+  // True when any user-applied filter narrows the result set. Drives the
+  // "Clear filters" CTA on the empty state — we only offer it when there's
+  // actually something to clear (no point telling a fresh visitor to "clear"
+  // when nothing is set).
+  const hasActiveFilters = (
+    !!searchInput
+    || filterType !== 'all'
+    || filterTemp !== 'all'
+    || filterStatus !== 'all'
+    || filterStage !== 'all'
+    || filterActivity !== 'all'
+    || !!dateFrom || !!dateTo
+    || showBlacklisted || showUnassigned
+    || (Array.isArray(smartFilters) && smartFilters.length > 0)
+  );
+  const handleClearAllFilters = useCallback(() => {
+    setSearchInput('');
+    setSearch('');
+    setFilterType('all');
+    setFilterTemp('all');
+    setFilterStatus('all');
+    setFilterStage('all');
+    setFilterActivity('all');
+    setDateFrom('');
+    setDateTo('');
+    setShowBlacklisted(false);
+    setShowUnassigned(false);
+    setSmartFilters([]);
+    setPage(1);
+  }, [setSearchInput, setSearch, setFilterType, setShowBlacklisted, setSmartFilters, setPage]);
 
   // Track whether highlight has been handled
   const highlightHandled = useReactRef(false);
@@ -1154,11 +1210,26 @@ export default function ContactsPage() {
     }
   }, [profile?.role, profile?.id, profile?.team_id, page, pageSize, search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showBlacklisted, showUnassigned, globalFilter?.department, globalFilter?.agentName, smartFilters, sortBy, overdueContactIds, todayFollowupIds, noOppsIds, singleAgentIds, noActivityExcludeIds, stageContactIds]);
 
+  // Debounce filter/page-driven refetches by 250ms so rapid chip toggles
+  // (status → temperature → activity → date in quick succession) collapse
+  // into one Supabase round-trip instead of queueing 4-6 racing requests.
+  // Search input already has its own 300ms debounce inside useContactsFilters.
   useEffect(() => {
-    if (profile) loadContactsData();
-    else { setContacts(MOCK); setLoading(false); }
-    fetchCampaigns().then(c => setCampaignsList(c)).catch(err => { if (import.meta.env.DEV) console.warn('fetch campaigns:', err); });
+    if (!profile) {
+      setContacts(MOCK);
+      setLoading(false);
+      return;
+    }
+    const t = setTimeout(() => loadContactsData(), 250);
+    return () => clearTimeout(t);
   }, [profile, loadContactsData]);
+
+  // Campaigns list — one-shot fetch, doesn't need the same debounce.
+  useEffect(() => {
+    fetchCampaigns()
+      .then(c => setCampaignsList(c))
+      .catch(err => { if (import.meta.env.DEV) console.warn('fetch campaigns:', err); });
+  }, []);
 
   // Realtime: auto-refresh contacts when any row changes in Supabase. We
   // hold the latest loader in a ref so this callback identity is stable —
@@ -1777,6 +1848,9 @@ export default function ContactsPage() {
         isSalesAgent={profile?.role === 'sales_agent'}
         isAdmin={profile?.role === 'admin' || profile?.role === 'operations'}
         agentName={profile?.full_name_en || profile?.full_name_ar}
+        userMap={userMap}
+        hasActiveFilters={hasActiveFilters}
+        onClearAllFilters={handleClearAllFilters}
         deptView={deptView}
       />
       </div>
@@ -1806,6 +1880,9 @@ export default function ContactsPage() {
         perms={perms}
         isRTL={isRTL}
         agentName={profile?.full_name_en || profile?.full_name_ar}
+        userMap={userMap}
+        hasActiveFilters={hasActiveFilters}
+        onClearAllFilters={handleClearAllFilters}
         isSalesAgent={profile?.role === 'sales_agent'}
         onRefresh={loadContactsData}
         safePage={page}
