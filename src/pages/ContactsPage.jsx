@@ -87,6 +87,11 @@ export default function ContactsPage() {
   const [campaignsList, setCampaignsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  // Optional label + counter shown alongside the top progress bar so bulk
+  // operations no longer feel "stuck". `null` = no bulk in flight; otherwise
+  // `{ label, done, total }`. Handlers set total upfront then bump done as
+  // each row settles (for the per-row paths); RPC paths just set/clear.
+  const [bulkProgress, setBulkProgress] = useState(null);
 
   const [savedFilters, setSavedFilters] = useState(() => JSON.parse(localStorage.getItem('platform_saved_filters_contacts') || '[]'));
   const [saveFilterModalOpen, setSaveFilterModalOpen] = useState(false);
@@ -602,6 +607,11 @@ export default function ContactsPage() {
     setSelectedIds([]);
     setBulkReassignModal(false);
     setShowBulkMenu(false);
+    setBulkProgress({
+      label: isRTL ? `جاري النقل إلى ${agentName}` : `Reassigning to ${agentName}`,
+      done: 0,
+      total: idsToUpdate.length,
+    });
     try {
       // Atomic single-RPC instead of N updateContact round-trips. The DB
       // function inserts the activity rows + updates contacts in one
@@ -617,6 +627,8 @@ export default function ContactsPage() {
             assigned_to_names: [agentName],
             assigned_by_name: assignedByName,
             ...extraUpdates,
+          }).finally(() => {
+            setBulkProgress(p => p ? { ...p, done: p.done + 1 } : p);
           }))
         );
         const failedIdx = results.map((r, i) => r.status === 'rejected' ? i : -1).filter(i => i >= 0);
@@ -642,6 +654,7 @@ export default function ContactsPage() {
         }
       }
     } catch (err) { toast.error(isRTL ? 'فشل إعادة التعيين' : 'Reassign failed'); console.error('bulk reassign:', err); reportError('ContactsPage', 'bulkReassignRPC', err); }
+    finally { setBulkProgress(null); }
   };
 
   const handleBulkChangeField = async (field, value, actionLabel) => {
@@ -665,6 +678,11 @@ export default function ContactsPage() {
     // round-trip instead of N updateContact calls. Other fields fall through
     // to the per-row updateContact path (rare — Type, Source, Dept, Campaign).
     let results;
+    setBulkProgress({
+      label: isRTL ? `جاري تحديث ${actionLabel}` : `Updating ${actionLabel}`,
+      done: 0,
+      total: idsToUpdate.length,
+    });
     if (field === 'contact_status') {
       const { data: count, error } = await supabase.rpc('bulk_change_contact_status', {
         p_contact_ids: idsToUpdate,
@@ -687,8 +705,15 @@ export default function ContactsPage() {
         results = idsToUpdate.map(() => ({ status: 'fulfilled', value: null }));
       }
     } else {
-      results = await Promise.allSettled(idsToUpdate.map(id => updateContact(id, { [field]: value })));
+      // Per-row path — bump done as each promise settles so the user sees
+      // real-time progress on hundreds of rows.
+      results = await Promise.allSettled(idsToUpdate.map(id =>
+        updateContact(id, { [field]: value }).finally(() => {
+          setBulkProgress(p => p ? { ...p, done: p.done + 1 } : p);
+        })
+      ));
     }
+    setBulkProgress(null);
     const succeeded = [];
     const failedIdx = [];
     results.forEach((r, i) => {
@@ -1535,7 +1560,24 @@ export default function ContactsPage() {
     try {
       await blacklistContact(contact.id, reason);
       logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
-      toast.success(isRTL ? 'تم إضافة للقائمة السوداء' : 'Lead blacklisted');
+      // Undo path — blacklist is a single is_blacklisted=true flip, so the
+      // restore is just the inverse update. 8s gives the user a moment to
+      // catch a misclick before the lead is filtered out of the default view.
+      const undoBlacklist = async () => {
+        try {
+          await updateContact(contact.id, { is_blacklisted: false, blacklist_reason: null });
+          setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: false, blacklist_reason: null } : c));
+          toast.success(isRTL ? 'تم استعادة العميل' : 'Lead restored');
+        } catch {
+          toast.error(isRTL ? 'فشل التراجع' : 'Undo failed');
+        }
+      };
+      toast.show({
+        type: 'success',
+        message: isRTL ? 'تم إضافة للقائمة السوداء' : 'Lead blacklisted',
+        duration: 8000,
+        action: { label: isRTL ? 'تراجع' : 'Undo', onClick: undoBlacklist },
+      });
     } catch (err) {
       reportError('ContactsPage', 'handleBlacklist', err);
       setContacts(prev => prev.map(c => c.id === contact.id ? before : c));
@@ -1552,6 +1594,20 @@ export default function ContactsPage() {
       <div className="fixed top-0 left-0 right-0 z-[2000] h-1 bg-brand-500/20 overflow-hidden">
         <div className="h-full bg-brand-500" style={{ width: '30%', animation: 'indeterminate 1.5s ease-in-out infinite' }} />
         <style>{`@keyframes indeterminate { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }`}</style>
+      </div>
+    )}
+    {bulkProgress && (
+      // Slim status pill anchored top-center so the user always sees what's
+      // running on bulk actions. Shows count when total is known; otherwise
+      // just the label with a spinner via the actionLoading bar above.
+      <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[2001] px-3.5 py-1.5 rounded-full bg-brand-700 text-white text-xs font-semibold shadow-lg flex items-center gap-2" dir={isRTL ? 'rtl' : 'ltr'}>
+        <span className="w-2 h-2 rounded-full bg-white/90 animate-pulse" />
+        <span>{bulkProgress.label}</span>
+        {bulkProgress.total > 0 && (
+          <span className="opacity-80 tabular-nums">
+            {bulkProgress.done} / {bulkProgress.total}
+          </span>
+        )}
       </div>
     )}
     <div dir={isRTL ? 'rtl' : 'ltr'} className={`font-['Cairo','Tajawal',sans-serif] text-content dark:text-content-dark px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen overflow-x-hidden ${selectedIds.length > 0 ? 'pb-32 sm:pb-24' : ''}`}>

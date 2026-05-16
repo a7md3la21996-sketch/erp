@@ -312,7 +312,37 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
               const okCount = ids.length - failedIds.length;
               if (okCount > 0) {
                 logAction({ action: 'bulk_disqualify', entity: 'contact', entityId: ids.filter(id => !failedIds.includes(id)).join(','), description: `Disqualified ${okCount} contacts (${reasonLabel}): ${names}`, userName: profile?.full_name_ar || profile?.full_name_en || '' }).catch(() => {});
-                toast.success(isRTL ? `تم استبعاد ${okCount} عميل` : `${okCount} leads disqualified`);
+                // Undo path — restore the pre-DQ status/reason/note for each
+                // row that succeeded. DQ is reversible (it's just a status
+                // flag), so an 8s window is enough to catch an accidental
+                // misclick. Failed rows weren't mutated, so they're skipped.
+                const successIds = ids.filter(id => !failedIds.includes(id));
+                const undoBulkDq = async () => {
+                  try {
+                    await Promise.allSettled(successIds.map(id => {
+                      const before = beforeMap.get(id);
+                      return updateContact(id, {
+                        contact_status: before?.contact_status || 'new',
+                        disqualify_reason: before?.disqualify_reason || null,
+                        disqualify_note: before?.disqualify_note || null,
+                      });
+                    }));
+                    setContacts(prev => prev.map(c => {
+                      if (!successIds.includes(c.id)) return c;
+                      const before = beforeMap.get(c.id);
+                      return before ? { ...c, contact_status: before.contact_status, disqualify_reason: before.disqualify_reason, disqualify_note: before.disqualify_note } : c;
+                    }));
+                    toast.success(isRTL ? 'تم التراجع عن الاستبعاد' : 'Disqualify undone');
+                  } catch {
+                    toast.error(isRTL ? 'فشل التراجع' : 'Undo failed');
+                  }
+                };
+                toast.show({
+                  type: 'success',
+                  message: isRTL ? `تم استبعاد ${okCount} عميل` : `${okCount} leads disqualified`,
+                  duration: 8000,
+                  action: { label: isRTL ? 'تراجع' : 'Undo', onClick: undoBulkDq },
+                });
               }
               setSelectedIds([]);
             } else {
