@@ -13,7 +13,9 @@ const btnVariants = {
 const dropdownActiveCls = 'bg-brand-500/[0.20]';
 
 // Dropdown panel styles. Pops above the button (toolbar is fixed at bottom).
-const dropdownPanelCls = 'absolute bottom-[110%] start-0 bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] shadow-[0_8px_24px_rgba(0,0,0,0.35)] overflow-hidden z-[301]';
+// max-w cap + max-h with overflow-y-auto: on tiny phones the longest panel
+// (statuses, sources) can otherwise extend past the viewport edge.
+const dropdownPanelCls = 'absolute bottom-[110%] start-0 max-w-[calc(100vw-1.5rem)] max-h-[60vh] overflow-y-auto bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-[10px] shadow-[0_8px_24px_rgba(0,0,0,0.35)] z-[301]';
 const dropdownItemCls = 'w-full px-3.5 py-2 bg-transparent border-none text-content dark:text-content-dark text-[11px] cursor-pointer flex items-center gap-1.5 text-start hover:bg-brand-500/[0.15]';
 
 export default function BulkActionToolbar({
@@ -61,10 +63,11 @@ export default function BulkActionToolbar({
     <div dir={isRTL ? 'rtl' : 'ltr'}
       role="toolbar"
       aria-label={isRTL ? 'إجراءات جماعية' : 'Bulk actions'}
-      className="fixed bottom-0 inset-x-0 z-[300] px-5 py-2.5 flex items-center gap-2 flex-wrap
+      className="fixed bottom-0 inset-x-0 z-[300] px-2.5 sm:px-5 py-2.5 flex items-center gap-1.5 sm:gap-2 flex-wrap overflow-x-auto
                  bg-gradient-to-br from-[#0a1929] to-[#132337] dark:from-[#0a1929] dark:to-[#132337]
                  border-t border-brand-500/30
-                 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+                 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]
+                 max-h-[55vh]">
       {/* Count + Deselect — always white-on-dark since the bar gradient stays dark */}
       <div className="flex items-center gap-2 me-2">
         <span className="text-[13px] font-bold text-slate-200">

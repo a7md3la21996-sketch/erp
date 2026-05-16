@@ -500,11 +500,12 @@ export default function ContactsTable({
                       if (!s) return <span className="text-content-muted/50 text-[11px]">—</span>;
                       const info = STATUS_STYLES[s];
                       return info ? (
-                        <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1" style={{ color: info.color, background: info.color + '18' }}>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 border bg-transparent" style={{ color: info.color, borderColor: info.color + '55' }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: info.color }} />
                           {isRTL ? info.label : info.labelEn}
                         </span>
                       ) : (
-                        <span className="text-[10px] px-2.5 py-1 rounded-full font-semibold bg-brand-500/[0.08] text-brand-600 dark:text-brand-400">{s.replace(/_/g, ' ')}</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold border border-brand-500/30 text-brand-600 dark:text-brand-400 bg-transparent">{s.replace(/_/g, ' ')}</span>
                       );
                     }
                     // Multi-agent — stack up to 3 chips, collapse the rest into a "+N" pill
@@ -519,11 +520,16 @@ export default function ContactsTable({
                           const info = a.status ? STATUS_STYLES[a.status] : null;
                           const color = info?.color || '#6b7280';
                           const label = info ? (isRTL ? info.label : info.labelEn) : (a.status ? a.status.replace(/_/g, ' ') : '—');
+                          // Demoted to a colored DOT + outline-only chip so the row
+                          // doesn't carry two filled chip columns (temperature +
+                          // status) side-by-side. Temperature stays filled —
+                          // that's the more actionable signal for next-action.
                           return (
                             <span key={a.name}
-                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
-                              style={{ color, background: color + '18' }}
+                              className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 border bg-transparent ${a.isViewer ? 'ring-1 ring-brand-500/40' : ''}`}
+                              style={{ color, borderColor: color + '55' }}
                               title={`${a.name}: ${label}`}>
+                              <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
                               <span className="font-mono text-[9px] opacity-80">{agentInitials(a.name)}</span>
                               <span>{label}</span>
                             </span>
