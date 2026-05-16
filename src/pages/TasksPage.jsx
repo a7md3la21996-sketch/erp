@@ -10,7 +10,7 @@ import {
   CheckSquare, Plus, X, Clock, Phone, PhoneCall,
   Users, Mail, MessageCircle, Trash2, Check,
   User, CloudOff, Repeat, ToggleLeft, ToggleRight,
-  Edit3, SkipForward, Calendar, AlertCircle
+  Edit3, Calendar, AlertCircle
 } from 'lucide-react';
 import { fetchTasks, createTask, updateTask, TASK_PRIORITIES, TASK_STATUSES, TASK_TYPES } from '../services/tasksService';
 import supabase from '../lib/supabase';
@@ -24,8 +24,8 @@ import { notifyTaskAssigned } from '../services/notificationsService';
 import { useToast } from '../contexts/ToastContext';
 import {
   getRecurringTasks, createRecurringTask, updateRecurringTask, deleteRecurringTask,
-  toggleRecurringTask, generateDueInstances, getTodayInstances, completeInstance,
-  skipInstance, getNextDueDate, FREQUENCIES, PRIORITY_OPTIONS, DAY_NAMES
+  toggleRecurringTask, generateDueInstances,
+  getNextDueDate, FREQUENCIES, PRIORITY_OPTIONS, DAY_NAMES
 } from '../services/recurringTaskService';
 
 const ICONS = { Phone, PhoneCall, Users, Mail, MessageCircle, CheckSquare };
@@ -302,7 +302,6 @@ function RecurringTaskModal({ open, onClose, onSave, editTask, lang, isRTL, isDa
 function RecurringTab({ lang, isRTL, isDark, profile }) {
   const toast = useToast();
   const [recTasks, setRecTasks] = useState([]);
-  const [instances, setInstances] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
 
@@ -311,10 +310,12 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
   const loadData = useCallback(async () => {
     setLoadingRec(true);
     try {
+      // generateDueInstances spawns real task rows from active recurring
+      // templates; we no longer track in-memory instances since the migration
+      // — they live in the tasks table now and surface in the main Tasks tab.
       await generateDueInstances();
       const tasks = await getRecurringTasks();
       setRecTasks(tasks);
-      setInstances([]); // instances now created as real tasks
     } catch { setRecTasks([]); }
     finally { setLoadingRec(false); }
   }, []);
@@ -353,16 +354,6 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
     loadData();
   };
 
-  const handleComplete = (instanceId) => {
-    completeInstance(instanceId);
-    loadData();
-  };
-
-  const handleSkip = (instanceId) => {
-    skipInstance(instanceId);
-    loadData();
-  };
-
   const formatNextDue = (task) => {
     const next = getNextDueDate(task);
     if (!next) return lang === 'ar' ? 'غير محدد' : 'N/A';
@@ -380,9 +371,6 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
     }
   };
 
-  const pendingInstances = instances.filter(i => i.status === 'pending');
-  const completedInstances = instances.filter(i => i.status === 'completed' || i.status === 'skipped');
-
   const tableHeaderStyle = {
     textAlign: isRTL ? 'right' : 'left', padding: '10px 14px', fontSize: 11,
     fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px',
@@ -398,88 +386,6 @@ function RecurringTab({ lang, isRTL, isDark, profile }) {
 
   return (
     <div>
-      {/* Today's Instances */}
-      {pendingInstances.length > 0 && (
-        <Card className="mb-4 overflow-hidden">
-          <div style={{
-            padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 10,
-            borderBottom: `1px solid ${isDark ? '#2a3a4a' : '#e2e8f0'}`,
-            flexDirection: isRTL ? 'row-reverse' : 'row',
-          }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: '#F59E0B18',
-            }}>
-              <AlertCircle size={16} color="#F59E0B" />
-            </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: isDark ? '#e2e8f0' : '#1e293b' }}>
-                {lang === 'ar' ? 'مهام اليوم المتكررة' : "Today's Recurring Tasks"}
-              </div>
-              <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b' }}>
-                {pendingInstances.length} {lang === 'ar' ? 'مهمة مستحقة' : 'due'}
-              </div>
-            </div>
-          </div>
-          {pendingInstances.map((inst, idx) => {
-            const priColor = PRIORITY_OPTIONS[inst.priority]?.color || '#4A7AAB';
-            return (
-              <div key={inst.id} style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px',
-                borderBottom: idx < pendingInstances.length - 1 ? `1px solid ${isDark ? '#1a2332' : '#f1f5f9'}` : 'none',
-                flexDirection: isRTL ? 'row-reverse' : 'row',
-              }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: priColor + '18',
-                }}>
-                  <Repeat size={14} color={priColor} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: isDark ? '#e2e8f0' : '#1e293b' }}>
-                    {lang === 'ar' ? (inst.titleAr || inst.title) : inst.title}
-                  </div>
-                  <div style={{ fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', display: 'flex', gap: 8, alignItems: 'center', flexDirection: isRTL ? 'row-reverse' : 'row', marginTop: 2 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                      <Clock size={10} /> {inst.dueTime}
-                    </span>
-                    {inst.assigneeName && (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                        <User size={10} /> {inst.assigneeName}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-                  <button onClick={() => handleComplete(inst.id)} style={{
-                    display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8,
-                    border: 'none', background: '#10B98118', color: '#10B981', fontSize: 12,
-                    fontWeight: 600, cursor: 'pointer',
-                  }}>
-                    <Check size={13} /> {lang === 'ar' ? 'تم' : 'Done'}
-                  </button>
-                  <button onClick={() => handleSkip(inst.id)} style={{
-                    display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 8,
-                    border: 'none', background: isDark ? '#ffffff0a' : '#f1f5f9', color: isDark ? '#94a3b8' : '#64748b',
-                    fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                  }}>
-                    <SkipForward size={13} /> {lang === 'ar' ? 'تخطي' : 'Skip'}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </Card>
-      )}
-
-      {/* Completed today */}
-      {completedInstances.length > 0 && (
-        <div style={{ marginBottom: 12, fontSize: 11, color: isDark ? '#94a3b8' : '#64748b', display: 'flex', alignItems: 'center', gap: 6, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
-          <Check size={12} />
-          {completedInstances.length} {lang === 'ar' ? 'مهمة مكتملة/متخطاة اليوم' : 'completed/skipped today'}
-        </div>
-      )}
-
       {/* Add button */}
       <div style={{ display: 'flex', justifyContent: isRTL ? 'flex-start' : 'flex-end', marginBottom: 14, flexDirection: isRTL ? 'row-reverse' : 'row' }}>
         <Button variant="primary" size="sm" onClick={() => { setEditingTask(null); setShowModal(true); }} className={isRTL ? 'flex-row-reverse' : ''}>
@@ -618,19 +524,33 @@ function CalendarView({ tasks, lang, isRTL, isDark, onTaskClick }) {
     return d;
   }, [weekOffset]);
 
+  // Local-date YYYY-MM-DD — toISOString() returns UTC, which for users in
+  // +02/+03 timezones shifts late-evening / early-morning tasks onto the
+  // wrong calendar day. A task due 01:00 Cairo (= 22:00Z the day before)
+  // was bucketing onto the previous day in the week calendar.
+  const localDateStr = (d) => {
+    const dt = (d instanceof Date) ? d : new Date(d);
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const day = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
   const days = useMemo(() => {
     const arr = [];
     for (let i = 0; i < 7; i++) {
       const d = new Date(startOfWeek);
       d.setDate(d.getDate() + i);
-      const dateStr = d.toISOString().slice(0, 10);
-      const dayTasks = (tasks || []).filter(t => t.due_date?.slice(0, 10) === dateStr && t.status !== 'done');
+      const dateStr = localDateStr(d);
+      // Convert each task's due_date (UTC ISO) to a Date and project to its
+      // *local* calendar day before comparing — same TZ on both sides.
+      const dayTasks = (tasks || []).filter(t => t.due_date && localDateStr(new Date(t.due_date)) === dateStr && t.status !== 'done');
       arr.push({ date: d, dateStr, tasks: dayTasks });
     }
     return arr;
   }, [startOfWeek, tasks]);
 
-  const isToday = (d) => d.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
+  const isToday = (d) => localDateStr(d) === localDateStr(new Date());
   const dayNames = lang === 'ar'
     ? ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت']
     : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -867,6 +787,9 @@ function CompleteTaskModal({ task, onClose, onComplete, lang, isRTL, profile }) 
                   <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'تاريخ المتابعة' : 'Follow-up date'} <span className="text-red-500">*</span></label>
                   <input type="datetime-local" value={followUpDate} onChange={e => setFollowUpDate(e.target.value)}
                     className="w-full px-2.5 py-2 rounded-lg border border-edge dark:border-edge-dark bg-surface-input dark:bg-surface-input-dark text-content dark:text-content-dark text-xs outline-none" />
+                  <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+                    {isRTL ? '⏱ بتوقيت' : '⏱ Time zone:'} {Intl.DateTimeFormat().resolvedOptions().timeZone || (isRTL ? 'محلي' : 'local')}
+                  </p>
                 </div>
                 <div>
                   <label className="text-[11px] font-semibold text-content-muted dark:text-content-muted-dark mb-1 block">{isRTL ? 'ملاحظة المتابعة' : 'Follow-up note'}</label>
@@ -934,6 +857,26 @@ export default function TasksPage() {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('tasks');
   const [tasks, setTasks]           = useState([]);
+  // Live UUID → display name lookup. Replaces the denormalized
+  // assigned_to_name_ar/_en columns for rendering, so renaming a user
+  // doesn't leave ghost names on old task rows. Fetched once on mount.
+  const [userMap, setUserMap] = useState(() => new Map());
+  useEffect(() => {
+    let cancelled = false;
+    import('../services/opportunitiesService').then(({ fetchSalesAgents }) => {
+      fetchSalesAgents().then(list => {
+        if (cancelled) return;
+        const m = new Map();
+        for (const u of list || []) {
+          if (!u?.id) continue;
+          const name = isRTL ? (u.full_name_ar || u.full_name_en) : (u.full_name_en || u.full_name_ar);
+          if (name) m.set(u.id, name);
+        }
+        setUserMap(m);
+      }).catch(() => {});
+    });
+    return () => { cancelled = true; };
+  }, [isRTL]);
   const [loading, setLoading]       = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [completeTask, setCompleteTask] = useState(null);
@@ -1303,7 +1246,15 @@ export default function TasksPage() {
                     <option key={k} value={k}>{v}</option>
                   ))}
                 </Select>
-                <Input type="datetime-local" value={form.due_date} onChange={e => setForm(f=>({...f,due_date:e.target.value}))} className={isRTL ? 'direction-rtl' : 'direction-ltr'} />
+                <div>
+                  <Input type="datetime-local" value={form.due_date} onChange={e => setForm(f=>({...f,due_date:e.target.value}))} className={isRTL ? 'direction-rtl' : 'direction-ltr'} />
+                  {/* datetime-local is interpreted in the browser's local TZ.
+                      Surface the user's IANA zone so they know how the picked
+                      time maps to "the team's clock" before they submit. */}
+                  <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+                    {lang === 'ar' ? '⏱ بتوقيت' : '⏱ Time zone:'} {Intl.DateTimeFormat().resolvedOptions().timeZone || (lang === 'ar' ? 'محلي' : 'local')}
+                  </p>
+                </div>
                 {form.contact_id ? (
                   <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-500/[0.08] border border-brand-500/20">
                     <span className="flex-1 text-xs font-semibold text-content dark:text-content-dark">{form.contact_name}</span>
@@ -1331,21 +1282,31 @@ export default function TasksPage() {
 
           {/* Status + Priority Chips */}
           <div className="flex gap-2 mb-2 flex-wrap">
-            {[
-              { value: 'pending', label: lang==='ar'?'معلقة':'Pending', color: '#F97316' },
-              { value: 'in_progress', label: lang==='ar'?'جارية':'In Progress', color: '#4A7AAB' },
-              { value: 'done', label: lang==='ar'?'مكتملة':'Done', color: '#10B981' },
-              { value: 'all', label: lang==='ar'?'الكل':'All', color: '#6B8DB5' },
-            ].map(s => {
-              const active = statusFilter === s.value;
-              return (
-                <button key={s.value} onClick={() => { setStatusFilter(s.value); setPage(1); }}
-                  className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
-                  style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
-                  {s.label}
-                </button>
-              );
-            })}
+            {(() => {
+              // Smart filter for status wins over the chip in baseQueryArgs.
+              // Visually disable the chips when that happens so users don't
+              // click "Done" then wonder why nothing changed.
+              const statusOverridden = !!serverFilters.status;
+              return [
+                { value: 'pending', label: lang==='ar'?'معلقة':'Pending', color: '#F97316' },
+                { value: 'in_progress', label: lang==='ar'?'جارية':'In Progress', color: '#4A7AAB' },
+                { value: 'done', label: lang==='ar'?'مكتملة':'Done', color: '#10B981' },
+                { value: 'all', label: lang==='ar'?'الكل':'All', color: '#6B8DB5' },
+              ].map(s => {
+                const active = !statusOverridden && statusFilter === s.value;
+                return (
+                  <button
+                    key={s.value}
+                    onClick={() => { if (statusOverridden) return; setStatusFilter(s.value); setPage(1); }}
+                    disabled={statusOverridden}
+                    title={statusOverridden ? (lang==='ar' ? 'متعطل: فيه smart filter على الحالة' : 'Disabled: a smart filter is controlling status') : undefined}
+                    className={`px-3.5 py-1.5 rounded-full text-xs ${statusOverridden ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'} ${active ? 'font-bold' : 'font-normal bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark'}`}
+                    style={active ? { border: `1px solid ${s.color}`, background: `${s.color}15`, color: s.color } : undefined}>
+                    {s.label}
+                  </button>
+                );
+              });
+            })()}
             <div className="w-px h-6 bg-edge dark:bg-edge-dark self-center mx-1" />
             {[
               { value: 'all', label: lang==='ar'?'كل الأولويات':'All Priorities', color: '#6B8DB5' },
@@ -1406,13 +1367,52 @@ export default function TasksPage() {
             {loading ? (
               <div className="text-center p-12 text-content-muted dark:text-content-muted-dark">{lang==='ar'?'جاري التحميل...':'Loading...'}</div>
             ) : filtered.length === 0 ? (
-                <div className="text-center py-[60px] px-5">
-                    <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
-                      <CheckSquare size={24} className="text-brand-500" />
+                (() => {
+                  const hasActive = statusFilter !== 'pending'
+                    || priorityFilter !== 'all'
+                    || dateFilter !== 'all'
+                    || agentFilter !== 'all'
+                    || !!search
+                    || (Array.isArray(smartFilters) && smartFilters.length > 0);
+                  const handleClear = () => {
+                    setStatusFilter('pending');
+                    setPriorityFilter('all');
+                    setDateFilter('all');
+                    setAgentFilter('all');
+                    setSearchInput('');
+                    setSmartFilters([]);
+                    setPage(1);
+                  };
+                  return (
+                    <div className="text-center py-[60px] px-5">
+                      <div className="w-16 h-16 rounded-2xl bg-brand-500/10 flex items-center justify-center mx-auto mb-4">
+                        <CheckSquare size={24} className="text-brand-500" />
+                      </div>
+                      <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
+                      <p className="m-0 mb-3 text-xs text-content-muted dark:text-content-muted-dark">
+                        {hasActive
+                          ? (lang==='ar' ? 'الفلاتر الحالية مفيش بيها نتايج' : 'Current filters return nothing')
+                          : (lang==='ar' ? 'ضف مهمة جديدة للبداية' : 'Add a task to get started')}
+                      </p>
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        {hasActive && (
+                          <button
+                            onClick={handleClear}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500/12 text-brand-500 text-xs font-semibold border-none cursor-pointer hover:bg-brand-500/20"
+                          >
+                            <X size={12} /> {lang==='ar' ? 'مسح الفلاتر' : 'Clear filters'}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setShowAdd(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-500 text-white text-xs font-semibold border-none cursor-pointer hover:bg-brand-600"
+                        >
+                          <Plus size={12} /> {lang==='ar' ? 'مهمة جديدة' : 'New task'}
+                        </button>
+                      </div>
                     </div>
-                    <p className="m-0 mb-1.5 text-sm font-bold text-content dark:text-content-dark">{lang==='ar'?'لا توجد مهام':'No Tasks Found'}</p>
-                    <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{lang==='ar'?'لم يتم إضافة أي مهام بعد أو جرّب تغيير الفلتر':'No tasks found, try changing the filter'}</p>
-                  </div>
+                  );
+                })()
                 ) : paged.map((task, idx) => {
               const typeDef = TASK_TYPES[task.type] || TASK_TYPES.general;
               const Ic = ICONS[typeDef.icon] || CheckSquare;
@@ -1472,12 +1472,22 @@ export default function TasksPage() {
                       }`}>
                         <Clock size={10} /> {due.label}
                       </span>
-                      {(task.assigned_to_name_ar || task.assigned_to_name_en) && (
-                        <span className="text-xs text-brand-500 flex items-center gap-[3px] font-medium">
-                          <User size={10} />
-                          {lang==='ar' ? (task.assigned_to_name_ar || task.assigned_to_name_en) : (task.assigned_to_name_en || task.assigned_to_name_ar)}
-                        </span>
-                      )}
+                      {(() => {
+                        // Live name from UUID wins; fall back to the stored
+                        // assigned_to_name_ar/_en only for legacy rows where
+                        // assigned_to is null or the user is no longer in the map.
+                        const liveName = task.assigned_to ? userMap.get(task.assigned_to) : null;
+                        const display = liveName || (lang === 'ar'
+                          ? (task.assigned_to_name_ar || task.assigned_to_name_en)
+                          : (task.assigned_to_name_en || task.assigned_to_name_ar));
+                        if (!display) return null;
+                        return (
+                          <span className="text-xs text-brand-500 flex items-center gap-[3px] font-medium">
+                            <User size={10} />
+                            {display}
+                          </span>
+                        );
+                      })()}
                       {task.contact_name && (
                         <button
                           onClick={(e) => { e.stopPropagation(); navigate(task.contact_id ? `/contacts?highlight=${task.contact_id}` : `/contacts?q=${encodeURIComponent(task.contact_name)}`); }}
@@ -1525,6 +1535,17 @@ export default function TasksPage() {
             })}
           </Card>
 
+          {/* Smart filters narrow `paged` client-side after the server has
+              returned the page, so the visible count can be less than the
+              server's totalCount. Surface that gap so "Page 2 of 4 · 3 visible"
+              doesn't look like a bug. */}
+          {filtered.length < tasks.length && (
+            <div className="mt-2 px-1 text-[11px] text-content-muted dark:text-content-muted-dark text-center">
+              {lang === 'ar'
+                ? `الفلاتر بتعرض ${filtered.length} من ${tasks.length} في الصفحة دي`
+                : `Smart filters showing ${filtered.length} of ${tasks.length} on this page`}
+            </div>
+          )}
           <Pagination
             page={page}
             totalPages={totalPages}
