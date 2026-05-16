@@ -855,23 +855,38 @@ function ActionableLeadsWidget({ lang, isRTL, profile, navigate }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Wait until the auth profile is populated. Hitting `contacts` before the
+    // session lands gives a 401 with an empty body which is hard to debug.
+    if (!profile?.id) return;
     let cancelled = false;
     (async () => {
       try {
         const cutoff = new Date(Date.now() - 3 * 86400000).toISOString();
+        // Single .lt filter (drop the .or with is.null) because PostgREST .or
+        // was returning 400 on this deployment with an ISO timestamp value.
+        // Leads with a null last_activity_at fall through — that's a rare
+        // edge case (the column is typically backfilled to created_at on
+        // insert) and the simpler filter is far easier to keep working.
         let q = supabase
           .from('contacts')
           .select('id, full_name, phone, last_activity_at, contact_status')
           .eq('contact_status', 'following')
-          .or(`last_activity_at.lt.${cutoff},last_activity_at.is.null`)
-          .order('last_activity_at', { ascending: true, nullsFirst: true })
+          .lt('last_activity_at', cutoff)
+          .order('last_activity_at', { ascending: true })
           .limit(8);
         if (profile?.role === 'sales_agent' && profile?.id) {
           q = q.eq('assigned_to', profile.id);
         }
         const { data, error } = await q;
         if (cancelled) return;
-        if (error) { setLeads([]); } else { setLeads(Array.isArray(data) ? data : []); }
+        if (error) {
+          // Surface the real reason so future deploys don't silently fail.
+          // eslint-disable-next-line no-console
+          console.warn('[ActionableLeadsWidget] query failed:', error.message || error);
+          setLeads([]);
+        } else {
+          setLeads(Array.isArray(data) ? data : []);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
