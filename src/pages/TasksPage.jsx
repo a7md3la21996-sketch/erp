@@ -881,6 +881,9 @@ export default function TasksPage() {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [completeTask, setCompleteTask] = useState(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState(new Set());
+  // Tracks an in-flight bulk operation so we can render a "X / N" pill while
+  // the per-row Promise.allSettled is settling. `null` = idle.
+  const [bulkBusy, setBulkBusy] = useState(null);
   const [statusFilter, setStatusFilter] = useState('pending');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
@@ -994,16 +997,58 @@ export default function TasksPage() {
 
   useEffect(() => { if (profile) loadTasks(); }, [profile, loadTasks]);
 
-  // Realtime
+  // Realtime — payload predicates live in refs so the subscription doesn't
+  // re-subscribe on every filter change (which would leak channels). Refs
+  // hold the latest filter values; the callback reads from them at fire time.
+  const filterRefs = useRef({});
+  filterRefs.current = { profile, statusFilter, priorityFilter, agentFilter, dateFilter };
   useRealtimeSubscription('tasks', useCallback((payload) => {
-    if (payload?.eventType) {
-      setTasks(prev => {
-        if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== payload.old?.id);
-        if (payload.eventType === 'INSERT') return [payload.new, ...prev];
-        if (payload.eventType === 'UPDATE') return prev.map(t => t.id === payload.new?.id ? { ...t, ...payload.new } : t);
-        return prev;
-      });
-    }
+    if (!payload?.eventType) return;
+    const { profile: p, statusFilter: sf, priorityFilter: pf, agentFilter: af, dateFilter: df } = filterRefs.current;
+
+    // Predicate: does this row belong in the current view?
+    const matchesView = (row) => {
+      if (!row) return false;
+      // Role scope — sales_agent only ever sees their own tasks. RLS already
+      // enforces this server-side, but realtime payloads can leak rows the
+      // viewer wasn't supposed to receive if the publication isn't filtered.
+      if (p?.role === 'sales_agent' && p?.id && row.assigned_to !== p.id) return false;
+      if (sf && sf !== 'all' && row.status !== sf) return false;
+      if (pf && pf !== 'all' && row.priority !== pf) return false;
+      // agentFilter is a NAME (matches assignedToOptions), so compare against
+      // the row's denormalized name. Imperfect (drift) but matches how the
+      // initial fetch filtered.
+      if (af && af !== 'all' && row.assigned_to_name_en !== af) return false;
+      if (df === 'overdue') {
+        const due = row.due_date ? new Date(row.due_date).getTime() : null;
+        if (!due || due >= Date.now() || row.status === 'done') return false;
+      }
+      return true;
+    };
+
+    setTasks(prev => {
+      // DELETE always applies — stale rows are worse than over-deletion.
+      if (payload.eventType === 'DELETE') return prev.filter(t => t.id !== payload.old?.id);
+      if (payload.eventType === 'INSERT') {
+        // Skip rows that don't match the active filters; the user can
+        // adjust filters to see them. Avoids a flood of off-scope inserts
+        // (e.g. another agent's task) appearing in the list.
+        if (!matchesView(payload.new)) return prev;
+        if (prev.some(t => t.id === payload.new.id)) return prev; // de-dupe
+        return [payload.new, ...prev];
+      }
+      if (payload.eventType === 'UPDATE') {
+        const exists = prev.some(t => t.id === payload.new?.id);
+        // If the row was already visible, merge the update (even if it now
+        // falls outside the view) — better UX than rows that mutate then
+        // disappear silently mid-edit.
+        if (exists) return prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t);
+        // Otherwise only adopt if it matches the view (e.g. a row was just
+        // reassigned to the current agent).
+        return matchesView(payload.new) ? [payload.new, ...prev] : prev;
+      }
+      return prev;
+    });
   }, []));
 
   // Stats — from server
@@ -1130,6 +1175,17 @@ export default function TasksPage() {
 
   return (
     <div className={`px-4 py-4 md:px-7 md:py-6 bg-surface-bg dark:bg-surface-bg-dark min-h-screen pb-16 ${isRTL ? 'direction-rtl' : 'direction-ltr'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+
+      {bulkBusy && (
+        // Floating progress pill — anchored top-center so it stays visible
+        // while the user looks at any part of the list. Same pattern as
+        // ContactsPage bulk-progress.
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-[2001] px-3.5 py-1.5 rounded-full bg-brand-700 text-white text-xs font-semibold shadow-lg flex items-center gap-2" dir={isRTL ? 'rtl' : 'ltr'}>
+          <span className="w-2 h-2 rounded-full bg-white/90 animate-pulse" />
+          <span>{isRTL ? 'جاري إنهاء المهام' : 'Completing tasks'}</span>
+          <span className="opacity-80 tabular-nums">{bulkBusy.done} / {bulkBusy.total}</span>
+        </div>
+      )}
 
       {/* Header */}
       <div className={`flex flex-wrap items-center justify-between gap-3 mb-5 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
@@ -1569,12 +1625,61 @@ export default function TasksPage() {
             </button>
             <button onClick={async () => {
               const ids = [...selectedTaskIds];
-              try {
-                await Promise.all(ids.map(id => updateTask(id, { status: 'done' })));
-                setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, status: 'done' } : t));
-                toast.success(isRTL ? `تم إنهاء ${ids.length} مهمة` : `${ids.length} tasks completed`);
-                setSelectedTaskIds(new Set());
-              } catch { toast.error(isRTL ? 'حدث خطأ' : 'Error'); }
+              // Snapshot prior status per id so the Undo path can revert each
+              // row to exactly where it was (mix of pending / in_progress is
+              // common). Without this, undo would blindly flip everything to
+              // 'pending' even if some were 'in_progress'.
+              const beforeMap = new Map(
+                tasks.filter(t => ids.includes(t.id)).map(t => [t.id, t.status])
+              );
+              setBulkBusy({ done: 0, total: ids.length });
+              // allSettled instead of all → one rejection no longer cancels
+              // feedback for the rows that did succeed. Bump the progress
+              // counter as each promise settles.
+              const results = await Promise.allSettled(
+                ids.map(id => updateTask(id, { status: 'done' }).finally(() => {
+                  setBulkBusy(b => b ? { ...b, done: b.done + 1 } : b);
+                }))
+              );
+              const succeededIds = ids.filter((id, i) => results[i].status === 'fulfilled');
+              const failedCount = ids.length - succeededIds.length;
+              setBulkBusy(null);
+              // Optimistic update — only flip rows that actually saved. Stale
+              // ones (RLS, conflict) stay as they were.
+              setTasks(prev => prev.map(t => succeededIds.includes(t.id) ? { ...t, status: 'done' } : t));
+              setSelectedTaskIds(new Set());
+
+              if (failedCount > 0 && succeededIds.length === 0) {
+                toast.error(isRTL ? 'فشل إنهاء أي مهمة — جرّب مرة تانية' : 'No tasks completed — please retry');
+                return;
+              }
+              if (failedCount > 0) {
+                toast.warning(isRTL
+                  ? `تم إنهاء ${succeededIds.length} من ${ids.length} (فشل ${failedCount})`
+                  : `Completed ${succeededIds.length} of ${ids.length} (${failedCount} failed)`);
+              }
+              // Undo path — restore each succeeded row to its previous status.
+              const undoBulkDone = async () => {
+                try {
+                  await Promise.allSettled(succeededIds.map(id =>
+                    updateTask(id, { status: beforeMap.get(id) || 'pending' })
+                  ));
+                  setTasks(prev => prev.map(t => succeededIds.includes(t.id)
+                    ? { ...t, status: beforeMap.get(t.id) || 'pending' }
+                    : t));
+                  toast.success(isRTL ? 'تم التراجع' : 'Bulk complete undone');
+                } catch {
+                  toast.error(isRTL ? 'فشل التراجع' : 'Undo failed');
+                }
+              };
+              toast.show({
+                type: 'success',
+                message: failedCount === 0
+                  ? (isRTL ? `تم إنهاء ${succeededIds.length} مهمة` : `${succeededIds.length} tasks completed`)
+                  : (isRTL ? `تم إنهاء ${succeededIds.length} مهمة` : `${succeededIds.length} tasks completed`),
+                duration: 8000,
+                action: { label: isRTL ? 'تراجع' : 'Undo', onClick: undoBulkDone },
+              });
             }}
               className="px-4 py-1.5 rounded-lg border-none bg-white text-brand-500 text-xs font-bold cursor-pointer flex items-center gap-1.5">
               <Check size={13} /> {isRTL ? 'إنهاء الكل' : 'Done All'}

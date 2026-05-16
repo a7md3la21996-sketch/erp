@@ -165,11 +165,30 @@ export async function generateDueInstances() {
     for (const task of tasks) {
       if (!task.active && !task.enabled) continue;
       if (!isDueToday(task)) continue;
-
-      // Check if already generated today
+      // Quick local short-circuit before the race-safe claim. Saves a network
+      // round-trip on the common case where today's instance is already done.
       if (task.last_generated_at?.slice(0, 10) === today) continue;
 
-      // Create a real task in the tasks table
+      // RACE-SAFE CLAIM. Two viewers opening the Recurring tab in the same
+      // second used to both pass the local "already generated?" check and
+      // spawn duplicate task rows. We now atomically claim the slot via a
+      // conditional UPDATE: only one caller wins (.select() returns the row),
+      // the other gets [] and skips. The DB enforces serial ordering — no
+      // local locking, no migrations, no constraint changes.
+      const nowIso = new Date().toISOString();
+      const todayBoundary = today + 'T00:00:00Z'; // any UTC instant today is >= this
+      const { data: claimed, error: claimErr } = await supabase
+        .from('recurring_tasks')
+        .update({ last_generated_at: nowIso })
+        .eq('id', task.id)
+        .or(`last_generated_at.is.null,last_generated_at.lt.${todayBoundary}`)
+        .select('id');
+      if (claimErr || !Array.isArray(claimed) || claimed.length === 0) {
+        // Either errored or someone else claimed it first — skip.
+        continue;
+      }
+
+      // We won the claim; safe to create the real task row.
       try {
         await createTask({
           title: task.title || task.titleAr || 'Recurring task',
@@ -180,12 +199,8 @@ export async function generateDueInstances() {
           due_date: today + 'T' + (task.time || '09:00') + ':00',
           assigned_to_name: task.assignee_name || task.assigneeName || '',
         });
-
-        // Mark as generated today
-        await supabase.from('recurring_tasks').update({ last_generated_at: new Date().toISOString() }).eq('id', task.id);
         generated++;
 
-        // Send notification
         createNotification({
           type: 'reminder',
           title_ar: 'مهمة متكررة مستحقة',
@@ -194,7 +209,17 @@ export async function generateDueInstances() {
           body_en: task.title || task.title_ar,
           for_user_id: task.assignee_id || 'all',
         }).catch(() => {});
-      } catch { /* skip this task */ }
+      } catch {
+        // createTask failed AFTER we already claimed the slot — release the
+        // claim by rolling last_generated_at back to its prior value so the
+        // next run can retry. Without this a transient failure (RLS, network)
+        // would silently swallow the recurring instance for today.
+        try {
+          await supabase.from('recurring_tasks')
+            .update({ last_generated_at: task.last_generated_at || null })
+            .eq('id', task.id);
+        } catch { /* best-effort rollback */ }
+      }
     }
     return generated;
   } catch (err) {
