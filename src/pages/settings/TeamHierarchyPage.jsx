@@ -62,6 +62,120 @@ export default function TeamHierarchyPage() {
   const [moveUser, setMoveUser] = useState(null);
   const [moveTarget, setMoveTarget] = useState('');
 
+  // ── "New team + members" wizard ─────────────────────────────────────
+  // Single-modal flow that operations uses instead of: create dept →
+  // edit user → set team_id (× N users). Inserts the department then
+  // batch-updates every picked user in one transaction-shaped flow.
+  // If the user-update step fails after the dept is created, we delete
+  // the orphan dept so we never leave a half-applied wizard run.
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [wizardForm, setWizardForm] = useState({
+    name_ar: '', name_en: '', parent_id: null,
+    leader_id: '',           // single team_leader / sales_manager
+    member_ids: new Set(),   // sales_agents
+  });
+  const [wizardSearch, setWizardSearch] = useState('');
+  const [wizardSaving, setWizardSaving] = useState(false);
+
+  const openWizard = (parentId = null) => {
+    setWizardForm({
+      name_ar: '', name_en: '',
+      parent_id: parentId,
+      leader_id: '',
+      member_ids: new Set(),
+    });
+    setWizardSearch('');
+    setWizardOpen(true);
+  };
+
+  const toggleWizardMember = (uid) => {
+    setWizardForm(f => {
+      const next = new Set(f.member_ids);
+      if (next.has(uid)) next.delete(uid); else next.add(uid);
+      return { ...f, member_ids: next };
+    });
+  };
+
+  const saveWizard = async () => {
+    if (!wizardForm.name_ar && !wizardForm.name_en) {
+      toast.error(isRTL ? 'اكتب اسم الفريق' : 'Team name required');
+      return;
+    }
+    setWizardSaving(true);
+    let createdId = null;
+    try {
+      // 1. Create the department
+      const { data: dept, error: deptErr } = await supabase
+        .from('departments')
+        .insert([{
+          name_ar: wizardForm.name_ar,
+          name_en: wizardForm.name_en,
+          parent_id: wizardForm.parent_id || null,
+          created_at: new Date().toISOString(),
+        }])
+        .select('*')
+        .single();
+      if (deptErr) throw deptErr;
+      createdId = dept.id;
+
+      // 2. Build the user-id list (leader + members, deduped)
+      const toAssign = new Set(wizardForm.member_ids);
+      if (wizardForm.leader_id) toAssign.add(wizardForm.leader_id);
+
+      if (toAssign.size > 0) {
+        const { error: updErr } = await supabase
+          .from('users')
+          .update({ team_id: createdId })
+          .in('id', [...toAssign]);
+        if (updErr) throw updErr;
+      }
+
+      // 3. Refresh + close
+      setDepartments(prev => [...prev, dept]);
+      setUsers(prev => prev.map(u => toAssign.has(u.id) ? { ...u, team_id: createdId } : u));
+      // Auto-expand the new team so the user sees the assignments landed
+      setExpanded(prev => ({ ...prev, [createdId]: true, ...(wizardForm.parent_id ? { [wizardForm.parent_id]: true } : {}) }));
+      toast.success(isRTL
+        ? `تم إنشاء الفريق وتعيين ${toAssign.size} عضو`
+        : `Team created and ${toAssign.size} member(s) assigned`);
+      setWizardOpen(false);
+    } catch (err) {
+      // Rollback the orphan dept so the next run doesn't see a half-applied state
+      if (createdId) {
+        try { await supabase.from('departments').delete().eq('id', createdId); } catch { /* best-effort */ }
+      }
+      toast.error((isRTL ? 'فشل: ' : 'Failed: ') + (err?.message || ''));
+    }
+    setWizardSaving(false);
+  };
+
+  // Filter for the wizard member picker — only show roles that make sense
+  // on a sales team (agents + leaders), exclude inactive, exclude anyone
+  // already on this team OR anywhere if we want the picker to be a
+  // "move from current team" affordance. Here we surface ALL eligible users
+  // (with a hint of their current team) so the operator picks freely.
+  const wizardEligibleUsers = useMemo(() => {
+    const list = users.filter(u =>
+      ['sales_agent', 'team_leader', 'sales_manager'].includes(u.role)
+      && u.status !== 'inactive'
+    );
+    if (!wizardSearch.trim()) return list;
+    const q = wizardSearch.toLowerCase();
+    return list.filter(u =>
+      (u.full_name_en || '').toLowerCase().includes(q) ||
+      (u.full_name_ar || '').toLowerCase().includes(q)
+    );
+  }, [users, wizardSearch]);
+  const wizardLeaderCandidates = useMemo(
+    () => wizardEligibleUsers.filter(u => u.role === 'team_leader' || u.role === 'sales_manager'),
+    [wizardEligibleUsers]
+  );
+  const teamNameById = useMemo(() => {
+    const m = {};
+    departments.forEach(d => { m[d.id] = isRTL ? (d.name_ar || d.name_en) : (d.name_en || d.name_ar); });
+    return m;
+  }, [departments, isRTL]);
+
   const load = async () => {
     setLoading(true);
     try {
@@ -271,7 +385,14 @@ export default function TeamHierarchyPage() {
             <p className="m-0 text-xs text-content-muted dark:text-content-muted-dark">{isRTL ? 'إدارة الفرق والأعضاء' : 'Manage teams and members'}</p>
           </div>
         </div>
-        <Button onClick={() => openAddDept(null)}><Plus size={14} /> {isRTL ? 'فريق جديد' : 'New Team'}</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="primary" onClick={() => openWizard(null)}>
+            <Plus size={14} /> {isRTL ? 'فريق + أعضاء' : 'Team + Members'}
+          </Button>
+          <Button variant="secondary" onClick={() => openAddDept(null)}>
+            <Plus size={14} /> {isRTL ? 'فريق فاضي' : 'Empty Team'}
+          </Button>
+        </div>
       </div>
 
       <Card className="p-4 mb-4">
@@ -309,6 +430,152 @@ export default function TeamHierarchyPage() {
             })}
           </div>
         </Card>
+      )}
+
+      {/* Wizard: team + members in one submit */}
+      {wizardOpen && (
+        <Modal isOpen={true} onClose={() => !wizardSaving && setWizardOpen(false)}
+          title={isRTL ? 'فريق جديد + الأعضاء' : 'New Team + Members'}>
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-content dark:text-content-dark mb-1">
+                  {isRTL ? 'الاسم بالعربي' : 'Name (AR)'} <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  value={wizardForm.name_ar}
+                  onChange={e => setWizardForm(f => ({ ...f, name_ar: e.target.value }))}
+                  placeholder={isRTL ? 'مثلاً: فريق نور' : 'e.g. Nour Team'}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-content dark:text-content-dark mb-1">
+                  {isRTL ? 'الاسم بالإنجليزي' : 'Name (EN)'}
+                </label>
+                <Input
+                  value={wizardForm.name_en}
+                  onChange={e => setWizardForm(f => ({ ...f, name_en: e.target.value }))}
+                  placeholder="e.g. Nour Team"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-content dark:text-content-dark mb-1">
+                {isRTL ? 'تحت أي فريق (parent)' : 'Parent team'}
+              </label>
+              <Select
+                value={wizardForm.parent_id || ''}
+                onChange={e => setWizardForm(f => ({ ...f, parent_id: e.target.value || null }))}
+              >
+                <option value="">{isRTL ? '— فريق رئيسي (مفيش parent) —' : '— Root (no parent) —'}</option>
+                {departments.map(d => (
+                  <option key={d.id} value={d.id}>{isRTL ? (d.name_ar || d.name_en) : (d.name_en || d.name_ar)}</option>
+                ))}
+              </Select>
+              <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+                {isRTL
+                  ? 'لو حطيت فريق أب، الـ manager بتاع الفريق الأب هيشوف اللي تحت ده تلقائياً'
+                  : 'When set, the parent team\'s manager automatically inherits visibility into this team'}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-content dark:text-content-dark mb-1">
+                {isRTL ? 'ليدر الفريق (اختياري)' : 'Team leader (optional)'}
+              </label>
+              <Select
+                value={wizardForm.leader_id}
+                onChange={e => setWizardForm(f => ({ ...f, leader_id: e.target.value }))}
+              >
+                <option value="">{isRTL ? '— مفيش ليدر دلوقتي —' : '— No leader yet —'}</option>
+                {wizardLeaderCandidates.map(u => {
+                  const name = isRTL ? (u.full_name_ar || u.full_name_en) : (u.full_name_en || u.full_name_ar);
+                  const current = u.team_id ? ` (${isRTL ? 'حالياً في:' : 'now in:'} ${teamNameById[u.team_id] || '—'})` : '';
+                  return <option key={u.id} value={u.id}>{name}{current}</option>;
+                })}
+              </Select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-content dark:text-content-dark">
+                  {isRTL ? `أعضاء الفريق (${wizardForm.member_ids.size} محدد)` : `Members (${wizardForm.member_ids.size} selected)`}
+                </label>
+                {wizardForm.member_ids.size > 0 && (
+                  <button
+                    onClick={() => setWizardForm(f => ({ ...f, member_ids: new Set() }))}
+                    className="text-[10px] text-red-500 bg-transparent border-none cursor-pointer hover:underline"
+                  >
+                    {isRTL ? 'إلغاء التحديد' : 'Clear all'}
+                  </button>
+                )}
+              </div>
+              <Input
+                value={wizardSearch}
+                onChange={e => setWizardSearch(e.target.value)}
+                placeholder={isRTL ? 'بحث بالاسم...' : 'Search by name...'}
+                className="mb-2"
+              />
+              <div className="border border-edge dark:border-edge-dark rounded-lg max-h-[240px] overflow-y-auto">
+                {wizardEligibleUsers.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-content-muted dark:text-content-muted-dark">
+                    {isRTL ? 'لا يوجد مستخدمين' : 'No matching users'}
+                  </div>
+                ) : (
+                  wizardEligibleUsers.map(u => {
+                    const isSel = wizardForm.member_ids.has(u.id);
+                    const isLeader = u.id === wizardForm.leader_id;
+                    const name = isRTL ? (u.full_name_ar || u.full_name_en) : (u.full_name_en || u.full_name_ar);
+                    return (
+                      <label key={u.id}
+                        className={`flex items-center gap-2 px-3 py-2 border-b border-edge/40 dark:border-edge-dark/40 last:border-b-0 cursor-pointer ${isSel ? 'bg-brand-500/[0.08]' : 'hover:bg-surface-bg dark:hover:bg-surface-bg-dark'} ${isLeader ? 'opacity-60' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={isSel}
+                          disabled={isLeader}
+                          onChange={() => toggleWizardMember(u.id)}
+                          className="w-4 h-4 cursor-pointer accent-brand-500"
+                        />
+                        <span className="text-xs text-content dark:text-content-dark flex-1">{name}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold"
+                          style={{ color: ROLE_COLORS[u.role] || '#6B8DB5', background: (ROLE_COLORS[u.role] || '#6B8DB5') + '18' }}>
+                          {ROLE_LABELS[u.role] ? (isRTL ? ROLE_LABELS[u.role].ar : ROLE_LABELS[u.role].en) : u.role}
+                        </span>
+                        {u.team_id && (
+                          <span className="text-[9px] text-content-muted dark:text-content-muted-dark truncate max-w-[120px]">
+                            {teamNameById[u.team_id] || '—'}
+                          </span>
+                        )}
+                        {isLeader && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold text-amber-500 bg-amber-500/15">
+                            {isRTL ? 'ليدر' : 'Leader'}
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })
+                )}
+              </div>
+              <p className="m-0 mt-1 text-[10px] text-content-muted dark:text-content-muted-dark">
+                {isRTL
+                  ? 'الأعضاء بينقلوا من فرقهم الحالية للفريق الجديد. الـ leader اللي اخترته فوق متضاف تلقائياً.'
+                  : 'Members move from their current team to the new one. The leader you picked is auto-included.'}
+              </p>
+            </div>
+          </div>
+
+          <ModalFooter>
+            <Button variant="secondary" onClick={() => setWizardOpen(false)} disabled={wizardSaving}>
+              {isRTL ? 'إلغاء' : 'Cancel'}
+            </Button>
+            <Button onClick={saveWizard} disabled={wizardSaving}>
+              {wizardSaving
+                ? (isRTL ? 'جارٍ الحفظ...' : 'Saving...')
+                : (isRTL ? 'إنشاء الفريق' : 'Create Team')}
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {/* Department Modal */}

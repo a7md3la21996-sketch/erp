@@ -122,8 +122,10 @@ export const ROLE_PERMISSIONS = {
 
   sales_manager: [
     P.DASHBOARD,
-    // Contacts: full access (no export, no delete)
-    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
+    // Contacts: view/edit/bulk only. No import + no export per May 17
+    // requirement — import/export are admin/operations responsibilities;
+    // sales_manager works the leads rather than feeding/exporting the pool.
+    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_BULK,
     // Opportunities: full access (no export, no delete)
     P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT, P.OPPS_BULK,
     // Deals
@@ -142,8 +144,12 @@ export const ROLE_PERMISSIONS = {
     P.OPPS_VIEW_OWN, P.OPPS_EDIT_OWN, P.OPPS_BULK,
     // Deals
     P.DEALS_VIEW_OWN,
-    // Pool
-    P.POOL_VIEW, P.POOL_MANAGE, P.POOL_ASSIGN, P.POOL_VIEW_FRESH,
+    // Pool + Master Leads: full pool + settings (Master Leads page reads
+    // pool.settings). MasterLeadsPage itself team-scopes the result via
+    // isTeamScoped so team_leader only sees their team's families. Delete
+    // is still gated separately by CONTACTS_DELETE which team_leader doesn't
+    // have, so they can distribute / hand off but can't permanently remove.
+    P.POOL_VIEW, P.POOL_MANAGE, P.POOL_ASSIGN, P.POOL_VIEW_FRESH, P.POOL_SETTINGS,
     // Other
     P.PROJECTS_VIEW, P.UNITS_VIEW, P.TASKS_VIEW_OWN, P.CALENDAR, P.CHAT_USE,
   ],
