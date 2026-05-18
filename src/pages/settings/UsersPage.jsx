@@ -160,12 +160,16 @@ export default function UsersPage() {
 
   const USE_SUPABASE = !!import.meta.env.VITE_SUPABASE_URL;
 
-  // Fetch teams
-  useEffect(() => {
+  // Fetch teams. Re-fetches whenever the Add/Edit modal opens so a team
+  // created elsewhere (e.g. from /settings/team-hierarchy) shows up in the
+  // Team dropdown immediately — without forcing a page reload.
+  const reloadTeams = useCallback(() => {
     supabase.from('departments').select('id, name_ar, name_en').order('name_en').then(({ data }) => {
       setTeamsList(data || []);
     }).catch(() => {});
   }, []);
+  useEffect(() => { reloadTeams(); }, [reloadTeams]);
+  useEffect(() => { if (showModal) reloadTeams(); }, [showModal, reloadTeams]);
 
   /* ── Fetch users ── */
   const loadUsers = useCallback(async () => {
