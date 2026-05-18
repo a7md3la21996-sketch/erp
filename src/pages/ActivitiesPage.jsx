@@ -94,18 +94,20 @@ export default function ActivitiesPage() {
   const { auditFields, applyAuditFilters } = useAuditFilter('activity');
   const globalFilter = useGlobalFilter();
 
-  // Fetch the full agent list once (all users, not just those on the
-  // current page) so the SmartFilter 'Done By' dropdown is complete.
+  // Fetch the agent list for the 'Done By' dropdown. Team-scoped so a
+  // team_leader / sales_manager doesn't see agents outside their team in
+  // the filter — the underlying activities query (now fail-closed) won't
+  // return data for them anyway, so listing them just confuses the filter.
   useEffect(() => {
     let cancelled = false;
-    import('../services/opportunitiesService').then(({ fetchSalesAgents }) => {
-      fetchSalesAgents().then(list => {
+    import('../services/opportunitiesService').then(({ fetchTeamAgents }) => {
+      fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(list => {
         if (cancelled) return;
         setAllAgents((list || []).filter(u => u.full_name_en || u.full_name_ar));
       }).catch(() => {});
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   const uniqueUsers = useMemo(() => {
     if (allAgents.length > 0) {

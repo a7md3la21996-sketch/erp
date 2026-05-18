@@ -233,11 +233,13 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
   const selfName = isRTL ? (profile?.full_name_ar || profile?.full_name_en || '') : (profile?.full_name_en || profile?.full_name_ar || '');
   const [newOpp, setNewOpp] = useState({ project:'', budget:'', stage:'qualification', temperature:'warm', priority:'medium', notes:'', assigned_to_name: isSalesAgent ? selfName : '' });
 
-  // Get agents list for assignment dropdown
+  // Get agents list for assignment dropdown. Team-scoped: a sales_manager or
+  // team_leader only sees their own team members in the picker, so they
+  // can't reassign to agents outside their scope.
   const [agentsList, setAgentsList] = useState([]);
   useEffect(() => {
-    import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
-      fetchSalesAgents().then(agents => {
+    import('../../../services/opportunitiesService').then(({ fetchTeamAgents }) => {
+      fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(agents => {
         setAgentsList(agents.map(a => a.full_name_en || a.full_name_ar).filter(Boolean).sort());
       }).catch(err => { if (import.meta.env.DEV) console.warn('fetch sales agents:', err); });
     }).catch(err => { if (import.meta.env.DEV) console.warn('import opportunitiesService:', err); });
@@ -245,7 +247,7 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
     import('../../../services/marketingService').then(({ fetchCampaigns }) => {
       fetchCampaigns().then(c => setCampaignsList(c || [])).catch(() => {});
     }).catch(() => {});
-  }, []);
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   // Favorites
   const [isFav, setIsFav] = useState(false);

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Send, Search, Check, ArrowRight } from 'lucide-react';
 import { Modal, ModalFooter, Button, Input } from '../../../components/ui';
 import { handOffLead } from '../../../services/contactsService';
-import { fetchSalesAgents } from '../../../services/opportunitiesService';
+import { fetchTeamAgents } from '../../../services/opportunitiesService';
 import { useToast } from '../../../contexts/ToastContext';
 import { useAuth } from '../../../contexts/AuthContext';
 
@@ -25,12 +25,14 @@ export default function HandOffLeadModal({ contact, onClose, onSuccess, eligible
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchSalesAgents().then(list => {
+    // Team-scoped picker: team_leader / sales_manager only see their own
+    // agents in the hand-off target list.
+    fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(list => {
       // Only active sales agents — managers can't hand off to inactive users
       setAgents((list || []).filter(a => a.status !== 'inactive' || a.id === contact?.assigned_to));
       setLoading(false);
     });
-  }, [contact?.assigned_to]);
+  }, [contact?.assigned_to, profile?.role, profile?.id, profile?.team_id]);
 
   const currentOwnerId = contact?.assigned_to;
   const currentOwnerName = contact?.assigned_to_name;

@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Users, Search, X, Check } from 'lucide-react';
 import { Modal, ModalFooter, Button, Input } from '../../../components/ui';
 import { distributeLeadToAgents } from '../../../services/contactsService';
-import { fetchSalesAgents } from '../../../services/opportunitiesService';
+import { fetchTeamAgents } from '../../../services/opportunitiesService';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 
 export default function DistributeLeadModal({ contact, onClose, onSuccess, eligibleUserIds = null }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
+  const { profile } = useAuth();
   const toast = useToast();
 
   const [agents, setAgents] = useState([]);
@@ -18,11 +20,14 @@ export default function DistributeLeadModal({ contact, onClose, onSuccess, eligi
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchSalesAgents().then(list => {
+    // Scoped to the viewer's team. team_leader / sales_manager now only see
+    // their own agents in this picker, instead of every salesperson in the
+    // company. Admin / operations / sales_director keep the full list.
+    fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(list => {
       setAgents(list);
       setLoading(false);
     });
-  }, []);
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   const currentOwnerId = contact?.assigned_to;
   const currentOwnerName = contact?.assigned_to_name;

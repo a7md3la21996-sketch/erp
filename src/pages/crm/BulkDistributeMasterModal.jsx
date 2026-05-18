@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { Users, Search, Check, AlertTriangle } from 'lucide-react';
 import { Modal, ModalFooter, Button, Input } from '../../components/ui';
 import { distributeLeadToAgents } from '../../services/contactsService';
-import { fetchSalesAgents } from '../../services/opportunitiesService';
+import { fetchTeamAgents } from '../../services/opportunitiesService';
+import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { reportError } from '../../utils/errorReporter';
 
@@ -17,6 +18,7 @@ const CONCURRENCY = 4; // be polite to RLS
 export default function BulkDistributeMasterModal({ families, onClose, onSuccess, eligibleUserIds = null }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
+  const { profile } = useAuth();
   const toast = useToast();
 
   const [agents, setAgents] = useState([]);
@@ -30,8 +32,12 @@ export default function BulkDistributeMasterModal({ families, onClose, onSuccess
   const [errorSummary, setErrorSummary] = useState(null);
 
   useEffect(() => {
-    fetchSalesAgents().then(list => setAgents(list || [])).catch(() => {});
-  }, []);
+    // Team-scoped: managers / leaders only see their team in this picker.
+    // eligibleUserIds (if passed) further narrows by the parent page's scope.
+    fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id })
+      .then(list => setAgents(list || []))
+      .catch(() => {});
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   // Active agents only — distributing onto an inactive account makes the
   // clone invisible until the account is reactivated. When eligibleUserIds

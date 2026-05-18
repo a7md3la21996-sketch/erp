@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Users, Search, Check } from 'lucide-react';
 import { Modal, ModalFooter, Button, Input } from '../../../components/ui';
 import { bulkDistributeLeads } from '../../../services/contactsService';
-import { fetchSalesAgents } from '../../../services/opportunitiesService';
+import { fetchTeamAgents } from '../../../services/opportunitiesService';
+import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
 
 export default function BulkDistributeModal({ contactIds, onClose, onSuccess }) {
   const { i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
+  const { profile } = useAuth();
   const toast = useToast();
 
   const [agents, setAgents] = useState([]);
@@ -18,11 +20,13 @@ export default function BulkDistributeModal({ contactIds, onClose, onSuccess }) 
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchSalesAgents().then(list => {
+    // Team-scoped: bulk distribute targets only the viewer's team for managers
+    // and leaders. Admin / operations still see everyone.
+    fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(list => {
       setAgents((list || []).filter(a => a.status !== 'inactive' && a.role === 'sales_agent'));
       setLoading(false);
     });
-  }, []);
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return agents;

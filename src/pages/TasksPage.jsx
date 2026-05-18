@@ -859,12 +859,14 @@ export default function TasksPage() {
   const [tasks, setTasks]           = useState([]);
   // Live UUID → display name lookup. Replaces the denormalized
   // assigned_to_name_ar/_en columns for rendering, so renaming a user
-  // doesn't leave ghost names on old task rows. Fetched once on mount.
+  // doesn't leave ghost names on old task rows. Fetched once on mount,
+  // team-scoped so a team_leader doesn't pull names of agents outside
+  // their scope (rows outside the team are filtered out anyway).
   const [userMap, setUserMap] = useState(() => new Map());
   useEffect(() => {
     let cancelled = false;
-    import('../services/opportunitiesService').then(({ fetchSalesAgents }) => {
-      fetchSalesAgents().then(list => {
+    import('../services/opportunitiesService').then(({ fetchTeamAgents }) => {
+      fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(list => {
         if (cancelled) return;
         const m = new Map();
         for (const u of list || []) {
@@ -876,7 +878,7 @@ export default function TasksPage() {
       }).catch(() => {});
     });
     return () => { cancelled = true; };
-  }, [isRTL]);
+  }, [isRTL, profile?.role, profile?.id, profile?.team_id]);
   const [loading, setLoading]       = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [completeTask, setCompleteTask] = useState(null);
@@ -909,12 +911,15 @@ export default function TasksPage() {
 
   const [allAgentsList, setAllAgentsList] = useState([]);
   useEffect(() => {
-    import('../services/opportunitiesService').then(({ fetchSalesAgents }) => {
-      fetchSalesAgents().then(data => {
+    // Team-scoped: agent dropdown only lists the viewer's team. Tasks fetch
+    // is already fail-closed on scope, so listing out-of-team agents would
+    // produce a filter that always returns 0.
+    import('../services/opportunitiesService').then(({ fetchTeamAgents }) => {
+      fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(data => {
         setAllAgentsList((data || []).map(a => ({ value: a.full_name_en || a.full_name_ar, label: a.full_name_ar || a.full_name_en, labelEn: a.full_name_en || a.full_name_ar })).filter(o => o.value));
       }).catch(() => {});
     });
-  }, []);
+  }, [profile?.role, profile?.id, profile?.team_id]);
 
   const assignedToOptions = allAgentsList.length > 0 ? allAgentsList :
     [...new Set(tasks.map(t => t.assigned_to_name_en).filter(Boolean))].map(name => {

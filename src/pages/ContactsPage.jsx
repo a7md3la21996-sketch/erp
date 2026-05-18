@@ -17,7 +17,7 @@ import { logAction } from '../services/auditService';
 import { bulkSend } from '../services/smsTemplateService';
 import { createNotification } from '../services/notificationsService';
 import { setFieldValues as setCFValues } from '../services/customFieldsService';
-import { fetchSalesAgents } from '../services/opportunitiesService';
+import { fetchTeamAgents } from '../services/opportunitiesService';
 import { fetchCampaigns, createCampaign } from '../services/marketingService';
 import { getDeptStages } from './crm/contacts/constants';
 import { notifyLeadAssigned } from '../services/notificationsService';
@@ -150,7 +150,9 @@ export default function ContactsPage() {
   // picks up the new name; existing rows fall back gracefully.
   useEffect(() => {
     let cancelled = false;
-    fetchSalesAgents().then(list => {
+    // Team-scoped: team_leader / sales_manager only see their team's name
+    // map. Out-of-team UUIDs fall back to the denormalized assigned_to_name.
+    fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(list => {
       if (cancelled) return;
       const m = new Map();
       for (const u of list || []) {
@@ -161,7 +163,7 @@ export default function ContactsPage() {
       setUserMap(m);
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [isRTL]);
+  }, [isRTL, profile?.role, profile?.id, profile?.team_id]);
 
   // Names of agents in the viewer's team (manager / leader / director). Used
   // by the table to clip chips on shared contacts so a manager doesn't see
@@ -2244,6 +2246,7 @@ export default function ContactsPage() {
         selectedIds={selectedIds}
         handleBulkReassign={handleBulkReassign}
         isRTL={isRTL}
+        profile={profile}
       />
 
       {/* Bulk Campaign Modal */}

@@ -3,7 +3,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
 import supabase from '../../lib/supabase';
-import { fetchOpportunities, updateOpportunity, deleteOpportunity, fetchSalesAgents, fetchProjects } from '../../services/opportunitiesService';
+import { fetchOpportunities, updateOpportunity, deleteOpportunity, fetchTeamAgents, fetchProjects } from '../../services/opportunitiesService';
 import { createDealFromOpportunity, dealExistsForOpportunity } from '../../services/dealsService';
 import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
@@ -353,7 +353,10 @@ export default function OpportunitiesPage() {
     try {
       [oppsData, agentsData, projectsData] = await Promise.all([
         fetchOpportunities({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id, page: 0, pageSize: 1000 }),
-        fetchSalesAgents(),
+        // Team-scoped agent list — managers/leaders only see their own team
+        // in the filters and the assignment picker, matching what they can
+        // actually see in opportunities anyway.
+        fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }),
         fetchProjects(),
       ]);
     } catch {

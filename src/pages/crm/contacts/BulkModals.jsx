@@ -377,7 +377,7 @@ export function DisqualifyModal({ disqualifyModal, setDisqualifyModal, dqReason,
 }
 
 // ── Bulk Reassign Modal ──────────────────────────────────────────────
-export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, contacts, selectedIds, handleBulkReassign, isRTL }) {
+export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, contacts, selectedIds, handleBulkReassign, isRTL, profile }) {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [allAgents, setAllAgents] = useState([]);
@@ -386,8 +386,11 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
 
   useEffect(() => {
     if (!bulkReassignModal) return;
-    import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
-      fetchSalesAgents().then(data => {
+    // Team-scoped: a sales_manager / team_leader can only reassign to their
+    // own team, not to agents on sibling teams. Admin / operations still
+    // see everyone.
+    import('../../../services/opportunitiesService').then(({ fetchTeamAgents }) => {
+      fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(data => {
         // Keep id alongside the display name — without the UUID the bulk
         // reassign falls back to a fragile name→uuid lookup in updateContact
         // that the May 3 audit found can silently leave assigned_to pointing
@@ -399,7 +402,7 @@ export function BulkReassignModal({ bulkReassignModal, setBulkReassignModal, con
         setAllAgents(list);
       }).catch(() => {});
     });
-  }, [bulkReassignModal]);
+  }, [bulkReassignModal, profile?.role, profile?.id, profile?.team_id]);
 
   if (!bulkReassignModal) return null;
 
@@ -544,12 +547,12 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
 
   useEffect(() => {
     if (!bulkOppModal) return;
-    // Fetch ACTIVE agents with their UUIDs. Picking by name string only would
-    // make the assigned_to UUID flaky after a rename and matched the bulk-
-    // reassign drift bug we just fixed. Fall back to contact-derived names
-    // only if the users fetch fails.
-    import('../../../services/opportunitiesService').then(({ fetchSalesAgents }) => {
-      fetchSalesAgents().then(data => {
+    // Fetch ACTIVE agents with their UUIDs, scoped to the viewer's team.
+    // Picking by name string only would make the assigned_to UUID flaky after
+    // a rename and matched the bulk-reassign drift bug we just fixed. Fall
+    // back to contact-derived names only if the users fetch fails.
+    import('../../../services/opportunitiesService').then(({ fetchTeamAgents }) => {
+      fetchTeamAgents({ role: profile?.role, userId: profile?.id, teamId: profile?.team_id }).then(data => {
         const list = (data || [])
           .filter(a => a.id && a.status !== 'inactive' && (a.full_name_en || a.full_name_ar))
           .map(a => ({ id: a.id, name: a.full_name_en || a.full_name_ar }))
@@ -557,7 +560,7 @@ export function BulkOppModal({ bulkOppModal, setBulkOppModal, bulkOppForm, setBu
         setSalesAgents(list);
       }).catch(() => {});
     });
-  }, [bulkOppModal]);
+  }, [bulkOppModal, profile?.role, profile?.id, profile?.team_id]);
 
   if (!bulkOppModal) return null;
 
