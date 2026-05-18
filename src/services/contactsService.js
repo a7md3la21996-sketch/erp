@@ -1109,9 +1109,12 @@ export async function fetchContactOpportunities(contactId, { role, userId, teamI
       } else {
         query = query.eq('assigned_to', userId);
       }
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+    } else if (role === 'team_leader' || role === 'sales_manager') {
+      // Fail-closed (May 17 incident). Empty team must NOT widen to "all".
+      if (!teamId) return [];
       const names = await getTeamMemberNames(role, teamId);
-      if (names.length) query = query.in('assigned_to_name', names);
+      if (names.length === 0) return [];
+      query = query.in('assigned_to_name', names);
     }
     const { data, error } = await rq(() => query, 'fetchContactOpportunities');
     if (error) throw error;

@@ -86,9 +86,13 @@ export async function fetchTasks({ contactId, dept, status, priority, page, page
         } else {
           query = query.eq('assigned_to', userId);
         }
-      } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      } else if (role === 'team_leader' || role === 'sales_manager') {
+        // Fail-closed (May 17 incident). A scoped role with no team must
+        // never widen to "all tasks".
+        if (!teamId) return isServerPaginated ? { data: [], count: 0 } : [];
         const ids = await getTeamMemberIds(role, teamId);
-        if (ids.length) query = query.in('assigned_to', ids);
+        if (ids.length === 0) return isServerPaginated ? { data: [], count: 0 } : [];
+        query = query.in('assigned_to', ids);
       }
     }
 

@@ -78,14 +78,21 @@ export async function fetchActivities({ entityType, entityId, dept, limit = 50, 
         } else {
           query = query.eq('user_id', userId);
         }
-      } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+      } else if (role === 'team_leader' || role === 'sales_manager') {
+        // Fail-closed scope. May 17 incident: a freshly-created team_leader
+        // with no team_id saw every agent's activities because the previous
+        // path returned the unfiltered query when ids/names were empty.
+        if (!teamId) return isServerPaginated ? { data: [], count: 0 } : [];
         const ids = await getTeamMemberIds(role, teamId);
         const names = await getTeamMemberNames(role, teamId);
-        if (names.length) {
-          const nameConds = names.map(n => `user_name_en.eq.${n}`).join(',');
-          const idConds = ids.map(id => `user_id.eq.${id}`).join(',');
-          query = query.or(`${nameConds},${idConds}`);
+        if (names.length === 0 && ids.length === 0) {
+          return isServerPaginated ? { data: [], count: 0 } : [];
         }
+        const nameConds = names.map(n => `user_name_en.eq.${n}`).join(',');
+        const idConds = ids.map(id => `user_id.eq.${id}`).join(',');
+        // Both can be empty individually — join with comma only on non-empty.
+        const conds = [nameConds, idConds].filter(Boolean).join(',');
+        query = query.or(conds);
       }
     }
 

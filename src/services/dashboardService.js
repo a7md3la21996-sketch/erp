@@ -6,13 +6,23 @@ import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
 const _teamCache = { key: null, names: null, ts: 0 };
 let _userNameCache = { id: null, name: null };
 
+// Sentinel uuid no real row can match — used to force an empty result when a
+// scoped role can't resolve a team. Returning the raw query here would
+// silently surface ALL rows (fail-open), which was the May 17 incident:
+// a freshly-created team_leader with no team_id saw every agent's data.
+const DENY_SENTINEL = '00000000-0000-0000-0000-000000000000';
+
 async function applyRoleFilter(query, field, { role, userId, teamId } = {}) {
   if (role === 'sales_agent' && userId) {
     return query.eq(field, userId);
-  } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
-    const ids = await getTeamMemberIds(role, teamId);
-    if (ids.length) return query.in(field, ids);
   }
+  if (role === 'team_leader' || role === 'sales_manager') {
+    if (!teamId) return query.in(field, [DENY_SENTINEL]);
+    const ids = await getTeamMemberIds(role, teamId);
+    if (ids.length === 0) return query.in(field, [DENY_SENTINEL]);
+    return query.in(field, ids);
+  }
+  // admin / operations / sales_director / hr / finance → unrestricted
   return query;
 }
 

@@ -98,11 +98,12 @@ export async function fetchOpportunities({ role, userId, teamId, page = 0, pageS
       } else {
         query = query.eq('assigned_to', userId);
       }
-    } else if ((role === 'team_leader' || role === 'sales_manager') && teamId) {
+    } else if (role === 'team_leader' || role === 'sales_manager') {
+      // Fail-closed (May 17 incident). Empty team must NOT mean "all opps".
+      if (!teamId) return [];
       const names = await getTeamMemberNames(role, teamId);
-      if (names.length) {
-        query = query.in('assigned_to_name', names);
-      }
+      if (names.length === 0) return [];
+      query = query.in('assigned_to_name', names);
     }
 
     const from = page * pageSize;
@@ -276,6 +277,9 @@ export async function fetchTeamAgents({ role, userId, teamId } = {}) {
       const allowedTeams = new Set([teamId, ...((children || []).map(c => c.id))]);
       return all.filter(a => allowedTeams.has(a.team_id));
     }
+    // Fail-closed: a team-scoped role with no resolvable team must NOT see
+    // everyone. Sales-director / marketing / hr / finance still go through.
+    if (role === 'team_leader' || role === 'sales_manager') return [];
     return all;
   } catch (err) { reportError('opportunitiesService', 'fetchTeamAgents', err);
     return [];
