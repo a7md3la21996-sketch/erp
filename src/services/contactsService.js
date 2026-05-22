@@ -3,6 +3,7 @@ import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import { logCreate, logUpdate, logAudit } from './auditService';
 import { requireAnyPerm, requirePerm } from '../utils/permissionGuard';
 import { P } from '../config/roles';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 import { reportError } from '../utils/errorReporter';
 import { getTeamMemberIds, getTeamMemberNames } from '../utils/teamHelper';
@@ -15,15 +16,23 @@ import { retryWithBackoff } from '../utils/retryWithBackoff';
 // duplicates on retry.
 const rq = (fn, label) => retryWithBackoff(fn, { label });
 
-// Mirrors the DB CHECK constraint `contacts_phone_e164_format`. Rejecting at
-// the service layer means callers get a clean error message ("phone2 invalid")
-// instead of an opaque PostgREST 400 mentioning the constraint name.
+// Strict per-country validation. The structural regex catches obviously
+// malformed shapes (no +, wrong digit count) before we even hand off to
+// libphonenumber-js, whose isValid() then enforces the country-specific
+// length and prefix rules (e.g. Egyptian mobile must be exactly 10 digits
+// after +20 starting with 1[0125], Saudi mobile 9 digits after +966
+// starting with 5, etc.). The DB CHECK is the structural safety net but
+// can't enforce per-country rules — that's this guard's job.
 const PHONE_E164_REGEX = /^\+[1-9][0-9]{7,14}$/;
 function assertPhoneE164(value, fieldName) {
   if (value == null || value === '') return;
   const trimmed = String(value).trim();
   if (!PHONE_E164_REGEX.test(trimmed)) {
     throw new Error(`Invalid ${fieldName}: must be E.164 format like "+201234567890". Got: ${JSON.stringify(value)}`);
+  }
+  const parsed = parsePhoneNumberFromString(trimmed);
+  if (!parsed?.isValid()) {
+    throw new Error(`Invalid ${fieldName}: digit count doesn't match the country code. Got: ${JSON.stringify(value)}`);
   }
 }
 

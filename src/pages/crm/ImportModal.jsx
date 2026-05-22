@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import supabase from '../../lib/supabase';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 // ExcelJS is loaded dynamically to reduce bundle size (~917KB)
 import { Button, FilterPill } from '../../components/ui';
 
@@ -147,12 +148,17 @@ const cleanPhone = (p) => {
     cleaned = '+2' + cleaned.slice(4);
   }
 
-  // Strict E.164 check — mirrors the contacts_phone_e164_format DB constraint
-  // and the assertPhoneE164 service-layer guard. Anything that doesn't match
-  // gets flagged so the import preview shows it before the row hits the DB.
-  // The old "digitsOnly.length < 10" check let malformed numbers like
-  // "+2811004160053128203011604031" and "+999999999999999" through as valid.
-  const invalid = !/^\+[1-9][0-9]{7,14}$/.test(cleaned);
+  // Strict per-country validation. Structural E.164 shape first (mirrors
+  // contacts_phone_e164_format DB CHECK), then libphonenumber-js isValid()
+  // verifies the digit count matches the country code's actual phone-number
+  // length (Egyptian +20 mobile = 10 digits, Saudi +966 mobile = 9 digits,
+  // etc). Without isValid() the old check let through structurally-correct
+  // junk like +201111111944 (passes regex, fails per-country length rules).
+  let invalid = !/^\+[1-9][0-9]{7,14}$/.test(cleaned);
+  if (!invalid) {
+    const parsed = parsePhoneNumberFromString(cleaned);
+    invalid = !parsed?.isValid();
+  }
 
   return {
     cleaned,

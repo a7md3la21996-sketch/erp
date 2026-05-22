@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { parsePhoneNumberFromString } from 'libphonenumber-js/mobile';
+// Full library (not /mobile) so landlines also pass isValid() — office
+// numbers and Cairo/Alex landlines are legitimate even if rare.
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useTranslation } from 'react-i18next';
 import { Flame, Wind, Snowflake, Thermometer } from 'lucide-react';
 
