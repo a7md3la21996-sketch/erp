@@ -54,11 +54,13 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
   });
   const [extraPhones, setExtraPhones] = useState(() => (contact.extra_phones || []).map(p => initPhone(p)));
   const [extraCodes, setExtraCodes] = useState(() => (contact.extra_phones || []).map(p => initCode(p)));
-  // Phone fields are gated on a separate permission so sales reps can't
-  // overwrite contact numbers. When false, the inputs render disabled and
-  // we omit phone/phone2/extra_phones from the save payload so the server
-  // guard isn't tripped.
+  // Phone fields are gated. Sales reps without CONTACTS_EDIT_PHONE can ADD
+  // new entries to extra_phones (e.g. a newly-shared work line) but cannot
+  // mutate or remove the primary phone, phone2, or any pre-existing extra.
+  // `originalExtraCount` freezes the boundary at modal open so anything at
+  // a smaller index renders read-only / no delete button.
   const canEditPhone = hasPerm(P.CONTACTS_EDIT_PHONE);
+  const originalExtraCount = (contact.extra_phones || []).length;
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false); // sync guard against double-submit
   const dialogRef = useRef(null);
@@ -158,15 +160,16 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
       };
-      // Only include phone fields when the user has permission. Sending them
-      // unconditionally would trip the server-side CONTACTS_EDIT_PHONE guard
-      // even if the values are unchanged (the guard checks key presence, not
-      // value diff).
+      // Phone fields the user can mutate: admin/ops can change anything;
+      // sales can only add to extra_phones. The server guard now compares
+      // new vs old, so for sales we still send extra_phones (their new
+      // additions are the whole point of allowing the modal to save) but
+      // omit phone/phone2 to avoid round-trip mismatches like spacing.
       if (canEditPhone) {
         payload.phone = fullPhone;
         payload.phone2 = getFullPhone(form.phone2, countryCode2);
-        payload.extra_phones = validExtras.length > 0 ? validExtras : null;
       }
+      payload.extra_phones = validExtras.length > 0 ? validExtras : null;
       await onSave(payload);
       toast.success(isRTL ? 'تم حفظ التعديلات' : 'Changes saved');
       onClose();
@@ -258,28 +261,33 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
             </div>
           </div>
 
-          {/* أرقام إضافية */}
-          {extraPhones.length > 0 && extraPhones.map((ph, i) => (
-            <div key={i} className="flex gap-1.5 items-start">
-              <Select value={extraCodes[i] || '+20'} onChange={e => { const nc = [...extraCodes]; nc[i] = e.target.value; setExtraCodes(nc); }} className="!w-[90px] shrink-0" disabled={!canEditPhone}>
-                {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
-              </Select>
-              <div className="flex-1">
-                <Input value={ph} onChange={e => { const np = [...extraPhones]; np[i] = e.target.value; setExtraPhones(np); }} placeholder="10xxxxxxxx" disabled={!canEditPhone} />
-                {ph && (() => { const fp = getFullPhone(ph, extraCodes[i]); if (!validatePhone(fp)) return <span className="text-[10px] text-orange-500 mt-0.5 block">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-[10px] text-emerald-500 mt-0.5 block">{info.flag} {info.country}</span> : null; })()}
+          {/* أرقام إضافية — sales reps can add new entries but the rows
+              that were there when the modal opened render read-only. */}
+          {extraPhones.length > 0 && extraPhones.map((ph, i) => {
+            const isOriginal = i < originalExtraCount;
+            const rowEditable = canEditPhone || !isOriginal;
+            return (
+              <div key={i} className="flex gap-1.5 items-start">
+                <Select value={extraCodes[i] || '+20'} onChange={e => { const nc = [...extraCodes]; nc[i] = e.target.value; setExtraCodes(nc); }} className="!w-[90px] shrink-0" disabled={!rowEditable}>
+                  {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
+                </Select>
+                <div className="flex-1">
+                  <Input value={ph} onChange={e => { const np = [...extraPhones]; np[i] = e.target.value; setExtraPhones(np); }} placeholder="10xxxxxxxx" disabled={!rowEditable} />
+                  {ph && (() => { const fp = getFullPhone(ph, extraCodes[i]); if (!validatePhone(fp)) return <span className="text-[10px] text-orange-500 mt-0.5 block">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-[10px] text-emerald-500 mt-0.5 block">{info.flag} {info.country}</span> : null; })()}
+                </div>
+                {rowEditable && (
+                  <button onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraCodes(extraCodes.filter((_, j) => j !== i)); }}
+                    className="mt-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-sm leading-none shrink-0">×</button>
+                )}
               </div>
-              {canEditPhone && (
-                <button onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraCodes(extraCodes.filter((_, j) => j !== i)); }}
-                  className="mt-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-sm leading-none shrink-0">×</button>
-              )}
-            </div>
-          ))}
-          {canEditPhone && (
-            <button onClick={() => { setExtraPhones([...extraPhones, '']); setExtraCodes([...extraCodes, '+20']); }}
-              className="text-xs text-brand-500 bg-brand-500/[0.08] border border-brand-500/20 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-brand-500/[0.15] transition-colors w-fit">
-              + {isRTL ? 'إضافة رقم' : 'Add Phone'}
-            </button>
-          )}
+            );
+          })}
+          {/* Add-phone button stays visible for sales reps so they can append
+              new numbers (e.g. work line) without needing ops to do it. */}
+          <button onClick={() => { setExtraPhones([...extraPhones, '']); setExtraCodes([...extraCodes, '+20']); }}
+            className="text-xs text-brand-500 bg-brand-500/[0.08] border border-brand-500/20 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-brand-500/[0.15] transition-colors w-fit">
+            + {isRTL ? 'إضافة رقم' : 'Add Phone'}
+          </button>
 
           {/* الإيميل */}
           <div>
