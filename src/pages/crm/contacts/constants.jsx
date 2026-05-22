@@ -182,17 +182,22 @@ export const normalizePhone = (p) => {
   } catch { /* noop */ }
   return p;
 };
+// Strict E.164 validation. libphonenumber is authoritative — its `isValid()`
+// understands per-country prefix rules (e.g. Egyptian mobile must start with
+// 01[0125], Saudi mobile with 5X). The earlier loose fallback that accepted
+// any "+" + 8-15 digits is what let junk like +201111111944 and +999999999999
+// into the DB. Removed deliberately; the DB CHECK constraint
+// `contacts_phone_e164_format` is the final safety net.
 export const validatePhone = (p) => {
   if (!p) return false;
   const normalized = normalizePhone(p);
   if (normalized === p && p.startsWith('0')) return false;
+  // Must match E.164 shape before we even try libphonenumber — guards against
+  // anything that wouldn't fit the DB constraint regardless of libphonenumber's opinion.
+  if (!/^\+[1-9][0-9]{7,14}$/.test(normalized)) return false;
   try {
     const phone = parsePhoneNumberFromString(normalized);
-    if (phone?.isValid()) return true;
-    // Fallback: accept numbers with + prefix and 8-15 digits (international format)
-    const digits = normalized.replace(/\D/g, '');
-    if (normalized.startsWith('+') && digits.length >= 8 && digits.length <= 15) return true;
-    return false;
+    return Boolean(phone?.isValid());
   } catch { return false; }
 };
 export const getPhoneInfo = (p) => {

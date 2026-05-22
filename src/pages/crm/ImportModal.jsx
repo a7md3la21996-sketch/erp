@@ -147,9 +147,12 @@ const cleanPhone = (p) => {
     cleaned = '+2' + cleaned.slice(4);
   }
 
-  // Strip non-digit except leading +
-  const digitsOnly = cleaned.replace(/[^0-9]/g, '');
-  const invalid = digitsOnly.length < 10;
+  // Strict E.164 check — mirrors the contacts_phone_e164_format DB constraint
+  // and the assertPhoneE164 service-layer guard. Anything that doesn't match
+  // gets flagged so the import preview shows it before the row hits the DB.
+  // The old "digitsOnly.length < 10" check let malformed numbers like
+  // "+2811004160053128203011604031" and "+999999999999999" through as valid.
+  const invalid = !/^\+[1-9][0-9]{7,14}$/.test(cleaned);
 
   return {
     cleaned,
@@ -319,9 +322,12 @@ export default function ImportModal({ onClose, existingContacts, onImportDone })
   // Track per-cell cleaning details: { rowIdx: { fieldKey: { original, cleaned, status } } }
   const [cellCleaningDetails, setCellCleaningDetails] = useState({});
 
-  // Validation rules state
+  // Validation rules state. rejectNoPhone defaults ON now that cleanPhone
+  // uses the strict E.164 check — without it, invalid rows would still hit
+  // the DB and fail one-by-one against contacts_phone_e164_format, which is
+  // worse UX than rejecting upfront with a clear summary.
   const [validationRules, setValidationRules] = useState({
-    rejectNoPhone: false,
+    rejectNoPhone: true,
     rejectNoName: false,
     rejectNoEmail: false,
     autoFillDepartment: false,

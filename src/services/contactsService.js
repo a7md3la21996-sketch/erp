@@ -15,6 +15,18 @@ import { retryWithBackoff } from '../utils/retryWithBackoff';
 // duplicates on retry.
 const rq = (fn, label) => retryWithBackoff(fn, { label });
 
+// Mirrors the DB CHECK constraint `contacts_phone_e164_format`. Rejecting at
+// the service layer means callers get a clean error message ("phone2 invalid")
+// instead of an opaque PostgREST 400 mentioning the constraint name.
+const PHONE_E164_REGEX = /^\+[1-9][0-9]{7,14}$/;
+function assertPhoneE164(value, fieldName) {
+  if (value == null || value === '') return;
+  const trimmed = String(value).trim();
+  if (!PHONE_E164_REGEX.test(trimmed)) {
+    throw new Error(`Invalid ${fieldName}: must be E.164 format like "+201234567890". Got: ${JSON.stringify(value)}`);
+  }
+}
+
 // ── Assignment History ─────────────────────────────────────────────────────
 
 /** @deprecated Assignment history now comes from activities (type='reassignment') via fetchContactActivities */
@@ -332,8 +344,11 @@ export async function createContact(contactData) {
   // permission. Defense in depth — the UI gate plus this guard plus DB RLS.
   requireAnyPerm([P.CONTACTS_EDIT, P.CONTACTS_EDIT_OWN], 'Not allowed to create contacts');
   // Input validation
-  if (!contactData.phone || String(contactData.phone).replace(/\D/g, '').length < 8) {
-    throw new Error('Invalid phone number');
+  if (!contactData.phone) throw new Error('Phone is required');
+  assertPhoneE164(contactData.phone, 'phone');
+  assertPhoneE164(contactData.phone2, 'phone2');
+  if (Array.isArray(contactData.extra_phones)) {
+    contactData.extra_phones.forEach((p, i) => assertPhoneE164(p, `extra_phones[${i}]`));
   }
   if (contactData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactData.email)) {
     throw new Error('Invalid email format');
@@ -445,6 +460,15 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
   if (import.meta.env.DEV) {
     const stripped = stripInternalFields({ ...cleanUpdates });
     console.log('[updateContact] id:', id, 'fields:', Object.keys(stripped));
+  }
+  // Mirror the DB CHECK constraint at the service layer so callers get a
+  // clear "Invalid phone" error instead of an opaque PostgREST 400. Only
+  // validate fields the caller is actually updating — partial updates that
+  // don't touch phone/phone2/extra_phones must still work.
+  if ('phone' in cleanUpdates) assertPhoneE164(cleanUpdates.phone, 'phone');
+  if ('phone2' in cleanUpdates) assertPhoneE164(cleanUpdates.phone2, 'phone2');
+  if (Array.isArray(cleanUpdates.extra_phones)) {
+    cleanUpdates.extra_phones.forEach((p, i) => assertPhoneE164(p, `extra_phones[${i}]`));
   }
   // Diagnostic: any DQ write that would violate the DB check constraint
   // gets blocked + logged here with a clear message + the call site.
