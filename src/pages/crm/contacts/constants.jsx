@@ -208,14 +208,26 @@ export const getPhoneInfo = (p) => {
   try {
     const phone = parsePhoneNumberFromString(normalized);
     if (!phone || !phone.isValid()) return null;
-    const flags = { EG: '🇪🇬', SA: '🇸🇦', AE: '🇦🇪', KW: '🇰🇼', QA: '🇶🇦', BH: '🇧🇭', OM: '🇴🇲', JO: '🇯🇴', LB: '🇱🇧', US: '🇺🇸', GB: '🇬🇧', DE: '🇩🇪', FR: '🇫🇷' };
+    // Flag lookup synced with COUNTRY_CODES below. Anything missing falls
+    // back to 🌍 so the badge still renders.
+    const flags = {
+      EG:'🇪🇬', SA:'🇸🇦', AE:'🇦🇪', KW:'🇰🇼', QA:'🇶🇦', BH:'🇧🇭', OM:'🇴🇲', JO:'🇯🇴', LB:'🇱🇧',
+      IQ:'🇮🇶', SY:'🇸🇾', LY:'🇱🇾', TN:'🇹🇳', DZ:'🇩🇿', MA:'🇲🇦', SD:'🇸🇩', YE:'🇾🇪', PS:'🇵🇸',
+      MR:'🇲🇷', DJ:'🇩🇯', SO:'🇸🇴', KM:'🇰🇲',
+      IN:'🇮🇳', PK:'🇵🇰', BD:'🇧🇩', PH:'🇵🇭', ID:'🇮🇩', LK:'🇱🇰', NP:'🇳🇵', IR:'🇮🇷', AF:'🇦🇫', TR:'🇹🇷',
+      NG:'🇳🇬', KE:'🇰🇪', ET:'🇪🇹', GH:'🇬🇭', ZA:'🇿🇦',
+      US:'🇺🇸', GB:'🇬🇧', DE:'🇩🇪', FR:'🇫🇷', IT:'🇮🇹', ES:'🇪🇸', PT:'🇵🇹', NL:'🇳🇱', BE:'🇧🇪',
+      CH:'🇨🇭', AT:'🇦🇹', SE:'🇸🇪', NO:'🇳🇴', DK:'🇩🇰', FI:'🇫🇮', IE:'🇮🇪', GR:'🇬🇷', PL:'🇵🇱',
+      CZ:'🇨🇿', RU:'🇷🇺', UA:'🇺🇦', CY:'🇨🇾', AU:'🇦🇺', NZ:'🇳🇿', BR:'🇧🇷', MX:'🇲🇽',
+      CN:'🇨🇳', JP:'🇯🇵', KR:'🇰🇷', HK:'🇭🇰', SG:'🇸🇬', MY:'🇲🇾', TH:'🇹🇭',
+    };
     return { country: phone.country, flag: flags[phone.country] || '🌍', formatted: phone.formatInternational() };
   } catch { return null; }
 };
 
 // ── Country Codes ─────────────────────────────────────────────────────────
 export const COUNTRY_CODES = [
-  // Arab countries
+  // Arab countries — primary customer base
   { code: '+20', country: 'EG', flag: '🇪🇬', label: 'Egypt', labelAr: 'مصر' },
   { code: '+966', country: 'SA', flag: '🇸🇦', label: 'Saudi Arabia', labelAr: 'السعودية' },
   { code: '+971', country: 'AE', flag: '🇦🇪', label: 'UAE', labelAr: 'الإمارات' },
@@ -234,17 +246,61 @@ export const COUNTRY_CODES = [
   { code: '+249', country: 'SD', flag: '🇸🇩', label: 'Sudan', labelAr: 'السودان' },
   { code: '+967', country: 'YE', flag: '🇾🇪', label: 'Yemen', labelAr: 'اليمن' },
   { code: '+970', country: 'PS', flag: '🇵🇸', label: 'Palestine', labelAr: 'فلسطين' },
-  // International
-  { code: '+44', country: 'GB', flag: '🇬🇧', label: 'UK', labelAr: 'بريطانيا' },
+  { code: '+222', country: 'MR', flag: '🇲🇷', label: 'Mauritania', labelAr: 'موريتانيا' },
+  { code: '+253', country: 'DJ', flag: '🇩🇯', label: 'Djibouti', labelAr: 'جيبوتي' },
+  { code: '+252', country: 'SO', flag: '🇸🇴', label: 'Somalia', labelAr: 'الصومال' },
+  { code: '+269', country: 'KM', flag: '🇰🇲', label: 'Comoros', labelAr: 'القمر' },
+  // Expat-origin countries (common for Gulf workers)
+  { code: '+91', country: 'IN', flag: '🇮🇳', label: 'India', labelAr: 'الهند' },
+  { code: '+92', country: 'PK', flag: '🇵🇰', label: 'Pakistan', labelAr: 'باكستان' },
+  { code: '+880', country: 'BD', flag: '🇧🇩', label: 'Bangladesh', labelAr: 'بنغلاديش' },
+  { code: '+63', country: 'PH', flag: '🇵🇭', label: 'Philippines', labelAr: 'الفلبين' },
+  { code: '+62', country: 'ID', flag: '🇮🇩', label: 'Indonesia', labelAr: 'إندونيسيا' },
+  { code: '+94', country: 'LK', flag: '🇱🇰', label: 'Sri Lanka', labelAr: 'سريلانكا' },
+  { code: '+977', country: 'NP', flag: '🇳🇵', label: 'Nepal', labelAr: 'نيبال' },
+  { code: '+98', country: 'IR', flag: '🇮🇷', label: 'Iran', labelAr: 'إيران' },
+  { code: '+93', country: 'AF', flag: '🇦🇫', label: 'Afghanistan', labelAr: 'أفغانستان' },
+  { code: '+90', country: 'TR', flag: '🇹🇷', label: 'Turkey', labelAr: 'تركيا' },
+  { code: '+234', country: 'NG', flag: '🇳🇬', label: 'Nigeria', labelAr: 'نيجيريا' },
+  { code: '+254', country: 'KE', flag: '🇰🇪', label: 'Kenya', labelAr: 'كينيا' },
+  { code: '+251', country: 'ET', flag: '🇪🇹', label: 'Ethiopia', labelAr: 'إثيوبيا' },
+  { code: '+233', country: 'GH', flag: '🇬🇭', label: 'Ghana', labelAr: 'غانا' },
+  { code: '+27', country: 'ZA', flag: '🇿🇦', label: 'South Africa', labelAr: 'جنوب أفريقيا' },
+  // Major Western markets
   { code: '+1', country: 'US', flag: '🇺🇸', label: 'US/CA', labelAr: 'أمريكا/كندا' },
+  { code: '+44', country: 'GB', flag: '🇬🇧', label: 'UK', labelAr: 'بريطانيا' },
   { code: '+49', country: 'DE', flag: '🇩🇪', label: 'Germany', labelAr: 'ألمانيا' },
   { code: '+33', country: 'FR', flag: '🇫🇷', label: 'France', labelAr: 'فرنسا' },
   { code: '+39', country: 'IT', flag: '🇮🇹', label: 'Italy', labelAr: 'إيطاليا' },
   { code: '+34', country: 'ES', flag: '🇪🇸', label: 'Spain', labelAr: 'إسبانيا' },
-  { code: '+90', country: 'TR', flag: '🇹🇷', label: 'Turkey', labelAr: 'تركيا' },
-  { code: '+91', country: 'IN', flag: '🇮🇳', label: 'India', labelAr: 'الهند' },
-  { code: '+86', country: 'CN', flag: '🇨🇳', label: 'China', labelAr: 'الصين' },
+  { code: '+351', country: 'PT', flag: '🇵🇹', label: 'Portugal', labelAr: 'البرتغال' },
+  { code: '+31', country: 'NL', flag: '🇳🇱', label: 'Netherlands', labelAr: 'هولندا' },
+  { code: '+32', country: 'BE', flag: '🇧🇪', label: 'Belgium', labelAr: 'بلجيكا' },
+  { code: '+41', country: 'CH', flag: '🇨🇭', label: 'Switzerland', labelAr: 'سويسرا' },
+  { code: '+43', country: 'AT', flag: '🇦🇹', label: 'Austria', labelAr: 'النمسا' },
+  { code: '+46', country: 'SE', flag: '🇸🇪', label: 'Sweden', labelAr: 'السويد' },
+  { code: '+47', country: 'NO', flag: '🇳🇴', label: 'Norway', labelAr: 'النرويج' },
+  { code: '+45', country: 'DK', flag: '🇩🇰', label: 'Denmark', labelAr: 'الدنمارك' },
+  { code: '+358', country: 'FI', flag: '🇫🇮', label: 'Finland', labelAr: 'فنلندا' },
+  { code: '+353', country: 'IE', flag: '🇮🇪', label: 'Ireland', labelAr: 'أيرلندا' },
+  { code: '+30', country: 'GR', flag: '🇬🇷', label: 'Greece', labelAr: 'اليونان' },
+  { code: '+48', country: 'PL', flag: '🇵🇱', label: 'Poland', labelAr: 'بولندا' },
+  { code: '+420', country: 'CZ', flag: '🇨🇿', label: 'Czech Republic', labelAr: 'التشيك' },
   { code: '+7', country: 'RU', flag: '🇷🇺', label: 'Russia', labelAr: 'روسيا' },
+  { code: '+380', country: 'UA', flag: '🇺🇦', label: 'Ukraine', labelAr: 'أوكرانيا' },
+  { code: '+357', country: 'CY', flag: '🇨🇾', label: 'Cyprus', labelAr: 'قبرص' },
+  { code: '+61', country: 'AU', flag: '🇦🇺', label: 'Australia', labelAr: 'أستراليا' },
+  { code: '+64', country: 'NZ', flag: '🇳🇿', label: 'New Zealand', labelAr: 'نيوزيلندا' },
+  { code: '+55', country: 'BR', flag: '🇧🇷', label: 'Brazil', labelAr: 'البرازيل' },
+  { code: '+52', country: 'MX', flag: '🇲🇽', label: 'Mexico', labelAr: 'المكسيك' },
+  // Asia-Pacific
+  { code: '+86', country: 'CN', flag: '🇨🇳', label: 'China', labelAr: 'الصين' },
+  { code: '+81', country: 'JP', flag: '🇯🇵', label: 'Japan', labelAr: 'اليابان' },
+  { code: '+82', country: 'KR', flag: '🇰🇷', label: 'South Korea', labelAr: 'كوريا الجنوبية' },
+  { code: '+852', country: 'HK', flag: '🇭🇰', label: 'Hong Kong', labelAr: 'هونغ كونغ' },
+  { code: '+65', country: 'SG', flag: '🇸🇬', label: 'Singapore', labelAr: 'سنغافورة' },
+  { code: '+60', country: 'MY', flag: '🇲🇾', label: 'Malaysia', labelAr: 'ماليزيا' },
+  { code: '+66', country: 'TH', flag: '🇹🇭', label: 'Thailand', labelAr: 'تايلاند' },
 ];
 
 export const getCountryFromPhone = (phone) => {
