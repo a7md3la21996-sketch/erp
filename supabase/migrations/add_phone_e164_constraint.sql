@@ -106,10 +106,17 @@ ALTER TABLE contacts
   CHECK (is_valid_phone_intl(phone))
   NOT VALID;
 
--- Same rule for phone2, but allow NULL (it's an optional secondary phone).
--- 115 historical violations existed at constraint-add time (mostly Egyptian
--- local-format like 01XXXXXXXXX); they're preserved by NOT VALID.
+-- Same rule for phone2, but is_valid_phone_intl returns TRUE for NULL so
+-- the optional secondary phone is allowed to stay empty.
 ALTER TABLE contacts
   ADD CONSTRAINT contacts_phone2_valid
   CHECK (is_valid_phone_intl(phone2))
   NOT VALID;
+
+-- Cleanup of historical junk (run May 22 2026) made every row satisfy the
+-- constraints, so we then VALIDATEd to drop the NOT-VALID grandfathering.
+-- The DB now guarantees per-country phone format for every contact row,
+-- old or new — no row can violate. Future migrations that need to bypass
+-- the rule (rare) should DROP+re-add with NOT VALID, not delete the data.
+ALTER TABLE contacts VALIDATE CONSTRAINT contacts_phone_valid;
+ALTER TABLE contacts VALIDATE CONSTRAINT contacts_phone2_valid;
