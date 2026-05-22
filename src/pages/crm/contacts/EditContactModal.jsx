@@ -6,6 +6,8 @@ import { X } from 'lucide-react';
 import { Button, Input, Select, Textarea, DiscardConfirm } from '../../../components/ui/';
 import { useEscClose, SOURCE_LABELS, SOURCE_EN, SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES, COUNTRY_CODES, getCountryFromPhone, getPhoneInfo, validatePhone, normalizePhone, getFullPhone } from './constants';
 import { useFocusTrap, useDirtyTracker } from '../../../utils/hooks';
+import { hasPerm } from '../../../utils/permissionGuard';
+import { P } from '../../../config/roles';
 
 export default function EditContactModal({ contact, onClose, onSave, userRole, campaigns = [] }) {
   const { i18n } = useTranslation();
@@ -52,6 +54,11 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
   });
   const [extraPhones, setExtraPhones] = useState(() => (contact.extra_phones || []).map(p => initPhone(p)));
   const [extraCodes, setExtraCodes] = useState(() => (contact.extra_phones || []).map(p => initCode(p)));
+  // Phone fields are gated on a separate permission so sales reps can't
+  // overwrite contact numbers. When false, the inputs render disabled and
+  // we omit phone/phone2/extra_phones from the save payload so the server
+  // guard isn't tripped.
+  const canEditPhone = hasPerm(P.CONTACTS_EDIT_PHONE);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false); // sync guard against double-submit
   const dialogRef = useRef(null);
@@ -130,12 +137,10 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
       // Spreading the original would expose assigned_to_names to client-side
       // mutation (devtools edit before save). The id is required for the
       // update; everything else comes from form.
-      await onSave({
+      const payload = {
         id: contact.id,
         prefix: formData.prefix,
         full_name: formData.full_name,
-        phone: fullPhone,
-        phone2: getFullPhone(form.phone2, countryCode2),
         email: formData.email,
         contact_type: formData.contact_type,
         source: formData.source,
@@ -150,10 +155,19 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
         company: formData.company,
         job_title: formData.job_title,
         platform: formData.platform,
-        extra_phones: validExtras.length > 0 ? validExtras : null,
         budget_min: form.budget_min ? Number(form.budget_min) : null,
         budget_max: form.budget_max ? Number(form.budget_max) : null,
-      });
+      };
+      // Only include phone fields when the user has permission. Sending them
+      // unconditionally would trip the server-side CONTACTS_EDIT_PHONE guard
+      // even if the values are unchanged (the guard checks key presence, not
+      // value diff).
+      if (canEditPhone) {
+        payload.phone = fullPhone;
+        payload.phone2 = getFullPhone(form.phone2, countryCode2);
+        payload.extra_phones = validExtras.length > 0 ? validExtras : null;
+      }
+      await onSave(payload);
       toast.success(isRTL ? 'تم حفظ التعديلات' : 'Changes saved');
       onClose();
     } catch (err) {
@@ -219,25 +233,27 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
             <div>
               <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
                 {isRTL ? 'رقم الهاتف' : 'Phone'} <span className="text-red-500">*</span>
+                {!canEditPhone && <span className="text-xs text-content-muted ms-1">🔒 {isRTL ? 'للمشرف فقط' : 'admin only'}</span>}
                 {(() => { const fp = getFullPhone(form.phone, form.countryCode); if (!fp) return null; if (!validatePhone(fp)) return <span className="text-xs text-orange-500 ms-1">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-xs text-emerald-500 ms-1">{info.flag} {info.country}</span> : null; })()}
               </label>
               <div className="flex gap-1.5">
-                <Select value={form.countryCode} onChange={e => set('countryCode', e.target.value)} className="!w-[90px] shrink-0">
+                <Select value={form.countryCode} onChange={e => set('countryCode', e.target.value)} className="!w-[90px] shrink-0" disabled={!canEditPhone}>
                   {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
                 </Select>
-                <Input value={form.phone} onChange={e => handlePhoneChange(e.target.value, 'phone', 'countryCode')} placeholder="10xxxxxxxx" className="flex-1" />
+                <Input value={form.phone} onChange={e => handlePhoneChange(e.target.value, 'phone', 'countryCode')} placeholder="10xxxxxxxx" className="flex-1" disabled={!canEditPhone} />
               </div>
             </div>
             <div>
               <label className="block text-xs text-content-muted dark:text-content-muted-dark mb-1">
                 {isRTL ? 'هاتف 2' : 'Phone 2'}
+                {!canEditPhone && <span className="text-xs text-content-muted ms-1">🔒</span>}
                 {(() => { const fp = getFullPhone(form.phone2, form.countryCode2); if (!fp) return null; if (!validatePhone(fp)) return <span className="text-xs text-orange-500 ms-1">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-xs text-emerald-500 ms-1">{info.flag} {info.country}</span> : null; })()}
               </label>
               <div className="flex gap-1.5">
-                <Select value={form.countryCode2} onChange={e => set('countryCode2', e.target.value)} className="!w-[90px] shrink-0">
+                <Select value={form.countryCode2} onChange={e => set('countryCode2', e.target.value)} className="!w-[90px] shrink-0" disabled={!canEditPhone}>
                   {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
                 </Select>
-                <Input value={form.phone2} onChange={e => handlePhoneChange(e.target.value, 'phone2', 'countryCode2')} placeholder="11xxxxxxxx" className="flex-1" />
+                <Input value={form.phone2} onChange={e => handlePhoneChange(e.target.value, 'phone2', 'countryCode2')} placeholder="11xxxxxxxx" className="flex-1" disabled={!canEditPhone} />
               </div>
             </div>
           </div>
@@ -245,21 +261,25 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
           {/* أرقام إضافية */}
           {extraPhones.length > 0 && extraPhones.map((ph, i) => (
             <div key={i} className="flex gap-1.5 items-start">
-              <Select value={extraCodes[i] || '+20'} onChange={e => { const nc = [...extraCodes]; nc[i] = e.target.value; setExtraCodes(nc); }} className="!w-[90px] shrink-0">
+              <Select value={extraCodes[i] || '+20'} onChange={e => { const nc = [...extraCodes]; nc[i] = e.target.value; setExtraCodes(nc); }} className="!w-[90px] shrink-0" disabled={!canEditPhone}>
                 {COUNTRY_CODES.map(c => <option key={c.code} value={c.code}>{c.code} {c.flag}</option>)}
               </Select>
               <div className="flex-1">
-                <Input value={ph} onChange={e => { const np = [...extraPhones]; np[i] = e.target.value; setExtraPhones(np); }} placeholder="10xxxxxxxx" />
+                <Input value={ph} onChange={e => { const np = [...extraPhones]; np[i] = e.target.value; setExtraPhones(np); }} placeholder="10xxxxxxxx" disabled={!canEditPhone} />
                 {ph && (() => { const fp = getFullPhone(ph, extraCodes[i]); if (!validatePhone(fp)) return <span className="text-[10px] text-orange-500 mt-0.5 block">{isRTL ? '⚠️ رقم غير صحيح' : '⚠️ Invalid'}</span>; const info = getPhoneInfo(fp); return info ? <span className="text-[10px] text-emerald-500 mt-0.5 block">{info.flag} {info.country}</span> : null; })()}
               </div>
-              <button onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraCodes(extraCodes.filter((_, j) => j !== i)); }}
-                className="mt-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-sm leading-none shrink-0">×</button>
+              {canEditPhone && (
+                <button onClick={() => { setExtraPhones(extraPhones.filter((_, j) => j !== i)); setExtraCodes(extraCodes.filter((_, j) => j !== i)); }}
+                  className="mt-1 px-2 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-red-500 cursor-pointer text-sm leading-none shrink-0">×</button>
+              )}
             </div>
           ))}
-          <button onClick={() => { setExtraPhones([...extraPhones, '']); setExtraCodes([...extraCodes, '+20']); }}
-            className="text-xs text-brand-500 bg-brand-500/[0.08] border border-brand-500/20 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-brand-500/[0.15] transition-colors w-fit">
-            + {isRTL ? 'إضافة رقم' : 'Add Phone'}
-          </button>
+          {canEditPhone && (
+            <button onClick={() => { setExtraPhones([...extraPhones, '']); setExtraCodes([...extraCodes, '+20']); }}
+              className="text-xs text-brand-500 bg-brand-500/[0.08] border border-brand-500/20 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-brand-500/[0.15] transition-colors w-fit">
+              + {isRTL ? 'إضافة رقم' : 'Add Phone'}
+            </button>
+          )}
 
           {/* الإيميل */}
           <div>

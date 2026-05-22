@@ -30,6 +30,12 @@ export const P = {
   CONTACTS_VIEW_ALL: 'contacts.view_all',
   CONTACTS_EDIT_OWN: 'contacts.edit_own',
   CONTACTS_EDIT: 'contacts.edit',
+  // Separate gate for phone fields. Sales reps can EDIT a contact but cannot
+  // overwrite phone/phone2/extra_phones — that's reserved for admin and
+  // operations so a bad call/typo doesn't silently corrupt the lead's
+  // contact info. New contacts can still be created with a phone (creation
+  // path doesn't gate on this).
+  CONTACTS_EDIT_PHONE: 'contacts.edit_phone',
   CONTACTS_DELETE: 'contacts.delete',
   CONTACTS_EXPORT: 'contacts.export',
   CONTACTS_IMPORT: 'contacts.import',
@@ -176,7 +182,7 @@ export const ROLE_PERMISSIONS = {
     // Operations
     P.OPS_VIEW, P.OPS_MANAGE, P.OPS_PAYMENTS, P.OPS_HANDOVER, P.OPS_AFTERSALES,
     // Sales (contacts, opps, deals)
-    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
+    P.CONTACTS_VIEW_OWN, P.CONTACTS_VIEW_ALL, P.CONTACTS_EDIT, P.CONTACTS_EDIT_PHONE, P.CONTACTS_IMPORT, P.CONTACTS_BULK,
     P.OPPS_VIEW_OWN, P.OPPS_VIEW_ALL, P.OPPS_EDIT,
     P.DEALS_VIEW_OWN,
     // Marketing

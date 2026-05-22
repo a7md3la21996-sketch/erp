@@ -479,6 +479,11 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
   if (Array.isArray(cleanUpdates.extra_phones)) {
     cleanUpdates.extra_phones.forEach((p, i) => assertPhoneE164(p, `extra_phones[${i}]`));
   }
+  // Phone-edit permission is enforced below after we read oldData so we
+  // can compare new vs current value. Bulk operations (merge, etc.) pass
+  // the whole record back with phone fields unchanged — those callers
+  // shouldn't trip the guard. Only ACTUAL value changes require the
+  // CONTACTS_EDIT_PHONE perm.
   // Diagnostic: any DQ write that would violate the DB check constraint
   // gets blocked + logged here with a clear message + the call site.
   // Removes the round-trip and gives us a stack trace pointing at the
@@ -504,6 +509,20 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       }
     }
     const { data: oldData } = await rq(() => supabase.from('contacts').select('*').eq('id', id).single(), 'updateContact.read');
+    // Phone-edit gate (see comment above): only block when a phone field is
+    // actually changing. Comparing extra_phones via JSON.stringify treats
+    // [null] and null as different but they're equivalent for our purposes —
+    // normalize both to a sorted, blank-stripped string before comparison.
+    const normExtras = (v) => Array.isArray(v)
+      ? JSON.stringify([...v].filter(Boolean).map(String).sort())
+      : '';
+    const phoneChanged =
+      ('phone' in cleanUpdates && cleanUpdates.phone !== oldData?.phone) ||
+      ('phone2' in cleanUpdates && cleanUpdates.phone2 !== oldData?.phone2) ||
+      ('extra_phones' in cleanUpdates && normExtras(cleanUpdates.extra_phones) !== normExtras(oldData?.extra_phones));
+    if (phoneChanged) {
+      requirePerm(P.CONTACTS_EDIT_PHONE, 'Only admin or operations can change phone numbers');
+    }
     // Convert empty strings to null (Supabase rejects '' for date/number columns)
     const sanitized = {};
     for (const [k, v] of Object.entries(cleanUpdates)) {
