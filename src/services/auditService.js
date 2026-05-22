@@ -7,6 +7,7 @@ export const ACTION_TYPES = {
   update:           { ar: 'تعديل',           en: 'Update' },
   delete:           { ar: 'حذف',             en: 'Delete' },
   status_change:    { ar: 'تغيير حالة',      en: 'Status Change' },
+  phone_change:     { ar: 'تغيير رقم',       en: 'Phone Change' },
   type_change:      { ar: 'تغيير نوع',       en: 'Type Change' },
   blacklist:        { ar: 'بلاك ليست',       en: 'Blacklisted' },
   unblacklist:      { ar: 'إلغاء بلاك ليست', en: 'Unblacklisted' },
@@ -168,6 +169,48 @@ export const logUpdate = (entity, id, old, now, desc, userName) =>
 
 export const logDelete = (entity, id, old, desc, userName) =>
   logAudit({ action: 'delete', entity, entityId: id, entityName: old?.full_name || old?.name || '', oldData: old, description: desc || 'Deleted ' + entity, userName });
+
+/**
+ * Specific logger for phone-number changes — a dedicated `phone_change`
+ * action makes the audit log queryable directly instead of having to scan
+ * every generic 'update' entry diffing oldData.phone vs newData.phone. The
+ * generic update entry still fires alongside; this is the indexed shortcut.
+ */
+export const logPhoneChange = (contactId, contactName, oldPhones, newPhones, userName) =>
+  logAudit({
+    action: 'phone_change',
+    entity: 'contact',
+    entityId: contactId,
+    entityName: contactName || '',
+    oldData: oldPhones,
+    newData: newPhones,
+    description: 'Phone fields changed',
+    userName,
+  });
+
+/**
+ * Fetches every recorded phone change for a single contact, newest first.
+ * Useful for a "show history" panel: the caller gets back a list of
+ * {created_at, user_name, oldData, newData} so it can render a timeline of
+ * what the number used to be and who edited it.
+ */
+export async function getPhoneHistory(contactId, limit = 50) {
+  try {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('id, created_at, user_name, old_data, new_data, description')
+      .eq('entity', 'contact')
+      .eq('entity_id', contactId)
+      .eq('action', 'phone_change')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    reportError('auditService', 'getPhoneHistory', err);
+    return [];
+  }
+}
 
 // ── Specific action loggers ─────────────────────────────────────────────
 export const logAction = ({ action, entity, entityId, entityName, description, oldValue, newValue, userName }) =>

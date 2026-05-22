@@ -1,6 +1,6 @@
 import supabase from '../lib/supabase';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
-import { logCreate, logUpdate, logAudit } from './auditService';
+import { logCreate, logUpdate, logAudit, logPhoneChange } from './auditService';
 import { requireAnyPerm, requirePerm } from '../utils/permissionGuard';
 import { P } from '../config/roles';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
@@ -23,16 +23,20 @@ const rq = (fn, label) => retryWithBackoff(fn, { label });
 // after +20 starting with 1[0125], Saudi mobile 9 digits after +966
 // starting with 5, etc.). The DB CHECK is the structural safety net but
 // can't enforce per-country rules — that's this guard's job.
+//
+// Error messages are bilingual (AR + EN) so the toast that surfaces them
+// is intelligible to both the sales team and English-speaking ops, with
+// the offending value included so the bad row is identifiable.
 const PHONE_E164_REGEX = /^\+[1-9][0-9]{7,14}$/;
 function assertPhoneE164(value, fieldName) {
   if (value == null || value === '') return;
   const trimmed = String(value).trim();
   if (!PHONE_E164_REGEX.test(trimmed)) {
-    throw new Error(`Invalid ${fieldName}: must be E.164 format like "+201234567890". Got: ${JSON.stringify(value)}`);
+    throw new Error(`رقم ${fieldName} غير صحيح — لازم يكون بصيغة دولية زي "+201234567890" / Invalid ${fieldName}: must be E.164 format. Got: ${JSON.stringify(value)}`);
   }
   const parsed = parsePhoneNumberFromString(trimmed);
   if (!parsed?.isValid()) {
-    throw new Error(`Invalid ${fieldName}: digit count doesn't match the country code. Got: ${JSON.stringify(value)}`);
+    throw new Error(`رقم ${fieldName} غير صحيح — عدد الأرقام مش مطابق لكود الدولة / Invalid ${fieldName}: digit count doesn't match the country code. Got: ${JSON.stringify(value)}`);
   }
 }
 
@@ -527,7 +531,7 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       ('phone2' in cleanUpdates && cleanUpdates.phone2 !== oldData?.phone2) ||
       extraPhonesShrunk;
     if (phoneChanged) {
-      requirePerm(P.CONTACTS_EDIT_PHONE, 'Only admin or operations can change or remove existing phone numbers');
+      requirePerm(P.CONTACTS_EDIT_PHONE, 'تعديل أو حذف رقم تليفون مسجَّل مسموح للمشرف أو الـ operations فقط / Only admin or operations can change or remove existing phone numbers');
     }
     // Convert empty strings to null (Supabase rejects '' for date/number columns)
     const sanitized = {};
@@ -603,6 +607,17 @@ export async function updateContact(id, updates, lastKnownUpdatedAt) {
       .single(), 'updateContact.write');
     if (error) throw error;
     logUpdate('contact', id, oldData, data);
+    // Dedicated phone_change audit entry on top of the generic update —
+    // makes "show this contact's phone history" a single indexed query
+    // instead of scanning every update record.
+    if (phoneChanged) {
+      logPhoneChange(
+        id,
+        data?.full_name,
+        { phone: oldData?.phone, phone2: oldData?.phone2, extra_phones: oldData?.extra_phones },
+        { phone: data?.phone, phone2: data?.phone2, extra_phones: data?.extra_phones },
+      );
+    }
     return data;
   } catch (err) {
     throw err;
