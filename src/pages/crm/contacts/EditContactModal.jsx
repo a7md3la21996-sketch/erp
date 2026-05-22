@@ -5,6 +5,7 @@ import { useSystemConfig } from '../../../contexts/SystemConfigContext';
 import { X } from 'lucide-react';
 import { Button, Input, Select, Textarea, DiscardConfirm } from '../../../components/ui/';
 import { useEscClose, SOURCE_LABELS, SOURCE_EN, SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES, COUNTRY_CODES, getCountryFromPhone, getPhoneInfo, validatePhone, normalizePhone, getFullPhone } from './constants';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import { useFocusTrap, useDirtyTracker } from '../../../utils/hooks';
 import { hasPerm } from '../../../utils/permissionGuard';
 import { P } from '../../../config/roles';
@@ -103,12 +104,28 @@ export default function EditContactModal({ contact, onClose, onSave, userRole, c
   const isSalesDept = form.department === 'sales';
   const emailValid = !form.email || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
 
+  // Auto-detect country across the same input shapes AddContactModal does:
+  // +966..., 00966..., bare-intl "966...", and local "0X..." prefixes.
+  // libphonenumber is authoritative when the prefix is unambiguous; the
+  // local-prefix table handles short partial input that can't yet be parsed.
   const handlePhoneChange = (val, field, codeField) => {
     set(field, val);
-    if (val.startsWith('0')) {
-      const detected = getCountryFromPhone(normalizePhone(val));
-      if (detected) set(codeField, detected.code);
+    const lookup = (country) => COUNTRY_CODES.find(c => c.country === country) || null;
+    let detected = null;
+    if (val.startsWith('+') || val.startsWith('00')) {
+      const normalized = val.startsWith('00') ? '+' + val.slice(2) : val;
+      const parsed = parsePhoneNumberFromString(normalized);
+      if (parsed?.country) detected = lookup(parsed.country);
+    } else if (val.length >= 3 && !val.startsWith('0')) {
+      const parsed = parsePhoneNumberFromString('+' + val);
+      if (parsed?.country) detected = lookup(parsed.country);
+    } else if (val.startsWith('0')) {
+      if (/^01[0125]/.test(val)) detected = lookup('EG');
+      else if (val.startsWith('05')) detected = lookup('SA');
+      else if (val.startsWith('07')) detected = lookup('JO');
+      else if (val.startsWith('09')) detected = lookup('IQ');
     }
+    if (detected) set(codeField, detected.code);
   };
 
   const handleSourceChange = (src) => {
