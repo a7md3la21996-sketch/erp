@@ -11,6 +11,7 @@ import {
   SOURCE_PLATFORM, PLATFORM_LABELS, AD_SOURCES,
   getFullPhone,
 } from './constants';
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 import CustomFieldsRenderer from '../../../components/ui/CustomFieldsRenderer';
 import { DiscardConfirm } from '../../../components/ui';
 import { Plus } from 'lucide-react';
@@ -231,13 +232,35 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
     }
   };
 
-  // Auto-detect country from local phone number prefix
+  // Auto-detect country from whatever the user has typed so far. Order
+  // matters: libphonenumber is authoritative once the prefix is long
+  // enough to be unambiguous, so we try it FIRST for any +/00/bare-intl
+  // input. The hardcoded local-prefix table is a fallback for short
+  // ambiguous strings (e.g. "0501" could be Saudi or UAE — pick Saudi
+  // since it's the more common case in this CRM).
   const detectCountryFromLocal = (phone) => {
-    if (!phone || phone.startsWith('+')) return null;
-    if (phone.startsWith('01') && phone.length >= 3 && ['0','1','2','5'].includes(phone[2])) return { code: '+20', country: 'EG', flag: '\u{1F1EA}\u{1F1EC}' };
-    if (phone.startsWith('05')) return { code: '+966', country: 'SA', flag: '\u{1F1F8}\u{1F1E6}' };
-    if (phone.startsWith('07')) return { code: '+962', country: 'JO', flag: '\u{1F1EF}\u{1F1F4}' };
-    if (phone.startsWith('09')) return { code: '+964', country: 'IQ', flag: '\u{1F1EE}\u{1F1F6}' };
+    if (!phone) return null;
+    const lookup = (code) => COUNTRY_CODES.find(c => c.country === code) || null;
+    // International format: +966..., 00966..., or bare 966... — let
+    // libphonenumber decide once the prefix is unambiguous.
+    if (phone.startsWith('+') || phone.startsWith('00')) {
+      const normalized = phone.startsWith('00') ? '+' + phone.slice(2) : phone;
+      const parsed = parsePhoneNumberFromString(normalized);
+      if (parsed?.country) return lookup(parsed.country);
+      return null;
+    }
+    // Bare international (no leading + or 00) — only try if the first
+    // digit can't be a local-format prefix (avoids hijacking "01..." from
+    // Egyptian-mobile detection).
+    if (phone.length >= 3 && !phone.startsWith('0')) {
+      const parsed = parsePhoneNumberFromString('+' + phone);
+      if (parsed?.country) return lookup(parsed.country);
+    }
+    // Local-format fallback for common 0X prefixes.
+    if (phone.startsWith('01') && phone.length >= 3 && ['0','1','2','5'].includes(phone[2])) return lookup('EG');
+    if (phone.startsWith('05')) return lookup('SA');
+    if (phone.startsWith('07')) return lookup('JO');
+    if (phone.startsWith('09')) return lookup('IQ');
     return null;
   };
   const setDept = (dept) => {
@@ -437,17 +460,14 @@ export default function AddContactModal({ onClose, onSave, checkDup, onOpenOppor
                     onChange={e => {
                       const v = e.target.value.replace(/[^0-9+]/g, '');
                       set('phone', v);
-                      // Auto-detect country from number
-                      if (v.startsWith('+')) {
-                        const detected = getCountryFromPhone(v);
+                      // Auto-detect country code on every keystroke. Only
+                      // update when detection succeeds — don't overwrite a
+                      // valid earlier guess with the default if the new
+                      // partial is too short to detect.
+                      const detected = detectCountryFromLocal(v);
+                      if (detected) {
                         set('countryCode', detected.code);
                         set('country', detected.country);
-                      } else {
-                        const detected = detectCountryFromLocal(v);
-                        if (detected) {
-                          set('countryCode', detected.code);
-                          set('country', detected.country);
-                        }
                       }
                       setDupWarning(null);
                       const full = getFullPhone(v, form.countryCode);
