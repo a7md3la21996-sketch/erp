@@ -213,7 +213,7 @@ export const getPhoneInfo = (p) => {
     const flags = {
       EG:'🇪🇬', SA:'🇸🇦', AE:'🇦🇪', KW:'🇰🇼', QA:'🇶🇦', BH:'🇧🇭', OM:'🇴🇲', JO:'🇯🇴', LB:'🇱🇧',
       IQ:'🇮🇶', SY:'🇸🇾', LY:'🇱🇾', TN:'🇹🇳', DZ:'🇩🇿', MA:'🇲🇦', SD:'🇸🇩', YE:'🇾🇪', PS:'🇵🇸',
-      MR:'🇲🇷', DJ:'🇩🇯', SO:'🇸🇴', KM:'🇰🇲',
+      MR:'🇲🇷', DJ:'🇩🇯', SO:'🇸🇴', KM:'🇰🇲', IL:'🇵🇸',
       IN:'🇮🇳', PK:'🇵🇰', BD:'🇧🇩', PH:'🇵🇭', ID:'🇮🇩', LK:'🇱🇰', NP:'🇳🇵', IR:'🇮🇷', AF:'🇦🇫', TR:'🇹🇷',
       NG:'🇳🇬', KE:'🇰🇪', ET:'🇪🇹', GH:'🇬🇭', ZA:'🇿🇦',
       US:'🇺🇸', GB:'🇬🇧', DE:'🇩🇪', FR:'🇫🇷', IT:'🇮🇹', ES:'🇪🇸', PT:'🇵🇹', NL:'🇳🇱', BE:'🇧🇪',
@@ -246,6 +246,11 @@ export const COUNTRY_CODES = [
   { code: '+249', country: 'SD', flag: '🇸🇩', label: 'Sudan', labelAr: 'السودان' },
   { code: '+967', country: 'YE', flag: '🇾🇪', label: 'Yemen', labelAr: 'اليمن' },
   { code: '+970', country: 'PS', flag: '🇵🇸', label: 'Palestine', labelAr: 'فلسطين' },
+  // +972 is the dial code libphonenumber/ITU label as Israel; in this CRM
+  // we surface it as Palestine per business policy. The country=IL key
+  // stays so libphonenumber-detected numbers still match this entry on
+  // lookup — the user-visible label is what changes.
+  { code: '+972', country: 'IL', flag: '🇵🇸', label: 'Palestine', labelAr: 'فلسطين' },
   { code: '+222', country: 'MR', flag: '🇲🇷', label: 'Mauritania', labelAr: 'موريتانيا' },
   { code: '+253', country: 'DJ', flag: '🇩🇯', label: 'Djibouti', labelAr: 'جيبوتي' },
   { code: '+252', country: 'SO', flag: '🇸🇴', label: 'Somalia', labelAr: 'الصومال' },
