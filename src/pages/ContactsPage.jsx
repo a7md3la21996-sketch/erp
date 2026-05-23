@@ -442,8 +442,11 @@ export default function ContactsPage() {
   }, [quickActionTarget, batchCallMode, mergePreview, disqualifyModal, bulkOppModal, bulkReassignModal, confirmAction, bulkSMSModal, bulkDropdownOpen]);
 
   const handleDelete = async (id) => {
-    if (profile?.role !== 'admin') {
-      toast.error(isRTL ? 'الحذف متاح للأدمن فقط' : 'Only admin can delete contacts');
+    // Gate on the permission, not a hardcoded role string. roles.js may grant
+    // CONTACTS_DELETE to operations later without anyone remembering to update
+    // this check; permission-driven means the UI keeps up automatically.
+    if (!perms.canDeleteContacts) {
+      toast.error(isRTL ? 'مفيش صلاحية حذف' : 'No delete permission');
       return;
     }
     const contact = contacts.find(c => c.id === id);
