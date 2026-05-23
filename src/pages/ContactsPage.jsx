@@ -575,7 +575,7 @@ export default function ContactsPage() {
         : `Could not resolve UUID for ${agentName} — please reopen the modal`);
       return;
     }
-    const assignedByName = profile?.full_name_ar || '—';
+    const assignedByName = profile?.full_name_ar || profile?.full_name_en || profile?.email || profile?.id || '—';
     const allSelected = await getAllSelectedContacts();
     const allSelectedById = new Map(allSelected.map(c => [c.id, c]));
     const names = allSelected.map(c => c.full_name).filter(Boolean).join(', ');
@@ -1549,7 +1549,7 @@ export default function ContactsPage() {
       assigned_to: assigneeId,
       assigned_to_name: form.assigned_to_name || myName,
       assigned_to_names: form.assigned_to_names || [myName].filter(n => n !== '—'),
-      assigned_by_name: profile?.full_name_ar || '—',
+      assigned_by_name: profile?.full_name_ar || profile?.full_name_en || profile?.email || profile?.id || '—',
       created_by: profile?.id || null,
       created_by_name: profile?.full_name_ar || profile?.full_name_en || '—',
       campaign_interactions,
@@ -1592,7 +1592,7 @@ export default function ContactsPage() {
           contactId: saved.id,
           agentId: recipientId,
           agentName: recipientName,
-          assignedBy: profile?.full_name_ar || '—',
+          assignedBy: profile?.full_name_ar || profile?.full_name_en || profile?.email || profile?.id || '—',
         });
       }
     } catch (err) {
