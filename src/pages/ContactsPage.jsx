@@ -61,6 +61,36 @@ export default function ContactsPage() {
   const isRTL = i18n.language === 'ar';
   const toast = useToast();
   const perms = useCrmPermissions();
+  // Translate the common backend / Supabase error patterns into something
+  // an Arabic-speaking rep can act on. Anything we don't recognize falls
+  // back to the raw message so we don't accidentally hide a new error type.
+  const translateErr = useCallback((err) => {
+    const raw = String(err?.message || err || '').trim();
+    if (!raw) return isRTL ? 'خطأ غير معروف' : 'Unknown error';
+    const lower = raw.toLowerCase();
+    if (err?.code === 'PERM_DENIED' || lower.includes('not allowed') || lower.includes('permission denied')) {
+      return isRTL ? 'الصلاحية مش متوفرة — كلم الـ admin' : 'Not permitted — ask your admin';
+    }
+    if (lower.includes('dq_requires_reason')) {
+      return isRTL ? 'لازم تختار سبب لعدم التأهيل' : 'Disqualify reason is required';
+    }
+    if (lower.includes('contacts_phone') || lower.includes('e164') || lower.includes('digit count')) {
+      return isRTL ? 'رقم التليفون مش بصيغة صحيحة' : 'Phone is not in a valid format';
+    }
+    if (lower.includes('uniq_active_new_phone_per_owner') || (lower.includes('duplicate key') && lower.includes('phone'))) {
+      return isRTL ? 'الرقم ده موجود فعلاً عند نفس السيلز كـ lead جديد' : 'This phone is already assigned as a new lead to the same agent';
+    }
+    if (lower.includes('check constraint')) {
+      return isRTL ? 'فشل حفظ — البيانات مش مطابقة لقواعد السيستم' : 'Save failed — data violates a system rule';
+    }
+    if (lower.includes('rate limit')) {
+      return isRTL ? 'العمليات كتير في وقت قصير — استنى ثانية وحاول تاني' : 'Rate limit — wait a moment and retry';
+    }
+    if (lower.includes('network') || lower.includes('failed to fetch')) {
+      return isRTL ? 'مشكلة في الشبكة — جرب تاني' : 'Network issue — please retry';
+    }
+    return isRTL ? `خطأ: ${raw}` : `Error: ${raw}`;
+  }, [isRTL]);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightId = searchParams.get('highlight');
@@ -385,7 +415,7 @@ export default function ContactsPage() {
       // actually persist locally after Phase 2, so the success toast lied
       // when the DB write failed. Surface the real failure.
       reportError('ContactsPage', 'handleQuickAction.saveActivity', err);
-      toast.error(isRTL ? `فشل حفظ النشاط: ${err.message || 'خطأ غير معروف'}` : `Failed to save activity: ${err.message || 'Unknown error'}`);
+      toast.error(translateErr(err));
     }
     setSavingQuickAction(false);
     setQuickActionTarget(null);
@@ -460,7 +490,7 @@ export default function ContactsPage() {
             } : undefined,
           });
         } catch (err) {
-          toast.error(isRTL ? 'فشل الحذف: ' + (err?.message || '') : 'Delete failed: ' + (err?.message || ''));
+          toast.error(translateErr(err));
         } finally {
           setActionLoading(false);
         }
@@ -776,7 +806,7 @@ export default function ContactsPage() {
       // error so the user can retry instead of staring at a frozen UI.
       reportError('ContactsPage', 'handleBulkSMS', err);
       setBulkSMSState(s => ({ ...s, sending: false, progress: 0 }));
-      toast.error(isRTL ? `فشل إرسال الرسائل: ${err.message || 'خطأ غير معروف'}` : `Bulk SMS failed: ${err.message || 'Unknown error'}`);
+      toast.error(translateErr(err));
     }
   };
 
@@ -1552,7 +1582,7 @@ export default function ContactsPage() {
       }
     } catch (err) {
       console.error('[handleSave] Failed to create contact:', err?.message || err);
-      toast.error(isRTL ? 'فشل حفظ العميل: ' + (err?.message || 'خطأ غير معروف') : 'Failed to save lead: ' + (err?.message || 'Unknown error'));
+      toast.error(translateErr(err));
     }
   };
 
@@ -2015,7 +2045,7 @@ export default function ContactsPage() {
             await updateContact(cleanUpdated.id, cleanUpdated);
           } catch (err) {
             console.error('[onUpdate] updateContact failed:', err?.message || err);
-            toast.error(isRTL ? 'فشل حفظ التعديلات: ' + (err?.message || '') : 'Save failed: ' + (err?.message || ''));
+            toast.error(translateErr(err));
             if (old) {
               setContacts(prev => rollbackContact(prev, old));
               // Drawer's "selected" snapshot is independent of the realtime
@@ -2190,7 +2220,7 @@ export default function ContactsPage() {
             notifyImportLeadsForAgent({ count, agentName: name, importedBy: profile?.full_name_en || profile?.full_name_ar });
           });
         } catch (err) {
-          toast.error(isRTL ? 'فشل الاستيراد: ' + err.message : 'Import failed: ' + err.message);
+          toast.error(translateErr(err));
         }
         setShowImportModal(false);
       }} />}
