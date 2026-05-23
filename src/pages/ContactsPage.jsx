@@ -1152,7 +1152,21 @@ export default function ContactsPage() {
           smartCreatedAt: createdFilter ? { operator: createdFilter.operator, value: createdFilter.value } : undefined,
           smartCampaign: campaignFilter?.value || undefined,
           contactIds: stageContactIds || overdueContactIds || todayFollowupIds || undefined,
-          excludeContactIds: noActivityExcludeIds || (showNoOpps ? noOppsIds : showSingleAgent ? singleAgentIds : undefined),
+          // Union every active exclude source instead of falling through with
+          // `||` — the old chain silently dropped every list past the first
+          // non-null one, so toggling "no activity by X" + "no opps" applied
+          // only the first filter and the user got a result they didn't ask
+          // for. dedupe so we don't send a giant array of repeats.
+          excludeContactIds: (() => {
+            const sources = [
+              noActivityExcludeIds,
+              showNoOpps ? noOppsIds : null,
+              showSingleAgent ? singleAgentIds : null,
+            ].filter(arr => Array.isArray(arr) && arr.length > 0);
+            if (sources.length === 0) return undefined;
+            if (sources.length === 1) return sources[0];
+            return Array.from(new Set(sources.flat()));
+          })(),
           contact_status: myStatusFilter?.value || statusFilter?.value || (filterStatus !== 'all' ? filterStatus : undefined),
           contact_status_op: myStatusFilter?.operator || statusFilter?.operator,
           contact_status_not: ((myStatusFilter?.operator === 'is_not' || myStatusFilter?.operator === 'not_in') || statusFilter?.operator === 'is_not' || statusFilter?.operator === 'not_in') ? true : undefined,
