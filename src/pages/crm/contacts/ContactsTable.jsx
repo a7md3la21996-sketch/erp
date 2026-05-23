@@ -640,7 +640,7 @@ export default function ContactsTable({
         onPageChange={setPage}
         pageSize={pageSize}
         onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
-        totalItems={totalContacts || filtered.length}
+        totalItems={totalContacts}
       />
     </div>
   );
