@@ -723,6 +723,10 @@ export default function ContactsPage() {
       done: 0,
       total: idsToUpdate.length,
     });
+    // Set when the failure-set is RLS-driven and we genuinely don't know
+    // which IDs got skipped — used below to show a generic message instead
+    // of fabricating "Ahmed/Mona/Karim failed" from arbitrary array indices.
+    let opaqueFailure = false;
     if (field === 'contact_status') {
       const { data: count, error } = await supabase.rpc('bulk_change_contact_status', {
         p_contact_ids: idsToUpdate,
@@ -735,9 +739,12 @@ export default function ContactsPage() {
       if (error) {
         results = idsToUpdate.map(() => ({ status: 'rejected', reason: error }));
       } else if (typeof count === 'number' && count < idsToUpdate.length) {
-        // Some rows skipped by RLS — mark all-but-count as rejected
-        // (we can't tell which rows were skipped, so flag it but don't claim
-        // a specific row failed; the user gets a partial-success message).
+        // Some rows skipped by RLS. We have a count but no per-row info —
+        // earlier code marked "first N succeeded, rest failed" which is a
+        // lie because RLS doesn't preserve array order. We still need to
+        // mark some rows as rejected so the optimistic-state rollback
+        // runs, but the toast below shouldn't claim specific names.
+        opaqueFailure = true;
         results = idsToUpdate.map((_, i) => i < count
           ? { status: 'fulfilled', value: null }
           : { status: 'rejected', reason: new Error('skipped by RLS') });
@@ -761,20 +768,31 @@ export default function ContactsPage() {
       else failedIdx.push(i);
     });
     if (failedIdx.length > 0) {
-      // Roll back the optimistic state for failed rows so the UI doesn't
-      // pretend the change stuck. This was the root of "I changed status
-      // but it didn't actually change" — the timeline saw the optimistic
-      // success while the DB row stayed put.
-      setContacts(prev => prev.map(c => {
-        if (!failedIdx.some(i => idsToUpdate[i] === c.id)) return c;
-        const original = beforeSnapshot.get(c.id);
-        return original || c;
-      }));
-      failedIdx.forEach(i => reportError('ContactsPage', `bulkChange_${field}`, results[i].reason));
-      const failedNames = failedIdx.map(i => beforeSnapshot.get(idsToUpdate[i])?.full_name || idsToUpdate[i]).filter(Boolean);
-      const preview = failedNames.slice(0, 3).join(', ');
-      const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
-      toast.error(isRTL ? `فشل تحديث ${failedIdx.length} عميل: ${preview}${more}` : `Failed to update ${failedIdx.length} leads: ${preview}${more}`);
+      if (opaqueFailure) {
+        // RPC told us "N of M succeeded" but not which specific IDs. We
+        // can't safely roll back individual rows (would revert a successful
+        // change for an ID we wrongly assumed failed), and we can't name
+        // specific failures either. Refetch the page so the UI reflects
+        // the actual DB state, and tell the user honestly.
+        reportError('ContactsPage', `bulkChange_${field}_partial`, new Error(`${failedIdx.length} of ${idsToUpdate.length} skipped by RLS`));
+        toast.warning(isRTL
+          ? `نجح ${idsToUpdate.length - failedIdx.length} من ${idsToUpdate.length} — الباقي خارج صلاحياتك أو DQ بدون سبب`
+          : `${idsToUpdate.length - failedIdx.length} of ${idsToUpdate.length} succeeded — the rest were outside your scope or violate a constraint`);
+        loadContactsData();
+      } else {
+        // Per-row path — we actually know which IDs failed, so we can
+        // safely roll back just those and name them in the toast.
+        setContacts(prev => prev.map(c => {
+          if (!failedIdx.some(i => idsToUpdate[i] === c.id)) return c;
+          const original = beforeSnapshot.get(c.id);
+          return original || c;
+        }));
+        failedIdx.forEach(i => reportError('ContactsPage', `bulkChange_${field}`, results[i].reason));
+        const failedNames = failedIdx.map(i => beforeSnapshot.get(idsToUpdate[i])?.full_name || idsToUpdate[i]).filter(Boolean);
+        const preview = failedNames.slice(0, 3).join(', ');
+        const more = failedNames.length > 3 ? (isRTL ? ` و${failedNames.length - 3} آخرين` : ` and ${failedNames.length - 3} more`) : '';
+        toast.error(isRTL ? `فشل تحديث ${failedIdx.length} عميل: ${preview}${more}` : `Failed to update ${failedIdx.length} leads: ${preview}${more}`);
+      }
     }
     if (succeeded.length > 0) {
       const succeededNames = succeeded.map(id => beforeSnapshot.get(id)?.full_name).filter(Boolean).join(', ');
