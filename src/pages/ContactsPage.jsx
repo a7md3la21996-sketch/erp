@@ -27,6 +27,7 @@ import { reportError } from '../utils/errorReporter';
 import { rollbackContact } from '../utils/safeRollback';
 import { validateAgentNames } from '../utils/agentValidation';
 import { getTeamMemberNames } from '../utils/teamHelper';
+import { applyRoleFilter } from '../utils/roleFilter';
 import ImportModal from './crm/ImportModal';
 import { PageSkeleton, Button, SmartFilter, Modal, ModalFooter, Input } from '../components/ui';
 import { useAuditFilter } from '../hooks/useAuditFilter';
@@ -49,11 +50,10 @@ import BulkActionToolbar from './crm/contacts/BulkActionToolbar';
 import { MergePreviewModal, ConfirmModal, DisqualifyModal, BulkReassignModal, BulkOppModal, BulkSMSModal, BulkCampaignModal } from './crm/contacts/BulkModals';
 import BulkDistributeModal from './crm/contacts/BulkDistributeModal';
 
-// Session-scoped Set to dedupe the auto-mark-inactive write. Without this,
-// every page navigation re-fired updateContact(...,{contact_status:'contacted'})
-// for every following lead past the threshold, plus mutated the React state
-// array directly which broke memoization.
-const _autoInactiveSeen = new Set();
+// Previously this was a module-level Set that never cleared across
+// login/logout/role-switch and grew unboundedly. Moved into the component
+// as a ref so it resets when the profile changes (see the useEffect on
+// profile?.id below).
 
 export default function ContactsPage() {
   const { i18n } = useTranslation();
@@ -117,6 +117,11 @@ export default function ContactsPage() {
   const [bulkSMSModal, setBulkSMSModal] = useState(false);
   const [bulkSMSState, setBulkSMSState] = useState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] });
   const [pinnedIds, setPinnedIds] = useState(() => { try { return JSON.parse(localStorage.getItem('platform_pinned_contacts') || '[]'); } catch (err) { if (import.meta.env.DEV) console.warn('pinned contacts parse:', err); return []; } });
+  // Session-scoped sentinel so the auto-inactive write doesn't re-fire for
+  // every page navigation. Kept in a ref so it clears on logout/role-switch
+  // — the module-scoped version this replaces would silently grow forever.
+  const autoInactiveSeenRef = useRef(new Set());
+  useEffect(() => { autoInactiveSeenRef.current = new Set(); }, [profile?.id]);
   const [batchCallMode, setBatchCallMode] = useState(false);
   const [batchCallIndex, setBatchCallIndex] = useState(0);
   const [batchCallNotes, setBatchCallNotes] = useState('');
@@ -1167,19 +1172,36 @@ export default function ContactsPage() {
           c.contact_status === 'following'
           && c.last_activity_at
           && (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold
-          && !_autoInactiveSeen.has(c.id)
+          && !autoInactiveSeenRef.current.has(c.id)
         );
         if (toMark.length > 0) {
-          toMark.forEach(c => _autoInactiveSeen.add(c.id));
-          const markedIds = new Set(toMark.map(c => c.id));
-          // Best-effort writes — failures already report via reportError; we
-          // keep the optimistic state change so the user sees the result.
-          for (const c of toMark) {
-            updateContact(c.id, { contact_status: 'contacted' }).catch(err => reportError('ContactsPage', 'auto-contacted', err));
+          toMark.forEach(c => autoInactiveSeenRef.current.add(c.id));
+          // Conditional write: filter on contact_status='following' so the
+          // UPDATE is a no-op if realtime/another tab already changed it
+          // (e.g. the rep logged a call between our fetch and this loop).
+          // The returned .select() is empty when nothing matched, and we
+          // only apply the optimistic state mutation for rows that
+          // actually got written.
+          const succeededIds = new Set();
+          await Promise.all(toMark.map(async (c) => {
+            try {
+              const { data } = await supabase
+                .from('contacts')
+                .update({ contact_status: 'contacted' })
+                .eq('id', c.id)
+                .eq('contact_status', 'following')
+                .select('id')
+                .maybeSingle();
+              if (data?.id) succeededIds.add(data.id);
+            } catch (err) {
+              reportError('ContactsPage', 'auto-contacted', err);
+            }
+          }));
+          if (succeededIds.size > 0) {
+            setContacts(prev => prev.map(c =>
+              succeededIds.has(c.id) ? { ...c, contact_status: 'contacted' } : c
+            ));
           }
-          setContacts(prev => prev.map(c =>
-            markedIds.has(c.id) ? { ...c, contact_status: 'contacted' } : c
-          ));
         }
 
         // Fetch last feedback (non-blocking).
@@ -1374,7 +1396,15 @@ export default function ContactsPage() {
     } catch (err) { reportError('ContactsPage', 'loadStats', err); }
   }, [profile?.role, profile?.id, profile?.full_name_en, profile?.full_name_ar, globalFilter?.department, globalFilter?.agentName, filterStatus, filterTemp]);
 
-  useEffect(() => { if (profile) loadStats(); }, [profile, loadStats]);
+  // Same 250ms debounce as loadContactsData — without this, rapid
+  // toggles of globalFilter.agentName fire one users-table lookup per
+  // keystroke (an admin toggling between agents 3 times in 2s used to
+  // queue 3 user lookups + 3 get_contact_stats RPCs racing each other).
+  useEffect(() => {
+    if (!profile) return;
+    const t = setTimeout(() => loadStats(), 250);
+    return () => clearTimeout(t);
+  }, [profile, loadStats]);
 
   // Clear selection when filters change
   useEffect(() => { setSelectedIds([]); }, [filterType, search, showBlacklisted, sortBy, smartFilters, pageSize]);
@@ -1433,12 +1463,17 @@ export default function ContactsPage() {
       return;
     }
     try {
-      // Fetch all matching contact IDs from server (not just current page)
-      let query = supabase.from('contacts').select('id');
-      // Apply same filters as loadContactsData
-      if (profile?.role === 'sales_agent' && profile.id) {
-        query = query.eq('assigned_to', profile.id);
-      }
+      // Fetch all matching contact IDs from server (not just current page).
+      // Apply the SAME role-aware filtering fetchContacts uses — without
+      // this, team_leader/sales_manager would select IDs RLS later denies
+      // on UPDATE, and the synthesized partial-success path (see the
+      // bulk_change_contact_status path) would name random rows as failed.
+      let query = supabase.from('contacts').select('id', { count: 'exact' });
+      query = await applyRoleFilter(query, 'contacts', {
+        role: profile?.role,
+        userId: profile?.id,
+        teamId: profile?.team_id,
+      });
       if (search) { const s = search.replace(/[%_\\'"(),.*+?^${}|[\]]/g, ''); if (s.length > 0) query = query.or(`full_name.ilike.%${s}%,phone.ilike.%${s}%,email.ilike.%${s}%`); }
       if (filterType !== 'all') query = query.eq('contact_type', filterType);
       if (filterTemp !== 'all') query = query.eq('temperature', filterTemp);
@@ -1452,16 +1487,30 @@ export default function ContactsPage() {
       if (deptFilter) query = query.eq('department', deptFilter);
       const agentFilter = globalFilter?.agentName && globalFilter.agentName !== 'all' ? globalFilter.agentName : null;
       if (agentFilter) query = query.eq('assigned_to_name', agentFilter);
-      const { data } = await query.range(0, 9999);
+      const { data, count } = await query.range(0, 9999);
+      // The 9,999 cap silently truncates large selections — better to refuse
+      // and force the user to narrow filters than to let a subsequent bulk
+      // delete operate on 2/3 of the intended set.
+      if (count != null && count > 10000) {
+        toast.warning(isRTL
+          ? `النتائج كثيرة جداً (${count}). ضيّق الفلاتر قبل "تحديد كل الصفحات".`
+          : `Too many results (${count}). Narrow your filters before "select all pages".`);
+        return;
+      }
       if (data?.length) {
         setSelectedIds(data.map(c => c.id));
         setAllPagesSelected(true);
       }
     } catch (err) {
       reportError('ContactsPage', 'handleSelectAllPages', err);
-      // Fallback to current page
+      // Fallback to current page — and DON'T claim all pages are selected;
+      // a subsequent bulk action would operate on 25 rows while the banner
+      // says "N selected". Mark visible-only so the toolbar reflects reality.
       setSelectedIds(contacts.map(c => c.id));
-      setAllPagesSelected(true);
+      setAllPagesSelected(false);
+      toast.warning(isRTL
+        ? 'فشل تحميل كل الصفحات — تم تحديد الصفحة الحالية فقط.'
+        : 'Failed to load all pages — only the current page is selected.');
     }
   };
 
