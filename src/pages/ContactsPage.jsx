@@ -1213,30 +1213,26 @@ export default function ContactsPage() {
       // hide it behind a page load.
       if (list.length) {
 
-        // Fetch last feedback (non-blocking).
-        // Two bugs fixed here that were 500-ing on the leads page:
-        //   (a) .or('notes.neq.,description.neq.') was malformed
-        //       PostgREST syntax (no value after the operator) — the
-        //       server rejected every request.
-        //   (b) .in('contact_id', ids) with 100+ ids built a URL that
-        //       sometimes exceeded PostgREST's URL length limit.
-        // Fix: chunk the IN by 200 and drop the broken OR filter
-        // (notes/description filtering happens client-side below
-        // anyway — `if (a._feedback)` does the same thing).
+        // Fetch last feedback per contact via Postgres DISTINCT ON RPC
+        // (non-blocking). The previous implementation pulled .range(0,199)
+        // activities per chunk of 200 contacts, so for any chunk where ~30
+        // contacts dominated the activity log, the other ~170 silently
+        // stayed `_lastNote: null` even when they had real notes — reps
+        // saw an empty feedback column for contacts they knew were
+        // documented. The RPC returns exactly one row per contact (the
+        // newest activity whose notes or description is non-empty), so
+        // the page always shows the latest documented feedback if any
+        // exists.
         const ids = list.map(c => c.id).filter(Boolean);
         const fetchFeedbackChunked = async () => {
           const lastByContact = {};
-          const CHUNK = 200;
+          const CHUNK = 500;
           for (let i = 0; i < ids.length; i += CHUNK) {
             const chunk = ids.slice(i, i + CHUNK);
-            const { data: acts } = await supabase
-              .from('activities')
-              .select('contact_id, notes, description, user_name_ar, user_name_en, created_at')
-              .in('contact_id', chunk)
-              .order('created_at', { ascending: false })
-              .range(0, 199);
-            (acts || []).forEach(a => {
-              if (!a.contact_id || lastByContact[a.contact_id]) return;
+            const { data: rows } = await supabase
+              .rpc('get_latest_feedback_per_contact', { p_contact_ids: chunk });
+            (rows || []).forEach(a => {
+              if (!a.contact_id) return;
               a._feedback = a.notes || a.description || null;
               if (a._feedback) lastByContact[a.contact_id] = a;
             });
