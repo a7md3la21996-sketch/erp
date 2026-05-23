@@ -963,11 +963,24 @@ export default function ContactsPage() {
     let cancelled = false;
     (async () => {
       try {
-        // Counts per stage (one query, group on the client)
-        const { data: rows } = await supabase
+        // Counts per stage (one query, group on the client).
+        // Scope to the same dept/agent/role the contacts query uses so
+        // chip counts and table totals always agree. Without these
+        // filters the "Proposal 12" chip could be 12 opps across every
+        // dept, while the table filtered to sales+Ahmed would show 8 —
+        // the user clicked a number that didn't match what they got.
+        let query = supabase
           .from('opportunities')
           .select('contact_id, stage')
           .not('contact_id', 'is', null);
+        const deptFilter = globalFilter?.department && globalFilter.department !== 'all' ? globalFilter.department : null;
+        if (deptFilter) query = query.eq('department', deptFilter);
+        const agentFilter = globalFilter?.agentName && globalFilter.agentName !== 'all' ? globalFilter.agentName : null;
+        if (agentFilter) query = query.eq('assigned_to_name', agentFilter);
+        if (profile?.role === 'sales_agent' && profile?.id) {
+          query = query.eq('assigned_to', profile.id);
+        }
+        const { data: rows } = await query;
         if (cancelled) return;
         const counts = {};
         const idsByStage = {};
@@ -992,7 +1005,7 @@ export default function ContactsPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [filterStatus, filterStage]);
+  }, [filterStatus, filterStage, globalFilter?.department, globalFilter?.agentName, profile?.role, profile?.id]);
 
   // Fetch contact IDs that HAVE opportunities (to exclude them)
   useEffect(() => {
