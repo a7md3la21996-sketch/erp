@@ -331,11 +331,6 @@ export default function ContactsCardList({
                           🆕 {isRTL ? 'لم يُتصل به' : 'Untouched'}
                         </span>
                       )}
-                      {c.is_blacklisted && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">
-                          <Ban size={10} /> BL
-                        </span>
-                      )}
                     </div>
                     {/* Masked phone (tap to reveal) + source icon + type */}
                     <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 flex items-center gap-1.5 flex-wrap min-w-0">

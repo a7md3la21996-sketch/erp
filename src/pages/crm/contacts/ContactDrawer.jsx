@@ -1568,16 +1568,6 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
                                 <Trash2 size={13} /> {isRTL ? 'حذف' : 'Delete'}
                               </button>
                             )}
-                            {!contact.is_blacklisted && canEditContact && (
-                              <button onClick={() => {
-                                if (window.confirm(isRTL ? `إضافة "${contact.full_name}" للبلاك ليست؟` : `Add "${contact.full_name}" to blacklist?`)) {
-                                  onBlacklist(contact);
-                                  setShowDrawerMenu(false);
-                                }
-                              }} className={`${itemCls} text-red-500 hover:bg-red-500/[0.05]`}>
-                                <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
-                              </button>
-                            )}
                           </div>
                         ),
                       ];

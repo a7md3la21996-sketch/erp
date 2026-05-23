@@ -622,14 +622,6 @@ export default function ContactsTable({
                             </button>
                           )}
                         </div>
-                        {hasMenuAction('blacklist') && perms.canDeleteContacts && !c.is_blacklisted && <>
-                        <div className="h-px bg-edge dark:bg-edge-dark mx-1" />
-                        <div className="p-1">
-                          <button onClick={() => { setBlacklistTarget(c); setOpenMenuId(null); }} className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-none bg-transparent cursor-pointer text-xs text-red-500 font-inherit hover:bg-red-500/[0.05]">
-                            <Ban size={13} /> {isRTL ? 'بلاك ليست' : 'Blacklist'}
-                          </button>
-                        </div>
-                        </>}
                       </FixedDropdown>
                     </div>
                   </div>

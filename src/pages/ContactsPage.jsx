@@ -9,7 +9,7 @@ import { useGlobalFilter } from '../contexts/GlobalFilterContext';
 import { Plus, Upload, Download, Ban, Bookmark, X as XIcon, Save, Users, ChevronDown, Clock } from 'lucide-react';
 import {
   fetchContacts, createContact, updateContact, deleteContact,
-  blacklistContact, createActivity, recordAssignment,
+  createActivity, recordAssignment,
   checkDuplicate,
 } from '../services/contactsService';
 import supabase from '../lib/supabase';
@@ -40,7 +40,6 @@ import { SOURCE_LABELS, SOURCE_EN, TYPE, TEMP, MOCK, normalizePhone } from './cr
 import AddContactModal from './crm/contacts/AddContactModal';
 import LogCallModal from './crm/contacts/LogCallModal';
 import QuickTaskModal from './crm/contacts/QuickTaskModal';
-import BlacklistModal from './crm/contacts/BlacklistModal';
 import ContactDrawer from './crm/contacts/ContactDrawer';
 import ContactsTable from './crm/contacts/ContactsTable';
 import ContactsCardList from './crm/contacts/ContactsCardList';
@@ -128,7 +127,6 @@ export default function ContactsPage() {
   const [saveFilterName, setSaveFilterName] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selected, setSelected] = useState(null);
-  const [blacklistTarget, setBlacklistTarget] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [openWithAction, setOpenWithAction] = useState(false);
   const [quickActionTarget, setQuickActionTarget] = useState(null);
@@ -232,7 +230,7 @@ export default function ContactsPage() {
     applyAuditFilters,
     initialSearch: searchParams.get('q') || '',
     initialFilterType: searchParams.get('type') || 'all',
-    initialShowBlacklisted: searchParams.get('blacklist') === 'true',
+    initialShowBlacklisted: false,
     initialSortBy: searchParams.get('sort') || 'created',
     initialPage: Math.max(1, parseInt(searchParams.get('page'), 10) || 1),
     profile,
@@ -290,7 +288,6 @@ export default function ContactsPage() {
     if (dateFrom) params.set('from', dateFrom);
     if (dateTo) params.set('to', dateTo);
     if (showUnassigned) params.set('unassigned', 'true');
-    if (showBlacklisted) params.set('blacklist', 'true');
     if (sortBy !== 'created') params.set('sort', sortBy);
     if (page > 1) params.set('page', String(page));
     setSearchParams(params, { replace: true });
@@ -1593,43 +1590,6 @@ export default function ContactsPage() {
     { key: '/', action: () => { const el = document.querySelector('[data-search-input]'); if (el) el.focus(); } },
   ]);
 
-  const handleBlacklist = async (contact, reason) => {
-    // Optimistic update — flip the chip first so the row reacts instantly.
-    const before = contact;
-    setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: true, blacklist_reason: reason } : c));
-    if (selected?.id === contact.id) setSelected(null);
-    // Wait for the DB write so we can roll back + show an honest error if
-    // it fails. Previous version fired-and-forgot, then announced
-    // "Lead blacklisted" even when RLS denied the write — the user reloaded
-    // and the contact wasn't blacklisted at all.
-    try {
-      await blacklistContact(contact.id, reason);
-      logAction({ action: 'blacklist', entity: 'contact', entityId: contact.id, entityName: contact.full_name, description: `Blacklisted: ${contact.full_name} — ${reason}`, newValue: reason, userName: profile?.full_name_ar });
-      // Undo path — blacklist is a single is_blacklisted=true flip, so the
-      // restore is just the inverse update. 8s gives the user a moment to
-      // catch a misclick before the lead is filtered out of the default view.
-      const undoBlacklist = async () => {
-        try {
-          await updateContact(contact.id, { is_blacklisted: false, blacklist_reason: null });
-          setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, is_blacklisted: false, blacklist_reason: null } : c));
-          toast.success(isRTL ? 'تم استعادة العميل' : 'Lead restored');
-        } catch {
-          toast.error(isRTL ? 'فشل التراجع' : 'Undo failed');
-        }
-      };
-      toast.show({
-        type: 'success',
-        message: isRTL ? 'تم إضافة للقائمة السوداء' : 'Lead blacklisted',
-        duration: 8000,
-        action: { label: isRTL ? 'تراجع' : 'Undo', onClick: undoBlacklist },
-      });
-    } catch (err) {
-      reportError('ContactsPage', 'handleBlacklist', err);
-      setContacts(prev => prev.map(c => c.id === contact.id ? before : c));
-      toast.error(isRTL ? 'فشل إضافة للقائمة السوداء' : 'Failed to blacklist lead');
-    }
-  };
-
   const tdCls = `px-4 py-3.5 border-b border-edge/50 dark:border-edge-dark/50 align-middle text-xs text-content dark:text-content-dark text-start`;
 
   if (loading) return <PageSkeleton hasKpis={false} tableRows={8} tableCols={7} />;
@@ -1746,9 +1706,6 @@ export default function ContactsPage() {
           <Users size={11} /> {isRTL ? 'غير معين' : 'Unassigned'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${showUnassigned ? 'bg-amber-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.unassigned || 0}</span>
         </button>
         )}
-        <button onClick={() => setShowBlacklisted(v => !v)} className={`px-3.5 py-1.5 rounded-full text-xs cursor-pointer flex items-center gap-1.5 ${showBlacklisted ? 'border border-red-500 bg-red-500/[0.08] text-red-500 font-bold' : 'bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content-muted dark:text-content-muted-dark font-normal'}`}>
-          <Ban size={11} /> {isRTL ? 'بلاك ليست' : 'Blacklist'} <span className={`rounded-xl px-2 py-px text-[10px] ms-1 ${showBlacklisted ? 'bg-red-500 text-white' : 'bg-edge dark:bg-edge-dark text-content-muted dark:text-content-muted-dark'}`}>{stats.blacklisted}</span>
-        </button>
       </div>
 
       {/* Stage sub-filter — only when 'Has Opportunity' is the active status filter */}
@@ -1930,7 +1887,6 @@ export default function ContactsPage() {
         MAX_PINS={MAX_PINS}
         setLogCallTarget={setLogCallTarget}
         setReminderTarget={setReminderTarget}
-        setBlacklistTarget={setBlacklistTarget}
         setDisqualifyModal={setDisqualifyModal}
         setDqReason={setDqReason}
         setDqNote={setDqNote}
@@ -1973,7 +1929,6 @@ export default function ContactsPage() {
         togglePin={togglePin}
         MAX_PINS={MAX_PINS}
         setLogCallTarget={setLogCallTarget}
-        setBlacklistTarget={setBlacklistTarget}
         setDisqualifyModal={setDisqualifyModal}
         setDqReason={setDqReason}
         setDqNote={setDqNote}
@@ -2035,7 +1990,7 @@ export default function ContactsPage() {
             setContacts(prev => rollbackContact(prev, contact));
           });
       }} />}
-      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onBlacklist={c => { setBlacklistTarget(c); setSelected(null); }} onRequestDisqualify={c => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); }} onUpdate={async (updated) => {
+      {selected && <ContactDrawer contact={selected} onClose={() => { setSelected(null); setOpenWithAction(false); }} onRequestDisqualify={c => { setDisqualifyModal(c); setDqReason(''); setDqNote(''); }} onUpdate={async (updated) => {
         const old = contacts.find(c => c.id === updated.id);
         const { _skipDbUpdate, ...cleanUpdated } = updated;
         setContacts(prev => prev.map(c => c.id === cleanUpdated.id ? cleanUpdated : c));
@@ -2081,7 +2036,6 @@ export default function ContactsPage() {
         });
       }} />}
       {reminderTarget && <QuickTaskModal contact={reminderTarget} onClose={() => setReminderTarget(null)} />}
-      {blacklistTarget && <BlacklistModal contact={blacklistTarget} onClose={() => setBlacklistTarget(null)} onConfirm={handleBlacklist} />}
       {/* Save Filter Modal — replaces the native prompt() that was used before. */}
       {saveFilterModalOpen && (
         <Modal
