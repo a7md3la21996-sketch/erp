@@ -1247,13 +1247,17 @@ export default function ContactsPage() {
         };
         fetchFeedbackChunked().catch(err => { if (import.meta.env.DEV) console.warn('fetch last feedback:', err); });
 
-        // Fetch opportunity counts per contact (non-blocking)
-        supabase.from('opportunities').select('contact_id')
-          .in('contact_id', ids)
-          .then(({ data: opps }) => {
-            if (opps?.length) {
+        // Fetch opportunity counts per contact via aggregating RPC
+        // (non-blocking). Previously this pulled the full opp rows and
+        // grouped client-side — for an admin scrolling a dept where many
+        // contacts have multiple opps, the response could balloon to
+        // thousands of rows just to compute integers. The RPC does the
+        // GROUP BY in Postgres and returns one row per contact.
+        supabase.rpc('get_contact_opp_counts', { p_contact_ids: ids })
+          .then(({ data: counts }) => {
+            if (counts?.length) {
               const countByContact = {};
-              opps.forEach(o => { if (o.contact_id) countByContact[o.contact_id] = (countByContact[o.contact_id] || 0) + 1; });
+              counts.forEach(c => { countByContact[c.contact_id] = Number(c.opp_count) || 0; });
               setContacts(prev => prev.map(c => ({ ...c, _opp_count: countByContact[c.id] || 0 })));
             }
           }).catch(err => { if (import.meta.env.DEV) console.warn('fetch opp counts:', err); });
