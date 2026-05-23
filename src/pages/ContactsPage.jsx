@@ -71,19 +71,19 @@ export default function ContactsPage() {
   // whenever someone is renamed. We still keep `assigned_to_name` as a
   // fallback for legacy rows where assigned_to is null but a name was set.
   const [userMap, setUserMap] = useState(() => new Map());
-  const [filterTemp, setFilterTemp] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterTemp, setFilterTemp] = useState(() => searchParams.get('temp') || 'all');
+  const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || 'all');
   // Stage sub-filter — only meaningful when filterStatus === 'has_opportunity'.
   // Resets to 'all' whenever the parent status filter changes.
-  const [filterStage, setFilterStage] = useState('all');
+  const [filterStage, setFilterStage] = useState(() => searchParams.get('stage') || 'all');
   // contact_ids that have at least one opp in the selected stage (lazy-fetched)
   const [stageContactIds, setStageContactIds] = useState(null);
   // counts per stage for the chips below has_opportunity (lazy-fetched)
   const [stageCounts, setStageCounts] = useState({});
-  const [filterActivity, setFilterActivity] = useState('all'); // all, active_3d, moderate_7d, stale, never
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [showUnassigned, setShowUnassigned] = useState(false);
+  const [filterActivity, setFilterActivity] = useState(() => searchParams.get('activity') || 'all'); // all, active_3d, moderate_7d, stale, never
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get('from') || '');
+  const [dateTo, setDateTo] = useState(() => searchParams.get('to') || '');
+  const [showUnassigned, setShowUnassigned] = useState(() => searchParams.get('unassigned') === 'true');
   const [campaignsList, setCampaignsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -243,17 +243,28 @@ export default function ContactsPage() {
   // Track whether highlight has been handled
   const highlightHandled = useReactRef(false);
 
-  // Sync filters to URL — skip if highlight is pending (avoid overwriting it)
+  // Sync filters to URL — skip if highlight is pending (avoid overwriting it).
+  // Every filter the user can toggle is round-tripped so a reload, bookmark,
+  // or shared link restores the exact view. Previously only q/type/blacklist/
+  // sort/page were saved and the other 6 (temp/status/stage/activity/date/
+  // unassigned) silently dropped on refresh.
   useEffect(() => {
-    if (highlightId && !highlightHandled.current) return; // don't touch URL while highlight is pending
+    if (highlightId && !highlightHandled.current) return;
     const params = new URLSearchParams();
     if (search) params.set('q', search);
     if (filterType !== 'all') params.set('type', filterType);
+    if (filterTemp !== 'all') params.set('temp', filterTemp);
+    if (filterStatus !== 'all') params.set('status', filterStatus);
+    if (filterStage !== 'all') params.set('stage', filterStage);
+    if (filterActivity !== 'all') params.set('activity', filterActivity);
+    if (dateFrom) params.set('from', dateFrom);
+    if (dateTo) params.set('to', dateTo);
+    if (showUnassigned) params.set('unassigned', 'true');
     if (showBlacklisted) params.set('blacklist', 'true');
     if (sortBy !== 'created') params.set('sort', sortBy);
-    if (page > 1) params.set('page', String(page)); // preserve pagination in URL for reload/share
+    if (page > 1) params.set('page', String(page));
     setSearchParams(params, { replace: true });
-  }, [search, filterType, showBlacklisted, sortBy, page, setSearchParams]);
+  }, [search, filterType, filterTemp, filterStatus, filterStage, filterActivity, dateFrom, dateTo, showUnassigned, showBlacklisted, sortBy, page, setSearchParams, highlightId]);
 
   const { activityResults: configResults, contactsSettings } = useSystemConfig();
   const MERGE_LIMIT = contactsSettings?.mergeLimit || 2;
