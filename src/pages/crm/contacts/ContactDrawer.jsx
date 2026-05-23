@@ -526,45 +526,18 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
       console.error('Activity save error:', err?.message || err);
       toast.error(isRTL ? `حدث خطأ: ${err?.message || 'غير معروف'}` : `Error: ${err?.message || 'Unknown'}`);
     }
-    // Don't auto-promote contact_status off the back of an activity that
-    // never landed in the DB — otherwise a failed "answered" call still
-    // pushes the contact to "following" and the user sees a status that
-    // doesn't match the (missing) activity.
+    // Auto-status-from-activity REMOVED per policy (May 2026): reps
+    // complained the system was silently moving their leads from one
+    // status to another after every call result. contact_status is now
+    // user-driven only — the rep uses the status dropdown when they
+    // want to change it. The activity itself is still saved so the
+    // history/feedback log is intact; we just don't touch the status.
+    // The "not interested" → DQ prompt below is kept because it's a UI
+    // confirmation, not a silent write.
     if (!activitySaved) return;
-    // If the caller is also about to change status explicitly, skip the
-    // auto-update so we don't race them. Otherwise infer a sensible default.
     if (opts.skipAutoStatus) return;
-
-    const currentStatus = contact.contact_status || 'new';
-    let newStatus = null;
-
-    if (currentStatus !== 'disqualified') {
-      const result = form.result || '';
-      if (result === 'not_interested' && currentStatus !== 'has_opportunity' && currentStatus !== 'following') {
-        // Don't auto-disqualify — let the user choose from disqualify in the menu
-        toast.warning(isRTL ? 'اختر "غير مؤهل" من القائمة لتحديد السبب' : 'Use "Disqualify" from menu to select a reason');
-      } else if (['no_answer', 'busy', 'switched_off'].includes(result)) {
-        newStatus = 'contacted';
-      } else if (result === 'answered' || result === 'replied') {
-        newStatus = 'following';
-      } else if (currentStatus === 'new' || !currentStatus) {
-        newStatus = 'following';
-      }
-    }
-
-    if (newStatus && newStatus !== currentStatus) {
-      // Await so we can surface a status-update failure separately from the
-      // activity save. Earlier this was fire-and-forget — the activity got
-      // saved + toast'd success, but a silent status-update failure left
-      // the contact stuck on the old status.
-      if (onUpdate) {
-        try {
-          await onUpdate({ ...contact, contact_status: newStatus });
-        } catch {
-          // onUpdate already showed an error toast + rolled back. Nothing
-          // more to do here — the activity is still saved correctly.
-        }
-      }
+    if ((form.result || '') === 'not_interested' && contact.contact_status !== 'disqualified') {
+      toast.warning(isRTL ? 'اختر "غير مؤهل" من القائمة لتحديد السبب' : 'Use "Disqualify" from menu to select a reason');
     }
   };
 
@@ -732,11 +705,12 @@ export default function ContactDrawer({ contact, onClose, onBlacklist, onUpdate,
         createNotification({ type: 'opportunity_assigned', title_ar: 'فرصة جديدة', title_en: 'New Opportunity Assigned', body_ar: `تم تعيين فرصة "${contact.full_name}" لك بواسطة ${selfName}`, body_en: `Opportunity "${contact.full_name}" assigned to you by ${selfName}`, for_user_name: newOpp.assigned_to_name, entity_type: 'opportunity', from_user: selfName });
       }
       logAction({ action: 'create_opportunity', entity: 'opportunity', entityId: saved.id, description: `Created opportunity for ${contact.full_name} → ${newOpp.assigned_to_name}`, userName: profile?.full_name_ar });
-      // Auto-set status to has_opportunity when opportunity is created.
-      const currentStatus = contact.contact_status || 'new';
-      if (currentStatus !== 'disqualified' && currentStatus !== 'has_opportunity') {
-        if (onUpdate) onUpdate({ ...contact, contact_status: 'has_opportunity' });
-      }
+      // Auto-promote to has_opportunity REMOVED per policy (May 2026):
+      // reps were seeing their leads flip from following → has_opportunity
+      // without their input the moment an opp was created, and complaints
+      // about "the system is moving my leads on its own" pointed straight
+      // here. If they want the status to reflect the new opp, they can
+      // change it from the status dropdown.
     } catch (err) {
       console.error('Opportunity save error:', err?.message || err);
       toast.error(isRTL ? `خطأ: ${err?.message || 'غير معروف'}` : `Error: ${err?.message || 'Unknown'}`);

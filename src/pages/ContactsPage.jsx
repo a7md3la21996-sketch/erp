@@ -1153,56 +1153,14 @@ export default function ContactsPage() {
       setContacts(list);
       setTotalContacts(result?.count || list.length);
 
-      // Background: auto-mark inactive + fetch feedback (non-blocking)
+      // Background: fetch feedback (non-blocking).
+      // Auto-demote of stale `following` → `contacted` was REMOVED per
+      // policy (May 2026): reps complained the system was silently moving
+      // their leads between statuses while they were working them.
+      // contact_status is now purely user-driven — anyone who wants a
+      // periodic sweep should run it as a manager-triggered batch, not
+      // hide it behind a page load.
       if (list.length) {
-        // Auto-mark inactive contacts as 'contacted' if their last activity is past
-        // the threshold. Single-assignment now — contact_status alone is the signal.
-        // Earlier this loop mutated `c.contact_status` in place on the React state
-        // array AND re-fired the same updateContact write every page load — both
-        // are wrong. Now we collect the ids, write once per ID via a session-scoped
-        // sentinel so we don't re-write on the next page navigation, and update
-        // state via setContacts(prev => prev.map(...)) so React sees the change.
-        const now = Date.now();
-        const inactiveThreshold = INACTIVE_DAYS * 86400000;
-        // Only `following` demotes to `contacted` — `contacted`-and-stale
-        // is left alone on purpose so a contact never "rewinds" past a
-        // call already logged. Reactivation belongs to the next call/note,
-        // not a passive timer.
-        const toMark = list.filter(c =>
-          c.contact_status === 'following'
-          && c.last_activity_at
-          && (now - new Date(c.last_activity_at).getTime()) > inactiveThreshold
-          && !autoInactiveSeenRef.current.has(c.id)
-        );
-        if (toMark.length > 0) {
-          toMark.forEach(c => autoInactiveSeenRef.current.add(c.id));
-          // Conditional write: filter on contact_status='following' so the
-          // UPDATE is a no-op if realtime/another tab already changed it
-          // (e.g. the rep logged a call between our fetch and this loop).
-          // The returned .select() is empty when nothing matched, and we
-          // only apply the optimistic state mutation for rows that
-          // actually got written.
-          const succeededIds = new Set();
-          await Promise.all(toMark.map(async (c) => {
-            try {
-              const { data } = await supabase
-                .from('contacts')
-                .update({ contact_status: 'contacted' })
-                .eq('id', c.id)
-                .eq('contact_status', 'following')
-                .select('id')
-                .maybeSingle();
-              if (data?.id) succeededIds.add(data.id);
-            } catch (err) {
-              reportError('ContactsPage', 'auto-contacted', err);
-            }
-          }));
-          if (succeededIds.size > 0) {
-            setContacts(prev => prev.map(c =>
-              succeededIds.has(c.id) ? { ...c, contact_status: 'contacted' } : c
-            ));
-          }
-        }
 
         // Fetch last feedback (non-blocking).
         // Two bugs fixed here that were 500-ing on the leads page:

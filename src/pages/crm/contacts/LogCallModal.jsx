@@ -104,41 +104,16 @@ export default function LogCallModal({ contact, onClose, onUpdate, onRequestDisq
       return;
     }
 
-    // Auto-update contact_status based on call result. Single-assignment now —
-    // contact_status is the status.
-    if (onUpdate) {
-      const myStatus = contact.contact_status;
-      let newStatus = myStatus;
-      let needsDqModal = false;
-      // disqualified → never auto-change
-      if (myStatus === 'disqualified') {
-        newStatus = myStatus;
-      } else if (['no_answer', 'busy', 'switched_off'].includes(callResult)) {
-        newStatus = 'contacted';
-      } else if (callResult === 'answered') {
-        newStatus = 'following';
-      } else if (callResult === 'not_interested' && myStatus !== 'has_opportunity' && myStatus !== 'following') {
-        // Auto-DQ on "not interested" must capture a reason — defer to the
-        // parent's DisqualifyModal instead of writing contact_status=
-        // disqualified with dq_reason=NULL (the orphan-DQ pattern we just
-        // cleaned up across 150+ contacts).
-        needsDqModal = true;
-      } else if (myStatus === 'new' || !myStatus) {
-        newStatus = 'following';
-      }
-      if (needsDqModal && onRequestDisqualify) {
-        onRequestDisqualify(contact);
-      } else if (newStatus !== myStatus) {
-        // Await + catch so we surface a failed status update separately
-        // from the activity save (which already succeeded above). Earlier
-        // this was fire-and-forget — same drift pattern fixed in the
-        // drawer's handleSaveActivity today.
-        try {
-          await onUpdate({ ...contact, contact_status: newStatus });
-        } catch {
-          // Parent already toast'd + rolled back the optimistic state.
-        }
-      }
+    // Auto-status-from-call REMOVED per policy (May 2026): reps complained
+    // the system was moving their leads' status off the back of every call
+    // result. The call activity is still saved (above); the status stays
+    // wherever the rep last set it. The "not interested" → disqualify
+    // prompt is kept because it's a UI confirmation, not a silent write.
+    if (callResult === 'not_interested'
+        && contact.contact_status !== 'disqualified'
+        && contact.contact_status !== 'has_opportunity'
+        && onRequestDisqualify) {
+      onRequestDisqualify(contact);
     }
 
     if (addFollowup && followupDate) {

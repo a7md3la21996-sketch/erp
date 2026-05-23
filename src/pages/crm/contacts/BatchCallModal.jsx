@@ -307,18 +307,12 @@ export default function BatchCallModal({
                   // Only update contact_status if the activity was saved — otherwise
                   // we'd flip the status with no audit trail explaining why.
                   if (activitySaved) {
-                    const myStatus = current.contact_status;
-                    let newStatus = myStatus;
-                    if (myStatus === 'disqualified') {
-                      newStatus = myStatus;
-                    } else if (['no_answer', 'busy', 'switched_off'].includes(batchCallResult)) {
-                      newStatus = 'contacted';
-                    } else if (batchCallResult === 'answered') {
-                      newStatus = 'following';
-                    } else if (myStatus === 'new' || !myStatus) {
-                      newStatus = 'following';
-                    }
-                    const statusUpdate = { last_activity_at: new Date().toISOString(), contact_status: newStatus };
+                    // Auto-status-from-batch-call REMOVED per policy (May
+                    // 2026) — same as LogCallModal / ContactDrawer. The
+                    // last_activity_at timestamp still updates so the
+                    // contact rises in "recently touched" sorting; the
+                    // status itself stays wherever the rep set it.
+                    const statusUpdate = { last_activity_at: new Date().toISOString() };
                     try {
                       await updateContact(current.id, statusUpdate);
                       setContacts(prev => prev.map(c => c.id === current.id ? { ...c, ...statusUpdate } : c));
