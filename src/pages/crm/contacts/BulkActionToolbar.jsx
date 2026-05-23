@@ -63,7 +63,8 @@ export default function BulkActionToolbar({
     <div dir={isRTL ? 'rtl' : 'ltr'}
       role="toolbar"
       aria-label={isRTL ? 'إجراءات جماعية' : 'Bulk actions'}
-      className="fixed bottom-0 inset-x-0 z-[300] px-2.5 sm:px-5 py-2.5 flex items-center gap-1.5 sm:gap-2 flex-wrap overflow-x-auto
+      style={{ paddingBottom: 'max(0.625rem, env(safe-area-inset-bottom))' }}
+      className="fixed bottom-0 inset-x-0 z-[300] px-2.5 sm:px-5 pt-2.5 flex items-center gap-1.5 sm:gap-2 flex-wrap overflow-x-auto
                  bg-gradient-to-br from-[#0a1929] to-[#132337] dark:from-[#0a1929] dark:to-[#132337]
                  border-t border-brand-500/30
                  shadow-[0_-4px_20px_rgba(0,0,0,0.3)]
