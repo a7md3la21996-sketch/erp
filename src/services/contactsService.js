@@ -1,7 +1,7 @@
 import supabase from '../lib/supabase';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import { logCreate, logUpdate, logAudit, logPhoneChange } from './auditService';
-import { requireAnyPerm, requirePerm } from '../utils/permissionGuard';
+import { requireAnyPerm, requirePerm, currentProfile } from '../utils/permissionGuard';
 import { P } from '../config/roles';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
@@ -418,6 +418,37 @@ export async function createContact(contactData) {
         if (u?.id) sanitized.assigned_to = u.id;
       } catch (lookupErr) {
         if (import.meta.env.DEV) console.warn('[createContact] could not resolve assigned_to_name to uuid:', newName, lookupErr);
+      }
+    }
+  }
+
+  // Validate assigned_to UUID before we hand the row to the DB. Without this
+  // a UI bug (or a devtools-crafted call) could create a lead assigned to a
+  // user that doesn't exist, or — worse for a sales_agent — to a teammate
+  // they shouldn't be writing on behalf of. RLS catches some of these but
+  // the failure mode is opaque ("insert violated RLS"); doing the check here
+  // lets us return a clear error and skip the round-trip.
+  if (sanitized.assigned_to) {
+    const { data: target, error: targetErr } = await supabase
+      .from('users')
+      .select('id, team_id, status')
+      .eq('id', sanitized.assigned_to)
+      .maybeSingle();
+    if (targetErr || !target) {
+      throw new Error(`Invalid assigned_to: user ${sanitized.assigned_to} not found`);
+    }
+    if (target.status === 'inactive') {
+      throw new Error(`Cannot assign lead to inactive user ${sanitized.assigned_to}`);
+    }
+    const caller = currentProfile();
+    const callerRole = caller?.role;
+    const privileged = callerRole === 'admin' || callerRole === 'operations' || callerRole === 'sales_director';
+    // Non-privileged callers can only assign to themselves or to someone in
+    // the same team. Admin/ops/director skip this check — they routinely
+    // distribute across teams.
+    if (!privileged && caller?.id && target.id !== caller.id) {
+      if (!caller.team_id || target.team_id !== caller.team_id) {
+        throw new Error(`Cannot assign lead to a user outside your team`);
       }
     }
   }
