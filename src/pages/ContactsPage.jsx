@@ -117,11 +117,6 @@ export default function ContactsPage() {
   const [bulkSMSModal, setBulkSMSModal] = useState(false);
   const [bulkSMSState, setBulkSMSState] = useState({ templateId: '', lang: 'en', sending: false, progress: 0, total: 0, done: false, results: [] });
   const [pinnedIds, setPinnedIds] = useState(() => { try { return JSON.parse(localStorage.getItem('platform_pinned_contacts') || '[]'); } catch (err) { if (import.meta.env.DEV) console.warn('pinned contacts parse:', err); return []; } });
-  // Session-scoped sentinel so the auto-inactive write doesn't re-fire for
-  // every page navigation. Kept in a ref so it clears on logout/role-switch
-  // — the module-scoped version this replaces would silently grow forever.
-  const autoInactiveSeenRef = useRef(new Set());
-  useEffect(() => { autoInactiveSeenRef.current = new Set(); }, [profile?.id]);
   const [batchCallMode, setBatchCallMode] = useState(false);
   const [batchCallIndex, setBatchCallIndex] = useState(0);
   const [batchCallNotes, setBatchCallNotes] = useState('');
