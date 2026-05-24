@@ -67,6 +67,10 @@ export default function CrmDashboardPage() {
   // rawOpps from dashboardService doesn't select lost_reason so this is
   // a dedicated fetch — small slice, narrow column set, cheap query.
   const [lostThisMonth, setLostThisMonth] = useState([]);
+  // {fresh, aging, old} — counts of non-disqualified leads by age bucket.
+  // Powers the Lead Aging section. RLS handles scoping; sales_agent
+  // additionally gets an assigned_to filter inside the loader.
+  const [agingBuckets, setAgingBuckets] = useState({ fresh: 0, aging: 0, old: 0 });
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchInput, setSearchInput] = useState('');
 
@@ -109,6 +113,7 @@ export default function CrmDashboardPage() {
         contactStats, oppStats, hotCountRes, lastMonthRes,
         todayTasksRes, overdueTasksRes, staleLeadsRes,
         activityRes, sourceRes, upcomingRes, recentFeedRes, leadsByUserRes, lostRes,
+        agingRes,
       ] = await Promise.allSettled([
         fetchContactStats(ctx),
         fetchOpportunityStats(ctx),
@@ -123,6 +128,7 @@ export default function CrmDashboardPage() {
         loadRecentActivityFeed(ctx),
         isManagerPlus ? loadLeadsThisMonthByUser() : Promise.resolve({}),
         isManagerPlus ? loadLostThisMonth() : Promise.resolve([]),
+        loadAgingBuckets(ctx),
       ]);
 
       // Drop writes if a newer load has started — protects against the
@@ -145,6 +151,7 @@ export default function CrmDashboardPage() {
       setRecentFeed(recentFeedRes.status === 'fulfilled' ? recentFeedRes.value : []);
       setLeadsByUser(leadsByUserRes.status === 'fulfilled' ? leadsByUserRes.value : {});
       setLostThisMonth(lostRes.status === 'fulfilled' ? lostRes.value : []);
+      setAgingBuckets(agingRes.status === 'fulfilled' ? agingRes.value : { fresh: 0, aging: 0, old: 0 });
     } catch (err) {
       reportError('CrmDashboardPage', 'loadAll', err);
       toast.error(isRTLRef.current ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
@@ -156,6 +163,26 @@ export default function CrmDashboardPage() {
   }, [ctx, toast]);
 
   useEffect(() => { loadAll(); }, [loadAll, refreshKey]);
+
+  // Auto-refresh every 5 minutes when the tab is in the foreground.
+  // Skipping hidden tabs keeps idle/background sessions from hammering
+  // the API; the dashboard refreshes naturally the moment the user
+  // comes back to the tab via the visibilitychange listener below.
+  useEffect(() => {
+    const FIVE_MIN = 5 * 60 * 1000;
+    const tick = () => {
+      if (document.visibilityState === 'visible') {
+        setRefreshKey(k => k + 1);
+      }
+    };
+    const id = setInterval(tick, FIVE_MIN);
+    const onVisible = () => { if (document.visibilityState === 'visible') tick(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
 
   // ── derived values via hooks. All hooks must run on every render —
   // keep them above the loading early-return below or React throws #310
@@ -315,6 +342,9 @@ export default function CrmDashboardPage() {
           icon={Users}
           color="brand"
           to="/contacts"
+          description={isRTL
+            ? 'كل العملاء غير المحذوفين في نطاق صلاحياتك.'
+            : 'All non-deleted leads in your permission scope.'}
         />
         <KpiCard
           label={isRTL ? 'العملاء الواعدون' : 'Hot Leads'}
@@ -322,6 +352,9 @@ export default function CrmDashboardPage() {
           icon={Flame}
           color="red"
           to="/contacts?temp=hot"
+          description={isRTL
+            ? 'عملاء مصنفون "Hot" — أعلى أولوية للمتابعة.'
+            : 'Leads marked Hot — highest follow-up priority.'}
         />
         <KpiCard
           label={isRTL ? 'الفرص المفتوحة' : 'Open Opportunities'}
@@ -330,6 +363,9 @@ export default function CrmDashboardPage() {
           icon={Target}
           color="emerald"
           to="/crm/opportunities"
+          description={isRTL
+            ? 'الفرص غير المغلقة. الرقم أسفل = إجمالي القيمة المتوقعة.'
+            : 'Opportunities not closed/cancelled. Subtitle = total open pipeline value.'}
         />
         <KpiCard
           label={isRTL ? 'مهام اليوم' : 'Tasks Due Today'}
@@ -337,6 +373,9 @@ export default function CrmDashboardPage() {
           icon={CheckSquare}
           color="amber"
           to="/tasks"
+          description={isRTL
+            ? 'مهام معلقة مستحقة اليوم.'
+            : 'Pending tasks due today.'}
         />
         <KpiCard
           label={isRTL ? 'جدد هذا الشهر' : 'New This Month'}
@@ -345,8 +384,39 @@ export default function CrmDashboardPage() {
           color="purple"
           to="/contacts"
           delta={buildDelta(stats.contact?.newLeadsThisMonth ?? 0, stats.lastMonthCount ?? 0, isRTL)}
+          description={isRTL
+            ? 'عملاء أُضيفوا منذ بداية الشهر. الشارة = الفرق عن الشهر السابق.'
+            : 'Leads created since the 1st. Badge = delta vs. previous month.'}
         />
       </div>
+
+      {/* Lead Aging — distribution of non-disqualified leads by age.
+          Hidden if all three buckets are empty (a totally fresh tenant
+          or no permission to see any leads). */}
+      {(agingBuckets.fresh + agingBuckets.aging + agingBuckets.old > 0) && (
+        <Section title={isRTL ? 'عمر العملاء' : 'Lead Aging'} icon={Calendar} compact>
+          <div className="grid grid-cols-3 gap-3">
+            <AgingBucket
+              label={isRTL ? 'حديثة' : 'Fresh'}
+              sub={isRTL ? '0-7 أيام' : '0–7 days'}
+              count={agingBuckets.fresh}
+              tone="emerald"
+            />
+            <AgingBucket
+              label={isRTL ? 'في الانتظار' : 'Aging'}
+              sub={isRTL ? '7-30 يوم' : '7–30 days'}
+              count={agingBuckets.aging}
+              tone="amber"
+            />
+            <AgingBucket
+              label={isRTL ? 'قديمة' : 'Old'}
+              sub={isRTL ? '30+ يوم' : '30+ days'}
+              count={agingBuckets.old}
+              tone="red"
+            />
+          </div>
+        </Section>
+      )}
 
       {/* Today's Focus */}
       <Section
@@ -419,7 +489,17 @@ export default function CrmDashboardPage() {
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={pipelineData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name}: ${value}`}>
+                  <Pie
+                    data={pipelineData}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={70}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    onClick={(d) => d?.name && navigate(`/crm/opportunities?stage=${encodeURIComponent(d.name)}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     {pipelineData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                   </Pie>
                   <Tooltip />
@@ -605,6 +685,38 @@ async function loadLastMonthNewCount(ctx) {
   const { count, error } = await q;
   if (error) { reportError('CrmDashboardPage', 'loadLastMonthNewCount', error); return 0; }
   return count || 0;
+}
+
+// Three count-only queries bucketing non-disqualified leads by age:
+// 0-7 days (fresh), 7-30 days (aging), 30+ days (old). Helps managers
+// see how much of the pipeline is going stale.
+async function loadAgingBuckets(ctx) {
+  const now = Date.now();
+  const d7 = new Date(now - 7 * 86400000).toISOString();
+  const d30 = new Date(now - 30 * 86400000).toISOString();
+
+  const base = () => {
+    let q = supabase
+      .from('contacts')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_deleted', false)
+      .neq('contact_status', 'disqualified');
+    if (ctx.role === 'sales_agent' && ctx.userId) q = q.eq('assigned_to', ctx.userId);
+    return q;
+  };
+  const [fresh, aging, old] = await Promise.all([
+    base().gte('created_at', d7),
+    base().lt('created_at', d7).gte('created_at', d30),
+    base().lt('created_at', d30),
+  ]);
+  if (fresh.error) reportError('CrmDashboardPage', 'loadAgingBuckets:fresh', fresh.error);
+  if (aging.error) reportError('CrmDashboardPage', 'loadAgingBuckets:aging', aging.error);
+  if (old.error)   reportError('CrmDashboardPage', 'loadAgingBuckets:old',   old.error);
+  return {
+    fresh: fresh.count || 0,
+    aging: aging.count || 0,
+    old: old.count || 0,
+  };
 }
 
 async function loadHotLeadsCount(ctx) {
@@ -837,7 +949,7 @@ function buildDelta(current, previous, isRTL) {
 
 // ── presentation components ────────────────────────────────────────────────
 
-function KpiCard({ label, value, sublabel, icon: Icon, color = 'brand', to, delta }) {
+function KpiCard({ label, value, sublabel, icon: Icon, color = 'brand', to, delta, description }) {
   const colorMap = {
     brand: 'text-brand-500 bg-brand-500/10 border-brand-500/20',
     red: 'text-red-500 bg-red-500/10 border-red-500/20',
@@ -852,7 +964,7 @@ function KpiCard({ label, value, sublabel, icon: Icon, color = 'brand', to, delt
       ? 'text-red-500'
       : 'text-content-muted dark:text-content-muted-dark';
   const content = (
-    <div className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl p-3 sm:p-4 hover:border-brand-500/30 transition-colors">
+    <div title={description} className="bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl p-3 sm:p-4 hover:border-brand-500/30 transition-colors">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[11px] text-content-muted dark:text-content-muted-dark font-medium">{label}</span>
         <span className={`w-7 h-7 rounded-lg flex items-center justify-center border ${colorMap[color] || colorMap.brand}`}>
@@ -907,6 +1019,22 @@ function FocusList({ title, items, renderItem, emptyMessage }) {
           })}
         </ul>
       )}
+    </div>
+  );
+}
+
+function AgingBucket({ label, sub, count, tone = 'brand' }) {
+  const toneMap = {
+    emerald: 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5',
+    amber:   'text-amber-500   border-amber-500/20   bg-amber-500/5',
+    red:     'text-red-500     border-red-500/20     bg-red-500/5',
+    brand:   'text-brand-500   border-brand-500/20   bg-brand-500/5',
+  };
+  return (
+    <div className={`rounded-lg border p-3 ${toneMap[tone] || toneMap.brand}`}>
+      <div className="text-[11px] font-semibold mb-0.5">{label}</div>
+      <div className="text-xl font-bold text-content dark:text-content-dark leading-none">{count.toLocaleString()}</div>
+      <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-1">{sub}</div>
     </div>
   );
 }
