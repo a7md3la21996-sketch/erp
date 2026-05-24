@@ -4,6 +4,7 @@
  */
 
 import { requirePerm } from '../utils/permissionGuard';
+import { logAudit } from './auditService';
 import { P } from '../config/roles';
 
 const ROLES_KEY = 'platform_rbac_roles';
@@ -218,6 +219,17 @@ export function createRole({ name, nameEn, permissions, description, description
   };
   roles.push(newRole);
   safeSet(ROLES_KEY, roles);
+  // Security-critical event — a new role defines who can do what.
+  // Always audit. logAudit is fire-and-forget so the role creation
+  // doesn't depend on the audit insert succeeding.
+  logAudit({
+    action: 'create',
+    entity: 'role',
+    entityId: id,
+    entityName: nameEn || name,
+    newData: { name: newRole.name, nameEn: newRole.nameEn, permissions: newRole.permissions },
+    description: `Created role: ${newRole.nameEn || newRole.name}`,
+  });
   return newRole;
 }
 
@@ -227,6 +239,10 @@ export function updateRole(id, updates) {
   const idx = roles.findIndex(r => r.id === id);
   if (idx === -1) return null;
   const role = roles[idx];
+  // Snapshot before mutating so the audit captures old→new for the
+  // permissions matrix. A single boolean flip can quietly expand a
+  // role's reach — diffing matters.
+  const oldSnapshot = { name: role.name, nameEn: role.nameEn, permissions: role.permissions };
   // For built-in roles, only allow updating description, not core permissions
   if (role.builtIn) {
     if (updates.description !== undefined) role.description = updates.description;
@@ -236,6 +252,15 @@ export function updateRole(id, updates) {
   }
   roles[idx] = role;
   safeSet(ROLES_KEY, roles);
+  logAudit({
+    action: 'update',
+    entity: 'role',
+    entityId: id,
+    entityName: role.nameEn || role.name,
+    oldData: oldSnapshot,
+    newData: { name: role.name, nameEn: role.nameEn, permissions: role.permissions },
+    description: `Updated role: ${role.nameEn || role.name}`,
+  });
   return role;
 }
 
@@ -248,10 +273,22 @@ export function deleteRole(id) {
   safeSet(ROLES_KEY, filtered);
   // Also remove any user assignments for this role
   const userRoles = safeGet(USER_ROLES_KEY, {});
+  const reassigned = [];
   Object.keys(userRoles).forEach(uid => {
-    if (userRoles[uid] === id) userRoles[uid] = 'viewer';
+    if (userRoles[uid] === id) {
+      userRoles[uid] = 'viewer';
+      reassigned.push(uid);
+    }
   });
   safeSet(USER_ROLES_KEY, userRoles);
+  logAudit({
+    action: 'delete',
+    entity: 'role',
+    entityId: id,
+    entityName: role.nameEn || role.name,
+    oldData: { name: role.name, nameEn: role.nameEn, permissions: role.permissions },
+    description: `Deleted role: ${role.nameEn || role.name}${reassigned.length ? ` (${reassigned.length} users downgraded to viewer)` : ''}`,
+  });
   return true;
 }
 
@@ -265,8 +302,20 @@ export function setUserRole(userId, roleId) {
   // it grants effective permissions. Same gate.
   requirePerm(P.USERS_MANAGE, 'Not allowed to assign roles');
   const userRoles = safeGet(USER_ROLES_KEY, {});
+  const oldRoleId = userRoles[userId];
   userRoles[userId] = roleId;
   safeSet(USER_ROLES_KEY, userRoles);
+  // Auditing this is the difference between "we noticed access drift
+  // mid-quarter" and "we have no idea when X became an admin".
+  logAudit({
+    action: 'assign',
+    entity: 'user_role',
+    entityId: userId,
+    entityName: userId,
+    oldData: { role: oldRoleId || null },
+    newData: { role: roleId },
+    description: `Assigned role: ${oldRoleId || '(none)'} → ${roleId}`,
+  });
   return true;
 }
 

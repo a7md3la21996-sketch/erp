@@ -2,6 +2,7 @@ import { reportError } from '../utils/errorReporter';
 import { stripInternalFields } from '../utils/sanitizeForSupabase';
 import supabase from '../lib/supabase';
 import { requireAnyPerm } from '../utils/permissionGuard';
+import { logAudit } from './auditService';
 import { P } from '../config/roles';
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
@@ -190,13 +191,22 @@ export async function getTemplates(onlyActive = false) {
 export async function saveTemplate(tpl) {
   requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to save WhatsApp templates');
   // Check if updating existing
-  const { data: existing } = await supabase.from('whatsapp_templates').select('id').eq('id', tpl.id).maybeSingle();
+  const { data: existing } = await supabase.from('whatsapp_templates').select('*').eq('id', tpl.id).maybeSingle();
   if (existing) {
     const { error } = await supabase.from('whatsapp_templates').update(stripInternalFields({ ...tpl, updated_at: new Date().toISOString() })).eq('id', tpl.id);
     if (error) {
       reportError('whatsappService', 'saveTemplate', error);
       throw error;
     }
+    logAudit({
+      action: 'update',
+      entity: 'whatsapp_template',
+      entityId: tpl.id,
+      entityName: tpl.name || tpl.id,
+      oldData: existing,
+      newData: tpl,
+      description: `Updated WhatsApp template: ${tpl.name || tpl.id}`,
+    });
   } else {
     const newTpl = { ...tpl, id: tpl.id || genId(), created_at: new Date().toISOString(), is_active: true };
     const { error } = await supabase.from('whatsapp_templates').insert([stripInternalFields(newTpl)]);
@@ -204,6 +214,14 @@ export async function saveTemplate(tpl) {
       reportError('whatsappService', 'saveTemplate', error);
       throw error;
     }
+    logAudit({
+      action: 'create',
+      entity: 'whatsapp_template',
+      entityId: newTpl.id,
+      entityName: newTpl.name || newTpl.id,
+      newData: newTpl,
+      description: `Created WhatsApp template: ${newTpl.name || newTpl.id}`,
+    });
   }
 
   // Return updated list
@@ -213,18 +231,29 @@ export async function saveTemplate(tpl) {
 
 export async function deleteTemplate(id) {
   requireAnyPerm([P.SETTINGS_MANAGE, P.CAMPAIGNS_VIEW], 'Not allowed to delete WhatsApp templates');
+  // Snapshot before delete so the audit shows what was removed.
+  const { data: oldRow } = await supabase.from('whatsapp_templates').select('*').eq('id', id).maybeSingle();
   const { error } = await supabase.from('whatsapp_templates').delete().eq('id', id);
   if (error) {
     reportError('whatsappService', 'deleteTemplate', error);
     throw error;
   }
+  logAudit({
+    action: 'delete',
+    entity: 'whatsapp_template',
+    entityId: id,
+    entityName: oldRow?.name || id,
+    oldData: oldRow,
+    description: `Deleted WhatsApp template: ${oldRow?.name || id}`,
+  });
   const { data } = await supabase.from('whatsapp_templates').select('*').range(0, 199);
   return data || [];
 }
 
 export async function toggleTemplate(id) {
-  // Fetch current state
-  const { data: tpl, error: fetchErr } = await supabase.from('whatsapp_templates').select('is_active').eq('id', id).maybeSingle();
+  // Fetch current state — we need both is_active (for the flip) and
+  // name (for the audit description).
+  const { data: tpl, error: fetchErr } = await supabase.from('whatsapp_templates').select('id, name, is_active').eq('id', id).maybeSingle();
   if (fetchErr) {
     reportError('whatsappService', 'toggleTemplate', fetchErr);
     throw fetchErr;
@@ -235,6 +264,15 @@ export async function toggleTemplate(id) {
       reportError('whatsappService', 'toggleTemplate', error);
       throw error;
     }
+    logAudit({
+      action: 'update',
+      entity: 'whatsapp_template',
+      entityId: id,
+      entityName: tpl.name || id,
+      oldData: { is_active: tpl.is_active },
+      newData: { is_active: !tpl.is_active },
+      description: `${tpl.is_active ? 'Disabled' : 'Enabled'} WhatsApp template: ${tpl.name || id}`,
+    });
   }
   const { data } = await supabase.from('whatsapp_templates').select('*').range(0, 199);
   return data || [];

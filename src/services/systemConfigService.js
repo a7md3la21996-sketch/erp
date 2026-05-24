@@ -1,4 +1,5 @@
 import { requirePerm } from '../utils/permissionGuard';
+import { logAudit } from './auditService';
 import { P } from '../config/roles';
 
 const STORAGE_KEY = 'platform_system_config';
@@ -277,12 +278,34 @@ export function saveConfig(config) {
 
 export function saveSection(key, data) {
   const current = loadConfig();
+  const oldValue = current[key];
   current[key] = data;
   saveConfig(current);
+  // Audit at the section level — saving "sources" or "lostReasons" is
+  // a semantically meaningful change. Logging the whole config blob
+  // every time would be noise; section-scoped diff stays useful.
+  logAudit({
+    action: 'update',
+    entity: 'system_config',
+    entityId: key,
+    entityName: key,
+    oldData: { [key]: oldValue },
+    newData: { [key]: data },
+    description: `Updated system config section: ${key}`,
+  });
 }
 
 export function resetConfig() {
   localStorage.removeItem(STORAGE_KEY);
+  // Audit because reset blows away every customization at once — the
+  // kind of action that needs a clear "who, when" answer for recovery.
+  logAudit({
+    action: 'delete',
+    entity: 'system_config',
+    entityId: 'all',
+    entityName: 'all sections',
+    description: 'Reset system config to defaults',
+  });
   return { ...DEFAULT_CONFIG };
 }
 
