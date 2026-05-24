@@ -35,7 +35,10 @@ function readDashboardCache(userId, role) {
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed?.ts || Date.now() - parsed.ts > DASHBOARD_CACHE_TTL_MS) return null;
-    return parsed.data;
+    // Return {ts, data} so the hydration path can also restore the
+    // lastUpdatedAt indicator — otherwise it would show "just now"
+    // even for a 50s-old cache.
+    return { ts: parsed.ts, ...parsed.data };
   } catch { return null; }
 }
 
@@ -115,6 +118,12 @@ export default function CrmDashboardPage() {
   // completed. Drives the "X جديد" badge on the Recent Activity feed.
   // Resets to 0 whenever recentFeed gets a fresh batch (loadAll finish).
   const [newActivityCount, setNewActivityCount] = useState(0);
+  // Wall-time of the last successful load (or cache hydration). Drives
+  // the "محدّث منذ Xم" indicator so users always see how fresh the
+  // dashboard is. Ticked every 60s via the `now` state below so the
+  // relative label stays accurate without a full re-render of children.
+  const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
+  const [now, setNow] = useState(Date.now());
   // True once we've successfully rendered real (non-skeleton) data from
   // either the sessionStorage cache or a completed loadAll. Drives the
   // page-skeleton suppression so subsequent refreshes don't blank the
@@ -150,6 +159,7 @@ export default function CrmDashboardPage() {
     if (cached.lostThisMonth) setLostThisMonth(cached.lostThisMonth);
     if (cached.agingBuckets) setAgingBuckets(cached.agingBuckets);
     if (typeof cached.slaBreachCount === 'number') setSlaBreachCount(cached.slaBreachCount);
+    if (typeof cached.ts === 'number') setLastUpdatedAt(cached.ts);
     setHasEverLoaded(true);
   }, [ctx.userId, ctx.role]);
 
@@ -243,6 +253,7 @@ export default function CrmDashboardPage() {
       setAgingBuckets(nextAgingBuckets);
       setSlaBreachCount(nextSlaBreachCount);
       setHasEverLoaded(true);
+      setLastUpdatedAt(Date.now());
 
       writeDashboardCache(ctx.userId, ctx.role, {
         stats: nextStats,
@@ -285,6 +296,13 @@ export default function CrmDashboardPage() {
   // Whenever the feed is replaced (loadAll completed), clear the "new"
   // badge — those events are now part of the visible feed.
   useEffect(() => { setNewActivityCount(0); }, [recentFeed]);
+
+  // Tick `now` once a minute so the "محدّث منذ Xم" indicator stays
+  // fresh without re-fetching anything.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Auto-refresh every 5 minutes when the tab is in the foreground.
   // Skipping hidden tabs keeps idle/background sessions from hammering
@@ -473,6 +491,11 @@ export default function CrmDashboardPage() {
           </h1>
           <p className="text-xs sm:text-sm text-content-muted dark:text-content-muted-dark mt-1 mb-0">
             {isRTL ? 'نظرة عامة على إدارة العملاء الخاصة بك' : 'Your CRM at a glance'}
+            {lastUpdatedAt && (
+              <span className="ms-2 text-[11px] opacity-70" title={new Date(lastUpdatedAt).toLocaleString()}>
+                · {isRTL ? `محدّث ${formatRelativeTime(new Date(lastUpdatedAt).toISOString(), isRTL, now)}` : `updated ${formatRelativeTime(new Date(lastUpdatedAt).toISOString(), isRTL, now)}`}
+              </span>
+            )}
           </p>
         </div>
 
@@ -717,7 +740,7 @@ export default function CrmDashboardPage() {
       <div className={tabVisible('today')}>
       {/* Today's Focus */}
       <Section
-        title={isRTL ? 'ركز على دلوقتي' : "Today's Focus"}
+        title={isRTL ? 'ركّز على اليوم' : "Today's Focus"}
         icon={Calendar}
       >
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -730,7 +753,7 @@ export default function CrmDashboardPage() {
               meta: t.priority,
               to: t.contact_id ? `/contacts?highlight=${t.contact_id}` : '/tasks',
             })}
-            emptyMessage={isRTL ? 'مفيش مهام اليوم — استمتع!' : 'No tasks today — enjoy!'}
+            emptyMessage={isRTL ? 'لا توجد مهام اليوم — استمتع!' : 'No tasks today — enjoy!'}
           />
           <FocusList
             title={isRTL ? 'مهام متأخرة' : 'Overdue Tasks'}
@@ -742,7 +765,7 @@ export default function CrmDashboardPage() {
               to: t.contact_id ? `/contacts?highlight=${t.contact_id}` : '/tasks',
               flag: 'red',
             })}
-            emptyMessage={isRTL ? 'مفيش متأخرات' : 'Nothing overdue'}
+            emptyMessage={isRTL ? 'لا توجد مهام متأخرة' : 'Nothing overdue'}
           />
           <FocusList
             title={isRTL ? 'عملاء بدون متابعة (7 أيام+)' : 'Stale Leads (7d+)'}
@@ -753,7 +776,7 @@ export default function CrmDashboardPage() {
               meta: c.contact_status,
               to: `/contacts?highlight=${c.id}`,
             })}
-            emptyMessage={isRTL ? 'كل العملاء تتم متابعتهم 👏' : 'Every lead is being followed up 👏'}
+            emptyMessage={isRTL ? 'كل العملاء تتم متابعتهم' : 'Every lead is being followed up'}
           />
         </div>
       </Section>
@@ -783,7 +806,7 @@ export default function CrmDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
         <Section title={isRTL ? 'خط البيع' : 'Pipeline'} icon={BarChart3} compact>
           {pipelineData.length === 0 ? (
-            <EmptyState message={isRTL ? 'مفيش فرص حالياً' : 'No opportunities yet'} />
+            <EmptyState message={isRTL ? 'لا توجد فرص حالياً' : 'No opportunities yet'} />
           ) : (
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -810,7 +833,7 @@ export default function CrmDashboardPage() {
 
         <Section title={isRTL ? 'النشاط (14 يوم)' : 'Activity (14 days)'} icon={Activity} compact>
           {activityByDay.length === 0 ? (
-            <EmptyState message={isRTL ? 'مفيش نشاط مسجل' : 'No activity yet'} />
+            <EmptyState message={isRTL ? 'لا يوجد نشاط مسجل' : 'No activity yet'} />
           ) : (
             <div className="h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -1315,9 +1338,9 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString();
 }
 
-function formatRelativeTime(iso, isRTL) {
+function formatRelativeTime(iso, isRTL, nowMs = Date.now()) {
   if (!iso) return '';
-  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffMs = nowMs - new Date(iso).getTime();
   const sec = Math.floor(diffMs / 1000);
   if (sec < 60) return isRTL ? 'الآن' : 'just now';
   const min = Math.floor(sec / 60);
