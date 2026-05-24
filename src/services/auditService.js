@@ -23,6 +23,9 @@ export const ACTION_TYPES = {
   batch_call:       { ar: 'اتصال جماعي',     en: 'Batch Call' },
   note:             { ar: 'ملاحظة',          en: 'Note' },
   export:           { ar: 'تصدير',           en: 'Export' },
+  login:            { ar: 'تسجيل دخول',      en: 'Login' },
+  logout:           { ar: 'تسجيل خروج',      en: 'Logout' },
+  password_reset:   { ar: 'إعادة تعيين كلمة المرور', en: 'Password Reset' },
 };
 
 export async function getAuditLogs({ limit = 50, offset = 0, action, entity, search, withCount = false } = {}) {

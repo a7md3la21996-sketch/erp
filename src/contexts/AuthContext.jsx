@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ROLE_PERMISSIONS, mergePermissions } from '../config/roles';
 import { logSession, endSession, updateSessionActivity } from '../services/sessionService';
+import { logAudit } from '../services/auditService';
 import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
@@ -245,6 +246,17 @@ export function AuthProvider({ children }) {
         try { localStorage.setItem('platform_mock_user', JSON.stringify(profileData)); } catch {}
         getEffectivePermissions(profileData.role).then(p => setPermissions(p));
         logSession(profileData);
+        // Fire-and-forget audit entry — login event is the basic
+        // who/when of the security trail. logAudit catches its own
+        // errors, so a failed insert doesn't block the login.
+        logAudit({
+          action: 'login',
+          entity: 'auth',
+          entityId: data.user.id,
+          entityName: profileData.full_name_ar || profileData.full_name_en || data.user.email,
+          description: `Login via ${USE_SUPABASE_AUTH ? 'Supabase' : 'mock'} auth`,
+          userName: profileData.full_name_ar || profileData.full_name_en || data.user.email,
+        });
         return profileData;
       } catch (err) {
         // In production with Supabase configured, never fall back to mock auth
@@ -288,6 +300,26 @@ export function AuthProvider({ children }) {
 
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = async () => {
+    // Capture identity snapshot for the audit row BEFORE we clear it
+    // and BEFORE signOut runs — once the auth session is gone, logAudit
+    // can't resolve user_id from supabase.auth.getUser().
+    const auditSnapshot = (user || profile) ? {
+      id: user?.id || profile?.id,
+      name: profile?.full_name_ar || profile?.full_name_en || user?.email || profile?.email,
+    } : null;
+    if (auditSnapshot) {
+      try {
+        await logAudit({
+          action: 'logout',
+          entity: 'auth',
+          entityId: auditSnapshot.id,
+          entityName: auditSnapshot.name,
+          description: 'User logged out',
+          userName: auditSnapshot.name,
+        });
+      } catch { /* audit failures must not block logout */ }
+    }
+
     endSession();
     clearInterval(activityInterval.current);
 

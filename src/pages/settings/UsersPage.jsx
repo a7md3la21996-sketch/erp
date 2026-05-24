@@ -256,6 +256,17 @@ export default function UsersPage() {
     try {
       const { error } = await supabase.auth.admin.updateUserById(userId, { password: newPass });
       if (error) throw error;
+      // High-trust admin action — record who reset whose password, when,
+      // without recording the new password value itself (logAudit's
+      // SENSITIVE_FIELDS strip catches it anyway, but we never pass it).
+      logAudit({
+        action: 'password_reset',
+        entity: 'user',
+        entityId: userId,
+        entityName: userEmail,
+        description: `Password reset by admin for ${userEmail}`,
+        userName: profile?.full_name_ar || profile?.full_name_en || '',
+      });
       toast.success(lang === 'ar' ? `تم تغيير كلمة المرور لـ ${userEmail}` : `Password reset for ${userEmail}`);
     } catch {
       // If admin API not available, try via service role or show manual instructions
@@ -409,6 +420,27 @@ export default function UsersPage() {
           if (error) throw error;
         }
 
+        // Audit — capture old/new so reviewers can see exactly what
+        // changed (full_name, role, department, team). Old data taken
+        // from editingUser snapshot which is the row as it was opened.
+        logAudit({
+          action: 'update',
+          entity: 'user',
+          entityId: editingUser.id,
+          entityName: cleanFullNameEn || cleanFullNameAr || cleanEmail,
+          oldData: {
+            full_name_ar: editingUser.full_name_ar,
+            full_name_en: editingUser.full_name_en,
+            role: editingUser.role,
+            department: editingUser.department,
+            team_id: editingUser.team_id,
+            phone: editingUser.phone,
+          },
+          newData: updates,
+          description: `Updated user ${cleanFullNameEn || cleanEmail}`,
+          userName: profile?.full_name_ar || profile?.full_name_en || '',
+        });
+
         // Update local state
         setUsers(prev => prev.map(u =>
           u.id === editingUser.id ? { ...u, ...updates } : u
@@ -426,6 +458,26 @@ export default function UsersPage() {
               department: form.department,
               team_id: form.team_id || null,
               phone: cleanPhone || null,
+            });
+            // Audit — entityId is left empty because register() doesn't
+            // return the new id directly; entityName + the new_data
+            // payload are enough to identify the row in the trail.
+            logAudit({
+              action: 'create',
+              entity: 'user',
+              entityId: null,
+              entityName: cleanFullNameEn || cleanFullNameAr || cleanEmail,
+              newData: {
+                email: cleanEmail,
+                full_name_ar: cleanFullNameAr,
+                full_name_en: cleanFullNameEn,
+                role: form.role,
+                department: form.department,
+                team_id: form.team_id || null,
+                phone: cleanPhone || null,
+              },
+              description: `Created user ${cleanEmail} as ${form.role}`,
+              userName: profile?.full_name_ar || profile?.full_name_en || '',
             });
             toast.success(lang === 'ar' ? 'تم إنشاء المستخدم بنجاح' : 'User created successfully');
           } catch (err) {
