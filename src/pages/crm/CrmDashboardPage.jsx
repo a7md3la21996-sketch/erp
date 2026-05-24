@@ -24,11 +24,14 @@ const STAGE_COLORS = ['#4A7AAB', '#6B8DB5', '#92B0CC', '#F59E0B', '#10B981', '#0
  * activities into a sales rep's "what do I work on next" landing page.
  *
  * Sections (top to bottom):
- *   1. KPI cards row — leads, hot, open opps, tasks due, this-week leads
+ *   1. KPI cards row — leads, hot, open opps, tasks due today, new-this-month
  *   2. Today's Focus — tasks due today, overdue tasks, stale leads
- *   3. Pipeline — funnel by stage, total open value
- *   4. Recent Activity (last 14 days) — bar chart of calls/notes per day
- *   5. Source breakdown (managers+) — leads + conversion by source
+ *   3. Upcoming — pending tasks in the next 48h (hidden when empty)
+ *   4. Pipeline + Activity chart — funnel by stage, 14-day activity bars
+ *   5. Recent Activity Feed — last 15 events with actor / contact / time
+ *   6. Top Performers (managers+) — leaderboard for the month
+ *   7. Lost Deal Reasons (managers+) — why deals slipped this month
+ *   8. Source Performance (managers+) — leads + conversion by source
  *
  * Role-aware: sales_agent sees own data, leader/manager see team, admin/ops
  * see everything. Driven by the existing dashboardService applyRoleFilter
@@ -314,7 +317,7 @@ export default function CrmDashboardPage() {
           to="/contacts"
         />
         <KpiCard
-          label={isRTL ? 'Hot Leads' : 'Hot Leads'}
+          label={isRTL ? 'العملاء الواعدون' : 'Hot Leads'}
           value={stats.hotCount ?? 0}
           icon={Flame}
           color="red"
@@ -454,7 +457,7 @@ export default function CrmDashboardPage() {
             {recentFeed.map((a) => {
               const meta = getActivityMeta(a.type, isRTL);
               const actor = isRTL
-                ? (a.user_name_ar || a.user_name_en || (isRTL ? 'مستخدم' : 'User'))
+                ? (a.user_name_ar || a.user_name_en || 'مستخدم')
                 : (a.user_name_en || a.user_name_ar || 'User');
               const Icon = meta.icon;
               const node = (
@@ -560,7 +563,7 @@ export default function CrmDashboardPage() {
               <thead>
                 <tr className="text-content-muted dark:text-content-muted-dark border-b border-edge dark:border-edge-dark">
                   <th className="text-start py-2 px-3">{isRTL ? 'المصدر' : 'Source'}</th>
-                  <th className="text-end py-2 px-3">{isRTL ? 'عدد leads' : 'Leads'}</th>
+                  <th className="text-end py-2 px-3">{isRTL ? 'عدد العملاء' : 'Leads'}</th>
                   <th className="text-end py-2 px-3">{isRTL ? 'فرص' : 'Opps'}</th>
                   <th className="text-end py-2 px-3">{isRTL ? 'تحويل' : 'Conv %'}</th>
                 </tr>
@@ -713,7 +716,7 @@ async function loadLeadsThisMonthByUser() {
 async function loadRecentActivityFeed(ctx) {
   let q = supabase
     .from('activities')
-    .select('id, type, notes, created_at, user_name_en, user_name_ar, contact_id, entity_type')
+    .select('id, type, notes, created_at, user_name_en, user_name_ar, contact_id')
     .order('created_at', { ascending: false })
     .limit(15);
   if (ctx.role === 'sales_agent' && ctx.userId) q = q.eq('user_id', ctx.userId);
@@ -723,10 +726,11 @@ async function loadRecentActivityFeed(ctx) {
   const contactIds = [...new Set(rows.map(a => a.contact_id).filter(Boolean))];
   let nameById = {};
   if (contactIds.length) {
-    const { data: contacts } = await supabase
+    const { data: contacts, error: contactsErr } = await supabase
       .from('contacts')
       .select('id, full_name, phone')
       .in('id', contactIds);
+    if (contactsErr) reportError('CrmDashboardPage', 'loadRecentActivityFeed:contacts', contactsErr);
     nameById = Object.fromEntries((contacts || []).map(c => [c.id, c.full_name || c.phone]));
   }
   return rows.map(a => ({ ...a, contact_name: a.contact_id ? nameById[a.contact_id] : null }));
