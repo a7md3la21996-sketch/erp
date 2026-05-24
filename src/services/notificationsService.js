@@ -17,10 +17,21 @@ import {
   notifyTaskAssigned,
   notifyDealWon,
   notifyReminder,
+  notifyImportDone,
+  notifyLeadReassigned,
+  notifyImportLeadsForAgent,
 } from './notificationService';
 
-// ── Re-export helpers as-is ──
-export { notifyLeadAssigned, notifyTaskAssigned, notifyDealWon, notifyReminder };
+// Re-export everything callers ever need from the singular file. Two
+// files with almost-identical names ('notificationService' vs
+// 'notificationsService') was a typo trap — a missing 's' would
+// silently import undefined and crash at runtime only when the code
+// path actually fired. Consolidating all imports here means callers
+// only ever pick this file.
+export {
+  notifyLeadAssigned, notifyTaskAssigned, notifyDealWon, notifyReminder,
+  notifyImportDone, notifyLeadReassigned, notifyImportLeadsForAgent,
+};
 
 // ── Notification Types Config ──
 export const NOTIFICATION_TYPES = {
