@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { PageSkeleton, Button } from '../../components/ui';
-import { fetchContactStats, fetchOpportunityStats, fetchTaskStats } from '../../services/dashboardService';
+import { fetchContactStats, fetchOpportunityStats } from '../../services/dashboardService';
 import { fetchTasks } from '../../services/tasksService';
 import { reportError } from '../../utils/errorReporter';
 
@@ -37,7 +37,10 @@ export default function CrmDashboardPage() {
   const toast = useToast();
   const isRTL = i18n.language === 'ar';
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ contact: null, opp: null, task: null });
+  // task stats were initially fetched but nothing on the page renders
+  // them yet — Today's Focus uses todayTasks/overdueTasks lists directly.
+  // Leaving them out of stats avoids dead state + a pointless query.
+  const [stats, setStats] = useState({ contact: null, opp: null, hotCount: 0 });
   const [todayTasks, setTodayTasks] = useState([]);
   const [overdueTasks, setOverdueTasks] = useState([]);
   const [staleLeads, setStaleLeads] = useState([]);
@@ -64,13 +67,12 @@ export default function CrmDashboardPage() {
       // Parallel-fetch every panel. Each one's failure is reported but
       // doesn't block the others — partial data is better than a blank page.
       const [
-        contactStats, oppStats, taskStats, hotCountRes,
+        contactStats, oppStats, hotCountRes,
         todayTasksRes, overdueTasksRes, staleLeadsRes,
         activityRes, sourceRes,
       ] = await Promise.allSettled([
         fetchContactStats(ctx),
         fetchOpportunityStats(ctx),
-        fetchTaskStats(ctx),
         loadHotLeadsCount(ctx),
         fetchTasks({ ...ctx, dueDateFrom: todayStart, dueDateTo: todayEnd, status: 'pending', pageSize: 5, page: 1 }),
         fetchTasks({ ...ctx, overdueOnly: true, status: 'pending', pageSize: 5, page: 1 }),
@@ -84,7 +86,6 @@ export default function CrmDashboardPage() {
       setStats({
         contact: contactStats.status === 'fulfilled' ? contactStats.value : null,
         opp: oppStats.status === 'fulfilled' ? oppStats.value : null,
-        task: taskStats.status === 'fulfilled' ? taskStats.value : null,
         hotCount: hotCountRes.status === 'fulfilled' ? hotCountRes.value : 0,
       });
       setTodayTasks(todayTasksRes.status === 'fulfilled' ? (todayTasksRes.value?.data || todayTasksRes.value || []) : []);
@@ -323,9 +324,11 @@ async function loadStaleLeads(ctx, sevenDaysAgo) {
 }
 
 async function loadActivityByDay(ctx, sinceIso) {
+  // Only need created_at for the daily-buckets grouping. The earlier query
+  // also selected user_id which was used nowhere — pure wasted bandwidth.
   let query = supabase
     .from('activities')
-    .select('created_at, user_id')
+    .select('created_at')
     .gte('created_at', sinceIso);
   if (ctx.role === 'sales_agent' && ctx.userId) query = query.eq('user_id', ctx.userId);
   const { data, error } = await query;
@@ -358,18 +361,23 @@ async function loadSourceBreakdown(ctx) {
   }
   const [{ data: contacts }, { data: opps }] = await Promise.all([contactQuery, oppQuery]);
   if (!contacts) return [];
+  // Normalize source so "Facebook" and "facebook" group together — the DB
+  // has both casings depending on which import script wrote the row. Use
+  // the lowercased key for grouping, keep the most common original spelling
+  // as the display label.
   const contactsBySource = {};
   contacts.forEach(c => {
-    const src = c.source || 'unknown';
-    contactsBySource[src] = contactsBySource[src] || { leads: 0, contactIds: new Set() };
-    contactsBySource[src].leads += 1;
-    contactsBySource[src].contactIds.add(c.id);
+    const original = c.source || 'unknown';
+    const key = original.toLowerCase();
+    contactsBySource[key] = contactsBySource[key] || { leads: 0, contactIds: new Set(), label: original };
+    contactsBySource[key].leads += 1;
+    contactsBySource[key].contactIds.add(c.id);
   });
   const oppContactIds = new Set((opps || []).map(o => o.contact_id).filter(Boolean));
-  const rows = Object.entries(contactsBySource).map(([source, v]) => {
+  const rows = Object.values(contactsBySource).map(v => {
     const oppsForSource = [...v.contactIds].filter(id => oppContactIds.has(id)).length;
     return {
-      source,
+      source: v.label,
       leads: v.leads,
       opps: oppsForSource,
       conversion: v.leads > 0 ? (oppsForSource / v.leads) * 100 : 0,
