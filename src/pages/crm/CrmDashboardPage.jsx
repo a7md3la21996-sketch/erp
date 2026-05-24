@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -73,8 +73,20 @@ export default function CrmDashboardPage() {
     teamId: profile?.team_id,
   }), [profile?.role, profile?.id, profile?.team_id]);
 
+  // Monotonically-increasing call id used to drop stale loadAll results.
+  // Each invocation snapshots its id; after all fetches resolve, it
+  // compares to the current ref — if a newer call has started, the old
+  // one drops its writes instead of overwriting fresher state.
+  const loadIdRef = useRef(0);
+  // isRTL is read inside loadAll's error path only; keeping it as a ref
+  // means language switches don't recreate loadAll → don't fire useEffect
+  // → don't refetch every panel for nothing.
+  const isRTLRef = useRef(isRTL);
+  useEffect(() => { isRTLRef.current = isRTL; }, [isRTL]);
+
   const loadAll = useCallback(async () => {
-    if (!profile) return;
+    if (!ctx.userId) return;
+    const myLoadId = ++loadIdRef.current;
     setLoading(true);
     try {
       const today = new Date();
@@ -86,7 +98,7 @@ export default function CrmDashboardPage() {
       // + the day after. Excludes today (which has its own focus column).
       const upcomingEnd = new Date(new Date(todayEnd).getTime() + 48 * 3600000).toISOString();
 
-      const isManagerPlus = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(profile?.role);
+      const isManagerPlus = ['admin', 'operations', 'sales_director', 'sales_manager', 'team_leader'].includes(ctx.role);
 
       // Parallel-fetch every panel. Each one's failure is reported but
       // doesn't block the others — partial data is better than a blank page.
@@ -110,6 +122,11 @@ export default function CrmDashboardPage() {
         isManagerPlus ? loadLostThisMonth() : Promise.resolve([]),
       ]);
 
+      // Drop writes if a newer load has started — protects against the
+      // refresh-twice-fast race that would otherwise let stale data
+      // overwrite the freshest result.
+      if (myLoadId !== loadIdRef.current) return;
+
       setStats({
         contact: contactStats.status === 'fulfilled' ? contactStats.value : null,
         opp: oppStats.status === 'fulfilled' ? oppStats.value : null,
@@ -127,11 +144,13 @@ export default function CrmDashboardPage() {
       setLostThisMonth(lostRes.status === 'fulfilled' ? lostRes.value : []);
     } catch (err) {
       reportError('CrmDashboardPage', 'loadAll', err);
-      toast.error(isRTL ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
+      toast.error(isRTLRef.current ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
     } finally {
-      setLoading(false);
+      // Only the latest call resets loading — stale calls leave it alone
+      // so the in-flight load's UI state isn't yanked out from under it.
+      if (myLoadId === loadIdRef.current) setLoading(false);
     }
-  }, [profile, ctx, toast, isRTL]);
+  }, [ctx, toast]);
 
   useEffect(() => { loadAll(); }, [loadAll, refreshKey]);
 
@@ -153,7 +172,10 @@ export default function CrmDashboardPage() {
     const winsByUser = {};
     opps.forEach(o => {
       if (!o.assigned_to) return;
-      oppsByUser[o.assigned_to] = (oppsByUser[o.assigned_to] || 0) + 1;
+      // "Opps" column shows open pipeline only — closed/cancelled deals
+      // are reflected in the "Wins" column or excluded entirely.
+      const isOpen = !['closed_won', 'closed_lost', 'cancelled'].includes(o.stage);
+      if (isOpen) oppsByUser[o.assigned_to] = (oppsByUser[o.assigned_to] || 0) + 1;
       const closedAt = new Date(o.stage_changed_at || o.created_at).getTime();
       if (o.stage === 'closed_won' && closedAt >= monthStart) {
         winsByUser[o.assigned_to] = (winsByUser[o.assigned_to] || 0) + 1;
