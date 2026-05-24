@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { useToast } from '../../contexts/ToastContext';
 import supabase from '../../lib/supabase';
 import {
@@ -36,6 +37,7 @@ const STAGE_COLORS = ['#4A7AAB', '#6B8DB5', '#92B0CC', '#F59E0B', '#10B981', '#0
 export default function CrmDashboardPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
+  const { lostReasons: configLostReasons } = useSystemConfig();
   const toast = useToast();
   const navigate = useNavigate();
   const isRTL = i18n.language === 'ar';
@@ -58,6 +60,10 @@ export default function CrmDashboardPage() {
   // this month. Combined with stats.opp.rawOpps below to rank top
   // performers. Empty for sales_agent (they shouldn't see this section).
   const [leadsByUser, setLeadsByUser] = useState({});
+  // Raw closed_lost opps closed this month, with the lost_reason field.
+  // rawOpps from dashboardService doesn't select lost_reason so this is
+  // a dedicated fetch — small slice, narrow column set, cheap query.
+  const [lostThisMonth, setLostThisMonth] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchInput, setSearchInput] = useState('');
 
@@ -87,7 +93,7 @@ export default function CrmDashboardPage() {
       const [
         contactStats, oppStats, hotCountRes, lastMonthRes,
         todayTasksRes, overdueTasksRes, staleLeadsRes,
-        activityRes, sourceRes, upcomingRes, recentFeedRes, leadsByUserRes,
+        activityRes, sourceRes, upcomingRes, recentFeedRes, leadsByUserRes, lostRes,
       ] = await Promise.allSettled([
         fetchContactStats(ctx),
         fetchOpportunityStats(ctx),
@@ -101,6 +107,7 @@ export default function CrmDashboardPage() {
         fetchTasks({ ...ctx, dueDateFrom: todayEnd, dueDateTo: upcomingEnd, status: 'pending', pageSize: 5, page: 1 }),
         loadRecentActivityFeed(ctx),
         isManagerPlus ? loadLeadsThisMonthByUser() : Promise.resolve({}),
+        isManagerPlus ? loadLostThisMonth() : Promise.resolve([]),
       ]);
 
       setStats({
@@ -117,6 +124,7 @@ export default function CrmDashboardPage() {
       setUpcomingTasks(upcomingRes.status === 'fulfilled' ? (upcomingRes.value?.data || upcomingRes.value || []) : []);
       setRecentFeed(recentFeedRes.status === 'fulfilled' ? recentFeedRes.value : []);
       setLeadsByUser(leadsByUserRes.status === 'fulfilled' ? leadsByUserRes.value : {});
+      setLostThisMonth(lostRes.status === 'fulfilled' ? lostRes.value : []);
     } catch (err) {
       reportError('CrmDashboardPage', 'loadAll', err);
       toast.error(isRTL ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
@@ -177,6 +185,40 @@ export default function CrmDashboardPage() {
       .sort((a, b) => (b.wins * 3 + b.opps + b.leads * 0.5) - (a.wins * 3 + a.opps + a.leads * 0.5))
       .slice(0, 5);
   }, [profile?.role, leadsByUser, stats.opp?.rawOpps]);
+
+  // Reason → label map (ar/en) from system config. Falls back to the raw
+  // key when no config entry exists (drift safety).
+  const lostReasonsMap = useMemo(() => {
+    const m = {};
+    (configLostReasons || []).forEach(r => { m[r.key] = r; });
+    return m;
+  }, [configLostReasons]);
+
+  // Group lost-this-month opps by reason → sorted list of {key, label, count, pct}.
+  // The "no reason" bucket is kept distinct so reps can see when reasons
+  // aren't being captured.
+  const lostReasonBreakdown = useMemo(() => {
+    if (lostThisMonth.length === 0) return [];
+    const counts = {};
+    lostThisMonth.forEach(o => {
+      const key = o.lost_reason || '__no_reason__';
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    const total = lostThisMonth.length;
+    return Object.entries(counts)
+      .map(([key, count]) => {
+        const labelSource = key === '__no_reason__'
+          ? null
+          : lostReasonsMap[key];
+        const label = labelSource
+          ? (isRTL ? labelSource.label_ar : labelSource.label_en)
+          : key === '__no_reason__'
+            ? (isRTL ? 'لم يُذكر سبب' : 'No reason given')
+            : key;
+        return { key, label, count, pct: total > 0 ? Math.round((count / total) * 100) : 0 };
+      })
+      .sort((a, b) => b.count - a.count);
+  }, [lostThisMonth, lostReasonsMap, isRTL]);
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return isRTL ? 'صباح الخير' : 'Good morning';
@@ -457,6 +499,32 @@ export default function CrmDashboardPage() {
         </Section>
       )}
 
+      {/* Lost deals breakdown — managers+ only. Horizontal-bar list
+          showing why deals slipped this month. Hidden when nothing was
+          lost so a healthy month doesn't trigger a misleading empty card. */}
+      {lostReasonBreakdown.length > 0 && (
+        <Section title={isRTL ? 'أسباب خسارة الصفقات (هذا الشهر)' : 'Lost Deal Reasons (This Month)'} icon={AlertCircle}>
+          <ul className="list-none p-0 m-0 space-y-2">
+            {lostReasonBreakdown.map((r) => (
+              <li key={r.key}>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-content dark:text-content-dark font-medium truncate">{r.label}</span>
+                  <span className="text-content-muted dark:text-content-muted-dark whitespace-nowrap ms-2">
+                    {r.count} · {r.pct}%
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-edge/40 dark:bg-edge-dark/40 overflow-hidden">
+                  <div
+                    className="h-full bg-red-500/70 rounded-full transition-all"
+                    style={{ width: `${r.pct}%` }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       {/* Source breakdown — managers+ only */}
       {sourceBreakdown.length > 0 && (
         <Section title={isRTL ? 'أداء المصادر' : 'Source Performance'} icon={TrendingUp}>
@@ -562,6 +630,22 @@ async function loadActivityByDay(ctx, sinceIso) {
     out.push({ day: key, count: byDay[key] || 0 });
   }
   return out;
+}
+
+// Closed-lost opportunities in the current month, with the reason field
+// so the dashboard can group them. Uses stage_changed_at when present,
+// else falls back to created_at — matches the existing computeOppStats
+// convention in dashboardService.
+async function loadLostThisMonth() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { data, error } = await supabase
+    .from('opportunities')
+    .select('id, lost_reason, stage_changed_at, created_at')
+    .eq('stage', 'closed_lost')
+    .or(`stage_changed_at.gte.${monthStart},and(stage_changed_at.is.null,created_at.gte.${monthStart})`);
+  if (error) { reportError('CrmDashboardPage', 'loadLostThisMonth', error); return []; }
+  return data || [];
 }
 
 // Group contacts created in the current calendar month by assigned_to.
