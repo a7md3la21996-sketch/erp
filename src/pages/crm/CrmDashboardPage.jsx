@@ -71,6 +71,9 @@ export default function CrmDashboardPage() {
   // Powers the Lead Aging section. RLS handles scoping; sales_agent
   // additionally gets an assigned_to filter inside the loader.
   const [agingBuckets, setAgingBuckets] = useState({ fresh: 0, aging: 0, old: 0 });
+  // Count of active leads older than the SLA window that still have
+  // no first-touch activity. Powers the SLA Breaches alert section.
+  const [slaBreachCount, setSlaBreachCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchInput, setSearchInput] = useState('');
 
@@ -113,7 +116,7 @@ export default function CrmDashboardPage() {
         contactStats, oppStats, hotCountRes, lastMonthRes,
         todayTasksRes, overdueTasksRes, staleLeadsRes,
         activityRes, sourceRes, upcomingRes, recentFeedRes, leadsByUserRes, lostRes,
-        agingRes,
+        agingRes, slaRes,
       ] = await Promise.allSettled([
         fetchContactStats(ctx),
         fetchOpportunityStats(ctx),
@@ -129,6 +132,7 @@ export default function CrmDashboardPage() {
         isManagerPlus ? loadLeadsThisMonthByUser() : Promise.resolve({}),
         isManagerPlus ? loadLostThisMonth() : Promise.resolve([]),
         loadAgingBuckets(ctx),
+        loadSlaBreaches(ctx),
       ]);
 
       // Drop writes if a newer load has started — protects against the
@@ -152,6 +156,7 @@ export default function CrmDashboardPage() {
       setLeadsByUser(leadsByUserRes.status === 'fulfilled' ? leadsByUserRes.value : {});
       setLostThisMonth(lostRes.status === 'fulfilled' ? lostRes.value : []);
       setAgingBuckets(agingRes.status === 'fulfilled' ? agingRes.value : { fresh: 0, aging: 0, old: 0 });
+      setSlaBreachCount(slaRes.status === 'fulfilled' ? slaRes.value : 0);
     } catch (err) {
       reportError('CrmDashboardPage', 'loadAll', err);
       toast.error(isRTLRef.current ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
@@ -261,6 +266,44 @@ export default function CrmDashboardPage() {
       })
       .sort((a, b) => b.count - a.count);
   }, [lostThisMonth, lostReasonsMap, isRTL]);
+
+  // Conversion funnel: this-month new leads → opps created this month →
+  // wins closed this month. Uses contact stats + rawOpps so no extra
+  // query needed. Conversion rates are computed cumulative (lead→opp,
+  // opp→win) for the most meaningful drop-off readout.
+  const funnelData = useMemo(() => {
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const leads = stats.contact?.newLeadsThisMonth ?? 0;
+    const rawOpps = stats.opp?.rawOpps || [];
+    const oppsThisMonth = rawOpps.filter(o => new Date(o.created_at).getTime() >= monthStart).length;
+    const winsThisMonth = stats.opp?.closedThisMonth ?? 0;
+    const leadToOpp = leads > 0 ? Math.round((oppsThisMonth / leads) * 100) : 0;
+    const oppToWin = oppsThisMonth > 0 ? Math.round((winsThisMonth / oppsThisMonth) * 100) : 0;
+    return { leads, opps: oppsThisMonth, wins: winsThisMonth, leadToOpp, oppToWin };
+  }, [stats.contact?.newLeadsThisMonth, stats.opp?.rawOpps, stats.opp?.closedThisMonth]);
+
+  // Revenue per month for the last 6 calendar months, derived entirely
+  // from rawOpps (closed_won + stage_changed_at or created_at within
+  // the month). Months are emitted oldest-first for natural chart flow.
+  const revenueTrend = useMemo(() => {
+    const rawOpps = stats.opp?.rawOpps || [];
+    const now = new Date();
+    const out = [];
+    for (let i = 5; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1).getTime();
+      const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1).getTime();
+      const monthRevenue = rawOpps
+        .filter(o => o.stage === 'closed_won')
+        .filter(o => {
+          const t = new Date(o.stage_changed_at || o.created_at).getTime();
+          return t >= start && t < end;
+        })
+        .reduce((sum, o) => sum + (parseFloat(o.deal_value || o.budget) || 0), 0);
+      const label = new Date(start).toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'short' });
+      out.push({ month: label, revenue: monthRevenue });
+    }
+    return out;
+  }, [stats.opp?.rawOpps, isRTL]);
 
   if (loading && !stats.contact) return <PageSkeleton />;
 
@@ -390,6 +433,37 @@ export default function CrmDashboardPage() {
         />
       </div>
 
+      {/* SLA breach alert — leads created more than SLA_HOURS ago that
+          still have zero activity. Only renders when count > 0 so a
+          well-handled day stays quiet. Links into the "never contacted"
+          filter on the leads page. */}
+      {slaBreachCount > 0 && (
+        <Link
+          to="/contacts?activity=never"
+          className="block no-underline mb-3 bg-red-500/10 hover:bg-red-500/15 border border-red-500/30 rounded-xl p-3 sm:p-4 transition-colors"
+          title={isRTL ? `عملاء بدون أي تواصل خلال أكثر من ${SLA_HOURS} ساعات` : `Leads with no activity for more than ${SLA_HOURS} hours`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-lg flex items-center justify-center bg-red-500/20 text-red-500 border border-red-500/30 shrink-0">
+              <AlertCircle size={18} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-red-500">
+                {isRTL
+                  ? `${slaBreachCount} عميل بحاجة لأول تواصل (>${SLA_HOURS}س)`
+                  : `${slaBreachCount} leads need first contact (>${SLA_HOURS}h)`}
+              </div>
+              <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5">
+                {isRTL
+                  ? 'تجاوزوا نافذة الاستجابة المعتمدة دون أي نشاط مسجَّل.'
+                  : 'Exceeded the response window with no activity logged.'}
+              </div>
+            </div>
+            <ChevronRight size={16} className={`text-red-500 shrink-0 ${isRTL ? 'rotate-180' : ''}`} />
+          </div>
+        </Link>
+      )}
+
       {/* Lead Aging — distribution of non-disqualified leads by age.
           Hidden if all three buckets are empty (a totally fresh tenant
           or no permission to see any leads). */}
@@ -413,6 +487,31 @@ export default function CrmDashboardPage() {
               sub={isRTL ? '30+ يوم' : '30+ days'}
               count={agingBuckets.old}
               tone="red"
+            />
+          </div>
+        </Section>
+      )}
+
+      {/* Conversion Funnel — leads/opps/wins this month with the two
+          drop-off rates that matter. Hidden when there's nothing to
+          measure yet (a fresh tenant with zero leads). */}
+      {funnelData.leads > 0 && (
+        <Section title={isRTL ? 'قمع التحويل (هذا الشهر)' : 'Conversion Funnel (This Month)'} icon={Target} compact>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <FunnelStep label={isRTL ? 'عملاء' : 'Leads'}      value={funnelData.leads} tone="brand" />
+            <FunnelStep
+              label={isRTL ? 'فرص' : 'Opps'}
+              value={funnelData.opps}
+              tone="amber"
+              conversion={funnelData.leadToOpp}
+              isRTL={isRTL}
+            />
+            <FunnelStep
+              label={isRTL ? 'صفقات' : 'Wins'}
+              value={funnelData.wins}
+              tone="emerald"
+              conversion={funnelData.oppToWin}
+              isRTL={isRTL}
             />
           </div>
         </Section>
@@ -527,6 +626,25 @@ export default function CrmDashboardPage() {
           )}
         </Section>
       </div>
+
+      {/* Revenue trend — closed_won totals across the last 6 calendar
+          months. Derived entirely from rawOpps so no extra query.
+          Hidden when every bucket is zero (a healthy "hide noise" check). */}
+      {revenueTrend.some(m => m.revenue > 0) && (
+        <Section title={isRTL ? 'الإيرادات (آخر 6 شهور)' : 'Revenue (Last 6 Months)'} icon={TrendingUp} compact>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={revenueTrend}>
+                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => formatCurrency(v)} />
+                <Tooltip formatter={(v) => formatCurrency(v)} />
+                <Bar dataKey="revenue" fill="#10B981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Section>
+      )}
 
       {/* Recent activity feed — most recent 15 events. RLS already
           constrains visibility per role, so we just render whatever
@@ -684,6 +802,31 @@ async function loadLastMonthNewCount(ctx) {
   if (ctx.role === 'sales_agent' && ctx.userId) q = q.eq('assigned_to', ctx.userId);
   const { count, error } = await q;
   if (error) { reportError('CrmDashboardPage', 'loadLastMonthNewCount', error); return 0; }
+  return count || 0;
+}
+
+// SLA constant — leads created more than SLA_HOURS ago with no first
+// activity are considered "breached" and need urgent follow-up. The
+// 4-hour figure matches industry SaaS norms; could move to system config
+// later when there's a per-org override use case.
+const SLA_HOURS = 4;
+
+// Count of active leads where:
+//   - last_activity_at IS NULL (no touch ever — proxy for first-contact SLA)
+//   - created_at older than now - SLA_HOURS
+//   - not disqualified, not deleted
+async function loadSlaBreaches(ctx) {
+  const cutoff = new Date(Date.now() - SLA_HOURS * 3600000).toISOString();
+  let q = supabase
+    .from('contacts')
+    .select('id', { count: 'exact', head: true })
+    .eq('is_deleted', false)
+    .neq('contact_status', 'disqualified')
+    .is('last_activity_at', null)
+    .lt('created_at', cutoff);
+  if (ctx.role === 'sales_agent' && ctx.userId) q = q.eq('assigned_to', ctx.userId);
+  const { count, error } = await q;
+  if (error) { reportError('CrmDashboardPage', 'loadSlaBreaches', error); return 0; }
   return count || 0;
 }
 
@@ -1018,6 +1161,25 @@ function FocusList({ title, items, renderItem, emptyMessage }) {
             return <li key={i}>{r.to ? <Link to={r.to} className="no-underline">{node}</Link> : node}</li>;
           })}
         </ul>
+      )}
+    </div>
+  );
+}
+
+function FunnelStep({ label, value, tone = 'brand', conversion, isRTL }) {
+  const toneMap = {
+    brand:   'bg-brand-500/10   border-brand-500/30   text-brand-500',
+    amber:   'bg-amber-500/10   border-amber-500/30   text-amber-500',
+    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500',
+  };
+  return (
+    <div className={`rounded-lg border p-3 sm:p-4 ${toneMap[tone] || toneMap.brand}`}>
+      <div className="text-[11px] font-semibold mb-1">{label}</div>
+      <div className="text-2xl font-bold text-content dark:text-content-dark leading-none">{value.toLocaleString()}</div>
+      {conversion != null && (
+        <div className="text-[10px] mt-2 text-content-muted dark:text-content-muted-dark">
+          {conversion}% {isRTL ? 'تحويل' : 'conversion'}
+        </div>
       )}
     </div>
   );
