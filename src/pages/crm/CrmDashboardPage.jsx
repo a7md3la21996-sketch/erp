@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSystemConfig } from '../../contexts/SystemConfigContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useRealtimeSubscription } from '../../hooks/useRealtimeSubscription';
 import supabase from '../../lib/supabase';
 import {
   Users, Target, CheckSquare, Flame, AlertCircle, TrendingUp,
@@ -110,6 +111,10 @@ export default function CrmDashboardPage() {
   // is hidden. 'today' is the default because the most common reason
   // to open the page is to triage today's work.
   const [activeMobileTab, setActiveMobileTab] = useState('today');
+  // Live counter of activities streamed in since the last loadAll
+  // completed. Drives the "X جديد" badge on the Recent Activity feed.
+  // Resets to 0 whenever recentFeed gets a fresh batch (loadAll finish).
+  const [newActivityCount, setNewActivityCount] = useState(0);
   // True once we've successfully rendered real (non-skeleton) data from
   // either the sessionStorage cache or a completed loadAll. Drives the
   // page-skeleton suppression so subsequent refreshes don't blank the
@@ -264,6 +269,22 @@ export default function CrmDashboardPage() {
   }, [ctx, toast]);
 
   useEffect(() => { loadAll(); }, [loadAll, refreshKey]);
+
+  // Realtime: every INSERT on the activities table bumps the unread
+  // counter, which the Recent Activity feed surfaces as a badge. The
+  // counter resets when the feed itself is replaced by a fresh fetch
+  // (see the recentFeed-dep effect just below). For sales_agent we
+  // filter to events authored by them so the count matches what their
+  // feed would actually show.
+  useRealtimeSubscription('activities', useCallback((payload) => {
+    if (payload.eventType !== 'INSERT') return;
+    if (ctx.role === 'sales_agent' && ctx.userId && payload.new?.user_id !== ctx.userId) return;
+    setNewActivityCount(c => c + 1);
+  }, [ctx.role, ctx.userId]));
+
+  // Whenever the feed is replaced (loadAll completed), clear the "new"
+  // badge — those events are now part of the visible feed.
+  useEffect(() => { setNewActivityCount(0); }, [recentFeed]);
 
   // Auto-refresh every 5 minutes when the tab is in the foreground.
   // Skipping hidden tabs keeps idle/background sessions from hammering
@@ -831,7 +852,20 @@ export default function CrmDashboardPage() {
           constrains visibility per role, so we just render whatever
           comes back. Hidden when there's nothing to show. */}
       {recentFeed.length > 0 && (
-        <Section title={isRTL ? 'آخر النشاطات' : 'Recent Activity'} icon={Activity}>
+        <Section
+          title={isRTL ? 'آخر النشاطات' : 'Recent Activity'}
+          icon={Activity}
+          action={newActivityCount > 0 && (
+            <button
+              type="button"
+              onClick={() => { setRefreshKey(k => k + 1); }}
+              className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-brand-500 text-white hover:bg-brand-600 transition-colors"
+              title={isRTL ? 'تحديث لعرض الجديد' : 'Refresh to show new'}
+            >
+              {newActivityCount} {isRTL ? 'جديد' : 'new'}
+            </button>
+          )}
+        >
           <ul className="list-none p-0 m-0 divide-y divide-edge/40 dark:divide-edge-dark/40">
             {recentFeed.map((a) => {
               const meta = getActivityMeta(a.type, isRTL);
@@ -1370,12 +1404,13 @@ function KpiCard({ label, value, sublabel, icon: Icon, color = 'brand', to, delt
   return to ? <Link to={to} className="block no-underline">{content}</Link> : content;
 }
 
-function Section({ title, icon: Icon, compact = false, children }) {
+function Section({ title, icon: Icon, compact = false, children, action }) {
   return (
     <section className={`bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark rounded-xl ${compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5'} mb-3`}>
       <div className="flex items-center gap-2 mb-3">
         {Icon && <Icon size={16} className="text-content-muted dark:text-content-muted-dark" />}
-        <h2 className="text-sm font-bold text-content dark:text-content-dark m-0">{title}</h2>
+        <h2 className="text-sm font-bold text-content dark:text-content-dark m-0 flex-1">{title}</h2>
+        {action}
       </div>
       {children}
     </section>
