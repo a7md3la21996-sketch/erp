@@ -105,6 +105,11 @@ export default function CrmDashboardPage() {
   const [slaBreachCount, setSlaBreachCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchInput, setSearchInput] = useState('');
+  // Mobile-only tab to keep the page from becoming an endless scroll
+  // on phones. On sm+ all sections render regardless and the tab bar
+  // is hidden. 'today' is the default because the most common reason
+  // to open the page is to triage today's work.
+  const [activeMobileTab, setActiveMobileTab] = useState('today');
   // True once we've successfully rendered real (non-skeleton) data from
   // either the sessionStorage cache or a completed loadAll. Drives the
   // page-skeleton suppression so subsequent refreshes don't blank the
@@ -431,6 +436,12 @@ export default function CrmDashboardPage() {
     navigate(`/contacts?q=${encodeURIComponent(trimmed)}`);
   };
 
+  // Mobile tab visibility helper. On sm+ everything is visible (sm:block
+  // overrides the mobile hidden). On mobile, only the active tab's
+  // sections render visibly. Returning '' lets the wrapper fall back to
+  // its natural block display when active.
+  const tabVisible = (tab) => activeMobileTab === tab ? '' : 'hidden sm:block';
+
   return (
     <div dir={isRTL ? 'rtl' : 'ltr'} className="p-4 sm:p-6 max-w-[1400px] mx-auto pb-24 sm:pb-6">
       {/* Header */}
@@ -545,6 +556,36 @@ export default function CrmDashboardPage() {
         </div>
       </div>
 
+      {/* Mobile tab bar — sm:hidden on desktop where all sections render
+          freely. Each section below is wrapped with a tabVisible helper
+          that hides it on mobile when its tab isn't active. */}
+      <div
+        role="tablist"
+        aria-label={isRTL ? 'مجموعات أقسام لوحة CRM' : 'CRM dashboard section groups'}
+        className="sm:hidden mb-4 flex gap-1 bg-surface-bg dark:bg-surface-bg-dark rounded-lg p-1"
+      >
+        {[
+          { id: 'today',    label: isRTL ? 'اليوم'    : 'Today' },
+          { id: 'insights', label: isRTL ? 'تحليلات' : 'Insights' },
+          { id: 'team',     label: isRTL ? 'الفريق'  : 'Team' },
+        ].map(t => (
+          <button
+            key={t.id}
+            role="tab"
+            aria-selected={activeMobileTab === t.id}
+            onClick={() => setActiveMobileTab(t.id)}
+            className={`flex-1 text-xs font-semibold py-2 rounded transition-colors ${
+              activeMobileTab === t.id
+                ? 'bg-brand-500 text-white'
+                : 'text-content-muted dark:text-content-muted-dark hover:bg-surface-card dark:hover:bg-surface-card-dark'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={tabVisible('today')}>
       {/* SLA breach alert — leads created more than SLA_HOURS ago that
           still have zero activity. Only renders when count > 0 so a
           well-handled day stays quiet. Links into the "never contacted"
@@ -575,7 +616,9 @@ export default function CrmDashboardPage() {
           </div>
         </Link>
       )}
+      </div>
 
+      <div className={tabVisible('insights')}>
       {/* Lead Aging — distribution of non-disqualified leads by age.
           Hidden if all three buckets are empty (a totally fresh tenant
           or no permission to see any leads). */}
@@ -587,18 +630,24 @@ export default function CrmDashboardPage() {
               sub={isRTL ? '0-7 أيام' : '0–7 days'}
               count={agingBuckets.fresh}
               tone="emerald"
+              to={`/contacts?from=${isoDaysAgo(7)}`}
+              title={isRTL ? 'عملاء أُضيفوا خلال آخر 7 أيام' : 'Leads created in the last 7 days'}
             />
             <AgingBucket
               label={isRTL ? 'في الانتظار' : 'Aging'}
               sub={isRTL ? '7-30 يوم' : '7–30 days'}
               count={agingBuckets.aging}
               tone="amber"
+              to={`/contacts?from=${isoDaysAgo(30)}&to=${isoDaysAgo(7)}`}
+              title={isRTL ? 'عملاء بين 7 و 30 يوم' : 'Leads between 7 and 30 days old'}
             />
             <AgingBucket
               label={isRTL ? 'قديمة' : 'Old'}
               sub={isRTL ? '30+ يوم' : '30+ days'}
               count={agingBuckets.old}
               tone="red"
+              to={`/contacts?to=${isoDaysAgo(30)}`}
+              title={isRTL ? 'عملاء أقدم من 30 يوم بدون إغلاق' : 'Leads older than 30 days, not closed'}
             />
           </div>
         </Section>
@@ -610,13 +659,23 @@ export default function CrmDashboardPage() {
       {funnelData.leads > 0 && (
         <Section title={isRTL ? 'قمع التحويل (هذا الشهر)' : 'Conversion Funnel (This Month)'} icon={Target} compact>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
-            <FunnelStep label={isRTL ? 'عملاء' : 'Leads'}      value={funnelData.leads} tone="brand" />
+            <FunnelStep
+              label={isRTL ? 'عملاء' : 'Leads'}
+              value={funnelData.leads}
+              tone="brand"
+              to={`/contacts?from=${isoMonthStart()}`}
+              title={isRTL ? 'عملاء جدد منذ بداية الشهر' : 'New leads since the start of the month'}
+            />
             <FunnelStep
               label={isRTL ? 'فرص' : 'Opps'}
               value={funnelData.opps}
               tone="amber"
               conversion={funnelData.leadToOpp}
               isRTL={isRTL}
+              to="/crm/opportunities"
+              title={isRTL
+                ? `فرص أُنشئت هذا الشهر — نسبة التحويل من العملاء ${funnelData.leadToOpp}%`
+                : `Opps created this month — ${funnelData.leadToOpp}% lead-to-opp conversion`}
             />
             <FunnelStep
               label={isRTL ? 'صفقات' : 'Wins'}
@@ -624,11 +683,17 @@ export default function CrmDashboardPage() {
               tone="emerald"
               conversion={funnelData.oppToWin}
               isRTL={isRTL}
+              to="/crm/opportunities?stage=closed_won"
+              title={isRTL
+                ? `صفقات أُغلقت هذا الشهر — نسبة التحويل من الفرص ${funnelData.oppToWin}%`
+                : `Wins this month — ${funnelData.oppToWin}% opp-to-win conversion`}
             />
           </div>
         </Section>
       )}
+      </div>
 
+      <div className={tabVisible('today')}>
       {/* Today's Focus */}
       <Section
         title={isRTL ? 'ركز على دلوقتي' : "Today's Focus"}
@@ -690,7 +755,9 @@ export default function CrmDashboardPage() {
           />
         </Section>
       )}
+      </div>
 
+      <div className={tabVisible('insights')}>
       {/* Pipeline + Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-6">
         <Section title={isRTL ? 'خط البيع' : 'Pipeline'} icon={BarChart3} compact>
@@ -757,7 +824,9 @@ export default function CrmDashboardPage() {
           </div>
         </Section>
       )}
+      </div>
 
+      <div className={tabVisible('team')}>
       {/* Recent activity feed — most recent 15 events. RLS already
           constrains visibility per role, so we just render whatever
           comes back. Hidden when there's nothing to show. */}
@@ -879,37 +948,6 @@ export default function CrmDashboardPage() {
         </Section>
       )}
 
-      {/* Mobile FAB action bar — fixed at the bottom on phones, hidden
-          on sm+. Mirrors the desktop header's primary actions so the
-          thumb-reach zone always has Add Lead / Add Task / Refresh.
-          The pb-24 on the page wrapper above reserves space so the
-          bar never overlaps the last section. */}
-      <div
-        className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur border-t border-edge dark:border-edge-dark px-3 py-2 flex items-center gap-2"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
-      >
-        <Link to="/contacts" className="no-underline flex-1">
-          <Button variant="primary" size="sm" className="w-full justify-center">
-            <Plus size={14} /> {isRTL ? 'عميل' : 'Lead'}
-          </Button>
-        </Link>
-        <Link to="/tasks" className="no-underline flex-1">
-          <Button variant="secondary" size="sm" className="w-full justify-center">
-            <Plus size={14} /> {isRTL ? 'مهمة' : 'Task'}
-          </Button>
-        </Link>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setRefreshKey(k => k + 1)}
-          disabled={loading}
-          className="shrink-0"
-          title={isRTL ? 'تحديث' : 'Refresh'}
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-        </Button>
-      </div>
-
       {/* Source breakdown — managers+ only */}
       {sourceBreakdown.length > 0 && (
         <Section title={isRTL ? 'أداء المصادر' : 'Source Performance'} icon={TrendingUp}>
@@ -942,6 +980,38 @@ export default function CrmDashboardPage() {
           </div>
         </Section>
       )}
+      </div>
+
+      {/* Mobile FAB action bar — fixed at the bottom on phones, hidden
+          on sm+. Mirrors the desktop header's primary actions so the
+          thumb-reach zone always has Add Lead / Add Task / Refresh.
+          The pb-24 on the page wrapper above reserves space so the
+          bar never overlaps the last section. */}
+      <div
+        className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur border-t border-edge dark:border-edge-dark px-3 py-2 flex items-center gap-2"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
+      >
+        <Link to="/contacts" className="no-underline flex-1">
+          <Button variant="primary" size="sm" className="w-full justify-center">
+            <Plus size={14} /> {isRTL ? 'عميل' : 'Lead'}
+          </Button>
+        </Link>
+        <Link to="/tasks" className="no-underline flex-1">
+          <Button variant="secondary" size="sm" className="w-full justify-center">
+            <Plus size={14} /> {isRTL ? 'مهمة' : 'Task'}
+          </Button>
+        </Link>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setRefreshKey(k => k + 1)}
+          disabled={loading}
+          className="shrink-0"
+          title={isRTL ? 'تحديث' : 'Refresh'}
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+        </Button>
+      </div>
     </div>
   );
 }
@@ -1194,6 +1264,18 @@ function daysSince(iso) {
   return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 }
 
+// Render YYYY-MM-DD for the date N days ago (local time). ContactsPage's
+// from/to URL params expect this format, so we shape it the same way.
+function isoDaysAgo(n) {
+  const d = new Date(Date.now() - n * 86400000);
+  return d.toISOString().slice(0, 10);
+}
+
+function isoMonthStart() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+}
+
 function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString();
@@ -1328,14 +1410,14 @@ function FocusList({ title, items, renderItem, emptyMessage }) {
   );
 }
 
-function FunnelStep({ label, value, tone = 'brand', conversion, isRTL }) {
+function FunnelStep({ label, value, tone = 'brand', conversion, isRTL, to, title }) {
   const toneMap = {
     brand:   'bg-brand-500/10   border-brand-500/30   text-brand-500',
     amber:   'bg-amber-500/10   border-amber-500/30   text-amber-500',
     emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500',
   };
-  return (
-    <div className={`rounded-lg border p-3 sm:p-4 ${toneMap[tone] || toneMap.brand}`}>
+  const body = (
+    <div title={title} className={`rounded-lg border p-3 sm:p-4 ${toneMap[tone] || toneMap.brand} ${to ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}>
       <div className="text-[11px] font-semibold mb-1">{label}</div>
       <div className="text-2xl font-bold text-content dark:text-content-dark leading-none">{value.toLocaleString()}</div>
       {conversion != null && (
@@ -1345,22 +1427,24 @@ function FunnelStep({ label, value, tone = 'brand', conversion, isRTL }) {
       )}
     </div>
   );
+  return to ? <Link to={to} className="block no-underline">{body}</Link> : body;
 }
 
-function AgingBucket({ label, sub, count, tone = 'brand' }) {
+function AgingBucket({ label, sub, count, tone = 'brand', to, title }) {
   const toneMap = {
     emerald: 'text-emerald-500 border-emerald-500/20 bg-emerald-500/5',
     amber:   'text-amber-500   border-amber-500/20   bg-amber-500/5',
     red:     'text-red-500     border-red-500/20     bg-red-500/5',
     brand:   'text-brand-500   border-brand-500/20   bg-brand-500/5',
   };
-  return (
-    <div className={`rounded-lg border p-3 ${toneMap[tone] || toneMap.brand}`}>
+  const body = (
+    <div title={title} className={`rounded-lg border p-3 ${toneMap[tone] || toneMap.brand} ${to ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}>
       <div className="text-[11px] font-semibold mb-0.5">{label}</div>
       <div className="text-xl font-bold text-content dark:text-content-dark leading-none">{count.toLocaleString()}</div>
       <div className="text-[10px] text-content-muted dark:text-content-muted-dark mt-1">{sub}</div>
     </div>
   );
+  return to ? <Link to={to} className="block no-underline">{body}</Link> : body;
 }
 
 function EmptyState({ message }) {
