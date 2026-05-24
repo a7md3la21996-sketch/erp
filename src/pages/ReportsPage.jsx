@@ -37,14 +37,29 @@ const ChartBuilderPage = lazy(() => import('./ChartBuilderPage').catch(() => ({ 
 const SalesForecastPage = lazy(() => import('./sales/SalesForecastPage').catch(() => ({ default: () => null })));
 
 // ── Section-level tabs (top bar) ─────────────────────────────────
+// Five top-level tabs. Previously nine views (six section + three inner)
+// were exposed at the same level, which made the page feel like a maze.
+// Targets + KPI were promoted from inner tabs to top-level so users find
+// them immediately. Comparison/Heatmap/Chart Builder collapsed under the
+// Analytics tab as sub-tabs since they share the "data exploration" intent.
 const SECTION_TABS = [
-  { id: 'reports',       ar: 'التقارير',        en: 'Reports',        icon: FileText },
-  { id: 'comparison',    ar: 'المقارنة',        en: 'Comparison',     icon: GitCompareArrows },
-  { id: 'heatmap',       ar: 'خريطة النشاط',    en: 'Activity Map',   icon: MapIcon },
-  { id: 'analytics',     ar: 'التحليلات',       en: 'Analytics',      icon: LineChart },
-  { id: 'chart-builder', ar: 'منشئ الرسوم',     en: 'Chart Builder',  icon: PenTool },
-  { id: 'forecast',      ar: 'توقعات المبيعات',  en: 'Sales Forecast', icon: TrendingUp },
+  { id: 'reports',   ar: 'مكتبة التقارير', en: 'Report Library',   icon: FileText },
+  { id: 'targets',   ar: 'الأهداف',         en: 'Targets',           icon: Trophy },
+  { id: 'kpi',       ar: 'أداء الفريق',     en: 'Team Performance',  icon: Target },
+  { id: 'analytics', ar: 'التحليلات',       en: 'Analytics',         icon: LineChart },
+  { id: 'forecast',  ar: 'التوقعات',        en: 'Forecast',          icon: TrendingUp },
 ];
+
+const ANALYTICS_SUB_TABS = [
+  { id: 'overview',      ar: 'تحليلات عامة', en: 'Overview',       icon: LineChart },
+  { id: 'comparison',    ar: 'المقارنة',     en: 'Comparison',     icon: GitCompareArrows },
+  { id: 'heatmap',       ar: 'خريطة النشاط',  en: 'Activity Map',   icon: MapIcon },
+  { id: 'chart-builder', ar: 'منشئ الرسوم',   en: 'Chart Builder',  icon: PenTool },
+];
+
+// Old tab IDs that now live as analytics sub-tabs. Used by the URL
+// migration effect below to redirect bookmarks without breaking them.
+const LEGACY_ANALYTICS_TABS = new Set(['comparison', 'heatmap', 'chart-builder']);
 
 function SectionLoader() {
   return <PageSkeleton hasKpis={false} tableRows={5} tableCols={4} />;
@@ -619,12 +634,6 @@ function KpiPerformanceTab({ lang, isRTL }) {
   );
 }
 
-const TABS = [
-  { id: 'reports', ar: 'التقارير', en: 'Reports', icon: FileText },
-  { id: 'targets', ar: 'التارجت', en: 'Targets', icon: Trophy },
-  { id: 'kpi', ar: 'أداء الفريق', en: 'Team Performance', icon: Target },
-];
-
 export default function ReportsPage() {
   const { i18n } = useTranslation();
   const { profile } = useAuth();
@@ -633,10 +642,24 @@ export default function ReportsPage() {
   const lang = i18n.language;
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Section-level tab (top bar) — driven by ?tab= query param
+  // Section-level tab (top bar) — driven by ?tab= query param.
+  // Resolves legacy IDs (comparison/heatmap/chart-builder) to the
+  // new 'analytics' tab so old bookmarks keep working.
   const sectionTab = useMemo(() => {
     const t = searchParams.get('tab');
+    if (LEGACY_ANALYTICS_TABS.has(t)) return 'analytics';
     return SECTION_TABS.some(s => s.id === t) ? t : 'reports';
+  }, [searchParams]);
+
+  // Analytics sub-tab. Defaults to 'overview'; legacy ?tab=comparison
+  // surfaces here as the active sub-tab so the user lands exactly where
+  // their bookmark expected.
+  const analyticsSubTab = useMemo(() => {
+    const t = searchParams.get('tab');
+    const sub = searchParams.get('sub');
+    if (LEGACY_ANALYTICS_TABS.has(t)) return t;       // legacy redirect
+    if (sub && ANALYTICS_SUB_TABS.some(s => s.id === sub)) return sub;
+    return 'overview';
   }, [searchParams]);
 
   const setSectionTab = useCallback((tabId) => {
@@ -647,7 +670,9 @@ export default function ReportsPage() {
     }
   }, [setSearchParams]);
 
-  const [activeTab, setActiveTab] = useState('reports');
+  const setAnalyticsSubTab = useCallback((subId) => {
+    setSearchParams({ tab: 'analytics', sub: subId }, { replace: true });
+  }, [setSearchParams]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [dateRange, setDateRange] = useState('all');
@@ -844,39 +869,17 @@ export default function ReportsPage() {
         })}
       </div>
 
-      {/* Embedded section pages — negative margin to offset parent padding */}
-      {sectionTab === 'comparison' && (
-        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
-          <Suspense fallback={<SectionLoader />}>
-            <ComparisonReportsPage />
-          </Suspense>
-        </div>
+      {/* ── Section: Targets (promoted from inner-tab to top level) ── */}
+      {sectionTab === 'targets' && (
+        <TargetTrackerTab lang={lang} isRTL={isRTL} />
       )}
 
-      {sectionTab === 'heatmap' && (
-        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
-          <Suspense fallback={<SectionLoader />}>
-            <HeatmapPage />
-          </Suspense>
-        </div>
+      {/* ── Section: Team Performance (promoted from inner-tab) ── */}
+      {sectionTab === 'kpi' && (
+        <KpiPerformanceTab lang={lang} isRTL={isRTL} />
       )}
 
-      {sectionTab === 'analytics' && (
-        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
-          <Suspense fallback={<SectionLoader />}>
-            <AnalyticsPage />
-          </Suspense>
-        </div>
-      )}
-
-      {sectionTab === 'chart-builder' && (
-        <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
-          <Suspense fallback={<SectionLoader />}>
-            <ChartBuilderPage />
-          </Suspense>
-        </div>
-      )}
-
+      {/* ── Section: Forecast ── */}
       {sectionTab === 'forecast' && (
         <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
           <Suspense fallback={<SectionLoader />}>
@@ -885,37 +888,46 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* Section: Reports (default — original content) */}
-      {sectionTab === 'reports' && (<>
+      {/* ── Section: Analytics (with sub-tabs replacing old top-level
+              Comparison / Heatmap / Chart Builder pills) ── */}
+      {sectionTab === 'analytics' && (
+        <>
+          <div className="flex gap-1 mb-5 border-b border-edge dark:border-edge-dark overflow-x-auto">
+            {ANALYTICS_SUB_TABS.map(tab => {
+              const Icon = tab.icon;
+              const isActive = analyticsSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setAnalyticsSubTab(tab.id)}
+                  className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 cursor-pointer transition-colors bg-transparent border-x-0 border-t-0 whitespace-nowrap ${
+                    isActive
+                      ? 'border-brand-500 text-brand-500'
+                      : 'border-transparent text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark'
+                  }`}
+                >
+                  <Icon size={16} />
+                  {lang === 'ar' ? tab.ar : tab.en}
+                </button>
+              );
+            })}
+          </div>
+          <div className="-mx-4 -mb-4 md:-mx-7 md:-mb-6">
+            <Suspense fallback={<SectionLoader />}>
+              {analyticsSubTab === 'overview' && <AnalyticsPage />}
+              {analyticsSubTab === 'comparison' && <ComparisonReportsPage />}
+              {analyticsSubTab === 'heatmap' && <HeatmapPage />}
+              {analyticsSubTab === 'chart-builder' && <ChartBuilderPage />}
+            </Suspense>
+          </div>
+        </>
+      )}
 
-      {/* Internal Tabs */}
-      <div className="flex gap-1 mb-5 border-b border-edge dark:border-edge-dark">
-        {TABS.map(tab => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`inline-flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold border-b-2 cursor-pointer transition-colors bg-transparent border-x-0 border-t-0 ${
-                isActive
-                  ? 'border-brand-500 text-brand-500'
-                  : 'border-transparent text-content-muted dark:text-content-muted-dark hover:text-content dark:hover:text-content-dark'
-              }`}
-            >
-              <Icon size={16} />
-              {lang === 'ar' ? tab.ar : tab.en}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'kpi' ? (
-        <KpiPerformanceTab lang={lang} isRTL={isRTL} />
-      ) : activeTab === 'targets' ? (
-        <TargetTrackerTab lang={lang} isRTL={isRTL} />
-      ) : (
+      {/* ── Section: Reports library (default). The old inner Tabs row
+              (reports / targets / kpi) is gone — targets and kpi are
+              now top-level so the reports section can focus on the
+              category-driven library without a second tier of nav. ── */}
+      {sectionTab === 'reports' && (
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
@@ -1106,8 +1118,6 @@ export default function ReportsPage() {
           onClose={() => setPrintHTML(null)}
         />
       )}
-
-      </>)}
     </div>
   );
 }
