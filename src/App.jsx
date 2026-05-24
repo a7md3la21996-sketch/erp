@@ -58,6 +58,7 @@ function lazyRetry(importFn) {
 // Lazy-loaded pages
 const DashboardPage = lazyRetry(() => import('./pages/dashboard/DashboardPage'));
 const ContactsPage = lazyRetry(() => import('./pages/ContactsPage'));
+const CrmDashboardPage = lazyRetry(() => import('./pages/crm/CrmDashboardPage'));
 const OpportunitiesPage = lazyRetry(() => import('./pages/crm/OpportunitiesPage'));
 const LeadPoolPage = lazyRetry(() => import('./pages/crm/LeadPoolPage'));
 const MasterProfilePage = lazyRetry(() => import('./pages/crm/MasterProfilePage'));
@@ -247,6 +248,8 @@ export default function App() {
                 <Route path="/contacts" element={<Guarded><ContactsPage /></Guarded>} />
                 <Route path="/activities" element={<Guarded><ActivitiesPage /></Guarded>} />
                 <Route path="/tasks" element={<Guarded><TasksPage /></Guarded>} />
+                <Route path="/crm" element={<Guarded><CrmDashboardPage /></Guarded>} />
+                <Route path="/crm/dashboard" element={<Guarded><CrmDashboardPage /></Guarded>} />
                 <Route path="/crm/opportunities" element={<Guarded><OpportunitiesPage /></Guarded>} />
                 <Route path="/crm/lead-pool" element={<Guarded><LeadPoolPage /></Guarded>} />
                 <Route path="/crm/master-leads" element={<Guarded><MasterLeadsPage /></Guarded>} />

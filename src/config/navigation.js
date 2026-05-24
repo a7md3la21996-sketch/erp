@@ -10,6 +10,7 @@ import {
 export const NAV_ITEMS = [
   { id: 'dashboard', label: { ar: 'لوحة التحكم', en: 'Dashboard' }, icon: LayoutDashboard, path: '/dashboard', permission: P.DASHBOARD },
   { id: 'crm', label: { ar: 'إدارة العملاء', en: 'CRM' }, icon: Users, permission: P.CONTACTS_VIEW_OWN, children: [
+    { id: 'crm-dashboard', label: { ar: 'لوحة CRM', en: 'CRM Dashboard' }, path: '/crm/dashboard', permission: P.CONTACTS_VIEW_OWN },
     { id: 'contacts', label: { ar: 'العملاء المحتملين', en: 'Leads' }, path: '/contacts', permission: P.CONTACTS_VIEW_OWN },
     { id: 'opportunities', label: { ar: 'الفرص البيعية', en: 'Opportunities' }, path: '/crm/opportunities', permission: P.OPPS_VIEW_OWN },
     { id: 'lead-pool', label: { ar: 'توزيع الليدز', en: 'Lead Distribution' }, path: '/crm/lead-pool', permission: P.POOL_VIEW },
