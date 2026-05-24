@@ -72,6 +72,7 @@ function SectionLoader() {
 const REPORT_CATEGORIES = [
   {
     key: 'crm', ar: 'تقارير CRM', en: 'CRM Reports', icon: Users, color: '#4A7AAB',
+    desc_ar: 'تقارير العملاء المحتملين، المصادر، الحملات، ومعدلات التحويل', desc_en: 'Leads, sources, campaigns, conversion funnels',
     reports: [
       { key: 'contacts_by_source', ar: 'جهات الاتصال حسب المصدر', en: 'Contacts by Source', desc_ar: 'توزيع جهات الاتصال على مصادر الاستقطاب', desc_en: 'Distribution of contacts across acquisition sources', icon: PieChart, data: [] },
       { key: 'dq_by_source', ar: 'نسبة الاستبعاد حسب المصدر', en: 'Disqualified by Source', desc_ar: 'نسبة جهات الاتصال المستبعدة من كل مصدر وأسباب الاستبعاد', desc_en: 'Disqualification rate per source with top reasons', icon: Target, data: [] },
@@ -84,6 +85,7 @@ const REPORT_CATEGORIES = [
   },
   {
     key: 'sales', ar: 'تقارير المبيعات', en: 'Sales Reports', icon: DollarSign, color: '#4A7AAB',
+    desc_ar: 'الإيرادات الشهرية، تحقيق الأهداف، أداء الفريق، ودورة الصفقة', desc_en: 'Revenue, targets, performers, deal cycle',
     reports: [
       { key: 'revenue_by_month', ar: 'الإيرادات الشهرية', en: 'Revenue by Month', desc_ar: 'مقارنة الإيرادات الفعلية مع المستهدف', desc_en: 'Compare actual revenue vs target by month', icon: BarChart3, data: [] },
       { key: 'target_achievement', ar: 'تحقيق الأهداف', en: 'Target Achievement', desc_ar: 'أداء أفضل البائعين مقابل الأهداف', desc_en: 'Top performers achievement against targets', icon: TrendingUp, data: [] },
@@ -93,6 +95,7 @@ const REPORT_CATEGORIES = [
   },
   {
     key: 'hr', ar: 'تقارير الموارد البشرية', en: 'HR Reports', icon: Briefcase, color: '#6B8DB5',
+    desc_ar: 'الحضور، الإجازات، الرواتب، وتوزيع الموظفين', desc_en: 'Attendance, leave, payroll, headcount',
     reports: [
       { key: 'attendance', ar: 'ملخص الحضور', en: 'Attendance Summary', desc_ar: 'حضور وغياب وتأخير كل قسم', desc_en: 'Present, absent and late counts per department', icon: UserCheck, data: [] },
       { key: 'leave_balance', ar: 'رصيد الإجازات', en: 'Leave Balance', desc_ar: 'الرصيد المتبقي والمستخدم لكل موظف', desc_en: 'Remaining and used leave per employee', icon: Calendar, data: [] },
@@ -102,6 +105,7 @@ const REPORT_CATEGORIES = [
   },
   {
     key: 'finance', ar: 'التقارير المالية', en: 'Finance Reports', icon: FileBarChart, color: '#2B4C6F',
+    desc_ar: 'قائمة الدخل، المصروفات، أعمار الفواتير، والتدفق النقدي', desc_en: 'P&L, expenses, invoice aging, cash flow',
     reports: [
       { key: 'pnl', ar: 'قائمة الدخل', en: 'P&L Statement', desc_ar: 'الإيرادات والمصروفات وصافي الربح', desc_en: 'Revenue, expenses and net profit overview', icon: FileText, data: [] },
       { key: 'expense_breakdown', ar: 'تفصيل المصروفات', en: 'Expense Breakdown', desc_ar: 'توزيع المصروفات على الفئات', desc_en: 'Expense distribution across categories', icon: PieChart, data: [] },
@@ -111,6 +115,7 @@ const REPORT_CATEGORIES = [
   },
   {
     key: 'operations', ar: 'تقارير العمليات', en: 'Operations Reports', icon: Briefcase, color: '#1B3347',
+    desc_ar: 'خط سير الصفقات، المدفوعات، التسليمات، وتذاكر الدعم', desc_en: 'Deal pipeline, payments, handover, tickets',
     reports: [
       { key: 'deal_pipeline', ar: 'خط سير الصفقات', en: 'Deal Pipeline', desc_ar: 'حالة الصفقات وقيمتها في كل مرحلة', desc_en: 'Deal status and value at each stage', icon: BarChart3, data: [] },
       { key: 'payments_summary', ar: 'ملخص المدفوعات', en: 'Payments Summary', desc_ar: 'إجمالي المدفوع والمستحق والمتأخر', desc_en: 'Total paid, due and overdue payments', icon: CreditCard, data: [] },
@@ -815,6 +820,14 @@ export default function ReportsPage() {
   useEffect(() => { setPage(1); }, [smartFilters, deptFilter, dateRange]);
 
   const totalReports = REPORT_CATEGORIES.reduce((s, c) => s + c.reports.length, 0);
+  // Per-category counts replace the hard-coded "4" that used to sit in
+  // every KPI card — those numbers were already wrong when CRM grew
+  // past four reports, and silently kept lying as more got added.
+  const reportsByCategoryKey = useMemo(() => {
+    const m = {};
+    REPORT_CATEGORIES.forEach(c => { m[c.key] = c.reports.length; });
+    return m;
+  }, []);
 
   const handleGenerate = useCallback((report, category) => {
     const data = getReportData(report.key, report.data);
@@ -932,9 +945,9 @@ export default function ReportsPage() {
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3.5 mb-5">
             <KpiCard icon={FileText} label={lang === 'ar' ? 'إجمالي التقارير' : 'Total Reports'} value={totalReports} color="#4A7AAB" />
-            <KpiCard icon={Users} label={lang === 'ar' ? 'تقارير CRM' : 'CRM Reports'} value={4} color="#4A7AAB" />
-            <KpiCard icon={DollarSign} label={lang === 'ar' ? 'تقارير مالية' : 'Finance Reports'} value={4} color="#2B4C6F" />
-            <KpiCard icon={Briefcase} label={lang === 'ar' ? 'تقارير HR' : 'HR Reports'} value={4} color="#6B8DB5" />
+            <KpiCard icon={Users} label={lang === 'ar' ? 'تقارير CRM' : 'CRM Reports'} value={reportsByCategoryKey.crm || 0} color="#4A7AAB" />
+            <KpiCard icon={DollarSign} label={lang === 'ar' ? 'تقارير مالية' : 'Finance Reports'} value={reportsByCategoryKey.finance || 0} color="#2B4C6F" />
+            <KpiCard icon={Briefcase} label={lang === 'ar' ? 'تقارير HR' : 'HR Reports'} value={reportsByCategoryKey.hr || 0} color="#6B8DB5" />
           </div>
 
           {/* Filter bar */}
@@ -986,11 +999,16 @@ export default function ReportsPage() {
             const CatIcon = category.icon;
             return (
               <div key={category.key} className="mb-8">
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-2 mb-1">
                   <CatIcon size={18} style={{ color: category.color }} />
                   <h2 className="m-0 text-base font-bold text-content dark:text-content-dark">{lang === 'ar' ? category.ar : category.en}</h2>
                   <Badge size="sm" className="rounded-full" style={{ background: category.color + '20', color: category.color }}>{category.reports.length}</Badge>
                 </div>
+                {(category.desc_ar || category.desc_en) && (
+                  <p className="m-0 mb-4 text-xs text-content-muted dark:text-content-muted-dark ms-7">
+                    {lang === 'ar' ? category.desc_ar : category.desc_en}
+                  </p>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {category.reports.map(report => {
                     const RIcon = report.icon;
