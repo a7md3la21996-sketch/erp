@@ -829,11 +829,41 @@ export default function ReportsPage() {
     return m;
   }, []);
 
+  // Recent reports — last 5 keys the user generated, kept per-user in
+  // localStorage so they survive reloads but stay scoped. Used to surface
+  // a "Recent" row at the top of the library so the most-clicked reports
+  // are one click away instead of buried in their category.
+  const RECENT_KEY = `crm:reports:recent:${profile?.id || 'anon'}`;
+  const [recentKeys, setRecentKeys] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); } catch { return []; }
+  });
+
   const handleGenerate = useCallback((report, category) => {
     const data = getReportData(report.key, report.data);
     setActiveReport({ report: { ...report, data }, category, liveData: data });
     setModalOpen(true);
-  }, [getReportData]);
+    // Push to recent list — newest first, dedupe, cap at 5.
+    setRecentKeys(prev => {
+      const next = [report.key, ...prev.filter(k => k !== report.key)].slice(0, 5);
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* quota */ }
+      return next;
+    });
+  }, [getReportData, RECENT_KEY]);
+
+  // Resolve recent keys back to {report, category} pairs for rendering.
+  // Drops keys that no longer exist (e.g. a report removed in a migration).
+  const recentReports = useMemo(() => {
+    return recentKeys
+      .map(key => {
+        for (const cat of REPORT_CATEGORIES) {
+          const report = cat.reports.find(r => r.key === key);
+          if (report) return { report, category: cat };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }, [recentKeys]);
 
   const reportTable = useMemo(() => activeReport ? renderReportTable(activeReport.report.key, activeReport.liveData || activeReport.report.data, lang) : null, [activeReport, lang]);
   const exportData = useMemo(() => reportTable ? reportTable.rows.map(row => { const obj = {}; reportTable.headers.forEach((h, i) => { obj[h] = row[i]; }); return obj; }) : [], [reportTable]);
@@ -990,6 +1020,48 @@ export default function ReportsPage() {
                 <span className="text-sm text-content-muted dark:text-content-muted-dark">
                   {lang === 'ar' ? 'جاري تحميل البيانات...' : 'Loading report data...'}
                 </span>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Reports — last 5 the user generated. Skipped on page>1
+              so users browsing categories don't see the recent row repeat
+              on every page. */}
+          {recentReports.length > 0 && page === 1 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Clock size={18} className="text-content-muted dark:text-content-muted-dark" />
+                <h2 className="m-0 text-base font-bold text-content dark:text-content-dark">
+                  {lang === 'ar' ? 'الأحدث' : 'Recent'}
+                </h2>
+                <Badge size="sm" className="rounded-full bg-content-muted/10 text-content-muted dark:text-content-muted-dark">
+                  {recentReports.length}
+                </Badge>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {recentReports.map(({ report, category }) => {
+                  const RIcon = report.icon;
+                  return (
+                    <button
+                      key={report.key}
+                      onClick={() => handleGenerate(report, category)}
+                      className="shrink-0 w-[260px] text-start px-4 py-3 rounded-xl border border-edge dark:border-edge-dark bg-surface-card dark:bg-surface-card-dark hover:border-brand-500/40 transition-colors cursor-pointer"
+                      style={{ fontFamily: 'inherit' }}
+                    >
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: category.color + '15' }}>
+                          <RIcon size={15} style={{ color: category.color }} />
+                        </div>
+                        <h3 className="m-0 text-sm font-semibold text-content dark:text-content-dark truncate flex-1">
+                          {lang === 'ar' ? report.ar : report.en}
+                        </h3>
+                      </div>
+                      <p className="m-0 text-[11px] text-content-muted dark:text-content-muted-dark" style={{ color: category.color }}>
+                        {lang === 'ar' ? category.ar : category.en}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
