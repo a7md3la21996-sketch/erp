@@ -8,6 +8,7 @@ import {
   Users, Target, CheckSquare, Flame, AlertCircle, TrendingUp,
   Calendar, ChevronRight, RefreshCw, BarChart3, Activity,
   Search, Plus, Bell, ArrowUp, ArrowDown, Minus,
+  Phone, FileText, MessageCircle, ArrowRight,
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 import { PageSkeleton, Button } from '../../components/ui';
@@ -52,6 +53,7 @@ export default function CrmDashboardPage() {
   const [activityByDay, setActivityByDay] = useState([]);
   const [sourceBreakdown, setSourceBreakdown] = useState([]);
   const [upcomingTasks, setUpcomingTasks] = useState([]);
+  const [recentFeed, setRecentFeed] = useState([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchInput, setSearchInput] = useState('');
 
@@ -79,7 +81,7 @@ export default function CrmDashboardPage() {
       const [
         contactStats, oppStats, hotCountRes, lastMonthRes,
         todayTasksRes, overdueTasksRes, staleLeadsRes,
-        activityRes, sourceRes, upcomingRes,
+        activityRes, sourceRes, upcomingRes, recentFeedRes,
       ] = await Promise.allSettled([
         fetchContactStats(ctx),
         fetchOpportunityStats(ctx),
@@ -93,6 +95,7 @@ export default function CrmDashboardPage() {
           ? loadSourceBreakdown(ctx)
           : Promise.resolve([]),
         fetchTasks({ ...ctx, dueDateFrom: todayEnd, dueDateTo: upcomingEnd, status: 'pending', pageSize: 5, page: 1 }),
+        loadRecentActivityFeed(ctx),
       ]);
 
       setStats({
@@ -107,6 +110,7 @@ export default function CrmDashboardPage() {
       setActivityByDay(activityRes.status === 'fulfilled' ? activityRes.value : []);
       setSourceBreakdown(sourceRes.status === 'fulfilled' ? sourceRes.value : []);
       setUpcomingTasks(upcomingRes.status === 'fulfilled' ? (upcomingRes.value?.data || upcomingRes.value || []) : []);
+      setRecentFeed(recentFeedRes.status === 'fulfilled' ? recentFeedRes.value : []);
     } catch (err) {
       reportError('CrmDashboardPage', 'loadAll', err);
       toast.error(isRTL ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
@@ -329,6 +333,55 @@ export default function CrmDashboardPage() {
         </Section>
       </div>
 
+      {/* Recent activity feed — most recent 15 events. RLS already
+          constrains visibility per role, so we just render whatever
+          comes back. Hidden when there's nothing to show. */}
+      {recentFeed.length > 0 && (
+        <Section title={isRTL ? 'آخر النشاطات' : 'Recent Activity'} icon={Activity}>
+          <ul className="list-none p-0 m-0 divide-y divide-edge/40 dark:divide-edge-dark/40">
+            {recentFeed.map((a) => {
+              const meta = getActivityMeta(a.type, isRTL);
+              const actor = isRTL
+                ? (a.user_name_ar || a.user_name_en || (isRTL ? 'مستخدم' : 'User'))
+                : (a.user_name_en || a.user_name_ar || 'User');
+              const Icon = meta.icon;
+              const node = (
+                <div className="flex items-start gap-3 py-2.5 px-1 hover:bg-surface-bg dark:hover:bg-surface-bg-dark rounded transition-colors">
+                  <span className="w-7 h-7 rounded-lg flex items-center justify-center bg-brand-500/10 text-brand-500 border border-brand-500/20 shrink-0 mt-0.5">
+                    <Icon size={13} />
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-content dark:text-content-dark">
+                      <span className="font-semibold">{actor}</span>
+                      <span className="text-content-muted dark:text-content-muted-dark"> · {meta.label}</span>
+                      {a.contact_name && (
+                        <>
+                          <span className="text-content-muted dark:text-content-muted-dark"> {isRTL ? 'مع' : 'with'} </span>
+                          <span className="font-medium">{a.contact_name}</span>
+                        </>
+                      )}
+                    </div>
+                    {a.notes && (
+                      <div className="text-[11px] text-content-muted dark:text-content-muted-dark mt-0.5 truncate">{a.notes}</div>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-content-muted dark:text-content-muted-dark whitespace-nowrap mt-0.5">
+                    {formatRelativeTime(a.created_at, isRTL)}
+                  </span>
+                </div>
+              );
+              return (
+                <li key={a.id}>
+                  {a.contact_id
+                    ? <Link to={`/contacts?highlight=${a.contact_id}`} className="no-underline block">{node}</Link>
+                    : node}
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+      )}
+
       {/* Source breakdown — managers+ only */}
       {sourceBreakdown.length > 0 && (
         <Section title={isRTL ? 'أداء المصادر' : 'Source Performance'} icon={TrendingUp}>
@@ -436,6 +489,33 @@ async function loadActivityByDay(ctx, sinceIso) {
   return out;
 }
 
+// Last 15 activities ordered newest-first, with a batch contact-name
+// lookup so we can show "did X to Lead Y" without a per-row roundtrip.
+// RLS on the activities table already constrains visibility per role —
+// the sales_agent guard below is belt-and-suspenders for cases where
+// RLS lets through joined rows we don't want to surface in the feed.
+async function loadRecentActivityFeed(ctx) {
+  let q = supabase
+    .from('activities')
+    .select('id, type, notes, created_at, user_name_en, user_name_ar, contact_id, entity_type')
+    .order('created_at', { ascending: false })
+    .limit(15);
+  if (ctx.role === 'sales_agent' && ctx.userId) q = q.eq('user_id', ctx.userId);
+  const { data, error } = await q;
+  if (error) { reportError('CrmDashboardPage', 'loadRecentActivityFeed', error); return []; }
+  const rows = data || [];
+  const contactIds = [...new Set(rows.map(a => a.contact_id).filter(Boolean))];
+  let nameById = {};
+  if (contactIds.length) {
+    const { data: contacts } = await supabase
+      .from('contacts')
+      .select('id, full_name, phone')
+      .in('id', contactIds);
+    nameById = Object.fromEntries((contacts || []).map(c => [c.id, c.full_name || c.phone]));
+  }
+  return rows.map(a => ({ ...a, contact_name: a.contact_id ? nameById[a.contact_id] : null }));
+}
+
 async function loadSourceBreakdown(ctx) {
   // Pull contacts + opps in parallel, then aggregate client-side. The
   // counts respect RLS so each role only sees their scope.
@@ -480,6 +560,35 @@ function daysSince(iso) {
 function formatDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString();
+}
+
+function formatRelativeTime(iso, isRTL) {
+  if (!iso) return '';
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 60) return isRTL ? 'الآن' : 'just now';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return isRTL ? `منذ ${min} د` : `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return isRTL ? `منذ ${hr} س` : `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 7) return isRTL ? `منذ ${day} يوم` : `${day}d ago`;
+  return formatDate(iso);
+}
+
+// Map an activity row's `type` value to a presentation icon + label.
+// Unknown types fall back to the generic Activity icon — better than
+// throwing on schema drift.
+const ACTIVITY_TYPE_META = {
+  call:           { icon: Phone,          ar: 'اتصال',         en: 'Call' },
+  note:           { icon: FileText,       ar: 'ملاحظة',         en: 'Note' },
+  whatsapp:       { icon: MessageCircle,  ar: 'واتساب',         en: 'WhatsApp' },
+  status_change:  { icon: ArrowRight,     ar: 'تغيير حالة',     en: 'Status change' },
+  reassignment:   { icon: Users,          ar: 'إعادة تعيين',    en: 'Reassignment' },
+};
+function getActivityMeta(type, isRTL) {
+  const m = ACTIVITY_TYPE_META[type] || { icon: Activity, ar: type || 'نشاط', en: type || 'Activity' };
+  return { icon: m.icon, label: isRTL ? m.ar : m.en };
 }
 
 function formatCurrency(n) {
