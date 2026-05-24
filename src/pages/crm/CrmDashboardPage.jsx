@@ -19,6 +19,35 @@ import { reportError } from '../../utils/errorReporter';
 
 const STAGE_COLORS = ['#4A7AAB', '#6B8DB5', '#92B0CC', '#F59E0B', '#10B981', '#059669', '#6B21A8'];
 
+// sessionStorage cache for instant-feel tab returns. TTL is intentionally
+// short — long enough that flipping to /contacts and back skips the
+// full re-fetch, short enough that the data the user sees isn't
+// meaningfully stale. The cache is also scoped per (userId, role) so
+// no cross-account leak and so role upgrades invalidate naturally.
+const DASHBOARD_CACHE_PREFIX = 'crm-dashboard';
+const DASHBOARD_CACHE_TTL_MS = 60 * 1000;
+
+function readDashboardCache(userId, role) {
+  if (typeof window === 'undefined' || !userId) return null;
+  try {
+    const raw = sessionStorage.getItem(`${DASHBOARD_CACHE_PREFIX}:${userId}:${role}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.ts || Date.now() - parsed.ts > DASHBOARD_CACHE_TTL_MS) return null;
+    return parsed.data;
+  } catch { return null; }
+}
+
+function writeDashboardCache(userId, role, data) {
+  if (typeof window === 'undefined' || !userId) return;
+  try {
+    sessionStorage.setItem(
+      `${DASHBOARD_CACHE_PREFIX}:${userId}:${role}`,
+      JSON.stringify({ ts: Date.now(), data })
+    );
+  } catch { /* quota exceeded — drop silently, fresh fetch still fires */ }
+}
+
 /**
  * CRM Dashboard — single-screen overview tying contacts / opps / tasks /
  * activities into a sales rep's "what do I work on next" landing page.
@@ -76,12 +105,43 @@ export default function CrmDashboardPage() {
   const [slaBreachCount, setSlaBreachCount] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchInput, setSearchInput] = useState('');
+  // True once we've successfully rendered real (non-skeleton) data from
+  // either the sessionStorage cache or a completed loadAll. Drives the
+  // page-skeleton suppression so subsequent refreshes don't blank the
+  // page out — stale data stays visible during background refetch.
+  const [hasEverLoaded, setHasEverLoaded] = useState(false);
+  const hydratedRef = useRef(false);
 
   const ctx = useMemo(() => ({
     role: profile?.role,
     userId: profile?.id,
     teamId: profile?.team_id,
   }), [profile?.role, profile?.id, profile?.team_id]);
+
+  // Hydrate from sessionStorage cache once per mount. Runs as soon as
+  // ctx is populated (i.e. profile has resolved). If a fresh cache is
+  // present, we render real data immediately and rely on the background
+  // loadAll below to refresh it — the user never sees a skeleton on
+  // tab-switch returns.
+  useEffect(() => {
+    if (hydratedRef.current || !ctx.userId) return;
+    const cached = readDashboardCache(ctx.userId, ctx.role);
+    hydratedRef.current = true;
+    if (!cached) return;
+    if (cached.stats) setStats(cached.stats);
+    if (cached.todayTasks) setTodayTasks(cached.todayTasks);
+    if (cached.overdueTasks) setOverdueTasks(cached.overdueTasks);
+    if (cached.staleLeads) setStaleLeads(cached.staleLeads);
+    if (cached.activityByDay) setActivityByDay(cached.activityByDay);
+    if (cached.sourceBreakdown) setSourceBreakdown(cached.sourceBreakdown);
+    if (cached.upcomingTasks) setUpcomingTasks(cached.upcomingTasks);
+    if (cached.recentFeed) setRecentFeed(cached.recentFeed);
+    if (cached.leadsByUser) setLeadsByUser(cached.leadsByUser);
+    if (cached.lostThisMonth) setLostThisMonth(cached.lostThisMonth);
+    if (cached.agingBuckets) setAgingBuckets(cached.agingBuckets);
+    if (typeof cached.slaBreachCount === 'number') setSlaBreachCount(cached.slaBreachCount);
+    setHasEverLoaded(true);
+  }, [ctx.userId, ctx.role]);
 
   // Monotonically-increasing call id used to drop stale loadAll results.
   // Each invocation snapshots its id; after all fetches resolve, it
@@ -140,23 +200,54 @@ export default function CrmDashboardPage() {
       // overwrite the freshest result.
       if (myLoadId !== loadIdRef.current) return;
 
-      setStats({
+      // Compute every next-state value once so we can both setState
+      // and write the same snapshot to cache without re-deriving.
+      const nextStats = {
         contact: contactStats.status === 'fulfilled' ? contactStats.value : null,
         opp: oppStats.status === 'fulfilled' ? oppStats.value : null,
         hotCount: hotCountRes.status === 'fulfilled' ? hotCountRes.value : 0,
         lastMonthCount: lastMonthRes.status === 'fulfilled' ? lastMonthRes.value : 0,
+      };
+      const nextTodayTasks = todayTasksRes.status === 'fulfilled' ? (todayTasksRes.value?.data || todayTasksRes.value || []) : [];
+      const nextOverdueTasks = overdueTasksRes.status === 'fulfilled' ? (overdueTasksRes.value?.data || overdueTasksRes.value || []) : [];
+      const nextStaleLeads = staleLeadsRes.status === 'fulfilled' ? staleLeadsRes.value : [];
+      const nextActivityByDay = activityRes.status === 'fulfilled' ? activityRes.value : [];
+      const nextSourceBreakdown = sourceRes.status === 'fulfilled' ? sourceRes.value : [];
+      const nextUpcomingTasks = upcomingRes.status === 'fulfilled' ? (upcomingRes.value?.data || upcomingRes.value || []) : [];
+      const nextRecentFeed = recentFeedRes.status === 'fulfilled' ? recentFeedRes.value : [];
+      const nextLeadsByUser = leadsByUserRes.status === 'fulfilled' ? leadsByUserRes.value : {};
+      const nextLostThisMonth = lostRes.status === 'fulfilled' ? lostRes.value : [];
+      const nextAgingBuckets = agingRes.status === 'fulfilled' ? agingRes.value : { fresh: 0, aging: 0, old: 0 };
+      const nextSlaBreachCount = slaRes.status === 'fulfilled' ? slaRes.value : 0;
+
+      setStats(nextStats);
+      setTodayTasks(nextTodayTasks);
+      setOverdueTasks(nextOverdueTasks);
+      setStaleLeads(nextStaleLeads);
+      setActivityByDay(nextActivityByDay);
+      setSourceBreakdown(nextSourceBreakdown);
+      setUpcomingTasks(nextUpcomingTasks);
+      setRecentFeed(nextRecentFeed);
+      setLeadsByUser(nextLeadsByUser);
+      setLostThisMonth(nextLostThisMonth);
+      setAgingBuckets(nextAgingBuckets);
+      setSlaBreachCount(nextSlaBreachCount);
+      setHasEverLoaded(true);
+
+      writeDashboardCache(ctx.userId, ctx.role, {
+        stats: nextStats,
+        todayTasks: nextTodayTasks,
+        overdueTasks: nextOverdueTasks,
+        staleLeads: nextStaleLeads,
+        activityByDay: nextActivityByDay,
+        sourceBreakdown: nextSourceBreakdown,
+        upcomingTasks: nextUpcomingTasks,
+        recentFeed: nextRecentFeed,
+        leadsByUser: nextLeadsByUser,
+        lostThisMonth: nextLostThisMonth,
+        agingBuckets: nextAgingBuckets,
+        slaBreachCount: nextSlaBreachCount,
       });
-      setTodayTasks(todayTasksRes.status === 'fulfilled' ? (todayTasksRes.value?.data || todayTasksRes.value || []) : []);
-      setOverdueTasks(overdueTasksRes.status === 'fulfilled' ? (overdueTasksRes.value?.data || overdueTasksRes.value || []) : []);
-      setStaleLeads(staleLeadsRes.status === 'fulfilled' ? staleLeadsRes.value : []);
-      setActivityByDay(activityRes.status === 'fulfilled' ? activityRes.value : []);
-      setSourceBreakdown(sourceRes.status === 'fulfilled' ? sourceRes.value : []);
-      setUpcomingTasks(upcomingRes.status === 'fulfilled' ? (upcomingRes.value?.data || upcomingRes.value || []) : []);
-      setRecentFeed(recentFeedRes.status === 'fulfilled' ? recentFeedRes.value : []);
-      setLeadsByUser(leadsByUserRes.status === 'fulfilled' ? leadsByUserRes.value : {});
-      setLostThisMonth(lostRes.status === 'fulfilled' ? lostRes.value : []);
-      setAgingBuckets(agingRes.status === 'fulfilled' ? agingRes.value : { fresh: 0, aging: 0, old: 0 });
-      setSlaBreachCount(slaRes.status === 'fulfilled' ? slaRes.value : 0);
     } catch (err) {
       reportError('CrmDashboardPage', 'loadAll', err);
       toast.error(isRTLRef.current ? 'فشل تحميل البيانات' : 'Failed to load dashboard');
@@ -305,7 +396,11 @@ export default function CrmDashboardPage() {
     return out;
   }, [stats.opp?.rawOpps, isRTL]);
 
-  if (loading && !stats.contact) return <PageSkeleton />;
+  // Show page skeleton only on the very first load with no cache. Once
+  // we've ever rendered real data (from cache hydration or a completed
+  // fetch), subsequent background refreshes update the page in place —
+  // the user keeps seeing stale data rather than a wiped layout.
+  if (loading && !hasEverLoaded) return <PageSkeleton />;
 
   // stageCounts is the raw {stage: count} map. Filter out closed stages so
   // the pipeline pie reflects only opportunities still in play.
