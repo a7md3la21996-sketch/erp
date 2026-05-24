@@ -432,7 +432,7 @@ export default function CrmDashboardPage() {
   };
 
   return (
-    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-4 sm:p-6 max-w-[1400px] mx-auto">
+    <div dir={isRTL ? 'rtl' : 'ltr'} className="p-4 sm:p-6 max-w-[1400px] mx-auto pb-24 sm:pb-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-5 sm:mb-6 flex-wrap gap-3">
         <div>
@@ -456,12 +456,15 @@ export default function CrmDashboardPage() {
               className={`h-8 text-xs rounded-md bg-surface-card dark:bg-surface-card-dark border border-edge dark:border-edge-dark text-content dark:text-content-dark placeholder:text-content-muted dark:placeholder:text-content-muted-dark focus:outline-none focus:border-brand-500 ${isRTL ? 'pr-8 pl-2' : 'pl-8 pr-2'} w-40 sm:w-56`}
             />
           </form>
-          <Link to="/contacts" className="no-underline">
+          {/* Hide add-buttons on mobile — they live in the bottom FAB bar
+              instead so the header stays compact and the thumb-reach
+              zone has the primary actions. */}
+          <Link to="/contacts" className="no-underline hidden sm:block">
             <Button variant="primary" size="sm">
               <Plus size={14} /> {isRTL ? 'عميل جديد' : 'Add Lead'}
             </Button>
           </Link>
-          <Link to="/tasks" className="no-underline">
+          <Link to="/tasks" className="no-underline hidden sm:block">
             <Button variant="secondary" size="sm">
               <Plus size={14} /> {isRTL ? 'مهمة جديدة' : 'Add Task'}
             </Button>
@@ -472,8 +475,13 @@ export default function CrmDashboardPage() {
         </div>
       </div>
 
-      {/* KPI cards row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+      {/* KPI cards row — horizontal scroll on mobile (snap per card),
+          flips to grid at sm and above. The negative margin + padding
+          on the mobile flex makes the scroll track bleed to the edges
+          of the screen so cards aren't visually cramped in the page
+          container's padding. */}
+      <div className="flex sm:grid gap-3 mb-6 overflow-x-auto sm:overflow-visible sm:grid-cols-3 lg:grid-cols-5 -mx-4 sm:mx-0 px-4 sm:px-0 snap-x snap-mandatory sm:snap-none">
+        <div className="shrink-0 w-[160px] sm:w-auto snap-start">
         <KpiCard
           label={isRTL ? 'إجمالي العملاء' : 'Total Leads'}
           value={stats.contact?.totalLeads ?? 0}
@@ -484,6 +492,8 @@ export default function CrmDashboardPage() {
             ? 'كل العملاء غير المحذوفين في نطاق صلاحياتك.'
             : 'All non-deleted leads in your permission scope.'}
         />
+        </div>
+        <div className="shrink-0 w-[160px] sm:w-auto snap-start">
         <KpiCard
           label={isRTL ? 'العملاء الواعدون' : 'Hot Leads'}
           value={stats.hotCount ?? 0}
@@ -494,6 +504,8 @@ export default function CrmDashboardPage() {
             ? 'عملاء مصنفون "Hot" — أعلى أولوية للمتابعة.'
             : 'Leads marked Hot — highest follow-up priority.'}
         />
+        </div>
+        <div className="shrink-0 w-[160px] sm:w-auto snap-start">
         <KpiCard
           label={isRTL ? 'الفرص المفتوحة' : 'Open Opportunities'}
           value={stats.opp?.activeOpps ?? 0}
@@ -505,6 +517,8 @@ export default function CrmDashboardPage() {
             ? 'الفرص غير المغلقة. الرقم أسفل = إجمالي القيمة المتوقعة.'
             : 'Opportunities not closed/cancelled. Subtitle = total open pipeline value.'}
         />
+        </div>
+        <div className="shrink-0 w-[160px] sm:w-auto snap-start">
         <KpiCard
           label={isRTL ? 'مهام اليوم' : 'Tasks Due Today'}
           value={todayTasks.length}
@@ -515,6 +529,8 @@ export default function CrmDashboardPage() {
             ? 'مهام معلقة مستحقة اليوم.'
             : 'Pending tasks due today.'}
         />
+        </div>
+        <div className="shrink-0 w-[160px] sm:w-auto snap-start">
         <KpiCard
           label={isRTL ? 'جدد هذا الشهر' : 'New This Month'}
           value={stats.contact?.newLeadsThisMonth ?? 0}
@@ -526,6 +542,7 @@ export default function CrmDashboardPage() {
             ? 'عملاء أُضيفوا منذ بداية الشهر. الشارة = الفرق عن الشهر السابق.'
             : 'Leads created since the 1st. Badge = delta vs. previous month.'}
         />
+        </div>
       </div>
 
       {/* SLA breach alert — leads created more than SLA_HOURS ago that
@@ -861,6 +878,37 @@ export default function CrmDashboardPage() {
           </ul>
         </Section>
       )}
+
+      {/* Mobile FAB action bar — fixed at the bottom on phones, hidden
+          on sm+. Mirrors the desktop header's primary actions so the
+          thumb-reach zone always has Add Lead / Add Task / Refresh.
+          The pb-24 on the page wrapper above reserves space so the
+          bar never overlaps the last section. */}
+      <div
+        className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-card/95 dark:bg-surface-card-dark/95 backdrop-blur border-t border-edge dark:border-edge-dark px-3 py-2 flex items-center gap-2"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}
+      >
+        <Link to="/contacts" className="no-underline flex-1">
+          <Button variant="primary" size="sm" className="w-full justify-center">
+            <Plus size={14} /> {isRTL ? 'عميل' : 'Lead'}
+          </Button>
+        </Link>
+        <Link to="/tasks" className="no-underline flex-1">
+          <Button variant="secondary" size="sm" className="w-full justify-center">
+            <Plus size={14} /> {isRTL ? 'مهمة' : 'Task'}
+          </Button>
+        </Link>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setRefreshKey(k => k + 1)}
+          disabled={loading}
+          className="shrink-0"
+          title={isRTL ? 'تحديث' : 'Refresh'}
+        >
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+        </Button>
+      </div>
 
       {/* Source breakdown — managers+ only */}
       {sourceBreakdown.length > 0 && (
